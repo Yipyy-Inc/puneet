@@ -40,10 +40,10 @@ import {
   groomingAppointments,
   GroomingAppointment,
   GroomingStatus,
-  stylists,
   type GroomingIntake,
   type PriceAdjustment,
 } from "@/data/grooming";
+import { useStylists } from "@/lib/api/stylists";
 import { clients } from "@/data/clients";
 import { GroomingIntakeForm } from "@/components/grooming/GroomingIntakeForm";
 import { PriceAdjustmentForm } from "@/components/grooming/PriceAdjustmentForm";
@@ -105,6 +105,8 @@ export function GroomingSection() {
   );
 
   // Get groomer availability based on in-progress appointments
+  const { data: stylists = [] } = useStylists();
+
   const groomerStatus = useMemo(() => {
     const statusMap: Record<string, { busy: boolean; currentPet?: string }> =
       {};
@@ -122,7 +124,7 @@ export function GroomingSection() {
     });
 
     return statusMap;
-  }, [appointmentsData]);
+  }, [appointmentsData, stylists]);
 
   const isGroomerAvailable = (stylistId: string) => {
     return !groomerStatus[stylistId]?.busy;

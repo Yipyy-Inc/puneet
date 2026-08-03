@@ -3,12 +3,13 @@
 import Image from "next/image";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useStylists } from "@/lib/api/stylists";
 import { groomingQueries } from "@/lib/api/grooming";
 import { useGroomingValidation } from "@/hooks/use-grooming-validation";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { vaccinationRecords } from "@/data/pet-data";
-import { stylists, groomingAppointments } from "@/data/grooming";
+import { groomingAppointments } from "@/data/grooming";
 import { locations } from "@/data/settings";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -872,6 +873,12 @@ export function GroomingBookingFlow({
 
   const didPreselectAddOnsRef = useRef(false);
 
+  // The groomer roster, from Postgres. This flow shows it to a CUSTOMER, so
+  // only groomers marked `visible_online` come back for them — that is what
+  // the flag is for, and the policy that enforces it lives on the table
+  // (20260806500000) rather than in a filter here that could be forgotten.
+  const { data: stylists = [] } = useStylists();
+
   // Per-day availability density for the date picker dots (Table 91). Derived
   // from how full each day already is across active groomers vs a soft daily
   // capacity: plenty (green) / limited (amber) / waitlist (red).
@@ -893,7 +900,7 @@ export function GroomingBookingFlow({
         ratio >= 1 ? "waitlist" : ratio >= 0.6 ? "limited" : "plenty";
     }
     return density;
-  }, []);
+  }, [stylists]);
 
   // Calculate total duration with add-ons
   const totalDurationWithAddOns = useMemo(() => {
@@ -1234,7 +1241,7 @@ export function GroomingBookingFlow({
     }
 
     return groomers;
-  }, [groomerSelectionMode, requiresFearFree]);
+  }, [groomerSelectionMode, requiresFearFree, stylists]);
 
   // Get groomer tiers from config
   const groomerTiers = config.bookingRules.groomerSelection.tiers || [];
@@ -2157,7 +2164,7 @@ export function GroomingBookingFlow({
       return selectedGroomerTier;
     }
     return "System assigned";
-  }, [selectedGroomerId, selectedGroomerTier]);
+  }, [selectedGroomerId, selectedGroomerTier, stylists]);
 
   // Get selected service category name
   const selectedServiceCategoryName = useMemo(() => {

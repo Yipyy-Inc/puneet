@@ -1407,7 +1407,7 @@ export function BookingModal({
               typeof pet.age === "number"
                 ? Math.max(0, Math.round(pet.age * 12))
                 : undefined,
-            stylistId: undefined,
+            stylistTier: undefined,
             package: pkg,
             petPricingOverrides: groomingPetPricingOverrides,
           });

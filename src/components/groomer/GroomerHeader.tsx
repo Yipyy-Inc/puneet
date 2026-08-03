@@ -4,14 +4,15 @@ import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Scissors } from "lucide-react";
 import { getCurrentUserId } from "@/lib/role-utils";
-import { stylists } from "@/data/grooming";
+import { useStylists } from "@/lib/api/stylists";
 import { signOutEverywhere } from "@/lib/auth/sign-out-client";
 
 export function GroomerHeader() {
   const userId = getCurrentUserId();
+  const { data: stylists = [] } = useStylists();
   const groomer = userId
     ? stylists.find((s) => s.id === userId)
-    : stylists[0] || null;
+    : (stylists[0] ?? null);
 
   // Was: clear a `current_user_id` cookie that nothing ever set, then route to
   // the login page. No session was ended, and the key it cleared was not even

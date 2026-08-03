@@ -403,6 +403,60 @@ It took signing in as a customer in a browser and loading the page. That is now 
 
 The contract exists in both `use-booking-modal.tsx` and `BookingModal.tsx`. Making it async needed both edited, and a change to only one would have typechecked at the call site while failing at the other.
 
+## Snapshot (2026-08-06, groomers come from the staff roster)
+
+### 🔴 A permission chosen for the ADMINISTRATOR, not the user — twice in two days
+
+`grooming_stylist_profiles` shipped with reads gated on `view_services`, reasoning that the people who need to know who can take a matted giant-breed are schedulers. That skipped the obvious reader: **the groomer standing at the board.** A groomer holds no `view_services`, so:
+
+```
+groomer sees 0 profiles     ← the entire point of the assigned_only queue
+customer sees 1             ← the deny half worked fine
+```
+
+Every "your queue" surface runs `useStylistIdForStaff`, which needs this table. The grooming board showed the groomer no columns and no cards.
+
+This is the **same shape** as the customer-package policies a day earlier: gate written from the perspective of who _administers_ a thing rather than who _uses_ it. Both times the failing assertion was the POSITIVE one; every deny passed throughout.
+
+**Do instead:** `staff_read` already had the answer — any facility member may read the roster. A grooming profile is _less_ sensitive than the staff record it hangs off, so making it harder to read is incoherent. Fixed in 20260806540000 to mirror `staff_read`; writes still need `manage_staff`. When adding a policy, list the roles that will _call_ the screen before choosing the permission, and write a positive assertion for each.
+
+### 🟡 `stylistIdForStaff` was synchronous because it searched an array
+
+It now reads an index primed by a fetch, which changes what "no answer" means. A component calling the bare function gets `undefined` on first paint and never re-renders, because nothing it subscribes to changed — the groomer's board would render empty and stay empty.
+
+Two mechanisms, deliberately different:
+
+- `fetchGroomingAppointments` and `fetchWaitlist` **await** `ensureStylistIndex()`. Both are already async; there was no reason to race.
+- Components use `useStylistIdForStaff` (`src/lib/api/stylists.ts`), which subscribes to the query.
+
+**Do instead:** don't call the bare `stylistIdForStaff` from a component. If a third async fetch needs the remap, await the index like the other two.
+
+### 🟡 `resolveEffectivePricing` took a stylist id and looked up the tier itself
+
+It resolved `stylistId` against the mock array to read `capacity.skillLevel` for `pkg.tierAdjustments`. With the roster fetched, a cached lookup would have been **worse than the fixture**: a miss silently skips the tier surcharge and returns a price that is quietly too low.
+
+It now takes `stylistTier` explicitly, alongside `stylistId` — which is still needed, because `pkg.stylistPricing[id]` is a _different_ feature (an explicit amount for one named groomer, versus a surcharge for a whole tier). Nearly collapsed those two into one parameter before noticing.
+
+**Do instead:** when a pure function needs data it cannot fetch, pass it. A lookup that can silently miss inside a pricing path is a wrong invoice, not a blank field.
+
+### 🟡 The React Compiler rejects a memo that reaches into fetched state
+
+Adding `stylistsData.find(...)` inside two `useMemo` bodies in `new-appointment-dialog.tsx` produced `Compilation Skipped: Existing memoization could not be preserved` — an ESLint **error**, so it fails the gate. Adding the whole array as a dependency defeats the memo anyway.
+
+**Do instead:** hoist the derivation to a scalar outside the memo (`selectedStylistTier`) and depend on that. The compiler is happy and the memo only recomputes when the chosen groomer changes.
+
+### 🟢 `rating` has no source and is now always 0
+
+The fixture's 4.9 / 4.95 / 4.7 were typed, not measured — there is no reviews table, no report-card score, nothing a rating could come from. Rather than a column nothing can update, it is absent and the mapper returns 0. The stylists page already draws "—" for an unrated groomer and averages only rated ones, so the KPI reads "no ratings yet".
+
+`totalAppointments` went the other way: it IS derivable, so it is a view. The counts dropped from 1250/890/720/2100/450 to 3/2/1/1/0 — small and true.
+
+**Do instead:** when a review system lands, `rating` becomes a view over it, not a column on the profile.
+
+### 🟢 `hireDate` is no longer served by the stylist route
+
+It is employment data and lives on the staff record. The stylists page already fell back to `staff.employment.hireDate` when a profile had none; that fallback is now the only path.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

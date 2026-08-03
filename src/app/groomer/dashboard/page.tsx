@@ -32,14 +32,13 @@ import {
 } from "lucide-react";
 import {
   groomingAppointments,
-  stylists,
   type GroomingAppointment,
   type GroomingStatus,
   type GroomingPhoto,
 } from "@/data/grooming";
 import { getCurrentUserId } from "@/lib/role-utils";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { stylistIdForStaff } from "@/lib/api/grooming";
+import { useStylistIdForStaff, useStylists } from "@/lib/api/stylists";
 import { sendPickupNotifications } from "@/lib/grooming-pickup-notifications";
 
 const statusColors: Record<
@@ -92,10 +91,11 @@ export default function GroomerDashboardPage() {
   const [notes, setNotes] = useState("");
   const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [userId] = useState<string | null>(() => {
-    const currentUserId = getCurrentUserId();
-    return currentUserId || stylists[0]?.id || null;
-  });
+  // The roster is fetched, so the `stylists[0]` fallback cannot live in a
+  // mount-time initialiser any more -- it would run against an empty list and
+  // stick. It moves to `displayStylist`, which re-evaluates.
+  const { data: stylists = [] } = useStylists();
+  const [userId] = useState<string | null>(() => getCurrentUserId());
 
   // Local state for appointments to allow updates
   const [appointmentsData, setAppointmentsData] =
@@ -105,7 +105,7 @@ export default function GroomerDashboardPage() {
   const currentStylist = useMemo(() => {
     if (!userId) return null;
     return stylists.find((s) => s.id === userId || s.email === userId) || null;
-  }, [userId]);
+  }, [userId, stylists]);
 
   // Section 8B: in the employee portal (view_grooming_queue = assigned_only),
   // scope the queue to the ACTING viewer's stylist via the data-layer resolver
@@ -113,14 +113,14 @@ export default function GroomerDashboardPage() {
   // (the /groomer portal), so that path falls back unchanged.
   const groomingScope = useAssignedScope("view_grooming_queue");
 
+  const scopedStylistId = useStylistIdForStaff(groomingScope ?? undefined);
   const displayStylist = useMemo(() => {
-    if (groomingScope) {
-      const sid = stylistIdForStaff(groomingScope);
-      const own = sid ? stylists.find((s) => s.id === sid) : null;
-      if (own) return own;
-    }
+    const own = scopedStylistId
+      ? stylists.find((s) => s.id === scopedStylistId)
+      : null;
+    if (own) return own;
     return currentStylist || stylists[0] || null;
-  }, [groomingScope, currentStylist]);
+  }, [scopedStylistId, currentStylist, stylists]);
 
   // Get today's appointments for this groomer
   const todayAppointments = useMemo(() => {

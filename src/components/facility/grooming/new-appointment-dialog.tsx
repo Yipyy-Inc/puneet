@@ -351,6 +351,12 @@ export function NewAppointmentDialog({
 
   const { data: packages = [] } = useQuery(groomingQueries.packages());
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
+  // Hoisted out of the pricing memos below. A memo that reached into
+  // `stylistsData` needed the whole array as a dependency, which the React
+  // Compiler refuses to memoise; the tier is a scalar and changes only when
+  // the chosen groomer does.
+  const selectedStylistTier = stylistsData.find((s) => s.id === form.stylistId)
+    ?.capacity.skillLevel;
   const { data: allPetPricing = [] } = useQuery(
     groomingQueries.allPetServicePricing(),
   );
@@ -735,6 +741,7 @@ export function NewAppointmentDialog({
           : undefined,
         petAgeMonths: form.petAgeMonths,
         stylistId: form.stylistId || undefined,
+        stylistTier: selectedStylistTier,
         package: selectedPackage,
         petPricingOverrides: allPetPricing,
       });
@@ -749,6 +756,7 @@ export function NewAppointmentDialog({
     form.coatType,
     form.petAgeMonths,
     form.stylistId,
+    selectedStylistTier,
     allPetPricing,
   ]);
 
@@ -1156,6 +1164,7 @@ export function NewAppointmentDialog({
           : undefined,
         petAgeMonths: form.petAgeMonths,
         stylistId: form.stylistId || undefined,
+        stylistTier: selectedStylistTier,
         package: selectedPackage,
         petPricingOverrides: allPetPricing,
       });
@@ -1181,6 +1190,7 @@ export function NewAppointmentDialog({
       const pricing = resolveEffectivePricing({
         petSize: ap.petSize as PetSize,
         stylistId: form.stylistId || undefined,
+        stylistTier: selectedStylistTier,
         package: pkg,
         petPricingOverrides: allPetPricing,
       });
@@ -1203,6 +1213,7 @@ export function NewAppointmentDialog({
     form.coatType,
     form.petAgeMonths,
     form.stylistId,
+    selectedStylistTier,
     additionalPets,
     packages,
     allPetPricing,

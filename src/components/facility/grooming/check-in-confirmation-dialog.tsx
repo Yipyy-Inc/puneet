@@ -30,7 +30,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { stylistIdForStaff } from "@/lib/api/grooming";
+import { useStylistIdForStaff } from "@/lib/api/stylists";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
 import { groomingAddOnsList } from "@/data/grooming-pricing-rules";
@@ -237,9 +237,10 @@ export function CheckInConfirmationDialog({
   // Section 5A — when assigned_only, the step shows only on the viewer's OWN
   // appointments.
   const photoScope = useAssignedScope("grooming_upload_photos");
+  const photoScopeStylistId = useStylistIdForStaff(photoScope ?? undefined);
   const isOwnAppointment =
     photoScope == null ||
-    (apt != null && stylistIdForStaff(photoScope) === apt.stylistId);
+    (apt != null && photoScopeStylistId === apt.stylistId);
   const canUploadPhotos =
     usePermission("grooming_upload_photos") && isOwnAppointment;
   // Estimated ready time — auto-computed from check-in time + service +

@@ -119,6 +119,13 @@ export type Database = {
             foreignKeyName: "bookings_assigned_staff_id_fkey";
             columns: ["assigned_staff_id"];
             isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "bookings_assigned_staff_id_fkey";
+            columns: ["assigned_staff_id"];
+            isOneToOne: false;
             referencedRelation: "staff";
             referencedColumns: ["id"];
           },
@@ -1353,6 +1360,164 @@ export type Database = {
           },
         ];
       };
+      grooming_stylist_availability: {
+        Row: {
+          created_at: string;
+          day_of_week: number;
+          end_time: string;
+          facility_id: string;
+          id: string;
+          is_available: boolean;
+          staff_id: string;
+          start_time: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          day_of_week: number;
+          end_time: string;
+          facility_id: string;
+          id?: string;
+          is_available?: boolean;
+          staff_id: string;
+          start_time: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          day_of_week?: number;
+          end_time?: string;
+          facility_id?: string;
+          id?: string;
+          is_available?: boolean;
+          staff_id?: string;
+          start_time?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_stylist_availability_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_stylist_availability_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "grooming_stylist_availability_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_stylist_profiles: {
+        Row: {
+          bio: string;
+          calendar_color: string | null;
+          can_handle_aggressive: boolean;
+          can_handle_anxious: boolean;
+          can_handle_matted: boolean;
+          certifications: string[];
+          created_at: string;
+          facility_id: string;
+          id: string;
+          legacy_id: string | null;
+          max_concurrent_appointments: number;
+          max_daily_appointments: number;
+          max_weekly_appointments: number | null;
+          notification_prefs: Json | null;
+          on_leave: boolean;
+          preferred_pet_sizes: string[];
+          qualified_service_ids: string[];
+          skill_level: string;
+          specializations: string[];
+          staff_id: string;
+          updated_at: string;
+          visible_online: boolean;
+          years_experience: number;
+        };
+        Insert: {
+          bio?: string;
+          calendar_color?: string | null;
+          can_handle_aggressive?: boolean;
+          can_handle_anxious?: boolean;
+          can_handle_matted?: boolean;
+          certifications?: string[];
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          legacy_id?: string | null;
+          max_concurrent_appointments?: number;
+          max_daily_appointments?: number;
+          max_weekly_appointments?: number | null;
+          notification_prefs?: Json | null;
+          on_leave?: boolean;
+          preferred_pet_sizes?: string[];
+          qualified_service_ids?: string[];
+          skill_level?: string;
+          specializations?: string[];
+          staff_id: string;
+          updated_at?: string;
+          visible_online?: boolean;
+          years_experience?: number;
+        };
+        Update: {
+          bio?: string;
+          calendar_color?: string | null;
+          can_handle_aggressive?: boolean;
+          can_handle_anxious?: boolean;
+          can_handle_matted?: boolean;
+          certifications?: string[];
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          legacy_id?: string | null;
+          max_concurrent_appointments?: number;
+          max_daily_appointments?: number;
+          max_weekly_appointments?: number | null;
+          notification_prefs?: Json | null;
+          on_leave?: boolean;
+          preferred_pet_sizes?: string[];
+          qualified_service_ids?: string[];
+          skill_level?: string;
+          specializations?: string[];
+          staff_id?: string;
+          updated_at?: string;
+          visible_online?: boolean;
+          years_experience?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_stylist_profiles_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_stylist_profiles_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "grooming_stylist_profiles_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       grooming_ticket_comments: {
         Row: {
           author_name: string;
@@ -1668,6 +1833,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "facilities";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "offboarding_instances_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
           },
           {
             foreignKeyName: "offboarding_instances_staff_id_fkey";
@@ -2038,6 +2210,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "facilities";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "onboarding_instances_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
           },
           {
             foreignKeyName: "onboarding_instances_staff_id_fkey";
@@ -2824,6 +3003,13 @@ export type Database = {
             foreignKeyName: "staff_custom_roles_staff_id_fkey";
             columns: ["staff_id"];
             isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "staff_custom_roles_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
             referencedRelation: "staff";
             referencedColumns: ["id"];
           },
@@ -2895,6 +3081,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "onboarding_instances";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_documents_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
           },
           {
             foreignKeyName: "staff_documents_staff_id_fkey";
@@ -2992,6 +3185,13 @@ export type Database = {
             foreignKeyName: "staff_permissions_staff_id_fkey";
             columns: ["staff_id"];
             isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "staff_permissions_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
             referencedRelation: "staff";
             referencedColumns: ["id"];
           },
@@ -3066,6 +3266,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "onboarding_instances";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_signatures_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
           },
           {
             foreignKeyName: "staff_signatures_staff_id_fkey";
@@ -3182,6 +3389,22 @@ export type Database = {
           },
           {
             foreignKeyName: "customer_packages_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_stylist_stats: {
+        Row: {
+          facility_id: string | null;
+          staff_id: string | null;
+          total_appointments: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_facility_id_fkey";
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";

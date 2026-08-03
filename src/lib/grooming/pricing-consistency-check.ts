@@ -70,9 +70,10 @@ const FIXTURE_PACKAGE: GroomingPackage = {
 
 const EMPTY_OVERRIDES: PetServicePricingOverride[] = [];
 
-// Real stylist IDs from src/data/grooming.ts — the resolver looks each one
-// up to read `capacity.skillLevel`, so we can't pass a fake id.
-const STYLIST_ID_PREMIUM = "stylist-001"; // skillLevel: "premium"
+// The resolver no longer looks a stylist up -- the tier is passed in -- so
+// these are just the two halves of "a premium groomer", stated together.
+const STYLIST_ID_PREMIUM = "stylist-001";
+const STYLIST_TIER_PREMIUM = "premium" as const;
 
 // ── Scenarios ──────────────────────────────────────────────────────────────
 
@@ -104,7 +105,7 @@ export function runPricingConsistencyChecks(): ConsistencyReport {
       petSize: "large",
       petBreed: "Mixed",
       petCoatType: "long",
-      stylistId: undefined,
+      stylistTier: undefined,
       package: FIXTURE_PACKAGE,
       petPricingOverrides: EMPTY_OVERRIDES,
     });
@@ -126,6 +127,7 @@ export function runPricingConsistencyChecks(): ConsistencyReport {
       petBreed: "Mixed",
       petCoatType: "long",
       stylistId: STYLIST_ID_PREMIUM,
+      stylistTier: STYLIST_TIER_PREMIUM,
       package: FIXTURE_PACKAGE,
       petPricingOverrides: EMPTY_OVERRIDES,
     });
@@ -146,7 +148,7 @@ export function runPricingConsistencyChecks(): ConsistencyReport {
       petSize: "medium",
       petBreed: "Standard Poodle",
       petCoatType: "long",
-      stylistId: undefined,
+      stylistTier: undefined,
       package: FIXTURE_PACKAGE,
       petPricingOverrides: EMPTY_OVERRIDES,
     });
@@ -171,6 +173,7 @@ export function runPricingConsistencyChecks(): ConsistencyReport {
       petBreed: "Standard Poodle",
       petCoatType: "long",
       stylistId: STYLIST_ID_PREMIUM,
+      stylistTier: STYLIST_TIER_PREMIUM,
       package: FIXTURE_PACKAGE,
       petPricingOverrides: EMPTY_OVERRIDES,
     });
@@ -190,6 +193,7 @@ export function runPricingConsistencyChecks(): ConsistencyReport {
       petBreed: "Standard Poodle",
       petCoatType: "long",
       stylistId: STYLIST_ID_PREMIUM,
+      stylistTier: STYLIST_TIER_PREMIUM,
       package: FIXTURE_PACKAGE,
       petPricingOverrides: [
         {
@@ -222,7 +226,7 @@ export function runPricingConsistencyChecks(): ConsistencyReport {
       petSize: "small",
       petBreed: "Chihuahua",
       petCoatType: "short",
-      stylistId: undefined,
+      stylistTier: undefined,
       package: FIXTURE_PACKAGE,
       petPricingOverrides: EMPTY_OVERRIDES,
     });
@@ -244,7 +248,7 @@ export function runPricingConsistencyChecks(): ConsistencyReport {
       petSize: "large" as const,
       petBreed: "Mixed",
       petCoatType: "long" as const,
-      stylistId: undefined,
+      stylistTier: undefined,
       package: FIXTURE_PACKAGE,
       petPricingOverrides: EMPTY_OVERRIDES,
     };

@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
+import { useStylists } from "@/lib/api/stylists";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,13 +53,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  stylists,
-  stylistAvailability,
-  groomingAppointments,
-  groomingPackages,
-} from "@/data/grooming";
+import { groomingAppointments, groomingPackages } from "@/data/grooming";
 import type {
+  Stylist,
   StylistCapacity,
   StylistSkillLevel,
   GroomerNotificationPrefs,
@@ -152,10 +151,13 @@ function fallbackColorFor(staffId: string): string {
   ];
 }
 
-function buildMergedStylists(staffList: StaffProfile[]): MergedStylist[] {
+function buildMergedStylists(
+  staffList: StaffProfile[],
+  profiles: Stylist[],
+): MergedStylist[] {
   const groomers = staffList.filter((s) => s.primaryRole === "groomer");
   return groomers.map((staff) => {
-    const profile = stylists.find((s) => s.staffId === staff.id);
+    const profile = profiles.find((s) => s.staffId === staff.id);
     return {
       staffId: staff.id,
       stylistId: profile?.id,
@@ -259,17 +261,13 @@ export default function StylistsPage() {
     qualifiedPackageIds: [] as string[],
   });
 
+  // Seeded from the fetched roster rather than a module array, so it cannot be
+  // populated at mount. It starts empty and fills in from `stylistProfiles`
+  // below; an unseen groomer defaults to visible, which is what
+  // `visibleOnline !== false` meant.
   const [groomerVisibility, setGroomerVisibility] = useState<
     Record<string, boolean>
-  >(() =>
-    stylists.reduce(
-      (acc, s) => {
-        if (s.staffId) acc[s.staffId] = s.visibleOnline !== false;
-        return acc;
-      },
-      {} as Record<string, boolean>,
-    ),
-  );
+  >({});
 
   const [availabilityData, setAvailabilityData] = useState<
     Record<number, { isAvailable: boolean; startTime: string; endTime: string }>
@@ -283,7 +281,32 @@ export default function StylistsPage() {
     6: { isAvailable: false, startTime: "08:00", endTime: "17:00" },
   });
 
-  const mergedStylists = useMemo(() => buildMergedStylists(facilityStaff), []);
+  const { data: stylistProfiles = [] } = useStylists();
+  const { data: stylistHours = [] } = useQuery(
+    groomingQueries.allStylistAvailability(),
+  );
+  const mergedStylists = useMemo(
+    () => buildMergedStylists(facilityStaff, stylistProfiles),
+    [stylistProfiles],
+  );
+
+  // The visibility toggles follow the roster once it arrives. Keyed on staff
+  // id, and only for groomers not already toggled in this session, so a switch
+  // the user just flipped is not undone by a refetch.
+  useEffect(() => {
+    if (stylistProfiles.length === 0) return;
+    setGroomerVisibility((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const profile of stylistProfiles) {
+        if (profile.staffId && !(profile.staffId in next)) {
+          next[profile.staffId] = profile.visibleOnline !== false;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [stylistProfiles]);
 
   const stylistMetrics = useMemo(() => {
     const metricsMap = new Map<
@@ -325,7 +348,7 @@ export default function StylistsPage() {
     const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     mergedStylists.forEach((g) => {
       if (!g.stylistId) return;
-      const slots = stylistAvailability.filter(
+      const slots = stylistHours.filter(
         (a) => a.stylistId === g.stylistId && a.isAvailable,
       );
       if (slots.length === 0) {
@@ -368,7 +391,7 @@ export default function StylistsPage() {
       );
     });
     return map;
-  }, [mergedStylists]);
+  }, [mergedStylists, stylistHours]);
 
   const activePackages = useMemo(
     () => groomingPackages.filter((p) => p.isActive),
@@ -640,7 +663,7 @@ export default function StylistsPage() {
     };
 
     if (groomer.stylistId) {
-      stylistAvailability
+      stylistHours
         .filter((a) => a.stylistId === groomer.stylistId)
         .forEach((a) => {
           existingAvailability[a.dayOfWeek] = {

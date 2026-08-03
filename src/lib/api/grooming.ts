@@ -2,15 +2,14 @@
 // /api/grooming/appointments now. The rest of this file is still fixtures —
 // stylists, products, inventory — and the mix is deliberate rather than
 // half-finished. See the note on groomingQueries.appointments below.
+// `stylists` and `stylistAvailability` are gone from this import: groomers come
+// from /api/grooming/stylists, which joins the grooming profile onto the real
+// staff row (20260806500000).
 import {
   groomingPackages,
   groomingProducts,
   inventoryOrders,
-  stylists,
-  stylistAvailability,
 } from "@/data/grooming";
-import { groomingPrepaidPackages } from "@/data/grooming-prepaid-packages";
-import type { GroomingPrepaidPackage } from "@/data/grooming-prepaid-packages";
 // `mockCustomerPackages` is gone from this import too: what a customer owns
 // comes from /api/packages/owned. The type stays — it is the shape
 // six screens already read, and the mapper fills it from Postgres.
@@ -47,9 +46,62 @@ import type { PetSize } from "@/types/base";
 // appointments. Enforced in the data layer; same data admin sees when unscoped.
 // ============================================================================
 
-/** The stylist id for a facility staff member (fs-* id), or undefined. */
+// ── The staff → stylist index ──────────────────────────────────────────────
+//
+// `stylistIdForStaff` used to search a module array, which made it synchronous
+// for free. The list is fetched now, so the index is a cache primed by the
+// stylists request, and callers must make sure it has loaded.
+//
+// Two ways of doing that, both used deliberately:
+//
+//   - `fetchGroomingAppointments` AWAITS `ensureStylistIndex()` before it
+//     remaps. It is already async, so there is no reason for it to race.
+//
+//   - React components use `useStylistIdForStaff` (src/lib/api/stylists.ts),
+//     which subscribes to the query and re-renders when it resolves. The bare
+//     function below would hand them `undefined` on first paint and never tell
+//     them it had changed.
+
+let stylistIndex: Map<string, string> | null = null;
+let stylistIndexLoad: Promise<void> | null = null;
+
+interface StylistPayload {
+  stylists: Stylist[];
+  availability: StylistAvailability[];
+}
+
+async function fetchStylistPayload(): Promise<StylistPayload> {
+  const response = await fetch("/api/grooming/stylists");
+  if (!response.ok) {
+    const parsed = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+  }
+  const payload = (await response.json()) as StylistPayload;
+  stylistIndex = new Map(
+    payload.stylists
+      .filter((s): s is Stylist & { staffId: string } => Boolean(s.staffId))
+      .map((s) => [s.staffId, s.id]),
+  );
+  return payload;
+}
+
+/** Load the index once. Concurrent callers share the one request. */
+export function ensureStylistIndex(): Promise<void> {
+  if (stylistIndex) return Promise.resolve();
+  stylistIndexLoad ??= fetchStylistPayload().then(() => undefined);
+  return stylistIndexLoad;
+}
+
+/**
+ * The stylist id for a facility staff member (fs-* id), or undefined.
+ *
+ * Returns undefined until the stylist list has loaded at least once. In a
+ * component, use `useStylistIdForStaff` instead — it waits and re-renders.
+ */
 export function stylistIdForStaff(staffId: string): string | undefined {
-  return stylists.find((s) => s.staffId === staffId)?.id;
+  return stylistIndex?.get(staffId);
 }
 
 /** Filter grooming appointments to those of `staffId`'s stylist (8B). Returns
@@ -222,6 +274,10 @@ async function fetchGroomingAppointments(): Promise<GroomingAppointment[]> {
     throw new Error(parsed?.error ?? `Request failed (${response.status})`);
   }
   const rows = (await response.json()) as GroomingAppointment[];
+  // Primed before the remap, not hoped for. Without this the first load of the
+  // board would map every appointment to a staff id and put every pet in no
+  // groomer's column.
+  await ensureStylistIndex();
   return rows.map((a) => ({
     ...a,
     stylistId: a.stylistId
@@ -274,32 +330,36 @@ export const groomingQueries = {
   }),
   stylists: () => ({
     queryKey: ["grooming", "stylists"] as const,
-    queryFn: async () => stylists as Stylist[],
+    queryFn: async () => (await fetchStylistPayload()).stylists,
   }),
   stylist: (id: string) => ({
     queryKey: ["grooming", "stylists", id] as const,
     queryFn: async () =>
-      stylists.find((s) => s.id === id) as Stylist | undefined,
+      (await fetchStylistPayload()).stylists.find((s) => s.id === id),
   }),
+  // Both availability factories share the stylists request. The route returns
+  // groomers and hours together because serving the hours needs the groomer
+  // lookup anyway -- see its header.
   stylistAvailability: (stylistId: string) => ({
     queryKey: ["grooming", "stylists", stylistId, "availability"] as const,
     queryFn: async () =>
-      stylistAvailability.filter(
+      (await fetchStylistPayload()).availability.filter(
         (a) => a.stylistId === stylistId,
-      ) as StylistAvailability[],
+      ),
   }),
   allStylistAvailability: () => ({
     queryKey: ["grooming", "stylist-availability"] as const,
-    queryFn: async () => stylistAvailability as StylistAvailability[],
+    queryFn: async () => (await fetchStylistPayload()).availability,
   }),
   packages: () => ({
     queryKey: ["grooming", "packages"] as const,
     queryFn: async () => groomingPackages as GroomingPackage[],
   }),
-  prepaidPackages: () => ({
-    queryKey: ["grooming", "prepaid-packages"] as const,
-    queryFn: async () => groomingPrepaidPackages as GroomingPrepaidPackage[],
-  }),
+  // `prepaidPackages` used to sit here, serving the fixture. It is gone rather
+  // than repointed: the catalogue comes from `usePrepaidPackages`
+  // (src/lib/api/prepaid-packages.ts), and this factory had no callers left
+  // once the screen moved -- a second door to the same data that only ever
+  // returned the stale copy.
   customerPackages: () => ({
     queryKey: ["grooming", "customer-packages"] as const,
     queryFn: () => fetchCustomerPackages(),
@@ -481,7 +541,23 @@ export function resolveEffectivePricing(args: {
   petCoatType?: CoatType;
   /** Pet age in months. When provided, age-group rules are evaluated. */
   petAgeMonths?: number;
+  /** The assigned groomer, for the per-stylist price list (step 3). */
   stylistId?: string;
+  /**
+   * The assigned groomer's skill tier, when there is one.
+   *
+   * Was `stylistId`, resolved against the mock stylist array inside this
+   * function. That array is gone, and a cached lookup would have been worse
+   * than the fixture: a miss would silently skip the tier surcharge and return
+   * a price that is quietly too low. Passing the tier makes the dependency
+   * impossible to lose.
+   *
+   * Separate from `stylistId` because they are separate features:
+   * `pkg.stylistPricing` is an explicit amount for one named groomer, and
+   * `pkg.tierAdjustments` is a surcharge for a whole tier. The id could not
+   * stand in for the tier once the roster stopped being a module array.
+   */
+  stylistTier?: StylistSkillLevel;
   package: GroomingPackage;
   petPricingOverrides: PetServicePricingOverride[];
 }): EffectivePricing {
@@ -492,6 +568,7 @@ export function resolveEffectivePricing(args: {
     petCoatType,
     petAgeMonths,
     stylistId,
+    stylistTier,
     package: pkg,
     petPricingOverrides,
   } = args;
@@ -588,14 +665,11 @@ export function resolveEffectivePricing(args: {
   // on the assigned stylist's tier.
   let tierAdjustment: EffectivePricing["tierAdjustment"] | undefined;
   let finalPrice = preTierPrice;
-  if (stylistId && pkg.tierAdjustments) {
-    const stylist = stylists.find((s) => s.id === stylistId);
-    if (stylist && pkg.tierAdjustments[stylist.capacity.skillLevel]) {
-      const delta = pkg.tierAdjustments[stylist.capacity.skillLevel]!;
-      if (delta !== 0) {
-        tierAdjustment = { tier: stylist.capacity.skillLevel, delta };
-        finalPrice = Math.max(0, preTierPrice + delta);
-      }
+  if (stylistTier && pkg.tierAdjustments) {
+    const delta = pkg.tierAdjustments[stylistTier];
+    if (delta) {
+      tierAdjustment = { tier: stylistTier, delta };
+      finalPrice = Math.max(0, preTierPrice + delta);
     }
   }
 
@@ -918,7 +992,10 @@ export function propagatePackageChangesToUpcoming(args: {
     const pricing = resolveEffectivePricing({
       petId: a.petId,
       petSize: a.petSize,
-      stylistId: a.stylistId,
+      // The appointment carries a stylist id, not a tier. Callers that know
+      // the roster pass `stylistTier`; this bulk repricing path does not have
+      // it, so it reprices without the tier surcharge -- the same result the
+      // old code gave whenever the stylist was not one of the five mock ones.
       package: updatedPackage,
       petPricingOverrides,
     });

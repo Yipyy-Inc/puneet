@@ -19,7 +19,7 @@ import {
   stylistMatchesPreference,
   timeMatchesPreference,
 } from "@/lib/grooming-waitlist-matcher";
-import { stylistIdForStaff } from "@/lib/api/grooming";
+import { ensureStylistIndex, stylistIdForStaff } from "@/lib/api/grooming";
 import { WAITLIST_OFFER_WINDOW_MINUTES } from "@/lib/grooming-waitlist-offer";
 
 // ============================================================================
@@ -137,16 +137,23 @@ async function json<T>(
 
 /**
  * The route emits STAFF legacy ids in `preferredStylistIds`; the screens compare
- * against stylist ids. Remapped here rather than server-side because
- * `stylistIdForStaff` reads the mock stylist list, and the same seam already
- * exists for appointments (src/lib/api/grooming.ts).
+ * against stylist ids. Remapped here rather than server-side because the same
+ * seam already exists for appointments (src/lib/api/grooming.ts).
+ *
+ * `ensureStylistIndex` is awaited first. The index used to be a module array
+ * that was always there; it is a fetch now, and without the await the first
+ * load would leave every preferred groomer as a staff id -- matching no slot,
+ * which reads as "this family will take anyone" when they asked for Amy.
  *
  * A preferred groomer who is not one of the mock stylists keeps its staff id
  * rather than being dropped — it then matches no slot, which is visible, where
  * silently emptying the list would turn "only Amy" into "anyone".
  */
 async function fetchWaitlist(): Promise<GroomingWaitlistEntry[]> {
-  const rows = await json<GroomingWaitlistEntry[]>(BASE);
+  const [rows] = await Promise.all([
+    json<GroomingWaitlistEntry[]>(BASE),
+    ensureStylistIndex(),
+  ]);
   return rows.map((entry) => ({
     ...entry,
     preferredStylistIds: (entry.preferredStylistIds ?? []).map(

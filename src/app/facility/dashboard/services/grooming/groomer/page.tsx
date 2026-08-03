@@ -33,11 +33,11 @@ import {
 } from "lucide-react";
 import {
   groomingAppointments,
-  stylists,
   type GroomingAppointment,
   type GroomingStatus,
   type GroomingPhoto,
 } from "@/data/grooming";
+import { useStylists } from "@/lib/api/stylists";
 
 const statusColors: Record<
   GroomingStatus,
@@ -94,13 +94,15 @@ export default function GroomerDashboardPage() {
   const [appointmentsData, setAppointmentsData] =
     useState<GroomingAppointment[]>(groomingAppointments);
 
+  const { data: stylists = [] } = useStylists();
+
   // Find the stylist for the current user
   // In a real app, userId would match stylist.id or stylist.email
   const currentStylist = useMemo(() => {
     if (!userId) return null;
     // Try to match by ID first, then by email
     return stylists.find((s) => s.id === userId || s.email === userId) || null;
-  }, [userId]);
+  }, [userId, stylists]);
 
   // Get today's appointments for this groomer
   const todayAppointments = useMemo(() => {

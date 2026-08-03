@@ -404,7 +404,7 @@ function GroomingPackagePicker({
               petSize: getPetSize(primaryPet),
               petCoatType: coatTypeEnum.safeParse(primaryPet.coatType).data,
               petBreed: primaryPet.breed,
-              stylistId: undefined,
+              stylistTier: undefined,
               package: pkg,
               petPricingOverrides: [],
             });
@@ -1002,6 +1002,7 @@ function GroomingPriceOverride({
   const { data: allPetPricing = [] } = useQuery(
     groomingQueries.allPetServicePricing(),
   );
+  const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
   const selectedPackage = groomingPackages.find(
     (p) => p.id === selectedPackageId,
   );
@@ -1014,10 +1015,14 @@ function GroomingPriceOverride({
       petSize: getPetSize(primaryPet),
       petBreed: primaryPet.breed || undefined,
       stylistId: stylistId || undefined,
+      // The tier drives `pkg.tierAdjustments`; the id drives the per-groomer
+      // price list. Two different surcharges, so both are passed.
+      stylistTier: stylistsData.find((s) => s.id === stylistId)?.capacity
+        .skillLevel,
       package: selectedPackage,
       petPricingOverrides: allPetPricing,
     });
-  }, [selectedPackage, primaryPet, stylistId, allPetPricing]);
+  }, [selectedPackage, primaryPet, stylistId, allPetPricing, stylistsData]);
 
   if (!resolved || !primaryPet) return null;
 

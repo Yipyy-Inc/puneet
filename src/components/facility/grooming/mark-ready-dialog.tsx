@@ -27,7 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { stylistIdForStaff } from "@/lib/api/grooming";
+import { useStylistIdForStaff } from "@/lib/api/stylists";
 import type { GroomingAppointment } from "@/types/grooming";
 
 export interface MarkReadyFinalCharge {
@@ -79,9 +79,10 @@ export function MarkReadyDialog({
   // Section 5A — when grooming_upload_photos is assigned_only, the photo step
   // appears only on the viewer's OWN appointments.
   const photoScope = useAssignedScope("grooming_upload_photos");
+  const photoScopeStylistId = useStylistIdForStaff(photoScope ?? undefined);
   const isOwnAppointment =
     photoScope == null ||
-    (apt != null && stylistIdForStaff(photoScope) === apt.stylistId);
+    (apt != null && photoScopeStylistId === apt.stylistId);
   const canUploadPhotos =
     usePermission("grooming_upload_photos") && isOwnAppointment;
   const canAddNotes = usePermission("add_grooming_notes");

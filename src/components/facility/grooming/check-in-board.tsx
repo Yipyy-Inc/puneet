@@ -32,7 +32,7 @@ import { GroomerColumn } from "./check-in-board-column";
 import { WaitlistRow } from "./check-in-board-waitlist";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { stylistIdForStaff } from "@/lib/api/grooming";
+import { useStylistIdForStaff } from "@/lib/api/stylists";
 import {
   useRecordPayment,
   useSaveAppointmentIntake,
@@ -73,9 +73,7 @@ export function CheckInBoard() {
   // groomer column still renders, but only the VIEWER's column carries cards +
   // action buttons. Undefined for full-access viewers (admin) → unchanged.
   const queueScope = useAssignedScope("view_grooming_queue");
-  const viewerStylistId = queueScope
-    ? stylistIdForStaff(queueScope)
-    : undefined;
+  const viewerStylistId = useStylistIdForStaff(queueScope ?? undefined);
 
   const { data: apptData = [] } = useQuery(groomingQueries.appointments());
   const { data: stylistData = [] } = useQuery(groomingQueries.stylists());
