@@ -43,7 +43,7 @@ import {
 } from "@/lib/cash-register-store";
 import { resolveRegisterContext } from "@/lib/employee/register-context";
 import { shouldPromptCloseOnExit } from "@/lib/register-hours";
-import { useStaffHrConfig } from "@/data/staff-onboarding";
+import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 import { ClockInOut } from "@/components/employee/ClockInOut";

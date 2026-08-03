@@ -49,7 +49,7 @@ import {
   type NotificationScope,
 } from "@/types/facility-staff";
 import { FACILITY_LOCATIONS } from "@/data/facility-staff";
-import { useStaffHrConfig } from "@/data/staff-onboarding";
+import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import { RoleIcon, ServiceIcon } from "./staff-shared";
 import { AdditionalRolesGrid } from "./additional-roles-grid";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";

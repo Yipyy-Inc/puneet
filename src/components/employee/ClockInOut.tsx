@@ -10,7 +10,7 @@ import {
   clockElapsedLabel,
 } from "@/components/employee/ClockConfirm";
 import { useClock, clockIn, clockOut } from "@/lib/employee/clock-store";
-import { useStaffHrConfig } from "@/data/staff-onboarding";
+import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import { usePermission, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import {
   getTodaySession,

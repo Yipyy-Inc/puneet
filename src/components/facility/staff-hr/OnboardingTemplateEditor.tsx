@@ -11,8 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import type { FacilityStaffRole } from "@/types/facility-staff";
+import { useSaveOnboardingTemplate } from "@/lib/api/staff-onboarding";
 import {
-  saveOnboardingTemplate,
   type OnboardingTemplate,
   type OnboardingTask,
   type OnboardingTaskType,
@@ -76,6 +76,8 @@ export function OnboardingTemplateEditor({
   template: OnboardingTemplate;
   onBack: () => void;
 }) {
+  const { mutate: saveTemplate, isPending: saving } =
+    useSaveOnboardingTemplate();
   const [draft, setDraft] = useState<OnboardingTemplate>(template);
   const dirty = JSON.stringify(draft) !== JSON.stringify(template);
 
@@ -111,10 +113,20 @@ export function OnboardingTemplateEditor({
     patch({ managerTasks });
   };
 
+  // Same correction as the offboarding editor: this wrote to the mock store
+  // while the list it returns to reads Postgres, so the save reported success
+  // and the edit was gone on reload. Navigation now waits for the write.
   const save = () => {
-    saveOnboardingTemplate(draft);
-    toast.success("Template saved");
-    onBack();
+    saveTemplate(draft, {
+      onSuccess: () => {
+        toast.success("Template saved");
+        onBack();
+      },
+      onError: (error) =>
+        toast.error(
+          error instanceof Error ? error.message : "Could not save template.",
+        ),
+    });
   };
 
   return (
@@ -126,7 +138,7 @@ export function OnboardingTemplateEditor({
         </Button>
         <Button
           onClick={save}
-          disabled={!dirty}
+          disabled={!dirty || saving}
           className="bg-emerald-600 text-white hover:bg-emerald-700"
         >
           Save template
@@ -253,7 +265,7 @@ export function OnboardingTemplateEditor({
       <div className="flex justify-end">
         <Button
           onClick={save}
-          disabled={!dirty}
+          disabled={!dirty || saving}
           className="bg-emerald-600 text-white hover:bg-emerald-700"
         >
           Save template

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Vault, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePermission, useFacilityViewer } from "@/hooks/use-facility-rbac";
-import { useStaffHrConfig } from "@/data/staff-onboarding";
+import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import {
   requestRegisterClose,
   todayBusinessDate,

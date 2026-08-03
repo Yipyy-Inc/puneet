@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import {
-  saveOffboardingTemplate,
-  useStaffHrConfig,
-  type OffboardingTemplate,
-  type OffboardingTask,
+import type {
+  OffboardingTemplate,
+  OffboardingTask,
 } from "@/data/staff-onboarding";
+import {
+  useStaffHrConfig,
+  useSaveOffboardingTemplate,
+} from "@/lib/api/staff-onboarding";
 import {
   TaskConfigEditor,
   type TaskConfigValue,
@@ -65,6 +67,8 @@ export function OffboardingTemplateEditor({
   // status-change dialog offers), so a reason-scoped template actually matches
   // a termination. `appliesToReasons` stores the reason LABEL string.
   const { terminationReasons } = useStaffHrConfig();
+  const { mutate: saveTemplate, isPending: saving } =
+    useSaveOffboardingTemplate();
   const [draft, setDraft] = useState<OffboardingTemplate>(template);
   const dirty = JSON.stringify(draft) !== JSON.stringify(template);
 
@@ -78,10 +82,21 @@ export function OffboardingTemplateEditor({
         : draft.appliesToReasons.filter((r) => r !== reason),
     });
 
+  // Navigating back happens in onSuccess, not alongside the call. This wrote to
+  // the mock store while the LIST it returns to reads Postgres, so a save said
+  // "Template saved", closed the editor, and lost the edit — the two halves of
+  // the screen were talking to different systems.
   const save = () => {
-    saveOffboardingTemplate(draft);
-    toast.success("Template saved");
-    onBack();
+    saveTemplate(draft, {
+      onSuccess: () => {
+        toast.success("Template saved");
+        onBack();
+      },
+      onError: (error) =>
+        toast.error(
+          error instanceof Error ? error.message : "Could not save template.",
+        ),
+    });
   };
 
   return (
@@ -93,7 +108,7 @@ export function OffboardingTemplateEditor({
         </Button>
         <Button
           onClick={save}
-          disabled={!dirty}
+          disabled={!dirty || saving}
           className="bg-emerald-600 text-white hover:bg-emerald-700"
         >
           Save template
@@ -163,7 +178,7 @@ export function OffboardingTemplateEditor({
       <div className="flex justify-end">
         <Button
           onClick={save}
-          disabled={!dirty}
+          disabled={!dirty || saving}
           className="bg-emerald-600 text-white hover:bg-emerald-700"
         >
           Save template

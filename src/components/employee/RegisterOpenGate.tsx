@@ -14,7 +14,7 @@ import {
   type DenominationCount,
 } from "@/data/cash-drawer";
 import { usePermission, useFacilityViewer } from "@/hooks/use-facility-rbac";
-import { useStaffHrConfig } from "@/data/staff-onboarding";
+import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import {
   getRegisterSessions,
   openRegister,

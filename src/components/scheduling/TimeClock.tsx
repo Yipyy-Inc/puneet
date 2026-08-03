@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Clock, LogIn, LogOut } from "lucide-react";
 import { ClockConfirm } from "@/components/employee/ClockConfirm";
-import { useStaffHrConfig } from "@/data/staff-onboarding";
+import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import { cn } from "@/lib/utils";
 import { formatElapsed } from "@/lib/scheduling-utils";
 import type {
