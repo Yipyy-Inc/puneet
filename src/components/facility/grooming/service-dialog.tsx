@@ -34,6 +34,7 @@ import {
   findAffectedUpcomingAppointments,
   propagatePackageChangesToUpcoming,
 } from "@/lib/api/grooming";
+import { useSaveGroomingService } from "@/lib/api/grooming-catalogue";
 import type { GroomingAppointment } from "@/types/grooming";
 import { cn } from "@/lib/utils";
 import {
@@ -499,6 +500,7 @@ export function ServiceDialog({
 }: ServiceDialogProps) {
   const isEditing = !!editingPackage;
   const queryClient = useQueryClient();
+  const { mutate: saveService, isPending: saving } = useSaveGroomingService();
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
   const { data: appointmentsData = [] } = useQuery(
     groomingQueries.appointments(),
@@ -799,15 +801,42 @@ export function ServiceDialog({
         : undefined,
     };
 
-    queryClient.setQueryData<GroomingPackage[]>(
-      ["grooming", "packages"],
-      (prev = []) =>
-        isEditing
-          ? prev.map((p) => (p.id === next.id ? next : p))
-          : [...prev, next],
+    // POSTGRES, not the query cache. This was
+    // `queryClient.setQueryData(["grooming","packages"], …)` — a write that
+    // reported success and vanished on reload, the same failure the onboarding
+    // template editors had.
+    //
+    // Not awaited before the prompt below: the "apply to upcoming
+    // appointments?" flow is about local appointment state and does not depend
+    // on the service row landing. The toast, however, IS deferred to the
+    // response, because a save that says "updated" before the server agrees is
+    // exactly what this replaces.
+    saveService(
+      { ...next, id: isEditing ? editingPackage?.id : undefined },
+      {
+        onSuccess: (result) => {
+          if (result.pricesWritten) {
+            toast.success(
+              isEditing ? `"${name}" updated` : `"${name}" created`,
+            );
+          } else {
+            // Two permissions, two outcomes. `manage_services` created the
+            // service; `manage_rates` refused the price table. Saying "saved"
+            // here would hide a price list that did not save.
+            toast.warning(
+              isEditing
+                ? `"${name}" updated, but the prices were not saved.`
+                : `"${name}" created, but the prices were not saved.`,
+              { description: "You do not have permission to set rates." },
+            );
+          }
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof Error ? error.message : "Could not save service.",
+          ),
+      },
     );
-
-    toast.success(isEditing ? `"${name}" updated` : `"${name}" created`);
 
     // For edits, surface the "apply to upcoming unconfirmed appointments?"
     // prompt when anything that affects price or duration changed. The
@@ -1865,8 +1894,8 @@ export function ServiceDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>
-            {isEditing ? "Save Changes" : "Create Service"}
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : isEditing ? "Save Changes" : "Create Service"}
           </Button>
         </DialogFooter>
       </DialogContent>

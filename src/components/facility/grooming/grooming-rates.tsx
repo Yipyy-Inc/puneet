@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { groomingQueries } from "@/lib/api/grooming";
+import {
+  useDeleteGroomingService,
+  useGroomingServices,
+} from "@/lib/api/grooming-catalogue";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -391,8 +393,11 @@ function ChargeEditorDialog({
 // ─────────────────────────────────────────────────────────────────────────
 
 export function GroomingRates() {
-  const queryClient = useQueryClient();
-  const { data: services = [] } = useQuery(groomingQueries.packages());
+  // The menu, from Postgres. RLS decides what comes back — staff see drafts, a
+  // signed-in client sees only live services — so this list is not re-filtered
+  // here.
+  const { data: services = [] } = useGroomingServices();
+  const { mutate: deleteService } = useDeleteGroomingService();
   // Section 3B / Table 4 — pricing mutations require grooming_edit_pricing
   // (all-access fallback keeps them for admin outside the RBAC provider).
   const canEditPricing = usePermission("grooming_edit_pricing");
@@ -438,12 +443,23 @@ export function GroomingRates() {
     setEditingService(null);
     setServiceDialogOpen(true);
   }
+  // A REAL delete. This was `queryClient.setQueryData(…)` — the service came
+  // back on reload and the toast was the only thing that happened.
+  //
+  // Safe to be a hard delete rather than a soft one: grooming_appointments
+  // snapshots the name and price it was sold at and its FK is
+  // `on delete set null` (20260805140000), so retiring a service removes it
+  // from the menu without touching a single past sale.
   function handleServiceDelete(pkg: GroomingPackage) {
-    queryClient.setQueryData<GroomingPackage[]>(
-      ["grooming", "packages"],
-      (prev = []) => prev.filter((p) => p.id !== pkg.id),
-    );
-    toast.success(`"${pkg.name}" deleted`);
+    deleteService(pkg.id, {
+      onSuccess: () => toast.success(`"${pkg.name}" deleted`),
+      onError: (error) =>
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : `Could not delete "${pkg.name}".`,
+        ),
+    });
   }
 
   // ── Service charge handlers ──────────────────────────────────────────
