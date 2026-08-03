@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
+import { clientQueries } from "@/lib/api/client";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import {
@@ -22,17 +24,30 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { TagList } from "@/components/shared/TagList";
 
-// Mock customer ID - TODO: Get from auth context
+// The signed-out fallback only. Signed in, RLS answers this question — see below.
 const MOCK_CUSTOMER_ID = 15;
 
 export default function CustomerPetsPage() {
   const { selectedFacility } = useCustomerFacility();
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Get customer and their pets
+  // WHOSE PETS THESE ARE IS NOT A CLIENT-SIDE DECISION.
+  //
+  // This picked client 15 out of the mock array by hardcoded id, with a TODO
+  // about auth. There is auth now, and the answer is better than a lookup:
+  // `clients_read` admits `profile_id = auth.uid()`, so /api/clients returns
+  // exactly ONE record to a customer — their own. Taking the first row is not a
+  // shortcut, it is the whole list.
+  //
+  // The mock id survives only for the signed-out fallback, where there is no
+  // session to ask and the array is all there is.
+  const { data: roster } = useQuery(clientQueries.all());
   const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
+    () =>
+      roster?.length
+        ? (roster.find((c) => c.id === MOCK_CUSTOMER_ID) ?? roster[0])
+        : clients.find((c) => c.id === MOCK_CUSTOMER_ID),
+    [roster],
   );
 
   const customerPets = useMemo(() => customer?.pets || [], [customer]);

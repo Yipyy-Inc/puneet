@@ -291,16 +291,23 @@ test.describe("Staff portal nav parity", () => {
     page,
     context,
   }) => {
+    // /employee/marketing is one of the heaviest routes in the app, and the dev
+    // server compiles it on first hit. This test failed twice for that reason
+    // alone — once timing out inside `goto` waiting for `load`, then again on a
+    // 60s assertion — while passing whenever the route happened to be warm.
+    // Both reds were about compile time and nothing else, which is the most
+    // expensive kind: they look like a permissions regression.
+    test.setTimeout(240_000);
+
     // Marketing is absent from the caretaker preset, so this needs no override.
     await enterPortalAs(context, page, ACCOUNTS.caretaker);
-    // `commit` rather than the default `load`: the dev server compiles
-    // /employee/marketing on first hit, and waiting for every resource to
-    // settle blew the whole test's 120s budget on a route that had already
-    // answered. The assertion below does the real waiting.
+    // `commit` rather than the default `load`: no waiting for every resource to
+    // settle on a route that has already answered. The assertion does the
+    // waiting, so a slow compile costs time instead of a failure.
     await page.goto("/employee/marketing", { waitUntil: "commit" });
     await expect(
       page.getByText(/don't have access to this section/i),
-    ).toBeVisible({ timeout: 60_000 });
+    ).toBeVisible({ timeout: 150_000 });
   });
 
   // #4 — an override lands on the PERSON, not on their role.

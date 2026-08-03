@@ -110,3 +110,58 @@ export async function PATCH(
     rowToClient(updated, facility?.name ?? "Example Pet Care Facility"),
   );
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ ref: string }> },
+) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const { ref } = await params;
+  const numericRef = Number(ref);
+  if (!Number.isFinite(numericRef)) {
+    return NextResponse.json({ error: "Invalid client id." }, { status: 400 });
+  }
+
+  const supabase = await createServerClient();
+
+  // `clients_delete` needs delete_clients — a permission distinct from
+  // edit_clients precisely because this is not an edit. A customer cannot
+  // delete their own record, and neither can most staff.
+  //
+  // Pets cascade with the owner (`on delete cascade`), which is the right shape:
+  // an animal's record has no meaning without the person responsible for it.
+  //
+  // A refusal matches ZERO ROWS rather than erroring, so "denied" and "already
+  // gone" are indistinguishable from the result alone. Reading back tells them
+  // apart — the same shape the roles-override route uses.
+  const { error } = await supabase
+    .from("clients")
+    .delete()
+    .eq("ref", numericRef);
+
+  if (error) {
+    return writeFailure(error, {
+      denied: "Not allowed to remove this client.",
+      duplicate: "",
+    });
+  }
+
+  const { data: survivor } = await supabase
+    .from("clients")
+    .select("ref")
+    .eq("ref", numericRef)
+    .maybeSingle();
+
+  if (survivor) {
+    return NextResponse.json(
+      { error: "Not allowed to remove this client." },
+      { status: 403 },
+    );
+  }
+
+  return new NextResponse(null, { status: 204 });
+}

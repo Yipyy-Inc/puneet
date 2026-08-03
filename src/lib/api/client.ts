@@ -1,7 +1,12 @@
+"use client";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { resolveBookingStaffId } from "./booking";
 import type { Client } from "@/types/client";
+import type { Pet } from "@/types/pet";
 import { liveFetch } from "./live-fetch";
 
 // ============================================================================
@@ -67,3 +72,89 @@ export const clientQueries = {
     },
   }),
 };
+
+// ============================================================================
+// Writes.
+//
+// One place, so a screen never talks to /api/clients directly and every write
+// invalidates the same keys. The rules these obey are in the database
+// (20260803090000), not here — see the route handlers.
+// ============================================================================
+
+async function writeJson<T>(
+  url: string,
+  method: "POST" | "PATCH",
+  payload: unknown,
+): Promise<T> {
+  const response = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const parsed = (await response.json().catch(() => null)) as
+    | (T & { error?: string })
+    | null;
+
+  if (!response.ok) {
+    // The database writes its refusals for a person ("A client record belongs
+    // to one facility and cannot be moved"), and the route passes them through.
+    // Surfacing that beats a generic failure the user cannot act on.
+    throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+  }
+  return parsed as T;
+}
+
+/**
+ * Create a client, and its pets.
+ *
+ * Two round trips because they are two tables and a pet needs its owner's id
+ * to exist first. A pet that fails to save does NOT roll the client back: the
+ * client is the record that matters, the caller is told which pets did not
+ * make it, and losing a saved customer because their spaniel had a bad breed
+ * string would be the worse failure.
+ */
+export function useCreateClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: Partial<Client> & { pets?: Partial<Pet>[] }) => {
+      const { pets = [], ...clientInput } = input;
+      const created = await writeJson<Client>(
+        "/api/clients",
+        "POST",
+        clientInput,
+      );
+
+      const failed: string[] = [];
+      for (const pet of pets) {
+        try {
+          await writeJson<Pet>("/api/pets", "POST", {
+            ...pet,
+            clientId: created.id,
+          });
+        } catch {
+          failed.push(pet.name ?? "a pet");
+        }
+      }
+      return { client: created, failedPets: failed };
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["clients"] });
+      void queryClient.invalidateQueries({ queryKey: ["pets"] });
+    },
+  });
+}
+
+/** Update a client. The response is the STORED row, not the request. */
+export function useUpdateClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: number; patch: Partial<Client> }) =>
+      writeJson<Client>(`/api/clients/${id}`, "PATCH", patch),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["clients"] });
+    },
+  });
+}

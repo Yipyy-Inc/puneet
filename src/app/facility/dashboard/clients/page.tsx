@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { clients } from "@/data/clients";
+import { clientQueries, useCreateClient } from "@/lib/api/client";
 import { facilities } from "@/data/facilities";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { deriveLocationId } from "@/data/locations";
@@ -201,7 +203,20 @@ export default function FacilityClientsPage() {
   // undefined (full access, as admin).
   const assignedClientScope = useAssignedScope("view_client_list");
 
-  const [clientsData, setClientsData] = useState(clients);
+  // The roster from Postgres, with the mock array as the signed-out fallback.
+  //
+  // This was `useState(clients)` — a local copy of the mock array that "created"
+  // a client by appending to it with `Math.max(...ids) + 1`. Convincing on
+  // screen and gone on reload, which is the failure mode the whole API layer
+  // exists to end.
+  const { data: roster } = useQuery(clientQueries.all());
+  const clientsData = roster ?? [];
+  // No pending flag threaded into the modal: it has no prop for one, and a
+  // double-submit now hits the unique (facility, email) constraint and comes
+  // back as "Someone with that email is already a client here" rather than
+  // silently creating two people. Worth a proper disabled state when the modal
+  // is next touched.
+  const { mutate: createClient } = useCreateClient();
   const [creatingClient, setCreatingClient] = useState(false);
   const [segmentDialogOpen, setSegmentDialogOpen] = useState(false);
   const [segmentName, setSegmentName] = useState("");
@@ -214,9 +229,19 @@ export default function FacilityClientsPage() {
     return <div>Facility not found</div>;
   }
 
-  const facilityClients = clientsData.filter(
-    (client) => client.facility === facility.name,
-  );
+  // NO FACILITY FILTER. The rows are already this facility's.
+  //
+  // This filtered on `client.facility === facility.name`, which was necessary
+  // when one mock array held every facility's clients and a string was the only
+  // thing telling them apart. Against Postgres it is worse than redundant: it
+  // compares the DB's facility name ("Yipyy Demo Facility") against the mock
+  // catalogue's ("Example Pet Care Facility"), matches nothing, and renders an
+  // empty directory over a full database. Which is exactly what it did — the
+  // screen showed "0 total" with fourteen clients in the API response.
+  //
+  // Scoping is RLS's job now: `clients_read` returns only rows the caller's
+  // membership admits, and no string comparison in a browser can improve on it.
+  const facilityClients = clientsData;
 
   const locationScopedClients =
     isMultiLocation && !isHQView && currentLocationId
@@ -259,30 +284,36 @@ export default function FacilityClientsPage() {
       specialNeeds: string;
     }>;
   }) => {
-    const maxId = Math.max(...clientsData.map((c) => c.id), 0);
-    const petMaxId = Math.max(
-      ...clientsData.flatMap((c) => c.pets.map((p) => p.id)),
-      0,
+    // Ids come from the database now. They used to be `Math.max(...) + 1` over
+    // the local array, which is a guess that collides the moment two people
+    // add a client at once.
+    createClient(
+      {
+        name: newClient.name,
+        email: newClient.email,
+        phone: newClient.phone || undefined,
+        preferredLanguage: newClient.preferredLanguage,
+        status: newClient.status,
+        address: newClient.address,
+        additionalContacts: newClient.additionalContacts,
+        pets: newClient.pets,
+      } as Parameters<typeof createClient>[0],
+      {
+        onSuccess: ({ client, failedPets }) => {
+          // Named, because "some pets could not be saved" leaves the user to
+          // work out which — and the client itself IS saved, so this is a
+          // partial success rather than a failure to retry wholesale.
+          if (failedPets.length > 0) {
+            toast.warning(
+              `${client.name} was saved, but these pets were not: ${failedPets.join(", ")}.`,
+            );
+          } else {
+            toast.success(`${client.name} added.`);
+          }
+        },
+        onError: (error: Error) => toast.error(error.message),
+      },
     );
-
-    const petsWithIds = newClient.pets.map((pet, index) => ({
-      id: petMaxId + index + 1,
-      ...pet,
-    }));
-
-    const clientWithId = {
-      id: maxId + 1,
-      name: newClient.name,
-      email: newClient.email,
-      phone: newClient.phone || "",
-      preferredLanguage: newClient.preferredLanguage,
-      status: newClient.status,
-      facility: newClient.facility,
-      address: newClient.address,
-      additionalContacts: newClient.additionalContacts,
-      pets: petsWithIds,
-    };
-    setClientsData([...clientsData, clientWithId]);
   };
 
   const totalPets = locationClients.reduce((sum, c) => sum + c.pets.length, 0);
