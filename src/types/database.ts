@@ -447,6 +447,295 @@ export type Database = {
           },
         ];
       };
+      grooming_add_ons: {
+        Row: {
+          created_at: string;
+          description: string;
+          display_order: number;
+          duration_min: number;
+          facility_id: string;
+          id: string;
+          is_active: boolean;
+          legacy_id: string | null;
+          name: string;
+          price: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string;
+          display_order?: number;
+          duration_min?: number;
+          facility_id: string;
+          id?: string;
+          is_active?: boolean;
+          legacy_id?: string | null;
+          name: string;
+          price?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          display_order?: number;
+          duration_min?: number;
+          facility_id?: string;
+          id?: string;
+          is_active?: boolean;
+          legacy_id?: string | null;
+          name?: string;
+          price?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_add_ons_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_config: {
+        Row: {
+          created_at: string;
+          facility_id: string;
+          offers_mobile: boolean;
+          offers_salon: boolean;
+          pet_size_tiers: Json;
+          progress_checklist_enabled: boolean;
+          require_after_photos: boolean;
+          require_before_photos: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          facility_id: string;
+          offers_mobile?: boolean;
+          offers_salon?: boolean;
+          pet_size_tiers?: Json;
+          progress_checklist_enabled?: boolean;
+          require_after_photos?: boolean;
+          require_before_photos?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          facility_id?: string;
+          offers_mobile?: boolean;
+          offers_salon?: boolean;
+          pet_size_tiers?: Json;
+          progress_checklist_enabled?: boolean;
+          require_after_photos?: boolean;
+          require_before_photos?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_config_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: true;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_service_default_add_ons: {
+        Row: {
+          add_on_id: string;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          removable: boolean;
+          service_id: string;
+          when_breeds: string[];
+          when_coat_types: string[];
+          when_pet_sizes: string[];
+        };
+        Insert: {
+          add_on_id: string;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          removable?: boolean;
+          service_id: string;
+          when_breeds?: string[];
+          when_coat_types?: string[];
+          when_pet_sizes?: string[];
+        };
+        Update: {
+          add_on_id?: string;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          removable?: boolean;
+          service_id?: string;
+          when_breeds?: string[];
+          when_coat_types?: string[];
+          when_pet_sizes?: string[];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_service_default_add_ons_add_on_id_fkey";
+            columns: ["add_on_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_add_ons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_service_default_add_ons_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_service_default_add_ons_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_services";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_service_size_prices: {
+        Row: {
+          created_at: string;
+          duration_min: number | null;
+          facility_id: string;
+          id: string;
+          price: number;
+          service_id: string;
+          size_label: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          duration_min?: number | null;
+          facility_id: string;
+          id?: string;
+          price: number;
+          service_id: string;
+          size_label: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          duration_min?: number | null;
+          facility_id?: string;
+          id?: string;
+          price?: number;
+          service_id?: string;
+          size_label?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_service_size_prices_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_service_size_prices_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_services";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_services: {
+        Row: {
+          base_price: number;
+          coat_adjustment_mode: string;
+          coat_adjustments: Json;
+          color: string | null;
+          created_at: string;
+          description: string;
+          display_order: number;
+          duration_min: number;
+          eligible_breeds: string[];
+          eligible_coat_types: string[];
+          eligible_pet_sizes: string[];
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          includes: string[];
+          is_active: boolean;
+          is_popular: boolean;
+          legacy_id: string | null;
+          matted_surcharge_default: number;
+          max_per_day: number | null;
+          min_booking_notice_hours: number | null;
+          name: string;
+          required_skill_level: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          base_price?: number;
+          coat_adjustment_mode?: string;
+          coat_adjustments?: Json;
+          color?: string | null;
+          created_at?: string;
+          description?: string;
+          display_order?: number;
+          duration_min: number;
+          eligible_breeds?: string[];
+          eligible_coat_types?: string[];
+          eligible_pet_sizes?: string[];
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          includes?: string[];
+          is_active?: boolean;
+          is_popular?: boolean;
+          legacy_id?: string | null;
+          matted_surcharge_default?: number;
+          max_per_day?: number | null;
+          min_booking_notice_hours?: number | null;
+          name: string;
+          required_skill_level?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          base_price?: number;
+          coat_adjustment_mode?: string;
+          coat_adjustments?: Json;
+          color?: string | null;
+          created_at?: string;
+          description?: string;
+          display_order?: number;
+          duration_min?: number;
+          eligible_breeds?: string[];
+          eligible_coat_types?: string[];
+          eligible_pet_sizes?: string[];
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          includes?: string[];
+          is_active?: boolean;
+          is_popular?: boolean;
+          legacy_id?: string | null;
+          matted_surcharge_default?: number;
+          max_per_day?: number | null;
+          min_booking_notice_hours?: number | null;
+          name?: string;
+          required_skill_level?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_services_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       locations: {
         Row: {
           created_at: string;
@@ -593,6 +882,7 @@ export type Database = {
       };
       offboarding_task_states: {
         Row: {
+          assigned_to: string;
           completed_at: string | null;
           completed_by: string | null;
           completion_note: string | null;
@@ -610,6 +900,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          assigned_to?: string;
           completed_at?: string | null;
           completed_by?: string | null;
           completion_note?: string | null;
@@ -627,6 +918,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          assigned_to?: string;
           completed_at?: string | null;
           completed_by?: string | null;
           completion_note?: string | null;
