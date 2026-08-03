@@ -31,9 +31,6 @@ import type { PriceAdjustment } from "@/types/grooming";
 //   intake, afterPhotos, expressCheckinSubmission,
 //   additionalPets, additionalStylistIds, stages
 //                    — none built. All optional; all omitted.
-//   history          — still local. It is an append-only audit trail and needs
-//                      the immutability enforcement the audit log has; its own
-//                      pass (20260806140000, "what is not here").
 //   lastGroomDate    — derivable from the client's booking history, but that is
 //                      a query per row and no screen has asked for it yet.
 //   paymentMethod, appliedStoreCredit, appliedPackagePassId
@@ -105,7 +102,28 @@ export function sizeForWeight(
   return tiers[tiers.length - 1].id as PetSize;
 }
 
+/**
+ * History rows. NOT nested under `grooming_appointments` like the other
+ * children: the table holds `booking_id` as a plain identifier with no foreign
+ * key (20260806160000, Decision 2 — an immutable table cannot participate in
+ * cascades), and PostgREST embeds relationships, not loose columns. So the
+ * route fetches them separately and hands them down.
+ */
+export interface HistoryRow {
+  id: string;
+  kind: string;
+  description: string | null;
+  field: string | null;
+  before_value: string | null;
+  after_value: string | null;
+  author_name: string;
+  created_at: string;
+}
+
 export interface AppointmentRow {
+  /** The booking's uuid. Not exposed to the screens — they address appointments
+   *  by `ref` — but the route needs it to fetch history, which keys on it. */
+  id: string;
   ref: number;
   status: string;
   start_at: string;
@@ -208,7 +226,7 @@ function ymd(iso: string, timeZone: string): string {
 
 export function rowToGroomingAppointment(
   row: AppointmentRow,
-  opts: { timeZone: string; tiers: SizeTier[] },
+  opts: { timeZone: string; tiers: SizeTier[]; history?: HistoryRow[] },
 ): GroomingAppointment {
   const ext = row.grooming_appointments;
   const pet = row.booking_pets?.[0]?.pets ?? null;
@@ -323,13 +341,31 @@ export function rowToGroomingAppointment(
       }))
       .sort((a, b) => a.at.localeCompare(b.at)),
     groomingProgress: ext?.session_progress ?? [],
+
+    // Oldest first — it is a trail, and the page renders it top-down. The union
+    // is rebuilt from its `kind` discriminant, which the CHECK guarantees
+    // agrees with the payload (20260806160000, Decision 1).
+    history: (opts.history ?? []).map((h) => ({
+      id: h.id,
+      at: h.created_at,
+      staff: h.author_name,
+      ...(h.kind === "field_change"
+        ? {
+            fieldChange: {
+              field: h.field ?? "",
+              before: h.before_value,
+              after: h.after_value,
+            },
+          }
+        : { description: h.description ?? "" }),
+    })),
   } as GroomingAppointment;
 }
 
 /** The select the route issues. Kept beside the row type so the two cannot
  *  drift — a column added here without a field there fails to compile. */
 export const APPOINTMENT_SELECT = `
-  ref, status, start_at, end_at, payment_status, base_price, total_cost,
+  id, ref, status, start_at, end_at, payment_status, base_price, total_cost,
   tip_amount, special_requests, created_at,
   assigned_staff_id, assigned_staff_name,
   staff:assigned_staff_id ( legacy_id ),

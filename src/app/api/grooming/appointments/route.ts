@@ -8,6 +8,7 @@ import {
   GROOMING_STATUS_TO_BOOKING,
   rowToGroomingAppointment,
   type AppointmentRow,
+  type HistoryRow,
   type SizeTier,
 } from "@/lib/api/mappers/grooming-appointment";
 
@@ -81,10 +82,44 @@ export async function GET(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  const rows = data as unknown as AppointmentRow[];
+
+  // History cannot be embedded: the table holds `booking_id` as a plain
+  // identifier with no foreign key, because an immutable table cannot
+  // participate in cascades (20260806160000, Decision 2), and PostgREST embeds
+  // relationships. One extra query for the page, grouped in memory — not one
+  // per appointment.
+  //
+  // Scoped by the ids actually being returned rather than fetching the
+  // facility's whole trail: this table only grows, and a board asking for today
+  // has no business reading two years of it.
+  const bookingIds = rows.map((r) => r.id).filter(Boolean);
+  const historyByBooking = new Map<string, HistoryRow[]>();
+  if (bookingIds.length > 0) {
+    const { data: historyRows } = await supabase
+      .from("grooming_appointment_history")
+      .select(
+        "id, booking_id, kind, description, field, before_value, after_value, author_name, created_at",
+      )
+      .in("booking_id", bookingIds)
+      .order("created_at", { ascending: true });
+
+    for (const entry of (historyRows ?? []) as unknown as (HistoryRow & {
+      booking_id: string;
+    })[]) {
+      const list = historyByBooking.get(entry.booking_id) ?? [];
+      list.push(entry);
+      historyByBooking.set(entry.booking_id, list);
+    }
+  }
 
   return NextResponse.json(
-    (data as unknown as AppointmentRow[]).map((row) =>
-      rowToGroomingAppointment(row, { timeZone, tiers }),
+    rows.map((row) =>
+      rowToGroomingAppointment(row, {
+        timeZone,
+        tiers,
+        history: historyByBooking.get(row.id) ?? [],
+      }),
     ),
   );
 }

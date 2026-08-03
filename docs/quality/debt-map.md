@@ -178,7 +178,27 @@ Strictly better than before (nothing survived), and not finished. `history` is d
 
 Caught by T6 of [grooming-session-record-rls.sql](../../supabase/tests/grooming-session-record-rls.sql) before it shipped. The first cut of the read policy on the two note tables reused `using (exists (select 1 from public.bookings b where b.id = booking_id))` from `grooming_price_adjustments`. Because `bookings_read` deliberately lets a client read their **own** bookings, that handed the customer every internal note on their dog — the safety alerts and the bather-to-groomer thread.
 
-**The rule:** mirror the parent for child rows the customer is *entitled* to see (a price adjustment is a line on their bill). Name the permission for child rows they are not (an internal note). Copying the policy shape without asking which kind you have is how the leak got written.
+**The rule:** mirror the parent for child rows the customer is _entitled_ to see (a price adjustment is a line on their bill). Name the permission for child rows they are not (an internal note). Copying the policy shape without asking which kind you have is how the leak got written.
+
+## Snapshot (2026-08-06, appointment history trail)
+
+### 🟢 An immutable table can hold no foreign keys — and cannot be probed live
+
+Two things fell out of building `grooming_appointment_history` (20260806160000) that will bite anyone adding another append-only table.
+
+**1. Every FK is a mutation.** The obvious schema gives the table three, matching its sibling child tables. All three are wrong, because the immutability trigger refuses the write the FK would perform:
+
+| FK                                | On parent delete | Refused by |
+| --------------------------------- | ---------------- | ---------- |
+| `booking_id … on delete cascade`  | DELETE history   | trigger    |
+| `facility_id … on delete cascade` | DELETE history   | trigger    |
+| `created_by … on delete set null` | UPDATE history   | trigger    |
+
+They do not corrupt the trail — they make the **parent rows undeletable**, failing with an error about an audit trigger that says nothing about the booking somebody is trying to remove. So the table holds identifiers and validates them once at insert (`private.grooming_appointment_facility()` raises `23503` when the appointment does not exist). The trail then outlives the appointment, which is the point rather than a side effect.
+
+**2. Never probe one outside a transaction.** The immutability probe was first run through a plain `execute_sql`, which auto-commits. It left two fabricated entries against a real booking that **no role could delete** — the table had to be `DROP`ped and recreated to clear them. DDL is deliberately not blocked; the guard is DML-scoped.
+
+**Do instead:** for any append-only table, put every assertion inside `begin; … rollback;` (see [grooming-history-immutability.sql](../../supabase/tests/grooming-history-immutability.sql), which says so at the top), hold identifiers rather than references, and assert immutability **as the owner** — RLS is bypassed by `service_role`, so a test that only runs as `authenticated` proves nothing about the guarantee.
 
 ## How to add to this map
 

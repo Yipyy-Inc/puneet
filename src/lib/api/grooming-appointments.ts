@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type {
   AlertNote,
+  AppointmentHistoryEntry,
   GroomingStatus,
   TicketComment,
 } from "@/types/grooming";
@@ -153,6 +154,51 @@ export function useSetSessionProgress() {
         } | null;
         throw new Error(parsed?.error ?? "Could not save the checklist.");
       }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["grooming", "appointments"],
+      });
+    },
+  });
+}
+
+/**
+ * Append an entry to an appointment's history trail.
+ *
+ * APPEND ONLY, by construction. There is no edit or delete counterpart because
+ * the table refuses both for every role including the owner (20260806160000) —
+ * a hook offering one would be a hook that always throws.
+ *
+ * Fire-and-forget at the call sites: `recordHistory` is invoked from inside
+ * status transitions, note writes and email sends, none of which should fail
+ * because the audit line did. A failed append surfaces as a toast and the
+ * action it describes still stands.
+ */
+export function useRecordAppointmentHistory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      appointmentId: string;
+      description?: string;
+      fieldChange?: {
+        field: string;
+        before: string | null;
+        after: string | null;
+      };
+    }): Promise<AppointmentHistoryEntry> => {
+      const response = await fetch("/api/grooming/appointments/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const parsed = (await response.json().catch(() => null)) as
+        | (AppointmentHistoryEntry & { error?: string })
+        | null;
+      if (!response.ok) {
+        throw new Error(parsed?.error ?? "Could not record that change.");
+      }
+      return parsed as AppointmentHistoryEntry;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({

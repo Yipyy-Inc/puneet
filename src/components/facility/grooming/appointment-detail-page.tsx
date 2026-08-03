@@ -6,6 +6,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   useAddAppointmentNote,
+  useRecordAppointmentHistory,
   useRemoveAppointmentAlert,
 } from "@/lib/api/grooming-appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -319,6 +320,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   } = useGroomingWaitlist();
   const { mutate: addNote } = useAddAppointmentNote();
   const { mutate: removeAlertNote } = useRemoveAppointmentAlert();
+  const { mutate: recordTrail } = useRecordAppointmentHistory();
 
   function autoMatchAndOffer(reason: "cancellation" | "no-show") {
     if (!apt) return;
@@ -523,16 +525,27 @@ export function AppointmentDetailPage({ id }: { id: string }) {
           : ("voided" as const)
         : ("unpaid" as const);
 
+  // ── The history trail (20260806160000) ──────────────────────────────────
+  //
+  // Both of these append to Postgres and render the row that came back. The old
+  // versions invented the id, the timestamp and the author — and the author was
+  // the string "You" for every member of staff, which is precisely the value an
+  // audit trail must not be allowed to hold.
+  //
+  // NOT AWAITED at any call site. These are invoked from inside status
+  // transitions, note writes and email sends; none of those should fail because
+  // the audit line did. A failed append toasts and the action still stands —
+  // the alternative is a groomer unable to check a dog in because the trail is
+  // unavailable.
   function recordHistory(description: string) {
-    setHistory((prev) => [
-      ...prev,
+    if (!apt) return;
+    recordTrail(
+      { appointmentId: apt.id, description },
       {
-        id: `h-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        at: new Date().toISOString(),
-        staff: "You",
-        description,
+        onSuccess: (saved) => setHistory((prev) => [...prev, saved]),
+        onError: (error) => toast.error(error.message),
       },
-    ]);
+    );
   }
 
   function recordFieldChange(
@@ -540,15 +553,14 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     before: string | null,
     after: string | null,
   ) {
-    setHistory((prev) => [
-      ...prev,
+    if (!apt) return;
+    recordTrail(
+      { appointmentId: apt.id, fieldChange: { field, before, after } },
       {
-        id: `h-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        at: new Date().toISOString(),
-        staff: "You",
-        fieldChange: { field, before, after },
+        onSuccess: (saved) => setHistory((prev) => [...prev, saved]),
+        onError: (error) => toast.error(error.message),
       },
-    ]);
+    );
   }
 
   function advanceStatus(next: GroomingStatus, verb: string) {

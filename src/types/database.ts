@@ -603,6 +603,48 @@ export type Database = {
           },
         ];
       };
+      grooming_appointment_history: {
+        Row: {
+          after_value: string | null;
+          author_name: string;
+          before_value: string | null;
+          booking_id: string;
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          facility_id: string;
+          field: string | null;
+          id: string;
+          kind: string;
+        };
+        Insert: {
+          after_value?: string | null;
+          author_name?: string;
+          before_value?: string | null;
+          booking_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          facility_id: string;
+          field?: string | null;
+          id?: string;
+          kind: string;
+        };
+        Update: {
+          after_value?: string | null;
+          author_name?: string;
+          before_value?: string | null;
+          booking_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          facility_id?: string;
+          field?: string | null;
+          id?: string;
+          kind?: string;
+        };
+        Relationships: [];
+      };
       grooming_appointments: {
         Row: {
           booking_id: string;
