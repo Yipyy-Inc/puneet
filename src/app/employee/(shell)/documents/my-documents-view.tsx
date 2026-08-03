@@ -19,9 +19,14 @@ import {
   employeeDocumentTemplates,
   employeeDocumentSubmissions,
 } from "@/data/scheduling";
-import type { EmployeeDocumentTemplate } from "@/types/scheduling";
+import type {
+  EmployeeDocument,
+  EmployeeDocType,
+  EmployeeDocumentTemplate,
+} from "@/types/scheduling";
 import { EmployeeDocumentSigningDialog } from "@/components/scheduling/EmployeeDocumentSigningDialog";
 import { useFacilityViewer } from "@/hooks/use-facility-rbac";
+import { useStaffDocuments } from "@/lib/api/staff-documents";
 import { ROLE_META, type StaffProfile } from "@/types/facility-staff";
 import {
   fullNameOf,
@@ -61,14 +66,38 @@ export function MyDocumentsView() {
 function MyDocumentsBody({ staff }: { staff: StaffProfile }) {
   const [today] = useState(() => new Date().toISOString().split("T")[0]);
 
-  // My HR documents — read-only, and only those the facility marked visible.
-  const myDocs = useMemo(
-    () =>
-      employeeFiles
-        .filter((d) => d.employeeId === staff.id && d.visibleToEmployee)
-        .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)),
-    [staff.id],
-  );
+  // My HR documents, from Postgres — RLS already answers "mine", and the API
+  // already applies `visible_to_employee`, so neither is re-filtered here.
+  //
+  // `fileUrl` is a SIGNED URL that expires in 60 seconds. It is deliberately
+  // not persisted anywhere: the query refetches on mount rather than serving a
+  // cached list of dead links.
+  const { data: liveDocs } = useStaffDocuments(staff.id);
+
+  // Annotated rather than inferred: without it the two branches form a union
+  // and the mock's optional `expiresAt` disappears from the type, which the
+  // rendering below reads. The database rows carry no expiry yet — that is a
+  // facility-set field, not something an upload knows.
+  const myDocs = useMemo<EmployeeDocument[]>(() => {
+    if (liveDocs) {
+      return liveDocs.map((d) => ({
+        id: d.id,
+        employeeId: staff.id,
+        employeeName: fullNameOf(staff),
+        name: d.name,
+        type: d.type as EmployeeDocType,
+        fileUrl: d.fileUrl ?? "",
+        uploadedAt: d.uploadedAt,
+        expiresAt: undefined,
+        visibleToEmployee: d.visibleToEmployee,
+        departmentId: "",
+      }));
+    }
+    // The signed-out / still-loading fallback, unchanged.
+    return employeeFiles
+      .filter((d) => d.employeeId === staff.id && d.visibleToEmployee)
+      .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+  }, [liveDocs, staff]);
 
   // Documents this staff has already signed (from the submissions store + this
   // session's new signatures).
