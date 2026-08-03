@@ -12,12 +12,12 @@ import {
 } from "@/components/ui/select";
 import { Vault } from "lucide-react";
 import { toast } from "sonner";
+import { type RegisterCloseReminderMode } from "@/data/staff-onboarding";
+import { todayCloseTime } from "@/lib/register-hours";
 import {
   useStaffHrConfig,
-  saveStaffHrConfig,
-  type RegisterCloseReminderMode,
-} from "@/data/staff-onboarding";
-import { todayCloseTime } from "@/lib/register-hours";
+  useSaveStaffHrConfig,
+} from "@/lib/api/staff-onboarding";
 
 const CLOSE_REMINDER_LABELS: Record<RegisterCloseReminderMode, string> = {
   closing_time: "At closing time — any cashier (recommended)",
@@ -31,6 +31,9 @@ const CLOSE_REMINDER_LABELS: Record<RegisterCloseReminderMode, string> = {
  *  Persisted to StaffHrConfig. */
 export function RegisterPolicySettings() {
   const config = useStaffHrConfig();
+  // The displayed value comes from the REFETCH this mutation triggers, not
+  // from the input — see the note in src/lib/api/staff.ts.
+  const { mutate: saveStaffHrConfig } = useSaveStaffHrConfig();
 
   const setRequireOpen = (on: boolean) => {
     saveStaffHrConfig({ requireRegisterOpenOnLogin: on });

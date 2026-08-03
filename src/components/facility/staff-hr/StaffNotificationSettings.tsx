@@ -10,12 +10,14 @@ import { Bell } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  useStaffHrConfig,
-  saveStaffHrConfig,
   STAFF_NOTIF_TRIGGERS,
   type StaffNotifTrigger,
   type StaffNotifTriggerKey,
 } from "@/data/staff-onboarding";
+import {
+  useStaffHrConfig,
+  useSaveStaffHrConfig,
+} from "@/lib/api/staff-onboarding";
 
 const RECIPIENT_LABEL: Record<string, string> = {
   manager: "→ Manager",
@@ -31,6 +33,9 @@ const RECIPIENT_LABEL: Record<string, string> = {
  */
 export function StaffNotificationSettings() {
   const config = useStaffHrConfig();
+  // The displayed value comes from the REFETCH this mutation triggers, not
+  // from the input — see the note in src/lib/api/staff.ts.
+  const { mutate: saveStaffHrConfig } = useSaveStaffHrConfig();
   const [draft, setDraft] = useState<
     Record<StaffNotifTriggerKey, StaffNotifTrigger>
   >(config.notificationTriggers);

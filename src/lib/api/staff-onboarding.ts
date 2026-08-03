@@ -2,10 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type {
-  OffboardingTemplate,
-  OnboardingTemplate,
-  StaffHrConfig,
+import {
+  DEFAULT_STAFF_HR_CONFIG,
+  type OffboardingTemplate,
+  type OnboardingTemplate,
+  type StaffHrConfig,
 } from "@/data/staff-onboarding";
 
 // ============================================================================
@@ -182,6 +183,34 @@ export function useOnboardingTemplatesQuery() {
 export function useOffboardingTemplatesQuery() {
   return useQuery(staffOnboardingQueries.offboardingTemplates());
 }
+/**
+ * The facility's staff/HR config, with the SAME SIGNATURE the mock store had:
+ * always a StaffHrConfig, never undefined.
+ *
+ * That is not laziness about loading states — it is what makes this swap safe
+ * across seventeen call sites, five of them deep in the employee shell
+ * (ClockInOut, RegisterOpenGate, RegisterCloseWatcher, EmployeeHeader,
+ * TimeClock). Those read booleans like `requireClockInConfirm` and branch on
+ * them. Handing them `undefined` for the first few hundred milliseconds would
+ * mean a two-step clock confirmation that is briefly one-step, and a register
+ * gate that briefly is not there — behaviour changes disguised as loading
+ * states, in the exact places where the facility's policy is the point.
+ *
+ * So the defaults are the fallback, in ONE place, and they are the same
+ * defaults the mock seeded. A facility that has never opened the settings
+ * screen has no row at all (the API 404s), and defaults are the correct answer
+ * for that too — not an error, and not an empty object.
+ */
+export function useStaffHrConfig(): StaffHrConfig {
+  const { data } = useQuery({
+    ...staffOnboardingQueries.hrConfig(),
+    // A 404 means "this facility has not saved settings", which is a normal
+    // state and not worth retrying.
+    retry: false,
+  });
+  return data ?? DEFAULT_STAFF_HR_CONFIG;
+}
+
 export function useStaffHrConfigQuery() {
   return useQuery(staffOnboardingQueries.hrConfig());
 }

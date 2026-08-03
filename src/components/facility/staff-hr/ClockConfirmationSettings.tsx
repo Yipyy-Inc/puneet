@@ -5,13 +5,19 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { useStaffHrConfig, saveStaffHrConfig } from "@/data/staff-onboarding";
+import {
+  useStaffHrConfig,
+  useSaveStaffHrConfig,
+} from "@/lib/api/staff-onboarding";
 
 /** Facility control over the two-step clock confirmation. Both default ON so
  *  the client's accidental-clock-out requirement holds out of the box; turning
  *  a direction off makes it a single tap. Persisted to StaffHrConfig. */
 export function ClockConfirmationSettings() {
   const config = useStaffHrConfig();
+  // The displayed value comes from the REFETCH this mutation triggers, not
+  // from the input — see the note in src/lib/api/staff.ts.
+  const { mutate: saveStaffHrConfig } = useSaveStaffHrConfig();
 
   const setClockIn = (on: boolean) => {
     saveStaffHrConfig({ requireClockInConfirm: on });

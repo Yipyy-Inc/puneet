@@ -6,13 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserX, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useStaffHrConfig, saveStaffHrConfig } from "@/data/staff-onboarding";
+import {
+  useStaffHrConfig,
+  useSaveStaffHrConfig,
+} from "@/lib/api/staff-onboarding";
 
 /** Termination / departure reasons — an editable list of labels, persisted to
  *  the Phase 0 store (StaffHrConfig.terminationReasons). Feeds the reason
  *  dropdown in the staff status-change dialog. */
 export function TerminationReasonsSettings() {
   const config = useStaffHrConfig();
+  // The displayed value comes from the REFETCH this mutation triggers, not
+  // from the input — see the note in src/lib/api/staff.ts.
+  const { mutate: saveStaffHrConfig } = useSaveStaffHrConfig();
   const [reasons, setReasons] = useState<string[]>(config.terminationReasons);
   const [draft, setDraft] = useState("");
 

@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Briefcase, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useStaffHrConfig, saveStaffHrConfig } from "@/data/staff-onboarding";
+import {
+  useStaffHrConfig,
+  useSaveStaffHrConfig,
+} from "@/lib/api/staff-onboarding";
 
 const humanize = (v: string) =>
   v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -15,6 +18,9 @@ const humanize = (v: string) =>
  *  the Phase 0 staff-onboarding store (StaffHrConfig.employmentTypes). */
 export function EmploymentTypesSettings() {
   const config = useStaffHrConfig();
+  // The displayed value comes from the REFETCH this mutation triggers, not
+  // from the input — see the note in src/lib/api/staff.ts.
+  const { mutate: saveStaffHrConfig } = useSaveStaffHrConfig();
   const [types, setTypes] = useState<string[]>(config.employmentTypes);
   const [draft, setDraft] = useState("");
 

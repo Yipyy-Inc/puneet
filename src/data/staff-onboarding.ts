@@ -1018,7 +1018,16 @@ function seedOffboardingTemplates(): OffboardingTemplate[] {
   ];
 }
 
-function seedConfig(): StaffHrConfig {
+/**
+ * The facility defaults, exported so the API layer can fall back to exactly
+ * these when a facility has never saved settings.
+ *
+ * ONE definition, on purpose. The alternative — a second copy in
+ * src/lib/api/staff-onboarding.ts — would drift the first time someone changed
+ * a default, and the drift would show up as a facility whose clock-confirmation
+ * policy depends on whether its settings row exists yet.
+ */
+export function seedConfig(): StaffHrConfig {
   return {
     employmentTypes: [
       "full_time",
@@ -1053,6 +1062,9 @@ function seedConfig(): StaffHrConfig {
     notificationTriggers: seedNotificationTriggers(),
   };
 }
+
+/** Frozen at module load; the API layer returns this when the row is absent. */
+export const DEFAULT_STAFF_HR_CONFIG: StaffHrConfig = seedConfig();
 
 interface OnboardingStoreState {
   templates: OnboardingTemplate[];

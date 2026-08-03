@@ -7,7 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
-import { useStaffHrConfig, saveStaffHrConfig } from "@/data/staff-onboarding";
+import {
+  useStaffHrConfig,
+  useSaveStaffHrConfig,
+} from "@/lib/api/staff-onboarding";
 
 const INVITE_MIN = 3;
 const INVITE_MAX = 30;
@@ -16,6 +19,9 @@ const INVITE_MAX = 30;
  *  persisted to the Phase 0 staff-onboarding store (StaffHrConfig). */
 export function StaffHrConfigSettings() {
   const config = useStaffHrConfig();
+  // The displayed value comes from the REFETCH this mutation triggers, not
+  // from the input — see the note in src/lib/api/staff.ts.
+  const { mutate: saveStaffHrConfig } = useSaveStaffHrConfig();
   const [inviteExpiryDays, setInviteExpiryDays] = useState(
     config.inviteExpiryDays,
   );
