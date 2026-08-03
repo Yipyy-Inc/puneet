@@ -45,10 +45,8 @@ import type {
   ServicePackage,
   PassUsage,
 } from "@/data/services-pricing";
-import {
-  defaultPackagePolicy,
-  redeemPurchasePass,
-} from "@/data/services-pricing";
+import { defaultPackagePolicy } from "@/data/services-pricing";
+import { useRedeemPackagePass } from "@/lib/api/customer-packages";
 import type { Booking } from "@/types/booking";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
@@ -472,6 +470,7 @@ function BookWithPassButton({
 }) {
   const { selectedFacility } = useCustomerFacility();
   const { openBookingModal } = useBookingModal();
+  const { mutateAsync: redeemPass } = useRedeemPackagePass();
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
     [],
@@ -491,13 +490,28 @@ function BookWithPassButton({
       passRedemption: {
         serviceLabel: purchase.serviceLabel,
         category: purchase.category,
-        onRedeem: (ctx) => {
-          const result = redeemPurchasePass(purchase.id, ctx);
-          if (result.ok) {
+        onRedeem: async (ctx) => {
+          // `purchase.serviceId` is the pool the mapper picked: the first with
+          // passes left. Naming it matters — the old call spent whatever the
+          // ledger happened to offer first, which on a boarding+grooming
+          // bundle could take the wrong pass.
+          try {
+            const { passesLeft } = await redeemPass({
+              customerPackageId: purchase.id,
+              serviceId: purchase.serviceId,
+              serviceLabel: purchase.serviceLabel,
+              petId: ctx.petId,
+              petName: ctx.petName,
+            });
             onRedeemed?.();
-            return { ok: true, passesLeft: result.passesLeft };
+            return { ok: true, passesLeft };
+          } catch (error) {
+            return {
+              ok: false,
+              passesLeft: 0,
+              error: error instanceof Error ? error.message : undefined,
+            };
           }
-          return { ok: false, passesLeft: 0 };
         },
       },
       onCreateBooking: () => {

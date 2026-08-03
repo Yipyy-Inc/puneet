@@ -34,6 +34,20 @@ import {
 // is visible on the very screen that made it, where a half-applied payment is
 // money that silently disappears. Stated so the next person can decide it needs
 // one rather than discover the gap.
+//
+// ── THIS IS THE GROOMING VIEW OF A SHARED TABLE ────────────────────────────
+//
+// `prepaid_packages` now holds the portal's daycare, boarding and training
+// packages too (20260806440000). This route is the GROOMING screen's, so it
+// returns only packages whose pools are all grooming — otherwise the grooming
+// manager opens Packages and finds a Daycare 20-Pack they cannot price, in a
+// screen whose editor only offers grooming services.
+//
+// Filtered AFTER the read rather than in the query, because "every line is
+// grooming" is a condition on the whole set of lines and PostgREST's embedded
+// filters narrow the embed instead: `prepaid_package_lines.module=eq.grooming`
+// would return the Weekend Getaway with its boarding pool quietly missing,
+// which is worse than either including it or excluding it.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -147,10 +161,16 @@ export async function GET() {
   }
 
   const pricing = await pricingById(supabase);
+  const rows = (data ?? []) as unknown as (PrepaidPackageRow & {
+    id: string;
+  })[];
+  const groomingOnly = rows.filter((row) => {
+    const lines = row.prepaid_package_lines ?? [];
+    return lines.length > 0 && lines.every((l) => l.module === "grooming");
+  });
+
   return NextResponse.json(
-    (data as unknown as (PrepaidPackageRow & { id: string })[]).map((row) =>
-      rowToPrepaidPackage(row, pricing.get(row.id)),
-    ),
+    groomingOnly.map((row) => rowToPrepaidPackage(row, pricing.get(row.id))),
   );
 }
 
@@ -196,6 +216,10 @@ export async function POST(request: NextRequest) {
         service_name: l.serviceName,
         quantity: l.quantity,
         price_per_session: l.pricePerSession ?? 0,
+        // This screen prices grooming and nothing else; its editor offers only
+        // grooming services. The column has no default (20260806420000)
+        // precisely so a caller that does not know must say so here.
+        module: "grooming",
       })) as never,
     );
 

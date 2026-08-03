@@ -1640,103 +1640,17 @@ export const memberships: Membership[] = [
 // Customer-owned packages (1 entry = 1 purchase of a ServicePackage by a customer).
 // Each `passes[i]` entry represents a single redeemable pass, some already linked
 // to real bookings (see bookings.ts) so the customer UI can deep-link.
-export const customerPackagePurchases: CustomerPackagePurchase[] = [
-  {
-    id: "cpp-001",
-    customerId: "15",
-    packageId: "pkg-001",
-    packageName: "Daycare 10-Pack",
-    category: "daycare",
-    serviceId: "srv-003",
-    serviceLabel: "Full Day Daycare",
-    totalPasses: 10,
-    purchaseDate: "2026-02-10",
-    expiresAt: "2026-08-09",
-    pricePaid: 299,
-    passes: [
-      {
-        passNumber: 1,
-        status: "used",
-        bookingId: 3,
-        usedAt: "2026-03-30",
-        notes: "Full Day Daycare — Max",
-      },
-      {
-        passNumber: 2,
-        status: "used",
-        bookingId: 22,
-        usedAt: "2026-04-22",
-        notes: "Full Day Daycare — Buddy & Max",
-      },
-      { passNumber: 3, status: "available" },
-      { passNumber: 4, status: "available" },
-      { passNumber: 5, status: "available" },
-      { passNumber: 6, status: "available" },
-      { passNumber: 7, status: "available" },
-      { passNumber: 8, status: "available" },
-      { passNumber: 9, status: "available" },
-      { passNumber: 10, status: "available" },
-    ],
-  },
-  {
-    id: "cpp-002",
-    customerId: "15",
-    packageId: "pkg-005",
-    packageName: "Grooming Maintenance",
-    category: "grooming",
-    serviceId: "srv-005",
-    serviceLabel: "Bath & Brush",
-    totalPasses: 4,
-    purchaseDate: "2025-12-15",
-    expiresAt: "2026-04-14",
-    pricePaid: 140,
-    passes: [
-      {
-        passNumber: 1,
-        status: "used",
-        bookingId: 7,
-        usedAt: "2026-03-12",
-        notes: "Bath & Brush — Buddy",
-      },
-      { passNumber: 2, status: "available" },
-      { passNumber: 3, status: "available" },
-      { passNumber: 4, status: "available" },
-    ],
-    adjustments: [
-      {
-        id: "adj-001",
-        type: "extension",
-        date: "2026-04-01",
-        description: "Validity extended by 30 days (courtesy)",
-        daysAdded: 30,
-      },
-    ],
-  },
-];
-
-/**
- * Redeems one available pass from a `customerPackagePurchases` entry: flips the
- * lowest-numbered available pass to "used" and returns how many remain. Mutates
- * the array in place to match the mock-data-as-store pattern. Called from an
- * event handler (Book with Pass), so `new Date()` here is fine.
- */
-export function redeemPurchasePass(
-  purchaseId: string,
-  redemption: { petId?: number; petName?: string; bookingId?: number } = {},
-): { ok: true; passesLeft: number } | { ok: false; reason: string } {
-  const pkg = customerPackagePurchases.find((p) => p.id === purchaseId);
-  if (!pkg) return { ok: false, reason: "Package not found" };
-  const nextPass = pkg.passes.find((p) => p.status === "available");
-  if (!nextPass) return { ok: false, reason: "No passes remaining" };
-  nextPass.status = "used";
-  nextPass.usedAt = new Date().toISOString();
-  nextPass.bookingId = redemption.bookingId;
-  nextPass.notes = redemption.petName
-    ? `${pkg.serviceLabel} — ${redemption.petName}`
-    : pkg.serviceLabel;
-  const passesLeft = pkg.passes.filter((p) => p.status === "available").length;
-  return { ok: true, passesLeft };
-}
+// `customerPackagePurchases` and `redeemPurchasePass` used to live here: a
+// fixture array of owned packs and a function that spent one by flipping a
+// pass to "used" in place. Both are gone. What a customer owns is
+// `customer_packages` + its pools + the pass ledger, read through
+// /api/packages/owned, and a pass is spent by `redeem_package_pass` --
+// which checks the balance and writes in the same locked statement, so two
+// tills cannot both spend the last one.
+//
+// `CustomerPackagePurchase` and `PassUsage` above are KEPT: the portal's
+// owned-pack card renders that shape, and src/lib/api/mappers/owned-packages.ts
+// synthesises it from the ledger.
 
 export const prepaidCredits: PrepaidCredits[] = [
   {

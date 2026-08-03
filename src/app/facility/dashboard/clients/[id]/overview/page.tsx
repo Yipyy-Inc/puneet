@@ -7,13 +7,13 @@ import { bookings } from "@/data/bookings";
 import { vaccinationRecords } from "@/data/pet-data";
 import { clientCommunications } from "@/data/communications";
 import {
-  customerPackagePurchases,
   memberships as allMemberships,
   membershipPlans,
-  servicePackages,
 } from "@/data/services-pricing";
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
+import { recordToPurchase } from "@/lib/api/mappers/owned-packages";
+import { useServicePackages } from "@/lib/api/customer-packages";
 import { useFieldMask } from "@/lib/staff/mask";
 import { PurchasedPackageCard } from "@/components/customer/billing/packages/PurchasedPackageCard";
 import { ActiveMembershipCard } from "@/components/customer/billing/packages/ActiveMembershipCard";
@@ -72,6 +72,8 @@ export default function ClientOverviewPage({
   const { data: ownedPackages = [] } = useQuery(
     groomingQueries.customerPackagesForClient(clientId),
   );
+  // Only so each card can show the package's refund/transfer policy.
+  const { data: catalogue = [] } = useServicePackages();
 
   if (!client) return null;
 
@@ -80,9 +82,11 @@ export default function ClientOverviewPage({
   const clientMemberships = allMemberships.filter(
     (m) => m.customerId === customerIdStr,
   );
-  const clientPackagePurchases = customerPackagePurchases.filter(
-    (p) => p.customerId === customerIdStr,
-  );
+  // The same rows as `ownedPackages`, projected into the shape
+  // PurchasedPackageCard renders. Previously a separate fixture, which meant
+  // this page could show a client packages the grooming till had never heard
+  // of — and miss ones it had.
+  const clientPackagePurchases = ownedPackages.map(recordToPurchase);
   const activePrepaidPackages = ownedPackages.filter(
     (p) => p.status === "active",
   );
@@ -861,9 +865,7 @@ export default function ClientOverviewPage({
           {clientPackagePurchases.length > 0 && (
             <div className="grid gap-4 md:grid-cols-2">
               {clientPackagePurchases.map((purchase) => {
-                const pkg = servicePackages.find(
-                  (p) => p.id === purchase.packageId,
-                );
+                const pkg = catalogue.find((p) => p.id === purchase.packageId);
                 return (
                   <PurchasedPackageCard
                     key={purchase.id}

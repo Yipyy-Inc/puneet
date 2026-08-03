@@ -5,7 +5,7 @@ import type { CustomerPackage } from "@/types/packages";
 //
 // `mockCustomerPackages` held four purchases and `redeemPackagePass` spent
 // them by mutating the array in place. Both are replaced by
-// /api/grooming/customer-packages and the `redeem_package_pass` RPC.
+// /api/packages/owned and the `redeem_package_pass` RPC.
 //
 // Two things the fixture could not do, which is why it went rather than being
 // repointed:

@@ -1,5 +1,7 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
 import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import {
@@ -13,7 +15,7 @@ import {
 } from "@/data/camera-integration";
 import { bookings } from "@/data/bookings";
 import { memberships } from "@/data/services-pricing";
-import { customerPackagePurchases } from "@/data/services-pricing";
+
 import {
   Card,
   CardContent,
@@ -218,15 +220,18 @@ export default function CustomerCamerasPage() {
       .map((m) => m.planId);
   }, []);
 
-  const purchasedPackageIds = useMemo(() => {
-    return customerPackagePurchases
-      .filter(
-        (p) =>
-          p.customerId === String(MOCK_CUSTOMER_ID) &&
-          new Date(p.expiresAt) > new Date(),
-      )
-      .map((p) => p.packageId);
-  }, []);
+  // See CustomerSidebar: `status` is derived, so "still valid" is the
+  // database's answer rather than a second date comparison in the browser.
+  const { data: ownedPackages = [] } = useQuery(
+    groomingQueries.customerPackagesForClient(MOCK_CUSTOMER_ID),
+  );
+  const purchasedPackageIds = useMemo(
+    () =>
+      ownedPackages
+        .filter((p) => p.status === "active")
+        .map((p) => p.packageId),
+    [ownedPackages],
+  );
 
   const customerServiceTypes = useMemo<CameraServiceType[]>(() => {
     if (!selectedFacility) return [];

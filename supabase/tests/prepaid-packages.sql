@@ -41,6 +41,12 @@
 -- 5. THE LEDGER IS APPEND-ONLY (P6) AND EXPIRY BEATS A BALANCE (P7).
 --
 -- 6. PASSES ARE MONEY (P8/P9/P10): wrong facility, wrong role, not logged in.
+--
+-- 7. A CUSTOMER MAY SPEND THEIR OWN AND CONJURE NONE (P11/P12). The portal's
+--    read policies were added after pointing it at these tables produced an
+--    empty shop for everybody; the insert policy that came with them is the
+--    one that needs watching, because an entry with a POSITIVE `passes` is a
+--    pass nobody paid for.
 -- ============================================================================
 
 begin;
@@ -57,12 +63,15 @@ $$;
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-000000160001', 'pk2-owner@example.invalid'),
-  ('00000000-0000-0000-0000-000000160003', 'pk2-groom@example.invalid')
+  ('00000000-0000-0000-0000-000000160003', 'pk2-groom@example.invalid'),
+  -- a customer: an auth account with NO facility membership at all
+  ('00000000-0000-0000-0000-000000160005', 'pk2-cust@example.invalid')
 on conflict (id) do nothing;
 
 insert into public.profiles (id, email, full_name) values
   ('00000000-0000-0000-0000-000000160001', 'pk2-owner@example.invalid', 'Owner'),
-  ('00000000-0000-0000-0000-000000160003', 'pk2-groom@example.invalid', 'Groomer')
+  ('00000000-0000-0000-0000-000000160003', 'pk2-groom@example.invalid', 'Groomer'),
+  ('00000000-0000-0000-0000-000000160005', 'pk2-cust@example.invalid', 'Customer')
 on conflict (id) do update set full_name = excluded.full_name;
 
 insert into public.orgs (id, name, slug) values
@@ -85,11 +94,13 @@ insert into public.facility_memberships (id, facility_id, profile_id, role, is_a
    '00000000-0000-0000-0000-000000160003', 'groomer', true)
 on conflict (id) do nothing;
 
-insert into public.clients (id, facility_id, name, email) values
+-- 'Ours' is the customer's own client row; 'Theirs' belongs to Salon B and to
+-- nobody's login, which is what makes P11's scope assertion mean something.
+insert into public.clients (id, facility_id, name, email, profile_id) values
   ('00000000-0000-0000-0000-000000160040', '00000000-0000-0000-0000-000000160020',
-   'Ours', 'pk2-c@example.invalid'),
+   'Ours', 'pk2-c@example.invalid', '00000000-0000-0000-0000-000000160005'),
   ('00000000-0000-0000-0000-000000160041', '00000000-0000-0000-0000-000000160021',
-   'Theirs', 'pk2-d@example.invalid');
+   'Theirs', 'pk2-d@example.invalid', null);
 
 -- The catalogue: a two-service bundle, the shape that forced the rebuild.
 insert into public.prepaid_packages
@@ -102,10 +113,10 @@ values
    'Empty Pack', 'Nothing in it', 100, 90, 'active');
 
 insert into public.prepaid_package_lines
-  (package_id, service_id, service_name, quantity, price_per_session)
+  (package_id, service_id, service_name, quantity, price_per_session, module)
 values
-  ('00000000-0000-0000-0000-000000160050', 'svc-groom', 'Full Groom', 6, 65),
-  ('00000000-0000-0000-0000-000000160050', 'svc-bath',  'Basic Bath', 2, 35);
+  ('00000000-0000-0000-0000-000000160050', 'svc-groom', 'Full Groom', 6, 65, 'grooming'),
+  ('00000000-0000-0000-0000-000000160050', 'svc-bath',  'Basic Bath', 2, 35, 'grooming');
 
 create temp table pk2_sale (id uuid);
 grant all on pk2_sale to authenticated;
@@ -132,6 +143,22 @@ begin
     format('name=%s paid=%s pools=%s total=%s status=%s', nm, paid, pools, total, st));
 exception when others then
   reset role; perform pg_temp.t('P1  sale', false, sqlerrm);
+end $$;
+
+-- ── P1b: the module travels with the pool ─────────────────────────────────
+do $$
+declare modules text; v_cp uuid;
+begin
+  select id into v_cp from pk2_sale;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  set local role authenticated;
+  select string_agg(distinct l.module::text, ',') into modules
+    from public.customer_package_lines l where l.customer_package_id = v_cp;
+  reset role;
+  perform pg_temp.t('P1b each pool carries the module that can spend it',
+    modules = 'grooming', format('modules=%s', modules));
+exception when others then
+  reset role; perform pg_temp.t('P1b module copy', false, sqlerrm);
 end $$;
 
 -- ── P2: repricing and re-bundling the catalogue does not touch the sale ────
@@ -278,8 +305,8 @@ begin
           '00000000-0000-0000-0000-000000160040', 'Lapsed 5-pack', 300,
           now() - interval '1 day');
   insert into public.customer_package_lines
-    (customer_package_id, service_id, service_name, passes_total)
-  values ('00000000-0000-0000-0000-000000160061', 'svc-groom', 'Full Groom', 5);
+    (customer_package_id, service_id, service_name, passes_total, module)
+  values ('00000000-0000-0000-0000-000000160061', 'svc-groom', 'Full Groom', 5, 'grooming');
   begin
     perform public.redeem_package_pass(
       '00000000-0000-0000-0000-000000160061'::uuid, 'svc-groom', 'Full Groom');
@@ -367,6 +394,98 @@ begin
     blocked, format('blocked=%s', blocked));
 exception when others then
   reset role; perform pg_temp.t('P10 anon execute', false, sqlerrm);
+end $$;
+
+-- ── P11: a customer sees their own package, and only their own ────────────
+do $$
+declare mine integer; theirs integer; catalogue integer;
+        actually_mine integer; actually_theirs integer;
+begin
+  -- a second purchase, for the OTHER facility's client, as the owner cannot
+  -- reach it: inserted here with elevated rights precisely so P11 has
+  -- something it must NOT see.
+  insert into public.customer_packages
+    (id, facility_id, client_id, package_name, price_paid)
+  values ('00000000-0000-0000-0000-000000160062',
+          '00000000-0000-0000-0000-000000160021',
+          '00000000-0000-0000-0000-000000160041', 'Not yours', 100);
+
+  -- The truth, read with no policy in the way. Comparing against a hardcoded 1
+  -- was wrong: P7 sells this client a second (lapsed) pack, so "one" was an
+  -- assumption about test order rather than a fact about visibility.
+  select count(*) into actually_mine from public.customer_packages
+   where client_id = '00000000-0000-0000-0000-000000160040';
+  select count(*) into actually_theirs from public.customer_packages
+   where client_id = '00000000-0000-0000-0000-000000160041';
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160005', true);
+  set local role authenticated;
+  select count(*) into mine from public.customer_packages
+   where client_id = '00000000-0000-0000-0000-000000160040';
+  select count(*) into theirs from public.customer_packages
+   where client_id = '00000000-0000-0000-0000-000000160041';
+  select count(*) into catalogue from public.prepaid_packages;
+  reset role;
+  perform pg_temp.t('P11 a customer sees every package of their own, the shop, and no other client''s',
+    mine = actually_mine and actually_mine > 0
+      and theirs = 0 and actually_theirs > 0
+      and catalogue >= 1,
+    format('mine=%s/%s theirs=%s/%s catalogue=%s',
+           mine, actually_mine, theirs, actually_theirs, catalogue));
+exception when others then
+  reset role; perform pg_temp.t('P11 customer scope', false, sqlerrm);
+end $$;
+
+-- ── P12: a customer can spend a pass and cannot conjure one ───────────────
+--
+-- The insert policy allows exactly `reason = 'redeemed'` with `passes = -1`.
+-- Both halves are asserted: without the positive one this would pass on a
+-- policy that lets a customer do nothing at all.
+do $$
+declare spent integer; reversal_blocked boolean; gift_blocked boolean;
+        bulk_blocked boolean; v_cp uuid;
+begin
+  select id into v_cp from pk2_sale;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160005', true);
+  set local role authenticated;
+
+  -- The positive half. It failed until 20260806480000: `for update` applies
+  -- the UPDATE policy when locking, and a customer holds no
+  -- `financial_take_payment`, so the locking read returned NOTHING AND NO
+  -- ERROR and the function reported the package as not theirs.
+  begin
+    select public.redeem_package_pass(v_cp, 'svc-groom', 'Full Groom') into spent;
+  exception when others then spent := -1; end;
+
+  begin
+    insert into public.package_pass_entries
+      (facility_id, customer_package_id, service_id, passes, reason)
+    values ('00000000-0000-0000-0000-000000160020', v_cp, 'svc-groom', 1, 'reversed');
+    reversal_blocked := false;
+  exception when insufficient_privilege then reversal_blocked := true; end;
+
+  begin
+    insert into public.package_pass_entries
+      (facility_id, customer_package_id, service_id, passes, reason)
+    values ('00000000-0000-0000-0000-000000160020', v_cp, 'svc-groom', 10, 'adjustment');
+    gift_blocked := false;
+  exception when insufficient_privilege then gift_blocked := true; end;
+
+  -- and cannot spend more than one at a time to dodge the sign rule
+  begin
+    insert into public.package_pass_entries
+      (facility_id, customer_package_id, service_id, passes, reason)
+    values ('00000000-0000-0000-0000-000000160020', v_cp, 'svc-groom', -5, 'redeemed');
+    bulk_blocked := false;
+  exception when insufficient_privilege then bulk_blocked := true; end;
+
+  reset role;
+  perform pg_temp.t('P12 a customer spends one pass; reversals, gifts and bulk writes are refused',
+    spent = 5 and reversal_blocked and gift_blocked and bulk_blocked,
+    format('groom_left=%s reversal_blocked=%s gift_blocked=%s bulk_blocked=%s',
+           spent, reversal_blocked, gift_blocked, bulk_blocked));
+exception when others then
+  reset role; perform pg_temp.t('P12 customer ledger', false, sqlerrm);
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

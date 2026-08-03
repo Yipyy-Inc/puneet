@@ -233,6 +233,7 @@ export type Database = {
         Row: {
           customer_package_id: string;
           id: string;
+          module: Database["public"]["Enums"]["service_module"];
           passes_total: number;
           service_id: string;
           service_name: string;
@@ -240,6 +241,7 @@ export type Database = {
         Insert: {
           customer_package_id: string;
           id?: string;
+          module: Database["public"]["Enums"]["service_module"];
           passes_total: number;
           service_id: string;
           service_name: string;
@@ -247,6 +249,7 @@ export type Database = {
         Update: {
           customer_package_id?: string;
           id?: string;
+          module?: Database["public"]["Enums"]["service_module"];
           passes_total?: number;
           service_id?: string;
           service_name?: string;
@@ -2528,6 +2531,7 @@ export type Database = {
       prepaid_package_lines: {
         Row: {
           id: string;
+          module: Database["public"]["Enums"]["service_module"];
           package_id: string;
           price_per_session: number;
           quantity: number;
@@ -2536,6 +2540,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
+          module: Database["public"]["Enums"]["service_module"];
           package_id: string;
           price_per_session: number;
           quantity: number;
@@ -2544,6 +2549,7 @@ export type Database = {
         };
         Update: {
           id?: string;
+          module?: Database["public"]["Enums"]["service_module"];
           package_id?: string;
           price_per_session?: number;
           quantity?: number;
@@ -2584,6 +2590,7 @@ export type Database = {
           name: string;
           package_price: number;
           policy_notes: string | null;
+          popularity_rank: number | null;
           refund_per_unused_pass: number | null;
           status: string;
           updated_at: string;
@@ -2605,6 +2612,7 @@ export type Database = {
           name: string;
           package_price: number;
           policy_notes?: string | null;
+          popularity_rank?: number | null;
           refund_per_unused_pass?: number | null;
           status?: string;
           updated_at?: string;
@@ -2626,6 +2634,7 @@ export type Database = {
           name?: string;
           package_price?: number;
           policy_notes?: string | null;
+          popularity_rank?: number | null;
           refund_per_unused_pass?: number | null;
           status?: string;
           updated_at?: string;
@@ -3126,6 +3135,7 @@ export type Database = {
           client_id: string | null;
           customer_package_id: string | null;
           facility_id: string | null;
+          module: Database["public"]["Enums"]["service_module"] | null;
           passes_remaining: number | null;
           passes_total: number | null;
           service_id: string | null;

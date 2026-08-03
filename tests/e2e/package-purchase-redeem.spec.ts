@@ -30,7 +30,7 @@ import { ACCOUNTS, signIn } from "./_auth";
 // by the refusals, which reach the same resolution code.
 // ============================================================================
 
-const API = "/api/grooming/customer-packages";
+const API = "/api/packages/owned";
 const CATALOGUE = "/api/grooming/prepaid-packages";
 
 interface OwnedPackage {
@@ -241,5 +241,165 @@ test.describe("customer packages over HTTP", () => {
     // Nothing above created a row.
     const after = (await (await page.request.get(API)).json()) as unknown[];
     expect(after.length).toBe(owned.length);
+  });
+});
+
+// ============================================================================
+// The portal's half: one catalogue table, two questions asked of it.
+// ============================================================================
+
+test.describe("the portal shop reads the same rows as the facility", () => {
+  test("/api/packages spans modules; the grooming route does not", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const portal = (await (await page.request.get("/api/packages")).json()) as {
+      id: string;
+      name: string;
+      totalValue: number;
+      packagePrice: number;
+      savings: number;
+      savingsPercentage: number;
+      services: { serviceId: string; quantity: number }[];
+    }[];
+    const grooming = (await (await page.request.get(CATALOGUE)).json()) as {
+      id: string;
+      services: { serviceId: string }[];
+    }[];
+
+    // The portal sees strictly more: the facility's grooming route filters to
+    // bundles it can actually price.
+    expect(portal.length).toBeGreaterThan(grooming.length);
+    const groomingIds = new Set(grooming.map((p) => p.id));
+    expect(
+      [...groomingIds].every((id) => portal.some((p) => p.id === id)),
+    ).toBe(true);
+
+    // A cross-counter bundle exists, and belongs to neither module's admin
+    // screen — this is the case that put `module` on the line, not the package.
+    const multi = portal.filter((p) => p.services.length > 1);
+    expect(multi.length).toBeGreaterThan(0);
+    for (const bundle of multi) {
+      // If a multi-service bundle is grooming-only it may legitimately appear
+      // in both; the ones that are not must not.
+      const inGrooming = groomingIds.has(bundle.id);
+      const allGrooming = bundle.services.every((s) =>
+        s.serviceId.startsWith("groom-"),
+      );
+      expect(inGrooming).toBe(allGrooming);
+    }
+
+    // Savings are the view's, so the shop's struck-through price and its badge
+    // cannot disagree with the facility's.
+    for (const pkg of portal) {
+      expect(pkg.savings).toBeCloseTo(pkg.totalValue - pkg.packagePrice, 2);
+      if (pkg.totalValue > 0) {
+        expect(pkg.savingsPercentage).toBeCloseTo(
+          Math.round((pkg.savings / pkg.totalValue) * 1000) / 10,
+          1,
+        );
+      }
+    }
+  });
+
+  test("the shop page renders the catalogue from Postgres", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    await page.goto("/customer/packages");
+
+    // Named from the seeded catalogue, not from a fixture: the fixture array
+    // that used to back this screen is deleted.
+    await expect(
+      page.getByRole("heading", { name: /Buy Passes & Bundles/i }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByRole("heading", { name: "Daycare 10-Pack", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Weekend Getaway", exact: true }),
+    ).toBeVisible();
+    // Rank 1 badges as Most Popular, which a boolean could not have said.
+    await expect(page.getByText("Most Popular").first()).toBeVisible();
+  });
+});
+
+// ============================================================================
+// The customer's own view — the boundary the portal migration created.
+//
+// Before 20260806460000 these tables were staff-only, and pointing the portal
+// at them produced an empty shop and an empty "my packs" for everybody. The
+// fix adds customer read policies scoped by `private.own_client_ids()`, so
+// these assertions are about the scope, not just about seeing something.
+// ============================================================================
+
+test.describe("what a customer can and cannot see", () => {
+  test("a customer sees their own packages and nobody else's", async ({
+    page,
+  }) => {
+    // The owner's view: every purchase at the facility.
+    await signIn(page, ACCOUNTS.owner);
+    const staffView = (await (
+      await page.request.get(API)
+    ).json()) as OwnedPackage[];
+
+    await page.context().clearCookies();
+    await signIn(page, ACCOUNTS.customer);
+    const customerView = (await (
+      await page.request.get(API)
+    ).json()) as OwnedPackage[];
+
+    // Positive control first: without it, "sees nothing but their own" passes
+    // vacuously on a policy that denies everyone.
+    expect(
+      customerView.length,
+      "the customer can see at least one package of their own",
+    ).toBeGreaterThan(0);
+
+    const mine = new Set(customerView.map((p) => p.customerId));
+    expect(mine.size, "exactly one customer's packages came back").toBe(1);
+
+    // And it is a real subset: the staff view is not being handed over whole.
+    const staffCustomers = new Set(staffView.map((p) => p.customerId));
+    expect(staffCustomers.size).toBeGreaterThanOrEqual(mine.size);
+    for (const pkg of customerView) {
+      expect(staffView.some((s) => s.id === pkg.id)).toBe(true);
+    }
+  });
+
+  test("a customer sees the shop but cannot edit the catalogue", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+
+    const shop = (await (await page.request.get("/api/packages")).json()) as {
+      id: string;
+      name: string;
+    }[];
+    expect(shop.length, "the shop is readable").toBeGreaterThan(0);
+
+    // Reading the menu is not permission to change it. `manage_services` is a
+    // staff permission and a customer has no membership at all.
+    const created = await page.request.post(CATALOGUE, {
+      data: {
+        name: "Free Everything",
+        packagePrice: 0,
+        validityDays: 3650,
+        services: [
+          {
+            serviceId: "groom-pkg-002",
+            serviceName: "Full Groom",
+            quantity: 99,
+          },
+        ],
+      },
+    });
+    expect(created.status()).toBeGreaterThanOrEqual(400);
+
+    const after = (await (await page.request.get("/api/packages")).json()) as {
+      name: string;
+    }[];
+    expect(after.some((p) => p.name === "Free Everything")).toBe(false);
   });
 });

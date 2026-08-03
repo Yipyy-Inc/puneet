@@ -14,12 +14,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarClock, Check, Sparkles, Tag, Ticket } from "lucide-react";
 import { toast } from "sonner";
+import { services, type ServicePackage } from "@/data/services-pricing";
 import {
-  servicePackages,
-  services,
-  type ServicePackage,
-} from "@/data/services-pricing";
-import { purchasePackage } from "@/lib/customer-package-purchases-store";
+  useServicePackages,
+  usePurchasePackage,
+} from "@/lib/api/customer-packages";
+
+// The signed-in customer. Same placeholder the rest of the portal uses; it is
+// the id the purchase is recorded against, so it stops being a constant when
+// the portal reads a real session.
+const MOCK_CUSTOMER_ID = 15;
 
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("en-US", {
@@ -51,29 +55,47 @@ function rankBadge(rank?: number) {
  */
 export function BuyPackagesSection() {
   const [selected, setSelected] = useState<ServicePackage | null>(null);
+  const { data: catalogue = [] } = useServicePackages();
+  const { mutate: buy, isPending } = usePurchasePackage();
 
   const available = useMemo(
     () =>
-      servicePackages
+      catalogue
         .filter((p) => p.status === "active")
         .sort(
           (a, b) =>
             (a.popularityRank ?? 99) - (b.popularityRank ?? 99) ||
             a.packagePrice - b.packagePrice,
         ),
-    [],
+    [catalogue],
   );
 
   const confirmPurchase = () => {
     if (!selected) return;
-    // Adds the pack to the customer's owned purchases (module store), so it
-    // shows up immediately under "My prepaid packs". No real payment backend
-    // yet — this is the prototype's mock checkout, like the membership flow.
-    purchasePackage(selected);
-    toast.success(`${selected.name} purchased`, {
-      description: `${passCount(selected)} passes added to your account. Valid for ${selected.validDays} days.`,
-    });
-    setSelected(null);
+    // The sale is one transaction server-side: the purchase and its pass pools
+    // land together or not at all. The price is NOT sent — the database reads
+    // it off the catalogue row, because a price that arrives from a browser is
+    // a price the browser chose.
+    const pkg = selected;
+    buy(
+      { clientId: MOCK_CUSTOMER_ID, packageId: pkg.id },
+      {
+        onSuccess: () => {
+          toast.success(`${pkg.name} purchased`, {
+            description: `${passCount(pkg)} passes added to your account. Valid for ${pkg.validDays} days.`,
+          });
+          setSelected(null);
+        },
+        onError: (error: Error) => {
+          // The old flow could not fail, so it never said anything. This one
+          // can: the pack may have been retired between the page loading and
+          // the button being pressed.
+          toast.error("That purchase did not go through", {
+            description: error.message,
+          });
+        },
+      },
+    );
   };
 
   if (available.length === 0) return null;
@@ -232,8 +254,9 @@ export function BuyPackagesSection() {
             <Button
               className="bg-emerald-600 text-white hover:bg-emerald-700"
               onClick={confirmPurchase}
+              disabled={isPending}
             >
-              Confirm Purchase
+              {isPending ? "Purchasing…" : "Confirm Purchase"}
             </Button>
           </DialogFooter>
         </DialogContent>

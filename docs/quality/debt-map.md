@@ -333,6 +333,76 @@ It now takes the pool it spent from and both numbers describe that pool.
 
 **Do instead:** migrate it onto `purchase_package` rather than repointing it, and delete the store. The RPC already does what that store fakes.
 
+## Snapshot (2026-08-06, the portal's packages join the same tables)
+
+### 🔴 TWO service catalogues name the same service differently, and only one is in Postgres
+
+The blocker found while migrating the portal, and the one thing this work did **not** fix:
+
+| Catalogue                   | Where                                  | "a bath"                           |
+| --------------------------- | -------------------------------------- | ---------------------------------- |
+| `grooming_services` (table) | Postgres, seeded                       | `groom-pkg-001` Basic Bath, **35** |
+| `services` (fixture)        | `src/data/services-pricing.ts`, srv-\* | `srv-005` Bath & Brush, **40**     |
+
+The portal's packages are priced in `srv-*`; the facility's grooming packages in `groom-pkg-*`. Both now live in `prepaid_packages`, and each loop is internally consistent — a portal pass is bought and spent in `srv-*`, a counter pass in `groom-pkg-*`.
+
+**The consequence, which predates this work and survives it:** a grooming pass bought in the customer portal is not spendable at the grooming counter. The counter filters pools by `groom-pkg-*` and will never match `srv-005`.
+
+**Why it was not fixed here:** deciding that "Bath & Brush at 40" and "Basic Bath at 35" are the same service is a product decision, and merging them silently reprices one of them. Migrating `services` into Postgres and reconciling the two is its own change, with someone who can answer that question.
+
+### 🟡 A bundle spanning two counters renders as one card with one icon
+
+`CustomerPackagePurchase` — the portal's owned-pack shape — has a single `category` and `serviceLabel`, so it cannot fully describe the Weekend Getaway (2 nights boarding + 1 bath). `recordToPurchase` keeps **one card per purchase**: the price and the total pass count are right, `serviceLabel` names every service, and each pass row says what it was spent on. What is lost is per-pool remaining counts on the card face, and the theme icon reflects only the first pool.
+
+The alternative — one card per pool — was rejected because `pricePaid` is per purchase, so a two-pool pack would show the full price twice and read as a double charge.
+
+**What the mock did, for contrast:** collapsed the bundle to `services[0]` for the label while summing all quantities, so a Weekend Getaway displayed as "3 × Standard Boarding". One of those three was a bath.
+
+**Do instead:** if per-pool detail is wanted on the card, give the card the pools, not more cards.
+
+### 🟡 `is_popular` and `popularity_rank` are two fields for one idea
+
+The grooming screen edits `is_popular` as a switch. The portal shop needs rank — it badges 1 as "Most Popular" and 2 as "Best Value", which a boolean cannot express. Both columns now exist; the seed keeps them consistent (`is_popular` = rank 1).
+
+**Do instead:** collapse them only alongside the product decision about whether the grooming screen's switch becomes a rank picker.
+
+### 🟢 `PassUsage.status = "refunded"` has no source, and `adjustments` is always empty
+
+`recordToPurchase` never produces a refunded pass and always returns `adjustments: []`. That is not a gap introduced here: **nothing in the app has ever created a package adjustment.** The fixture carried decorative extension/refund history that no code path wrote, and the policy columns (`allow_refund_unused`, `allow_extension`, `allow_transfer`…) describe acts the ledger cannot yet record.
+
+**Do instead:** a refund or an extension is a `package_pass_entries` row with `reason = 'adjustment'` plus a record of the money — not a status flipped on a pass.
+
+### 🔴 `SELECT … FOR UPDATE` silently returns nothing when the UPDATE policy denies you
+
+The sharpest finding of this work, and it generalises well beyond packages.
+
+`redeem_package_pass` opened with `select … from customer_packages where id = $1 **for update**`. Under RLS, Postgres applies the table's **UPDATE** policy when locking rows, not just the SELECT policy. The only UPDATE policy there requires `financial_take_payment`, which a customer does not hold — so the portal's "Book with Pass" broke the moment it was pointed at the real function.
+
+Measured, as the same customer, in one transaction:
+
+```
+select count(*) … where id = X             -> 1
+select count(*) … where id = X for update  -> 0, and NO ERROR
+```
+
+**The silence is the danger.** The locking read does not raise `insufficient_privilege`. It returns zero rows, the function's own "does not exist, or is not yours" fires, and the message sends the reader to investigate ownership — the one thing that was fine.
+
+Fixed in 20260806480000 with `pg_advisory_xact_lock(hashtext(id::text))`, which serialises redemptions of the same package without needing any privilege on the row. The two alternatives were both worse: granting customers UPDATE on `customer_packages` is the right to rewrite a purchase's price and expiry, and SECURITY DEFINER would suspend every caller's RLS to fix a lock.
+
+**Do instead:** before adding `for update` to a row a non-owner role must read, check whether that role passes the table's UPDATE policy. If it does not, reach for an advisory lock. And treat "the row vanished" in a locking read as a privilege symptom, not a missing-data one.
+
+### 🟡 Typecheck, lint and build were all green while the portal was broken
+
+The RLS gap above, and the four missing customer read policies before it, produced a shop with nothing in it and a "my packs" section showing a customer none of their own packages. Every static gate passed.
+
+It took signing in as a customer in a browser and loading the page. That is now `tests/e2e/package-purchase-redeem.spec.ts`.
+
+**Do instead:** when a change moves a screen onto a table with RLS, the verification is a session in the role that screen serves — not the role you happen to be testing as. Staff-role tests would have stayed green through all of it.
+
+### 🟢 `passRedemption.onRedeem` is declared twice
+
+The contract exists in both `use-booking-modal.tsx` and `BookingModal.tsx`. Making it async needed both edited, and a change to only one would have typechecked at the call site while failing at the other.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

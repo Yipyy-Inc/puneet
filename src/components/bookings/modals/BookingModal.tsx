@@ -168,14 +168,18 @@ export interface NewBookingModalProps {
   /** When true, opens the wizard in edit mode — hides service/client-pet steps and changes labels. */
   editMode?: boolean;
   /** Pass-redemption mode (customer): skips the payment step and redeems a
-   *  prepaid pass on confirm instead of charging. */
+   *  prepaid pass on confirm instead of charging.
+   *
+   *  Kept identical to the copy in `use-booking-modal.tsx` — two declarations
+   *  of one contract, which is why changing it needed both edited. */
   passRedemption?: {
     serviceLabel: string;
     category: string;
-    onRedeem: (ctx: { petId?: number; petName?: string }) => {
+    onRedeem: (ctx: { petId?: number; petName?: string }) => Promise<{
       ok: boolean;
       passesLeft: number;
-    };
+      error?: string;
+    }>;
   };
 }
 
@@ -2465,17 +2469,27 @@ export function BookingModal({
       if (passRedemption) {
         const primaryPetId = Array.isArray(petId) ? petId[0] : petId;
         const primaryPet = selectedPets.find((p) => p.id === primaryPetId);
-        const result = passRedemption.onRedeem({
-          petId: primaryPetId,
-          petName: primaryPet?.name,
-        });
-        if (result.ok) {
-          toast.success("Booking confirmed", {
-            description: `1 ${passRedemption.category} pass used. ${
-              result.passesLeft
-            } pass${result.passesLeft === 1 ? "" : "es"} remaining.`,
+        const category = passRedemption.category;
+        void passRedemption
+          .onRedeem({ petId: primaryPetId, petName: primaryPet?.name })
+          .then((result) => {
+            if (result.ok) {
+              toast.success("Booking confirmed", {
+                description: `1 ${category} pass used. ${result.passesLeft} pass${
+                  result.passesLeft === 1 ? "" : "es"
+                } remaining.`,
+              });
+              return;
+            }
+            // Previously silent. A redemption that fails after the booking is
+            // made means a visit nobody has paid for, and the customer is the
+            // only person who can see both facts.
+            toast.error("The pass was not applied", {
+              description:
+                result.error ??
+                "Your booking is confirmed, but no pass was used.",
+            });
           });
-        }
       }
       onCreateBooking(booking);
       setBookingRequested(true);

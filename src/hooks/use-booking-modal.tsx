@@ -47,14 +47,20 @@ interface BookingModalConfig {
   isEstimateMode?: boolean;
   isCustomerMode?: boolean;
   /** Pass-redemption mode: no payment step; on confirm the pass is auto-applied
-   *  via `onRedeem`, which returns how many passes remain. */
+   *  via `onRedeem`, which returns how many passes remain.
+   *
+   *  ASYNC, because the pass is now spent by the database rather than by
+   *  mutating an array: the balance check and the write are one locked
+   *  statement, so the count can only be known after a round trip. A
+   *  synchronous signature could only be honoured by guessing it. */
   passRedemption?: {
     serviceLabel: string;
     category: string;
-    onRedeem: (ctx: { petId?: number; petName?: string }) => {
+    onRedeem: (ctx: { petId?: number; petName?: string }) => Promise<{
       ok: boolean;
       passesLeft: number;
-    };
+      error?: string;
+    }>;
   };
 }
 

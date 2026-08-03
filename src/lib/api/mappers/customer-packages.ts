@@ -25,18 +25,25 @@ import type { CustomerPackageRecord } from "@/data/customer-packages";
 // honest rendering — the reversed visit no longer consumed a pass, so the one
 // after it really is the Nth.
 //
-// ── moduleId IS "grooming" BECAUSE THE CATALOGUE IS ───────────────────────
+// ── moduleId IS A COLUMN NOW ──────────────────────────────────────────────
+//
+// It used to be the constant "grooming", true because `prepaid_packages` held
+// only the grooming catalogue, and flagged at the time as a thing that would
+// stop being true. It stopped being true: the portal's daycare, boarding and
+// training packages live in the same table (20260806440000), and the Weekend
+// Getaway bundles boarding WITH grooming, so the module cannot even be a
+// property of the package.
 //
 // `passes[].moduleId` is what BookingModal and the check-in board filter on.
-// It is not a column: `customer_packages` hangs off `prepaid_packages`, which
-// is the grooming catalogue. When another module sells packages this becomes a
-// real column rather than a constant — flagged rather than guessed at now.
+// Reading the real column is what stops a grooming counter spending a daycare
+// pass.
 // ============================================================================
 
 export interface CustomerPackageLineRow {
   service_id: string;
   service_name: string;
   passes_total: number;
+  module: string;
 }
 
 export interface PassEntryRow {
@@ -128,7 +135,7 @@ export function rowToCustomerPackage(
     passesUsed: status?.passes_used ?? 0,
     status: (status?.status ?? "active") as CustomerPackageRecord["status"],
     passes: (row.customer_package_lines ?? []).map((line) => ({
-      moduleId: "grooming",
+      moduleId: line.module,
       packageId: line.service_id,
       serviceName: line.service_name,
       totalPasses: line.passes_total,
@@ -144,7 +151,7 @@ export const CUSTOMER_PACKAGE_SELECT = `
   id, legacy_id, package_name, price_paid, purchased_at, expires_at,
   clients!inner ( ref ),
   prepaid_packages ( id, legacy_id ),
-  customer_package_lines ( service_id, service_name, passes_total ),
+  customer_package_lines ( service_id, service_name, passes_total, module ),
   package_pass_entries (
     id, service_id, passes, reason, booking_id, pet_id, pet_name,
     service_label, created_at

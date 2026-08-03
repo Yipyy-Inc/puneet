@@ -12,7 +12,7 @@ import {
 import { groomingPrepaidPackages } from "@/data/grooming-prepaid-packages";
 import type { GroomingPrepaidPackage } from "@/data/grooming-prepaid-packages";
 // `mockCustomerPackages` is gone from this import too: what a customer owns
-// comes from /api/grooming/customer-packages. The type stays — it is the shape
+// comes from /api/packages/owned. The type stays — it is the shape
 // six screens already read, and the mapper fills it from Postgres.
 import type { CustomerPackageRecord } from "@/data/customer-packages";
 import { petNotes } from "@/data/pet-notes";
@@ -231,7 +231,7 @@ async function fetchGroomingAppointments(): Promise<GroomingAppointment[]> {
 }
 
 /**
- * What customers own, from /api/grooming/customer-packages.
+ * What customers own, from /api/packages/owned.
  *
  * The three counts inside each record — `passesUsed`, `passes[].usedPasses`
  * and the length of `redemptions[]` — all come from the same derived source
@@ -243,8 +243,8 @@ async function fetchCustomerPackages(
 ): Promise<CustomerPackageRecord[]> {
   const url =
     clientId === undefined
-      ? "/api/grooming/customer-packages"
-      : `/api/grooming/customer-packages?clientId=${clientId}`;
+      ? "/api/packages/owned"
+      : `/api/packages/owned?clientId=${clientId}`;
   const response = await fetch(url);
   if (!response.ok) {
     const parsed = (await response.json().catch(() => null)) as {

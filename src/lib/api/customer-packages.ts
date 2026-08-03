@@ -1,6 +1,8 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import type { ServicePackage } from "@/data/services-pricing";
 
 // ============================================================================
 // Buying a package and spending a pass.
@@ -18,7 +20,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 // built to delete.
 // ============================================================================
 
-const BASE = "/api/grooming/customer-packages";
+const BASE = "/api/packages/owned";
 
 async function post<T>(url: string, body: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -40,8 +42,33 @@ function invalidateOwned(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({
     queryKey: ["grooming", "customer-packages"],
   });
-  // The catalogue's `purchaseCount` is derived from these rows.
+  // Both catalogue projections carry a derived `purchaseCount` off these rows.
   void queryClient.invalidateQueries({ queryKey: ["prepaid-packages"] });
+  void queryClient.invalidateQueries({ queryKey: ["packages", "catalogue"] });
+}
+
+/**
+ * The whole catalogue, every module — what the portal shop offers.
+ *
+ * Separate from `usePrepaidPackages`, which is the grooming manager's
+ * grooming-only view of the same rows. Two questions, two routes; the derived
+ * prices come from one view either way, so the two screens cannot quote
+ * different savings for the same package.
+ */
+export function useServicePackages() {
+  return useQuery({
+    queryKey: ["packages", "catalogue"] as const,
+    queryFn: async (): Promise<ServicePackage[]> => {
+      const response = await fetch("/api/packages");
+      if (!response.ok) {
+        const parsed = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+      }
+      return (await response.json()) as ServicePackage[];
+    },
+  });
 }
 
 export function usePurchasePackage() {

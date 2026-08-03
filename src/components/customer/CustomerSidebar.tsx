@@ -1,5 +1,7 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
 import { useMemo } from "react";
 import Link from "next/link";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
@@ -33,7 +35,7 @@ import {
   cameraIntegrationConfig,
   petCamAccessConfigs,
 } from "@/data/camera-integration";
-import { memberships, customerPackagePurchases } from "@/data/services-pricing";
+import { memberships } from "@/data/services-pricing";
 import type {
   CameraRuleSet,
   CameraServiceType,
@@ -58,6 +60,9 @@ const unreadReportCardCount = reportCards.filter(
 export function CustomerSidebar() {
   const { selectedFacility } = useCustomerFacility();
   const isMounted = useHydrated();
+  const { data: ownedPackages = [] } = useQuery(
+    groomingQueries.customerPackagesForClient(MOCK_CUSTOMER_ID),
+  );
 
   // Build access context for rule evaluation (only on client after mount)
   const accessContext = useMemo(() => {
@@ -90,12 +95,12 @@ export function CustomerSidebar() {
       )
       .map((m) => m.planId);
 
-    const purchasedPackageIds = customerPackagePurchases
-      .filter(
-        (p) =>
-          p.customerId === String(MOCK_CUSTOMER_ID) &&
-          new Date(p.expiresAt) > new Date(),
-      )
+    // Which catalogue packages this customer still holds. `status` is derived
+    // server-side from the ledger and the clock, so an expired pack is already
+    // marked expired — the old client-side date comparison could disagree with
+    // the till by a timezone.
+    const purchasedPackageIds = ownedPackages
+      .filter((p) => p.status === "active")
       .map((p) => p.packageId);
 
     const customerServiceTypes: CameraServiceType[] = [
@@ -122,7 +127,7 @@ export function CustomerSidebar() {
       customerServiceTypes,
       isWithinOperatingHours,
     };
-  }, [isMounted, selectedFacility]);
+  }, [isMounted, selectedFacility, ownedPackages]);
 
   function passesRuleSet(ruleSet: CameraRuleSet): boolean {
     if (!accessContext || !ruleSet.enabled || ruleSet.rules.length === 0)

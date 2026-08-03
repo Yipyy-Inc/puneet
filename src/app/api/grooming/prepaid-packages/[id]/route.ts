@@ -132,6 +132,10 @@ export async function PATCH(
           service_name: l.serviceName,
           quantity: l.quantity,
           price_per_session: l.pricePerSession ?? 0,
+          // This screen prices grooming and nothing else; its editor offers
+          // only grooming services. The column has no default (20260806420000)
+          // precisely so a caller that does not know must say so here.
+          module: "grooming",
         })) as never,
       );
     if (lineError) {

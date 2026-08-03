@@ -27,6 +27,10 @@ export interface PackageLineRow {
   service_name: string;
   quantity: number;
   price_per_session: number;
+  /** Which counter can spend this pool (20260806420000). Read by the grooming
+   *  route to keep the portal's daycare and boarding packages off a screen
+   *  that can only price grooming. */
+  module: string;
 }
 
 export interface PrepaidPackageRow {
@@ -114,5 +118,7 @@ export const PREPAID_PACKAGE_SELECT = `
   allow_refund_unused, refund_per_unused_pass, allow_store_credit_on_cancel,
   allow_transfer, allow_extension, max_extension_days, extension_fee,
   policy_notes, created_at,
-  prepaid_package_lines ( service_id, service_name, quantity, price_per_session )
+  prepaid_package_lines (
+    service_id, service_name, quantity, price_per_session, module
+  )
 ` as const;

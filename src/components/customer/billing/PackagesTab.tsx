@@ -7,9 +7,11 @@ import {
   membershipPlans,
   memberships,
   prepaidCredits,
-  servicePackages,
 } from "@/data/services-pricing";
-import { useCustomerPackagePurchases } from "@/lib/customer-package-purchases-store";
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
+import { useServicePackages } from "@/lib/api/customer-packages";
+import { recordToPurchase } from "@/lib/api/mappers/owned-packages";
 import { bookings } from "@/data/bookings";
 import {
   Card,
@@ -185,11 +187,18 @@ export function PackagesTab() {
     [],
   );
 
-  // From the live store so a pack bought in "Buy Passes & Bundles" appears here.
-  const allPurchases = useCustomerPackagePurchases();
+  // From Postgres, scoped to this customer server-side. A pack bought in "Buy
+  // Passes & Bundles" appears here because both surfaces read the same rows —
+  // the module store they used to share could only agree within one tab.
+  // The catalogue, only so a card can show the package's refund/transfer
+  // policy beside what the customer owns.
+  const { data: catalogue = [] } = useServicePackages();
+  const { data: ownedRecords = [] } = useQuery(
+    groomingQueries.customerPackagesForClient(Number(MOCK_CUSTOMER_ID)),
+  );
   const customerPackages = useMemo(
-    () => allPurchases.filter((p) => p.customerId === MOCK_CUSTOMER_ID),
-    [allPurchases],
+    () => ownedRecords.map(recordToPurchase),
+    [ownedRecords],
   );
 
   const getBooking = (id: number) => bookings.find((b) => b.id === id);
@@ -301,9 +310,7 @@ export function PackagesTab() {
           {customerPackages.length > 0 || customerPrepaidCredits.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
               {customerPackages.map((purchase) => {
-                const pkg = servicePackages.find(
-                  (p) => p.id === purchase.packageId,
-                );
+                const pkg = catalogue.find((p) => p.id === purchase.packageId);
                 return (
                   <PurchasedPackageCard
                     key={purchase.id}

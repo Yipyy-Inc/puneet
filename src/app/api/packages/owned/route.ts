@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { writeFailure } from "@/lib/api/write-failure";
 import {
   CUSTOMER_PACKAGE_SELECT,
@@ -134,6 +135,27 @@ export async function GET(request: NextRequest) {
   );
 }
 
+/**
+ * True when the signed-in session IS the customer this client row belongs to.
+ *
+ * Asks `profile_id` directly rather than inferring from visibility: a client
+ * row is visible to its own customer AND to the facility's staff, so "I can
+ * see it" is not "it is mine". Getting that wrong here would hand every
+ * receptionist a free-package button.
+ */
+async function callerOwnsClient(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  clientId: string,
+  userId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("clients")
+    .select("profile_id")
+    .eq("id", clientId)
+    .maybeSingle();
+  return (data as { profile_id: string | null } | null)?.profile_id === userId;
+}
+
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser().catch(() => null);
   if (!user) {
@@ -184,7 +206,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No such package." }, { status: 404 });
   }
 
-  const { data, error } = await supabase.rpc("purchase_package", {
+  // ── WHO IS ALLOWED TO SELL, AND WHY A CUSTOMER IS NOT ────────────────────
+  //
+  // Staff sell through their own privileges: `purchase_package` is SECURITY
+  // INVOKER, so `financial_take_payment` decides, and a groomer is refused.
+  //
+  // A customer buying from the portal has no such permission and deliberately
+  // never will (20260806460000). A row in `customer_packages` is a package
+  // somebody paid for; if a client could write one, a client could grant
+  // themselves passes for nothing — from the checkout screen today, and from
+  // any client-side query for the rest of the project's life.
+  //
+  // So their purchase runs with the service-role client, AFTER checking the
+  // session owns that client row. The check is the authorisation: without it
+  // this route would let any signed-in person buy a package in anybody's name.
+  //
+  // The gap this leaves, stated rather than buried: nothing here takes payment.
+  // That was equally true of the mock. What changed is that the capability now
+  // lives in one server route that a payment gate can be added to, instead of
+  // in every browser holding a session.
+  const ownsClient = await callerOwnsClient(supabase, client.id, user.id);
+  let executor = supabase;
+  if (!ownsClient) {
+    // Not their own — fall through to the caller's own permissions, which is
+    // the staff path and refuses if they have none.
+  } else if (hasServiceRoleKey()) {
+    executor = createAdminClient() as unknown as typeof supabase;
+  }
+
+  const { data, error } = await executor.rpc("purchase_package", {
     p_client_id: client.id,
     p_package_id: packageId,
     p_price_override: input.priceOverride ?? undefined,
