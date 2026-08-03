@@ -21,6 +21,9 @@ export interface StaffDocumentRow {
   uploadedAt: string;
   visibleToEmployee: boolean;
   taskKey: string | null;
+  /** Set by the server from the facility's retention policy, and only for the
+   *  offboarding document kinds. Null on everything else. */
+  retainUntil: string | null;
   /** Null when the URL could not be signed — render a disabled control, not a
    *  link that 404s. */
   fileUrl: string | null;
@@ -48,6 +51,37 @@ async function json<T>(url: string): Promise<T> {
     throw new Error(parsed?.error ?? `Request failed (${response.status})`);
   }
   return parsed as T;
+}
+
+/**
+ * The document kinds that belong to a departure, as stored in
+ * `staff_documents.doc_type`.
+ *
+ * Offboarding documents were NOT given a table of their own — the only field
+ * that did not already map onto staff_documents was retention, which is one
+ * column (20260804180000). The cost of that decision is this list: "final
+ * documents" is a filter rather than a relationship, so it has to live in one
+ * place or the two surfaces that render it will drift.
+ */
+export const OFFBOARDING_DOC_KINDS = [
+  "roe",
+  "termination_letter",
+  "settlement_agreement",
+] as const;
+
+export type OffboardingDocKind = (typeof OFFBOARDING_DOC_KINDS)[number];
+
+/**
+ * A type predicate rather than a plain boolean, so callers get `type` narrowed
+ * to the three kinds and can index a label map without a cast. `doc_type` is
+ * `text` in Postgres and arrives here as `string`; the CHECK constraint is what
+ * makes this narrowing true, and this is where that fact enters the type
+ * system.
+ */
+export function isOffboardingDoc(
+  doc: StaffDocumentRow,
+): doc is StaffDocumentRow & { type: OffboardingDocKind } {
+  return (OFFBOARDING_DOC_KINDS as readonly string[]).includes(doc.type);
 }
 
 export const staffDocumentKeys = {

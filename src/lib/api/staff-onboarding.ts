@@ -234,6 +234,28 @@ export function useStaffHrConfigQuery() {
  * now guarantees at most one active template per role, so `.find()` is no
  * longer picking by array order — see 20260803140000, Decision 4.
  */
+/**
+ * Offboarding templates matching a termination reason, as a PURE function over
+ * an already-loaded list — the counterpart to resolveTemplateForRole, and for
+ * the same reason (staff-onboarding.ts:1639 read the store during render).
+ *
+ * Returns a LIST, not one template, because several may apply and the status
+ * dialog offers the manager the choice. Precedence is unchanged: reason-
+ * specific templates if any exist, otherwise the universal ones (empty
+ * appliesToReasons). Note this is "specific OR universal", never both — a
+ * facility that has written a Resignation checklist should not also be offered
+ * its catch-all for a resignation.
+ */
+export function resolveOffboardingTemplatesForReason(
+  templates: OffboardingTemplate[],
+  reason: string,
+): OffboardingTemplate[] {
+  const specific = templates.filter((t) => t.appliesToReasons.includes(reason));
+  return specific.length
+    ? specific
+    : templates.filter((t) => t.appliesToReasons.length === 0);
+}
+
 export function resolveTemplateForRole(
   templates: OnboardingTemplate[],
   role: string,

@@ -379,6 +379,31 @@ begin
     format('anon_execute=%s', g));
 end $$;
 
+-- ── T13: the checklist snapshot carries the ASSIGNEE ────────────────────────
+-- Materialising copies off the template so a later template edit does not
+-- rewrite a departure in progress. The first cut copied name/description/
+-- required/position and dropped `assigned_to` — which both offboarding screens
+-- render, and which is the entire point of a list shared between a manager, an
+-- owner and HR. Fixed in 20260804220000; asserted here against all three values
+-- so a single-value test cannot pass by accident on a column defaulting to
+-- 'manager'.
+--
+-- `due`/`days` are deliberately NOT snapshotted: those are a rule, and
+-- materialising resolves them into due_date (T9). Copying both would be two
+-- sources of truth for one date.
+do $$
+declare drift integer; n integer;
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  select count(*) into n from public.offboarding_task_states;
+  select count(*) into drift
+    from public.offboarding_task_states s
+    join public.offboarding_tasks t on t.id = s.task_id
+   where s.assigned_to is distinct from t.assigned_to;
+  perform pg_temp.t('T13 the checklist snapshot carries assigned_to from the template',
+    n = 2 and drift = 0, format('states=%s drift=%s', n, drift));
+end $$;
+
 -- ── Report ──────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result, name, detail
   from tap order by n;

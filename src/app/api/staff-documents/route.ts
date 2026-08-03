@@ -83,6 +83,7 @@ export async function GET(request: NextRequest) {
       uploadedAt: d.uploaded_at,
       visibleToEmployee: d.visible_to_employee,
       taskKey: d.task_key,
+      retainUntil: d.retain_until,
       // Absent rather than empty when signing failed — a broken link is worse
       // than a disabled button, because only one of them tells the truth.
       fileUrl: urlByPath.get(d.storage_path) ?? null,
@@ -170,13 +171,40 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // RETENTION IS COMPUTED HERE, NOT ACCEPTED. The client sends nothing; the
+  // date comes from the facility's own hrDocRetentionYears, because "how long
+  // we must keep this" is a policy of the business and not a property of the
+  // upload. A caller-supplied retain_until would let whoever files a document
+  // decide when it may be destroyed.
+  //
+  // Only the offboarding kinds get one. An ordinary certification has no
+  // statutory retention attached to it, and stamping every upload with a date
+  // would turn a legal obligation into decoration.
+  const docType = (form?.get("docType") as string | null) || "other";
+  const RETAINED = ["roe", "termination_letter", "settlement_agreement"];
+
+  let retainUntil: string | null = null;
+  if (RETAINED.includes(docType)) {
+    const { data: config } = await supabase
+      .from("staff_hr_config")
+      .select("hr_doc_retention_years")
+      .eq("facility_id", staff.facility_id)
+      .maybeSingle();
+
+    const years = (config?.hr_doc_retention_years as number | null) ?? 7;
+    const until = new Date();
+    until.setFullYear(until.getFullYear() + years);
+    retainUntil = until.toISOString().split("T")[0];
+  }
+
   const { data: row, error } = await supabase
     .from("staff_documents")
     .insert({
       facility_id: staff.facility_id,
       staff_id: staff.id,
       task_key: (form?.get("taskKey") as string | null) || null,
-      doc_type: (form?.get("docType") as string | null) || "other",
+      doc_type: docType,
+      retain_until: retainUntil,
       file_name: file.name.slice(-200),
       content_type: contentType,
       size_bytes: file.size,

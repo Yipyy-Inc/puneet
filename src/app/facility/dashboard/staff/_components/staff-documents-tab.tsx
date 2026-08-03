@@ -5,9 +5,9 @@ import type { StaffProfile } from "@/types/facility-staff";
 import {
   useOnboardingInstance,
   useOnboardingTemplates,
-  useOffboardingInstance,
   EMPLOYEE_TASK_LABEL,
 } from "@/data/staff-onboarding";
+import { isOffboardingDoc, useStaffDocuments } from "@/lib/api/staff-documents";
 import { EmployeeFilesTab } from "./employee-files-tab";
 import { WriteUpsTab } from "./write-ups-tab";
 
@@ -41,7 +41,12 @@ function DocSection({
 export function StaffDocumentsTab({ staff }: { staff: StaffProfile }) {
   const onboarding = useOnboardingInstance(staff.id);
   const templates = useOnboardingTemplates();
-  const offboarding = useOffboardingInstance(staff.id);
+  // Final documents are ordinary staff_documents rows with a departure
+  // doc_type, not a `finalDocuments` array hanging off the offboarding record
+  // — so this reads the document list and filters, rather than loading an
+  // instance it otherwise has no use for.
+  const { data: allDocs } = useStaffDocuments(staff.id);
+  const finalDocs = (allDocs ?? []).filter(isOffboardingDoc);
 
   const template = onboarding
     ? templates.find((t) => t.id === onboarding.templateId)
@@ -142,13 +147,13 @@ export function StaffDocumentsTab({ staff }: { staff: StaffProfile }) {
       </DocSection>
 
       {/* Offboarding final documents (terminated only) */}
-      {offboarding && (offboarding.finalDocuments?.length ?? 0) > 0 && (
+      {finalDocs.length > 0 && (
         <DocSection
           title="Final documents"
           hint="Permanent departure records (ROE, termination letter, settlement)."
         >
           <div className="space-y-2">
-            {offboarding.finalDocuments!.map((doc) => (
+            {finalDocs.map((doc) => (
               <div
                 key={doc.id}
                 className="border-border/50 flex items-start gap-2.5 rounded-lg border p-2.5"
@@ -156,10 +161,12 @@ export function StaffDocumentsTab({ staff }: { staff: StaffProfile }) {
                 <GraduationCap className="mt-0.5 size-4 shrink-0 text-rose-500" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">{doc.name}</div>
-                  <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
-                    <Lock className="size-2.5" /> Retained until{" "}
-                    {doc.retainUntil}
-                  </p>
+                  {doc.retainUntil && (
+                    <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
+                      <Lock className="size-2.5" /> Retained until{" "}
+                      {doc.retainUntil}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}

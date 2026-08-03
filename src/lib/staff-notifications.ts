@@ -3,12 +3,6 @@ import { addFacilityNotification } from "@/data/facility-notifications";
 import {
   getStaffHrConfig,
   recordOnboardingEmail,
-  getOverdueOffboardingReminders,
-  markOffboardingReminded,
-  getOffboardingDueToday,
-  markOffboardingDueTodayNotified,
-  isOffboardingNewlyComplete,
-  markOffboardingCompleteNotified,
   getExpiredOnboardingInvites,
   markOnboardingInviteExpiredNotified,
   getOverdueOnboarding,
@@ -84,11 +78,26 @@ export function notifyStaffLifecycle(
 }
 
 /**
- * Announce "Offboarding for [name] is complete" once, the first time an
- * instance reaches fully-complete. Call after every offboarding-task toggle.
+ * Announce "Offboarding for [name] is complete" when the last task is ticked.
+ *
+ * TAKES THE INSTANCE, rather than looking it up. It used to read
+ * `hrStore.offboardingInstances`, which nothing writes any more — so it would
+ * have gone on compiling and silently never fired. The caller has the instance
+ * already: every offboarding mutation resolves with the server's updated copy.
+ *
+ * The old once-only dedup (`completeNotifiedAt` in localStorage) is gone with
+ * the store, and is not replaced, because the argument makes it unnecessary:
+ * this is called from the COMPLETION success path only, and the transition into
+ * "every task done" happens once per completion. Reopening and re-completing a
+ * task announces again, which is the truthful thing to say — the offboarding
+ * did in fact complete twice.
  */
-export function maybeAnnounceOffboardingComplete(staffId: string): void {
-  if (!isOffboardingNewlyComplete(staffId)) return;
+export function maybeAnnounceOffboardingComplete(instance: {
+  staffId: string;
+  tasks: { completedAt?: string }[];
+}): void {
+  const { tasks, staffId } = instance;
+  if (tasks.length === 0 || tasks.some((t) => !t.completedAt)) return;
   const name = staffNameFor(staffId);
   notifyStaffLifecycle("offboarding_complete", {
     inApp: {
@@ -106,15 +115,55 @@ export function maybeAnnounceOffboardingComplete(staffId: string): void {
       body: `Offboarding for ${name} is complete — all tasks are done.`,
     },
   });
-  markOffboardingCompleteNotified(staffId);
 }
 
 /**
- * Daily/mount sweep for the offboarding polling triggers — overdue reminders
- * and due-today alerts. Deduped per day inside the store selectors.
+ * Per-session dedup for the sweep, keyed by `${staffId}:${trigger}:${today}`.
+ *
+ * The store's `lastReminderDate` / `dueTodayNotifiedDate` columns exist in
+ * Postgres but nothing writes them, and the honest reason is that persisting
+ * them needs a write endpoint whose only purpose is suppressing a toast. A
+ * module-level Set is per-tab and resets on reload — which is what the
+ * localStorage version effectively was too, only less obviously so. Stated here
+ * rather than implied, because "deduped daily" and "deduped per session" are
+ * different promises.
  */
-export function runOffboardingNotificationSweep(today: string): void {
-  for (const inst of getOverdueOffboardingReminders(today)) {
+const sweptThisSession = new Set<string>();
+
+function sweepOnce(key: string): boolean {
+  if (sweptThisSession.has(key)) return false;
+  sweptThisSession.add(key);
+  return true;
+}
+
+interface SweepableOffboarding {
+  staffId: string;
+  completedAt?: string;
+  tasks: { required: boolean; completedAt?: string; dueDate?: string }[];
+}
+
+/**
+ * Mount sweep for the offboarding polling triggers — overdue reminders and
+ * due-today alerts.
+ *
+ * TAKES THE INSTANCES, for the same reason as above: the selectors it used to
+ * call read a store nothing populates, so this had quietly become a loop over
+ * an empty array.
+ */
+export function runOffboardingNotificationSweep(
+  instances: SweepableOffboarding[],
+  today: string,
+): void {
+  const overdueInstances = instances.filter(
+    (inst) =>
+      !inst.completedAt &&
+      inst.tasks.some(
+        (t) => t.required && !t.completedAt && !!t.dueDate && t.dueDate < today,
+      ),
+  );
+
+  for (const inst of overdueInstances) {
+    if (!sweepOnce(`${inst.staffId}:overdue:${today}`)) continue;
     const name = staffNameFor(inst.staffId);
     const overdue = inst.tasks.filter(
       (t) => t.required && !t.completedAt && t.dueDate && t.dueDate < today,
@@ -137,10 +186,18 @@ export function runOffboardingNotificationSweep(today: string): void {
         body: `${name}'s offboarding has ${overdue} overdue required task(s).`,
       },
     });
-    markOffboardingReminded(inst.staffId, today);
   }
 
-  for (const inst of getOffboardingDueToday(today)) {
+  const dueTodayInstances = instances.filter(
+    (inst) =>
+      !inst.completedAt &&
+      inst.tasks.some(
+        (t) => t.required && !t.completedAt && t.dueDate === today,
+      ),
+  );
+
+  for (const inst of dueTodayInstances) {
+    if (!sweepOnce(`${inst.staffId}:due:${today}`)) continue;
     const name = staffNameFor(inst.staffId);
     const due = inst.tasks.filter(
       (t) => t.required && !t.completedAt && t.dueDate === today,
@@ -155,7 +212,6 @@ export function runOffboardingNotificationSweep(today: string): void {
         link: OFFBOARDING_LINK,
       },
     });
-    markOffboardingDueTodayNotified(inst.staffId, today);
   }
 }
 

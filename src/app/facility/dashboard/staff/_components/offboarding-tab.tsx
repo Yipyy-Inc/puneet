@@ -34,14 +34,18 @@ import {
   Plus,
 } from "lucide-react";
 import type { StaffProfile } from "@/types/facility-staff";
+import type { OffboardingDocumentKind } from "@/data/staff-onboarding";
+import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import {
   useOffboardingInstance,
-  useStaffHrConfig,
-  createOffboardingInstance,
-  setOffboardingTaskComplete,
-  addOffboardingDocument,
-  type OffboardingDocumentKind,
-} from "@/data/staff-onboarding";
+  useSetOffboardingTask,
+  useStartOffboarding,
+} from "@/lib/api/offboarding-instances";
+import {
+  isOffboardingDoc,
+  useStaffDocuments,
+  useUploadStaffDocument,
+} from "@/lib/api/staff-documents";
 import {
   notifyStaffLifecycle,
   maybeAnnounceOffboardingComplete,
@@ -63,10 +67,16 @@ const DOC_KIND_LABEL: Record<OffboardingDocumentKind, string> = {
 export function OffboardingTab({ staff }: { staff: StaffProfile }) {
   const instance = useOffboardingInstance(staff.id);
   const config = useStaffHrConfig();
+  const { mutate: startOffboarding, isPending: starting } =
+    useStartOffboarding();
   const [today] = useState(() => new Date().toISOString().split("T")[0]);
 
   // Legacy terminated staff (terminated before offboarding existed) have no
   // instance — offer to start one from their recorded status reason.
+  //
+  // This branch is also what renders while the request is in flight, which is
+  // deliberate: the query 404s for most staff, and a spinner on a tab that is
+  // usually empty is worse than the empty state it resolves to.
   if (!instance) {
     return (
       <div className="border-border/60 flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-center">
@@ -79,15 +89,27 @@ export function OffboardingTab({ staff }: { staff: StaffProfile }) {
         <Button
           size="sm"
           className="mt-1"
+          disabled={starting}
           onClick={() => {
-            createOffboardingInstance(
-              staff.id,
-              staff.statusReason ?? "Terminated",
+            startOffboarding(
+              {
+                staffId: staff.id,
+                reason: staff.statusReason ?? "Terminated",
+              },
+              {
+                onSuccess: () => toast.success("Offboarding started"),
+                onError: (error) =>
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not start offboarding.",
+                  ),
+              },
             );
-            toast.success("Offboarding started");
           }}
         >
-          <Plus className="size-3.5" /> Start offboarding
+          <Plus className="size-3.5" />{" "}
+          {starting ? "Starting…" : "Start offboarding"}
         </Button>
       </div>
     );
@@ -177,6 +199,7 @@ function OffboardingTaskRow({
   today: string;
 }) {
   const [note, setNote] = useState("");
+  const { mutate: setTask, isPending } = useSetOffboardingTask();
   const complete = Boolean(task.completedAt);
   const overdue = !complete && !!task.dueDate && task.dueDate < today;
 
@@ -270,9 +293,20 @@ function OffboardingTaskRow({
               )}
               <button
                 type="button"
-                className="text-muted-foreground hover:text-foreground text-[11px] underline"
+                disabled={isPending}
+                className="text-muted-foreground hover:text-foreground text-[11px] underline disabled:opacity-50"
                 onClick={() =>
-                  setOffboardingTaskComplete(staffId, task.id, false)
+                  setTask(
+                    { staffId, taskKey: task.id, complete: false },
+                    {
+                      onError: (error) =>
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Could not reopen that task.",
+                        ),
+                    },
+                  )
                 }
               >
                 Reopen
@@ -289,21 +323,35 @@ function OffboardingTaskRow({
               />
               <Button
                 size="sm"
+                disabled={isPending}
                 className="h-8 shrink-0 bg-emerald-600 text-white hover:bg-emerald-700"
                 onClick={() => {
-                  setOffboardingTaskComplete(
-                    staffId,
-                    task.id,
-                    true,
-                    "Manager",
-                    note,
+                  // The note is cleared in onSuccess, not before the call: a
+                  // failed write that had already emptied the field would lose
+                  // what the manager typed, and "ROE submitted, ref #XYZ" is
+                  // not something to ask anyone to retype.
+                  setTask(
+                    { staffId, taskKey: task.id, complete: true, note },
+                    {
+                      onSuccess: (updated) => {
+                        setNote("");
+                        // The response, not local state: whether this was the
+                        // last outstanding task is the server's answer.
+                        maybeAnnounceOffboardingComplete(updated);
+                        toast.success("Task marked complete");
+                      },
+                      onError: (error) =>
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Could not update that task.",
+                        ),
+                    },
                   );
-                  maybeAnnounceOffboardingComplete(staffId);
-                  setNote("");
-                  toast.success("Task marked complete");
                 }}
               >
-                <CheckCircle2 className="size-3.5" /> Mark complete
+                <CheckCircle2 className="size-3.5" />{" "}
+                {isPending ? "Saving…" : "Mark complete"}
               </Button>
             </div>
           )}
@@ -322,24 +370,30 @@ function FinalDocuments({
   staff: StaffProfile;
   retentionYears: number;
 }) {
-  const instance = useOffboardingInstance(staff.id);
+  // The offboarding kinds live in staff_documents alongside every other HR
+  // document rather than in a table of their own — the only thing that did not
+  // map was retention, which is one column (20260804180000). So this filters
+  // the real document list rather than reading a `finalDocuments` array.
+  const { data: allDocs } = useStaffDocuments(staff.id);
+  const { mutate: upload, isPending: uploading } = useUploadStaffDocument();
+
   const docs = useMemo(
-    () => instance?.finalDocuments ?? [],
-    [instance?.finalDocuments],
+    () => (allDocs ?? []).filter(isOffboardingDoc),
+    [allDocs],
   );
 
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<OffboardingDocumentKind>("roe");
   const [name, setName] = useState("");
   const [fileName, setFileName] = useState("");
-  const fileUrlRef = useRef<string>("");
+  const fileRef = useRef<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const openDialog = () => {
     setKind("roe");
     setName("");
     setFileName("");
-    fileUrlRef.current = "";
+    fileRef.current = null;
     setOpen(true);
   };
 
@@ -348,37 +402,45 @@ function FinalDocuments({
     if (!file) return;
     setFileName(file.name);
     if (!name.trim()) setName(file.name.replace(/\.[^.]+$/, ""));
-    // Mock capture — object URL stands in for a real upload.
-    fileUrlRef.current = URL.createObjectURL(file);
+    // The FILE itself, held for the upload. The old object URL was a mock
+    // stand-in and would not have survived a reload even as a link.
+    fileRef.current = file;
   };
 
   const handleUpload = () => {
+    const file = fileRef.current;
+    if (!file) return;
     const label = name.trim() || DOC_KIND_LABEL[kind];
-    const retain = new Date();
-    retain.setFullYear(retain.getFullYear() + retentionYears);
-    addOffboardingDocument(staff.id, {
-      id: `off-doc-${Date.now()}`,
-      kind,
-      name: label,
-      fileUrl:
-        fileUrlRef.current ||
-        `/files/${staff.id}/${label.toLowerCase().replace(/\s+/g, "-")}.pdf`,
-      uploadedAt: new Date().toISOString(),
-      retainUntil: retain.toISOString().split("T")[0],
-    });
-    // Table 5 — optional employee notification when an HR doc is added.
-    notifyStaffLifecycle("hr_doc_added", {
-      email: {
-        kind: "hr_doc",
-        staffId: staff.id,
-        staffName: `${staff.firstName} ${staff.lastName}`.trim(),
-        to: staff.email,
-        subject: "A document was added to your HR file",
-        body: `${label} was added to your records.`,
+
+    // `retainUntil` is NOT sent. The server computes it from the facility's
+    // retention policy, because whoever files a document should not be the one
+    // deciding when it may be destroyed.
+    upload(
+      { staffId: staff.id, file, docType: kind },
+      {
+        onSuccess: () => {
+          // Table 5 — optional employee notification when an HR doc is added.
+          notifyStaffLifecycle("hr_doc_added", {
+            email: {
+              kind: "hr_doc",
+              staffId: staff.id,
+              staffName: `${staff.firstName} ${staff.lastName}`.trim(),
+              to: staff.email,
+              subject: "A document was added to your HR file",
+              body: `${label} was added to your records.`,
+            },
+          });
+          setOpen(false);
+          toast.success("Document added to the permanent record");
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not upload that file.",
+          ),
       },
-    });
-    setOpen(false);
-    toast.success("Document added to the permanent record");
+    );
   };
 
   return (
@@ -414,7 +476,7 @@ function FinalDocuments({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-sm font-medium">{doc.name}</span>
                   <Badge className="border-0 bg-indigo-500/10 text-[10px] text-indigo-600 dark:text-indigo-400">
-                    {DOC_KIND_LABEL[doc.kind]}
+                    {DOC_KIND_LABEL[doc.type]}
                   </Badge>
                 </div>
                 <p className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px]">
@@ -426,12 +488,31 @@ function FinalDocuments({
                       year: "numeric",
                     })}
                   </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Lock className="size-2.5" /> Retained until{" "}
-                    {doc.retainUntil}
-                  </span>
+                  {doc.retainUntil && (
+                    <span className="inline-flex items-center gap-1">
+                      <Lock className="size-2.5" /> Retained until{" "}
+                      {doc.retainUntil}
+                    </span>
+                  )}
                 </p>
               </div>
+              {/* The URL is signed and expires in 60 seconds, so a null one is
+                  a disabled control rather than a link that 404s. */}
+              <Button
+                size="sm"
+                variant="outline"
+                asChild={Boolean(doc.fileUrl)}
+                disabled={!doc.fileUrl}
+                className="h-7 shrink-0 text-[11px]"
+              >
+                {doc.fileUrl ? (
+                  <a href={doc.fileUrl} target="_blank" rel="noreferrer">
+                    Open
+                  </a>
+                ) : (
+                  <span>Unavailable</span>
+                )}
+              </Button>
             </div>
           ))}
         </div>
@@ -504,11 +585,19 @@ function FinalDocuments({
             </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              variant="outline"
+              disabled={uploading}
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleUpload}>
-              <Upload className="mr-1.5 size-3.5" /> Add to record
+            {/* A file is now REQUIRED. The mock version accepted an empty
+                dialog and invented a plausible-looking path, which produced a
+                permanent record pointing at nothing. */}
+            <Button onClick={handleUpload} disabled={!fileName || uploading}>
+              <Upload className="mr-1.5 size-3.5" />{" "}
+              {uploading ? "Uploading…" : "Add to record"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -22,11 +22,13 @@ import {
 import { cn } from "@/lib/utils";
 import { UserCheck, UserMinus, UserX, AlertTriangle } from "lucide-react";
 import type { StaffProfile } from "@/types/facility-staff";
+import { toast } from "sonner";
 import {
   useStaffHrConfig,
-  getOffboardingTemplatesForReason,
-  createOffboardingInstance,
-} from "@/data/staff-onboarding";
+  useOffboardingTemplatesQuery,
+  resolveOffboardingTemplatesForReason,
+} from "@/lib/api/staff-onboarding";
+import { useStartOffboarding } from "@/lib/api/offboarding-instances";
 import {
   notifyStaffLifecycle,
   managerRecipient,
@@ -98,6 +100,13 @@ export function StatusChangeDialog({
   onConfirm,
 }: StatusChangeDialogProps) {
   const config = useStaffHrConfig();
+  // Loaded here rather than inside the reason branch: the templates are needed
+  // the instant a termination reason is picked, and a query that starts then
+  // would leave the picker empty for the first render after the choice.
+  const { data: templates = [] } = useOffboardingTemplatesQuery();
+  const { mutateAsync: startOffboarding, isPending: offboarding } =
+    useStartOffboarding();
+
   const reasonsFor = (status: StaffStatus): ReasonOption[] =>
     status === "terminated"
       ? config.terminationReasons.map((r) => ({ value: r, label: r }))
@@ -143,43 +152,73 @@ export function StatusChangeDialog({
 
   // Offboarding template(s) matching the chosen termination reason.
   const offboardingTemplates =
-    isDestructive && reason ? getOffboardingTemplatesForReason(reason) : [];
+    isDestructive && reason
+      ? resolveOffboardingTemplatesForReason(templates, reason)
+      : [];
   const chosenTemplateId =
     offboardingTemplateId || offboardingTemplates[0]?.id || "";
 
-  function handleConfirm() {
+  // TERMINATION GOES THROUGH THE OFFBOARDING RPC FIRST, and the ordering is the
+  // point rather than an implementation detail.
+  //
+  // `onConfirm` writes the status through the ordinary staff update. That alone
+  // marks somebody terminated on the roster while leaving their membership
+  // active — which is to say, still able to sign in and read the facility.
+  // `offboard_staff()` terminates, deactivates the membership and materialises
+  // the checklist in ONE transaction, so running it first means there is never
+  // a moment where the roster says "gone" and the session says otherwise.
+  //
+  // It also means a FAILED offboarding leaves the employee untouched. Calling
+  // onConfirm first and the RPC second would produce the worst state available:
+  // terminated, access intact, no checklist, no error the manager can act on.
+  //
+  // onConfirm still runs afterwards — it carries the audit entry and the status
+  // note, neither of which the RPC owns. Re-writing status=terminated there is
+  // a no-op by then.
+  async function handleConfirm() {
     if (!profile || !reason) return;
-    // Existing behaviour: revoke access + move to Former Employees.
-    onConfirm(profile.id, newStatus, reason, note.trim());
 
-    // On termination: start offboarding — materialise the template's tasks and
-    // notify the manager's task list.
     if (newStatus === "terminated") {
-      const inst = createOffboardingInstance(
-        profile.id,
-        reason,
-        chosenTemplateId || undefined,
-      );
-      const name = fullNameOf(profile);
-      notifyStaffLifecycle("offboarding_started", {
-        inApp: {
-          type: "staff_announcement",
-          title: "Offboarding started",
-          message: `${name} has been terminated. ${inst.tasks.length} offboarding task${
-            inst.tasks.length === 1 ? "" : "s"
-          } added to your task list. View offboarding tasks →`,
-          link: "/facility/dashboard/tasks?tab=offboarding",
-        },
-        email: {
-          kind: "offboarding_complete",
+      try {
+        const instance = await startOffboarding({
           staffId: profile.id,
-          staffName: name,
-          to: managerRecipient().email,
-          subject: "Offboarding started",
-          body: `${name} has been terminated. ${inst.tasks.length} offboarding task(s) added to the task list.`,
-        },
-      });
+          reason,
+          ...(chosenTemplateId ? { templateId: chosenTemplateId } : {}),
+        });
+
+        const name = fullNameOf(profile);
+        const count = instance.tasks.length;
+        notifyStaffLifecycle("offboarding_started", {
+          inApp: {
+            type: "staff_announcement",
+            title: "Offboarding started",
+            message: `${name} has been terminated. ${count} offboarding task${
+              count === 1 ? "" : "s"
+            } added to your task list. View offboarding tasks →`,
+            link: "/facility/dashboard/tasks?tab=offboarding",
+          },
+          email: {
+            kind: "offboarding_complete",
+            staffId: profile.id,
+            staffName: name,
+            to: managerRecipient().email,
+            subject: "Offboarding started",
+            body: `${name} has been terminated. ${count} offboarding task(s) added to the task list.`,
+          },
+        });
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not start offboarding.",
+        );
+        // Dialog stays OPEN and nothing was written. The manager can retry or
+        // cancel; closing it here would look like the termination succeeded.
+        return;
+      }
     }
+
+    onConfirm(profile.id, newStatus, reason, note.trim());
     onOpenChange(false);
   }
 
@@ -330,16 +369,28 @@ export function StatusChangeDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            disabled={offboarding}
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button
             variant={isDestructive ? "destructive" : "default"}
-            disabled={!canConfirm}
+            // Terminating is a network write now, and a double-click would
+            // fire the RPC twice. The second is harmless — offboard_staff
+            // upserts on staff_id and its task insert is `on conflict do
+            // nothing` — but a disabled button says what is happening, and
+            // relying on idempotence to cover a UI gap only works until the
+            // next write is added.
+            disabled={!canConfirm || offboarding}
             onClick={handleConfirm}
           >
             <TargetIcon className="size-4" />
-            Set as {targetMeta.label}
+            {offboarding
+              ? "Starting offboarding…"
+              : `Set as ${targetMeta.label}`}
           </Button>
         </DialogFooter>
       </DialogContent>

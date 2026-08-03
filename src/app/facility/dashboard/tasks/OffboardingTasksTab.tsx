@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserX, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { facilityStaff } from "@/data/facility-staff";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { staffQueries } from "@/lib/api/staff";
+import type { OffboardingInstance } from "@/data/staff-onboarding";
 import {
   useOffboardingInstances,
-  setOffboardingTaskComplete,
-  type OffboardingInstance,
-} from "@/data/staff-onboarding";
+  useSetOffboardingTask,
+} from "@/lib/api/offboarding-instances";
 import {
   runOffboardingNotificationSweep,
   maybeAnnounceOffboardingComplete,
@@ -39,10 +41,13 @@ export function OffboardingTasksTab() {
   const today = new Date().toISOString().slice(0, 10);
   const [todayOnly, setTodayOnly] = useState(false);
 
-  // Mount sweep — overdue (daily) + due-today reminders, deduped in the store.
+  // Mount sweep — overdue + due-today reminders. Waits for the instances to
+  // arrive rather than firing on an empty list: this used to read a synchronous
+  // store, and running it before the fetch lands would sweep nothing and then
+  // never run again.
   useEffect(() => {
-    runOffboardingNotificationSweep(today);
-  }, [today]);
+    if (instances.length > 0) runOffboardingNotificationSweep(instances, today);
+  }, [instances, today]);
 
   const withTasks = instances.filter((i) => i.tasks.length > 0);
   const isDueToday = (i: OffboardingInstance) =>
@@ -96,10 +101,18 @@ function OffboardingGroup({
   instance: OffboardingInstance;
   today: string;
 }) {
-  const staff = facilityStaff.find((s) => s.id === instance.staffId);
+  // The roster, from Postgres. "Former employee" stays as the fallback and now
+  // means something real: a terminated staff row the caller cannot read, or one
+  // deleted since the offboarding began. The instance itself is still readable
+  // and its checklist still has to be workable — that is the whole point of
+  // keeping the record after the person is gone.
+  const { data: staffList } = useQuery(staffQueries.profiles());
+  const staff = staffList?.find((s) => s.id === instance.staffId);
   const name = staff
     ? `${staff.firstName} ${staff.lastName}`.trim()
     : "Former employee";
+
+  const { mutate: setTask, isPending } = useSetOffboardingTask();
   const done = instance.tasks.filter((t) => t.completedAt).length;
 
   return (
@@ -125,15 +138,29 @@ function OffboardingGroup({
             <li key={task.id} className="flex items-start gap-3 px-4 py-3">
               <Checkbox
                 checked={complete}
+                disabled={isPending}
                 className="mt-0.5"
                 onCheckedChange={(v) => {
-                  setOffboardingTaskComplete(
-                    instance.staffId,
-                    task.id,
-                    v === true,
-                    "Manager",
+                  setTask(
+                    {
+                      staffId: instance.staffId,
+                      taskKey: task.id,
+                      complete: v === true,
+                    },
+                    {
+                      // The RESPONSE, not `instance` — the server decides
+                      // whether that tick was the last one, and the prop in
+                      // scope here is the state from before the write.
+                      onSuccess: (updated) =>
+                        maybeAnnounceOffboardingComplete(updated),
+                      onError: (error) =>
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Could not update that task.",
+                        ),
+                    },
                   );
-                  maybeAnnounceOffboardingComplete(instance.staffId);
                 }}
               />
               <div className="min-w-0 flex-1">
