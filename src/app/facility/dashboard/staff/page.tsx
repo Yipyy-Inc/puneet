@@ -60,6 +60,7 @@ import { OnboardingProgressList } from "./_components/onboarding-progress-list";
 import { StaffCard } from "./_components/staff-card";
 import { StaffProfileSheet } from "./_components/staff-profile-sheet";
 import { StaffFormDialog } from "./_components/staff-form-dialog";
+import { useOnboardingTemplatesQuery } from "@/lib/api/staff-onboarding";
 import { ResendInviteDialog } from "./_components/resend-invite-dialog";
 import { ReviewActivateDialog } from "./_components/review-activate-dialog";
 import { RoleAccessMatrix } from "./_components/role-matrix";
@@ -249,6 +250,10 @@ export default function FacilityStaffPage() {
     upsertFacilityStaff(next);
     setViewing(null);
   }
+
+  // Held HERE so it is warm long before the dialog opens — see the note on
+  // StaffFormDialog's `templates` prop.
+  const { data: onboardingTemplates = [] } = useOnboardingTemplatesQuery();
 
   function openEdit(profile: StaffProfile) {
     setViewing(null);
@@ -661,6 +666,7 @@ export default function FacilityStaffPage() {
         }}
         editing={editing}
         onSave={handleSave}
+        templates={onboardingTemplates}
       />
 
       {/* Delete confirm */}

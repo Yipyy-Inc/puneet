@@ -214,3 +214,34 @@ export function useStaffHrConfig(): StaffHrConfig {
 export function useStaffHrConfigQuery() {
   return useQuery(staffOnboardingQueries.hrConfig());
 }
+
+/**
+ * The active template for a role, as a PURE function over an already-loaded
+ * list.
+ *
+ * The mock version read the store during render (staff-onboarding.ts:1298),
+ * which was fine while the store was synchronous and is not fine now: a hook
+ * that resolves a template mid-render either blocks the dialog or flickers
+ * through an empty state while the fetch lands.
+ *
+ * So resolution moves OUT of the dialog. The staff page — already mounted while
+ * the manager reads the roster — holds the query, and the dialog receives the
+ * resolved list as a prop. By the time anyone clicks "Add staff" the data has
+ * been in cache for as long as they have been looking at the page.
+ *
+ * Same precedence as the original: a role-specific active template, then the
+ * universal one (empty appliesToRoles), then whatever is first. The database
+ * now guarantees at most one active template per role, so `.find()` is no
+ * longer picking by array order — see 20260803140000, Decision 4.
+ */
+export function resolveTemplateForRole(
+  templates: OnboardingTemplate[],
+  role: string,
+): OnboardingTemplate | undefined {
+  const active = templates.filter((t) => t.status === "active");
+  return (
+    active.find((t) => t.appliesToRoles.includes(role as never)) ??
+    active.find((t) => t.appliesToRoles.length === 0) ??
+    active[0]
+  );
+}

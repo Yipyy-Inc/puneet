@@ -29,8 +29,6 @@ import {
 } from "@/types/facility-staff";
 import { FACILITY_LOCATIONS } from "@/data/facility-staff";
 import {
-  useOnboardingTemplates,
-  resolveTemplateForRole,
   createOnboardingInstance,
   type OnboardingTemplate,
 } from "@/data/staff-onboarding";
@@ -48,6 +46,7 @@ import {
   PRESET_COLORS,
 } from "./staff-form-sections";
 import { OnboardingInviteEmail } from "@/components/facility/staff-hr/onboarding-invite-email";
+import { resolveTemplateForRole } from "@/lib/api/staff-onboarding";
 import { toast } from "sonner";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { notifyStaffLifecycle } from "@/lib/staff-notifications";
@@ -57,6 +56,21 @@ interface StaffFormDialogProps {
   onOpenChange: (open: boolean) => void;
   editing: StaffProfile | null;
   onSave: (profile: StaffProfile) => void;
+  /**
+   * Resolved by the PAGE, not fetched here.
+   *
+   * The old code called resolveTemplateForRole() during render against a
+   * synchronous store. Against Postgres that becomes a fetch, and a fetch
+   * inside a dialog is a flicker: the template select would mount empty and
+   * fill in, on the one screen where "which checklist is this hire getting"
+   * needs to be settled before anyone reads it.
+   *
+   * The page already holds the query while the manager reads the roster, so by
+   * the time this opens the list has been in cache for as long as they have
+   * been on the page. Passing it in is what removes the loading state rather
+   * than hiding it.
+   */
+  templates: OnboardingTemplate[];
 }
 
 function emptyProfile(): StaffProfile {
@@ -99,6 +113,7 @@ export function StaffFormDialog({
   onOpenChange,
   editing,
   onSave,
+  templates,
 }: StaffFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,6 +125,7 @@ export function StaffFormDialog({
         onOpenChange={onOpenChange}
         editing={editing}
         onSave={onSave}
+        templates={templates}
       />
     </Dialog>
   );
@@ -119,6 +135,7 @@ function StaffFormDialogBody({
   onOpenChange,
   editing,
   onSave,
+  templates,
 }: StaffFormDialogProps) {
   const isHire = !editing;
   const [section, setSection] = useState<StaffSectionId>("profile");
@@ -128,12 +145,12 @@ function StaffFormDialogBody({
   );
 
   // Onboarding template — auto-selected by the primary role, overridable on the
-  // review screen.
-  const templates = useOnboardingTemplates();
+  // review screen. Resolved synchronously from the prop, so changing the role
+  // picker re-resolves without a round trip.
   const [templateId, setTemplateId] = useState("");
   const effectiveTemplateId =
     templateId ||
-    resolveTemplateForRole(draft.primaryRole)?.id ||
+    resolveTemplateForRole(templates, draft.primaryRole)?.id ||
     templates[0]?.id ||
     "";
 
