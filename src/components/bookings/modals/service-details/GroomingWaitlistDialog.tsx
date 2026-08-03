@@ -112,19 +112,14 @@ export function GroomingWaitlistDialog({
             period: timePeriod,
           };
 
-    // Persist as the first preferred date — the facility-side waitlist tab
-    // uses the legacy `date` for sort/index, then enriches from
-    // expectedDate/expectedTime for the matcher.
-    const legacyDate =
-      dateKind === "specific-date"
-        ? specificDate
-        : dateKind === "range"
-          ? rangeStart
-          : new Date().toISOString().split("T")[0];
-
+    // `date` is the ANCHOR the calendar hangs its per-day count on, and it is
+    // computed by the database from the preference above, in the facility's
+    // timezone (20260806100000, Decision 3). The value here is a placeholder
+    // that the POST does not send and the server's answer replaces — computing
+    // it in the browser gave a client-timezone date frozen at submit time.
     const entry: GroomingWaitlistEntry = {
       id: `wl-${Date.now()}`,
-      date: legacyDate,
+      date: new Date().toISOString().split("T")[0],
       clientId: selectedClient.id,
       petId: pet.id,
       petName: pet.name,

@@ -13,8 +13,6 @@ import { groomingPrepaidPackages } from "@/data/grooming-prepaid-packages";
 import type { GroomingPrepaidPackage } from "@/data/grooming-prepaid-packages";
 import { mockCustomerPackages } from "@/data/customer-packages";
 import type { CustomerPackageRecord } from "@/data/customer-packages";
-import { groomingWaitlist } from "@/data/grooming-waitlist";
-import type { GroomingWaitlistEntry } from "@/data/grooming-waitlist";
 import { petNotes } from "@/data/pet-notes";
 import type { PetNote } from "@/types/pet";
 import { petServicePricing } from "@/data/grooming-pet-pricing";
@@ -301,10 +299,11 @@ export const groomingQueries = {
     queryKey: ["grooming", "inventory-orders"] as const,
     queryFn: async () => inventoryOrders as InventoryOrder[],
   }),
-  waitlist: () => ({
-    queryKey: ["grooming", "waitlist"] as const,
-    queryFn: async () => groomingWaitlist as GroomingWaitlistEntry[],
-  }),
+  // `waitlist` used to live here, serving the mock array. It is gone rather
+  // than repointed: the waitlist is a provider (useGroomingWaitlist), because
+  // reading it and writing it are the same screen's job, and a second factory
+  // returning the fixture would be a working-looking way to put nine invented
+  // households back on the board.
   petNotes: (petId: number) => ({
     queryKey: ["pet-notes", "pet", petId] as const,
     queryFn: async () =>

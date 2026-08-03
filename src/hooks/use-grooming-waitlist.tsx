@@ -4,44 +4,69 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
-import {
-  groomingWaitlist as seedEntries,
-  type GroomingWaitlistEntry,
-  type GroomingWaitlistStatus,
-} from "@/data/grooming-waitlist";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type {
+  GroomingWaitlistEntry,
+  GroomingWaitlistStatus,
+} from "@/data/grooming-waitlist";
+import {
+  dateMatchesPreference,
+  dateNotExcluded,
+  stylistMatchesPreference,
+  timeMatchesPreference,
+} from "@/lib/grooming-waitlist-matcher";
+import { stylistIdForStaff } from "@/lib/api/grooming";
 import { WAITLIST_OFFER_WINDOW_MINUTES } from "@/lib/grooming-waitlist-offer";
 
-const STORAGE_KEY = "yipyy_grooming_waitlist_state";
+// ============================================================================
+// The grooming waitlist, from Postgres.
+//
+// THE CONTEXT SHAPE IS UNCHANGED. Five components consume this hook — the
+// check-in board, the calendar, the panel, the appointment detail page and the
+// booking dialog — and all seven members still mean what they meant. The same
+// approach as useGroomingStations: swap the source, leave the call sites alone.
+//
+// WHAT CHANGED BEHIND IT:
+//
+//   * `entries` is a query, not a seed array merged with a localStorage bag of
+//     overrides. The old provider kept the mock's nine entries and layered
+//     per-id patches on top, so a queue lived in one browser and "Remove" only
+//     removed it for the person who clicked.
+//
+//   * THE MATCHING FUNCTIONS ARE NO LONGER DUPLICATED HERE. This file used to
+//     carry its own `slotMatchesPreference` / `dateMatchesExpectedDate` beside
+//     the ones in grooming-waitlist-matcher.ts, and they had already drifted:
+//     the local copy treated `asap` as matching ANY date, including yesterday's,
+//     while the matcher required the date to be today or later. Two answers to
+//     "does this client want this slot" is one answer too many, so the local
+//     pair is gone and the matcher's is imported.
+//
+//   * `entriesForDate` NOW ASKS THE PREFERENCE, not the anchor date. It used to
+//     be `e.date === date`, which is wrong for three of the four preference
+//     kinds: an ASAP client added yesterday vanished from today's board while
+//     still waiting, and a Tue/Thu client only ever appeared on one Tuesday.
+//     The anchor is where the calendar hangs its count; who is waiting FOR a
+//     given day is a question only the preference can answer.
+//
+//   * The callbacks are still void-returning and safe to call unawaited. They
+//     fire a request and invalidate rather than patching the cache, because the
+//     offer deadline is stamped by the database (20260806100000, Decision 4) —
+//     a local guess at `offeredUntil` would be wrong by exactly the round trip.
+// ============================================================================
 
-// Default confirmation window when a slot is offered to a waitlist client —
-// 4 hours per Spec Table 96.
-export const DEFAULT_OFFER_WINDOW_MINUTES = WAITLIST_OFFER_WINDOW_MINUTES;
+const BASE = "/api/grooming/waitlist";
 
-type State = {
-  /** New entries staff added on top of the seed. */
-  added: GroomingWaitlistEntry[];
-  /** Per-entry overrides (status changes, offer timestamps). */
-  overrides: Record<string, Partial<GroomingWaitlistEntry>>;
+export const groomingWaitlistKeys = {
+  all: ["grooming-waitlist"] as const,
 };
 
-const emptyState: State = { added: [], overrides: {} };
-
-function loadStored(): State {
-  if (typeof window === "undefined") return emptyState;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return emptyState;
-    return JSON.parse(raw) as State;
-  } catch {
-    return emptyState;
-  }
-}
+// Default confirmation window when a slot is offered — 4 hours per Spec
+// Table 96. Sent to the server, which stamps the deadline from it.
+export const DEFAULT_OFFER_WINDOW_MINUTES = WAITLIST_OFFER_WINDOW_MINUTES;
 
 interface WaitlistContextValue {
   entries: GroomingWaitlistEntry[];
@@ -62,6 +87,7 @@ interface WaitlistContextValue {
     startTime: string;
     endTime: string;
     stylistName?: string;
+    stylistId?: string;
     serviceName?: string;
   }) => GroomingWaitlistEntry | null;
   /** Mark an entry as offered with the slot info + deadline. */
@@ -91,64 +117,42 @@ interface WaitlistContextValue {
 
 const WaitlistContext = createContext<WaitlistContextValue | null>(null);
 
-function mergeStatus(
-  entry: GroomingWaitlistEntry,
-  override?: Partial<GroomingWaitlistEntry>,
-): GroomingWaitlistEntry {
-  return {
+async function json<T>(
+  url: string,
+  init?: { method: string; body?: unknown },
+): Promise<T> {
+  const response = await fetch(url, {
+    method: init?.method ?? "GET",
+    headers: init?.body ? { "Content-Type": "application/json" } : undefined,
+    body: init?.body ? JSON.stringify(init.body) : undefined,
+  });
+  const parsed = (await response.json().catch(() => null)) as
+    | (T & { error?: string })
+    | null;
+  if (!response.ok) {
+    throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+  }
+  return parsed as T;
+}
+
+/**
+ * The route emits STAFF legacy ids in `preferredStylistIds`; the screens compare
+ * against stylist ids. Remapped here rather than server-side because
+ * `stylistIdForStaff` reads the mock stylist list, and the same seam already
+ * exists for appointments (src/lib/api/grooming.ts).
+ *
+ * A preferred groomer who is not one of the mock stylists keeps its staff id
+ * rather than being dropped — it then matches no slot, which is visible, where
+ * silently emptying the list would turn "only Amy" into "anyone".
+ */
+async function fetchWaitlist(): Promise<GroomingWaitlistEntry[]> {
+  const rows = await json<GroomingWaitlistEntry[]>(BASE);
+  return rows.map((entry) => ({
     ...entry,
-    ...override,
-    status: override?.status ?? entry.status ?? "waiting",
-  };
-}
-
-function timeToMin(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function slotMatchesPreference(
-  startTime: string,
-  preference: GroomingWaitlistEntry["preferredTimeWindow"],
-): boolean {
-  if (!preference || preference === "anytime") return true;
-  const h = Math.floor(timeToMin(startTime) / 60);
-  if (preference === "morning") return h < 12;
-  if (preference === "afternoon") return h >= 12;
-  return true;
-}
-
-/** Structured time preference — new shape. Anytime/period/exact-time. */
-function slotMatchesExpectedTime(
-  startTime: string,
-  pref: GroomingWaitlistEntry["expectedTime"],
-): boolean {
-  if (!pref || pref.kind === "anytime") return true;
-  const startMin = timeToMin(startTime);
-  if (pref.kind === "period") {
-    const h = Math.floor(startMin / 60);
-    if (pref.period === "morning") return h < 12;
-    if (pref.period === "afternoon") return h >= 12 && h < 17;
-    return h >= 17;
-  }
-  // exact-time: ±15 min tolerance
-  return Math.abs(startMin - timeToMin(pref.time)) <= 15;
-}
-
-/** Structured date preference — ASAP/specific-date/day-of-week/range. */
-function dateMatchesExpectedDate(
-  candidateDate: string,
-  pref: GroomingWaitlistEntry["expectedDate"],
-  legacyDate: string | undefined,
-): boolean {
-  if (!pref) return !legacyDate || candidateDate === legacyDate;
-  if (pref.kind === "asap") return true;
-  if (pref.kind === "specific-date") return candidateDate === pref.date;
-  if (pref.kind === "range") {
-    return candidateDate >= pref.startDate && candidateDate <= pref.endDate;
-  }
-  const dow = new Date(candidateDate + "T00:00:00").getDay();
-  return pref.daysOfWeek.includes(dow);
+    preferredStylistIds: (entry.preferredStylistIds ?? []).map(
+      (staffId) => stylistIdForStaff(staffId) ?? staffId,
+    ),
+  }));
 }
 
 /** Slot descriptor a freed appointment offers to the waitlist. */
@@ -173,35 +177,32 @@ function pickNextMatch(
 ): GroomingWaitlistEntry | null {
   const today = new Date().toISOString().split("T")[0];
   const candidates = entries
-    .filter((e) => e.status === "waiting")
+    .filter((e) => (e.status ?? "waiting") === "waiting")
     .filter((e) => e.id !== excludeId)
     .filter((e) => !e.validUntil || e.validUntil >= today)
-    .filter((e) => dateMatchesExpectedDate(input.date, e.expectedDate, e.date))
-    .filter((e) => !e.excludedDates?.includes(input.date))
+    .filter((e) =>
+      dateMatchesPreference(input.date, e.expectedDate, e.date, today),
+    )
+    .filter((e) => dateNotExcluded(input.date, e.excludedDates))
     .filter(
       (e) =>
         !input.serviceName ||
         e.serviceName.toLowerCase() === input.serviceName.toLowerCase() ||
         e.serviceName.toLowerCase().includes(input.serviceName.toLowerCase()),
     )
-    .filter((e) => {
-      if (e.preferredStylistIds && e.preferredStylistIds.length > 0) {
-        return !input.stylistId
-          ? false
-          : e.preferredStylistIds.includes(input.stylistId);
-      }
-      if (e.preferredStylistName && input.stylistName) {
-        return (
-          e.preferredStylistName.toLowerCase() ===
-          input.stylistName.toLowerCase()
-        );
-      }
-      return true;
-    })
     .filter((e) =>
-      e.expectedTime
-        ? slotMatchesExpectedTime(input.startTime, e.expectedTime)
-        : slotMatchesPreference(input.startTime, e.preferredTimeWindow),
+      stylistMatchesPreference(
+        input.stylistId ?? "",
+        input.stylistName ?? "",
+        e,
+      ),
+    )
+    .filter((e) =>
+      timeMatchesPreference(
+        input.startTime,
+        e.expectedTime,
+        e.preferredTimeWindow,
+      ),
     )
     .sort((a, b) => a.addedAt.localeCompare(b.addedAt));
   return candidates[0] ?? null;
@@ -212,67 +213,91 @@ export function GroomingWaitlistProvider({
 }: {
   children: ReactNode;
 }) {
-  const [state, setState] = useState<State>(emptyState);
-  const [hydrated, setHydrated] = useState(false);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    setState(loadStored());
-    setHydrated(true);
-  }, []);
+  const { data: entries = [] } = useQuery({
+    queryKey: groomingWaitlistKeys.all,
+    queryFn: fetchWaitlist,
+    // The queue changes when anyone at the facility books, cancels or offers.
+    // Same cadence as the stations query, which the same board renders beside.
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+  });
 
-  const persist = useCallback(
-    (next: State) => {
-      setState(next);
-      if (hydrated) {
-        queueMicrotask(() =>
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(next)),
-        );
-      }
-    },
-    [hydrated],
-  );
+  const invalidate = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: groomingWaitlistKeys.all });
+  }, [queryClient]);
 
-  const entries = useMemo<GroomingWaitlistEntry[]>(() => {
-    const merged = [
-      ...seedEntries.map((e) => mergeStatus(e, state.overrides[e.id])),
-      ...state.added.map((e) => mergeStatus(e, state.overrides[e.id])),
-    ];
-    return merged.filter((e) => e.status !== "removed");
-  }, [state]);
+  const { mutate: create } = useMutation({
+    mutationFn: (entry: GroomingWaitlistEntry) =>
+      json<GroomingWaitlistEntry>(BASE, {
+        method: "POST",
+        body: {
+          clientId: entry.clientId,
+          petId: entry.petId,
+          petName: entry.petName,
+          petBreed: entry.petBreed,
+          ownerName: entry.ownerName,
+          ownerPhone: entry.ownerPhone,
+          ownerEmail: entry.ownerEmail,
+          serviceName: entry.serviceName,
+          expectedDate: entry.expectedDate,
+          expectedTime: entry.expectedTime,
+          excludedDates: entry.excludedDates,
+          preferredStylistIds: entry.preferredStylistIds,
+          validUntil: entry.validUntil,
+          postalCode: entry.postalCode,
+          source: entry.source,
+          // `notes` is the legacy twin of `comment` and is not stored
+          // (20260806100000, Decision 1). Read here so an older caller that
+          // still sets it does not silently lose the text.
+          comment: entry.comment ?? entry.notes,
+        },
+      }),
+    onSuccess: invalidate,
+  });
 
+  const { mutate: patch } = useMutation({
+    mutationFn: (input: { id: string; body: Record<string, unknown> }) =>
+      json<GroomingWaitlistEntry>(`${BASE}/${encodeURIComponent(input.id)}`, {
+        method: "PATCH",
+        body: input.body,
+      }),
+    onSuccess: invalidate,
+  });
+
+  /**
+   * Who is waiting for this specific day. Asks each entry's preference rather
+   * than comparing its anchor date — see the header: the anchor is one day, the
+   * preference is the rule, and three of the four kinds admit more than one day.
+   */
   const entriesForDate = useCallback(
-    (date: string) => entries.filter((e) => e.date === date),
+    (date: string) => {
+      const today = new Date().toISOString().split("T")[0];
+      return entries.filter(
+        (e) =>
+          (!e.validUntil || e.validUntil >= today) &&
+          dateMatchesPreference(date, e.expectedDate, e.date, today) &&
+          dateNotExcluded(date, e.excludedDates),
+      );
+    },
     [entries],
   );
 
   const addEntry = useCallback(
-    (entry: GroomingWaitlistEntry) => {
-      persist({
-        ...state,
-        added: [
-          ...state.added,
-          { ...entry, status: entry.status ?? "waiting" },
-        ],
-      });
-    },
-    [state, persist],
+    (entry: GroomingWaitlistEntry) => create(entry),
+    [create],
   );
 
   const setStatus = useCallback(
-    (
-      id: string,
-      status: GroomingWaitlistStatus,
-      patch?: Partial<GroomingWaitlistEntry>,
-    ) => {
-      persist({
-        ...state,
-        overrides: {
-          ...state.overrides,
-          [id]: { ...state.overrides[id], ...patch, status },
-        },
-      });
+    (id: string, status: GroomingWaitlistStatus) => {
+      // The `patch` argument is deliberately not forwarded. Every field it was
+      // ever used to carry — offeredAt, offeredUntil, offeredSlot — is now the
+      // server's, and `offerSlot` below is the way to set the one that is still
+      // caller-supplied. Kept in the signature so the call sites compile.
+      patch({ id, body: { status } });
     },
-    [state, persist],
+    [patch],
   );
 
   const offerSlot = useCallback(
@@ -281,23 +306,16 @@ export function GroomingWaitlistProvider({
       slot: { startTime: string; endTime: string },
       windowMinutes: number = DEFAULT_OFFER_WINDOW_MINUTES,
     ) => {
-      const now = new Date();
-      const until = new Date(now.getTime() + windowMinutes * 60_000);
-      persist({
-        ...state,
-        overrides: {
-          ...state.overrides,
-          [id]: {
-            ...state.overrides[id],
-            status: "offered",
-            offeredAt: now.toISOString(),
-            offeredUntil: until.toISOString(),
-            offeredSlot: `${slot.startTime}–${slot.endTime}`,
-          },
+      patch({
+        id,
+        body: {
+          status: "offered",
+          offeredSlot: `${slot.startTime}–${slot.endTime}`,
+          offerWindowMinutes: windowMinutes,
         },
       });
     },
-    [state, persist],
+    [patch],
   );
 
   const findMatchForSlot = useCallback(
@@ -313,26 +331,23 @@ export function GroomingWaitlistProvider({
       windowMinutes: number = DEFAULT_OFFER_WINDOW_MINUTES,
     ): GroomingWaitlistEntry | null => {
       // Next person in line for the same slot, skipping the one who lapsed.
+      // Computed from the cache so the caller still gets an answer to render
+      // immediately; the two writes below are what make it true.
       const next = pickNextMatch(entries, slot, expiredId);
-      const now = new Date();
-      const overrides: State["overrides"] = {
-        ...state.overrides,
-        [expiredId]: { ...state.overrides[expiredId], status: "expired" },
-      };
+      patch({ id: expiredId, body: { status: "expired" } });
       if (next) {
-        const until = new Date(now.getTime() + windowMinutes * 60_000);
-        overrides[next.id] = {
-          ...state.overrides[next.id],
-          status: "offered",
-          offeredAt: now.toISOString(),
-          offeredUntil: until.toISOString(),
-          offeredSlot: `${slot.startTime}–${slot.endTime}`,
-        };
+        patch({
+          id: next.id,
+          body: {
+            status: "offered",
+            offeredSlot: `${slot.startTime}–${slot.endTime}`,
+            offerWindowMinutes: windowMinutes,
+          },
+        });
       }
-      persist({ ...state, overrides });
       return next;
     },
-    [entries, state, persist],
+    [entries, patch],
   );
 
   const value = useMemo<WaitlistContextValue>(

@@ -1,5 +1,17 @@
-// Mock waitlist entries for the grooming calendar. Dates cluster around the
-// current week so the indicators are visible without depending on real time.
+// Types for the grooming waitlist.
+//
+// THE MOCK ENTRIES ARE GONE. The waitlist lives in Postgres
+// (20260806100000); `useGroomingWaitlist` reads it and the seed migration
+// populates the demo facility from real clients and pets. The nine fixture
+// entries that used to sit here invented seven households — Aman Patel, Marie
+// Tremblay and the rest — who exist in no other table, and keeping them would
+// have meant a board that mixed real waiting clients with people who cannot be
+// called back.
+//
+// The legacy field pairs below (`date`/`expectedDate`, `notes`/`comment`,
+// `preferredStylistName`/`preferredStylistIds`, `preferredTimeWindow`/
+// `expectedTime`) are still on the type but NOT in the database: see Decision 1
+// of that migration. Nothing read from Postgres fills the legacy half.
 
 export type GroomingWaitlistStatus =
   | "waiting"
@@ -43,9 +55,12 @@ export type WaitlistSource =
 export type GroomingWaitlistEntry = {
   id: string;
   /**
-   * Legacy "date" field — first preferred date as a flat ISO string. Kept for
-   * back-compat with the calendar indicators; new entries should also fill
-   * `expectedDate` for matcher accuracy.
+   * The ANCHOR date — the first day this entry could be served, derived by the
+   * database from {@link expectedDate} in the facility's timezone. The calendar
+   * hangs its per-day waitlist count on this; the matcher uses `expectedDate`.
+   *
+   * NOT the legacy twin of `expectedDate`, despite once being documented as
+   * one: a rule and the first date the rule admits are two facts.
    */
   date: string;
   /** Client id when matched to a known household; undefined for new walk-ins. */
@@ -104,137 +119,3 @@ export type GroomingWaitlistEntry = {
   /** Time window of the offered slot, e.g. "10:00–11:30". */
   offeredSlot?: string;
 };
-
-export const groomingWaitlist: GroomingWaitlistEntry[] = [
-  {
-    id: "wl-01",
-    date: "2026-05-14",
-    petName: "Mochi",
-    petBreed: "Shih Tzu",
-    ownerName: "Aman Patel",
-    ownerPhone: "(514) 555-0142",
-    ownerEmail: "aman.patel@example.com",
-    serviceName: "Full Groom",
-    preferredStylistName: "Sarah Chen",
-    preferredTimeWindow: "morning",
-    addedAt: "2026-05-12T09:30:00Z",
-    notes: "Anxious in the dryer — please use low setting.",
-  },
-  {
-    id: "wl-02",
-    date: "2026-05-14",
-    petName: "Biscuit",
-    petBreed: "Golden Retriever",
-    ownerName: "Marie Tremblay",
-    ownerPhone: "(514) 555-0188",
-    serviceName: "Bath & Brush",
-    preferredTimeWindow: "afternoon",
-    addedAt: "2026-05-13T14:10:00Z",
-  },
-  {
-    id: "wl-03",
-    date: "2026-05-15",
-    petName: "Pixel",
-    petBreed: "Poodle Mix",
-    ownerName: "Jordan Lee",
-    ownerPhone: "(514) 555-0201",
-    ownerEmail: "jordan@example.com",
-    serviceName: "Full Groom",
-    preferredTimeWindow: "anytime",
-    addedAt: "2026-05-13T17:45:00Z",
-  },
-  {
-    id: "wl-04",
-    date: "2026-05-16",
-    petName: "Tofu",
-    petBreed: "French Bulldog",
-    ownerName: "Sasha Petrov",
-    ownerPhone: "(514) 555-0299",
-    serviceName: "Nail Trim",
-    preferredTimeWindow: "morning",
-    addedAt: "2026-05-13T11:00:00Z",
-    notes: "Walk-in OK if a cancellation opens.",
-  },
-  {
-    id: "wl-05",
-    date: "2026-05-19",
-    petName: "Cleo",
-    petBreed: "Maltese",
-    ownerName: "Pierre Dupont",
-    ownerPhone: "(514) 555-0317",
-    serviceName: "Full Groom",
-    preferredStylistName: "Marcus Reyes",
-    preferredTimeWindow: "afternoon",
-    addedAt: "2026-05-14T08:20:00Z",
-  },
-  {
-    id: "wl-06",
-    date: "2026-05-21",
-    petName: "Rocky",
-    petBreed: "Labrador",
-    ownerName: "Nadia Hassan",
-    ownerPhone: "(514) 555-0354",
-    serviceName: "De-shedding Treatment",
-    preferredTimeWindow: "anytime",
-    addedAt: "2026-05-14T10:50:00Z",
-  },
-  {
-    id: "wl-07",
-    date: "2026-05-21",
-    petName: "Toby",
-    petBreed: "Bichon",
-    ownerName: "Léa Martin",
-    ownerPhone: "(514) 555-0398",
-    ownerEmail: "lea.m@example.com",
-    serviceName: "Full Groom",
-    preferredStylistName: "Sarah Chen",
-    preferredTimeWindow: "morning",
-    addedAt: "2026-05-14T12:15:00Z",
-    notes: "Repeat client — same trim as last visit.",
-  },
-  // New-shape entries exercising every expectedDate / expectedTime variant.
-  {
-    id: "wl-08",
-    date: new Date().toISOString().split("T")[0],
-    petName: "Daisy",
-    petBreed: "Cavapoo",
-    ownerName: "Mrs. Johnson",
-    ownerPhone: "(514) 555-0421",
-    ownerEmail: "johnson@example.com",
-    serviceName: "Full Groom",
-    preferredStylistIds: [],
-    expectedDate: { kind: "asap" },
-    expectedTime: { kind: "period", period: "afternoon" },
-    validUntil: new Date(Date.now() + 14 * 86400_000)
-      .toISOString()
-      .split("T")[0],
-    postalCode: "H2P 1A3",
-    source: "calendar-plus",
-    comment: "Going on vacation next week — would love to slot in ASAP.",
-    addedAt: new Date(Date.now() - 6 * 3600_000).toISOString(),
-    status: "waiting",
-  },
-  {
-    id: "wl-09",
-    date: new Date(Date.now() + 2 * 86400_000).toISOString().split("T")[0],
-    petName: "Pepper",
-    petBreed: "Schnauzer",
-    ownerName: "Hassan Family",
-    ownerPhone: "(514) 555-0512",
-    serviceName: "Bath & Brush",
-    preferredStylistIds: ["stylist-002"],
-    expectedDate: {
-      kind: "day-of-week",
-      daysOfWeek: [2, 4], // Tue, Thu
-    },
-    expectedTime: { kind: "exact-time", time: "11:00" },
-    validUntil: new Date(Date.now() + 30 * 86400_000)
-      .toISOString()
-      .split("T")[0],
-    source: "moved-from-appointment",
-    comment:
-      "Originally booked for last Friday, rescheduling — only Tue/Thu work.",
-    addedAt: new Date(Date.now() - 2 * 86400_000).toISOString(),
-    status: "waiting",
-  },
-];

@@ -688,9 +688,12 @@ export type Database = {
           booking_id: string;
           created_at: string;
           created_by: string | null;
+          custom_reason: string | null;
+          customer_notified: boolean;
           facility_id: string;
           id: string;
           note: string;
+          notified_at: string | null;
           reason: string;
         };
         Insert: {
@@ -698,9 +701,12 @@ export type Database = {
           booking_id: string;
           created_at?: string;
           created_by?: string | null;
+          custom_reason?: string | null;
+          customer_notified?: boolean;
           facility_id: string;
           id?: string;
           note?: string;
+          notified_at?: string | null;
           reason: string;
         };
         Update: {
@@ -708,9 +714,12 @@ export type Database = {
           booking_id?: string;
           created_at?: string;
           created_by?: string | null;
+          custom_reason?: string | null;
+          customer_notified?: boolean;
           facility_id?: string;
           id?: string;
           note?: string;
+          notified_at?: string | null;
           reason?: string;
         };
         Relationships: [
@@ -986,6 +995,149 @@ export type Database = {
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_waitlist_entries: {
+        Row: {
+          added_at: string;
+          anchor_date: string;
+          client_id: string | null;
+          comment: string | null;
+          created_at: string;
+          excluded_dates: string[];
+          expected_date: string | null;
+          expected_date_kind: string;
+          expected_days_of_week: number[] | null;
+          expected_end_date: string | null;
+          expected_period: string | null;
+          expected_start_date: string | null;
+          expected_time: string | null;
+          expected_time_kind: string;
+          facility_id: string;
+          id: string;
+          legacy_id: string | null;
+          offer_window_minutes: number;
+          offered_at: string | null;
+          offered_slot: string | null;
+          offered_until: string | null;
+          owner_email: string | null;
+          owner_name: string;
+          owner_phone: string;
+          pet_breed: string;
+          pet_id: string | null;
+          pet_name: string;
+          postal_code: string | null;
+          preferred_staff_ids: string[];
+          service_id: string | null;
+          service_name: string;
+          source: string;
+          status: string;
+          updated_at: string;
+          valid_until: string | null;
+        };
+        Insert: {
+          added_at?: string;
+          anchor_date?: string;
+          client_id?: string | null;
+          comment?: string | null;
+          created_at?: string;
+          excluded_dates?: string[];
+          expected_date?: string | null;
+          expected_date_kind: string;
+          expected_days_of_week?: number[] | null;
+          expected_end_date?: string | null;
+          expected_period?: string | null;
+          expected_start_date?: string | null;
+          expected_time?: string | null;
+          expected_time_kind?: string;
+          facility_id: string;
+          id?: string;
+          legacy_id?: string | null;
+          offer_window_minutes?: number;
+          offered_at?: string | null;
+          offered_slot?: string | null;
+          offered_until?: string | null;
+          owner_email?: string | null;
+          owner_name: string;
+          owner_phone?: string;
+          pet_breed?: string;
+          pet_id?: string | null;
+          pet_name: string;
+          postal_code?: string | null;
+          preferred_staff_ids?: string[];
+          service_id?: string | null;
+          service_name: string;
+          source?: string;
+          status?: string;
+          updated_at?: string;
+          valid_until?: string | null;
+        };
+        Update: {
+          added_at?: string;
+          anchor_date?: string;
+          client_id?: string | null;
+          comment?: string | null;
+          created_at?: string;
+          excluded_dates?: string[];
+          expected_date?: string | null;
+          expected_date_kind?: string;
+          expected_days_of_week?: number[] | null;
+          expected_end_date?: string | null;
+          expected_period?: string | null;
+          expected_start_date?: string | null;
+          expected_time?: string | null;
+          expected_time_kind?: string;
+          facility_id?: string;
+          id?: string;
+          legacy_id?: string | null;
+          offer_window_minutes?: number;
+          offered_at?: string | null;
+          offered_slot?: string | null;
+          offered_until?: string | null;
+          owner_email?: string | null;
+          owner_name?: string;
+          owner_phone?: string;
+          pet_breed?: string;
+          pet_id?: string | null;
+          pet_name?: string;
+          postal_code?: string | null;
+          preferred_staff_ids?: string[];
+          service_id?: string | null;
+          service_name?: string;
+          source?: string;
+          status?: string;
+          updated_at?: string;
+          valid_until?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_waitlist_entries_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_waitlist_entries_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_waitlist_entries_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_waitlist_entries_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_services";
             referencedColumns: ["id"];
           },
         ];

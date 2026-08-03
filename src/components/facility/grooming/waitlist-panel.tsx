@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  CalendarDays,
   Clock,
   Hourglass,
   Mail,
@@ -21,6 +22,8 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
 import { toast } from "sonner";
 import type {
   GroomingWaitlistEntry,
@@ -31,14 +34,59 @@ import { buildWaitlistOfferForEntry } from "@/lib/grooming-waitlist-offer";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-const TIME_WINDOW_LABEL: Record<
-  NonNullable<GroomingWaitlistEntry["preferredTimeWindow"]>,
-  string
-> = {
+// ── Rendering the STRUCTURED preference ─────────────────────────────────────
+//
+// This panel used to read `preferredTimeWindow`, `preferredStylistName` and
+// `notes` — the three legacy halves of the type's legacy/structured field
+// pairs. Entries from Postgres never carry them (20260806100000, Decision 1),
+// and neither did the two newer mock entries, so those rows rendered a name and
+// a service and nothing else: no time preference, no comment, no groomer.
+//
+// These read the structured half. The legacy fields are still accepted as a
+// fallback so an entry built by a non-Postgres caller keeps rendering.
+
+const PERIOD_LABEL: Record<string, string> = {
   morning: "Morning",
   afternoon: "Afternoon",
+  evening: "Evening",
   anytime: "Any time",
 };
+
+function timePreferenceLabel(entry: GroomingWaitlistEntry): string | null {
+  const pref = entry.expectedTime;
+  if (!pref) {
+    return entry.preferredTimeWindow
+      ? (PERIOD_LABEL[entry.preferredTimeWindow] ?? null)
+      : null;
+  }
+  if (pref.kind === "anytime") return "Any time";
+  if (pref.kind === "period") return PERIOD_LABEL[pref.period] ?? null;
+  return `At ${pref.time}`;
+}
+
+const WEEKDAY_LABEL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function shortDate(iso: string): string {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-CA", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/** Null for `asap` — "as soon as possible" is the absence of a date
+ *  constraint, and a chip saying so is noise on every second card. */
+function datePreferenceLabel(entry: GroomingWaitlistEntry): string | null {
+  const pref = entry.expectedDate;
+  if (!pref || pref.kind === "asap") return null;
+  if (pref.kind === "specific-date") return shortDate(pref.date);
+  if (pref.kind === "range") {
+    return `${shortDate(pref.startDate)} – ${shortDate(pref.endDate)}`;
+  }
+  return pref.daysOfWeek
+    .map((d) => WEEKDAY_LABEL[d] ?? "")
+    .filter(Boolean)
+    .join(", ");
+}
 
 function formatRelative(iso: string): string {
   const then = new Date(iso).getTime();
@@ -135,6 +183,19 @@ export function WaitlistPanel({
   onBookFromWaitlist?: (entry: GroomingWaitlistEntry) => void;
 }) {
   const { setStatus, expireAndOfferNext } = useGroomingWaitlist();
+  // `preferredStylistIds` are ids; the card shows people. The legacy
+  // `preferredStylistName` is never set on an entry from Postgres, so without
+  // this lookup a client who asked for a specific groomer renders as if they
+  // did not care who grooms their dog.
+  const { data: stylists = [] } = useQuery(groomingQueries.stylists());
+  const preferredNames = (entry: GroomingWaitlistEntry): string | null => {
+    const ids = entry.preferredStylistIds ?? [];
+    if (ids.length === 0) return entry.preferredStylistName ?? null;
+    const names = ids.map(
+      (id) => stylists.find((s) => s.id === id)?.name ?? id,
+    );
+    return names.join(", ");
+  };
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -230,28 +291,34 @@ export function WaitlistPanel({
                         <Scissors className="text-muted-foreground size-3" />
                         <span className="truncate">{e.serviceName}</span>
                       </div>
-                      {e.preferredTimeWindow && (
+                      {timePreferenceLabel(e) && (
                         <div className="flex items-center gap-1.5">
                           <Clock className="text-muted-foreground size-3" />
-                          <span>
-                            {TIME_WINDOW_LABEL[e.preferredTimeWindow]}
+                          <span>{timePreferenceLabel(e)}</span>
+                        </div>
+                      )}
+                      {datePreferenceLabel(e) && (
+                        <div className="flex items-center gap-1.5">
+                          <CalendarDays className="text-muted-foreground size-3" />
+                          <span className="truncate">
+                            {datePreferenceLabel(e)}
                           </span>
                         </div>
                       )}
-                      {e.preferredStylistName && (
+                      {preferredNames(e) && (
                         <div className="col-span-2 flex items-center gap-1.5">
                           <User className="text-muted-foreground size-3" />
                           <span className="text-muted-foreground">Prefers</span>
                           <span className="font-medium">
-                            {e.preferredStylistName}
+                            {preferredNames(e)}
                           </span>
                         </div>
                       )}
                     </div>
 
-                    {e.notes && (
+                    {(e.comment ?? e.notes) && (
                       <p className="bg-muted/40 text-muted-foreground mt-2 rounded-md px-2.5 py-1.5 text-xs">
-                        {e.notes}
+                        {e.comment ?? e.notes}
                       </p>
                     )}
 
