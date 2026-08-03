@@ -4,6 +4,7 @@ import { ArrowRight, Clock } from "lucide-react";
 import { businessProfile } from "@/data/settings";
 import { ROLE_META, type StaffProfile } from "@/types/facility-staff";
 import type { OnboardingTemplate } from "@/data/staff-onboarding";
+import { staffInviteCopy } from "@/lib/staff-invite-copy";
 
 /**
  * Branded onboarding-invite email preview (mock — no real send). Renders the
@@ -29,10 +30,19 @@ export function OnboardingInviteEmail({
         { month: "long", day: "numeric", year: "numeric" },
       )
     : "—";
-  const welcome =
-    template?.welcomeMessage ||
-    "Welcome aboard! Please complete your onboarding so we can get you set up before your first shift.";
+  // The words come from staff-invite-copy.ts, which the SENT email
+  // (src/lib/staff-invite-email.ts) also imports — so this preview shows what
+  // actually goes out rather than an approximation that drifts.
   const expiresInDays = template?.inviteExpiryDays ?? 7;
+  const copy = staffInviteCopy({
+    firstName,
+    facilityName,
+    roleLabel,
+    startDate,
+    welcomeMessage: template?.welcomeMessage,
+    expiresInDays,
+  });
+  const welcome = copy.welcome;
   const link = token ? `/onboard/${token}` : "/onboard/…";
 
   return (
@@ -58,9 +68,7 @@ export function OnboardingInviteEmail({
 
       {/* Body */}
       <div className="space-y-4 px-5 py-5 text-sm">
-        <p className="text-lg font-semibold">
-          Welcome to the team, {firstName}!
-        </p>
+        <p className="text-lg font-semibold">{copy.heading}</p>
         <p className="text-slate-600 dark:text-slate-400">{welcome}</p>
 
         <dl className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-4 py-3 text-xs dark:bg-slate-900">
@@ -78,19 +86,17 @@ export function OnboardingInviteEmail({
           href={link}
           className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white no-underline hover:bg-emerald-700"
         >
-          Complete your onboarding
+          {copy.cta}
           <ArrowRight className="size-4" />
         </a>
 
         <p className="flex items-center gap-1.5 text-xs text-slate-500">
           <Clock className="size-3.5" />
-          This link expires in {expiresInDays} day
-          {expiresInDays === 1 ? "" : "s"}.
+          {copy.expiry}
         </p>
 
         <p className="border-t pt-3 text-[11px] text-slate-400">
-          Sent by {facilityName}. If you weren’t expecting this, you can ignore
-          this email.
+          {copy.footer}
         </p>
       </div>
     </div>

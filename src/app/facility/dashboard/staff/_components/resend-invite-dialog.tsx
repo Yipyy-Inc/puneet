@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { Copy, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 import type { StaffProfile } from "@/types/facility-staff";
@@ -22,10 +23,23 @@ import {
 import { OnboardingInviteEmail } from "@/components/facility/staff-hr/onboarding-invite-email";
 
 /**
- * Send / resend the onboarding invite for an invited staff member. Shows the
- * branded email preview + the testable /onboard/[token] link with a Copy
- * button. Resend reissues the token (invalidating the old link). Mock send —
- * a toast + the stored instance; no real email.
+ * Send / resend the onboarding invite for an invited staff member.
+ *
+ * THIS NOW SENDS. It posts to /api/staff/[id]/invite, which creates the auth
+ * account, links the membership, mints a fresh token and hands the whole thing
+ * to Resend. Resending reissues the token, and because only its hash is stored,
+ * the previous link stops working the moment this succeeds.
+ *
+ * The three outcomes are reported as three different things, because they are:
+ *
+ *   sent            the provider accepted it
+ *   not_configured  no RESEND_API_KEY (or no service-role key) — the link is
+ *                   handed back so the manager can deliver it themselves
+ *   send_failed     the provider rejected it; the staff row was NOT left
+ *                   claiming an invitation nobody received
+ *
+ * The local store is still updated alongside so the rest of the screen (which
+ * reads the mock instance) stays consistent until it moves onto the API.
  */
 export function ResendInviteDialog({
   profile,
@@ -38,6 +52,10 @@ export function ResendInviteDialog({
   onOpenChange: (v: boolean) => void;
   onSent?: (profile: StaffProfile) => void;
 }) {
+  // Above the early return, with the other hooks: hooks run in the same order
+  // every render or they run wrong, and `if (!profile) return null` below is an
+  // early return this must not sit after.
+  const [sending, setSending] = useState(false);
   const templates = useOnboardingTemplates();
   const instance = useOnboardingInstance(profile?.id);
   const template = instance
@@ -51,16 +69,54 @@ export function ResendInviteDialog({
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const path = instance ? `/onboard/${instance.token}` : "";
 
-  const send = () => {
-    const inst = instance
-      ? regenerateOnboardingToken(profile.id)
-      : createOnboardingInstance(profile.id, template?.id ?? "");
-    if (!inst) return;
-    toast.success(
-      `Onboarding email ${instance ? "resent" : "sent"} to ${profile.email}`,
-      { description: `Link: /onboard/${inst.token}` },
-    );
-    onSent?.(profile);
+  const send = async () => {
+    setSending(true);
+    try {
+      const response = await fetch(`/api/staff/${profile.id}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId: template?.id }),
+      });
+      const result = (await response.json().catch(() => null)) as {
+        sent?: boolean;
+        reason?: string;
+        message?: string;
+        setupUrl?: string;
+        error?: string;
+      } | null;
+
+      if (result?.sent) {
+        toast.success(`Onboarding email sent to ${profile.email}`);
+      } else if (result?.reason === "not_configured") {
+        // Not an error and not a success. The account is real; the delivery is
+        // the manager's to make. Saying "sent" here would be the exact lie the
+        // admin-invite route was written to avoid.
+        toast.warning(result.message ?? "Email service not configured.", {
+          description: result.setupUrl
+            ? "Copy the link below to share it."
+            : undefined,
+          duration: 8000,
+        });
+      } else {
+        toast.error(
+          result?.message ?? result?.error ?? "Could not send the invitation.",
+        );
+        return;
+      }
+
+      // Keep the local store in step so the rest of the staff screen — which
+      // still reads the mock instance — shows the same state as the database.
+      if (instance) {
+        regenerateOnboardingToken(profile.id);
+      } else {
+        createOnboardingInstance(profile.id, template?.id ?? "");
+      }
+      onSent?.(profile);
+    } catch {
+      toast.error("Could not reach the server. Nothing was sent.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const copy = () => {
@@ -114,7 +170,8 @@ export function ResendInviteDialog({
           </Button>
           <Button
             className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-            onClick={send}
+            onClick={() => void send()}
+            disabled={sending}
           >
             {instance ? (
               <>

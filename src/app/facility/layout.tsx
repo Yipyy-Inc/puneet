@@ -1,6 +1,7 @@
 import { canAccessFacilityPortal, canManageCustomers } from "@/lib/auth/viewer";
 import { guardPortal } from "@/lib/auth/portal-gate";
 import { legacyStaffIdForEmail } from "@/lib/auth/legacy-identity";
+import { redirectIfStillOnboarding } from "@/lib/auth/onboarding-gate";
 import { FacilityRbacProvider } from "@/hooks/use-facility-rbac";
 import { PermissionsHydration } from "@/components/providers/PermissionsHydration";
 import { FacilitySidebar } from "@/components/layout/facility-admin-sidebar";
@@ -36,6 +37,11 @@ export default async function FacilityLayout({
   const viewer = await guardPortal({
     allow: canAccessFacilityPortal,
   });
+
+  // A membership admits you to this portal; finishing your onboarding is a
+  // separate question, and inviting a hire now creates the membership before
+  // they have answered it. See lib/auth/onboarding-gate.ts.
+  await redirectIfStillOnboarding(viewer.email);
 
   const canCreateCustomer = canManageCustomers(viewer);
 
