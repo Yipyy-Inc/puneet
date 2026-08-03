@@ -8,12 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { ClipboardList, Plus, Trash2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useOnboardingTemplates,
-  createOnboardingTemplate,
-  deleteOnboardingTemplate,
-  saveOnboardingTemplate,
-  type OnboardingTemplate,
-} from "@/data/staff-onboarding";
+  useOnboardingTemplatesQuery,
+  useSaveOnboardingTemplate,
+  useDeleteOnboardingTemplate,
+} from "@/lib/api/staff-onboarding";
+import type { OnboardingTemplate } from "@/data/staff-onboarding";
 import { OnboardingTemplateEditor } from "./OnboardingTemplateEditor";
 
 const humanizeRole = (r: string) =>
@@ -23,7 +22,9 @@ const humanizeRole = (r: string) =>
  *  (template settings + manager tasks + employee self-serve tasks). Persisted
  *  to the Phase 0 staff-onboarding store. */
 export function OnboardingTemplatesSettings() {
-  const templates = useOnboardingTemplates();
+  const { data: templates = [], isLoading } = useOnboardingTemplatesQuery();
+  const { mutate: saveTemplate } = useSaveOnboardingTemplate();
+  const { mutate: deleteTemplate } = useDeleteOnboardingTemplate();
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const editing = editingId ? templates.find((t) => t.id === editingId) : null;
@@ -37,10 +38,27 @@ export function OnboardingTemplatesSettings() {
     );
   }
 
+  // THE ID COMES BACK FROM THE DATABASE.
+  //
+  // The mock version generated `uid("tmpl")` locally and opened the editor on
+  // it in the same tick. Against Postgres the id is assigned by the insert, so
+  // the editor cannot open until the response arrives — opening it on a guessed
+  // id would edit a template that does not exist, and the first save would
+  // create a second one.
   const create = () => {
-    const t = createOnboardingTemplate({ name: "New onboarding template" });
-    setEditingId(t.id);
-    toast.success("Template created");
+    saveTemplate(
+      {
+        name: "New onboarding template",
+        status: "draft",
+      } as OnboardingTemplate,
+      {
+        onSuccess: (created) => {
+          setEditingId(created.id);
+          toast.success("Template created");
+        },
+        onError: (error: Error) => toast.error(error.message),
+      },
+    );
   };
 
   return (
@@ -90,6 +108,11 @@ function TemplateCard({
   template: OnboardingTemplate;
   onEdit: () => void;
 }) {
+  // Its own mutations rather than two callbacks threaded down from the parent:
+  // the switch and the delete button live here, so the calls belong here too.
+  const { mutate: saveTemplate } = useSaveOnboardingTemplate();
+  const { mutate: deleteTemplate } = useDeleteOnboardingTemplate();
+
   const taskCount =
     template.managerTasks.length + template.employeeTasks.length;
 
@@ -120,10 +143,15 @@ function TemplateCard({
         <Switch
           checked={template.status === "active"}
           onCheckedChange={(v) =>
-            saveOnboardingTemplate({
-              ...template,
-              status: v ? "active" : "draft",
-            })
+            saveTemplate(
+              { ...template, status: v ? "active" : "draft" },
+              {
+                // The uniqueness trigger refuses a second ACTIVE template for a
+                // role and says which role. Surfacing that beats a switch that
+                // silently flips back.
+                onError: (error: Error) => toast.error(error.message),
+              },
+            )
           }
         />
         Active
@@ -134,10 +162,12 @@ function TemplateCard({
         size="icon"
         className="size-8"
         title="Delete template"
-        onClick={() => {
-          deleteOnboardingTemplate(template.id);
-          toast.success("Template deleted");
-        }}
+        onClick={() =>
+          deleteTemplate(template.id, {
+            onSuccess: () => toast.success("Template deleted"),
+            onError: (error: Error) => toast.error(error.message),
+          })
+        }
       >
         <Trash2 className="size-4" />
       </Button>

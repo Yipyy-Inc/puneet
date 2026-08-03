@@ -6,17 +6,18 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Plus, Trash2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useOffboardingTemplates,
-  createOffboardingTemplate,
-  deleteOffboardingTemplate,
-  type OffboardingTemplate,
-} from "@/data/staff-onboarding";
+  useOffboardingTemplatesQuery,
+  useSaveOffboardingTemplate,
+  useDeleteOffboardingTemplate,
+} from "@/lib/api/staff-onboarding";
+import type { OffboardingTemplate } from "@/data/staff-onboarding";
 import { OffboardingTemplateEditor } from "./OffboardingTemplateEditor";
 
 /** Offboarding Templates — list of template cards opening a manager-tasks-only
  *  editor (same structure as Onboarding). Persisted to the Phase 0 store. */
 export function OffboardingTemplatesSettings() {
-  const templates = useOffboardingTemplates();
+  const { data: templates = [] } = useOffboardingTemplatesQuery();
+  const { mutate: saveTemplate } = useSaveOffboardingTemplate();
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const editing = editingId ? templates.find((t) => t.id === editingId) : null;
@@ -31,11 +32,16 @@ export function OffboardingTemplatesSettings() {
   }
 
   const create = () => {
-    const t = createOffboardingTemplate({ name: "New offboarding template" });
-    setEditingId(t.id);
-    toast.success("Template created");
+    // The id is assigned by the insert — see the note in
+    // OnboardingTemplatesSettings. The editor opens on the RETURNED row.
+    saveTemplate({ name: "New offboarding template" } as OffboardingTemplate, {
+      onSuccess: (created) => {
+        setEditingId(created.id);
+        toast.success("Template created");
+      },
+      onError: (error: Error) => toast.error(error.message),
+    });
   };
-
   return (
     <Card>
       <CardHeader>
@@ -84,6 +90,9 @@ function OffboardingCard({
   template: OffboardingTemplate;
   onEdit: () => void;
 }) {
+  // Its own mutation, where the delete button is.
+  const { mutate: deleteTemplate } = useDeleteOffboardingTemplate();
+
   const count = template.managerTasks.length;
   return (
     <div className="hover:border-primary/40 flex items-center gap-3 rounded-lg border p-3 transition-colors">
@@ -106,7 +115,7 @@ function OffboardingCard({
         className="size-8"
         title="Delete template"
         onClick={() => {
-          deleteOffboardingTemplate(template.id);
+          deleteTemplate(template.id);
           toast.success("Template deleted");
         }}
       >
