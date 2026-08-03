@@ -200,6 +200,36 @@ They do not corrupt the trail — they make the **parent rows undeletable**, fai
 
 **Do instead:** for any append-only table, put every assertion inside `begin; … rollback;` (see [grooming-history-immutability.sql](../../supabase/tests/grooming-history-immutability.sql), which says so at the top), hold identifiers rather than references, and assert immutability **as the owner** — RLS is bypassed by `service_role`, so a test that only runs as `authenticated` proves nothing about the guarantee.
 
+## Snapshot (2026-08-06, storage policies)
+
+### 🔴 `facilities.name` shadows `storage.objects.name` inside a policy subquery — FIXED, but read this before writing another
+
+The natural way to write a storage policy that gates on a facility path prefix:
+
+```sql
+and exists (select 1 from public.facilities f
+             where f.id::text = (storage.foldername(name))[1]
+               and private.has_permission(f.id, 'manage_staff'))
+```
+
+is **silently, completely broken**. `public.facilities` has a column called `name`, so the unqualified `name` inside the subquery binds to the **facility's** name, not the storage object's. The predicate compares a facility id against a segment of that facility's own name, matches nothing, and raises nothing.
+
+**It was live in `staff_documents_object_*` (20260804090000)** from the day it shipped until 20260806200000:
+
+| Policy | Effect of the bug                                                                 |
+| ------ | --------------------------------------------------------------------------------- |
+| read   | the employee's own-prefix arm worked; **`manage_staff` could read nothing**       |
+| insert | same — a manager could not upload on a hire's behalf                              |
+| delete | the manager arm was the **only** arm, so **nobody could delete a staff document** |
+
+It fails **closed**, so no file was ever exposed — a functionality bug, not a leak. But the migration's own header promises documents are "deletable by `manage_staff`" so a passport scan can be destroyed on request, and that had never worked.
+
+**How it was found, which is the transferable part:** the same mistake was made in the new `grooming-photos` policies, and the test caught it _only_ because the suite asserts the positive case. `S1 — a facility CAN upload under its own prefix` failed, which revealed that `S2 — cannot upload under another facility's prefix` had been passing **vacuously** all along. A suite with only the negative half reports a healthy security boundary on a policy that denies everyone.
+
+**Do instead:** compute the path segment in the **outer** scope and compare it against a set — `(storage.foldername(name))[1] in (select f.id::text from public.facilities f where …)` — which removes the shadowing rather than papering over it with a qualified reference. And for every deny-assertion, write the matching allow-assertion next to it; a negative control with no positive control is not a control.
+
+Note also: `storage.objects` refuses direct `DELETE` from SQL ("Use the Storage API instead"), so delete policies cannot be exercised in a psql test at all — cover them by asserting the identical predicate on insert.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
