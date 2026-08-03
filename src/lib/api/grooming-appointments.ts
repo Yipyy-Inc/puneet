@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   AlertNote,
   AppointmentHistoryEntry,
+  GroomingPhoto,
   GroomingStatus,
   TicketComment,
 } from "@/types/grooming";
@@ -199,6 +200,122 @@ export function useRecordAppointmentHistory() {
         throw new Error(parsed?.error ?? "Could not record that change.");
       }
       return parsed as AppointmentHistoryEntry;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["grooming", "appointments"],
+      });
+    },
+  });
+}
+
+/**
+ * Upload a before/after photo.
+ *
+ * Multipart, not base64-in-JSON: the bytes go straight to the route, which
+ * sniffs them and forwards to a private bucket. Returns the STORED photo,
+ * including a freshly signed URL, so the caller renders the real object rather
+ * than the `URL.createObjectURL` blob it used to invent — those look identical
+ * until the page reloads and every thumbnail is gone.
+ */
+export function useUploadAppointmentPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      appointmentId: string;
+      kind: "before" | "after";
+      file: File;
+      caption?: string;
+    }): Promise<GroomingPhoto> => {
+      const form = new FormData();
+      form.set("appointmentId", input.appointmentId);
+      form.set("kind", input.kind);
+      form.set("file", input.file);
+      if (input.caption) form.set("caption", input.caption);
+
+      const response = await fetch("/api/grooming/appointments/photos", {
+        method: "POST",
+        body: form,
+      });
+      const parsed = (await response.json().catch(() => null)) as
+        | (GroomingPhoto & { error?: string })
+        | null;
+      if (!response.ok) {
+        throw new Error(parsed?.error ?? "Could not upload that photo.");
+      }
+      return parsed as GroomingPhoto;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["grooming", "appointments"],
+      });
+    },
+  });
+}
+
+/** Remove a photo — the row first, then the bytes. */
+export function useRemoveAppointmentPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(
+        `/api/grooming/appointments/photos?id=${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) {
+        const parsed = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(parsed?.error ?? "Could not remove that photo.");
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["grooming", "appointments"],
+      });
+    },
+  });
+}
+
+/**
+ * Save the intake record. PARTIAL — only the fields passed are written, so the
+ * session panel saving mood tags cannot blank the coat condition that check-in
+ * recorded an hour earlier.
+ *
+ * `complete: true` is what stamps `completedAt`, server-side. A row existing
+ * because the session panel opened is not a completed intake.
+ */
+export function useSaveAppointmentIntake() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      appointmentId: string;
+      coatCondition?: string;
+      behaviorNotes?: string;
+      arrivalCoatCondition?: string | null;
+      arrivalBehavior?: string | null;
+      arrivalHealthFlags?: string[];
+      allergies?: string[];
+      specialInstructions?: string;
+      mattingFeeWarning?: boolean;
+      mattingFeeAmount?: number | null;
+      dropOffObservations?: string | null;
+      sessionNotes?: string | null;
+      moodTags?: string[];
+      sessionStartedAt?: string | null;
+      complete?: boolean;
+    }) => {
+      const response = await fetch("/api/grooming/appointments/intake", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (!response.ok) {
+        const parsed = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(parsed?.error ?? "Could not save the intake record.");
+      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({

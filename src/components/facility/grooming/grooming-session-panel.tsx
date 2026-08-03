@@ -24,7 +24,12 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { petQueries } from "@/lib/api/pet";
 import { getGroomingPhotoRequirements } from "@/lib/api/grooming";
-import { useSetSessionProgress } from "@/lib/api/grooming-appointments";
+import {
+  useRemoveAppointmentPhoto,
+  useSaveAppointmentIntake,
+  useSetSessionProgress,
+  useUploadAppointmentPhoto,
+} from "@/lib/api/grooming-appointments";
 import { useSettings } from "@/hooks/use-settings";
 import type {
   BehaviorTag,
@@ -113,6 +118,9 @@ export function GroomingSessionPanel({
     groomingModule.settings.progressChecklist?.enabled ?? false;
 
   const { mutate: saveProgress } = useSetSessionProgress();
+  const { mutate: uploadPhoto } = useUploadAppointmentPhoto();
+  const { mutate: removePhoto } = useRemoveAppointmentPhoto();
+  const { mutate: saveIntake } = useSaveAppointmentIntake();
 
   const [progress, setProgress] = useState<ProgressStep[]>(() => {
     const existing = appointment.groomingProgress ?? [];
@@ -166,8 +174,18 @@ export function GroomingSessionPanel({
     [],
   );
 
-  const [photos, setPhotos] = useState<string[]>(
-    appointment.intake?.beforePhotos ?? [],
+  // RECORDS, not bare URLs. `intake.beforePhotos` is typed as string[], which
+  // is fine for the Report Card but leaves the panel with no id to delete by.
+  // The list is held as photos here and projected to URLs where the type
+  // demands it — one shape in the component, the lossy one only at the edge.
+  const [photos, setPhotos] = useState<GroomingPhoto[]>(() =>
+    (appointment.intake?.beforePhotos ?? []).map((url, i) => ({
+      id: `seed-${i}`,
+      url,
+      type: "before" as const,
+      takenAt: appointment.intake?.completedAt ?? "",
+      takenBy: appointment.intake?.completedBy ?? "",
+    })),
   );
   const [afterPhotos, setAfterPhotos] = useState<GroomingPhoto[]>(
     appointment.afterPhotos ?? [],
@@ -254,63 +272,85 @@ export function GroomingSessionPanel({
       completedAt: appointment.intake?.completedAt,
       dropOffObservations: appointment.intake?.dropOffObservations,
       sessionStartedAt: appointment.intake?.sessionStartedAt,
-      beforePhotos: photos,
+      beforePhotos: photos.map((p) => p.url),
       sessionNotes: notes,
       moodTags: moods,
       issues,
       careLog,
     };
-    (appointment as GroomingAppointment & { intake?: GroomingIntake }).intake =
-      next;
-    appointment.afterPhotos = afterPhotos;
+    // The assignments that used to live here — `appointment.intake = next` and
+    // `appointment.afterPhotos = …` — mutated a row inside the TanStack Query
+    // cache. Invisible to React, gone on the next refetch, and the same bug the
+    // progress checklist had. The photos now write themselves on upload; the
+    // three session fields below go to the intake row.
     onChange?.(next);
+
+    // Only the fields this panel owns. The write is partial (20260806180000),
+    // so it cannot blank the coat condition or allergies that check-in
+    // recorded — which a full-row save from here would do every time somebody
+    // typed a note.
+    saveIntake(
+      {
+        appointmentId: appointment.id,
+        sessionNotes: notes || null,
+        moodTags: moods,
+        ...(appointment.intake?.sessionStartedAt
+          ? { sessionStartedAt: appointment.intake.sessionStartedAt }
+          : {}),
+      },
+      { onError: (error) => toast.error(error.message) },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photos, afterPhotos, notes, moods, issues, careLog]);
 
+  // ── Photos (20260806180000) ─────────────────────────────────────────────
+  //
+  // These used to be `URL.createObjectURL(file)` — blob URLs, which look
+  // identical to a real photo until the page reloads and every thumbnail is
+  // gone. A groomer photographing a matted coat to justify a fee had evidence
+  // that lasted exactly as long as the tab did.
+  //
+  // Uploaded one at a time rather than in one request: a multi-file pick where
+  // the third file is a screenshot should keep the first two, not fail the lot.
+  // Each resolves to the STORED photo, with the server's signed URL and author.
   function handleBeforeFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
-    const urls: string[] = [];
     for (const file of Array.from(files)) {
-      urls.push(URL.createObjectURL(file));
+      uploadPhoto(
+        { appointmentId: appointment.id, kind: "before", file },
+        {
+          onSuccess: (saved) => setPhotos((prev) => [...prev, saved]),
+          onError: (error) => toast.error(`${file.name}: ${error.message}`),
+        },
+      );
     }
-    setPhotos((prev) => [...prev, ...urls]);
-    toast.success(
-      urls.length === 1
-        ? "Before photo added"
-        : `${urls.length} before photos added`,
-    );
   }
 
-  function removeBeforePhoto(url: string) {
-    setPhotos((prev) => prev.filter((u) => u !== url));
+  function removeBeforePhoto(id: string) {
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
+    // A seeded row predates this list having ids — it came from the legacy
+    // string[] and has no record to delete. Dropping it locally is all that can
+    // honestly be done.
+    if (id.startsWith("seed-")) return;
+    removePhoto(id, { onError: (error) => toast.error(error.message) });
   }
 
   function handleAfterFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
-    const taken: GroomingPhoto[] = [];
-    const now = new Date().toISOString();
     for (const file of Array.from(files)) {
-      taken.push({
-        id: `gp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        url: URL.createObjectURL(file),
-        type: "after",
-        takenAt: now,
-        takenBy: "You",
-      });
+      uploadPhoto(
+        { appointmentId: appointment.id, kind: "after", file },
+        {
+          onSuccess: (saved) => setAfterPhotos((prev) => [...prev, saved]),
+          onError: (error) => toast.error(`${file.name}: ${error.message}`),
+        },
+      );
     }
-    setAfterPhotos((prev) => [...prev, ...taken]);
-    toast.success(
-      taken.length === 1
-        ? "After photo added"
-        : `${taken.length} after photos added`,
-      {
-        description: "Attached to the Report Card.",
-      },
-    );
   }
 
   function removeAfterPhoto(id: string) {
     setAfterPhotos((prev) => prev.filter((p) => p.id !== id));
+    removePhoto(id, { onError: (error) => toast.error(error.message) });
   }
 
   function toggleMood(tag: BehaviorTag) {
@@ -498,21 +538,21 @@ export function GroomingSessionPanel({
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {photos.map((url, i) => (
+              {photos.map((photo, i) => (
                 <div
-                  key={`${url}-${i}`}
+                  key={photo.id}
                   className="group ring-border relative size-20 overflow-hidden rounded-md ring-1"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={url}
+                    src={photo.url}
                     alt={`Before photo ${i + 1}`}
                     className="size-full object-cover"
                   />
                   <button
                     type="button"
                     aria-label="Remove photo"
-                    onClick={() => removeBeforePhoto(url)}
+                    onClick={() => removeBeforePhoto(photo.id)}
                     className="absolute top-1 right-1 hidden rounded-full bg-black/60 p-1 text-white group-hover:block"
                   >
                     <Trash2 className="size-3" />

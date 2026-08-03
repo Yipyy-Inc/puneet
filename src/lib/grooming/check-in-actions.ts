@@ -33,6 +33,28 @@ export interface CheckInActionSummary {
   addedTotal: number;
   /** Alert notes promoted from this check-in's arrival flags. */
   promotedAlerts: AlertNote[];
+  /**
+   * What the check-in recorded about the drop-off, ready to send to
+   * `useSaveAppointmentIntake`.
+   *
+   * RETURNED RATHER THAN WRITTEN HERE. This module is imported by three screens
+   * and is not a React component, so it cannot hold the mutation hook — and
+   * making it fetch directly would put a second network path beside the one the
+   * query cache knows about. The callers persist it; this decides what.
+   *
+   * `complete: true` because a check-in IS the intake being completed — that is
+   * the moment the field exists to record.
+   */
+  intakePatch: {
+    arrivalCoatCondition?: string;
+    arrivalBehavior?: string;
+    arrivalHealthFlags?: string[];
+    dropOffObservations?: string | null;
+    mattingFeeWarning: boolean;
+    mattingFeeAmount: number | null;
+    sessionStartedAt: string;
+    complete: true;
+  };
 }
 
 /**
@@ -223,6 +245,28 @@ export function applyCheckInResult(
     newlyAddedAddOns: newlyAdded,
     addedTotal,
     promotedAlerts,
+    // The drop-off, for the caller to persist. `beforePhotos` is deliberately
+    // absent: photos are rows with their own upload path now
+    // (20260806180000), not a list carried on the intake.
+    intakePatch: {
+      ...(result.arrivalCoatCondition
+        ? { arrivalCoatCondition: result.arrivalCoatCondition }
+        : {}),
+      ...(result.arrivalBehavior
+        ? { arrivalBehavior: result.arrivalBehavior }
+        : {}),
+      ...(result.arrivalHealthFlags
+        ? { arrivalHealthFlags: result.arrivalHealthFlags }
+        : {}),
+      dropOffObservations: result.dropOffObservations || null,
+      // Both together or neither — the database refuses half a matting fee, and
+      // a surcharge of 0 is not a fee that was warned about.
+      mattingFeeWarning: result.mattedSurcharge > 0,
+      mattingFeeAmount:
+        result.mattedSurcharge > 0 ? result.mattedSurcharge : null,
+      sessionStartedAt: nowIso,
+      complete: true,
+    },
   };
 }
 

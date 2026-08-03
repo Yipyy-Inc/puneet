@@ -61,3 +61,22 @@ export function sniffContentType(bytes: Uint8Array): AllowedContentType | null {
 }
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+/**
+ * The image subset, for callers that accept photos and not documents.
+ *
+ * A separate function rather than a flag on `sniffContentType`, because the
+ * grooming-photos bucket's `allowed_mime_types` and the CHECK on
+ * `grooming_photos.content_type` both list exactly these three. Three places
+ * naming the same set is already one too many; a boolean parameter would make
+ * the fourth one invisible at the call site.
+ *
+ * Null still means refuse. A PDF is a real file that this particular caller has
+ * no use for, and answering "no" is the correct answer to "is this a photo".
+ */
+export function sniffImageContentType(
+  bytes: Uint8Array,
+): Exclude<AllowedContentType, "application/pdf"> | null {
+  const found = sniffContentType(bytes);
+  return found === null || found === "application/pdf" ? null : found;
+}

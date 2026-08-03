@@ -8,6 +8,7 @@ import {
   useAddAppointmentNote,
   useRecordAppointmentHistory,
   useRemoveAppointmentAlert,
+  useSaveAppointmentIntake,
 } from "@/lib/api/grooming-appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -321,6 +322,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const { mutate: addNote } = useAddAppointmentNote();
   const { mutate: removeAlertNote } = useRemoveAppointmentAlert();
   const { mutate: recordTrail } = useRecordAppointmentHistory();
+  const { mutate: saveIntake } = useSaveAppointmentIntake();
 
   function autoMatchAndOffer(reason: "cancellation" | "no-show") {
     if (!apt) return;
@@ -624,6 +626,13 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       setStationStatus,
       notify: (title, detail) => toast.message(title, detail),
     });
+
+    // The drop-off record. `applyCheckInResult` decides what it says; the write
+    // lives here because that module is not a component and cannot hold a hook.
+    saveIntake(
+      { appointmentId: apt.id, ...summary.intakePatch },
+      { onError: (error) => toast.error(error.message) },
+    );
 
     if (summary.newlyAddedAddOns.length > 0) {
       recordHistory(

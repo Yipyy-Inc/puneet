@@ -33,7 +33,10 @@ import { WaitlistRow } from "./check-in-board-waitlist";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { stylistIdForStaff } from "@/lib/api/grooming";
-import { useSetGroomingAppointmentStatus } from "@/lib/api/grooming-appointments";
+import {
+  useSaveAppointmentIntake,
+  useSetGroomingAppointmentStatus,
+} from "@/lib/api/grooming-appointments";
 
 type DialogKind = "check-in" | "mark-ready" | "payment" | null;
 
@@ -82,6 +85,7 @@ export function CheckInBoard() {
 
   const { setStationStatus } = useGroomingStations();
   const { mutate: setAppointmentStatus } = useSetGroomingAppointmentStatus();
+  const { mutate: saveIntake } = useSaveAppointmentIntake();
   const { zipTaxRates } = useMobileGrooming();
   const { entriesForDate } = useGroomingWaitlist();
   const { recordEvent } = useLoyaltyEngine();
@@ -228,11 +232,15 @@ export function CheckInBoard() {
       return;
     }
     const next = { ...activeAppt };
-    applyCheckInResult(next, result, {
+    const summary = applyCheckInResult(next, result, {
       clients: initialClients,
       setStationStatus,
       notify,
     });
+    saveIntake(
+      { appointmentId: next.id, ...summary.intakePatch },
+      { onError: (error) => toast.error(error.message) },
+    );
     recordStationAssignmentHistory(next, result.stationName, "You");
     next.status = "checked-in";
     patch(next);

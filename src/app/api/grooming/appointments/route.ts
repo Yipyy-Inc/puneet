@@ -113,12 +113,34 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // SIGNED URLS, 60 SECONDS, ONE BATCH CALL. The bucket is private, so there is
+  // no URL that works without a token; these are minted per request and expire
+  // before they are worth sharing. A long expiry would turn "private bucket"
+  // back into "public bucket with a longer name".
+  //
+  // Batched rather than per photo: a day's board with twenty appointments and
+  // before/after shots on each should not be forty round trips to storage.
+  const photoPaths = rows.flatMap((r) =>
+    (r.grooming_appointments?.grooming_photos ?? []).map((p) => p.storage_path),
+  );
+  const photoUrls = new Map<string, string>();
+  if (photoPaths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from("grooming-photos")
+      .createSignedUrls(photoPaths, 60);
+    for (const entry of signed ?? []) {
+      if (entry.path && entry.signedUrl)
+        photoUrls.set(entry.path, entry.signedUrl);
+    }
+  }
+
   return NextResponse.json(
     rows.map((row) =>
       rowToGroomingAppointment(row, {
         timeZone,
         tiers,
         history: historyByBooking.get(row.id) ?? [],
+        photoUrls,
       }),
     ),
   );

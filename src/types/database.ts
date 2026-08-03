@@ -775,6 +775,147 @@ export type Database = {
           },
         ];
       };
+      grooming_intake: {
+        Row: {
+          allergies: string[];
+          arrival_behavior: string | null;
+          arrival_coat_condition: string | null;
+          arrival_health_flags: string[];
+          author_name: string;
+          behavior_notes: string;
+          booking_id: string;
+          coat_condition: string;
+          completed_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          drop_off_observations: string | null;
+          facility_id: string;
+          matting_fee_amount: number | null;
+          matting_fee_warning: boolean;
+          mood_tags: string[];
+          session_notes: string | null;
+          session_started_at: string | null;
+          special_instructions: string;
+          updated_at: string;
+        };
+        Insert: {
+          allergies?: string[];
+          arrival_behavior?: string | null;
+          arrival_coat_condition?: string | null;
+          arrival_health_flags?: string[];
+          author_name?: string;
+          behavior_notes?: string;
+          booking_id: string;
+          coat_condition?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          drop_off_observations?: string | null;
+          facility_id: string;
+          matting_fee_amount?: number | null;
+          matting_fee_warning?: boolean;
+          mood_tags?: string[];
+          session_notes?: string | null;
+          session_started_at?: string | null;
+          special_instructions?: string;
+          updated_at?: string;
+        };
+        Update: {
+          allergies?: string[];
+          arrival_behavior?: string | null;
+          arrival_coat_condition?: string | null;
+          arrival_health_flags?: string[];
+          author_name?: string;
+          behavior_notes?: string;
+          booking_id?: string;
+          coat_condition?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          drop_off_observations?: string | null;
+          facility_id?: string;
+          matting_fee_amount?: number | null;
+          matting_fee_warning?: boolean;
+          mood_tags?: string[];
+          session_notes?: string | null;
+          session_started_at?: string | null;
+          special_instructions?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_intake_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "grooming_appointments";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "grooming_intake_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_photos: {
+        Row: {
+          author_name: string;
+          booking_id: string;
+          caption: string | null;
+          content_type: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          kind: string;
+          size_bytes: number;
+          storage_path: string;
+        };
+        Insert: {
+          author_name?: string;
+          booking_id: string;
+          caption?: string | null;
+          content_type: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          kind: string;
+          size_bytes: number;
+          storage_path: string;
+        };
+        Update: {
+          author_name?: string;
+          booking_id?: string;
+          caption?: string | null;
+          content_type?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          size_bytes?: number;
+          storage_path?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_photos_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_appointments";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "grooming_photos_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       grooming_price_adjustments: {
         Row: {
           amount: number;

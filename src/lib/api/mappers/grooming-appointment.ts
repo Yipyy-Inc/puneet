@@ -1,4 +1,8 @@
 import type {
+  ArrivalBehavior,
+  ArrivalCoatCondition,
+  ArrivalHealthFlag,
+  BehaviorTag,
   GroomingAppointment,
   GroomingStatus,
   CoatType,
@@ -28,9 +32,13 @@ import type { PriceAdjustment } from "@/types/grooming";
 //
 // Listed so they are a decision rather than a discovery:
 //
-//   intake, afterPhotos, expressCheckinSubmission,
-//   additionalPets, additionalStylistIds, stages
+//   expressCheckinSubmission, additionalPets, additionalStylistIds, stages
 //                    — none built. All optional; all omitted.
+//   intake.issues, intake.careLog
+//                    — still local. An issue auto-creates an incident record
+//                      and the care log seeds from the pet's medication
+//                      schedule; both belong to systems that do not exist yet
+//                      (20260806180000, "what is not here").
 //   lastGroomDate    — derivable from the client's booking history, but that is
 //                      a query per row and no screen has asked for it yet.
 //   paymentMethod, appliedStoreCredit, appliedPackagePassId
@@ -187,6 +195,33 @@ export interface AppointmentRow {
           created_at: string;
         }[]
       | null;
+    grooming_photos:
+      | {
+          id: string;
+          kind: string;
+          caption: string | null;
+          storage_path: string;
+          author_name: string;
+          created_at: string;
+        }[]
+      | null;
+    grooming_intake: {
+      coat_condition: string;
+      behavior_notes: string;
+      arrival_coat_condition: string | null;
+      arrival_behavior: string | null;
+      arrival_health_flags: string[] | null;
+      allergies: string[] | null;
+      special_instructions: string;
+      matting_fee_warning: boolean;
+      matting_fee_amount: number | null;
+      drop_off_observations: string | null;
+      session_notes: string | null;
+      mood_tags: string[] | null;
+      session_started_at: string | null;
+      author_name: string;
+      completed_at: string | null;
+    } | null;
     grooming_price_adjustments:
       | {
           id: string;
@@ -226,10 +261,36 @@ function ymd(iso: string, timeZone: string): string {
 
 export function rowToGroomingAppointment(
   row: AppointmentRow,
-  opts: { timeZone: string; tiers: SizeTier[]; history?: HistoryRow[] },
+  opts: {
+    timeZone: string;
+    tiers: SizeTier[];
+    history?: HistoryRow[];
+    /** storage_path → signed URL, minted per request by the route. Absent for
+     *  a path whose signing failed, which renders as no photo rather than as a
+     *  broken image. */
+    photoUrls?: Map<string, string>;
+  },
 ): GroomingAppointment {
   const ext = row.grooming_appointments;
   const pet = row.booking_pets?.[0]?.pets ?? null;
+
+  // One list, split by `kind` — NOT two lists that can disagree. The mock kept
+  // before-photos as strings on the intake and after-photos as objects on the
+  // appointment (20260806180000, Decision 3); both are rows here.
+  const photos = (ext?.grooming_photos ?? [])
+    .map((p) => ({
+      id: p.id,
+      url: opts.photoUrls?.get(p.storage_path) ?? "",
+      type: p.kind as "before" | "after",
+      ...(p.caption ? { caption: p.caption } : {}),
+      takenAt: p.created_at,
+      takenBy: p.author_name,
+    }))
+    // A photo whose URL could not be signed is dropped rather than rendered
+    // with an empty src: a missing thumbnail is a smaller lie than a broken one.
+    .filter((p) => p.url !== "");
+
+  const intakeRow = ext?.grooming_intake ?? null;
 
   // The size SOLD is the snapshot on the appointment; only fall back to
   // deriving it when there is no extension row yet (a grooming booking made
@@ -342,6 +403,60 @@ export function rowToGroomingAppointment(
       .sort((a, b) => a.at.localeCompare(b.at)),
     groomingProgress: ext?.session_progress ?? [],
 
+    // ── Drop-off (20260806180000) ───────────────────────────────────────────
+    afterPhotos: photos.filter((p) => p.type === "after"),
+    ...(intakeRow
+      ? {
+          intake: {
+            coatCondition: intakeRow.coat_condition as
+              | "normal"
+              | "matted"
+              | "severely-matted",
+            behaviorNotes: intakeRow.behavior_notes,
+            ...(intakeRow.arrival_coat_condition
+              ? {
+                  arrivalCoatCondition:
+                    intakeRow.arrival_coat_condition as ArrivalCoatCondition,
+                }
+              : {}),
+            ...(intakeRow.arrival_behavior
+              ? {
+                  arrivalBehavior:
+                    intakeRow.arrival_behavior as ArrivalBehavior,
+                }
+              : {}),
+            arrivalHealthFlags: (intakeRow.arrival_health_flags ??
+              []) as ArrivalHealthFlag[],
+            allergies: intakeRow.allergies ?? [],
+            specialInstructions: intakeRow.special_instructions,
+            // The before-photos, as a projection of the one photo list rather
+            // than a second stored list. `beforePhotos` is typed as string[],
+            // so it carries the signed URLs.
+            beforePhotos: photos
+              .filter((p) => p.type === "before")
+              .map((p) => p.url),
+            mattingFeeWarning: intakeRow.matting_fee_warning,
+            ...(intakeRow.matting_fee_amount != null
+              ? { mattingFeeAmount: Number(intakeRow.matting_fee_amount) }
+              : {}),
+            completedBy: intakeRow.author_name,
+            ...(intakeRow.completed_at
+              ? { completedAt: intakeRow.completed_at }
+              : {}),
+            ...(intakeRow.drop_off_observations
+              ? { dropOffObservations: intakeRow.drop_off_observations }
+              : {}),
+            ...(intakeRow.session_notes
+              ? { sessionNotes: intakeRow.session_notes }
+              : {}),
+            moodTags: (intakeRow.mood_tags ?? []) as BehaviorTag[],
+            ...(intakeRow.session_started_at
+              ? { sessionStartedAt: intakeRow.session_started_at }
+              : {}),
+          },
+        }
+      : {}),
+
     // Oldest first — it is a trail, and the page renders it top-down. The union
     // is rebuilt from its `kind` discriminant, which the CHECK guarantees
     // agrees with the payload (20260806160000, Decision 1).
@@ -381,6 +496,13 @@ export const APPOINTMENT_SELECT = `
     grooming_alert_notes ( id, body, applies_to_future, author_name, created_at ),
     grooming_ticket_comments ( id, message, author_name, created_at ),
     grooming_price_adjustments ( id, reason, amount, note, custom_reason,
-                                 customer_notified, notified_at, created_at )
+                                 customer_notified, notified_at, created_at ),
+    grooming_photos ( id, kind, caption, storage_path, author_name, created_at ),
+    grooming_intake (
+      coat_condition, behavior_notes, arrival_coat_condition, arrival_behavior,
+      arrival_health_flags, allergies, special_instructions,
+      matting_fee_warning, matting_fee_amount, drop_off_observations,
+      session_notes, mood_tags, session_started_at, author_name, completed_at
+    )
   )
 ` as const;

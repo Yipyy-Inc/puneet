@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { useSaveAppointmentIntake } from "@/lib/api/grooming-appointments";
 import {
   Phone,
   Mail,
@@ -141,6 +142,7 @@ export function AppointmentPanel({
   const { data: allAppointments = [] } = useQuery(
     groomingQueries.appointments(),
   );
+  const { mutate: saveIntake } = useSaveAppointmentIntake();
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [markReadyOpen, setMarkReadyOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -807,11 +809,15 @@ export function AppointmentPanel({
             setCheckInOpen(false);
             return;
           }
-          applyCheckInResult(appointment, result, {
+          const summary = applyCheckInResult(appointment, result, {
             clients: initialClients,
             setStationStatus,
             notify: (title, detail) => toast.message(title, detail),
           });
+          saveIntake(
+            { appointmentId: appointment.id, ...summary.intakePatch },
+            { onError: (error) => toast.error(error.message) },
+          );
           // Record the station assignment on the appointment history so
           // station utilization can be reported later (spec Table 9). The
           // caller owns the decision to record (pure-mutation policy); the
