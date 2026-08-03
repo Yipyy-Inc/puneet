@@ -229,6 +229,52 @@ export type Database = {
           },
         ];
       };
+      customer_package_lines: {
+        Row: {
+          customer_package_id: string;
+          id: string;
+          passes_total: number;
+          service_id: string;
+          service_name: string;
+        };
+        Insert: {
+          customer_package_id: string;
+          id?: string;
+          passes_total: number;
+          service_id: string;
+          service_name: string;
+        };
+        Update: {
+          customer_package_id?: string;
+          id?: string;
+          passes_total?: number;
+          service_id?: string;
+          service_name?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "customer_package_lines_customer_package_id_fkey";
+            columns: ["customer_package_id"];
+            isOneToOne: false;
+            referencedRelation: "customer_package_pool_status";
+            referencedColumns: ["customer_package_id"];
+          },
+          {
+            foreignKeyName: "customer_package_lines_customer_package_id_fkey";
+            columns: ["customer_package_id"];
+            isOneToOne: false;
+            referencedRelation: "customer_package_status";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customer_package_lines_customer_package_id_fkey";
+            columns: ["customer_package_id"];
+            isOneToOne: false;
+            referencedRelation: "customer_packages";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       customer_packages: {
         Row: {
           client_id: string;
@@ -239,10 +285,8 @@ export type Database = {
           legacy_id: string | null;
           package_id: string | null;
           package_name: string;
-          passes_total: number;
           price_paid: number;
           purchased_at: string;
-          service_id: string;
           updated_at: string;
         };
         Insert: {
@@ -254,10 +298,8 @@ export type Database = {
           legacy_id?: string | null;
           package_id?: string | null;
           package_name: string;
-          passes_total: number;
           price_paid: number;
           purchased_at?: string;
-          service_id: string;
           updated_at?: string;
         };
         Update: {
@@ -269,10 +311,8 @@ export type Database = {
           legacy_id?: string | null;
           package_id?: string | null;
           package_name?: string;
-          passes_total?: number;
           price_paid?: number;
           purchased_at?: string;
-          service_id?: string;
           updated_at?: string;
         };
         Relationships: [
@@ -288,6 +328,13 @@ export type Database = {
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customer_packages_package_id_fkey";
+            columns: ["package_id"];
+            isOneToOne: false;
+            referencedRelation: "prepaid_package_pricing";
             referencedColumns: ["id"];
           },
           {
@@ -2229,6 +2276,7 @@ export type Database = {
           pet_id: string | null;
           pet_name: string | null;
           reason: string;
+          service_id: string;
           service_label: string;
         };
         Insert: {
@@ -2244,6 +2292,7 @@ export type Database = {
           pet_id?: string | null;
           pet_name?: string | null;
           reason: string;
+          service_id: string;
           service_label?: string;
         };
         Update: {
@@ -2259,9 +2308,17 @@ export type Database = {
           pet_id?: string | null;
           pet_name?: string | null;
           reason?: string;
+          service_id?: string;
           service_label?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "package_pass_entries_customer_package_id_fkey";
+            columns: ["customer_package_id"];
+            isOneToOne: false;
+            referencedRelation: "customer_package_pool_status";
+            referencedColumns: ["customer_package_id"];
+          },
           {
             foreignKeyName: "package_pass_entries_customer_package_id_fkey";
             columns: ["customer_package_id"];
@@ -2468,48 +2525,111 @@ export type Database = {
           },
         ];
       };
-      prepaid_packages: {
+      prepaid_package_lines: {
         Row: {
-          created_at: string;
-          description: string;
-          expiration_days: number | null;
-          facility_id: string;
           id: string;
-          is_active: boolean;
-          legacy_id: string | null;
-          name: string;
-          price: number;
+          package_id: string;
+          price_per_session: number;
+          quantity: number;
           service_id: string;
-          total_passes: number;
-          updated_at: string;
+          service_name: string;
         };
         Insert: {
-          created_at?: string;
-          description?: string;
-          expiration_days?: number | null;
-          facility_id: string;
           id?: string;
-          is_active?: boolean;
-          legacy_id?: string | null;
-          name: string;
-          price: number;
+          package_id: string;
+          price_per_session: number;
+          quantity: number;
           service_id: string;
-          total_passes: number;
-          updated_at?: string;
+          service_name: string;
         };
         Update: {
+          id?: string;
+          package_id?: string;
+          price_per_session?: number;
+          quantity?: number;
+          service_id?: string;
+          service_name?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "prepaid_package_lines_package_id_fkey";
+            columns: ["package_id"];
+            isOneToOne: false;
+            referencedRelation: "prepaid_package_pricing";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "prepaid_package_lines_package_id_fkey";
+            columns: ["package_id"];
+            isOneToOne: false;
+            referencedRelation: "prepaid_packages";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      prepaid_packages: {
+        Row: {
+          allow_extension: boolean;
+          allow_refund_unused: boolean;
+          allow_store_credit_on_cancel: boolean;
+          allow_transfer: boolean;
+          created_at: string;
+          description: string;
+          extension_fee: number;
+          facility_id: string;
+          id: string;
+          is_popular: boolean;
+          legacy_id: string | null;
+          max_extension_days: number;
+          name: string;
+          package_price: number;
+          policy_notes: string | null;
+          refund_per_unused_pass: number | null;
+          status: string;
+          updated_at: string;
+          validity_days: number;
+        };
+        Insert: {
+          allow_extension?: boolean;
+          allow_refund_unused?: boolean;
+          allow_store_credit_on_cancel?: boolean;
+          allow_transfer?: boolean;
           created_at?: string;
           description?: string;
-          expiration_days?: number | null;
+          extension_fee?: number;
+          facility_id: string;
+          id?: string;
+          is_popular?: boolean;
+          legacy_id?: string | null;
+          max_extension_days?: number;
+          name: string;
+          package_price: number;
+          policy_notes?: string | null;
+          refund_per_unused_pass?: number | null;
+          status?: string;
+          updated_at?: string;
+          validity_days: number;
+        };
+        Update: {
+          allow_extension?: boolean;
+          allow_refund_unused?: boolean;
+          allow_store_credit_on_cancel?: boolean;
+          allow_transfer?: boolean;
+          created_at?: string;
+          description?: string;
+          extension_fee?: number;
           facility_id?: string;
           id?: string;
-          is_active?: boolean;
+          is_popular?: boolean;
           legacy_id?: string | null;
+          max_extension_days?: number;
           name?: string;
-          price?: number;
-          service_id?: string;
-          total_passes?: number;
+          package_price?: number;
+          policy_notes?: string | null;
+          refund_per_unused_pass?: number | null;
+          status?: string;
           updated_at?: string;
+          validity_days?: number;
         };
         Relationships: [
           {
@@ -3001,6 +3121,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      customer_package_pool_status: {
+        Row: {
+          client_id: string | null;
+          customer_package_id: string | null;
+          facility_id: string | null;
+          passes_remaining: number | null;
+          passes_total: number | null;
+          service_id: string | null;
+          service_name: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "customer_packages_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customer_packages_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       customer_package_status: {
         Row: {
           client_id: string | null;
@@ -3013,7 +3160,6 @@ export type Database = {
           passes_used: number | null;
           price_paid: number | null;
           purchased_at: string | null;
-          service_id: string | null;
           status: string | null;
         };
         Relationships: [
@@ -3026,6 +3172,27 @@ export type Database = {
           },
           {
             foreignKeyName: "customer_packages_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      prepaid_package_pricing: {
+        Row: {
+          facility_id: string | null;
+          id: string | null;
+          package_price: number | null;
+          purchase_count: number | null;
+          regular_price: number | null;
+          savings: number | null;
+          savings_percentage: number | null;
+          total_passes: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "prepaid_packages_facility_id_fkey";
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
@@ -3071,6 +3238,7 @@ export type Database = {
           p_method: string;
           p_package_pass_applied?: number;
           p_package_pass_id?: string;
+          p_package_service_id?: string;
           p_pet_id?: string;
           p_pet_name?: string;
           p_receipt_channels?: string[];
@@ -3089,6 +3257,7 @@ export type Database = {
           p_customer_package_id: string;
           p_pet_id?: string;
           p_pet_name?: string;
+          p_service_id: string;
           p_service_label?: string;
         };
         Returns: number;

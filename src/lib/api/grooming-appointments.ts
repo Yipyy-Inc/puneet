@@ -357,6 +357,7 @@ export function useRecordPayment() {
       receiptChannels: string[];
       creditNote: string;
       customerPackageId?: string;
+      packageServiceId?: string;
       petName?: string;
       serviceLabel?: string;
     }): Promise<{ id: string; passesRemaining?: number }> => {

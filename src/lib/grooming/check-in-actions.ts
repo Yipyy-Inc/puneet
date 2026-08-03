@@ -477,6 +477,9 @@ export interface PaymentActionSummary {
     receiptChannels: string[];
     creditNote: string;
     customerPackageId?: string;
+    /** The pool the pass is drawn from — `packageId` is the grooming service
+     *  this appointment booked, which is exactly the pool it should spend. */
+    packageServiceId?: string;
     petName: string;
     serviceLabel: string;
   };
@@ -627,7 +630,10 @@ export function applyPaymentResult(
       // The pass to spend, and what it was spent on. Resolved to a uuid by the
       // route; redeemed by the same transaction that writes the payment.
       ...(result.appliedPackagePassId
-        ? { customerPackageId: result.appliedPackagePassId }
+        ? {
+            customerPackageId: result.appliedPackagePassId,
+            packageServiceId: apt.packageId,
+          }
         : {}),
       petName: apt.petName,
       serviceLabel: apt.packageName,

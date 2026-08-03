@@ -47,6 +47,10 @@ interface PaymentInput {
   receiptChannels?: string[];
   creditNote?: string;
   customerPackageId?: string;
+  /** WHICH POOL the pass comes from. A multi-service bundle has one pool per
+   *  service (20260806320000, Decision 2), so a redemption that does not name
+   *  one is ambiguous and the database refuses it. */
+  packageServiceId?: string;
   petName?: string;
   serviceLabel?: string;
 }
@@ -158,6 +162,7 @@ export async function POST(request: NextRequest) {
     p_receipt_channels: body.receiptChannels ?? [],
     p_credit_note: body.creditNote ?? "",
     p_customer_package_id: customerPackageId,
+    p_package_service_id: body.packageServiceId ?? null,
     p_pet_name: body.petName ?? null,
     p_service_label: body.serviceLabel ?? "",
   } as never);
