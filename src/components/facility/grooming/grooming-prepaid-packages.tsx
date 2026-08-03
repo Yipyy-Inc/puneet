@@ -50,7 +50,11 @@ import {
 import { toast } from "sonner";
 import { groomingQueries } from "@/lib/api/grooming";
 import {
-  groomingPrepaidPackages,
+  useDeletePrepaidPackage,
+  usePrepaidPackages,
+  useSavePrepaidPackage,
+} from "@/lib/api/prepaid-packages";
+import {
   defaultGroomingPrepaidPackagePolicy,
   type GroomingPrepaidPackage,
   type GroomingPrepaidPackagePolicy,
@@ -116,9 +120,14 @@ export function GroomingPrepaidPackages() {
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),
   );
-  const [packages, setPackages] = useState<GroomingPrepaidPackage[]>(
-    groomingPrepaidPackages,
-  );
+  // Postgres, not `useState(groomingPrepaidPackages)`. The old version seeded
+  // from the fixture and edited a local array, so a package a facility created
+  // was gone on reload — and the four derived figures it wrote (regularPrice,
+  // savings, savingsPercentage, purchaseCount) were the editor's own
+  // arithmetic rather than anything the database would stand behind.
+  const { data: packages = [] } = usePrepaidPackages();
+  const { mutate: savePackage } = useSavePrepaidPackage();
+  const { mutate: deletePackage } = useDeletePrepaidPackage();
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<GroomingPrepaidPackage | null>(null);
@@ -241,19 +250,29 @@ export function GroomingPrepaidPackages() {
       policy: form.policy,
     };
 
-    setPackages((prev) =>
-      editing
-        ? prev.map((p) => (p.id === editing.id ? payload : p))
-        : [...prev, payload],
+    // `regularPrice`, `savings`, `savingsPercentage` and `purchaseCount` are on
+    // `payload` because the editor computes them for its live preview. The
+    // payload builder drops them: they are the database's, derived from the
+    // lines and the package price.
+    savePackage(
+      { pkg: payload, isNew: !editing },
+      {
+        onSuccess: () => {
+          toast.success(editing ? "Package updated" : "Package created");
+          setEditorOpen(false);
+        },
+        onError: (error) => toast.error(error.message),
+      },
     );
-    toast.success(editing ? "Package updated" : "Package created");
-    setEditorOpen(false);
   };
 
   const handleDelete = () => {
     if (!deleting) return;
-    setPackages((prev) => prev.filter((p) => p.id !== deleting.id));
-    toast.success(`"${deleting.name}" deleted`);
+    const name = deleting.name;
+    deletePackage(deleting.id, {
+      onSuccess: () => toast.success(`"${name}" deleted`),
+      onError: (error) => toast.error(error.message),
+    });
     setDeleting(null);
   };
 
