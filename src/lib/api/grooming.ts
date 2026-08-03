@@ -1,5 +1,8 @@
+// `groomingAppointments` is gone from this import: appointments come from
+// /api/grooming/appointments now. The rest of this file is still fixtures —
+// stylists, products, inventory — and the mix is deliberate rather than
+// half-finished. See the note on groomingQueries.appointments below.
 import {
-  groomingAppointments,
   groomingPackages,
   groomingProducts,
   inventoryOrders,
@@ -196,24 +199,53 @@ export function getReportCardPrefillFromAppointment(
   };
 }
 
+/**
+ * Appointments, from Postgres.
+ *
+ * THE STYLIST REMAP HAPPENS HERE, and only here. The API returns the STAFF
+ * legacy id in `stylistId`, because the server has no business knowing about
+ * the mock `stylists` array. The screens compare against stylist ids
+ * (`stylist-001`…), so this is where the two meet — next to
+ * `stylistIdForStaff`, which already owns that mapping.
+ *
+ * An appointment whose staff member is not one of the five mock stylists keeps
+ * its staff id rather than being dropped. It then lands in no groomer column on
+ * the board, which is visible and fixable; silently discarding it would hide a
+ * pet that is genuinely booked in.
+ */
+async function fetchGroomingAppointments(): Promise<GroomingAppointment[]> {
+  const response = await fetch("/api/grooming/appointments");
+  if (!response.ok) {
+    const parsed = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+  }
+  const rows = (await response.json()) as GroomingAppointment[];
+  return rows.map((a) => ({
+    ...a,
+    stylistId: a.stylistId
+      ? (stylistIdForStaff(a.stylistId) ?? a.stylistId)
+      : "",
+  }));
+}
+
 export const groomingQueries = {
   appointments: () => ({
     queryKey: ["grooming", "appointments"] as const,
-    queryFn: async () => groomingAppointments as GroomingAppointment[],
+    queryFn: fetchGroomingAppointments,
   }),
   appointment: (id: string) => ({
     queryKey: ["grooming", "appointments", id] as const,
     queryFn: async () =>
-      groomingAppointments.find((a) => a.id === id) as
-        | GroomingAppointment
-        | undefined,
+      (await fetchGroomingAppointments()).find((a) => a.id === id),
   }),
   appointmentsByStylist: (stylistId: string) => ({
     queryKey: ["grooming", "appointments", "by-stylist", stylistId] as const,
     queryFn: async () =>
-      groomingAppointments.filter(
+      (await fetchGroomingAppointments()).filter(
         (a) => a.stylistId === stylistId,
-      ) as GroomingAppointment[],
+      ),
   }),
   stylists: () => ({
     queryKey: ["grooming", "stylists"] as const,
