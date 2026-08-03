@@ -1,0 +1,187 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import type {
+  OffboardingTemplate,
+  OnboardingTemplate,
+  StaffHrConfig,
+} from "@/data/staff-onboarding";
+
+// ============================================================================
+// Onboarding/offboarding TEMPLATES and the facility HR config, from Postgres.
+//
+// These are facility configuration — the checklists a business designs once.
+// They lived in localStorage, which meant a facility's onboarding design
+// existed in exactly one browser: a manager who built a Groomer template on
+// their laptop had configured Chrome, not the facility.
+//
+// NO MOCK FALLBACK HERE, deliberately, and unlike src/lib/api/live-fetch.ts.
+// That helper falls back to fixtures on a 401 because most of the app was
+// still browsed signed-out mid-cutover. Every portal requires a session now,
+// and these screens sit behind the facility gate — so a 401 is not a state to
+// paper over, it is a bug worth seeing. An empty template list is also
+// meaningful on its own ("this facility has not built one yet") and a fixture
+// would hide exactly that.
+//
+// The settings components still read the mock store. This layer is the seam
+// they move onto; wiring them is the next task, not this one.
+// ============================================================================
+
+const BASE = "/api/staff-onboarding";
+
+async function readJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  const parsed = (await response.json().catch(() => null)) as
+    | (T & { error?: string })
+    | null;
+  if (!response.ok) {
+    throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+  }
+  return parsed as T;
+}
+
+async function writeJson<T>(
+  url: string,
+  method: "POST" | "PATCH" | "PUT" | "DELETE",
+  payload?: unknown,
+): Promise<T> {
+  const response = await fetch(url, {
+    method,
+    headers: payload ? { "Content-Type": "application/json" } : undefined,
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+  if (response.status === 204) return undefined as T;
+
+  const parsed = (await response.json().catch(() => null)) as
+    | (T & { error?: string })
+    | null;
+  if (!response.ok) {
+    // The uniqueness trigger writes for a person — "Another active template
+    // already covers: groomer" — and the route passes it through. Surfacing
+    // that beats a generic failure the manager cannot act on.
+    throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+  }
+  return parsed as T;
+}
+
+export const staffOnboardingKeys = {
+  all: ["staff-onboarding"] as const,
+  templates: () => [...staffOnboardingKeys.all, "templates"] as const,
+  offboardingTemplates: () =>
+    [...staffOnboardingKeys.all, "offboarding-templates"] as const,
+  hrConfig: () => [...staffOnboardingKeys.all, "hr-config"] as const,
+};
+
+export const staffOnboardingQueries = {
+  /** Templates with their manager + employee tasks nested, in `position` order. */
+  templates: () => ({
+    queryKey: staffOnboardingKeys.templates(),
+    queryFn: () => readJson<OnboardingTemplate[]>(`${BASE}/templates`),
+  }),
+  offboardingTemplates: () => ({
+    queryKey: staffOnboardingKeys.offboardingTemplates(),
+    queryFn: () =>
+      readJson<OffboardingTemplate[]>(`${BASE}/offboarding-templates`),
+  }),
+  hrConfig: () => ({
+    queryKey: staffOnboardingKeys.hrConfig(),
+    queryFn: () => readJson<StaffHrConfig>(`${BASE}/hr-config`),
+  }),
+};
+
+// ── Writes ──────────────────────────────────────────────────────────────────
+// Every mutation invalidates the whole `staff-onboarding` key rather than
+// surgically patching the cache. Templates carry nested tasks whose positions
+// shift when any one of them moves, so a partial update would leave the client
+// holding an ordering the server no longer agrees with — and ordering is the
+// one thing the migration went out of its way to make explicit.
+
+export function useSaveOnboardingTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (template: OnboardingTemplate) =>
+      template.id
+        ? writeJson<OnboardingTemplate>(
+            `${BASE}/templates/${template.id}`,
+            "PATCH",
+            template,
+          )
+        : writeJson<OnboardingTemplate>(`${BASE}/templates`, "POST", template),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: staffOnboardingKeys.all });
+    },
+  });
+}
+
+export function useDeleteOnboardingTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      writeJson<void>(`${BASE}/templates/${id}`, "DELETE"),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: staffOnboardingKeys.all });
+    },
+  });
+}
+
+export function useSaveOffboardingTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (template: OffboardingTemplate) =>
+      template.id
+        ? writeJson<OffboardingTemplate>(
+            `${BASE}/offboarding-templates/${template.id}`,
+            "PATCH",
+            template,
+          )
+        : writeJson<OffboardingTemplate>(
+            `${BASE}/offboarding-templates`,
+            "POST",
+            template,
+          ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: staffOnboardingKeys.all });
+    },
+  });
+}
+
+export function useDeleteOffboardingTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      writeJson<void>(`${BASE}/offboarding-templates/${id}`, "DELETE"),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: staffOnboardingKeys.all });
+    },
+  });
+}
+
+/**
+ * PUT, not PATCH: there is exactly one config row per facility and the settings
+ * screen edits it as a whole object. The route upserts, so a facility that has
+ * never saved one does not need a separate "create" path — which is the shape
+ * of a row whose primary key is the facility itself.
+ */
+export function useSaveStaffHrConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: Partial<StaffHrConfig>) =>
+      writeJson<StaffHrConfig>(`${BASE}/hr-config`, "PUT", patch),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: staffOnboardingKeys.hrConfig(),
+      });
+    },
+  });
+}
+
+export function useOnboardingTemplatesQuery() {
+  return useQuery(staffOnboardingQueries.templates());
+}
+export function useOffboardingTemplatesQuery() {
+  return useQuery(staffOnboardingQueries.offboardingTemplates());
+}
+export function useStaffHrConfigQuery() {
+  return useQuery(staffOnboardingQueries.hrConfig());
+}

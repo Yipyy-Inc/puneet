@@ -655,6 +655,480 @@ export type Database = {
           },
         ];
       };
+      offboarding_tasks: {
+        Row: {
+          assigned_to: string;
+          created_at: string;
+          days: number | null;
+          description: string;
+          due: string;
+          facility_id: string;
+          id: string;
+          legacy_id: string | null;
+          name: string;
+          position: number;
+          required: boolean;
+          template_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          assigned_to?: string;
+          created_at?: string;
+          days?: number | null;
+          description?: string;
+          due?: string;
+          facility_id: string;
+          id?: string;
+          legacy_id?: string | null;
+          name: string;
+          position: number;
+          required?: boolean;
+          template_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          assigned_to?: string;
+          created_at?: string;
+          days?: number | null;
+          description?: string;
+          due?: string;
+          facility_id?: string;
+          id?: string;
+          legacy_id?: string | null;
+          name?: string;
+          position?: number;
+          required?: boolean;
+          template_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_tasks_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "offboarding_tasks_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "offboarding_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      offboarding_templates: {
+        Row: {
+          applies_to_reasons: string[];
+          created_at: string;
+          facility_id: string;
+          id: string;
+          legacy_id: string | null;
+          name: string;
+          updated_at: string;
+        };
+        Insert: {
+          applies_to_reasons?: string[];
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          legacy_id?: string | null;
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          applies_to_reasons?: string[];
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          legacy_id?: string | null;
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_templates_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      onboarding_change_requests: {
+        Row: {
+          created_at: string;
+          facility_id: string;
+          id: string;
+          instance_id: string;
+          note: string;
+          resolved_at: string | null;
+          section_type: string;
+          task_key: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          instance_id: string;
+          note: string;
+          resolved_at?: string | null;
+          section_type: string;
+          task_key?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          instance_id?: string;
+          note?: string;
+          resolved_at?: string | null;
+          section_type?: string;
+          task_key?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_change_requests_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "onboarding_change_requests_instance_id_fkey";
+            columns: ["instance_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_instances";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      onboarding_employee_tasks: {
+        Row: {
+          config: Json;
+          created_at: string;
+          description: string | null;
+          document_name: string | null;
+          document_ref: string | null;
+          facility_id: string;
+          id: string;
+          legacy_id: string | null;
+          name: string;
+          position: number;
+          required: boolean;
+          task_type: string;
+          template_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          config?: Json;
+          created_at?: string;
+          description?: string | null;
+          document_name?: string | null;
+          document_ref?: string | null;
+          facility_id: string;
+          id?: string;
+          legacy_id?: string | null;
+          name: string;
+          position: number;
+          required?: boolean;
+          task_type: string;
+          template_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          config?: Json;
+          created_at?: string;
+          description?: string | null;
+          document_name?: string | null;
+          document_ref?: string | null;
+          facility_id?: string;
+          id?: string;
+          legacy_id?: string | null;
+          name?: string;
+          position?: number;
+          required?: boolean;
+          task_type?: string;
+          template_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_employee_tasks_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "onboarding_employee_tasks_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      onboarding_instances: {
+        Row: {
+          account_password_set_at: string | null;
+          created_at: string;
+          expiry_notified_at: string | null;
+          facility_id: string;
+          id: string;
+          invited_at: string;
+          last_deadline_reminder: string | null;
+          reviewed_at: string | null;
+          staff_id: string;
+          submitted_at: string | null;
+          template_id: string | null;
+          token_expires_at: string;
+          token_hash: string;
+          updated_at: string;
+        };
+        Insert: {
+          account_password_set_at?: string | null;
+          created_at?: string;
+          expiry_notified_at?: string | null;
+          facility_id: string;
+          id?: string;
+          invited_at?: string;
+          last_deadline_reminder?: string | null;
+          reviewed_at?: string | null;
+          staff_id: string;
+          submitted_at?: string | null;
+          template_id?: string | null;
+          token_expires_at: string;
+          token_hash: string;
+          updated_at?: string;
+        };
+        Update: {
+          account_password_set_at?: string | null;
+          created_at?: string;
+          expiry_notified_at?: string | null;
+          facility_id?: string;
+          id?: string;
+          invited_at?: string;
+          last_deadline_reminder?: string | null;
+          reviewed_at?: string | null;
+          staff_id?: string;
+          submitted_at?: string | null;
+          template_id?: string | null;
+          token_expires_at?: string;
+          token_hash?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_instances_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "onboarding_instances_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "onboarding_instances_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      onboarding_manager_tasks: {
+        Row: {
+          assigned_to: string;
+          created_at: string;
+          description: string;
+          facility_id: string;
+          id: string;
+          legacy_id: string | null;
+          name: string;
+          position: number;
+          required: boolean;
+          requires_manager: boolean;
+          task_type: string;
+          template_id: string;
+          updated_at: string;
+          when_days: number | null;
+          when_due: string;
+        };
+        Insert: {
+          assigned_to?: string;
+          created_at?: string;
+          description?: string;
+          facility_id: string;
+          id?: string;
+          legacy_id?: string | null;
+          name: string;
+          position: number;
+          required?: boolean;
+          requires_manager?: boolean;
+          task_type: string;
+          template_id: string;
+          updated_at?: string;
+          when_days?: number | null;
+          when_due?: string;
+        };
+        Update: {
+          assigned_to?: string;
+          created_at?: string;
+          description?: string;
+          facility_id?: string;
+          id?: string;
+          legacy_id?: string | null;
+          name?: string;
+          position?: number;
+          required?: boolean;
+          requires_manager?: boolean;
+          task_type?: string;
+          template_id?: string;
+          updated_at?: string;
+          when_days?: number | null;
+          when_due?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_manager_tasks_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "onboarding_manager_tasks_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      onboarding_sections: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          data: Json;
+          facility_id: string;
+          id: string;
+          instance_id: string;
+          section_type: string;
+          status: string;
+          task_id: string | null;
+          task_key: string;
+          updated_at: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          data?: Json;
+          facility_id: string;
+          id?: string;
+          instance_id: string;
+          section_type: string;
+          status?: string;
+          task_id?: string | null;
+          task_key: string;
+          updated_at?: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          data?: Json;
+          facility_id?: string;
+          id?: string;
+          instance_id?: string;
+          section_type?: string;
+          status?: string;
+          task_id?: string | null;
+          task_key?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_sections_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "onboarding_sections_instance_id_fkey";
+            columns: ["instance_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_instances";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "onboarding_sections_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_employee_tasks";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      onboarding_templates: {
+        Row: {
+          applies_to_roles: string[];
+          completion_deadline_days: number;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          invite_expiry_days: number;
+          legacy_id: string | null;
+          name: string;
+          status: string;
+          updated_at: string;
+          welcome_message: string;
+        };
+        Insert: {
+          applies_to_roles?: string[];
+          completion_deadline_days?: number;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          invite_expiry_days?: number;
+          legacy_id?: string | null;
+          name: string;
+          status?: string;
+          updated_at?: string;
+          welcome_message?: string;
+        };
+        Update: {
+          applies_to_roles?: string[];
+          completion_deadline_days?: number;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          invite_expiry_days?: number;
+          legacy_id?: string | null;
+          name?: string;
+          status?: string;
+          updated_at?: string;
+          welcome_message?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_templates_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       orgs: {
         Row: {
           created_at: string;
@@ -796,6 +1270,214 @@ export type Database = {
           },
         ];
       };
+      staff_documents: {
+        Row: {
+          content_type: string;
+          created_at: string;
+          doc_type: string;
+          facility_id: string;
+          file_name: string;
+          id: string;
+          instance_id: string | null;
+          size_bytes: number;
+          staff_id: string;
+          storage_path: string;
+          task_key: string | null;
+          uploaded_at: string;
+          uploaded_by: string | null;
+          visible_to_employee: boolean;
+        };
+        Insert: {
+          content_type: string;
+          created_at?: string;
+          doc_type?: string;
+          facility_id: string;
+          file_name: string;
+          id?: string;
+          instance_id?: string | null;
+          size_bytes: number;
+          staff_id: string;
+          storage_path: string;
+          task_key?: string | null;
+          uploaded_at?: string;
+          uploaded_by?: string | null;
+          visible_to_employee?: boolean;
+        };
+        Update: {
+          content_type?: string;
+          created_at?: string;
+          doc_type?: string;
+          facility_id?: string;
+          file_name?: string;
+          id?: string;
+          instance_id?: string | null;
+          size_bytes?: number;
+          staff_id?: string;
+          storage_path?: string;
+          task_key?: string | null;
+          uploaded_at?: string;
+          uploaded_by?: string | null;
+          visible_to_employee?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_documents_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_documents_instance_id_fkey";
+            columns: ["instance_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_instances";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_documents_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      staff_hr_config: {
+        Row: {
+          completion_deadline_days: number;
+          created_at: string;
+          employment_types: string[];
+          facility_id: string;
+          hr_doc_retention_years: number;
+          invite_expiry_days: number;
+          notification_triggers: Json;
+          register_close_reminder: string;
+          require_clock_in_confirm: boolean;
+          require_clock_out_confirm: boolean;
+          require_register_open_on_login: boolean;
+          termination_reasons: string[];
+          updated_at: string;
+        };
+        Insert: {
+          completion_deadline_days?: number;
+          created_at?: string;
+          employment_types?: string[];
+          facility_id: string;
+          hr_doc_retention_years?: number;
+          invite_expiry_days?: number;
+          notification_triggers?: Json;
+          register_close_reminder?: string;
+          require_clock_in_confirm?: boolean;
+          require_clock_out_confirm?: boolean;
+          require_register_open_on_login?: boolean;
+          termination_reasons?: string[];
+          updated_at?: string;
+        };
+        Update: {
+          completion_deadline_days?: number;
+          created_at?: string;
+          employment_types?: string[];
+          facility_id?: string;
+          hr_doc_retention_years?: number;
+          invite_expiry_days?: number;
+          notification_triggers?: Json;
+          register_close_reminder?: string;
+          require_clock_in_confirm?: boolean;
+          require_clock_out_confirm?: boolean;
+          require_register_open_on_login?: boolean;
+          termination_reasons?: string[];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_hr_config_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: true;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      staff_signatures: {
+        Row: {
+          agreement_hash: string;
+          agreement_key: string;
+          agreement_text: string;
+          agreement_title: string;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          instance_id: string | null;
+          ip_address: string | null;
+          signature_data: string | null;
+          signature_name: string;
+          signed_at: string;
+          signed_by: string | null;
+          staff_id: string;
+          task_key: string | null;
+          user_agent: string | null;
+        };
+        Insert: {
+          agreement_hash: string;
+          agreement_key: string;
+          agreement_text: string;
+          agreement_title: string;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          instance_id?: string | null;
+          ip_address?: string | null;
+          signature_data?: string | null;
+          signature_name: string;
+          signed_at?: string;
+          signed_by?: string | null;
+          staff_id: string;
+          task_key?: string | null;
+          user_agent?: string | null;
+        };
+        Update: {
+          agreement_hash?: string;
+          agreement_key?: string;
+          agreement_text?: string;
+          agreement_title?: string;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          instance_id?: string | null;
+          ip_address?: string | null;
+          signature_data?: string | null;
+          signature_name?: string;
+          signed_at?: string;
+          signed_by?: string | null;
+          staff_id?: string;
+          task_key?: string | null;
+          user_agent?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_signatures_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_signatures_instance_id_fkey";
+            columns: ["instance_id"];
+            isOneToOne: false;
+            referencedRelation: "onboarding_instances";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_signatures_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       staff_permissions: {
         Row: {
           permission_key: string;
@@ -893,9 +1575,29 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      onboarding_by_token: { Args: { p_token: string }; Returns: Json };
+      save_onboarding_section: {
+        Args: {
+          p_data: Json;
+          p_section_type: string;
+          p_status?: string;
+          p_task_key: string;
+          p_token: string;
+        };
+        Returns: boolean;
+      };
+      set_onboarding_account_complete: {
+        Args: { p_token: string };
+        Returns: boolean;
+      };
+      submit_onboarding: { Args: { p_token: string }; Returns: boolean };
       link_client_record: {
         Args: Record<PropertyKey, never>;
         Returns: string | null;
+      };
+      link_staff_invite: {
+        Args: { p_email: string; p_staff_legacy_id: string; p_user_id: string };
+        Returns: Json;
       };
       my_permissions: {
         Args: Record<PropertyKey, never>;
