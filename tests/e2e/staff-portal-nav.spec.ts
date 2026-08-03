@@ -293,7 +293,11 @@ test.describe("Staff portal nav parity", () => {
   }) => {
     // Marketing is absent from the caretaker preset, so this needs no override.
     await enterPortalAs(context, page, ACCOUNTS.caretaker);
-    await page.goto("/employee/marketing");
+    // `commit` rather than the default `load`: the dev server compiles
+    // /employee/marketing on first hit, and waiting for every resource to
+    // settle blew the whole test's 120s budget on a route that had already
+    // answered. The assertion below does the real waiting.
+    await page.goto("/employee/marketing", { waitUntil: "commit" });
     await expect(
       page.getByText(/don't have access to this section/i),
     ).toBeVisible({ timeout: 60_000 });
