@@ -28,9 +28,12 @@ import type { PriceAdjustment } from "@/types/grooming";
 //
 // Listed so they are a decision rather than a discovery:
 //
-//   intake, afterPhotos, expressCheckinSubmission, groomingProgress,
-//   additionalPets, additionalStylistIds, stages, alertNotes, ticketComments,
-//   history          — none built. All optional; all omitted.
+//   intake, afterPhotos, expressCheckinSubmission,
+//   additionalPets, additionalStylistIds, stages
+//                    — none built. All optional; all omitted.
+//   history          — still local. It is an append-only audit trail and needs
+//                      the immutability enforcement the audit log has; its own
+//                      pass (20260806140000, "what is not here").
 //   lastGroomDate    — derivable from the client's booking history, but that is
 //                      a query per row and no screen has asked for it yet.
 //   paymentMethod, appliedStoreCredit, appliedPackagePassId
@@ -145,9 +148,27 @@ export interface AppointmentRow {
     estimated_ready_at: string | null;
     owner_eta_notified_at: string | null;
     groomer_notes: string;
+    session_progress: { step: string; done: boolean; at?: string }[] | null;
     service: { legacy_id: string | null } | null;
     station: { legacy_id: string | null; id: string } | null;
     grooming_appointment_add_ons: { name: string }[] | null;
+    grooming_alert_notes:
+      | {
+          id: string;
+          body: string;
+          applies_to_future: boolean;
+          author_name: string;
+          created_at: string;
+        }[]
+      | null;
+    grooming_ticket_comments:
+      | {
+          id: string;
+          message: string;
+          author_name: string;
+          created_at: string;
+        }[]
+      | null;
     grooming_price_adjustments:
       | {
           id: string;
@@ -279,6 +300,29 @@ export function rowToGroomingAppointment(
     // Nothing records the channel yet. False is the safer default: it means the
     // screens treat these as staff-made, which is what they were.
     onlineBooking: false,
+
+    // ── The session record (20260806140000) ──────────────────────────────────
+    // `createdBy` and `staff` are the AUTHOR NAME snapshotted at write time by
+    // trigger, not the uuid — the cards render a person, and the mock's
+    // placeholder was the string "You" for everybody.
+    alertNotes: (ext?.grooming_alert_notes ?? []).map((n) => ({
+      id: n.id,
+      text: n.body,
+      createdBy: n.author_name,
+      createdAt: n.created_at,
+      appliesToFuture: n.applies_to_future,
+    })),
+    // Oldest first: it is a handoff thread, and a conversation read bottom-up
+    // is a conversation nobody reads.
+    ticketComments: (ext?.grooming_ticket_comments ?? [])
+      .map((c) => ({
+        id: c.id,
+        staff: c.author_name,
+        message: c.message,
+        at: c.created_at,
+      }))
+      .sort((a, b) => a.at.localeCompare(b.at)),
+    groomingProgress: ext?.session_progress ?? [],
   } as GroomingAppointment;
 }
 
@@ -294,10 +338,12 @@ export const APPOINTMENT_SELECT = `
   grooming_appointments (
     service_name, size_label, service_price, service_duration_min,
     check_in_at, check_out_at, estimated_ready_at, owner_eta_notified_at,
-    groomer_notes,
+    groomer_notes, session_progress,
     service:service_id ( legacy_id ),
     station:station_id ( id, legacy_id ),
     grooming_appointment_add_ons ( name ),
+    grooming_alert_notes ( id, body, applies_to_future, author_name, created_at ),
+    grooming_ticket_comments ( id, message, author_name, created_at ),
     grooming_price_adjustments ( id, reason, amount, note, custom_reason,
                                  customer_notified, notified_at, created_at )
   )

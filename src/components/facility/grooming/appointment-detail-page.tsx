@@ -4,6 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  useAddAppointmentNote,
+  useRemoveAppointmentAlert,
+} from "@/lib/api/grooming-appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -313,6 +317,8 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     offerSlot,
     addEntry: addWaitlistEntry,
   } = useGroomingWaitlist();
+  const { mutate: addNote } = useAddAppointmentNote();
+  const { mutate: removeAlertNote } = useRemoveAppointmentAlert();
 
   function autoMatchAndOffer(reason: "cancellation" | "no-show") {
     if (!apt) return;
@@ -815,15 +821,25 @@ export function AppointmentDetailPage({ id }: { id: string }) {
 
   function addAlert() {
     const text = newAlert.trim();
-    if (!text) return;
-    const entry: AlertNote = {
-      id: `an-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      text,
-      createdBy: "You",
-      createdAt: new Date().toISOString(),
-      appliesToFuture: newAlertCarryForward,
-    };
-    setAlertNotes((prev) => [...prev, entry]);
+    if (!text || !apt) return;
+    // The list is patched from the SERVER's row, not from a local guess: the
+    // author name and the timestamp are stamped by trigger from the session
+    // (20260806140000, Decision 2), and the id is the database's. The old
+    // version invented all three — including `createdBy: "You"`, which is what
+    // every colleague's note also said.
+    addNote(
+      {
+        appointmentId: apt.id,
+        kind: "alert",
+        text,
+        appliesToFuture: newAlertCarryForward,
+      },
+      {
+        onSuccess: (saved) =>
+          setAlertNotes((prev) => [...prev, saved as AlertNote]),
+        onError: (error) => toast.error(error.message),
+      },
+    );
     recordHistory(
       newAlertCarryForward
         ? `Alert added (carries to future appointments): "${text.slice(0, 60)}${text.length > 60 ? "…" : ""}"`
@@ -835,6 +851,16 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   function removeAlert(noteId: string) {
     const target = alertNotes.find((n) => n.id === noteId);
     if (!target) return;
+    removeAlertNote(noteId, {
+      onError: (error) => {
+        // Put it back. The row is still there, and a card that vanished from
+        // one screen while surviving on every other one is worse than an error.
+        setAlertNotes((prev) =>
+          prev.some((n) => n.id === noteId) ? prev : [...prev, target],
+        );
+        toast.error(error.message);
+      },
+    });
     setAlertNotes((prev) => prev.filter((n) => n.id !== noteId));
     recordHistory(
       `Alert removed: "${target.text.slice(0, 60)}${target.text.length > 60 ? "…" : ""}"`,
@@ -843,16 +869,18 @@ export function AppointmentDetailPage({ id }: { id: string }) {
 
   function addComment() {
     const text = newComment.trim();
-    if (!text) return;
-    setComments((prev) => [
-      ...prev,
+    if (!text || !apt) return;
+    // Same rule as addAlert: render what was stored. This one matters more —
+    // the thread is append-only (Decision 3), so a comment posted under the
+    // wrong name can never be corrected, only contradicted by another one.
+    addNote(
+      { appointmentId: apt.id, kind: "comment", text },
       {
-        id: `tc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        staff: "You",
-        at: new Date().toISOString(),
-        message: text,
+        onSuccess: (saved) =>
+          setComments((prev) => [...prev, saved as TicketComment]),
+        onError: (error) => toast.error(error.message),
       },
-    ]);
+    );
     recordHistory("Internal comment posted");
     setNewComment("");
   }

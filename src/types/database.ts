@@ -497,6 +497,54 @@ export type Database = {
           },
         ];
       };
+      grooming_alert_notes: {
+        Row: {
+          applies_to_future: boolean;
+          author_name: string;
+          body: string;
+          booking_id: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+        };
+        Insert: {
+          applies_to_future?: boolean;
+          author_name?: string;
+          body: string;
+          booking_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+        };
+        Update: {
+          applies_to_future?: boolean;
+          author_name?: string;
+          body?: string;
+          booking_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_alert_notes_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_appointments";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "grooming_alert_notes_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       grooming_appointment_add_ons: {
         Row: {
           add_on_id: string | null;
@@ -569,6 +617,7 @@ export type Database = {
           service_id: string | null;
           service_name: string;
           service_price: number;
+          session_progress: Json;
           size_label: string | null;
           station_id: string | null;
           updated_at: string;
@@ -586,6 +635,7 @@ export type Database = {
           service_id?: string | null;
           service_name: string;
           service_price?: number;
+          session_progress?: Json;
           size_label?: string | null;
           station_id?: string | null;
           updated_at?: string;
@@ -603,6 +653,7 @@ export type Database = {
           service_id?: string | null;
           service_name?: string;
           service_price?: number;
+          session_progress?: Json;
           size_label?: string | null;
           station_id?: string | null;
           updated_at?: string;
@@ -992,6 +1043,51 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "grooming_stations_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_ticket_comments: {
+        Row: {
+          author_name: string;
+          booking_id: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          message: string;
+        };
+        Insert: {
+          author_name?: string;
+          booking_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          message: string;
+        };
+        Update: {
+          author_name?: string;
+          booking_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          message?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_ticket_comments_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_appointments";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "grooming_ticket_comments_facility_id_fkey";
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";

@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { petQueries } from "@/lib/api/pet";
 import { getGroomingPhotoRequirements } from "@/lib/api/grooming";
+import { useSetSessionProgress } from "@/lib/api/grooming-appointments";
 import { useSettings } from "@/hooks/use-settings";
 import type {
   BehaviorTag,
@@ -111,6 +112,8 @@ export function GroomingSessionPanel({
   const progressChecklistEnabled =
     groomingModule.settings.progressChecklist?.enabled ?? false;
 
+  const { mutate: saveProgress } = useSetSessionProgress();
+
   const [progress, setProgress] = useState<ProgressStep[]>(() => {
     const existing = appointment.groomingProgress ?? [];
     return GROOMING_STEPS.map((step) => {
@@ -123,8 +126,8 @@ export function GroomingSessionPanel({
   const allStepsDone = progress.length > 0 && progress.every((p) => p.done);
 
   function toggleStep(step: string) {
-    setProgress((prev) =>
-      prev.map((p) =>
+    setProgress((prev) => {
+      const next = prev.map((p) =>
         p.step === step
           ? {
               step,
@@ -132,18 +135,28 @@ export function GroomingSessionPanel({
               at: !p.done ? new Date().toISOString() : undefined,
             }
           : p,
-      ),
-    );
+      );
+      // Written whole on every toggle — the panel has always replaced the
+      // array, and the column is stored the same way. Local state stays the
+      // source of truth for the tick so the checkbox does not wait on a round
+      // trip; the write is what makes it survive a reload.
+      saveProgress(
+        { id: appointment.id, sessionProgress: next },
+        { onError: (error) => toast.error(error.message) },
+      );
+      return next;
+    });
   }
 
-  // Persist the checklist onto the appointment (in place, like intake) and let
-  // the page know whether Mark Ready should glow.
+  // Let the page know whether Mark Ready should glow.
+  //
+  // THIS USED TO ASSIGN THE CHECKLIST ONTO THE APPOINTMENT OBJECT — a direct
+  // mutation of a row inside the TanStack Query cache. It survived exactly as
+  // long as the cache entry did and was invisible to React, so the value was
+  // both lost on refetch and unable to re-render anything that read it. The
+  // checklist now has a column (20260806140000, Decision 4) and `saveProgress`
+  // below writes to it.
   useEffect(() => {
-    (
-      appointment as GroomingAppointment & {
-        groomingProgress?: ProgressStep[];
-      }
-    ).groomingProgress = progress;
     onProgressChange?.(progressChecklistEnabled && allStepsDone);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, progressChecklistEnabled]);

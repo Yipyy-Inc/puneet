@@ -99,6 +99,7 @@ export async function PATCH(request: NextRequest) {
     id?: string;
     status?: string;
     stationId?: string | null;
+    sessionProgress?: { step: string; done: boolean; at?: string }[];
   } | null;
 
   if (!body?.id) {
@@ -152,6 +153,35 @@ export async function PATCH(request: NextRequest) {
       return writeFailure(stationError, {
         denied: "Not allowed to change this appointment.",
         duplicate: "That station is already assigned.",
+      });
+    }
+  }
+
+  // The in-progress step checklist. Replaced whole, because that is how the
+  // panel edits it — every toggle rewrites the array (20260806140000,
+  // Decision 4). Rejected here rather than trusted: the column's CHECK only
+  // asserts it is an array, so a caller could otherwise store an array of
+  // anything and the panel would render blank rows it cannot explain.
+  if (body.sessionProgress !== undefined) {
+    if (
+      !Array.isArray(body.sessionProgress) ||
+      body.sessionProgress.some(
+        (s) => typeof s?.step !== "string" || typeof s?.done !== "boolean",
+      )
+    ) {
+      return NextResponse.json(
+        { error: "Each checklist step needs a name and a done flag." },
+        { status: 422 },
+      );
+    }
+    const { error: progressError } = await supabase
+      .from("grooming_appointments")
+      .update({ session_progress: body.sessionProgress } as never)
+      .eq("booking_id", booking.id);
+    if (progressError) {
+      return writeFailure(progressError, {
+        denied: "Not allowed to change this appointment.",
+        duplicate: "That change conflicts with the current state.",
       });
     }
   }
