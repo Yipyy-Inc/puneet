@@ -12,7 +12,8 @@ import {
   membershipPlans,
   servicePackages,
 } from "@/data/services-pricing";
-import { mockCustomerPackages } from "@/data/customer-packages";
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
 import { useFieldMask } from "@/lib/staff/mask";
 import { PurchasedPackageCard } from "@/components/customer/billing/packages/PurchasedPackageCard";
 import { ActiveMembershipCard } from "@/components/customer/billing/packages/ActiveMembershipCard";
@@ -63,6 +64,14 @@ export default function ClientOverviewPage({
   const [noteText, setNoteText] = useState("");
   const [now] = useState(() => Date.now());
   const [bulkPayOpen, setBulkPayOpen] = useState(false);
+  // Above the early return: hooks run in the same order on every render, and
+  // a client id that matches nothing is a render this component still does.
+  // Scoped server-side to this client. `status` is derived from the ledger and
+  // the clock, so a pack that lapsed unobserved reads as expired here without
+  // anything having run.
+  const { data: ownedPackages = [] } = useQuery(
+    groomingQueries.customerPackagesForClient(clientId),
+  );
 
   if (!client) return null;
 
@@ -74,8 +83,8 @@ export default function ClientOverviewPage({
   const clientPackagePurchases = customerPackagePurchases.filter(
     (p) => p.customerId === customerIdStr,
   );
-  const activePrepaidPackages = mockCustomerPackages.filter(
-    (p) => p.customerId === clientId && p.status === "active",
+  const activePrepaidPackages = ownedPackages.filter(
+    (p) => p.status === "active",
   );
   const totalPrepaidPassesRemaining = activePrepaidPackages.reduce(
     (sum, pkg) => sum + (pkg.passesTotal - pkg.passesUsed),

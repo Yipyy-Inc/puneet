@@ -36,30 +36,38 @@ import Image from "next/image";
 import Link from "next/link";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUiText } from "@/hooks/use-ui-text";
-import { mockCustomerPackages } from "@/data/customer-packages";
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
 import { memberships } from "@/data/services-pricing";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
 
-// Total redeemable credits the customer can spend right now: unused package
-// passes (active packs) plus remaining membership credits.
-const availablePackagePasses = mockCustomerPackages
-  .filter((p) => p.customerId === MOCK_CUSTOMER_ID && p.status === "active")
-  .reduce((sum, p) => sum + Math.max(0, p.passesTotal - p.passesUsed), 0);
-
+// Memberships are still a fixture; passes are not. This half stays a
+// module constant because nothing changes it at runtime.
 const availableMembershipCredits = memberships
   .filter(
     (m) => m.customerId === String(MOCK_CUSTOMER_ID) && m.status === "active",
   )
   .reduce((sum, m) => sum + Math.max(0, m.creditsRemaining), 0);
 
-const availableCredits = availablePackagePasses + availableMembershipCredits;
-
 export function CustomerHeader() {
   const { selectedFacility } = useCustomerFacility();
   const { t } = useUiText();
   const [isPending, startTransition] = useTransition();
+
+  // The pass count used to be computed at MODULE level, once, when the bundle
+  // loaded — so redeeming a pass could not change it without a full reload.
+  // It is a query now for the same reason it is derived in the database: the
+  // number is a consequence of a ledger, and a snapshot of it goes stale.
+  const { data: ownedPackages = [] } = useQuery(
+    groomingQueries.customerPackagesForClient(MOCK_CUSTOMER_ID),
+  );
+  const availableCredits =
+    ownedPackages
+      .filter((p) => p.status === "active")
+      .reduce((sum, p) => sum + Math.max(0, p.passesTotal - p.passesUsed), 0) +
+    availableMembershipCredits;
 
   const switchToFacility = () => {
     startTransition(() => {

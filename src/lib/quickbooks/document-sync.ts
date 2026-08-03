@@ -420,21 +420,32 @@ export function syncPackageRedemptionToQuickBooks(
 }
 
 /**
- * Adapter for the three `redeemPackagePass` call sites.
+ * Adapter for the pass-redemption call sites.
  *
  * They each know a customer package and how many passes are left; none of them
- * should have to know what a QuickBooks redemption document needs. The pass
- * number is derived from what redeemPackagePass returned rather than read back
- * off the record, so it matches the redemption row that call actually created.
+ * should have to know what a QuickBooks redemption document needs.
+ *
+ * ── THE NUMBERS ARE POOL-SCOPED, NOT PACKAGE-SCOPED ─────────────────────────
+ *
+ * `redeem_package_pass` returns what is left IN THE POOL it drew from, not in
+ * the package. This used to derive `passNumber` as `pkg.passesTotal -
+ * passesLeft`, which was right only while every package held one service:
+ * against the Puppy First-Year Plan — six grooms and two baths — spending the
+ * first bath would have been posted as "pass 7 of 8".
+ *
+ * So the caller passes the pool it spent from, and both numbers describe that
+ * pool. `pool` is the entry from `pkg.passes[]`; its `packageId` is the
+ * service id, which is also what makes the redemption id unique across pools.
  */
 export function syncRedeemedPassToQuickBooks(
   scope: QuickBooksScope,
   pkg: CustomerPackageRecord,
-  result: { passesLeft: number },
+  result: {
+    passesLeft: number;
+    pool: { packageId: string; serviceName: string; totalPasses: number };
+  },
   extras: {
-    serviceName?: string;
     servicePrice?: number;
-    serviceId?: string;
     petName?: string;
     bookingId?: number;
     customerName?: string;
@@ -442,26 +453,24 @@ export function syncRedeemedPassToQuickBooks(
   } = {},
 ): DocumentSyncOutcome {
   try {
-    const passNumber = pkg.passesTotal - result.passesLeft;
+    const passNumber = result.pool.totalPasses - result.passesLeft;
     const catalog = groomingPrepaidPackages.find((p) => p.id === pkg.packageId);
-    const catalogService = catalog?.services[0];
+    const catalogService = catalog?.services.find(
+      (s) => s.serviceId === result.pool.packageId,
+    );
 
     return syncPackageRedemptionToQuickBooks(scope, {
       customerPackageId: pkg.id,
       packageName: pkg.packageName,
-      redemptionId: `red-${pkg.id}-${passNumber}`,
-      serviceId: extras.serviceId ?? catalogService?.serviceId,
-      serviceName:
-        extras.serviceName ??
-        catalogService?.serviceName ??
-        pkg.passes[0]?.serviceName ??
-        pkg.packageName,
+      redemptionId: `red-${pkg.id}-${result.pool.packageId}-${passNumber}`,
+      serviceId: result.pool.packageId,
+      serviceName: result.pool.serviceName,
       // The per-session price the package was priced against. Without it the
       // redemption would show a $0 service, which tells nobody what was given.
       servicePrice: extras.servicePrice ?? catalogService?.pricePerSession ?? 0,
       redeemedAt: new Date().toISOString(),
       passNumber,
-      passesTotal: pkg.passesTotal,
+      passesTotal: result.pool.totalPasses,
       bookingId: extras.bookingId,
       petName: extras.petName,
       customerName: extras.customerName,

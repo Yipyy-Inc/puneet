@@ -11,7 +11,9 @@ import {
 } from "@/data/grooming";
 import { groomingPrepaidPackages } from "@/data/grooming-prepaid-packages";
 import type { GroomingPrepaidPackage } from "@/data/grooming-prepaid-packages";
-import { mockCustomerPackages } from "@/data/customer-packages";
+// `mockCustomerPackages` is gone from this import too: what a customer owns
+// comes from /api/grooming/customer-packages. The type stays — it is the shape
+// six screens already read, and the mapper fills it from Postgres.
 import type { CustomerPackageRecord } from "@/data/customer-packages";
 import { petNotes } from "@/data/pet-notes";
 import type { PetNote } from "@/types/pet";
@@ -228,6 +230,31 @@ async function fetchGroomingAppointments(): Promise<GroomingAppointment[]> {
   }));
 }
 
+/**
+ * What customers own, from /api/grooming/customer-packages.
+ *
+ * The three counts inside each record — `passesUsed`, `passes[].usedPasses`
+ * and the length of `redemptions[]` — all come from the same derived source
+ * server-side. Nothing recomputes them here, which is the point: the fixture
+ * this replaces kept them in step by hand.
+ */
+async function fetchCustomerPackages(
+  clientId?: number,
+): Promise<CustomerPackageRecord[]> {
+  const url =
+    clientId === undefined
+      ? "/api/grooming/customer-packages"
+      : `/api/grooming/customer-packages?clientId=${clientId}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    const parsed = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+  }
+  return (await response.json()) as CustomerPackageRecord[];
+}
+
 export const groomingQueries = {
   appointments: () => ({
     queryKey: ["grooming", "appointments"] as const,
@@ -275,16 +302,18 @@ export const groomingQueries = {
   }),
   customerPackages: () => ({
     queryKey: ["grooming", "customer-packages"] as const,
-    queryFn: async () => mockCustomerPackages as CustomerPackageRecord[],
+    queryFn: () => fetchCustomerPackages(),
   }),
+  // Filtered by the SERVER, not by fetching everything and narrowing here.
+  // A till has no business receiving every customer's purchases so it can
+  // discard all but one — and `financial_view_amounts` decides what comes back
+  // either way.
   customerPackagesForClient: (clientId: number | undefined) => ({
     queryKey: ["grooming", "customer-packages", "client", clientId] as const,
-    queryFn: async () =>
-      (clientId === undefined
-        ? []
-        : mockCustomerPackages.filter(
-            (p) => p.customerId === clientId,
-          )) as CustomerPackageRecord[],
+    queryFn: () =>
+      clientId === undefined
+        ? Promise.resolve([] as CustomerPackageRecord[])
+        : fetchCustomerPackages(clientId),
   }),
   products: () => ({
     queryKey: ["grooming", "products"] as const,

@@ -1,0 +1,40 @@
+-- ============================================================================
+-- Take EXECUTE on purchase_package away from `anon`.
+--
+-- 20260806380000 wrote `revoke all on function ... from public` and treated
+-- that as sufficient. It is not, and this is the SECOND time in this schema:
+-- the same mistake is already recorded in the debt map from the storage-policy
+-- work. Supabase grants EXECUTE to `anon`, `authenticated` and `service_role`
+-- BY NAME. `public` is a different grantee. Revoking from `public` removes the
+-- default grant and leaves all three named ones untouched.
+--
+-- Checked rather than assumed, immediately after applying it:
+--
+--   purchase_package     postgres=X | anon=X | authenticated=X | service_role=X
+--   redeem_package_pass  postgres=X |          authenticated=X | service_role=X
+--
+-- The neighbouring function, written a fortnight earlier with an explicit
+-- `revoke ... from anon`, was clean. The new one was not.
+--
+-- ── IT WAS NOT EXPLOITABLE, AND THAT IS NOT THE POINT ─────────────────────
+--
+-- `purchase_package` is SECURITY INVOKER, and every policy on
+-- `customer_packages` is `to authenticated`, so an anonymous caller reaching
+-- the function still could not insert anything: it would have raised on the
+-- first write. The grant bought an attacker nothing today.
+--
+-- It is removed anyway. A function that sells things should not be callable by
+-- someone who is not logged in, and the reason it was safe — a policy in a
+-- different file — is exactly the kind of reason that stops being true when
+-- somebody adds an anon read policy for a customer portal later. Defence in
+-- depth means the second layer is not asked to justify the first layer's hole.
+--
+-- Swept the rest of the schema for the same shape while here. The only other
+-- functions `anon` can execute are the four staff-onboarding token functions,
+-- where anonymous execution IS the design (a person following a link from an
+-- email is not logged in), and two trigger functions, which raise if called
+-- directly.
+-- ============================================================================
+
+revoke execute on function public.purchase_package(uuid, uuid, numeric)
+  from anon;

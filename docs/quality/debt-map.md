@@ -280,6 +280,59 @@ A fourth entry for the parallel-model list at the top of this file, and the one 
 
 **Do instead:** before modelling a domain, find the SCREEN that edits it and read the type that screen imports. Grep the component, not the types directory. If two types share a name-stem, assume they are different concepts until proven otherwise — that is what the rest of this section has been recording since June.
 
+## Snapshot (2026-08-06, selling and spending packages)
+
+### 🔴 `revoke ... from public` does NOT revoke from `anon` — for the second time
+
+20260806380000 shipped `purchase_package` with `revoke all on function ... from public` and nothing else. Checked the ACL immediately afterwards rather than assuming:
+
+```
+purchase_package     postgres=X | anon=X | authenticated=X | service_role=X
+redeem_package_pass  postgres=X |          authenticated=X | service_role=X
+```
+
+Supabase grants EXECUTE to `anon`, `authenticated` and `service_role` **by name**. `public` is a different grantee; revoking from it removes the default grant and leaves all three named ones intact. The neighbouring function, written with an explicit `revoke ... from anon`, was clean.
+
+It was not exploitable — `purchase_package` is SECURITY INVOKER and every policy on `customer_packages` is `to authenticated`, so an anonymous caller would have raised on the first write. That is not a defence: the reason it was safe lived in a different file, and it stops being true the day somebody adds an anon read policy for a customer portal.
+
+**This is the same finding as the storage-policy entry above.** Twice in one schema means it is not a slip, it is a missing habit.
+
+**Do instead:** every `create function` that is not meant for the public gets `revoke execute ... from anon` **by name**, and the ACL is read back with `select proacl from pg_proc` before the migration is called done. Sweeping for the shape is cheap: `where p.proacl::text like '%anon=X%'`. The only legitimate hits today are the four staff-onboarding token functions (anonymous execution IS the design there) and two trigger functions, which raise if called directly. Fixed in 20260806400000; asserted by P10 in `supabase/tests/prepaid-packages.sql`.
+
+### 🔴 A test file that cannot compile against its own schema reads as coverage
+
+`supabase/tests/prepaid-packages.sql` was written against the FIRST package schema and left in place when 20260806320000 replaced it. Every assertion referenced columns that no longer existed (`prepaid_packages.price`, `.service_id`, `.total_passes`), so the file errored on its first statement — seven tests that had silently stopped testing anything, in a directory whose contents are read as proof.
+
+**Do instead:** when a migration replaces a table, the suite that covers it is part of the same change, not a follow-up. Rewritten and extended to 10 assertions.
+
+### 🟡 `passes[0]` was the redemption target everywhere
+
+Both redemption call sites — `BookingModal` and `new-appointment-dialog` — spent `pkg.passes[0]`. Harmless while every fixture package held exactly one service, and wrong the moment a real bundle holds two: a customer booking a bath would have had a **Full Groom** pass taken instead, worth nearly twice as much. `passes[0]` could also point at an already-exhausted pool.
+
+The API now requires an explicit `serviceId` and refuses rather than guessing. The grooming dialog aims precisely (it knows the catalogue service being booked, and its eligibility filter now checks the matching pool has passes left). `BookingModal` knows only the module, so it takes the first pool for that module **with passes remaining** — better than `passes[0]`, still not precise. Noted rather than hidden.
+
+**Do instead:** when wiring a third redemption surface, give it the service id. If a screen cannot say which pool it is spending, that is a bug in the screen, not something the database should paper over.
+
+### 🟡 `syncRedeemedPassToQuickBooks` was nearly dropped silently, and its pass numbering was wrong
+
+Removing the mock redemption path left this with zero callers (see the previous snapshot). Restoring it revealed a live bug: it derived `passNumber` as `pkg.passesTotal - passesLeft`, but `redeem_package_pass` returns what is left **in the pool it drew from**. Against the Puppy First-Year Plan (six grooms, two baths), spending the first bath would have posted "pass 7 of 8" to the books.
+
+It now takes the pool it spent from and both numbers describe that pool.
+
+**Do instead:** when a function starts returning a narrower quantity than it used to, grep for arithmetic on its result. A number that changed meaning typechecks perfectly.
+
+### 🟢 `moduleId: "grooming"` is a constant in the customer-package mapper
+
+`passes[].moduleId` is what `BookingModal` and the check-in board filter on. It is not a column — `customer_packages` hangs off `prepaid_packages`, which is the grooming catalogue, so the constant is currently true rather than a guess.
+
+**Do instead:** when a second module sells packages, this becomes a real column. Do not add a second constant.
+
+### 🟢 The customer portal still has a second, unrelated package model
+
+`src/lib/customer-package-purchases-store.ts` + `services-pricing.ts`'s `CustomerPackagePurchase` power "Buy Passes & Bundles" and `PackagesTab` in the customer portal. Untouched by this work, and still fixtures. That is a fifth entry for the parallel-model list — the facility side now reads Postgres while the portal's own purchase flow does not.
+
+**Do instead:** migrate it onto `purchase_package` rather than repointing it, and delete the store. The RPC already does what that store fakes.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

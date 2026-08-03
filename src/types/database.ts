@@ -3224,6 +3224,14 @@ export type Database = {
         Returns: Json;
       };
       onboarding_by_token: { Args: { p_token: string }; Returns: Json };
+      purchase_package: {
+        Args: {
+          p_client_id: string;
+          p_package_id: string;
+          p_price_override?: number;
+        };
+        Returns: string;
+      };
       record_payment: {
         Args: {
           p_amount_charged: number;

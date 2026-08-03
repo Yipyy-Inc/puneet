@@ -47,7 +47,7 @@ import {
   type EffectivePricing,
 } from "@/lib/api/grooming";
 import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
-import { redeemPackagePass } from "@/data/customer-packages";
+import { useRedeemPackagePass } from "@/lib/api/customer-packages";
 import { syncRedeemedPassToQuickBooks } from "@/lib/quickbooks/document-sync";
 import { GroomingWaitlistDialog } from "@/components/bookings/modals/service-details/GroomingWaitlistDialog";
 import { clientQueries } from "@/lib/api/client";
@@ -105,9 +105,10 @@ const DEFAULT_FORM = {
   petAgeMonths: undefined as number | undefined,
   packageId: "",
   /** Active prepaid `CustomerPackage` id to redeem on confirm (one pass).
-   *  Independent of `packageId` (the catalog service). When set, the booking
-   *  is recorded as a pass redemption and the customer's pass count is
-   *  decremented in `mockCustomerPackages` on submit. */
+   *  Independent of `packageId` (the catalog service). When set, submitting
+   *  appends a -1 entry to that package's pass ledger for the pool matching
+   *  the booked service; no count is decremented anywhere, because none is
+   *  stored. */
   customerPackageId: "",
   stylistId: "",
   date: "",
@@ -224,6 +225,7 @@ export function NewAppointmentDialog({
   // submit so future bookings for the same pet/package pre-fill with it.
   const [savePriceToPet, setSavePriceToPet] = useState(false);
   const queryClient = useQueryClient();
+  const { mutate: redeemPass } = useRedeemPackagePass();
   // Ids the system auto-attached from the package's default-add-on rules.
   // Tracked separately so we know which add-ons to clear when the package
   // changes (manual selections survive package switches).
@@ -472,18 +474,34 @@ export function NewAppointmentDialog({
   const { data: clientCustomerPackages = [] } = useQuery(
     groomingQueries.customerPackagesForClient(form.clientId),
   );
+  // Eligible means the pack has a POOL for the service being booked with
+  // passes left in it — not merely that the pack has passes left somewhere.
+  // A Puppy Plan with six grooms and no baths remaining must not be offered
+  // against a bath, because redeeming it would spend a groom pass worth nearly
+  // twice as much.
   const eligibleCustomerPackages = useMemo(
     () =>
       clientCustomerPackages.filter(
         (p) =>
           p.status === "active" &&
-          p.passesTotal - p.passesUsed > 0 &&
-          p.passes.some((pass) => pass.moduleId === "grooming"),
+          p.passes.some(
+            (pass) =>
+              pass.moduleId === "grooming" &&
+              pass.totalPasses - pass.usedPasses > 0 &&
+              (!form.packageId || pass.packageId === form.packageId),
+          ),
       ),
-    [clientCustomerPackages],
+    [clientCustomerPackages, form.packageId],
   );
   const selectedCustomerPackage = eligibleCustomerPackages.find(
     (p) => p.id === form.customerPackageId,
+  );
+  /** The pool a redemption would draw on — the same rule as eligibility. */
+  const selectedPassPool = selectedCustomerPackage?.passes.find(
+    (pass) =>
+      pass.moduleId === "grooming" &&
+      pass.totalPasses - pass.usedPasses > 0 &&
+      (!form.packageId || pass.packageId === form.packageId),
   );
 
   // Clearing the customer-package selection if the client changes (or the
@@ -1061,34 +1079,44 @@ export function NewAppointmentDialog({
       }
     }
 
-    if (form.customerPackageId && selectedCustomerPackage) {
-      const result = redeemPackagePass(form.customerPackageId, {
-        petId: form.petId,
-        petName: form.petName,
-        serviceLabel:
-          selectedPackage?.name ??
-          selectedCustomerPackage.passes[0]?.serviceName ??
-          selectedCustomerPackage.packageName,
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["grooming", "customer-packages"],
-      });
-      if (result.ok) {
-        syncRedeemedPassToQuickBooks(
-          { facilityId: "11" },
-          selectedCustomerPackage,
-          result,
-          { petName: form.petName, serviceName: selectedPackage?.name },
-        );
-        toast.success(
-          `Redeemed 1 pass from ${selectedCustomerPackage.packageName}`,
-          {
-            description: `${result.passesLeft} pass${
-              result.passesLeft === 1 ? "" : "es"
-            } remaining.`,
+    if (form.customerPackageId && selectedCustomerPackage && selectedPassPool) {
+      // The pass is spent server-side: the balance check and the write are one
+      // locked statement, so two tills cannot both spend the last pass. The
+      // reported balance is what the database returned, not a local decrement.
+      const packageName = selectedCustomerPackage.packageName;
+      redeemPass(
+        {
+          customerPackageId: form.customerPackageId,
+          serviceId: selectedPassPool.packageId,
+          serviceLabel: selectedPackage?.name ?? selectedPassPool.serviceName,
+          petId: form.petId,
+          petName: form.petName,
+        },
+        {
+          onSuccess: ({ passesLeft }) => {
+            // A $0 receipt, so the books show the service was delivered
+            // against a package rather than given away.
+            syncRedeemedPassToQuickBooks(
+              { facilityId: "11" },
+              selectedCustomerPackage,
+              { passesLeft, pool: selectedPassPool },
+              { petName: form.petName },
+            );
+            toast.success(`Redeemed 1 pass from ${packageName}`, {
+              description: `${passesLeft} pass${
+                passesLeft === 1 ? "" : "es"
+              } remaining.`,
+            });
           },
-        );
-      }
+          onError: (error: Error) => {
+            // The appointment is already booked. Saying nothing would leave a
+            // visit that quietly costs full price.
+            toast.error("The pass was not redeemed", {
+              description: error.message,
+            });
+          },
+        },
+      );
     }
 
     const petCount = 1 + additionalPets.length;

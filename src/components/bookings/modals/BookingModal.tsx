@@ -51,7 +51,7 @@ import { getPetSize } from "@/lib/pet-size";
 import { computeBookingTotals, findZipTaxRate } from "@/lib/service-areas";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
-import { redeemPackagePass } from "@/data/customer-packages";
+import { useRedeemPackagePass } from "@/lib/api/customer-packages";
 import { syncRedeemedPassToQuickBooks } from "@/lib/quickbooks/document-sync";
 import {
   STEPS,
@@ -285,6 +285,7 @@ export function BookingModal({
   const { sections: daycareSections } = useDaycareAreas();
   const { categories: roomCategories, rooms: facilityRooms } = useRooms();
   const queryClient = useQueryClient();
+  const { mutate: redeemPass } = useRedeemPackagePass();
   const { data: customerPackagesData = [] } = useQuery(
     groomingQueries.customerPackages(),
   );
@@ -2573,31 +2574,50 @@ export function BookingModal({
         if (prepaid) {
           const primaryPetId = Array.isArray(petId) ? petId[0] : petId;
           const primaryPet = selectedPets.find((p) => p.id === primaryPetId);
-          const result = redeemPackagePass(prepaid.id, {
-            petId: primaryPetId,
-            petName: primaryPet?.name,
-            serviceLabel: prepaid.passes[0]?.serviceName ?? prepaid.packageName,
-          });
-          void queryClient.invalidateQueries({
-            queryKey: ["grooming", "customer-packages"],
-          });
-          if (result.ok) {
-            // A $0 receipt so the books show the service was delivered against
-            // a package rather than given away.
-            syncRedeemedPassToQuickBooks(
-              { facilityId: "11" },
-              prepaid,
-              result,
+          // The pool to draw on. This modal knows the MODULE being booked but
+          // not the catalogue service id, so it takes the first pool for that
+          // module with passes left — not `passes[0]`, which the mock used and
+          // which happily pointed at an exhausted pool. A bundle whose pools
+          // are different services still cannot be aimed precisely from here;
+          // the grooming dialog can, and does.
+          const pool = prepaid.passes.find(
+            (pass) =>
+              pass.moduleId === selectedService &&
+              pass.totalPasses - pass.usedPasses > 0,
+          );
+          if (pool) {
+            const packageName = prepaid.packageName;
+            redeemPass(
               {
+                customerPackageId: prepaid.id,
+                serviceId: pool.packageId,
+                serviceLabel: pool.serviceName,
+                petId: primaryPetId,
                 petName: primaryPet?.name,
-                serviceName: prepaid.passes[0]?.serviceName,
+              },
+              {
+                onSuccess: ({ passesLeft }) => {
+                  // A $0 receipt so the books show the service was delivered
+                  // against a package rather than given away.
+                  syncRedeemedPassToQuickBooks(
+                    { facilityId: "11" },
+                    prepaid,
+                    { passesLeft, pool },
+                    { petName: primaryPet?.name },
+                  );
+                  toast.success(`Redeemed 1 pass from ${packageName}`, {
+                    description: `${passesLeft} pass${
+                      passesLeft === 1 ? "" : "es"
+                    } remaining.`,
+                  });
+                },
+                onError: (error: Error) => {
+                  toast.error("The pass was not redeemed", {
+                    description: error.message,
+                  });
+                },
               },
             );
-            toast.success(`Redeemed 1 pass from ${prepaid.packageName}`, {
-              description: `${result.passesLeft} pass${
-                result.passesLeft === 1 ? "" : "es"
-              } remaining.`,
-            });
           }
         }
       }

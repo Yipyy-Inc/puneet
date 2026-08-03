@@ -50,7 +50,8 @@ import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
 import { clientCommunications } from "@/data/communications";
 import { reportCards } from "@/data/pet-data";
-import { mockCustomerPackages } from "@/data/customer-packages";
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
 import { customerLoyaltyData, loyaltySettings } from "@/data/marketing";
 import {
   getUnfinishedBookingsForCustomer,
@@ -77,6 +78,12 @@ export default function CustomerDashboardPage() {
   const isMounted = useHydrated();
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [nowMs] = useState(() => Date.now());
+
+  // Expiry is derived from the clock server-side, so a pack that lapsed while
+  // nobody was looking arrives already marked expired and drops out below.
+  const { data: ownedPackages = [] } = useQuery(
+    groomingQueries.customerPackagesForClient(MOCK_CUSTOMER_ID),
+  );
 
   // Get customer data
   const customer = useMemo(
@@ -218,13 +225,8 @@ export default function CustomerDashboardPage() {
   // Passes expiring within 14 days (with passes remaining), soonest first.
   const expiringPasses = useMemo(
     () =>
-      mockCustomerPackages
-        .filter(
-          (p) =>
-            p.customerId === MOCK_CUSTOMER_ID &&
-            p.status === "active" &&
-            p.expiresAt,
-        )
+      ownedPackages
+        .filter((p) => p.status === "active" && p.expiresAt)
         .map((p) => ({
           pkg: p,
           daysLeft: Math.ceil(
@@ -234,7 +236,7 @@ export default function CustomerDashboardPage() {
         }))
         .filter((x) => x.daysLeft > 0 && x.daysLeft <= 14 && x.remaining > 0)
         .sort((a, b) => a.daysLeft - b.daysLeft),
-    [nowMs],
+    [nowMs, ownedPackages],
   );
 
   // Newest unread report card for this customer's pets (viewedByCustomer=false).

@@ -1,31 +1,46 @@
 -- ============================================================================
--- Prepaid packages — derived counts, the signed ledger, and expiry
--- (20260806280000).
+-- Prepaid packages: selling one, spending it, and the counts nobody stores
+-- (20260806320000 + 20260806380000 + 20260806400000).
 --
 --   psql "$(supabase status -o json | jq -r .DB_URL)" \
 --     -f supabase/tests/prepaid-packages.sql
 --
 -- One transaction, rolled back. Fixture emails are @example.invalid.
 --
+-- ── THIS FILE WAS REWRITTEN, NOT EXTENDED ──────────────────────────────────
+--
+-- The version it replaces was written against the FIRST package schema, where
+-- a package was one service and a count: `prepaid_packages(price, service_id,
+-- total_passes)`. 20260806320000 replaced that model because the product sells
+-- multi-service bundles -- the Puppy First-Year Plan is six grooms and two
+-- baths -- and a single `service_id` cannot hold one.
+--
+-- The old tests stayed in the repo afterwards, proving nothing: every one of
+-- them referenced columns that no longer exist, so the file errors on its first
+-- statement. A suite that cannot run against its own schema is worse than no
+-- suite, because its presence in the directory is read as coverage.
+--
 -- ── WHAT THIS FILE IS REALLY ABOUT ─────────────────────────────────────────
 --
--- 1. THE COUNT IS DERIVED (K1/K2). The mock stored it THREE times --
---    pkg.passesUsed, pkg.passes[0].usedPasses and pkg.redemptions.length --
---    all updated by hand inside `redeemPackagePass`. Any path that forgot one
---    left a customer with passes they never bought, or lost ones they did.
---    There is no counter column here; K2 proves the number moves anyway.
+-- 1. A PURCHASE IS ONE TRANSACTION OR IT IS NOTHING (P3). Its two writes are
+--    "the customer paid" and "the customer has passes". P3 forces the second
+--    to fail and proves the first did not survive it -- because a paid package
+--    with no pools reads as `exhausted`, which is the most convincing wrong
+--    answer this schema can give.
 --
--- 2. THE LAST PASS CANNOT BE SPENT TWICE (K3). The availability check and the
---    write are one statement with the purchase row locked, so a second till
---    waits and finds the pass gone rather than acting on a stale read.
+-- 2. THE TERMS ARE A SNAPSHOT (P2). The catalogue is repriced AND re-bundled
+--    after the sale; the sold package does not move.
 --
--- 3. A REVERSAL IS AN ENTRY, NOT AN EDIT (K4/K5). A booking cancelled after its
---    pass was redeemed gives the pass back by appending +1. The ledger takes no
---    updates and no deletes, and a "redeemed" entry cannot add passes.
+-- 3. THE POOLS ARE SEPARATE (P4). The whole reason for the rebuild: a Basic
+--    Bath redemption must not be able to eat a Full Groom pass.
 --
--- 4. EXPIRY IS A FUNCTION OF THE CLOCK (K6). A stored status would be wrong the
---    moment a package lapsed unobserved; K6 has five unused passes and is still
---    refused.
+-- 4. NO COUNTER EXISTS (P5). The mock stored the used-count in three places at
+--    once -- `passesUsed`, `passes[0].usedPasses`, `redemptions.length` -- and
+--    updated them by hand. Here there is nothing to forget to update.
+--
+-- 5. THE LEDGER IS APPEND-ONLY (P6) AND EXPIRY BEATS A BALANCE (P7).
+--
+-- 6. PASSES ARE MONEY (P8/P9/P10): wrong facility, wrong role, not logged in.
 -- ============================================================================
 
 begin;
@@ -41,182 +56,317 @@ returns void language sql as $$
 $$;
 
 insert into auth.users (id, email) values
-  ('00000000-0000-0000-0000-000000150001', 'pk-owner@example.invalid'),
-  ('00000000-0000-0000-0000-000000150003', 'pk-groom@example.invalid')
+  ('00000000-0000-0000-0000-000000160001', 'pk2-owner@example.invalid'),
+  ('00000000-0000-0000-0000-000000160003', 'pk2-groom@example.invalid')
 on conflict (id) do nothing;
 
 insert into public.profiles (id, email, full_name) values
-  ('00000000-0000-0000-0000-000000150001', 'pk-owner@example.invalid', 'Owner'),
-  ('00000000-0000-0000-0000-000000150003', 'pk-groom@example.invalid', 'Groomer')
+  ('00000000-0000-0000-0000-000000160001', 'pk2-owner@example.invalid', 'Owner'),
+  ('00000000-0000-0000-0000-000000160003', 'pk2-groom@example.invalid', 'Groomer')
 on conflict (id) do update set full_name = excluded.full_name;
 
 insert into public.orgs (id, name, slug) values
-  ('00000000-0000-0000-0000-000000150010', 'PK Org', 'pk-org') on conflict do nothing;
+  ('00000000-0000-0000-0000-000000160010', 'PK2 Org', 'pk2-org')
+on conflict do nothing;
 
+-- Two facilities: the second exists only so P8 has somewhere to point.
 insert into public.facilities (id, org_id, name, slug, legacy_id) values
-  ('00000000-0000-0000-0000-000000150020', '00000000-0000-0000-0000-000000150010',
-   'Salon', 'pk-a', 'pk-a')
+  ('00000000-0000-0000-0000-000000160020', '00000000-0000-0000-0000-000000160010',
+   'Salon A', 'pk2-a', 'pk2-a'),
+  ('00000000-0000-0000-0000-000000160021', '00000000-0000-0000-0000-000000160010',
+   'Salon B', 'pk2-b', 'pk2-b')
 on conflict do nothing;
 
 insert into public.facility_memberships (id, facility_id, profile_id, role, is_active) values
-  ('00000000-0000-0000-0000-000000150030', '00000000-0000-0000-0000-000000150020',
-   '00000000-0000-0000-0000-000000150001', 'owner', true),
+  ('00000000-0000-0000-0000-000000160030', '00000000-0000-0000-0000-000000160020',
+   '00000000-0000-0000-0000-000000160001', 'owner', true),
   -- a groomer holds neither financial_view_amounts nor financial_take_payment
-  ('00000000-0000-0000-0000-000000150033', '00000000-0000-0000-0000-000000150020',
-   '00000000-0000-0000-0000-000000150003', 'groomer', true)
+  ('00000000-0000-0000-0000-000000160033', '00000000-0000-0000-0000-000000160020',
+   '00000000-0000-0000-0000-000000160003', 'groomer', true)
 on conflict (id) do nothing;
 
 insert into public.clients (id, facility_id, name, email) values
-  ('00000000-0000-0000-0000-000000150040', '00000000-0000-0000-0000-000000150020',
-   'Client', 'pk-c@example.invalid');
+  ('00000000-0000-0000-0000-000000160040', '00000000-0000-0000-0000-000000160020',
+   'Ours', 'pk2-c@example.invalid'),
+  ('00000000-0000-0000-0000-000000160041', '00000000-0000-0000-0000-000000160021',
+   'Theirs', 'pk2-d@example.invalid');
 
--- ── K1: a fresh 3-pack derives correctly ───────────────────────────────────
+-- The catalogue: a two-service bundle, the shape that forced the rebuild.
+insert into public.prepaid_packages
+  (id, facility_id, name, description, package_price, validity_days, status)
+values
+  ('00000000-0000-0000-0000-000000160050', '00000000-0000-0000-0000-000000160020',
+   'Puppy Plan', 'Grooms and baths', 379, 365, 'active'),
+  -- deliberately empty: P3's instrument
+  ('00000000-0000-0000-0000-000000160051', '00000000-0000-0000-0000-000000160020',
+   'Empty Pack', 'Nothing in it', 100, 90, 'active');
+
+insert into public.prepaid_package_lines
+  (package_id, service_id, service_name, quantity, price_per_session)
+values
+  ('00000000-0000-0000-0000-000000160050', 'svc-groom', 'Full Groom', 6, 65),
+  ('00000000-0000-0000-0000-000000160050', 'svc-bath',  'Basic Bath', 2, 35);
+
+create temp table pk2_sale (id uuid);
+grant all on pk2_sale to authenticated;
+
+-- ── P1: a sale copies the catalogue's terms, and both writes land ──────────
 do $$
-declare rem integer; used integer; st text;
+declare v_cp uuid; nm text; paid numeric; pools integer; total integer; st text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000150001', true);
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
   set local role authenticated;
-  insert into public.prepaid_packages (id, facility_id, name, price, service_id, total_passes)
-  values ('00000000-0000-0000-0000-000000150050', '00000000-0000-0000-0000-000000150020',
-          'Groom 3-pack', 210, 'grooming', 3);
-  insert into public.customer_packages
-    (id, facility_id, client_id, package_id, package_name, service_id, passes_total, price_paid)
-  values ('00000000-0000-0000-0000-000000150060', '00000000-0000-0000-0000-000000150020',
-          '00000000-0000-0000-0000-000000150040', '00000000-0000-0000-0000-000000150050',
-          'Groom 3-pack', 'grooming', 3, 210);
-  select passes_remaining, passes_used, status into rem, used, st
-    from public.customer_package_status where id = '00000000-0000-0000-0000-000000150060';
+  select public.purchase_package(
+    '00000000-0000-0000-0000-000000160040'::uuid,
+    '00000000-0000-0000-0000-000000160050'::uuid) into v_cp;
+  insert into pk2_sale values (v_cp);
+  select cp.package_name, cp.price_paid into nm, paid
+    from public.customer_packages cp where cp.id = v_cp;
+  select count(*) into pools
+    from public.customer_package_lines where customer_package_id = v_cp;
+  select s.passes_total, s.status into total, st
+    from public.customer_package_status s where s.id = v_cp;
   reset role;
-  perform pg_temp.t('K1  a fresh 3-pack derives to 3 remaining / 0 used / active',
-    rem = 3 and used = 0 and st = 'active',
-    format('remaining=%s used=%s status=%s', rem, used, st));
+  perform pg_temp.t('P1  a sale snapshots name and price and creates both pools',
+    nm = 'Puppy Plan' and paid = 379 and pools = 2 and total = 8 and st = 'active',
+    format('name=%s paid=%s pools=%s total=%s status=%s', nm, paid, pools, total, st));
 exception when others then
-  reset role; perform pg_temp.t('K1  fresh pack', false, sqlerrm);
+  reset role; perform pg_temp.t('P1  sale', false, sqlerrm);
 end $$;
 
--- ── K2: the count moves without a counter ──────────────────────────────────
+-- ── P2: repricing and re-bundling the catalogue does not touch the sale ────
 do $$
-declare left1 integer; left2 integer; rem integer; used integer;
+declare paid numeric; nm text; total integer; v_cp uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000150001', true);
+  select id into v_cp from pk2_sale;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
   set local role authenticated;
-  select public.redeem_package_pass('00000000-0000-0000-0000-000000150060'::uuid, 'Full Groom') into left1;
-  select public.redeem_package_pass('00000000-0000-0000-0000-000000150060'::uuid, 'Full Groom') into left2;
-  select passes_remaining, passes_used into rem, used
-    from public.customer_package_status where id = '00000000-0000-0000-0000-000000150060';
+  update public.prepaid_packages
+     set package_price = 999, name = 'Puppy Plan (2027 pricing)'
+   where id = '00000000-0000-0000-0000-000000160050';
+  delete from public.prepaid_package_lines
+   where package_id = '00000000-0000-0000-0000-000000160050'
+     and service_id = 'svc-bath';
+  update public.prepaid_package_lines set quantity = 1
+   where package_id = '00000000-0000-0000-0000-000000160050';
+  select cp.price_paid, cp.package_name into paid, nm
+    from public.customer_packages cp where cp.id = v_cp;
+  select s.passes_total into total
+    from public.customer_package_status s where s.id = v_cp;
   reset role;
-  perform pg_temp.t('K2  two redemptions leave 1; the count is the sum, not a column',
-    left1 = 2 and left2 = 1 and rem = 1 and used = 2,
-    format('returned=%s,%s remaining=%s used=%s', left1, left2, rem, used));
+  perform pg_temp.t('P2  repricing and re-bundling the catalogue leaves the sale alone',
+    paid = 379 and nm = 'Puppy Plan' and total = 8,
+    format('paid=%s name=%s total=%s', paid, nm, total));
 exception when others then
-  reset role; perform pg_temp.t('K2  redeem', false, sqlerrm);
+  reset role; perform pg_temp.t('P2  snapshot', false, sqlerrm);
 end $$;
 
--- ── K3: the last pass cannot be spent twice ────────────────────────────────
+-- ── P3: an empty package is refused, and leaves nothing behind ─────────────
+--
+-- The negative control that matters most. Without the second assertion this
+-- would pass while leaving a paid package with no pools -- which reads as
+-- `exhausted`, indistinguishable from one legitimately used up.
 do $$
-declare last_left integer; blocked boolean; st text;
+declare blocked boolean; orphans integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000150001', true);
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
   set local role authenticated;
-  select public.redeem_package_pass('00000000-0000-0000-0000-000000150060'::uuid, 'Full Groom') into last_left;
   begin
-    perform public.redeem_package_pass('00000000-0000-0000-0000-000000150060'::uuid, 'Full Groom');
+    perform public.purchase_package(
+      '00000000-0000-0000-0000-000000160040'::uuid,
+      '00000000-0000-0000-0000-000000160051'::uuid);
     blocked := false;
   exception when check_violation then blocked := true; end;
-  select status into st from public.customer_package_status
-   where id = '00000000-0000-0000-0000-000000150060';
+  select count(*) into orphans from public.customer_packages
+   where package_id = '00000000-0000-0000-0000-000000160051';
   reset role;
-  perform pg_temp.t('K3  the last pass cannot be spent twice; the pack reads exhausted',
-    last_left = 0 and blocked and st = 'exhausted',
-    format('last_left=%s blocked=%s status=%s', last_left, blocked, st));
+  perform pg_temp.t('P3  an empty package is refused AND no half-sale survives it',
+    blocked and orphans = 0, format('blocked=%s orphan_rows=%s', blocked, orphans));
 exception when others then
-  reset role; perform pg_temp.t('K3  exhaustion', false, sqlerrm);
+  reset role; perform pg_temp.t('P3  atomicity', false, sqlerrm);
 end $$;
 
--- ── K4: a reversal is an entry ─────────────────────────────────────────────
+-- ── P4: a bath cannot eat a groom pass ─────────────────────────────────────
 do $$
-declare rem integer; st text;
+declare bath_left integer; groom_left integer; wrong_pool boolean; v_cp uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000150001', true);
+  select id into v_cp from pk2_sale;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  set local role authenticated;
+  select public.redeem_package_pass(v_cp, 'svc-bath', 'Basic Bath') into bath_left;
+  select s.passes_remaining into groom_left
+    from public.customer_package_pool_status s
+   where s.customer_package_id = v_cp and s.service_id = 'svc-groom';
+  begin
+    -- a service the bundle never contained has no pool to draw on
+    perform public.redeem_package_pass(v_cp, 'svc-nails', 'Nail Trim');
+    wrong_pool := false;
+  exception when check_violation then wrong_pool := true; end;
+  reset role;
+  perform pg_temp.t('P4  a bath pass leaves all six groom passes; an unbundled service is refused',
+    bath_left = 1 and groom_left = 6 and wrong_pool,
+    format('bath_left=%s groom_left=%s unbundled_blocked=%s',
+           bath_left, groom_left, wrong_pool));
+exception when others then
+  reset role; perform pg_temp.t('P4  pools', false, sqlerrm);
+end $$;
+
+-- ── P5: the count moves without a counter; the last pass goes once ─────────
+do $$
+declare last_left integer; blocked boolean; used integer; v_cp uuid;
+begin
+  select id into v_cp from pk2_sale;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  set local role authenticated;
+  select public.redeem_package_pass(v_cp, 'svc-bath', 'Basic Bath') into last_left;
+  begin
+    perform public.redeem_package_pass(v_cp, 'svc-bath', 'Basic Bath');
+    blocked := false;
+  exception when check_violation then blocked := true; end;
+  select s.passes_used into used
+    from public.customer_package_status s where s.id = v_cp;
+  reset role;
+  perform pg_temp.t('P5  the bath pool empties, refuses a third, and the total says 2 used',
+    last_left = 0 and blocked and used = 2,
+    format('last_left=%s blocked=%s used=%s', last_left, blocked, used));
+exception when others then
+  reset role; perform pg_temp.t('P5  exhaustion', false, sqlerrm);
+end $$;
+
+-- ── P6: a reversal is an entry; the ledger takes no edits ──────────────────
+do $$
+declare rem integer; bad integer := 0; updated integer; deleted integer; v_cp uuid;
+begin
+  select id into v_cp from pk2_sale;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
   set local role authenticated;
   insert into public.package_pass_entries
-    (facility_id, customer_package_id, passes, reason, note)
-  values ('00000000-0000-0000-0000-000000150020', '00000000-0000-0000-0000-000000150060',
+    (facility_id, customer_package_id, service_id, passes, reason, note)
+  values ('00000000-0000-0000-0000-000000160020', v_cp, 'svc-bath',
           1, 'reversed', 'Booking cancelled');
-  select passes_remaining, status into rem, st
-    from public.customer_package_status where id = '00000000-0000-0000-0000-000000150060';
-  reset role;
-  perform pg_temp.t('K4  a cancelled booking gives the pass back, and the pack is active again',
-    rem = 1 and st = 'active', format('remaining=%s status=%s', rem, st));
-exception when others then
-  reset role; perform pg_temp.t('K4  reversal', false, sqlerrm);
-end $$;
-
--- ── K5: the ledger cannot be bent ──────────────────────────────────────────
-do $$
-declare bad integer := 0; updated integer; deleted integer;
-begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000150001', true);
-  set local role authenticated;
+  select s.passes_remaining into rem
+    from public.customer_package_pool_status s
+   where s.customer_package_id = v_cp and s.service_id = 'svc-bath';
   begin
-    insert into public.package_pass_entries (facility_id, customer_package_id, passes, reason)
-    values ('00000000-0000-0000-0000-000000150020', '00000000-0000-0000-0000-000000150060', 5, 'redeemed');
+    insert into public.package_pass_entries
+      (facility_id, customer_package_id, service_id, passes, reason)
+    values ('00000000-0000-0000-0000-000000160020', v_cp, 'svc-bath', 5, 'redeemed');
     bad := bad + 1;
   exception when check_violation then null; end;
-  update public.package_pass_entries set passes = 99
-   where customer_package_id = '00000000-0000-0000-0000-000000150060';
+  update public.package_pass_entries set passes = 99 where customer_package_id = v_cp;
   get diagnostics updated = row_count;
-  delete from public.package_pass_entries
-   where customer_package_id = '00000000-0000-0000-0000-000000150060';
+  delete from public.package_pass_entries where customer_package_id = v_cp;
   get diagnostics deleted = row_count;
   reset role;
-  perform pg_temp.t('K5  a redeemed entry cannot add passes; entries cannot be edited or deleted',
-    bad = 0 and updated = 0 and deleted = 0,
-    format('accepted_bad=%s updated=%s deleted=%s', bad, updated, deleted));
+  perform pg_temp.t('P6  a cancellation returns the pass; entries cannot be edited or deleted',
+    rem = 1 and bad = 0 and updated = 0 and deleted = 0,
+    format('remaining=%s accepted_bad=%s updated=%s deleted=%s',
+           rem, bad, updated, deleted));
 exception when others then
-  reset role; perform pg_temp.t('K5  ledger integrity', false, sqlerrm);
+  reset role; perform pg_temp.t('P6  ledger', false, sqlerrm);
 end $$;
 
--- ── K6: expiry beats an unused balance ─────────────────────────────────────
+-- ── P7: expiry beats an unused balance ─────────────────────────────────────
 do $$
 declare blocked boolean; st text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000150001', true);
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
   set local role authenticated;
   insert into public.customer_packages
-    (id, facility_id, client_id, package_name, service_id, passes_total, price_paid, expires_at)
-  values ('00000000-0000-0000-0000-000000150061', '00000000-0000-0000-0000-000000150020',
-          '00000000-0000-0000-0000-000000150040', 'Lapsed 5-pack', 'grooming', 5, 300,
+    (id, facility_id, client_id, package_name, price_paid, expires_at)
+  values ('00000000-0000-0000-0000-000000160061', '00000000-0000-0000-0000-000000160020',
+          '00000000-0000-0000-0000-000000160040', 'Lapsed 5-pack', 300,
           now() - interval '1 day');
+  insert into public.customer_package_lines
+    (customer_package_id, service_id, service_name, passes_total)
+  values ('00000000-0000-0000-0000-000000160061', 'svc-groom', 'Full Groom', 5);
   begin
-    perform public.redeem_package_pass('00000000-0000-0000-0000-000000150061'::uuid, 'Full Groom');
+    perform public.redeem_package_pass(
+      '00000000-0000-0000-0000-000000160061'::uuid, 'svc-groom', 'Full Groom');
     blocked := false;
   exception when check_violation then blocked := true; end;
-  select status into st from public.customer_package_status
-   where id = '00000000-0000-0000-0000-000000150061';
+  select s.status into st from public.customer_package_status s
+   where s.id = '00000000-0000-0000-0000-000000160061';
   reset role;
-  perform pg_temp.t('K6  an expired pack refuses redemption even with 5 passes unused',
+  perform pg_temp.t('P7  an expired pack refuses redemption with five passes unused',
     blocked and st = 'expired', format('blocked=%s status=%s', blocked, st));
 exception when others then
-  reset role; perform pg_temp.t('K6  expiry', false, sqlerrm);
+  reset role; perform pg_temp.t('P7  expiry', false, sqlerrm);
 end $$;
 
--- ── K7: passes are money ───────────────────────────────────────────────────
+-- ── P8: a package cannot be sold to another facility's client ──────────────
 do $$
-declare ok boolean; seen integer;
+declare blocked boolean; leaked integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000150003', true);
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  set local role authenticated;
+  begin
+    perform public.purchase_package(
+      '00000000-0000-0000-0000-000000160041'::uuid,   -- Salon B's client
+      '00000000-0000-0000-0000-000000160050'::uuid);  -- Salon A's package
+    blocked := false;
+  exception when no_data_found then blocked := true; end;
+  select count(*) into leaked from public.customer_packages
+   where client_id = '00000000-0000-0000-0000-000000160041';
+  reset role;
+  perform pg_temp.t('P8  a package cannot be sold to a client at another facility',
+    blocked and leaked = 0, format('blocked=%s rows=%s', blocked, leaked));
+exception when others then
+  reset role; perform pg_temp.t('P8  cross-facility', false, sqlerrm);
+end $$;
+
+-- ── P9: a groomer can neither see purchases, spend a pass, nor sell one ────
+--
+-- Paired with a positive control: P1 already proved the owner sees this sale,
+-- so `seen = 0` here is a denial rather than an empty table.
+do $$
+declare seen integer; spend_blocked boolean; sell_blocked boolean; v_cp uuid;
+begin
+  select id into v_cp from pk2_sale;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160003', true);
   set local role authenticated;
   select count(*) into seen from public.customer_packages;
   begin
-    perform public.redeem_package_pass('00000000-0000-0000-0000-000000150060'::uuid, 'Full Groom');
-    ok := false;
-  exception when insufficient_privilege or no_data_found then ok := true; end;
+    perform public.redeem_package_pass(v_cp, 'svc-groom', 'Full Groom');
+    spend_blocked := false;
+  exception when insufficient_privilege or no_data_found then spend_blocked := true; end;
+  begin
+    perform public.purchase_package(
+      '00000000-0000-0000-0000-000000160040'::uuid,
+      '00000000-0000-0000-0000-000000160050'::uuid);
+    sell_blocked := false;
+  exception when insufficient_privilege or no_data_found then sell_blocked := true; end;
   reset role;
-  perform pg_temp.t('K7  a groomer sees no purchases and cannot spend a pass',
-    ok and seen = 0, format('blocked=%s visible=%s', ok, seen));
+  perform pg_temp.t('P9  a groomer sees no purchases and can neither spend nor sell',
+    seen = 0 and spend_blocked and sell_blocked,
+    format('visible=%s spend_blocked=%s sell_blocked=%s',
+           seen, spend_blocked, sell_blocked));
 exception when others then
-  reset role; perform pg_temp.t('K7  groomer', false, sqlerrm);
+  reset role; perform pg_temp.t('P9  groomer', false, sqlerrm);
+end $$;
+
+-- ── P10: anon cannot even reach the function ───────────────────────────────
+--
+-- 20260806380000 shipped with EXECUTE still granted to `anon`, because
+-- `revoke ... from public` does not revoke from a role granted BY NAME. It was
+-- not exploitable -- every policy involved is `to authenticated`, so the first
+-- write would have raised -- but the grant is gone (20260806400000) and this
+-- asserts it stays gone.
+do $$
+declare blocked boolean;
+begin
+  set local role anon;
+  begin
+    perform public.purchase_package(
+      '00000000-0000-0000-0000-000000160040'::uuid,
+      '00000000-0000-0000-0000-000000160050'::uuid);
+    blocked := false;
+  exception when insufficient_privilege then blocked := true; end;
+  reset role;
+  perform pg_temp.t('P10 anon has no EXECUTE on purchase_package',
+    blocked, format('blocked=%s', blocked));
+exception when others then
+  reset role; perform pg_temp.t('P10 anon execute', false, sqlerrm);
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
