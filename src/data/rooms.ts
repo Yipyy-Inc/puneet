@@ -1,8 +1,4 @@
-import type {
-  RoomCategory,
-  FacilityRoom,
-  GroomingStation,
-} from "@/types/rooms";
+import type { RoomCategory, FacilityRoom } from "@/types/rooms";
 
 const FACILITY_ID = 11;
 
@@ -211,94 +207,10 @@ export const facilityRooms: FacilityRoom[] = [
   })),
 ];
 // Note: daycare room units are now modelled as DaycareSection in src/data/daycare-areas.ts
-
-// ── Grooming Stations ──────────────────────────────────────────────────────────
-
-export const groomingStations: GroomingStation[] = [
-  {
-    id: "gs-t-01",
-    facilityId: FACILITY_ID,
-    type: "table",
-    name: "Table 1",
-    active: true,
-    status: "in-use",
-    currentPetName: "Buddy",
-    currentStylistName: "Sarah Chen",
-    statusChangedAt: new Date(Date.now() - 35 * 60_000).toISOString(),
-    estimatedCompletionAt: new Date(Date.now() + 25 * 60_000).toISOString(),
-    allowedPetSizes: ["small", "medium", "large"],
-    maxWeightLbs: 70,
-  },
-  {
-    id: "gs-t-02",
-    facilityId: FACILITY_ID,
-    type: "table",
-    name: "Table 2",
-    active: true,
-    status: "available",
-    allowedPetSizes: ["small", "medium"],
-    maxWeightLbs: 40,
-  },
-  {
-    id: "gs-t-03",
-    facilityId: FACILITY_ID,
-    type: "table",
-    name: "Table 3",
-    active: true,
-    status: "needs-cleaning",
-    statusChangedAt: new Date(Date.now() - 8 * 60_000).toISOString(),
-    allowedPetSizes: ["large", "giant"],
-    staffNotes: "Heavy-duty hydraulic lift for big dogs",
-  },
-  {
-    id: "gs-t-04",
-    facilityId: FACILITY_ID,
-    type: "table",
-    name: "Table 4",
-    active: false,
-    staffNotes: "Awaiting replacement hydraulic lift",
-    status: "out-of-service",
-  },
-  {
-    id: "gs-tub-01",
-    facilityId: FACILITY_ID,
-    type: "tub",
-    name: "Tub 1",
-    active: true,
-    status: "in-use",
-    currentPetName: "Cleo",
-    currentStylistName: "Marcus Reyes",
-    statusChangedAt: new Date(Date.now() - 12 * 60_000).toISOString(),
-    estimatedCompletionAt: new Date(Date.now() + 18 * 60_000).toISOString(),
-    // Empty = multi-purpose (any size)
-  },
-  {
-    id: "gs-tub-02",
-    facilityId: FACILITY_ID,
-    type: "tub",
-    name: "Tub 2",
-    active: true,
-    status: "available",
-    allowedPetSizes: ["small", "medium"],
-    maxWeightLbs: 35,
-  },
-  {
-    id: "gs-dryer-01",
-    facilityId: FACILITY_ID,
-    type: "cage_dryer",
-    name: "Cage Dryer 1",
-    active: true,
-    status: "available",
-  },
-  {
-    id: "gs-dryer-02",
-    facilityId: FACILITY_ID,
-    type: "stand_dryer",
-    name: "Stand Dryer 1",
-    active: true,
-    status: "available",
-  },
-];
+// Grooming stations moved to Postgres (public.grooming_stations,
+// 20260805180000). The fixture that lived here seeded that table once via
+// 20260805190000 and had no readers left; useGroomingStations now serves the
+// real estate. Removed rather than kept as an unread copy that would drift.
 
 // ── Helper functions ───────────────────────────────────────────────────────────
 
