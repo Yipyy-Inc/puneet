@@ -570,6 +570,7 @@ export type Database = {
           service_name: string;
           service_price: number;
           size_label: string | null;
+          station_id: string | null;
           updated_at: string;
         };
         Insert: {
@@ -586,6 +587,7 @@ export type Database = {
           service_name: string;
           service_price?: number;
           size_label?: string | null;
+          station_id?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -602,6 +604,7 @@ export type Database = {
           service_name?: string;
           service_price?: number;
           size_label?: string | null;
+          station_id?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -624,6 +627,13 @@ export type Database = {
             columns: ["service_id"];
             isOneToOne: false;
             referencedRelation: "grooming_services";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_appointments_station_id_fkey";
+            columns: ["station_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stations";
             referencedColumns: ["id"];
           },
         ];
@@ -908,6 +918,71 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "grooming_services_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grooming_stations: {
+        Row: {
+          active: boolean;
+          allowed_pet_sizes: string[];
+          created_at: string;
+          display_order: number;
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          legacy_id: string | null;
+          max_weight_lbs: number | null;
+          name: string;
+          pet_types: string[];
+          staff_notes: string;
+          status: string;
+          status_changed_at: string | null;
+          type: string;
+          updated_at: string;
+        };
+        Insert: {
+          active?: boolean;
+          allowed_pet_sizes?: string[];
+          created_at?: string;
+          display_order?: number;
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          legacy_id?: string | null;
+          max_weight_lbs?: number | null;
+          name: string;
+          pet_types?: string[];
+          staff_notes?: string;
+          status?: string;
+          status_changed_at?: string | null;
+          type: string;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          allowed_pet_sizes?: string[];
+          created_at?: string;
+          display_order?: number;
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          legacy_id?: string | null;
+          max_weight_lbs?: number | null;
+          name?: string;
+          pet_types?: string[];
+          staff_notes?: string;
+          status?: string;
+          status_changed_at?: string | null;
+          type?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_stations_facility_id_fkey";
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
