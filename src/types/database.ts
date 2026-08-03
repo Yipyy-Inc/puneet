@@ -1,16 +1,3 @@
-// ============================================================================
-// GENERATED FILE — do not edit by hand.
-//
-// Regenerate after any schema change with the Supabase MCP
-// (`generate_typescript_types`) or the CLI:
-//   supabase gen types typescript --project-id nwvhjeqhhdcjhicnvypz > src/types/database.ts
-//
-// The Enums below are the database's copy of unions that also live in
-// src/types/facility-staff.ts (AccessScope, FacilityStaffRole, ServiceModule).
-// They are currently identical. If they ever diverge, the migration in
-// supabase/migrations/ is the source of truth and the TS union is stale.
-// ============================================================================
-
 export type Json =
   | string
   | number
@@ -20,6 +7,8 @@ export type Json =
   | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5";
   };
@@ -240,99 +229,6 @@ export type Database = {
           },
         ];
       };
-      pets: {
-        Row: {
-          age_years: number | null;
-          allergies: string | null;
-          breed: string | null;
-          client_id: string;
-          coat_type: string | null;
-          color: string | null;
-          created_at: string;
-          date_of_birth: string | null;
-          details: Json;
-          energy_level: string | null;
-          facility_id: string;
-          id: string;
-          image_url: string | null;
-          microchip: string | null;
-          name: string;
-          ref: number;
-          sex: string | null;
-          spayed_neutered: boolean | null;
-          special_needs: string | null;
-          species: string;
-          status: string;
-          updated_at: string;
-          weight: number | null;
-        };
-        Insert: {
-          age_years?: number | null;
-          allergies?: string | null;
-          breed?: string | null;
-          client_id: string;
-          coat_type?: string | null;
-          color?: string | null;
-          created_at?: string;
-          date_of_birth?: string | null;
-          details?: Json;
-          energy_level?: string | null;
-          facility_id: string;
-          id?: string;
-          image_url?: string | null;
-          microchip?: string | null;
-          name: string;
-          ref?: number;
-          sex?: string | null;
-          spayed_neutered?: boolean | null;
-          special_needs?: string | null;
-          species?: string;
-          status?: string;
-          updated_at?: string;
-          weight?: number | null;
-        };
-        Update: {
-          age_years?: number | null;
-          allergies?: string | null;
-          breed?: string | null;
-          client_id?: string;
-          coat_type?: string | null;
-          color?: string | null;
-          created_at?: string;
-          date_of_birth?: string | null;
-          details?: Json;
-          energy_level?: string | null;
-          facility_id?: string;
-          id?: string;
-          image_url?: string | null;
-          microchip?: string | null;
-          name?: string;
-          ref?: number;
-          sex?: string | null;
-          spayed_neutered?: boolean | null;
-          special_needs?: string | null;
-          species?: string;
-          status?: string;
-          updated_at?: string;
-          weight?: number | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "pets_client_id_fkey";
-            columns: ["client_id"];
-            isOneToOne: false;
-            referencedRelation: "clients";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "pets_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       facilities: {
         Row: {
           created_at: string;
@@ -370,6 +266,86 @@ export type Database = {
             columns: ["org_id"];
             isOneToOne: false;
             referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_custom_role_permissions: {
+        Row: {
+          custom_role_id: string;
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+        };
+        Insert: {
+          custom_role_id: string;
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+        };
+        Update: {
+          custom_role_id?: string;
+          permission_key?: string;
+          scope?: Database["public"]["Enums"]["access_scope"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_custom_role_permissions_custom_role_id_fkey";
+            columns: ["custom_role_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_custom_roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_custom_role_permissions_permission_key_fkey";
+            columns: ["permission_key"];
+            isOneToOne: false;
+            referencedRelation: "permissions";
+            referencedColumns: ["key"];
+          },
+        ];
+      };
+      facility_custom_roles: {
+        Row: {
+          accent: string;
+          created_at: string;
+          description: string;
+          facility_id: string;
+          icon: string;
+          id: string;
+          label: string;
+          legacy_id: string | null;
+          ring: string;
+          updated_at: string;
+        };
+        Insert: {
+          accent?: string;
+          created_at?: string;
+          description?: string;
+          facility_id: string;
+          icon?: string;
+          id?: string;
+          label: string;
+          legacy_id?: string | null;
+          ring?: string;
+          updated_at?: string;
+        };
+        Update: {
+          accent?: string;
+          created_at?: string;
+          description?: string;
+          facility_id?: string;
+          icon?: string;
+          id?: string;
+          label?: string;
+          legacy_id?: string | null;
+          ring?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_custom_roles_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
             referencedColumns: ["id"];
           },
         ];
@@ -471,116 +447,6 @@ export type Database = {
           },
         ];
       };
-      facility_custom_roles: {
-        Row: {
-          accent: string;
-          created_at: string;
-          description: string;
-          facility_id: string;
-          icon: string;
-          id: string;
-          label: string;
-          legacy_id: string | null;
-          ring: string;
-          updated_at: string;
-        };
-        Insert: {
-          accent?: string;
-          created_at?: string;
-          description?: string;
-          facility_id: string;
-          icon?: string;
-          id?: string;
-          label: string;
-          legacy_id?: string | null;
-          ring?: string;
-          updated_at?: string;
-        };
-        Update: {
-          accent?: string;
-          created_at?: string;
-          description?: string;
-          facility_id?: string;
-          icon?: string;
-          id?: string;
-          label?: string;
-          legacy_id?: string | null;
-          ring?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "facility_custom_roles_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      facility_custom_role_permissions: {
-        Row: {
-          custom_role_id: string;
-          permission_key: string;
-          scope: Database["public"]["Enums"]["access_scope"];
-        };
-        Insert: {
-          custom_role_id: string;
-          permission_key: string;
-          scope: Database["public"]["Enums"]["access_scope"];
-        };
-        Update: {
-          custom_role_id?: string;
-          permission_key?: string;
-          scope?: Database["public"]["Enums"]["access_scope"];
-        };
-        Relationships: [
-          {
-            foreignKeyName: "facility_custom_role_permissions_custom_role_id_fkey";
-            columns: ["custom_role_id"];
-            isOneToOne: false;
-            referencedRelation: "facility_custom_roles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "facility_custom_role_permissions_permission_key_fkey";
-            columns: ["permission_key"];
-            isOneToOne: false;
-            referencedRelation: "permissions";
-            referencedColumns: ["key"];
-          },
-        ];
-      };
-      staff_custom_roles: {
-        Row: {
-          custom_role_id: string;
-          staff_id: string;
-        };
-        Insert: {
-          custom_role_id: string;
-          staff_id: string;
-        };
-        Update: {
-          custom_role_id?: string;
-          staff_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "staff_custom_roles_custom_role_id_fkey";
-            columns: ["custom_role_id"];
-            isOneToOne: false;
-            referencedRelation: "facility_custom_roles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "staff_custom_roles_staff_id_fkey";
-            columns: ["staff_id"];
-            isOneToOne: false;
-            referencedRelation: "staff";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       locations: {
         Row: {
           created_at: string;
@@ -652,6 +518,152 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "permissions";
             referencedColumns: ["key"];
+          },
+        ];
+      };
+      offboarding_instances: {
+        Row: {
+          complete_notified_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          due_today_notified_date: string | null;
+          facility_id: string;
+          id: string;
+          last_day: string | null;
+          last_reminder_date: string | null;
+          reason: string;
+          staff_id: string;
+          started_at: string;
+          template_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          complete_notified_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          due_today_notified_date?: string | null;
+          facility_id: string;
+          id?: string;
+          last_day?: string | null;
+          last_reminder_date?: string | null;
+          reason: string;
+          staff_id: string;
+          started_at?: string;
+          template_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          complete_notified_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          due_today_notified_date?: string | null;
+          facility_id?: string;
+          id?: string;
+          last_day?: string | null;
+          last_reminder_date?: string | null;
+          reason?: string;
+          staff_id?: string;
+          started_at?: string;
+          template_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_instances_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "offboarding_instances_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "offboarding_instances_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "offboarding_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      offboarding_task_states: {
+        Row: {
+          completed_at: string | null;
+          completed_by: string | null;
+          completion_note: string | null;
+          created_at: string;
+          description: string;
+          due_date: string | null;
+          facility_id: string;
+          id: string;
+          instance_id: string;
+          name: string;
+          position: number;
+          required: boolean;
+          task_id: string | null;
+          task_key: string;
+          updated_at: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          completed_by?: string | null;
+          completion_note?: string | null;
+          created_at?: string;
+          description?: string;
+          due_date?: string | null;
+          facility_id: string;
+          id?: string;
+          instance_id: string;
+          name: string;
+          position: number;
+          required?: boolean;
+          task_id?: string | null;
+          task_key: string;
+          updated_at?: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          completed_by?: string | null;
+          completion_note?: string | null;
+          created_at?: string;
+          description?: string;
+          due_date?: string | null;
+          facility_id?: string;
+          id?: string;
+          instance_id?: string;
+          name?: string;
+          position?: number;
+          required?: boolean;
+          task_id?: string | null;
+          task_key?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_task_states_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "offboarding_task_states_instance_id_fkey";
+            columns: ["instance_id"];
+            isOneToOne: false;
+            referencedRelation: "offboarding_instances";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "offboarding_task_states_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "offboarding_tasks";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -1177,6 +1189,155 @@ export type Database = {
         };
         Relationships: [];
       };
+      pets: {
+        Row: {
+          age_years: number | null;
+          allergies: string | null;
+          breed: string | null;
+          client_id: string;
+          coat_type: string | null;
+          color: string | null;
+          created_at: string;
+          date_of_birth: string | null;
+          details: Json;
+          energy_level: string | null;
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          microchip: string | null;
+          name: string;
+          ref: number;
+          sex: string | null;
+          spayed_neutered: boolean | null;
+          special_needs: string | null;
+          species: string;
+          status: string;
+          updated_at: string;
+          weight: number | null;
+        };
+        Insert: {
+          age_years?: number | null;
+          allergies?: string | null;
+          breed?: string | null;
+          client_id: string;
+          coat_type?: string | null;
+          color?: string | null;
+          created_at?: string;
+          date_of_birth?: string | null;
+          details?: Json;
+          energy_level?: string | null;
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          microchip?: string | null;
+          name: string;
+          ref?: number;
+          sex?: string | null;
+          spayed_neutered?: boolean | null;
+          special_needs?: string | null;
+          species?: string;
+          status?: string;
+          updated_at?: string;
+          weight?: number | null;
+        };
+        Update: {
+          age_years?: number | null;
+          allergies?: string | null;
+          breed?: string | null;
+          client_id?: string;
+          coat_type?: string | null;
+          color?: string | null;
+          created_at?: string;
+          date_of_birth?: string | null;
+          details?: Json;
+          energy_level?: string | null;
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          microchip?: string | null;
+          name?: string;
+          ref?: number;
+          sex?: string | null;
+          spayed_neutered?: boolean | null;
+          special_needs?: string | null;
+          species?: string;
+          status?: string;
+          updated_at?: string;
+          weight?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pets_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pets_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      profiles: {
+        Row: {
+          avatar_url: string | null;
+          created_at: string;
+          email: string;
+          full_name: string | null;
+          id: string;
+          is_platform_admin: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          avatar_url?: string | null;
+          created_at?: string;
+          email: string;
+          full_name?: string | null;
+          id: string;
+          is_platform_admin?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          avatar_url?: string | null;
+          created_at?: string;
+          email?: string;
+          full_name?: string | null;
+          id?: string;
+          is_platform_admin?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      role_preset_permissions: {
+        Row: {
+          permission_key: string;
+          role: Database["public"]["Enums"]["facility_staff_role"];
+          scope: Database["public"]["Enums"]["access_scope"];
+        };
+        Insert: {
+          permission_key: string;
+          role: Database["public"]["Enums"]["facility_staff_role"];
+          scope: Database["public"]["Enums"]["access_scope"];
+        };
+        Update: {
+          permission_key?: string;
+          role?: Database["public"]["Enums"]["facility_staff_role"];
+          scope?: Database["public"]["Enums"]["access_scope"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "role_preset_permissions_permission_key_fkey";
+            columns: ["permission_key"];
+            isOneToOne: false;
+            referencedRelation: "permissions";
+            referencedColumns: ["key"];
+          },
+        ];
+      };
       staff: {
         Row: {
           additional_roles: Database["public"]["Enums"]["facility_staff_role"][];
@@ -1270,6 +1431,36 @@ export type Database = {
           },
         ];
       };
+      staff_custom_roles: {
+        Row: {
+          custom_role_id: string;
+          staff_id: string;
+        };
+        Insert: {
+          custom_role_id: string;
+          staff_id: string;
+        };
+        Update: {
+          custom_role_id?: string;
+          staff_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_custom_roles_custom_role_id_fkey";
+            columns: ["custom_role_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_custom_roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_custom_roles_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       staff_documents: {
         Row: {
           content_type: string;
@@ -1279,6 +1470,7 @@ export type Database = {
           file_name: string;
           id: string;
           instance_id: string | null;
+          retain_until: string | null;
           size_bytes: number;
           staff_id: string;
           storage_path: string;
@@ -1295,6 +1487,7 @@ export type Database = {
           file_name: string;
           id?: string;
           instance_id?: string | null;
+          retain_until?: string | null;
           size_bytes: number;
           staff_id: string;
           storage_path: string;
@@ -1311,6 +1504,7 @@ export type Database = {
           file_name?: string;
           id?: string;
           instance_id?: string | null;
+          retain_until?: string | null;
           size_bytes?: number;
           staff_id?: string;
           storage_path?: string;
@@ -1399,6 +1593,42 @@ export type Database = {
           },
         ];
       };
+      staff_permissions: {
+        Row: {
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+          staff_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+          staff_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          permission_key?: string;
+          scope?: Database["public"]["Enums"]["access_scope"];
+          staff_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_permissions_permission_key_fkey";
+            columns: ["permission_key"];
+            isOneToOne: false;
+            referencedRelation: "permissions";
+            referencedColumns: ["key"];
+          },
+          {
+            foreignKeyName: "staff_permissions_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       staff_signatures: {
         Row: {
           agreement_hash: string;
@@ -1478,103 +1708,32 @@ export type Database = {
           },
         ];
       };
-      staff_permissions: {
-        Row: {
-          permission_key: string;
-          scope: Database["public"]["Enums"]["access_scope"];
-          staff_id: string;
-          updated_at: string;
-        };
-        Insert: {
-          permission_key: string;
-          scope: Database["public"]["Enums"]["access_scope"];
-          staff_id: string;
-          updated_at?: string;
-        };
-        Update: {
-          permission_key?: string;
-          scope?: Database["public"]["Enums"]["access_scope"];
-          staff_id?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "staff_permissions_permission_key_fkey";
-            columns: ["permission_key"];
-            isOneToOne: false;
-            referencedRelation: "permissions";
-            referencedColumns: ["key"];
-          },
-          {
-            foreignKeyName: "staff_permissions_staff_id_fkey";
-            columns: ["staff_id"];
-            isOneToOne: false;
-            referencedRelation: "staff";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      profiles: {
-        Row: {
-          avatar_url: string | null;
-          created_at: string;
-          email: string;
-          full_name: string | null;
-          id: string;
-          is_platform_admin: boolean;
-          updated_at: string;
-        };
-        Insert: {
-          avatar_url?: string | null;
-          created_at?: string;
-          email: string;
-          full_name?: string | null;
-          id: string;
-          is_platform_admin?: boolean;
-          updated_at?: string;
-        };
-        Update: {
-          avatar_url?: string | null;
-          created_at?: string;
-          email?: string;
-          full_name?: string | null;
-          id?: string;
-          is_platform_admin?: boolean;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      role_preset_permissions: {
-        Row: {
-          permission_key: string;
-          role: Database["public"]["Enums"]["facility_staff_role"];
-          scope: Database["public"]["Enums"]["access_scope"];
-        };
-        Insert: {
-          permission_key: string;
-          role: Database["public"]["Enums"]["facility_staff_role"];
-          scope: Database["public"]["Enums"]["access_scope"];
-        };
-        Update: {
-          permission_key?: string;
-          role?: Database["public"]["Enums"]["facility_staff_role"];
-          scope?: Database["public"]["Enums"]["access_scope"];
-        };
-        Relationships: [
-          {
-            foreignKeyName: "role_preset_permissions_permission_key_fkey";
-            columns: ["permission_key"];
-            isOneToOne: false;
-            referencedRelation: "permissions";
-            referencedColumns: ["key"];
-          },
-        ];
-      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      link_client_record: { Args: never; Returns: string };
+      link_staff_invite: {
+        Args: { p_email: string; p_staff_legacy_id: string; p_user_id: string };
+        Returns: Json;
+      };
+      my_permissions: {
+        Args: never;
+        Returns: {
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+        }[];
+      };
+      offboard_staff: {
+        Args: {
+          p_last_day?: string;
+          p_reason: string;
+          p_staff_legacy_id: string;
+          p_template_id?: string;
+        };
+        Returns: Json;
+      };
       onboarding_by_token: { Args: { p_token: string }; Returns: Json };
       save_onboarding_section: {
         Args: {
@@ -1591,21 +1750,6 @@ export type Database = {
         Returns: boolean;
       };
       submit_onboarding: { Args: { p_token: string }; Returns: boolean };
-      link_client_record: {
-        Args: Record<PropertyKey, never>;
-        Returns: string | null;
-      };
-      link_staff_invite: {
-        Args: { p_email: string; p_staff_legacy_id: string; p_user_id: string };
-        Returns: Json;
-      };
-      my_permissions: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
-          permission_key: string;
-          scope: Database["public"]["Enums"]["access_scope"];
-        }[];
-      };
     };
     Enums: {
       access_scope: "anytime" | "operating_hours" | "assigned_shifts" | "none";
