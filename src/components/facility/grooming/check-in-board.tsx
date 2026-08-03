@@ -33,6 +33,7 @@ import { WaitlistRow } from "./check-in-board-waitlist";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { stylistIdForStaff } from "@/lib/api/grooming";
+import { useSetGroomingAppointmentStatus } from "@/lib/api/grooming-appointments";
 
 type DialogKind = "check-in" | "mark-ready" | "payment" | null;
 
@@ -80,6 +81,7 @@ export function CheckInBoard() {
   );
 
   const { setStationStatus } = useGroomingStations();
+  const { mutate: setAppointmentStatus } = useSetGroomingAppointmentStatus();
   const { zipTaxRates } = useMobileGrooming();
   const { entriesForDate } = useGroomingWaitlist();
   const { recordEvent } = useLoyaltyEngine();
@@ -170,8 +172,46 @@ export function CheckInBoard() {
   const notify = (title: string, detail: { description: string }) =>
     toast.message(title, detail);
 
+  /**
+   * Apply a board action.
+   *
+   * TWO WRITES, AND THE SPLIT IS THE POINT.
+   *
+   * The STATUS and the STATION go to Postgres, because the database owns what
+   * follows from them: moving a booking to `checked_in` is what stamps the
+   * arrival time and derives the ready-ETA from the add-ons on the ticket
+   * (20260805140000). This screen deliberately does not compute either — it
+   * asks for the transition and re-reads the result.
+   *
+   * Everything else stays local. Intake notes, before/after photos, alert
+   * notes, ticket comments and the session checklist have no tables yet, so a
+   * local patch is the only place they can live. That is a seam, not a design:
+   * those fields are lost on reload today, exactly as they were before this
+   * change, and they stop being lost when their tables land.
+   */
   function patch(next: GroomingAppointment) {
     setPatches((prev) => ({ ...prev, [next.id]: next }));
+
+    const before = appointments.find((a) => a.id === next.id);
+    const statusChanged = before && before.status !== next.status;
+    const stationChanged = before && before.stationId !== next.stationId;
+    if (!statusChanged && !stationChanged) return;
+
+    setAppointmentStatus(
+      {
+        id: next.id,
+        ...(statusChanged ? { status: next.status } : {}),
+        ...(stationChanged ? { stationId: next.stationId ?? null } : {}),
+      },
+      {
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "That change was not saved.",
+          ),
+      },
+    );
   }
 
   function closeDialog() {
