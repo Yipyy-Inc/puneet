@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
 import {
   OFFBOARDING_SELECT,
   actorIdsOf,
@@ -145,11 +146,12 @@ export async function PATCH(
       }
     : { completed_at: null, completed_by: null, completion_note: null };
 
-  const { error } = await supabase
+  const { data: touched, error } = await supabase
     .from("offboarding_task_states")
     .update(patch as never)
     .eq("instance_id", resolved.instanceId)
-    .eq("task_key", body.taskKey);
+    .eq("task_key", body.taskKey)
+    .select("id");
 
   if (error) {
     return writeFailure(error, {
@@ -160,6 +162,11 @@ export async function PATCH(
       duplicate: "That task has already been recorded.",
     });
   }
+  const denied = deniedIfUntouched(
+    touched,
+    "Not allowed to update this offboarding checklist.",
+  );
+  if (denied) return denied;
 
   const instance = await readBack(supabase, resolved.instanceId);
   if (!instance) {

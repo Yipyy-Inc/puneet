@@ -8,6 +8,7 @@ import {
   rowToOffboardingTemplate,
 } from "@/lib/api/mappers/staff-onboarding";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
 import type { OffboardingTemplate } from "@/data/staff-onboarding";
 
 // ============================================================================
@@ -49,10 +50,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Template not found." }, { status: 404 });
   }
 
-  const { error } = await supabase
+  const { data: touched, error } = await supabase
     .from("offboarding_templates")
     .update(offboardingTemplateToRow(input) as never)
-    .eq("id", existing.id);
+    .eq("id", existing.id)
+    .select("id");
 
   if (error) {
     return writeFailure(error, {
@@ -60,8 +62,15 @@ export async function PATCH(
       duplicate: "Another template already uses that id.",
     });
   }
+  const denied = deniedIfUntouched(
+    touched,
+    "Not allowed to edit this template.",
+  );
+  if (denied) return denied;
 
   if (input.managerTasks !== undefined) {
+    // rls-write-ok: the task insert below raises if the policy refuses, and
+    // the template update above has already been checked.
     await supabase
       .from("offboarding_tasks")
       .delete()
@@ -111,6 +120,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Template not found." }, { status: 404 });
   }
 
+  // rls-write-ok: the survivor read-back below turns a zero-row refusal into
+  // the 403 it was.
   const { error } = await supabase
     .from("offboarding_templates")
     .delete()

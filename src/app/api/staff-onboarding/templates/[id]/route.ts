@@ -7,6 +7,7 @@ import {
   templateToRow,
 } from "@/lib/api/mappers/staff-onboarding";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
 import { insertTemplateTasks } from "@/lib/api/onboarding-task-writes";
 import type { OnboardingTemplate } from "@/data/staff-onboarding";
 
@@ -55,10 +56,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Template not found." }, { status: 404 });
   }
 
-  const { error } = await supabase
+  const { data: touched, error } = await supabase
     .from("onboarding_templates")
     .update(templateToRow(input) as never)
-    .eq("id", existing.id);
+    .eq("id", existing.id)
+    .select("id");
 
   if (error) {
     return writeFailure(error, {
@@ -66,17 +68,25 @@ export async function PATCH(
       duplicate: "Another template already uses that id.",
     });
   }
+  const denied = deniedIfUntouched(
+    touched,
+    "Not allowed to edit this template.",
+  );
+  if (denied) return denied;
 
   // Only touch tasks when the caller sent them. A PATCH of just `status`
   // (activating a draft) must not silently empty the checklist.
   if (input.managerTasks !== undefined || input.employeeTasks !== undefined) {
     if (input.managerTasks !== undefined) {
+      // rls-write-ok: insertTemplateTasks below raises if the policy
+      // refuses, and the template update above has already been checked.
       await supabase
         .from("onboarding_manager_tasks")
         .delete()
         .eq("template_id", existing.id);
     }
     if (input.employeeTasks !== undefined) {
+      // rls-write-ok: as above -- the task insert is the loud one.
       await supabase
         .from("onboarding_employee_tasks")
         .delete()
@@ -118,10 +128,11 @@ export async function DELETE(
 
   // Tasks cascade with the template (`on delete cascade`), which is right: a
   // task has no meaning without the checklist it belongs to.
-  const { error } = await supabase
+  const { data: touched1, error } = await supabase
     .from("onboarding_templates")
     .delete()
-    .eq("id", existing.id);
+    .eq("id", existing.id)
+    .select("id");
 
   if (error) {
     return writeFailure(error, {
@@ -129,6 +140,11 @@ export async function DELETE(
       duplicate: "",
     });
   }
+  const denied1 = deniedIfUntouched(
+    touched1,
+    "Not allowed to delete this template.",
+  );
+  if (denied1) return denied1;
 
   // A refusal matches ZERO ROWS rather than erroring, so "denied" and "already
   // gone" look identical from the result. Reading back tells them apart.

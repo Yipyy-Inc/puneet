@@ -138,6 +138,8 @@ export async function DELETE(
   // A refusal matches ZERO ROWS rather than erroring, so "denied" and "already
   // gone" are indistinguishable from the result alone. Reading back tells them
   // apart — the same shape the roles-override route uses.
+  // rls-write-ok: the survivor read-back below turns a zero-row refusal
+  // into the 403 it was.
   const { error } = await supabase
     .from("clients")
     .delete()

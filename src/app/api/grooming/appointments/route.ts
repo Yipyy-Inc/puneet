@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
 import { getFacilityContext } from "@/lib/api/facility-context";
 import {
   APPOINTMENT_SELECT,
@@ -202,16 +203,22 @@ export async function PATCH(request: NextRequest) {
         .maybeSingle();
       stationUuid = (station?.id as string | undefined) ?? null;
     }
-    const { error: stationError } = await supabase
+    const { data: stationTouched, error: stationError } = await supabase
       .from("grooming_appointments")
       .update({ station_id: stationUuid } as never)
-      .eq("booking_id", booking.id);
+      .eq("booking_id", booking.id)
+      .select("booking_id");
     if (stationError) {
       return writeFailure(stationError, {
         denied: "Not allowed to change this appointment.",
         duplicate: "That station is already assigned.",
       });
     }
+    const stationDenied = deniedIfUntouched(
+      stationTouched,
+      "Not allowed to change this appointment.",
+    );
+    if (stationDenied) return stationDenied;
   }
 
   // The in-progress step checklist. Replaced whole, because that is how the
@@ -231,16 +238,22 @@ export async function PATCH(request: NextRequest) {
         { status: 422 },
       );
     }
-    const { error: progressError } = await supabase
+    const { data: progressTouched, error: progressError } = await supabase
       .from("grooming_appointments")
       .update({ session_progress: body.sessionProgress } as never)
-      .eq("booking_id", booking.id);
+      .eq("booking_id", booking.id)
+      .select("booking_id");
     if (progressError) {
       return writeFailure(progressError, {
         denied: "Not allowed to change this appointment.",
         duplicate: "That change conflicts with the current state.",
       });
     }
+    const progressDenied = deniedIfUntouched(
+      progressTouched,
+      "Not allowed to change this appointment.",
+    );
+    if (progressDenied) return progressDenied;
   }
 
   if (body.status !== undefined) {
@@ -254,10 +267,11 @@ export async function PATCH(request: NextRequest) {
 
     // Status only. check_in_at, check_out_at and estimated_ready_at are the
     // trigger's to write — see the header.
-    const { error: statusError } = await supabase
+    const { data: statusTouched, error: statusError } = await supabase
       .from("bookings")
       .update({ status: bookingStatus } as never)
-      .eq("id", booking.id);
+      .eq("id", booking.id)
+      .select("id");
 
     if (statusError) {
       return writeFailure(statusError, {
@@ -265,6 +279,11 @@ export async function PATCH(request: NextRequest) {
         duplicate: "That change conflicts with the current state.",
       });
     }
+    const statusDenied = deniedIfUntouched(
+      statusTouched,
+      "Not allowed to change this appointment.",
+    );
+    if (statusDenied) return statusDenied;
   }
 
   return new NextResponse(null, { status: 204 });

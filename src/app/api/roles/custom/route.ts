@@ -219,6 +219,7 @@ export async function PUT(request: NextRequest) {
   if (body.kind === "delete") {
     const { error } = await supabase
       .from("facility_custom_roles")
+      // rls-write-ok: a survivor read-back follows and reports the refusal.
       .delete()
       .eq("legacy_id", body.id);
     if (error) return failure(error);
@@ -243,6 +244,7 @@ export async function PUT(request: NextRequest) {
       const match = { custom_role_id: id, permission_key: body.key };
       const { error } = await supabase
         .from("facility_custom_role_permissions")
+        // rls-write-ok: a survivor read-back follows and reports the refusal.
         .delete()
         .match(match);
       if (error) return failure(error);
@@ -312,6 +314,7 @@ export async function PUT(request: NextRequest) {
     if (toRemove.length > 0) {
       const { error } = await supabase
         .from("staff_custom_roles")
+        // rls-write-ok: a survivor read-back follows and reports the refusal.
         .delete()
         .eq("staff_id", staffRow.id)
         .in("custom_role_id", toRemove);

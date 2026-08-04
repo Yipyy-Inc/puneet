@@ -32,6 +32,7 @@ There is **no test runner** in this project. "Green" = the CI gates plus a manua
 | `bun run prune`                 | Knip — dead-code / unused-export report                                    |
 | `bun run check:pricing`         | Project-specific pricing-consistency script                                |
 | `bun run check:settings-wiring` | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard) |
+| `bun run check:rls-writes`      | Fails if an API update/delete cannot tell an RLS refusal from a no-op      |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
 

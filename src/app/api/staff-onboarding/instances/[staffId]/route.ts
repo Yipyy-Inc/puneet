@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
 import {
   mintOnboardingToken,
   toByteaLiteral,
@@ -117,16 +118,24 @@ export async function PATCH(
       // reviewActivate — a reviewed instance with half-done sections would
       // read as unfinished forever.
       const now = new Date().toISOString();
-      const { error } = await supabase
+      const { data: touched, error } = await supabase
         .from("onboarding_instances")
         .update({ reviewed_at: now } as never)
-        .eq("id", instance.id);
+        .eq("id", instance.id)
+        .select("id");
       if (error) {
         return writeFailure(error, {
           denied: "Not allowed to activate this account.",
           duplicate: "",
         });
       }
+      const denied = deniedIfUntouched(
+        touched,
+        "Not allowed to activate this account.",
+      );
+      if (denied) return denied;
+      // rls-write-ok: follows the instance update above, which is checked.
+      // A caller refused there never reaches this line.
       await supabase
         .from("onboarding_sections")
         .update({ status: "complete", completed_at: now } as never)
@@ -146,7 +155,7 @@ export async function PATCH(
         .maybeSingle();
       const days = config?.invite_expiry_days ?? 7;
 
-      const { error } = await supabase
+      const { data: touched1, error } = await supabase
         .from("onboarding_instances")
         .update({
           token_hash: toByteaLiteral(hash),
@@ -155,13 +164,19 @@ export async function PATCH(
           ).toISOString(),
           expiry_notified_at: null,
         } as never)
-        .eq("id", instance.id);
+        .eq("id", instance.id)
+        .select("id");
       if (error) {
         return writeFailure(error, {
           denied: "Only a manager can reissue an onboarding link.",
           duplicate: "",
         });
       }
+      const denied1 = deniedIfUntouched(
+        touched1,
+        "Only a manager can reissue an onboarding link.",
+      );
+      if (denied1) return denied1;
       // Returned once. See the note in ../route.ts.
       return NextResponse.json({ token });
     }
@@ -192,16 +207,24 @@ export async function PATCH(
       // submitted_at is what makes the token work again (the RPC refuses a
       // submitted instance), which is the whole point of asking for a fix.
       if (body.taskId) {
+        // rls-write-ok: paired with the instance update below, which is
+        // checked; both are refused together or not at all.
         await supabase
           .from("onboarding_sections")
           .update({ status: "in_progress", completed_at: null } as never)
           .eq("instance_id", instance.id)
           .eq("task_key", body.taskId);
       }
-      await supabase
+      const { data: reopened } = await supabase
         .from("onboarding_instances")
         .update({ submitted_at: null } as never)
-        .eq("id", instance.id);
+        .eq("id", instance.id)
+        .select("id");
+      const reopenDenied = deniedIfUntouched(
+        reopened,
+        "Only a manager can reopen this onboarding.",
+      );
+      if (reopenDenied) return reopenDenied;
       break;
     }
 
@@ -211,8 +234,9 @@ export async function PATCH(
         .update({ resolved_at: new Date().toISOString() } as never)
         .eq("instance_id", instance.id)
         .eq("section_type", body.sectionType)
-        .is("resolved_at", null);
-      const { error } = body.taskId
+        .is("resolved_at", null)
+        .select("id");
+      const { data: resolvedRows, error } = body.taskId
         ? await query.eq("task_key", body.taskId)
         : await query;
       if (error) {

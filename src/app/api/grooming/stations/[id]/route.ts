@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
 
 // ============================================================================
 // One station: edit it, retire it.
@@ -110,10 +111,11 @@ export async function PATCH(
     return new NextResponse(null, { status: 204 });
   }
 
-  const { error } = await supabase
+  const { data: touched, error } = await supabase
     .from("grooming_stations")
     .update(patch as never)
-    .eq("id", stationId);
+    .eq("id", stationId)
+    .select("id");
 
   if (error) {
     return writeFailure(error, {
@@ -121,6 +123,11 @@ export async function PATCH(
       duplicate: "A station with that id already exists.",
     });
   }
+  const denied = deniedIfUntouched(
+    touched,
+    "Not allowed to change stations at this facility.",
+  );
+  if (denied) return denied;
 
   return new NextResponse(null, { status: 204 });
 }
@@ -147,10 +154,11 @@ export async function DELETE(
   // Safe as a hard delete: grooming_appointments.station_id is
   // `on delete set null`, so removing a table from the estate keeps every
   // appointment that happened on it.
-  const { error } = await supabase
+  const { data: touched1, error } = await supabase
     .from("grooming_stations")
     .delete()
-    .eq("id", stationId);
+    .eq("id", stationId)
+    .select("id");
 
   if (error) {
     return writeFailure(error, {
@@ -158,6 +166,11 @@ export async function DELETE(
       duplicate: "That station could not be removed.",
     });
   }
+  const denied1 = deniedIfUntouched(
+    touched1,
+    "Not allowed to remove stations at this facility.",
+  );
+  if (denied1) return denied1;
 
   return new NextResponse(null, { status: 204 });
 }

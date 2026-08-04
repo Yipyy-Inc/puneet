@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
 
 // ============================================================================
 // One prepaid package: edit it, retire it.
@@ -98,16 +99,22 @@ export async function PATCH(
   put("policy_notes", p.policyNotes ?? null);
 
   if (Object.keys(patch).length > 0) {
-    const { error } = await supabase
+    const { data: touched, error } = await supabase
       .from("prepaid_packages")
       .update(patch as never)
-      .eq("id", packageId);
+      .eq("id", packageId)
+      .select("id");
     if (error) {
       return writeFailure(error, {
         denied: "Not allowed to manage packages at this facility.",
         duplicate: "A package with that id already exists.",
       });
     }
+    const denied = deniedIfUntouched(
+      touched,
+      "Not allowed to manage packages at this facility.",
+    );
+    if (denied) return denied;
   }
 
   // The bundle is replaced whole — see the collection route's header for why
@@ -119,6 +126,8 @@ export async function PATCH(
         { status: 422 },
       );
     }
+    // rls-write-ok: the insert that follows raises 42501 if the policy
+    // refuses, so the request as a whole still fails loudly.
     await supabase
       .from("prepaid_package_lines")
       .delete()
@@ -165,10 +174,11 @@ export async function DELETE(
     return NextResponse.json({ error: "No such package." }, { status: 404 });
   }
 
-  const { error } = await supabase
+  const { data: removed, error } = await supabase
     .from("prepaid_packages")
     .delete()
-    .eq("id", packageId);
+    .eq("id", packageId)
+    .select("id");
 
   if (error) {
     return writeFailure(error, {
@@ -176,6 +186,11 @@ export async function DELETE(
       duplicate: "",
     });
   }
+  const denied = deniedIfUntouched(
+    removed,
+    "Not allowed to retire packages at this facility.",
+  );
+  if (denied) return denied;
 
   return new NextResponse(null, { status: 204 });
 }

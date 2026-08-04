@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
 import { MAX_UPLOAD_BYTES, sniffImageContentType } from "@/lib/api/file-type";
 
 // ============================================================================
@@ -211,16 +212,22 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  const { error } = await supabase
+  const { data: touched, error } = await supabase
     .from("grooming_photos")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
   if (error) {
     return writeFailure(error, {
       denied: "Not allowed to remove photos from this appointment.",
       duplicate: "",
     });
   }
+  const denied = deniedIfUntouched(
+    touched,
+    "Not allowed to remove photos from this appointment.",
+  );
+  if (denied) return denied;
 
   // Row first, then bytes. If this fails the object is orphaned rather than
   // dangling — invisible and collectable, instead of a broken image on a card.

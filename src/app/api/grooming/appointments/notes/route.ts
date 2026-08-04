@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
 
 // ============================================================================
 // The session record's writes: safety alerts and the handoff thread.
@@ -161,10 +162,11 @@ export async function DELETE(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
-  const { error } = await supabase
+  const { data: touched, error } = await supabase
     .from("grooming_alert_notes")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
 
   if (error) {
     return writeFailure(error, {
@@ -172,6 +174,11 @@ export async function DELETE(request: NextRequest) {
       duplicate: "",
     });
   }
+  const denied = deniedIfUntouched(
+    touched,
+    "Not allowed to remove alerts on this appointment.",
+  );
+  if (denied) return denied;
 
   return new NextResponse(null, { status: 204 });
 }

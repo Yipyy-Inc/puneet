@@ -436,7 +436,13 @@ Nothing was written; RLS held. But the API said it had been, and the screen woul
 
 **A test that only asserts the data is unchanged passes on this.** The assertion that caught it was on the _status code_.
 
-**Do instead:** every UPDATE and DELETE behind RLS asks for the rows it touched (`.select("id")`) and treats an empty result as a refusal. For a DELETE where "nothing to delete" is legitimate, count first and compare — that is the only way to tell a refusal from an empty set. See `src/app/api/grooming/stylists/[staffId]/route.ts`. The other write routes in this repo predate the finding and should be audited for it.
+**Do instead:** every UPDATE and DELETE behind RLS asks for the rows it touched (`.select("id")`) and treats an empty result as a refusal — `deniedIfUntouched` in `src/lib/api/rls-write.ts`. For a DELETE where "nothing to delete" is legitimate, count first and compare; that is the only way to tell a refusal from an empty set.
+
+**Audited and closed (2026-08-06).** All 43 mutations under `src/app/api/` now either count their rows (27) or carry `// rls-write-ok: <reason>` explaining why a later statement fails loudly (16). `bun run check:rls-writes` fails the build on a new one. Three things the audit turned up that are worth keeping:
+
+- **Seven sites were already correct** in a different shape — a survivor read-back after the delete (`clients`, `pets`, both `roles` routes). Two of them carried a comment describing this exact hazard. The prose was there; the check was not, in the routes that needed it.
+- **`.update()` is not only a Supabase verb.** `createHash(…).update(text)` in `staff-signatures` is a hash absorbing bytes. The gate now requires `.from(` in the same statement.
+- **The gate passed vacuously on its first run.** Adding the `.from(` filter against a slice that began at the mutation's own line — below the `.from("x")` line — made it "find" 2 mutations in the whole API instead of 43, and report green. A gate you have never watched fail is not evidence. It is now anchored to the statement, and was verified by breaking a route and watching it catch it.
 
 ### 🟡 `stylistIdForStaff` was synchronous because it searched an array
 

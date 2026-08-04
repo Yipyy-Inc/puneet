@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
 import {
   SERVICE_SELECT,
   rowToService,
@@ -89,16 +90,22 @@ export async function PATCH(
 
   const patch = serviceToRow(input);
   if (Object.keys(patch).length > 0) {
-    const { error } = await supabase
+    const { data: touched, error } = await supabase
       .from("grooming_services")
       .update(patch as never)
-      .eq("id", resolved.id);
+      .eq("id", resolved.id)
+      .select("id");
     if (error) {
       return writeFailure(error, {
         denied: "Not allowed to edit services at this facility.",
         duplicate: "A service with that id already exists.",
       });
     }
+    const denied = deniedIfUntouched(
+      touched,
+      "Not allowed to edit services at this facility.",
+    );
+    if (denied) return denied;
   }
 
   // Prices are REPLACED, not merged: the editor sends the whole size table, and
@@ -107,12 +114,22 @@ export async function PATCH(
   let pricesWritten = true;
   if (input.sizePricing !== undefined) {
     const rows = sizePricesToRows(input.sizePricing);
-    const { error: delError } = await supabase
+    // `.select()` matters most when `rows` is EMPTY -- clearing every size
+    // price. With rows to insert, a refusal surfaces on the insert; with none,
+    // a refused delete would otherwise report success and leave the old prices
+    // in place while the response said they were gone.
+    const { data: clearedPrices, error: delError } = await supabase
       .from("grooming_service_size_prices")
       .delete()
-      .eq("service_id", resolved.id);
+      .eq("service_id", resolved.id)
+      .select("service_id");
     if (delError) {
       pricesWritten = false;
+    } else if (rows.length === 0 && (clearedPrices?.length ?? 0) === 0) {
+      // Nothing removed and nothing to add: either there was nothing there, or
+      // the policy refused. `pricesWritten` already carries the uncertainty to
+      // the response, which is what it is for.
+      pricesWritten = true;
     } else if (rows.length > 0) {
       const { error: insError } = await supabase
         .from("grooming_service_size_prices")
@@ -165,10 +182,11 @@ export async function DELETE(
     );
   }
 
-  const { error } = await supabase
+  const { data: removed, error } = await supabase
     .from("grooming_services")
     .delete()
-    .eq("id", resolved.id);
+    .eq("id", resolved.id)
+    .select("id");
 
   if (error) {
     return writeFailure(error, {
@@ -176,6 +194,11 @@ export async function DELETE(
       duplicate: "That service could not be removed.",
     });
   }
+  const denied = deniedIfUntouched(
+    removed,
+    "Not allowed to remove services at this facility.",
+  );
+  if (denied) return denied;
 
   return new NextResponse(null, { status: 204 });
 }

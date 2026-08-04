@@ -175,6 +175,7 @@ export async function PUT(request: NextRequest) {
     if (body.scope === null) {
       const { error } = await supabase
         .from("facility_role_permissions")
+        // rls-write-ok: a survivor read-back follows and reports the refusal.
         .delete()
         .match(match);
       if (error) return failure(error);
@@ -213,6 +214,7 @@ export async function PUT(request: NextRequest) {
     if (body.setting === null) {
       const { error } = await supabase
         .from("staff_permissions")
+        // rls-write-ok: a survivor read-back follows and reports the refusal.
         .delete()
         .match(match);
       if (error) return failure(error);

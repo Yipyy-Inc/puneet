@@ -226,6 +226,8 @@ export async function POST(request: NextRequest) {
   if (lineError) {
     // Compensation: a bundle with no contents is not a bundle, and the pricing
     // view would report it as free.
+    // rls-write-ok: compensation inside an error path. The response is
+    // already a failure; a refusal here changes nothing the caller sees.
     await supabase.from("prepaid_packages").delete().eq("id", packageId);
     return writeFailure(lineError, {
       denied: "Not allowed to manage packages at this facility.",

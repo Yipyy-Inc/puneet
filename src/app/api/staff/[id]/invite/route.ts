@@ -366,6 +366,9 @@ async function rollbackInviteStatus(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   staffRowId: string,
 ) {
+  // rls-write-ok: compensation inside a failure path. The caller is already
+  // being told the invitation was not sent; a refusal here changes nothing
+  // they see, and the account stays exactly as it was.
   await supabase
     .from("staff")
     .update({ status: "inactive" } as never)
