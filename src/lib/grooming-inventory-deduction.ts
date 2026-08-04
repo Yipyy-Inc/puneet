@@ -7,19 +7,31 @@
 
 import type {
   GroomingAppointment,
+  GroomingPackage,
   ProductUsage,
   ProductUsageLog,
   DeductionResult,
 } from "@/types/grooming";
-import { groomingPackages, groomingProducts } from "@/data/grooming";
+// `groomingPackages` is gone from this import: the menu is a parameter now,
+// because this is a plain module and cannot call a hook to fetch it.
+import { groomingProducts } from "@/data/grooming";
 
 export type { DeductionResult };
 
 /**
  * Deduct products from inventory when a grooming appointment is completed
  */
+/**
+ * `menu` is REQUIRED and sits before `groomerName` deliberately.
+ *
+ * It used to be a module import. Now it comes from Postgres, and a default of
+ * `[]` would let a caller that forgot it get a confident "Package X not found"
+ * with `success: false` — a wrong answer that looks like a real one. Required,
+ * and second, so the compiler names every call site instead.
+ */
 export function deductProductsForAppointment(
   appointment: GroomingAppointment,
+  menu: GroomingPackage[],
   groomerName: string = "System",
 ): DeductionResult {
   const result: DeductionResult = {
@@ -30,9 +42,7 @@ export function deductProductsForAppointment(
   };
 
   // Find the package used for this appointment
-  const packageUsed = groomingPackages.find(
-    (pkg) => pkg.id === appointment.packageId,
-  );
+  const packageUsed = menu.find((pkg) => pkg.id === appointment.packageId);
 
   if (!packageUsed) {
     result.success = false;
@@ -123,7 +133,10 @@ export function deductProductsForAppointment(
 /**
  * Check if products are available for a package before booking
  */
-export function checkProductAvailability(packageId: string): {
+export function checkProductAvailability(
+  packageId: string,
+  menu: GroomingPackage[],
+): {
   available: boolean;
   unavailableProducts: Array<{
     productId: string;
@@ -132,7 +145,7 @@ export function checkProductAvailability(packageId: string): {
     required: number;
   }>;
 } {
-  const packageUsed = groomingPackages.find((pkg) => pkg.id === packageId);
+  const packageUsed = menu.find((pkg) => pkg.id === packageId);
 
   if (!packageUsed || !packageUsed.productUsage) {
     return { available: true, unavailableProducts: [] };
@@ -177,7 +190,10 @@ export function checkProductAvailability(packageId: string): {
 /**
  * Get product usage summary for a package
  */
-export function getPackageProductUsage(packageId: string): ProductUsage[] {
-  const packageUsed = groomingPackages.find((pkg) => pkg.id === packageId);
+export function getPackageProductUsage(
+  packageId: string,
+  menu: GroomingPackage[],
+): ProductUsage[] {
+  const packageUsed = menu.find((pkg) => pkg.id === packageId);
   return packageUsed?.productUsage || [];
 }

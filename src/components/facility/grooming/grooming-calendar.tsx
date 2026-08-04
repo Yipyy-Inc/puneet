@@ -56,7 +56,7 @@ import {
   findStylistTimeConflict,
   getBookedStationIdsInWindow,
 } from "@/lib/grooming-scheduling";
-import { groomingPackages } from "@/data/grooming";
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { buildBookingChangeMessage } from "@/lib/grooming-post-booking";
 import {
   AlertDialog,
@@ -2236,6 +2236,12 @@ export function GroomingCalendar() {
     groomingQueries.appointments(),
   );
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
+  // The menu, for the skill check on reassignment below. This one is not just a
+  // label: a stale `requiredSkillLevel` decides whether a groomer may be given
+  // the appointment at all.
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
   const { entries: waitlist } = useGroomingWaitlist();
 
   // Drag-and-drop reassign/reschedule edits, merged over the (static mock)
@@ -2279,7 +2285,7 @@ export function GroomingCalendar() {
     if (targetStylistId !== apt.stylistId) {
       const targetStylist = stylistsData.find((s) => s.id === targetStylistId);
       if (!targetStylist) return;
-      const pkg = groomingPackages.find((p) => p.id === apt.packageId);
+      const pkg = groomingMenu.find((p) => p.id === apt.packageId);
       if (pkg && !stylistMeetsSkillRequirement(targetStylist, pkg)) {
         toast.error(
           `${targetStylist.name} isn't qualified for ${apt.packageName}.`,

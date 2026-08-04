@@ -8,7 +8,9 @@ import { users } from "@/data/users";
 import { defaultServiceAddOns } from "@/data/service-addons";
 import { daycareRates } from "@/data/daycare";
 import { boardingRates } from "@/data/boarding";
-import { groomingPackages } from "@/data/grooming";
+// `groomingPackages` is gone from this import: the menu arrives on
+// BuildUnifiedEventsInput, because this module cannot fetch it itself.
+import type { GroomingPackage } from "@/types/grooming";
 import { trainingPackages } from "@/data/training";
 import type { FacilityTask } from "@/data/facility-tasks";
 import type { Booking } from "@/types/booking";
@@ -382,6 +384,14 @@ interface BuildUnifiedEventsInput {
   completedAddOns?: CompletedAddOnEntry[];
   viewerKey?: string;
   resources?: FacilityResource[];
+  /**
+   * The facility's grooming menu, for the rate-colour lookup.
+   *
+   * Passed in rather than imported: this module is not a component and cannot
+   * fetch it. Optional so the one caller can supply it as it loads — an empty
+   * list costs a default chip colour, which is the pre-existing behaviour.
+   */
+  groomingMenu?: GroomingPackage[];
 }
 
 function resourceTypeLabel(type: string): string {
@@ -827,9 +837,23 @@ function getAddOnColor(name: string): string | undefined {
 }
 
 let _rateColorLookup: Map<string, string> | null = null;
-function getRateColor(service: string, basePrice: number): string | undefined {
-  if (!_rateColorLookup) {
+// The menu the cache above was built from.
+//
+// The cache used to be built once and kept forever, which was fine while every
+// rate list was a module constant. The grooming menu is fetched now, so the map
+// has to be rebuilt when it changes — otherwise the first render freezes the
+// colours and a service added later never gets its own. Compared by reference:
+// TanStack Query hands back the same array until the data actually changes.
+let _rateColorMenu: GroomingPackage[] | null = null;
+
+function getRateColor(
+  service: string,
+  basePrice: number,
+  groomingMenu: GroomingPackage[],
+): string | undefined {
+  if (!_rateColorLookup || _rateColorMenu !== groomingMenu) {
     _rateColorLookup = new Map();
+    _rateColorMenu = groomingMenu;
     type RateEntry = { basePrice?: number; price?: number; color?: string };
     const add = (svc: string, rates: RateEntry[]) => {
       for (const r of rates) {
@@ -841,7 +865,7 @@ function getRateColor(service: string, basePrice: number): string | undefined {
     };
     add("daycare", daycareRates as RateEntry[]);
     add("boarding", boardingRates as RateEntry[]);
-    add("grooming", groomingPackages as RateEntry[]);
+    add("grooming", groomingMenu as RateEntry[]);
     add("training", trainingPackages as RateEntry[]);
   }
   return _rateColorLookup.get(`${service.toLowerCase()}-${basePrice}`);
@@ -1138,6 +1162,7 @@ function buildBookingEvents(
   clients: Client[],
   facilityId: number,
   decorationContext: DecorationContext,
+  groomingMenu: GroomingPackage[],
 ): OperationsCalendarEvent[] {
   const { petLookup } = buildClientLookups(clients);
 
@@ -1164,7 +1189,11 @@ function buildBookingEvents(
       const roleGroup = resolveRoleGroup(staffRole, serviceLabel);
       const addOns = extractBookingAddOns(booking);
       const resourceType = inferBookingResourceType(booking);
-      const rateColor = getRateColor(booking.service, booking.basePrice);
+      const rateColor = getRateColor(
+        booking.service,
+        booking.basePrice,
+        groomingMenu,
+      );
 
       return {
         id: `booking-${booking.id}`,
@@ -2051,6 +2080,7 @@ export function buildUnifiedEvents(
       input.clients,
       input.facilityId,
       decorationContext,
+      input.groomingMenu ?? [],
     ),
     // Evaluations still surface for ALL bookings (including boarding/daycare)
     ...buildEvaluationEvents(

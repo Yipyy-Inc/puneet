@@ -580,6 +580,8 @@ The last two are plain `.ts` libraries, not components, so they cannot call a ho
 
 **Do instead:** convert the four components with `groomingCatalogueQueries.services()` as done in the booking path; for the two libs, pass the menu as an argument rather than reaching for a module import.
 
+> **Resolved 2026-08-06.** All six converted, plus `GroomingSection` and `GroomingCheckInOutSection`, which the compiler surfaced once the menu became a required parameter. `bun run check:grooming-menu` now fails on any import of the fixture outside `src/data/`. One correction to the note above: the calendar's use was **not** just a name — `getRateColor` feeds the chip colour, and the drag-to-reassign handler reads `requiredSkillLevel` to decide whether a groomer may take the appointment at all. See the 2026-08-06 snapshot below.
+
 ### 🟡 A test that compares the fixture to the table proves nothing
 
 The table was seeded FROM `src/data/grooming.ts`, so the names and prices agree today and would agree just as well if every screen were still reading the array. Any assertion of the form "the screen shows what the API returns" passes in both worlds.
@@ -593,6 +595,28 @@ The table was seeded FROM `src/data/grooming.ts`, so the names and prices agree 
 `GroomingPackagePicker` carried a comment saying edits in the Grooming Rates editor reflect on the booking cards "via setQueryData" on `["grooming","packages"]`. That write was removed when the editor started saving for real (see the note in `service-dialog.tsx`), so the cards had been serving a frozen copy ever since — with a comment explaining why they were fresh.
 
 **Do instead:** when you delete a write, grep for the comments that promised it.
+
+## Snapshot (2026-08-06, the last fixture readers of the grooming menu)
+
+### 🔴 An optional parameter let a regression compile clean
+
+Threading the menu into `buildUnifiedEvents` I typed it `groomingMenu?: GroomingPackage[]` and defaulted it to `[]` at the call into `getRateColor`. Typecheck passed, lint passed, the build passed — and the single caller in `OperationsCalendar.tsx` was passing nothing, so **every grooming chip on the operations calendar would have lost its colour**. Caught by re-reading the call site, not by any gate.
+
+The same shape in `deductProductsForAppointment` went the other way and proved the point: making `menu` **required**, and putting it before the defaulted `groomerName`, made the compiler name both call sites — including two that were silently passing `groomerName` into the menu slot. A default of `[]` there would have produced a confident `"Package X not found"` with `success: false`: a wrong answer that reads like a real one.
+
+**Do instead:** when replacing a module import with a parameter, make it required. An optional one converts a compile error into a silent behaviour change, and the thing you are replacing was never optional.
+
+### 🟡 A module-level memo cache outlives fetched data
+
+`getRateColor` built `_rateColorLookup` once and kept it forever, which was correct while all four rate lists were module constants. Feeding it a fetched menu without touching the cache would have frozen the colours at whatever the first render saw — including the empty array before the query resolves. It now stores the menu it was built from and rebuilds on reference change.
+
+**Do instead:** any module-level cache keyed on data that becomes fetched needs an invalidation key, or it silently pins the first value.
+
+### 🟢 Two dead exports in the deduction lib
+
+`checkProductAvailability` and `getPackageProductUsage` in `lib/grooming-inventory-deduction.ts` have no callers anywhere in `src/`. They were given the new `menu` parameter for consistency rather than deleted, because boy-scout removal is opt-in here. Knip does not single them out — its unused-export list is ~996 entries, so it is not a useful signal for this.
+
+**Do instead:** delete them as part of a scoped dead-code pass, not in passing.
 
 ## How to add to this map
 

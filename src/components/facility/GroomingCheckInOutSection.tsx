@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -97,6 +100,11 @@ const _getPetImage = (petId: number) =>
 
 export function GroomingCheckInOutSection() {
   const { recordCheckout, cancelScheduled } = useReputation();
+  // Needed for the product deduction on completion: the menu says which
+  // products a service consumes, and it is the facility's to edit.
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [checkInOutMode, setCheckInOutMode] = useState<
@@ -325,6 +333,7 @@ export function GroomingCheckInOutSection() {
 
             const deductionResult = deductProductsForAppointment(
               originalAppointment,
+              groomingMenu,
               selectedAppointment.stylistName,
             );
 

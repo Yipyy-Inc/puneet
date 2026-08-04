@@ -57,7 +57,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { groomingAppointments, groomingPackages } from "@/data/grooming";
+import { groomingAppointments } from "@/data/grooming";
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import type {
   Stylist,
   StylistCapacity,
@@ -403,9 +404,12 @@ export default function StylistsPage() {
     return map;
   }, [mergedStylists, stylistHours]);
 
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
   const activePackages = useMemo(
-    () => groomingPackages.filter((p) => p.isActive),
-    [],
+    () => groomingMenu.filter((p) => p.isActive),
+    [groomingMenu],
   );
 
   const [analyticsRange, setAnalyticsRange] = useState<ReportRange>(() =>

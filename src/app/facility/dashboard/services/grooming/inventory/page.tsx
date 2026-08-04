@@ -48,9 +48,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useQuery } from "@tanstack/react-query";
+
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
+import type { GroomingPackage } from "@/types/grooming";
 import {
   groomingProducts,
-  groomingPackages,
   groomingAppointments,
   inventoryOrders,
   getInventoryStats,
@@ -160,9 +163,18 @@ function formatStockRange(product: GroomingProduct): string {
   return `${product.currentStock.toLocaleString()} / ${product.maxStock.toLocaleString()} ${unit}`;
 }
 
-/** Find all package names that use a given product */
-function getUsedInServices(productId: string): string[] {
-  return groomingPackages
+/**
+ * Find all package names that use a given product.
+ *
+ * The menu is a PARAMETER rather than a module import. It comes from Postgres
+ * now, and a module-scope function cannot call a hook — so the component that
+ * has the data passes it in, and this stays pure and testable.
+ */
+function getUsedInServices(
+  productId: string,
+  menu: GroomingPackage[],
+): string[] {
+  return menu
     .filter((pkg) => pkg.productUsage?.some((u) => u.productId === productId))
     .map((pkg) => pkg.name);
 }
@@ -183,12 +195,16 @@ function getStockLevel(
 // package lists this product in `productUsage`. Required-only deductions are
 // included (optional add-on usage is treated as "may have been used" and also
 // counted so the manager sees the upper-bound consumption rate).
-function getUsageInRange(productId: string, sinceDate: string): number {
+function getUsageInRange(
+  productId: string,
+  sinceDate: string,
+  menu: GroomingPackage[],
+): number {
   let total = 0;
   for (const apt of groomingAppointments) {
     if (apt.status !== "completed") continue;
     if (apt.date < sinceDate) continue;
-    const pkg = groomingPackages.find((p) => p.id === apt.packageId);
+    const pkg = menu.find((p) => p.id === apt.packageId);
     if (!pkg?.productUsage) continue;
     for (const usage of pkg.productUsage) {
       if (usage.productId === productId) total += usage.quantity;
@@ -274,6 +290,9 @@ function StockCell({ product }: { product: GroomingProduct }) {
 }
 
 function UsageCell({ productId }: { productId: string }) {
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
   // Gate behind mount so SSR and first client render match (Date.now() drifts).
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -283,8 +302,8 @@ function UsageCell({ productId }: { productId: string }) {
   }
 
   const now = new Date();
-  const week = getUsageInRange(productId, startOfWeekIso(now));
-  const month = getUsageInRange(productId, startOfMonthIso(now));
+  const week = getUsageInRange(productId, startOfWeekIso(now), groomingMenu);
+  const month = getUsageInRange(productId, startOfMonthIso(now), groomingMenu);
 
   if (week === 0 && month === 0) {
     return <span className="text-muted-foreground text-xs">No usage yet</span>;
@@ -304,7 +323,10 @@ function UsageCell({ productId }: { productId: string }) {
 }
 
 function UsedInCell({ productId }: { productId: string }) {
-  const services = getUsedInServices(productId);
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
+  const services = getUsedInServices(productId, groomingMenu);
   if (services.length === 0)
     return <span className="text-muted-foreground text-xs">—</span>;
   return (
@@ -345,6 +367,10 @@ const emptyForm = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function InventoryPage() {
+  // The delete dialog warns which services use the product being removed.
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<GroomingProduct | null>(
     null,
@@ -1611,11 +1637,15 @@ export default function InventoryPage() {
             <DialogDescription>
               Are you sure you want to remove &quot;{deletingProduct?.name}
               &quot;? This cannot be undone.
-              {getUsedInServices(deletingProduct?.id ?? "").length > 0 && (
+              {getUsedInServices(deletingProduct?.id ?? "", groomingMenu)
+                .length > 0 && (
                 <span className="mt-2 block text-yellow-700 dark:text-yellow-400">
                   ⚠ This product is used in{" "}
-                  {getUsedInServices(deletingProduct?.id ?? "").join(", ")}.
-                  Removing it will affect those services.
+                  {getUsedInServices(
+                    deletingProduct?.id ?? "",
+                    groomingMenu,
+                  ).join(", ")}
+                  . Removing it will affect those services.
                 </span>
               )}
             </DialogDescription>

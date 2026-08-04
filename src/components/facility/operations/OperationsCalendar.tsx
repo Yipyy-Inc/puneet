@@ -5,6 +5,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { getModuleWorkflowQuestionnaire } from "@/data/custom-services";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
@@ -828,6 +831,13 @@ export function OperationsCalendar() {
 
   const convertedLeadBookings = useConvertedLeadBookings();
   const convertedLeadEventIds = useConvertedLeadEventIds();
+  // Supplies the rate-colour lookup in operations-calendar.ts, which cannot
+  // fetch the menu itself. `groomingMenu` is optional on the input type, so
+  // forgetting it here would compile cleanly and quietly drop the colour off
+  // every grooming chip.
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
 
   const allEvents = useMemo(() => {
     const merged = buildUnifiedEvents({
@@ -844,6 +854,7 @@ export function OperationsCalendar() {
       completedAddOns,
       viewerKey: userId,
       resources,
+      groomingMenu,
     });
 
     // Flip converted leads: hide the source external event, add its booking.
@@ -867,6 +878,7 @@ export function OperationsCalendar() {
     resources,
     convertedLeadBookings,
     convertedLeadEventIds,
+    groomingMenu,
   ]);
 
   // Lead capture (Tasks 9–10): ingest external-calendar events → dedupe →

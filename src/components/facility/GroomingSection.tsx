@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useMemo, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -77,6 +80,11 @@ const findClientForPet = (petId: number) => {
 
 export function GroomingSection() {
   const router = useRouter();
+  // Needed for the product deduction on completion: the menu says which
+  // products a service consumes, and it is the facility's to edit.
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [inProgressQuery, setInProgressQuery] = useState("");
   const [completedQuery, setCompletedQuery] = useState("");
@@ -204,6 +212,7 @@ export function GroomingSection() {
         ({ deductProductsForAppointment }) => {
           const deductionResult = deductProductsForAppointment(
             appointment,
+            groomingMenu,
             appointment.stylistName,
           );
 

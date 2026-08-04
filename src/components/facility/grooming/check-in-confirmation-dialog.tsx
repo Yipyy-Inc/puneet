@@ -34,7 +34,9 @@ import { useStylistIdForStaff } from "@/lib/api/stylists";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
 import { groomingAddOnsList } from "@/data/grooming-pricing-rules";
-import { groomingPackages } from "@/data/grooming";
+import { useQuery } from "@tanstack/react-query";
+
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import type {
   ArrivalBehavior,
   ArrivalCoatCondition,
@@ -261,9 +263,12 @@ export function CheckInConfirmationDialog({
 
   // Look up this appointment's service config to get the default matted
   // surcharge amount the facility has configured.
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
   const packageConfig = useMemo(
-    () => groomingPackages.find((p) => p.id === apt?.packageId),
-    [apt?.packageId],
+    () => groomingMenu.find((p) => p.id === apt?.packageId),
+    [groomingMenu, apt?.packageId],
   );
 
   // Seed local state from the appointment each time the dialog opens.
