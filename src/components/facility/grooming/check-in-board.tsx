@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
 import {
   applyCheckInResult,
@@ -77,7 +78,9 @@ export function CheckInBoard() {
 
   const { data: apptData = [] } = useQuery(groomingQueries.appointments());
   const { data: stylistData = [] } = useQuery(groomingQueries.stylists());
-  const { data: packageData = [] } = useQuery(groomingQueries.packages());
+  const { data: packageData = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),
   );

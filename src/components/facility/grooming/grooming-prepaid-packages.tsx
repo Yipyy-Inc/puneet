@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { groomingQueries } from "@/lib/api/grooming";
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import {
   useDeletePrepaidPackage,
   usePrepaidPackages,
@@ -116,7 +117,7 @@ export function GroomingPrepaidPackages() {
   // Section 3B / Table 4 — package (grooming style/bundle) management requires
   // grooming_manage_styles (all-access fallback keeps it for admin).
   const canManageStyles = usePermission("grooming_manage_styles");
-  const { data: services = [] } = useQuery(groomingQueries.packages());
+  const { data: services = [] } = useQuery(groomingCatalogueQueries.services());
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),
   );

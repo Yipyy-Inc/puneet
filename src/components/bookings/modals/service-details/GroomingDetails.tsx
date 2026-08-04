@@ -25,7 +25,11 @@ import { useSettings } from "@/hooks/use-settings";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingScheduling } from "@/hooks/use-grooming-scheduling";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
-import { groomingPackages } from "@/data/grooming";
+// The grooming menu comes from Postgres, not from the fixture this used to
+// import. The rates screen writes `grooming_services`, and since 20260806560000
+// the appointment is priced from that same table — so a fixture here would quote
+// the customer one number while the booking recorded another.
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { GROOMING_ADD_ONS as ADD_ONS } from "@/data/grooming-add-ons";
 import { defaultServiceAddOns } from "@/data/service-addons";
 import { SERVICE_ACCENTS } from "../constants";
@@ -345,10 +349,15 @@ function GroomingPackagePicker({
   applyEligibilityFilter?: boolean;
 }) {
   const accent = SERVICE_ACCENTS.grooming;
-  // Read packages through the query factory so duration / price edits made in
-  // the Grooming Rates editor (which writes to ["grooming","packages"] via
-  // setQueryData) reflect on the cards without a page reload.
-  const { data: livePackages = [] } = useQuery(groomingQueries.packages());
+  // The facility's own menu, from Postgres. This used to read a query factory
+  // backed by a fixture, and the comment here claimed the Rates editor kept it
+  // fresh via setQueryData — that write was removed when the editor started
+  // saving for real (see service-dialog.tsx), so the cards had been serving a
+  // frozen copy ever since. Same key as the editor now, so an edit there
+  // invalidates these.
+  const { data: livePackages = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
   // Only show active packages. The catalog card shows the starting price —
   // the price for the smallest pet size — because the final price depends
   // on the pet (size / breed / coat / stylist), which is resolved later.
@@ -545,13 +554,13 @@ function GroomingStylistPicker({
     groomingQueries.appointments(),
   );
 
+  const { data: menu = [] } = useQuery(groomingCatalogueQueries.services());
+
   const activeStylists = useMemo(
     () => stylistsData.filter((s) => s.status === "active"),
     [stylistsData],
   );
-  const selectedPackage = groomingPackages.find(
-    (p) => p.id === selectedPackageId,
-  );
+  const selectedPackage = menu.find((p) => p.id === selectedPackageId);
 
   // Mirror NewAppointmentDialog's three-layer filter: package assignment >
   // stylist qualifications > package skill-level gate.
@@ -816,9 +825,8 @@ function GroomingStagesEditor({
   setStages: (stages: AppointmentStage[]) => void;
 }) {
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
-  const selectedPackage = groomingPackages.find(
-    (p) => p.id === selectedPackageId,
-  );
+  const { data: menu = [] } = useQuery(groomingCatalogueQueries.services());
+  const selectedPackage = menu.find((p) => p.id === selectedPackageId);
   const baseDuration = selectedPackage?.duration ?? 60;
 
   function stylistName(id: string): string {
@@ -1003,9 +1011,8 @@ function GroomingPriceOverride({
     groomingQueries.allPetServicePricing(),
   );
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
-  const selectedPackage = groomingPackages.find(
-    (p) => p.id === selectedPackageId,
-  );
+  const { data: menu = [] } = useQuery(groomingCatalogueQueries.services());
+  const selectedPackage = menu.find((p) => p.id === selectedPackageId);
   const primaryPet = selectedPets[0];
 
   const resolved = useMemo(() => {
@@ -1178,12 +1185,14 @@ function GroomingSchedule({
   );
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
 
+  const { data: menu = [] } = useQuery(groomingCatalogueQueries.services());
+
   // The route preview tints the van pin with the assigned groomer's color
   // so multi-van routes don't blur together. Fall back to the brand pink.
   const vanColorForStylist =
     stylistsData.find((s) => s.id === stylistId)?.calendarColor ?? "#ec4899";
 
-  const selectedPkg = groomingPackages.find((p) => p.id === packageId);
+  const selectedPkg = menu.find((p) => p.id === packageId);
   const serviceDurationForSlots = manualDuration ?? selectedPkg?.duration ?? 0;
 
   // Density dot for each calendar day — null = closed / off-day.
@@ -1751,7 +1760,8 @@ function GroomingAddOns({
   setAutoAttachedAddOnIds: (ids: string[]) => void;
 }) {
   const accent = SERVICE_ACCENTS.grooming;
-  const selectedPackage = groomingPackages.find((p) => p.id === packageId);
+  const { data: menu = [] } = useQuery(groomingCatalogueQueries.services());
+  const selectedPackage = menu.find((p) => p.id === packageId);
   const primaryPet = selectedPets[0];
 
   // Re-evaluate the package's default-add-on rules against the primary pet.

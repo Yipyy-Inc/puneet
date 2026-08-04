@@ -15,7 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
-import { groomingPackages } from "@/data/grooming";
+import { useQuery } from "@tanstack/react-query";
+
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import type { GroomingWaitlistEntry } from "@/data/grooming-waitlist";
 import { useGroomingWaitlist } from "@/hooks/use-grooming-waitlist";
 import { cn } from "@/lib/utils";
@@ -66,7 +68,10 @@ export function GroomingWaitlistDialog({
 
   const pet = selectedPets[0]; // Primary pet on the entry; multi-pet entries
   // would each get their own waitlist row — out of scope for this form.
-  const pkg = groomingPackages.find((p) => p.id === packageId);
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
+  const pkg = groomingMenu.find((p) => p.id === packageId);
 
   const toggleDay = (d: number) =>
     setDaysOfWeek((prev) =>

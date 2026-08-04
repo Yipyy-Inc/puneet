@@ -22,6 +22,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { groomingQueries } from "@/lib/api/grooming";
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import {
   calculateStylistPerformance,
   calculateStylistThirtyDayStats,
@@ -85,7 +86,7 @@ export function GroomerProfileSheet({
   const { data: allAppointments = [] } = useQuery(
     groomingQueries.appointments(),
   );
-  const { data: packages = [] } = useQuery(groomingQueries.packages());
+  const { data: packages = [] } = useQuery(groomingCatalogueQueries.services());
 
   const stylistId = groomer?.stylistId;
 

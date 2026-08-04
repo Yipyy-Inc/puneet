@@ -28,7 +28,9 @@ import {
 } from "lucide-react";
 import { facilityStaff } from "@/data/facility-staff";
 import type { ServiceModule } from "@/types/facility-staff";
-import { groomingPackages } from "@/data/grooming";
+import { useQuery } from "@tanstack/react-query";
+
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -276,6 +278,12 @@ export function ConfirmStep({
   tipAmount,
   onEditStep,
 }: ConfirmStepProps) {
+  // Names the chosen groom on the confirmation. Read from the facility's menu
+  // rather than a fixture so the summary cannot name a service the booking is
+  // not actually for.
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
+  );
   const serviceInfo = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
   const ServiceIcon = serviceInfo?.icon ?? PawPrint;
   const hasAddons = extraServices.length > 0;
@@ -343,7 +351,7 @@ export function ConfirmStep({
               if (!serviceType) return "";
               // For grooming, serviceType is the package id — resolve to name.
               if (selectedService === "grooming") {
-                const pkg = groomingPackages.find((p) => p.id === serviceType);
+                const pkg = groomingMenu.find((p) => p.id === serviceType);
                 return pkg ? ` · ${pkg.name}` : "";
               }
               return ` · ${serviceType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}`;
@@ -1212,9 +1220,7 @@ export function ConfirmStep({
               {(() => {
                 if (!serviceType) return "";
                 if (selectedService === "grooming") {
-                  const pkg = groomingPackages.find(
-                    (p) => p.id === serviceType,
-                  );
+                  const pkg = groomingMenu.find((p) => p.id === serviceType);
                   return pkg ? ` (${pkg.name})` : "";
                 }
                 return ` (${serviceType.replace(/_/g, " ")})`;

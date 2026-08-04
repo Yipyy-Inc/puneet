@@ -86,7 +86,7 @@ import { getNextEstimateId } from "@/data/estimates";
 import { facilities } from "@/data/facilities";
 import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 import { facilityStaff } from "@/data/facility-staff";
-import { groomingPackages } from "@/data/grooming";
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
 import { notificationToggles } from "@/data/settings";
 import { digitalWaivers, waiverSignatures } from "@/data/additional-features";
@@ -299,6 +299,13 @@ export function BookingModal({
   // when the appointment finally hits PaymentDialog.
   const { data: groomingPetPricingOverrides = [] } = useQuery(
     groomingQueries.allPetServicePricing(),
+  );
+  // The facility's grooming menu, from Postgres. What this quotes must be what
+  // create_booking records: since 20260806560000 the appointment's price comes
+  // from `grooming_services`, so a fixture here would show the customer one
+  // number and file another.
+  const { data: groomingMenu = [] } = useQuery(
+    groomingCatalogueQueries.services(),
   );
   // Travel-zone surcharge (Step 6) + ZIP-prefix tax (Step 7). Same lookups
   // the facility dialog and PaymentDialog use — single source of truth so
@@ -1393,7 +1400,7 @@ export function BookingModal({
       // which it isn't at this wizard stage). Falls back to the category
       // base when no package is picked yet.
       const pkg = serviceType
-        ? groomingPackages.find((p) => p.id === serviceType)
+        ? groomingMenu.find((p) => p.id === serviceType)
         : undefined;
       if (pkg && selectedPets.length > 0) {
         basePrice = selectedPets.reduce((sum, pet) => {
@@ -1783,6 +1790,11 @@ export function BookingModal({
     groomingZipTaxRates,
     trainingCart,
     currentTrainingLineItems,
+    // The grooming menu is fetched, so the quote has to recompute when it
+    // arrives. Without it here the first paint prices the groom off an empty
+    // list and never corrects itself — and the React Compiler rejects a memo
+    // that reaches into fetched state without depending on it.
+    groomingMenu,
   ]);
 
   // Check if service requires evaluation

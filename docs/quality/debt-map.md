@@ -559,6 +559,41 @@ That asymmetry is deliberate — `customer_package_lines` is the snapshot of wha
 
 **Do instead:** when boarding/daycare/training catalogues land in Postgres, extend the same trigger per module rather than adding a second mechanism.
 
+## Snapshot (2026-08-06, the booking flow reads the facility's menu)
+
+### 🔴 Six surfaces still read the grooming menu from the fixture
+
+The booking path now reads `grooming_services` through `useGroomingServices`. These do not, and each one resolves a package **name** from a module array:
+
+| File                                                            | What it does with it           |
+| --------------------------------------------------------------- | ------------------------------ |
+| `components/facility/grooming/check-in-confirmation-dialog.tsx` | names the service at check-in  |
+| `components/facility/grooming/grooming-calendar.tsx`            | names the service on a card    |
+| `app/facility/dashboard/services/grooming/inventory/page.tsx`   | product deduction per package  |
+| `app/facility/dashboard/services/grooming/stylists/page.tsx`    | the active-package filter list |
+| `lib/grooming-inventory-deduction.ts`                           | product usage per package      |
+| `lib/operations-calendar.ts`                                    | rate entries                   |
+
+None of them quotes a price at booking time, which is why they were left: the sharp edge was the quote disagreeing with what `create_booking` records, and that is closed. What they will do is **name a service wrongly** — a groom booked for a service the facility added last week shows a blank or stale name at check-in.
+
+The last two are plain `.ts` libraries, not components, so they cannot call a hook. Converting them means threading the menu in from a caller, which is a real refactor rather than the import swap the other four need.
+
+**Do instead:** convert the four components with `groomingCatalogueQueries.services()` as done in the booking path; for the two libs, pass the menu as an argument rather than reaching for a module import.
+
+### 🟡 A test that compares the fixture to the table proves nothing
+
+The table was seeded FROM `src/data/grooming.ts`, so the names and prices agree today and would agree just as well if every screen were still reading the array. Any assertion of the form "the screen shows what the API returns" passes in both worlds.
+
+`grooming-menu-live.spec.ts` gets around it by creating a service the fixture cannot contain and then looking for it in the wizard. Confirmed by reverting `GroomingPackagePicker` to the fixture: the API-level test still passes and only the wizard test fails.
+
+**Do instead:** when a fixture seeded the table it is meant to be replaced by, don't compare the two — introduce something only one of them can have.
+
+### 🟢 The Rates editor's `setQueryData` comment outlived the write it described
+
+`GroomingPackagePicker` carried a comment saying edits in the Grooming Rates editor reflect on the booking cards "via setQueryData" on `["grooming","packages"]`. That write was removed when the editor started saving for real (see the note in `service-dialog.tsx`), so the cards had been serving a frozen copy ever since — with a comment explaining why they were fresh.
+
+**Do instead:** when you delete a write, grep for the comments that promised it.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

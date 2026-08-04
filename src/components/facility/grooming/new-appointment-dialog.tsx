@@ -36,6 +36,7 @@ import { DensityCalendar } from "./density-calendar";
 import { SlotGrid } from "./slot-grid";
 import { MobileRouteMapPreview } from "./mobile-route-map-preview";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import {
   groomingQueries,
   resolveEffectivePricing,
@@ -349,7 +350,7 @@ export function NewAppointmentDialog({
     clients,
   ]);
 
-  const { data: packages = [] } = useQuery(groomingQueries.packages());
+  const { data: packages = [] } = useQuery(groomingCatalogueQueries.services());
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
   // Hoisted out of the pricing memos below. A memo that reached into
   // `stylistsData` needed the whole array as a dependency, which the React

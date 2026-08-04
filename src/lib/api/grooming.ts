@@ -5,11 +5,9 @@
 // `stylists` and `stylistAvailability` are gone from this import: groomers come
 // from /api/grooming/stylists, which joins the grooming profile onto the real
 // staff row (20260806500000).
-import {
-  groomingPackages,
-  groomingProducts,
-  inventoryOrders,
-} from "@/data/grooming";
+// `groomingPackages` is gone from this import too: the menu comes from
+// /api/grooming/services via `useGroomingServices`.
+import { groomingProducts, inventoryOrders } from "@/data/grooming";
 // `mockCustomerPackages` is gone from this import too: what a customer owns
 // comes from /api/packages/owned. The type stays — it is the shape
 // six screens already read, and the mapper fills it from Postgres.
@@ -351,10 +349,20 @@ export const groomingQueries = {
     queryKey: ["grooming", "stylist-availability"] as const,
     queryFn: async () => (await fetchStylistPayload()).availability,
   }),
-  packages: () => ({
-    queryKey: ["grooming", "packages"] as const,
-    queryFn: async () => groomingPackages as GroomingPackage[],
-  }),
+  // `packages` used to sit here, serving `groomingPackages` from the fixture,
+  // and is gone for the same reason `prepaidPackages` below is: the menu comes
+  // from `useGroomingServices` (src/lib/api/grooming-catalogue.ts), and a
+  // second factory on its own query key is a second door to the same data that
+  // only ever returned the stale copy.
+  //
+  // It mattered more here than it looks. The facility's rates screen writes
+  // grooming services to Postgres; this factory answered from a module array
+  // seeded to match. So a service added there was invisible everywhere a groom
+  // is booked, and a deactivated one stayed bookable. Since 20260806560000 the
+  // appointment is also PRICED from `grooming_services` -- so a price edited on
+  // the rates screen would have been quoted to the customer from the fixture
+  // and recorded from the table. Two numbers for one groom.
+  //
   // `prepaidPackages` used to sit here, serving the fixture. It is gone rather
   // than repointed: the catalogue comes from `usePrepaidPackages`
   // (src/lib/api/prepaid-packages.ts), and this factory had no callers left
