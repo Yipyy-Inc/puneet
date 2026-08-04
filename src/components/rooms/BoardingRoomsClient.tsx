@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Building2 } from "lucide-react";
 import { toast } from "sonner";
@@ -25,7 +25,16 @@ export function BoardingRoomsClient({ facilityId = 11 }: Props) {
     updateRoom,
     deleteRoom,
     toggleRoom,
+    error: writeError,
   } = useRooms();
+
+  // A save can now be REFUSED — by the `manage_services` policy, or because a
+  // category still holds rooms, or because a room has stays recorded against
+  // it. While this page wrote to localStorage none of that could happen and it
+  // had nowhere to say so.
+  useEffect(() => {
+    if (writeError) toast.error(writeError);
+  }, [writeError]);
 
   // Scope to this facility + boarding service
   const categories = allCategories.filter(

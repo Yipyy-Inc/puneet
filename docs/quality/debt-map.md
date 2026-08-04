@@ -754,6 +754,8 @@ So the split is narrower than it was — one model, one id space, one seed — b
 
 **Do instead:** move `useRooms` onto `/api/rooms` wholesale — reads and writes together. A read-only migration would leave Save buttons that appear to work, which is worse than the current state where at least the page is consistently local.
 
+> **Resolved 2026-08-06.** `useRooms` is TanStack Query over `/api/rooms` with mutations against `/api/rooms/categories` and `/api/rooms/units`. `resetRooms` is gone — restoring a fixture over a shared database is not a button. The room model is now one model, in one place, edited and booked from the same rows.
+
 ### 🟡 `RoomCategory.facilityId` is a number the rows do not carry
 
 `RoomCategory` and `FacilityRoom` both declare `facilityId: number` — the app's legacy ref — while the tables key on the facility uuid. The mapper fills it from `DEMO_FACILITY_LEGACY_ID` rather than reshaping the app's types.
@@ -767,6 +769,32 @@ That is fine while there is one facility and RLS scopes every read to it, and it
 `boardingCapacity` (total 30, standard/premium/luxury) and `BoardingGuest.packageType` ("Premium Suite") are still in `src/data/boarding.ts`, no longer read by the boarding page — its occupancy card counts active `facility_rooms` and groups by category name. `getOccupancyStats()` remains exported and is now unused by that page.
 
 **Do instead:** delete them with the rest of the boarding fixture when guests move to Postgres; they are harmless while nothing reads them, and misleading if something starts.
+
+## Snapshot (2026-08-06, the Rooms page writes to the database)
+
+### 🔴 Deleting a category no longer takes its rooms with it
+
+The localStorage version removed the category **and every unit in it**, silently. `facility_rooms.category_id` is `ON DELETE RESTRICT`, so the API now refuses and says how many rooms are in the way. Likewise a room with any stay recorded against it cannot be deleted — deactivating is the operation the facility actually wants, and the message says so.
+
+This is a **behaviour change on an existing screen**: a manager who could previously delete a populated category now cannot. That is the point — one of those rooms can have an animal in it tonight — but it will surprise someone.
+
+**Do instead:** if bulk removal is wanted, build "empty this category" as its own action that deletes the rooms first and reports what it could not. Don't relax the FK.
+
+### 🟡 A test whose cleanup cancels is not self-cleaning
+
+`rooms-admin.spec.ts` books into a room it created, and the first version cancelled the booking in cleanup. **Cancelling only RELEASES the stay** — the row survives, the room stays undeletable, and the second run collided on the category id. Caught by running the suite twice, which is the only way to catch it.
+
+The fix uses the real mechanism: `PUT /api/boarding/stays` with `roomId: null` deletes the stay, then the room and category go.
+
+**Do instead:** run a writing suite twice before trusting its cleanup. Once proves it runs; twice proves it can run again.
+
+### 🟢 Creating a category and its units is two writes, not one
+
+`POST /api/rooms/categories` takes `unitCount` and writes the category, then the units. If the units fail the category survives — recoverable by adding them, and both halves gate on `manage_services`, so a refusal on the second is close to impossible.
+
+Stated rather than assumed. The alternative is an RPC, which buys atomicity for a case that cannot realistically arise.
+
+**Do instead:** if a third write joins them, make it an RPC rather than adding another partial-failure message.
 
 ## How to add to this map
 
