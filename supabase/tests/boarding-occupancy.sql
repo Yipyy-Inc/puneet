@@ -355,6 +355,132 @@ exception when others then
   reset role; perform pg_temp.t('K8  cross-facility room', false, sqlerrm);
 end $$;
 
+-- ============================================================================
+-- Moving a guest between kennels (20260806640000).
+--
+-- `create_booking` places a guest at booking time; this is the ops board's
+-- actual job -- assign later, move, or pull back to unassigned. Uses the same
+-- fixtures above, on dates nothing else touches.
+-- ============================================================================
+
+-- ── A1: assigned after the fact, moved, then cleared ───────────────────────
+do $$
+declare v_ref bigint; v_room text; v_after text; v_gone integer;
+begin
+  perform pg_temp.as_owner();
+  set local role authenticated;
+
+  -- Deliberately created with NO room: the state the board exists to resolve.
+  select booking_ref into v_ref from public.create_booking(
+    pg_temp.stay('00000000-0000-0000-0000-0000001b0040', '2027-01-01', '2027-01-04'),
+    array['00000000-0000-0000-0000-0000001b0050']::uuid[], null, null);
+
+  v_room  := public.assign_boarding_room(v_ref, 'BD-01');
+  v_after := public.assign_boarding_room(v_ref, 'BD-02');
+  perform public.assign_boarding_room(v_ref, null);
+  reset role;
+
+  select count(*) into v_gone
+    from public.boarding_stays s
+    join public.bookings b on b.id = s.booking_id
+   where b.ref = v_ref;
+
+  -- Unassigning DELETES the stay rather than releasing it: the guest was never
+  -- placed there, so there is no history worth keeping. `released_at` is for a
+  -- cancelled booking, where the stay happened and then stopped.
+  perform pg_temp.t('A1  a kennel can be assigned after the fact, moved, and cleared',
+    v_room = 'BD-01' and v_after = 'BD-02' and v_gone = 0,
+    format('assigned=%s moved=%s remaining=%s', v_room, v_after, v_gone));
+exception when others then
+  reset role; perform pg_temp.t('A1  assign / move / clear', false, sqlerrm);
+end $$;
+
+-- ── A2: a refused move leaves the guest where they were ────────────────────
+--
+-- The half that matters. A move that fails must not also lose the room the
+-- guest already had.
+do $$
+declare v_a bigint; v_b bigint; v_raised boolean; v_still text;
+begin
+  perform pg_temp.as_owner();
+  set local role authenticated;
+
+  select booking_ref into v_a from public.create_booking(
+    pg_temp.stay('00000000-0000-0000-0000-0000001b0040', '2027-02-01', '2027-02-05'),
+    array['00000000-0000-0000-0000-0000001b0050']::uuid[], null,
+    jsonb_build_object('roomId', 'BD-01'));
+
+  select booking_ref into v_b from public.create_booking(
+    pg_temp.stay('00000000-0000-0000-0000-0000001b0041', '2027-02-02', '2027-02-06'),
+    array['00000000-0000-0000-0000-0000001b0051']::uuid[], null,
+    jsonb_build_object('roomId', 'BD-02'));
+
+  begin
+    perform public.assign_boarding_room(v_b, 'BD-01');
+    v_raised := false;
+  exception when others then v_raised := true; end;
+  reset role;
+
+  select r.legacy_id into v_still
+    from public.boarding_stays s
+    join public.bookings b on b.id = s.booking_id
+    join public.boarding_rooms r on r.id = s.room_id
+   where b.ref = v_b;
+
+  perform pg_temp.t('A2  a refused move does not cost the guest the kennel they had',
+    v_raised and v_still = 'BD-02',
+    format('raised=%s still in=%s', v_raised, v_still));
+exception when others then
+  reset role; perform pg_temp.t('A2  refused move', false, sqlerrm);
+end $$;
+
+-- ── A3: reception may place a guest, not overbook ──────────────────────────
+--
+-- Both halves. A permission check that refused everything would pass the deny
+-- on its own.
+do $$
+declare v_ref bigint; v_moved text; v_raised boolean;
+begin
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  select booking_ref into v_ref from public.create_booking(
+    pg_temp.stay('00000000-0000-0000-0000-0000001b0040', '2027-03-01', '2027-03-03'),
+    array['00000000-0000-0000-0000-0000001b0050']::uuid[], null, null);
+  reset role;
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000001b0002', true);
+  set local role authenticated;
+  v_moved := public.assign_boarding_room(v_ref, 'BD-01');
+  begin
+    perform public.assign_boarding_room(v_ref, 'BD-02', 'squeeze them in');
+    v_raised := false;
+  exception when others then v_raised := true; end;
+  reset role;
+
+  perform pg_temp.t('A3  reception can place a guest but cannot overbook',
+    v_moved = 'BD-01' and v_raised,
+    format('placed=%s override refused=%s', v_moved, v_raised));
+exception when others then
+  reset role; perform pg_temp.t('A3  reception scope', false, sqlerrm);
+end $$;
+
+-- ── A4: anon cannot call it ────────────────────────────────────────────────
+do $$
+declare v_allowed boolean;
+begin
+  set local role anon;
+  begin
+    perform public.assign_boarding_room(1, 'BD-01');
+    v_allowed := true;
+  exception when others then v_allowed := false; end;
+  reset role;
+
+  perform pg_temp.t('A4  anon cannot execute assign_boarding_room',
+    not v_allowed, format('allowed=%s', v_allowed));
+exception when others then
+  reset role; perform pg_temp.t('A4  anon execute', false, sqlerrm);
+end $$;
+
 -- ── Report ──────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result, name, detail
   from tap order by n;

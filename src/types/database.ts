@@ -3539,6 +3539,14 @@ export type Database = {
       };
     };
     Functions: {
+      assign_boarding_room: {
+        Args: {
+          p_booking_ref: number;
+          p_override_reason?: string | null;
+          p_room_id?: string | null;
+        };
+        Returns: string | null;
+      };
       create_booking: {
         Args: {
           p_booking: Json;

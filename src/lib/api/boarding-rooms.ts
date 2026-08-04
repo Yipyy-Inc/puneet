@@ -41,13 +41,16 @@ async function fetchRooms(from?: string, to?: string) {
   return (await response.json()) as BoardingRoomsPayload;
 }
 
-export const boardingRoomKeys = {
+// Module-private: the two hooks below are the whole surface. They are exported
+// the moment something outside this file needs them — an exported key nobody
+// imports is the same dead-with-a-plausible-name shape as an unused factory.
+const boardingRoomKeys = {
   all: ["boarding-rooms"] as const,
   window: (from?: string, to?: string) =>
     [...boardingRoomKeys.all, from ?? "now", to ?? "now"] as const,
 };
 
-export const boardingRoomQueries = {
+const boardingRoomQueries = {
   /** Rooms and who is in them right now. */
   current: () => ({
     queryKey: boardingRoomKeys.window(),
@@ -77,6 +80,20 @@ export function useBoardingRoomsForStay(from?: string, to?: string) {
     enabled: Boolean(from && to),
   });
 }
+
+// NO `useAssignBoardingRoom` HOOK HERE YET, on purpose.
+//
+// `PUT /api/boarding/stays` exists and is covered end to end, but nothing in
+// the app can call it: the only room-assignment surface is
+// BoardingRequestDialog, which operates on a `BoardingBookingRequest` — a
+// PRE-booking object with no booking ref — so its assignments are genuinely
+// local until the request becomes a booking. There is no screen that shows a
+// booked guest's kennel, let alone changes it.
+//
+// A hook with no component is the thing the previous commit's debt-map entry
+// warned about ("a factory with no callers is not a migration target, it is
+// dead code with a plausible name"). It gets written when the ops board that
+// needs it does.
 
 /**
  * Occupancy totals, derived.

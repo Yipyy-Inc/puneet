@@ -278,6 +278,104 @@ test.describe("the kennel list comes from the facility", () => {
     await expect(page.getByText(/premium \//i)).toHaveCount(0);
   });
 
+  // ── Moving a guest, over HTTP ────────────────────────────────────────────
+  //
+  // supabase/tests/boarding-occupancy.sql covers the RPC (A1–A4). This checks
+  // the route around it: the status codes, and that `roomId: null` really does
+  // free the kennel rather than merely answering 200.
+  test("a guest can be placed, moved and cleared", async ({ page }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const when = nights(150);
+    const created = await page.request.post("/api/bookings", {
+      data: stayBody({ ...when, unitAssignment: undefined }),
+    });
+    expect(created.status(), await created.text()).toBe(201);
+    const booking = (await created.json()) as { id: number };
+
+    const occupiedIn = async () => {
+      const payload = (await (
+        await page.request.get(
+          `/api/boarding/rooms?from=${when.startDate}&to=${when.endDate}`,
+        )
+      ).json()) as RoomsPayload;
+      return payload.occupied.map((o) => o.roomId);
+    };
+
+    // Created with no room, so nothing is held yet.
+    expect(await occupiedIn()).not.toContain(ROOM);
+
+    const placed = await page.request.put("/api/boarding/stays", {
+      data: { bookingRef: booking.id, roomId: ROOM },
+    });
+    expect(placed.status(), await placed.text()).toBe(200);
+    expect(await occupiedIn()).toContain(ROOM);
+
+    const moved = await page.request.put("/api/boarding/stays", {
+      data: { bookingRef: booking.id, roomId: OTHER_ROOM },
+    });
+    expect(moved.status()).toBe(200);
+    const afterMove = await occupiedIn();
+    expect(afterMove).toContain(OTHER_ROOM);
+    // The kennel they left is free again — the assertion that would fail if
+    // the move inserted a second stay instead of updating the one.
+    expect(afterMove).not.toContain(ROOM);
+
+    const cleared = await page.request.put("/api/boarding/stays", {
+      data: { bookingRef: booking.id, roomId: null },
+    });
+    expect(cleared.status()).toBe(200);
+    expect(await occupiedIn()).not.toContain(OTHER_ROOM);
+  });
+
+  test("moving a guest into a taken kennel is a 409, and they keep theirs", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const when = nights(180);
+    const first = await page.request.post("/api/bookings", {
+      data: stayBody({ ...when, unitAssignment: ROOM }),
+    });
+    expect(first.status()).toBe(201);
+
+    const second = await page.request.post("/api/bookings", {
+      data: stayBody({ ...when, unitAssignment: OTHER_ROOM }),
+    });
+    expect(second.status()).toBe(201);
+    const mover = (await second.json()) as { id: number };
+
+    const res = await page.request.put("/api/boarding/stays", {
+      data: { bookingRef: mover.id, roomId: ROOM },
+    });
+    expect(res.status()).toBe(409);
+    expect(((await res.json()) as { error?: string }).error).toContain(
+      "already taken",
+    );
+
+    // Still in the room they had. A failed move must not also evict them.
+    const payload = (await (
+      await page.request.get(
+        `/api/boarding/rooms?from=${when.startDate}&to=${when.endDate}`,
+      )
+    ).json()) as RoomsPayload;
+    expect(payload.occupied.map((o) => o.roomId)).toContain(OTHER_ROOM);
+  });
+
+  test("a body with no room at all is a 422, not a silent clear", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    // `undefined` and `null` mean different things: missing is a malformed
+    // request, null is "clear the assignment". Sending nothing must not be
+    // read as the second.
+    const res = await page.request.put("/api/boarding/stays", {
+      data: { bookingRef: 1 },
+    });
+    expect(res.status()).toBe(422);
+  });
+
   test("signed out gets 401, not an empty room list", async ({ browser }) => {
     // A fresh context: an empty list would read as "this facility has no
     // kennels" rather than "you are not signed in".

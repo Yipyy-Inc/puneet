@@ -694,6 +694,33 @@ Deleted rather than repointed, the same call made for `groomingQueries.packages`
 
 **Do instead:** before repointing a factory at an API, grep its callers. A factory with none is not a migration target, it is dead code with a plausible name.
 
+## Snapshot (2026-08-06, moving a guest between kennels)
+
+### 🔴 There is no screen that shows a booked guest's kennel
+
+`PUT /api/boarding/stays` and `assign_boarding_room` exist and are covered end to end — **and nothing in the app calls them.** The only room-assignment surface is `BoardingRequestDialog`, which operates on a `BoardingBookingRequest`: a **pre-booking** object with no booking ref, so its assignments are genuinely local until the request becomes a booking.
+
+So a kennel can be set at booking time and changed over HTTP, but an operator has no way to do the second thing. The ops board that shows current guests against their rooms is the missing piece, and it is a feature rather than a wiring job.
+
+**Do instead:** build the board against `/api/boarding/rooms` (which already returns rooms + occupancy per window) and `PUT /api/boarding/stays`; don't extend `BoardingRequestDialog` to do it, because a request is not a booking.
+
+### 🟡 `ON CONFLICT DO UPDATE` hides which half was refused
+
+The natural way to write "assign or move" is one upsert. Under RLS it is a trap, because the two halves fail differently:
+
+- an INSERT refused by `with check` **raises** 42501
+- an UPDATE refused by `using` **matches nothing and reports success**
+
+`ON CONFLICT DO UPDATE` blurs them, and its `row_count` is 1 whether it inserted or updated — so the zero-row check that normally catches a silent refusal would sit there looking like a guard while catching nothing. `assign_boarding_room` writes the two branches out separately for that reason.
+
+**Do instead:** when a statement can take either an insert or an update path under RLS, write both and check the update's row count. An upsert is only safe where the policies for both are identical and you don't need to tell them apart.
+
+### 🟢 Unassign deletes the stay; cancel releases it
+
+Two ways to stop occupying a kennel, deliberately different. A cancelled booking keeps its `boarding_stays` row with `released_at` set — the stay happened and then stopped, and who had the room matters. An unassignment deletes the row: the guest was never placed there, and a record saying "held kennel 3, released, reason none" would be a fiction.
+
+**Do instead:** don't unify them. The asymmetry is the meaning.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
