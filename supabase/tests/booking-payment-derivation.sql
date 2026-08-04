@@ -541,6 +541,102 @@ exception when others then
   reset role; perform pg_temp.t('R3  spending credit', false, sqlerrm);
 end $$;
 
+-- ── B1/B2: a batch is one transaction, and skips what owes nothing ─────────
+--
+-- `settle_bookings` (20260806800000) is what the client overview's "Collect
+-- Payment" button calls. Three bookings, one of them already paid: two
+-- payments recorded, the settled one absent from the result rather than
+-- charged again.
+do $$
+declare a uuid; b uuid; c uuid; v_out jsonb; v_rows integer;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  a := pg_temp.new_booking(50);
+  b := pg_temp.new_booking(30);
+  c := pg_temp.new_booking(20);
+  perform pg_temp.pay(c, 20);
+
+  v_out := public.settle_bookings(
+    '00000000-0000-0000-0000-0000001c0020', 'terminal', array[a, b, c]);
+  reset role;
+
+  select count(*) into v_rows from public.payments where booking_id in (a, b, c);
+
+  perform pg_temp.t('B1  the batch returns what it took, and skips the settled one',
+    jsonb_array_length(v_out) = 2,
+    format('returned=%s', v_out));
+  perform pg_temp.t('B2  three bookings, three payment rows, none charged twice',
+    v_rows = 3, format('payment rows=%s', v_rows));
+exception when others then
+  reset role; perform pg_temp.t('B1  batch', false, sqlerrm);
+end $$;
+
+-- ── B3: a stale screen cannot overcharge ───────────────────────────────────
+--
+-- The reason the RPC takes booking ids and NOT amounts (Decision 1). The
+-- dialog may have been open while somebody else took $70 of a $100 booking.
+do $$
+declare a uuid; v_out jsonb; v_taken numeric;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  a := pg_temp.new_booking(100);
+  perform pg_temp.pay(a, 70);
+  v_out := public.settle_bookings(
+    '00000000-0000-0000-0000-0000001c0020', 'e-transfer', array[a]);
+  reset role;
+
+  v_taken := (v_out->0->>'amount')::numeric;
+  perform pg_temp.t('B3  $30 is taken, not the $100 the screen was showing',
+    v_taken = 30, format('taken=%s', v_taken));
+exception when others then
+  reset role; perform pg_temp.t('B3  stale screen', false, sqlerrm);
+end $$;
+
+-- ── B4: a booking from elsewhere takes the whole batch down ────────────────
+do $$
+declare a uuid; v_err text := 'no error'; v_rows integer;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  a := pg_temp.new_booking(40);
+  begin
+    -- A facility this booking does not belong to.
+    perform public.settle_bookings(
+      '00000000-0000-0000-0000-0000001c0021', 'cash', array[a]);
+  exception when others then v_err := sqlerrm;
+  end;
+  reset role;
+
+  select count(*) into v_rows from public.payments where booking_id = a;
+  perform pg_temp.t('B4  a foreign facility id raises and takes nothing',
+    v_err <> 'no error' and v_rows = 0,
+    format('err=%s rows=%s', left(v_err, 50), v_rows));
+end $$;
+
+-- ── B5: retail can settle a batch, the receptionist''s daily job ───────────
+do $$
+declare a uuid; b uuid; v_out jsonb;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  a := pg_temp.new_booking(15);
+  b := pg_temp.new_booking(25);
+  reset role;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0002');
+  set local role authenticated;
+  v_out := public.settle_bookings(
+    '00000000-0000-0000-0000-0000001c0020', 'cash', array[a, b]);
+  reset role;
+
+  perform pg_temp.t('B5  retail settles a batch with financial_take_payment alone',
+    jsonb_array_length(v_out) = 2, format('returned=%s', v_out));
+exception when others then
+  reset role; perform pg_temp.t('B5  retail batch', false, sqlerrm);
+end $$;
+
 -- ── Results ────────────────────────────────────────────────────────────────
 
 do $$

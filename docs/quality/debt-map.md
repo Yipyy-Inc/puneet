@@ -959,6 +959,44 @@ The assertions are deltas, not absolutes. The first version asserted the upcomin
 
 **Do instead:** for a conditionally-rendered figure, wait on something that proves the DATA arrived, not on the figure itself. And assert deltas against a seeded record.
 
+## Snapshot (2026-08-06, Collect Payment settles what it lists)
+
+### 🔴 The receipt printed before the write, and the write was `() => {}`
+
+`BulkPaymentModal.handleConfirm` called `onConfirm`, closed the dialog, opened a print window reading **"PAYMENT COMPLETE · All N invoices marked as paid"**, and toasted success — in that order, unconditionally, with `onConfirm` returning nothing anybody could await.
+
+On the client overview `onConfirm` was `() => {}`. So the receipt was the _only_ thing that happened: a customer could leave holding paper for money nobody recorded.
+
+This was found by looking at the button the previous change had just put a red banner behind — the dead handler was the thing I went looking for, and the receipt was worse.
+
+**Do instead:** a receipt is an assertion about the ledger. It waits for the ledger. If a confirm handler can't be awaited, that is the bug, not a style question.
+
+### 🔴 A `useState` initialiser is a snapshot of the first render
+
+`const [selected] = useState(() => new Set(invoices.map(...)))`. The dialog is mounted permanently by its parents rather than rendered when open, so that initialiser ran on a first render where the overview had not fetched its bookings yet. The set stayed empty forever and **Continue was permanently disabled**.
+
+It was invisible until the previous change moved that page's bookings from a synchronous fixture to a query. Nothing about the modal changed; its input became asynchronous.
+
+Fixed by inverting the state — it now tracks what the user _unticked_, so an invoice arriving later is selected because nothing says otherwise, and there is nothing to keep in step. Syncing it in an effect also works and is what the React Compiler rejects (`set-state-in-effect`); `setTimeout(fn, 0)` has been used elsewhere in this repo to dodge that rule and is worse than not needing the effect.
+
+**Do instead:** when migrating a fixture read to a query, grep the consumers for `useState(() =>` and `useMemo` seeds. A prop that used to be populated on the first render is the whole failure mode.
+
+### 🟡 The bulk RPC takes booking ids and no amounts
+
+`settle_bookings` (20260806800000) reads each balance itself and returns what it took. A dialog left open while somebody else settles a booking would otherwise send a stale figure — proved by B3: the screen asks for $100 on a booking with $70 already paid, and $30 is taken.
+
+The receipt then prints from the **response**, not from what the dialog was showing, which is the only arrangement where the paper and the ledger cannot disagree. Already-settled bookings come back _absent_ rather than as a zero, and the toast names how many were skipped.
+
+**Do instead:** for any "settle these" action, send the identifiers and let the database price it. A client-supplied amount is a client-supplied price.
+
+### 🟢 `terminal` and `e-transfer` are now real tenders
+
+The dialog has always offered Card, Cash, Terminal and E-Transfer; `payments.method` knew about card-on-file, new-card, cash, package-pass and store-credit. Mapping a terminal tap or an Interac transfer onto `new-card` would record how the money arrived incorrectly, and reconciliation is the job that cares. The CHECK was widened — additive, so no existing row is invalidated.
+
+Note the two payment surfaces still disagree about tenders: grooming checkout offers card-on-file and package-pass, which the bulk dialog does not, and neither offers the other's full set.
+
+**Do instead:** don't map an unknown tender onto a known one to satisfy a CHECK. Widen the CHECK or drop the option.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

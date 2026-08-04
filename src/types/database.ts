@@ -3692,6 +3692,15 @@ export type Database = {
         Args: { p_token: string };
         Returns: boolean;
       };
+      settle_bookings: {
+        Args: {
+          p_booking_ids: string[];
+          p_facility_id: string;
+          p_method: string;
+          p_receipt_channels?: string[];
+        };
+        Returns: Json;
+      };
       submit_onboarding: { Args: { p_token: string }; Returns: boolean };
     };
     Enums: {

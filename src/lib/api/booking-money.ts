@@ -239,6 +239,51 @@ export function useRefundBooking() {
   });
 }
 
+/** What `settle_bookings` actually took, per booking. */
+export interface SettledBooking {
+  bookingRef: number;
+  amount: number;
+}
+
+/**
+ * Settle several bookings in one transaction.
+ *
+ * NO AMOUNTS ARE SENT. The database reads each balance and returns what it
+ * took, so a dialog left open while somebody else took a payment cannot
+ * overcharge — and the receipt is printed from the RESULT rather than from the
+ * figures the dialog was showing.
+ *
+ * Bookings that owed nothing come back absent, not zero. The caller compares
+ * what it asked for against what happened.
+ */
+export function useSettleBookings() {
+  const invalidate = useSettleInvalidation();
+  return useMutation({
+    mutationFn: async (input: {
+      bookingRefs: number[];
+      method: string;
+    }): Promise<SettledBooking[]> => {
+      const response = await fetch("/api/payments/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const parsed = (await response.json().catch(() => null)) as {
+        settled?: SettledBooking[];
+        error?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(parsed?.error ?? "Could not record those payments.");
+      }
+      return (parsed?.settled ?? []).map((s) => ({
+        bookingRef: s.bookingRef,
+        amount: Number(s.amount),
+      }));
+    },
+    onSuccess: invalidate,
+  });
+}
+
 /**
  * Cancel a booking, refunding first when there is money to return.
  *

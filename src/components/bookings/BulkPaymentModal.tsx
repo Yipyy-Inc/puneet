@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,11 +43,21 @@ interface BulkPaymentModalProps {
   onOpenChange: (open: boolean) => void;
   clientName: string;
   invoices: UnpaidInvoice[];
+  /**
+   * Records the payments and resolves with what was ACTUALLY taken.
+   *
+   * Returns a promise so the receipt can wait for it. The previous signature
+   * was fire-and-forget, and the receipt printed regardless — see the note on
+   * `handleConfirm`.
+   *
+   * It carries BOOKING ids, not invoice ids: `invoiceId` is a display label
+   * this component is handed, and on most of these bookings it is
+   * `10000 + bookingId`, invented at render time. Nothing can be settled by it.
+   */
   onConfirm: (payment: {
-    invoiceIds: string[];
-    totalAmount: number;
+    bookingIds: number[];
     method: string;
-  }) => void;
+  }) => Promise<{ bookingRef: number; amount: number }[]>;
 }
 
 type PaymentMethod = "card" | "cash" | "terminal" | "e_transfer";
@@ -70,20 +80,36 @@ export function BulkPaymentModal({
   invoices,
   onConfirm,
 }: BulkPaymentModalProps) {
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(invoices.map((i) => i.invoiceId)),
-  );
+  // ── The state is what the user UNTICKED, not what is ticked ──────────────
+  //
+  // The obvious shape — a set of selected ids seeded from `invoices` — needs
+  // the seed to be re-run whenever `invoices` changes, and this dialog is
+  // mounted permanently by its parents rather than rendered when open. A
+  // `useState` initialiser therefore runs once, on a first render where the
+  // client overview has not fetched its bookings yet: the set stayed empty
+  // forever and Continue was permanently disabled. That was invisible while
+  // the list came from a synchronous fixture.
+  //
+  // Syncing it in an effect works and is what the React Compiler rejects
+  // (set-state-in-effect). Inverting removes the question: everything is
+  // selected because nothing is unticked, so an invoice that arrives later is
+  // selected the moment it appears, with nothing to keep in step.
+  const [unticked, setUnticked] = useState<Set<string>>(new Set());
+  const isSelected = (id: string) => !unticked.has(id);
+  const selectedCount = invoices.filter((i) => isSelected(i.invoiceId)).length;
   const [method, setMethod] = useState<PaymentMethod>("card");
   const [step, setStep] = useState<"select" | "confirm">("select");
+  // The confirm button is now a network call, so it can be pressed twice.
+  const [busy, setBusy] = useState(false);
 
   const selectedInvoices = useMemo(
-    () => invoices.filter((i) => selected.has(i.invoiceId)),
-    [invoices, selected],
+    () => invoices.filter((i) => !unticked.has(i.invoiceId)),
+    [invoices, unticked],
   );
   const totalAmount = selectedInvoices.reduce((s, i) => s + i.remaining, 0);
 
   const toggleInvoice = (id: string) => {
-    setSelected((prev) => {
+    setUnticked((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -92,27 +118,64 @@ export function BulkPaymentModal({
   };
 
   const selectAll = () => {
-    if (selected.size === invoices.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(invoices.map((i) => i.invoiceId)));
-    }
+    setUnticked(
+      selectedCount === invoices.length
+        ? new Set(invoices.map((i) => i.invoiceId))
+        : new Set(),
+    );
   };
 
-  const handleConfirm = () => {
+  // ── The receipt waits for the money ───────────────────────────────────────
+  //
+  // This used to call `onConfirm`, close, print "PAYMENT COMPLETE · All N
+  // invoices marked as paid" and toast success — in that order, unconditionally,
+  // with `onConfirm` returning nothing anybody could wait for. On the client
+  // overview it was `onConfirm={() => {}}`, so the receipt was the ONLY thing
+  // that happened. A customer could leave holding paper for money nobody
+  // recorded.
+  //
+  // It now awaits the write and prints from what came BACK, so the paper says
+  // what the ledger says. The database computes each amount, which is why the
+  // per-line figures here are the response's and not `inv.remaining`.
+  const handleConfirm = async () => {
     if (step === "select") {
       setStep("confirm");
       return;
     }
-    onConfirm({
-      invoiceIds: [...selected],
-      totalAmount,
-      method,
-    });
+    if (busy) return;
+
+    setBusy(true);
+    let settled: { bookingRef: number; amount: number }[];
+    try {
+      settled = await onConfirm({
+        bookingIds: selectedInvoices.map((i) => i.bookingId),
+        method,
+      });
+    } catch (error) {
+      setBusy(false);
+      toast.error(
+        error instanceof Error ? error.message : "Could not take that payment.",
+      );
+      // Left open, on the confirm step: the operator is standing with a
+      // customer and needs to try again, not to start over.
+      return;
+    }
+    setBusy(false);
+
+    if (settled.length === 0) {
+      toast.info("Nothing was owing on those bookings.");
+      onOpenChange(false);
+      setStep("select");
+      return;
+    }
+
+    const charged = settled.reduce((sum, s) => sum + s.amount, 0);
+    const byRef = new Map(settled.map((s) => [s.bookingRef, s.amount]));
+    const lines = selectedInvoices.filter((i) => byRef.has(i.bookingId));
+
     onOpenChange(false);
     setStep("select");
 
-    // Auto-generate bulk receipt
     const w = window.open("", "_blank", "width=500,height=700");
     if (w) {
       w.document
@@ -128,18 +191,26 @@ h1{font-size:18px;margin:0}h2{font-size:12px;color:#666;margin:4px 0 20px}
 ${invoiceHeaderHtml(defaultFacility)}
 <h1>Bulk Payment Receipt</h1>
 <h2>${clientName} · ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</h2>
-<div class="section">Invoices Paid (${selectedInvoices.length})</div>
-${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${inv.service} · ${inv.petName}</span><span>$${inv.remaining.toFixed(2)}</span></div>`).join("")}
-<div class="row total"><span>Total Charged</span><span>$${totalAmount.toFixed(2)}</span></div>
+<div class="section">Bookings Paid (${lines.length})</div>
+${lines.map((inv) => `<div class="row"><span>#${inv.bookingId} · ${inv.service} · ${inv.petName}</span><span>$${(byRef.get(inv.bookingId) ?? 0).toFixed(2)}</span></div>`).join("")}
+<div class="row total"><span>Total Charged</span><span>$${charged.toFixed(2)}</span></div>
 <div class="row sub"><span>Payment Method</span><span>${method}</span></div>
 <div class="badge">PAYMENT COMPLETE</div>
-<div class="footer">Bulk payment processed · All ${selectedInvoices.length} invoices marked as paid</div>
+<div class="footer">Recorded against ${lines.length} booking${lines.length === 1 ? "" : "s"}</div>
 </body></html>`);
       w.document.close();
     }
 
+    // Says what was taken, and names the gap when it is not what was asked
+    // for — a booking somebody else settled in the meantime is skipped, and
+    // silently charging less than the screen showed is how a shortfall gets
+    // discovered at month end.
+    const skipped = selectedInvoices.length - settled.length;
     toast.success(
-      `Bulk payment of $${totalAmount.toFixed(2)} processed for ${selectedInvoices.length} invoices`,
+      `$${charged.toFixed(2)} taken across ${settled.length} booking${settled.length === 1 ? "" : "s"}` +
+        (skipped > 0
+          ? ` — ${skipped} had already been settled and ${skipped === 1 ? "was" : "were"} skipped`
+          : ""),
     );
   };
 
@@ -153,7 +224,12 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
     <Dialog
       open={open}
       onOpenChange={(v) => {
-        if (!v) setStep("select");
+        // Reset on CLOSE, in an event handler — which is where React says to
+        // put "start fresh next time", and needs no effect.
+        if (!v) {
+          setStep("select");
+          setUnticked(new Set());
+        }
         onOpenChange(v);
       }}
     >
@@ -189,7 +265,7 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
                   onClick={selectAll}
                   className="text-primary text-xs font-medium hover:underline"
                 >
-                  {selected.size === invoices.length
+                  {selectedCount === invoices.length
                     ? "Deselect All"
                     : "Select All"}
                 </button>
@@ -200,13 +276,13 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
                     key={inv.invoiceId}
                     className={cn(
                       "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-all",
-                      selected.has(inv.invoiceId)
+                      isSelected(inv.invoiceId)
                         ? "border-primary/30 bg-primary/5"
                         : "hover:bg-muted/30",
                     )}
                   >
                     <Checkbox
-                      checked={selected.has(inv.invoiceId)}
+                      checked={isSelected(inv.invoiceId)}
                       onCheckedChange={() => toggleInvoice(inv.invoiceId)}
                     />
                     <div className="flex items-center gap-2">
@@ -316,16 +392,18 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={selectedInvoices.length === 0}
+            disabled={selectedInvoices.length === 0 || busy}
             className={cn(
               "gap-1.5",
               step === "confirm" && "bg-emerald-600 hover:bg-emerald-700",
             )}
           >
             <Check className="size-4" />
-            {step === "confirm"
-              ? `Confirm & Charge $${totalAmount.toFixed(2)}`
-              : `Continue — $${totalAmount.toFixed(2)}`}
+            {busy
+              ? "Taking payment…"
+              : step === "confirm"
+                ? `Confirm & Charge $${totalAmount.toFixed(2)}`
+                : `Continue — $${totalAmount.toFixed(2)}`}
           </Button>
         </DialogFooter>
       </DialogContent>

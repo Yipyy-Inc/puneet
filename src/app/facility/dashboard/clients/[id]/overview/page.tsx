@@ -12,7 +12,11 @@ import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
 import { clientQueries } from "@/lib/api/client";
 import { bookingQueries } from "@/lib/api/booking";
-import { balanceOf, upcomingUnpaid } from "@/lib/api/booking-money";
+import {
+  balanceOf,
+  upcomingUnpaid,
+  useSettleBookings,
+} from "@/lib/api/booking-money";
 import { recordToPurchase } from "@/lib/api/mappers/owned-packages";
 import { useServicePackages } from "@/lib/api/customer-packages";
 import { useFieldMask } from "@/lib/staff/mask";
@@ -71,6 +75,7 @@ export default function ClientOverviewPage({
   const [noteText, setNoteText] = useState("");
   const [now] = useState(() => Date.now());
   const [bulkPayOpen, setBulkPayOpen] = useState(false);
+  const settleBookings = useSettleBookings();
   // Above the early return: hooks run in the same order on every render, and
   // a client id that matches nothing is a render this component still does.
   // Scoped server-side to this client. `status` is derived from the ledger and
@@ -939,12 +944,17 @@ export default function ClientOverviewPage({
             service: b.service,
             date: b.startDate,
             petName: bPet?.name ?? "Pet",
-            total: b.invoice?.total ?? b.totalCost,
-            paid: b.invoice?.depositCollected ?? 0,
-            remaining: b.invoice?.remainingDue ?? b.totalCost,
+            total: b.totalCost,
+            // From the ledger. These fell back to `depositCollected ?? 0` and
+            // `remainingDue ?? totalCost` — the PRICE — so every part-paid
+            // booking listed the wrong figure on both lines.
+            paid: b.amountPaid ?? 0,
+            remaining: balanceOf(b),
           };
         })}
-        onConfirm={() => {}}
+        onConfirm={({ bookingIds, method }) =>
+          settleBookings.mutateAsync({ bookingRefs: bookingIds, method })
+        }
       />
     </div>
   );
