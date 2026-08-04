@@ -618,6 +618,48 @@ The same shape in `deductProductsForAppointment` went the other way and proved t
 
 **Do instead:** delete them as part of a scoped dead-code pass, not in passing.
 
+## Snapshot (2026-08-06, a kennel holds one booking)
+
+### 🔴 The invariant was written in a comment and never built
+
+`src/app/api/bookings/route.ts` has said since it was written that this is where "the domain invariants RLS cannot express (**capacity**, ledger balance, handover) have somewhere to live." The word `capacity` appeared in that comment and nowhere else under `src/app/api`.
+
+Meanwhile all 7 boarding bookings had `details->>'unitAssignment'` = **null** — the room the modal assigns was React state that never reached the database — and `RoomAssignmentBoard.canDrop` checked `assignedPetIds.length >= room.capacity` against _the current booking's own_ assignment map, so it could not see any other booking. A within-this-form check wearing the clothes of a capacity rule.
+
+Closed by `boarding_rooms` + `boarding_stays` with an `EXCLUDE USING gist` constraint (`20260806600000`). **Ledger balance and handover from that same comment are still unbuilt** — treat the sentence as a to-do list, not a description.
+
+**Do instead:** when a comment names an invariant, grep for its enforcement before trusting it. Two of the three named here did not exist.
+
+### 🔴 `create or replace function` with a new argument makes an OVERLOAD
+
+Adding `p_boarding` to `create_booking` would have left the three-argument version in place beside the four-argument one. PostgREST resolves by the arguments in the request body, so any caller that omitted the new one would have kept hitting the old function and silently never written a stay — green typecheck, green build, no stay.
+
+`20260806620000` drops the old signature explicitly. Verified afterwards with `pg_proc` that exactly one `create_booking` exists.
+
+**Do instead:** changing an RPC's arity is a drop-and-create, and the check is `select oid::regprocedure from pg_proc where proname = ...` — not "the migration succeeded".
+
+### 🟡 A constraint predicate cannot reach another table
+
+The natural rule is "no two stays overlap in a room _unless the booking is cancelled_", and it cannot be written: a constraint predicate may only reference its own table, and `status` lives on `bookings`. Hence `released_at` on the stay plus a trigger that mirrors cancellation onto it, with the constraint applying `WHERE released_at IS NULL`.
+
+The half that is easy to miss is the way back: re-opening a cancelled booking must take the room _back_, and fail if somebody else was given it meanwhile (K5).
+
+**Do instead:** when a constraint needs a fact from another table, denormalise the fact and put a trigger on it — don't weaken the constraint to what one table can see.
+
+### 🟡 An absolute constraint would have deleted an existing capability
+
+`override_booking_capacity` ("Override capacity limits") is a real permission, and `RoomAssignmentBoard.canDrop` opens with `if (allowOverride) return true`. A constraint with no escape hatch would have made that permission unimplementable — and the predictable consequence is that whoever next needs an override drops the constraint.
+
+So a stay may carry `override_reason`; overridden stays are excluded from the check, and `create_booking` refuses to set it without the permission. Gating it **only** in the route would have left PostgREST — reachable directly with a session cookie — as an unguarded way to overbook with a typed excuse.
+
+**Do instead:** before making a rule absolute, grep the permission list for whoever is already allowed to break it.
+
+### 🟢 The e2e's first test proved nothing, and now says so
+
+`boarding-occupancy.spec.ts`'s "a stay can be created" passed **with the fix disabled** — a 201 says nothing about whether the room was recorded. There is no boarding read endpoint yet, so the only HTTP-observable evidence is the conflict the _next_ test provokes. Confirmed by removing `p_boarding` from the route: the double-booking test dropped from 409 to 201 while that one stayed green.
+
+**Do instead:** a test whose assertion survives the bug is a precondition. Label it as one, or give it something only the fix can satisfy.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

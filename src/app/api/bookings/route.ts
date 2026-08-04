@@ -127,8 +127,8 @@ export async function POST(request: NextRequest) {
     timeZone: facility.timeZone,
   });
 
-  // THE BOOKING, ITS PETS AND — FOR GROOMING — ITS APPOINTMENT, IN ONE
-  // TRANSACTION.
+  // THE BOOKING, ITS PETS AND — PER MODULE — ITS APPOINTMENT OR ITS KENNEL,
+  // IN ONE TRANSACTION.
   //
   // This used to be three sequential writes from here, and a grooming booking
   // got only the first two: `grooming_appointments` is what the board reads,
@@ -157,10 +157,25 @@ export async function POST(request: NextRequest) {
         }
       : null;
 
+  // Boarding is the mirror image of grooming here: a groom must name its
+  // service, a stay need not name a room. Kennels are routinely assigned on the
+  // ops board after the booking exists, so an absent room is a real state
+  // rather than an incomplete request.
+  //
+  // `unitAssignment` is what the modal already sends for boarding
+  // (BookingModal.tsx) — it just had nowhere to land: every boarding row in
+  // this database has `details->>'unitAssignment'` = null, because the room was
+  // React state and no table held it.
+  const boarding =
+    input.service === "boarding" && input.unitAssignment
+      ? { roomId: input.unitAssignment }
+      : null;
+
   const { data: createdRows, error } = await supabase.rpc("create_booking", {
     p_booking: row,
     p_pet_ids: resolved.map((p) => p.id),
     p_grooming: grooming,
+    p_boarding: boarding,
   });
 
   if (error) {
@@ -168,8 +183,25 @@ export async function POST(request: NextRequest) {
     // the request body and should not read as one in the client. 422 for the
     // RPC's own rejections — an unknown service or add-on is a bad request,
     // not a server fault and not a permission problem.
+    //
+    // 23P01 is the exclusion constraint on `boarding_stays`: the kennel is
+    // taken for those dates. That is a CONFLICT, not a malformed request and
+    // not a server fault — and the raw message names a constraint, so it is
+    // replaced with the sentence the person at the desk actually needs.
     const denied = error.code === "42501";
+    const occupied = error.code === "23P01";
     const badRequest = error.code === "23503" || error.code === "22023";
+
+    if (occupied) {
+      return NextResponse.json(
+        {
+          error:
+            "That room is already booked for those dates. Pick another room or another date.",
+        },
+        { status: 409 },
+      );
+    }
+
     return NextResponse.json(
       { error: denied ? "Not allowed to create bookings." : error.message },
       { status: denied ? 403 : badRequest ? 422 : 500 },

@@ -3438,6 +3438,7 @@ export type Database = {
       create_booking: {
         Args: {
           p_booking: Json;
+          p_boarding?: Json;
           p_grooming?: Json;
           p_pet_ids?: string[];
         };
