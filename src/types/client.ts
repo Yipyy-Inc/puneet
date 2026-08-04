@@ -151,6 +151,15 @@ export const clientSchema = z.object({
   // can spot returning clients and flagged accounts at a glance without
   // opening the profile.
   lastVisitDate: z.string().optional(),
+  /**
+   * What the client owes: the sum of `totalCost - amountPaid` over their
+   * DELIVERED bookings — `ready` and `completed` only.
+   *
+   * DERIVED (20260806780000). Writing it does nothing. Bookings that are merely
+   * confirmed are not counted, on purpose: "you owe us" and "you have something
+   * coming up" are different conversations. `upcomingUnpaid` in
+   * lib/api/booking-money.ts is the other one.
+   */
   outstandingBalance: z.number().optional(),
   noShowCount: z.number().optional(),
   /** Saved card-on-file records — surfaced as one-tap "charge this card"

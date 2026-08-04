@@ -908,6 +908,57 @@ The reachable one is now wired; the unreachable one is deleted. Its `amountPaid`
 
 **Do instead:** when a mutation computes an amount, have the dialog display it through the same function. Two computations of one number is one too many.
 
+## Snapshot (2026-08-06, what a client owes)
+
+### 🔴 The stored client balance said $75; the ledger said $2,695 across six people
+
+`clients.outstanding_balance` was the same defect as `bookings.payment_status`, one level up — and provably so once `amount_paid` existed to check it against:
+
+| client        | stored | unsettled per the ledger |
+| ------------- | ------ | ------------------------ |
+| Alice Johnson | $0.00  | $1,440.00                |
+| John Doe      | $0.00  | $1,005.00                |
+| Bob Smith     | $75.00 | $65.00                   |
+
+The one non-zero figure belonged to the only person whose real number it also got wrong. **Bob Smith's $75 was fiction — after reconciliation he owes nothing.**
+
+Not a cosmetic field: `ActiveCallPanel`/`IncomingCallPanel` show it to whoever answers the phone mid-conversation, `lib/calling/routing-rules.ts` ROUTES calls on it, and `lib/facility-export.ts` puts it in the GDPR Article 20 export.
+
+**Do instead:** when a number about money is stored on a parent row, ask what maintains it. If the answer is "whoever remembers", it is already wrong.
+
+### 🔴 "Outstanding" and "booked" were one number, and it was neither
+
+The client overview summed **every** pending non-cancelled booking at **full price** and captioned it "unpaid invoices from finished appointments". A confirmed booking six months out counted as debt; a part-paid booking counted for its whole amount.
+
+Split in 20260806780000: `outstanding_balance` covers `ready` and `completed` only. `checked_in`/`in_progress` are excluded (payment is due at pickup, and a multi-night stay has not earned its total); `no_show` is excluded (a no-show _fee_ is not the booking price). On this database that is **$150**, against **$2,695** for the loosest reading — the gap is entirely money not yet earned.
+
+`upcomingUnpaid()` shows the other figure on its own line, in grey rather than red, because chasing a customer in good standing is the failure this prevents.
+
+**Do instead:** don't add the two together. Write the definition into the migration header — the definition _is_ the number.
+
+### 🟡 The SECURITY DEFINER was right for a reason I had written down wrong
+
+The migration header first said the DEFINER was needed because a cashier lacks `edit_clients` and the UPDATE would be silently RLS-denied. Two probes showed that's not why:
+
+- **Paying** a booking works either way — that path already runs inside `payment_moves_the_booking`, which is DEFINER, so the nested trigger inherits `postgres`.
+- The case that needs it is a booking marked **completed by hand**. `supervisor` holds `edit_bookings` without `edit_clients` — a shipped preset — and as INVOKER it fails **twice, in an order that matters**:
+  1. `permission denied for function client_outstanding_balance` — **loud**, and it aborts the whole booking update.
+  2. Grant the helper to silence that, and the `clients` UPDATE is RLS-denied instead — **zero rows, no error**, stale balance.
+
+So the obvious fix for the loud failure converts it into the silent one.
+
+**Do instead:** when a nested trigger "works", check whether it works on its own merits or because something up the chain is already DEFINER. And prove a stated reason before writing it into a header — a confident wrong comment is worse than none.
+
+### 🟢 A settle-poll that agrees at zero proves nothing
+
+`client-balance.spec.ts` read both figures after the page heading appeared and got two zeroes: the heading comes from the client query, the figures need the bookings query, and **a line whose figure is zero is not rendered at all** — so "not loaded" and "genuinely nothing" look identical.
+
+Polling until two consecutive reads agreed did not help; they agreed at 0 immediately. The signal that works is the _absence_ of "No upcoming appointments", which only goes away once the list is real.
+
+The assertions are deltas, not absolutes. The first version asserted the upcoming line equals $210 and read $1,595 — client 15 is a seeded account with a history of its own.
+
+**Do instead:** for a conditionally-rendered figure, wait on something that proves the DATA arrived, not on the figure itself. And assert deltas against a seeded record.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

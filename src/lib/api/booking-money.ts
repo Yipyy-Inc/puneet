@@ -143,6 +143,34 @@ export function balanceOf(booking: {
   return Math.max(0, booking.totalCost - (booking.amountPaid ?? 0));
 }
 
+/** The statuses `clients.outstanding_balance` counts — see Decision 1 in 20260806780000. */
+const DELIVERED = new Set(["ready", "completed"]);
+
+/**
+ * Booked, not yet delivered, and not yet paid.
+ *
+ * The counterpart to `client.outstandingBalance`, which deliberately covers
+ * only DELIVERED bookings. This is the other conversation — "you have $400 of
+ * boarding coming up" is not a debt, and adding the two together produces a
+ * number that is true of neither.
+ *
+ * Not a stored column: a screen showing it already has the booking list, and a
+ * second derived figure on `clients` would be a second thing to keep right.
+ */
+export function upcomingUnpaid(
+  bookings: { status: string; totalCost: number; amountPaid?: number }[],
+): number {
+  return bookings
+    .filter(
+      (b) =>
+        !DELIVERED.has(b.status) &&
+        b.status !== "cancelled" &&
+        b.status !== "declined" &&
+        b.status !== "no_show",
+    )
+    .reduce((sum, b) => sum + balanceOf(b), 0);
+}
+
 /**
  * Take a payment for a booking's outstanding balance.
  *

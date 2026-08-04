@@ -2,8 +2,6 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { clients } from "@/data/clients";
-import { bookings } from "@/data/bookings";
 import { vaccinationRecords } from "@/data/pet-data";
 import { clientCommunications } from "@/data/communications";
 import {
@@ -12,6 +10,9 @@ import {
 } from "@/data/services-pricing";
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
+import { clientQueries } from "@/lib/api/client";
+import { bookingQueries } from "@/lib/api/booking";
+import { balanceOf, upcomingUnpaid } from "@/lib/api/booking-money";
 import { recordToPurchase } from "@/lib/api/mappers/owned-packages";
 import { useServicePackages } from "@/lib/api/customer-packages";
 import { useFieldMask } from "@/lib/staff/mask";
@@ -41,6 +42,7 @@ import {
   MessageSquare,
   StickyNote,
   Package,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -58,7 +60,12 @@ export default function ClientOverviewPage({
 }) {
   const { id } = use(params);
   const clientId = parseInt(id, 10);
-  const client = clients.find((c) => c.id === clientId);
+  // `outstandingBalance` on this row is derived from the bookings ledger
+  // (20260806780000). The fixture's copy was a number nobody maintained.
+  const { data: client } = useQuery(clientQueries.detail(clientId));
+  const { data: clientBookings = [] } = useQuery(
+    bookingQueries.byClient(clientId),
+  );
   // Table 21 masking. TODO: also strip server-side when a backend exists.
   const { maskContact, maskAmount, canSee } = useFieldMask();
   const [noteText, setNoteText] = useState("");
@@ -95,7 +102,6 @@ export default function ClientOverviewPage({
     0,
   );
 
-  const clientBookings = bookings.filter((b) => b.clientId === clientId);
   const upcoming = clientBookings
     .filter(
       (b) =>
@@ -117,13 +123,22 @@ export default function ClientOverviewPage({
     completedBookings.length > 0 ? totalSpent / completedBookings.length : 0;
 
   // Unpaid invoices for bulk payment
+  // ── What is owed, and what is merely booked ──────────────────────────────
+  //
+  // This used to count EVERY pending non-cancelled booking and describe the
+  // total as "unpaid invoices from finished appointments" — including bookings
+  // months away, which is not a debt. And it summed `remainingDue ?? totalCost`
+  // — the PRICE — so a part-paid booking counted for its full amount.
+  //
+  // The overdue figure is now the database's (`clients.outstanding_balance`,
+  // ready and completed only) and the upcoming one is stated separately,
+  // because adding them gives a number that is true of neither.
   const unpaidBookings = clientBookings.filter(
-    (b) => b.paymentStatus === "pending" && b.status !== "cancelled",
+    (b) =>
+      (b.status === "ready" || b.status === "completed") && balanceOf(b) > 0,
   );
-  const totalOverdue = unpaidBookings.reduce(
-    (s, b) => s + (b.invoice?.remainingDue ?? b.totalCost),
-    0,
-  );
+  const totalOverdue = client.outstandingBalance ?? 0;
+  const totalUpcoming = upcomingUnpaid(clientBookings);
 
   // Pet vaccination status
   const petVacStatus = client.pets.map((pet) => {
@@ -221,6 +236,19 @@ export default function ClientOverviewPage({
             <CreditCard className="size-3.5" />
             Collect Payment
           </Button>
+        </div>
+      )}
+
+      {/* Booked, not delivered. Deliberately NOT the red banner: this is money
+          coming, not money late, and colouring it the same is how a customer in
+          good standing gets chased. */}
+      {totalUpcoming > 0 && (
+        <div className="text-muted-foreground flex items-center gap-2 rounded-lg border px-4 py-2.5 text-xs">
+          <CalendarClock className="size-3.5 shrink-0" />
+          <span>
+            {maskAmount(`$${totalUpcoming.toFixed(2)}`)} booked and not yet
+            paid, across appointments still to come.
+          </span>
         </div>
       )}
 
@@ -871,7 +899,12 @@ export default function ClientOverviewPage({
                     key={purchase.id}
                     purchase={purchase}
                     pkg={pkg}
-                    getBooking={(bid) => bookings.find((b) => b.id === bid)}
+                    // This client's bookings, not the whole fixture. A pass is
+                    // redeemed against one of their own appointments, so a
+                    // wider search could only ever find the wrong booking.
+                    getBooking={(bid) =>
+                      clientBookings.find((b) => b.id === bid)
+                    }
                     bookingLinkPrefix={`/facility/dashboard/clients/${id}/bookings`}
                     showBookingCta={false}
                     showFacilityActions={true}

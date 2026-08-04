@@ -167,9 +167,11 @@ export function clientToRow(
   if (input.lastVisitDate !== undefined) {
     row.last_visit_date = dateOrNull(input.lastVisitDate);
   }
-  if (input.outstandingBalance !== undefined) {
-    row.outstanding_balance = input.outstandingBalance;
-  }
+  // outstandingBalance is NOT written. It is derived from the bookings ledger
+  // (20260806780000) — the sum of what delivered bookings have not settled —
+  // and `clients_set_derived_balance` overwrites any value on every write. It
+  // stays in CLIENT_COLUMN_FIELDS below so it is not copied into `details`,
+  // where a stale second copy would outlive it.
   if (input.noShowCount !== undefined) row.no_show_count = input.noShowCount;
 
   const details: Record<string, unknown> = {};
