@@ -36,8 +36,24 @@ export function writeFailure(
     return NextResponse.json({ error: context.duplicate }, { status: 409 });
   }
   if (error.code === "23503") {
+    // Same reasoning as 42501 above: 23503 is both Postgres's own foreign-key
+    // violation and the errcode our triggers raise when a row names something
+    // that has to exist — `grooming_line_names_a_grooming_service`
+    // (20260806580000) says "A grooming pass must name a grooming service;
+    // srv-005 is not one at this facility", which is worth far more to the
+    // person than the sentence below.
+    //
+    // A real FK violation always names the constraint it broke, and that text
+    // is not for a person. That is the test.
+    const message = error.message?.trim();
+    const fromPostgres = message?.includes("violates foreign key constraint");
     return NextResponse.json(
-      { error: "That record refers to something that does not exist." },
+      {
+        error:
+          message && !fromPostgres
+            ? message
+            : "That record refers to something that does not exist.",
+      },
       { status: 400 },
     );
   }

@@ -303,6 +303,52 @@ test.describe("the portal shop reads the same rows as the facility", () => {
     }
   });
 
+  // ── Can the pass actually be spent? ──────────────────────────────────────
+  //
+  // Grooming lines used to be written in two id namespaces: the counter's
+  // packages named `groom-pkg-*` and the portal's named `srv-*`, from the
+  // separate platform-wide catalogue in src/data/services-pricing.ts. Since
+  // redemption matches a pool by service id, a grooming pass bought in the
+  // portal could never be spent — the customer paid and the pass sat there.
+  //
+  // This asks the counter's own question, and it is read-only, which this file
+  // requires: a spent pass cannot be un-spent. 20260806580000 re-keyed the
+  // lines and added a trigger; the SQL suite covers the trigger and the
+  // round trip.
+  //
+  // Before that migration this failed on "Grooming Maintenance", which the
+  // facility's own grooming screen listed while naming `srv-005` — a service
+  // that screen does not have.
+  test("every grooming pass names a service the counter can resolve", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const bundles = (await (await page.request.get(CATALOGUE)).json()) as {
+      id: string;
+      name: string;
+      services: { serviceId: string }[];
+    }[];
+    const services = (await (
+      await page.request.get("/api/grooming/services")
+    ).json()) as { id: string }[];
+
+    expect(
+      bundles.length,
+      "there are grooming bundles to check",
+    ).toBeGreaterThan(0);
+    const sellable = new Set(services.map((s) => s.id));
+
+    for (const bundle of bundles) {
+      for (const line of bundle.services) {
+        expect(
+          sellable.has(line.serviceId),
+          `${bundle.name} sells passes for "${line.serviceId}", which is not on the grooming menu`,
+        ).toBe(true);
+      }
+    }
+  });
+
   test("the shop page renders the catalogue from Postgres", async ({
     page,
   }) => {

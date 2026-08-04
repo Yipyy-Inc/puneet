@@ -350,6 +350,8 @@ The portal's packages are priced in `srv-*`; the facility's grooming packages in
 
 **Why it was not fixed here:** deciding that "Bath & Brush at 40" and "Basic Bath at 35" are the same service is a product decision, and merging them silently reprices one of them. Migrating `services` into Postgres and reconciling the two is its own change, with someone who can answer that question.
 
+> **Resolved 2026-08-06** (`20260806580000`). Two claims above were wrong, and reading the two definitions was enough to settle both. They are not "two catalogues of the same thing": `services-pricing.ts` is the platform-wide list spanning boarding, daycare and training, and only its two grooming rows overlap with anything. And it needed no product decision — `srv-005` is described as "Basic bath, blow dry, brush out, ear cleaning, and nail trim" and `groom-pkg-001` includes exactly those five things in the same 60 minutes. The grooming lines now name `grooming_services`, a trigger keeps them there, and the price follows the catalogue. See the 2026-08-06 snapshot below for what that repricing exposed.
+
 ### 🟡 A bundle spanning two counters renders as one card with one icon
 
 `CustomerPackagePurchase` — the portal's owned-pack shape — has a single `category` and `serviceLabel`, so it cannot fully describe the Weekend Getaway (2 nights boarding + 1 bath). `recordToPurchase` keeps **one card per purchase**: the price and the total pass count are right, `serviceLabel` names every service, and each pass row says what it was spent on. What is lost is per-pool remaining counts on the card face, and the theme icon reflects only the first pool.
@@ -522,6 +524,40 @@ Caught in my own draft before it shipped. `select sp.price into v_price from gro
 Nothing is broken today — the booking path keys on the list that matches the table. The hazard is that they look interchangeable and are not, and the seed migration's header claims "the booking form … keys on them" about ids that only half the app uses.
 
 **Do instead:** when the check-in dialog is migrated, it takes add-ons from the API, and the `ao_teeth` list goes.
+
+## Snapshot (2026-08-06, a grooming pass names a grooming service)
+
+### 🔴 "Grooming Maintenance" is not a deal, and never was
+
+Repricing the portal's grooming lines to the counter's catalogue exposed this rather than caused it:
+
+| package              | price | list before | list after | saving before | saving after |
+| -------------------- | ----- | ----------- | ---------- | ------------- | ------------ |
+| Weekend Getaway      | 115   | 130         | 125        | 15            | 10           |
+| Vacation Package     | 499   | 590         | 590        | 91            | 91           |
+| Grooming Maintenance | 140   | 160         | **140**    | 20            | **0**        |
+
+4 × Basic Bath at 35 is 140, and the package sells for 140. You pay list price for the privilege of pre-paying. It only ever looked like a deal because it was priced against a stale `srv-005` at 40.
+
+`package_price` was **not** touched: inventing a discount is a commercial decision, not one a migration gets to make. The shop guards both the "Save $X" badge and the struck-through price on `savings > 0`, so it renders as a plain 140 claiming nothing — honest, and visibly unattractive.
+
+**Do instead:** someone with pricing authority reprices it. Until then it is correct and unappealing, which is the right way round.
+
+### 🟡 The mapper drops `module`, so the portal payload cannot say which line is grooming
+
+`prepaid_package_lines.module` is selected in `SERVICE_PACKAGE_SELECT` and then discarded by `recordToServicePackage` — `services` is mapped to `{serviceId, quantity}` only. So `/api/packages` cannot tell a consumer which of a bundle's lines is a grooming line, and the e2e for the namespace rule had to ask `/api/grooming/prepaid-packages` instead.
+
+It also means the existing "spans modules" test infers grooming from `serviceId.startsWith("groom-")` — a string prefix standing in for a column that is right there.
+
+**Do instead:** carry `module` through the mapper when something needs it; don't add a second prefix check.
+
+### 🟢 `service_id` is text in three tables, and only one of them is now guarded
+
+`prepaid_package_lines`, `customer_package_lines` and `package_pass_entries` all hold `service_id text` with no foreign key, because boarding, daycare and training have no catalogue in Postgres to point at. Only the first is now constrained, and only for `module = 'grooming'`.
+
+That asymmetry is deliberate — `customer_package_lines` is the snapshot of what somebody bought, and a sold pass must survive its service leaving the menu (N6) — but it is worth knowing that the guard is one table wide.
+
+**Do instead:** when boarding/daycare/training catalogues land in Postgres, extend the same trigger per module rather than adding a second mechanism.
 
 ## How to add to this map
 
