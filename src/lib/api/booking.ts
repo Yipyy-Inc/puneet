@@ -166,9 +166,22 @@ export const bookingMutations = {
   create: async (data: NewBooking): Promise<Booking> =>
     liveWrite<Booking>("/api/bookings", "POST", data),
 
+  /**
+   * `Partial<Booking>`, not `Partial<NewBooking>`.
+   *
+   * The extra fields — `cancellationReason`, `refundMethod`, the long tail —
+   * are exactly what a PATCH carries, and `bookingToRow` already routes
+   * anything outside `COLUMN_FIELDS` into the `details` jsonb. Typing it to the
+   * creation shape made every caller of those fields cast, which is the type
+   * system being told to be quiet about something that works.
+   *
+   * `paymentStatus` and `amountPaid` are in `Booking` and are DERIVED: sending
+   * them is accepted and discarded (20260806680000). Nothing here can mark a
+   * booking paid.
+   */
   update: async (
     id: number,
-    data: Partial<NewBooking>,
+    data: Partial<Booking>,
   ): Promise<Booking | undefined> =>
     liveWrite<Booking>(`/api/bookings/${id}`, "PATCH", data),
 };

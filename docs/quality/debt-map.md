@@ -860,6 +860,54 @@ Moved from `newBookingSchema` to `bookingSchema.extend({...})`: it is not someth
 
 **Do instead:** don't drop a derived field from `COLUMN_FIELDS` on the grounds that it is never written. That list controls what lands in `details`, not what lands in columns.
 
+## Snapshot (2026-08-06, the payment button takes a payment)
+
+### 🔴 Two of the three "Process Payment" screens could not open the dialog at all
+
+Recorded in the previous snapshot as "three screens have a button that has never taken a payment". That was generous. Once the handlers were wired it turned out only **one** of the three could open the dialog:
+
+| Screen                                       | Could it open? | Why not                                                        |
+| -------------------------------------------- | -------------- | -------------------------------------------------------------- |
+| `bookings/page.tsx` (list)                   | **no**         | nothing ever called `setProcessingPayment` — no actions column |
+| `bookings/[id]/page.tsx`                     | **no**         | `router.replace`s to the client-nested route on mount          |
+| `clients/[id]/bookings/[bookingId]/page.tsx` | yes            | "Accept Payment" on the invoice card                           |
+
+The list's three money dialogs and their handlers are gone rather than wired — a handler for a dialog nobody can open is dead code with a plausible name, and adding a row-actions column to create the trigger is a feature, not this change.
+
+**Do instead:** before wiring a handler, grep for the call that opens the thing. `setX(true)` appearing only in `onOpenChange={(o) => !o && setX(null)}` means the dialog closes and never opens.
+
+### 🔴 `/facility/dashboard/bookings/[id]` is 1197 lines behind a mount-time redirect
+
+`useEffect(() => { if (booking?.clientId) router.replace(...) })`, and every booking has a `clientId`. Everything below that effect — the invoice card, three dialogs, the buttons that open them — renders once and is navigated away from. The list page doesn't even link to it.
+
+Two dialogs were removed from it mid-change and then **put back**: taking away the dialogs while leaving the three `setPaymentOpen(true)` buttons made it internally inconsistent, which is worse than either doing all of it or none. It is dead for a reason unrelated to payments, and it should be deleted or unwound as its own change.
+
+**Do instead:** decide whether the route is a permalink worth keeping. If it is, it should redirect from the server and render nothing; if it isn't, delete it. Don't edit fragments of it.
+
+### 🟡 A refund to store credit recorded the refund and granted nothing
+
+`CancelBookingModal` and `RefundModal` have always offered card **or** store credit. `record_payment`'s store-credit branch fires on `store_credit_applied > 0` — credit being _spent_, writing a NEGATIVE ledger entry. There was no path that granted credit, so choosing "store credit" would have taken money off the books and put it nowhere.
+
+Fixed in 20260806760000 with no new parameter: `grand_total < 0` plus `method = 'store-credit'` already says it, and the sign is what distinguishes "refunded AS credit" from "paid WITH credit". A 23rd argument would also have made `create or replace` an overload rather than a replacement.
+
+**Do instead:** before adding a flag, check whether the payload already carries the fact. Two fields that cannot disagree beat three that can.
+
+### 🟡 Two refund modals, and the reachable one was the hollow one
+
+`RefundBookingModal` (built, card/store-credit, full modal) was mounted only on the list page, where nothing could open it. `RefundModal` (full/partial/by-item, richer) is on the detail page and its `onConfirm` was a bare `toast.success`.
+
+The reachable one is now wired; the unreachable one is deleted. Its `amountPaid` prop was `invoice?.depositCollected ?? booking.totalCost` — falling back to the **price**, which caps a refund at what the customer was billed rather than what they handed over. It reads `booking.amountPaid` now.
+
+**Do instead:** when two components do the same job, check which one is mounted before improving either.
+
+### 🟢 The dialog charged the price; the mutation charges the balance
+
+`useTakeBookingPayment` takes `totalCost - amountPaid`. `ProcessPaymentModal` was showing `totalCost`, so a part-paid booking would have displayed one number and charged another. Both call `balanceOf` now, and the dialog shows an "Already paid" line and says "Balance Due".
+
+`useRecordPayment` (grooming checkout) also gained a `["bookings"]` invalidation — a payment moves the booking now, and without it every booking list stayed stale after a groom was paid for.
+
+**Do instead:** when a mutation computes an amount, have the dialog display it through the same function. Two computations of one number is one too many.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

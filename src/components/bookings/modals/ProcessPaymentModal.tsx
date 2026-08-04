@@ -20,6 +20,7 @@ import {
   Star,
 } from "lucide-react";
 import type { Booking } from "@/types/booking";
+import { balanceOf } from "@/lib/api/booking-money";
 import { clients } from "@/data/clients";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TipSelector } from "@/components/bookings/TipSelector";
@@ -49,7 +50,13 @@ export function ProcessPaymentModal({
   const client = clients.find((c) => c.id === booking.clientId);
   const pet = client?.pets.find((p) => p.id === booking.petId);
 
-  const grandTotal = booking.totalCost + tipAmount;
+  // What is being taken is the BALANCE, not the price. `useTakeBookingPayment`
+  // charges `totalCost - amountPaid`, so showing the price here would name a
+  // different number from the one that reaches the ledger on anything
+  // part-paid. Same helper, so the two cannot drift.
+  const balance = balanceOf(booking);
+  const alreadyPaid = booking.totalCost - balance;
+  const grandTotal = balance + tipAmount;
 
   const handleConfirm = () => {
     onConfirm(booking.id, paymentMethod, tipAmount > 0 ? tipAmount : undefined);
@@ -87,6 +94,12 @@ export function ProcessPaymentModal({
                 <span>-${booking.discount.toFixed(2)}</span>
               </div>
             )}
+            {alreadyPaid > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>Already paid:</span>
+                <span>-${alreadyPaid.toFixed(2)}</span>
+              </div>
+            )}
             {tipAmount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground flex items-center gap-1">
@@ -96,7 +109,7 @@ export function ProcessPaymentModal({
               </div>
             )}
             <div className="flex justify-between border-t pt-2 text-lg font-semibold">
-              <span>Total Amount:</span>
+              <span>{alreadyPaid > 0 ? "Balance Due:" : "Total Amount:"}</span>
               <span className="text-primary">${grandTotal.toFixed(2)}</span>
             </div>
           </div>
@@ -109,7 +122,7 @@ export function ProcessPaymentModal({
               </p>
               <TipSelector
                 tipConfig={tipConfig}
-                subtotal={booking.totalCost}
+                subtotal={balance}
                 tipAmount={tipAmount}
                 onTipChange={setTipAmount}
               />

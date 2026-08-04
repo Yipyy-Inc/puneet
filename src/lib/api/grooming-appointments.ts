@@ -388,6 +388,11 @@ export function useRecordPayment() {
       });
       void queryClient.invalidateQueries({ queryKey: ["store-credit"] });
       void queryClient.invalidateQueries({ queryKey: ["customer-packages"] });
+      // A payment now moves the BOOKING too — `payment_status` and
+      // `amountPaid` are derived from this ledger (20260806680000). Without
+      // this, grooming checkout took the money and every booking list went on
+      // showing the appointment as unpaid until something else refetched.
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
     },
   });
 }

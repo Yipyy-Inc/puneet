@@ -40,7 +40,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
 import { getIncidentCareCharges } from "@/lib/incidents/incident-billing";
 import { getIncidentsForBooking, lockInStayCare } from "@/data/incidents";
-import { bookings as initialBookings } from "@/data/bookings";
+import { useQuery } from "@tanstack/react-query";
 import { estimates } from "@/data/estimates";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
@@ -84,7 +84,13 @@ import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { useFieldMask } from "@/lib/staff/mask";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { isBookingAssignedTo } from "@/lib/api/booking";
+import { bookingQueries, isBookingAssignedTo } from "@/lib/api/booking";
+import {
+  refundTender,
+  useCancelBooking,
+  useRefundBooking,
+  useTakeBookingPayment,
+} from "@/lib/api/booking-money";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
@@ -163,9 +169,18 @@ export default function ClientBookingDetailPage({
   const clientId = parseInt(id, 10);
   const bookingId = parseInt(bookingIdStr, 10);
 
+  // The client's bookings, live. `byClient` rather than `detail` because the
+  // invoice panel below needs the client's OTHER unpaid bookings too, and two
+  // queries for one client's bookings would be two answers to one question.
+  const { data: clientBookings = [] } = useQuery(
+    bookingQueries.byClient(clientId),
+  );
+  const takePayment = useTakeBookingPayment();
+  const cancelBooking = useCancelBooking();
+  const refundBooking = useRefundBooking();
   const initialBooking = useMemo(
-    () => initialBookings.find((b) => b.id === bookingId),
-    [bookingId],
+    () => clientBookings.find((b) => b.id === bookingId),
+    [clientBookings, bookingId],
   );
   const [booking, setBooking] = useState(() => initialBooking);
   useEffect(() => {
@@ -1498,22 +1513,52 @@ export default function ClientBookingDetailPage({
             toast.success(`${bookingRef} updated`);
           }}
         />
+        {/* Both of these used to close the dialog and toast, and nothing else
+            — no state change, no request. They record money now, and the
+            booking's payment status follows from the ledger. */}
         <ProcessPaymentModal
           booking={booking}
           open={paymentOpen}
           onOpenChange={setPaymentOpen}
-          onConfirm={(bId, m) => {
+          onConfirm={(bId, method, tipAmount) => {
             setPaymentOpen(false);
-            toast.success(`Payment via ${m} for #${bId}`);
+            takePayment.mutate(
+              { booking, method, ...(tipAmount ? { tipAmount } : {}) },
+              {
+                onSuccess: (charged) =>
+                  toast.success(
+                    `$${charged.toFixed(2)} taken by ${method} for ${bookingRef}`,
+                  ),
+                onError: (error) => toast.error(error.message),
+              },
+            );
           }}
         />
         <CancelBookingModal
           booking={booking}
           open={cancelOpen}
           onOpenChange={setCancelOpen}
-          onConfirm={(bId, r) => {
+          onConfirm={(bId, reason, refundMethod, refundAmount) => {
             setCancelOpen(false);
-            toast.success(`${bookingRef} cancelled: ${r}`);
+            cancelBooking.mutate(
+              {
+                bookingId: bId,
+                reason,
+                ...(refundAmount > 0
+                  ? { refund: { amount: refundAmount, method: refundMethod } }
+                  : {}),
+              },
+              {
+                onSuccess: (refunded) =>
+                  toast.success(
+                    `${bookingRef} cancelled` +
+                      (refunded > 0
+                        ? ` — $${refunded.toFixed(2)} refunded`
+                        : ""),
+                  ),
+                onError: (error) => toast.error(error.message),
+              },
+            );
           }}
         />
         <BookingTransferModal
@@ -1584,10 +1629,9 @@ export default function ClientBookingDetailPage({
             incidentCareTotal +
             (pendingLateFee?.amount ?? 0)
           }
-          otherUnpaidInvoices={initialBookings
+          otherUnpaidInvoices={clientBookings
             .filter(
               (b) =>
-                b.clientId === clientId &&
                 b.id !== bookingId &&
                 b.paymentStatus === "pending" &&
                 b.status !== "cancelled",
@@ -1734,14 +1778,30 @@ export default function ClientBookingDetailPage({
           open={refundOpen}
           onOpenChange={setRefundOpen}
           invoiceTotal={invoice?.total ?? booking.totalCost}
-          amountPaid={invoice?.depositCollected ?? booking.totalCost}
+          // What was actually taken, from the ledger. It used to fall back to
+          // the full price, which caps a refund at the amount the customer was
+          // BILLED rather than the amount they handed over.
+          amountPaid={booking.amountPaid ?? 0}
           items={(invoice?.items ?? []).map((i) => ({
             name: i.name,
             price: i.price,
           }))}
           onConfirm={(refund) => {
-            toast.success(
-              `Refund of $${refund.amount.toFixed(2)} processed via ${refund.method}`,
+            setRefundOpen(false);
+            refundBooking.mutate(
+              {
+                bookingId: booking.id,
+                amount: refund.amount,
+                method: refundTender(refund.method),
+                reason: refund.reason,
+              },
+              {
+                onSuccess: () =>
+                  toast.success(
+                    `$${refund.amount.toFixed(2)} refunded via ${refund.method.replace("_", " ")}`,
+                  ),
+                onError: (error) => toast.error(error.message),
+              },
             );
           }}
         />

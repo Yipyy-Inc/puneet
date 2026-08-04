@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { bookings as initialBookings } from "@/data/bookings";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import type { Booking } from "@/types/booking";
@@ -13,9 +14,6 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
-import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
-import { RefundBookingModal } from "@/components/bookings/modals/RefundBookingModal";
 import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
 import {
   Download,
@@ -42,7 +40,7 @@ import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFi
 import { useLocationContext } from "@/hooks/use-location-context";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { scopeBookingsToStaff } from "@/lib/api/booking";
+import { bookingMutations, bookingQueries } from "@/lib/api/booking";
 import { useFieldMask } from "@/lib/staff/mask";
 import { deriveLocationId, getLocationById } from "@/data/locations";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
@@ -173,9 +171,22 @@ export default function FacilityBookingsPage() {
   // viewer's fs-* id; otherwise undefined (full access, as admin sees).
   const assignedStaffId = useAssignedScope("view_bookings");
 
-  const [bookings, setBookings] = useState<Booking[]>(
-    initialBookings as Booking[],
+  // Section 8B scoping is applied by the FACTORY, not here: `bookingQueries.all`
+  // runs `scopeBookingsToStaff` when an assigned id is passed, which is the
+  // same call admin makes with no scope at all.
+  const { data: bookings = [], isLoading } = useQuery(
+    bookingQueries.all(assignedStaffId ? { assignedStaffId } : undefined),
   );
+
+  const queryClient = useQueryClient();
+  const saveBooking = useMutation({
+    mutationFn: async (booking: Booking) =>
+      bookings.some((b) => b.id === booking.id)
+        ? bookingMutations.update(booking.id, booking)
+        : bookingMutations.create(booking),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+  });
 
   const facilityBookings = bookings.filter(
     (booking) => booking.facilityId === facilityId,
@@ -188,29 +199,23 @@ export default function FacilityBookingsPage() {
         )
       : facilityBookings;
 
-  // Section 8B: restrict to the viewer's assigned bookings via the data-layer
-  // helper when assigned_only; unchanged for full-access viewers (admin).
-  const locationBookings = assignedStaffId
-    ? scopeBookingsToStaff(locationScopedBookings, assignedStaffId)
-    : locationScopedBookings;
+  // Section 8B scoping already happened in the query factory — applying
+  // `scopeBookingsToStaff` a second time here would be a no-op that reads like
+  // the rule, and the next person to change the rule would edit the wrong one.
+  const locationBookings = locationScopedBookings;
 
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
-
-  const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(
-    null,
-  );
-  const [processingPayment, setProcessingPayment] = useState<Booking | null>(
-    null,
-  );
-  const [refundingBooking, setRefundingBooking] = useState<Booking | null>(
-    null,
-  );
 
   const [activeTab, setActiveTab] = useState("all");
   const [filterStart, setFilterStart] = useState<Date | null>(null);
   const [filterEnd, setFilterEnd] = useState<Date | null>(null);
 
   useEffect(() => {
+    // Not until the list is here. The draft's id is derived from the highest
+    // one already in use, so running against an EMPTY list would produce id 1 —
+    // which `saveBooking` would then find in the list and treat as an edit of
+    // booking #1. The key is only consumed once, so re-running is harmless.
+    if (isLoading) return;
     const raw = localStorage.getItem("booking_requests_schedule_draft");
     if (!raw) return;
     try {
@@ -228,7 +233,9 @@ export default function FacilityBookingsPage() {
       const mm = String(appointment.getMinutes()).padStart(2, "0");
       const time = `${hh}:${mm}`;
 
-      const maxId = Math.max(...initialBookings.map((b) => b.id ?? 0), 0);
+      // A placeholder above every id in use, so the save is a CREATE and the
+      // server assigns the real reference.
+      const maxId = Math.max(...bookings.map((b) => b.id ?? 0), 0);
       setEditingBooking({
         id: maxId + 1,
         clientId: draft.clientId,
@@ -249,7 +256,7 @@ export default function FacilityBookingsPage() {
     } finally {
       localStorage.removeItem("booking_requests_schedule_draft");
     }
-  }, [facilityId]);
+  }, [facilityId, isLoading, bookings]);
 
   if (!facility) {
     return <div>Facility not found</div>;
@@ -593,101 +600,37 @@ export default function FacilityBookingsPage() {
     return applyDateFilter(base);
   };
 
-  const handleCancelBooking = (
-    bookingId: number,
-    cancellationReason: string,
-    refundMethod: "card" | "store_credit",
-    refundAmount: number,
-  ) => {
-    setBookings(
-      bookings.map((b) =>
-        b.id === bookingId
-          ? {
-              ...b,
-              status: "cancelled" as const,
-              paymentStatus:
-                b.paymentStatus === "paid"
-                  ? ("refunded" as const)
-                  : b.paymentStatus,
-              cancellationReason,
-              refundMethod,
-              refundAmount,
-            }
-          : b,
-      ),
-    );
-    alert(
-      `Booking #${bookingId} has been cancelled${refundAmount > 0 ? ` and $${refundAmount} refunded via ${refundMethod.replace("_", " ")}` : ""}.`,
-    );
-  };
-
-  const handleProcessPayment = (
-    bookingId: number,
-    paymentMethod: "cash" | "card",
-  ) => {
-    setBookings(
-      bookings.map((b) =>
-        b.id === bookingId
-          ? {
-              ...b,
-              paymentStatus: "paid" as const,
-              paymentMethod,
-            }
-          : b,
-      ),
-    );
-    alert(
-      `Payment of $${bookings.find((b) => b.id === bookingId)?.totalCost} has been processed via ${paymentMethod}.`,
-    );
-  };
-
-  const handleProcessRefund = (
-    bookingId: number,
-    refundReason: string,
-    refundMethod: "card" | "store_credit",
-    refundAmount: number,
-  ) => {
-    setBookings(
-      bookings.map((b) =>
-        b.id === bookingId
-          ? {
-              ...b,
-              paymentStatus: "refunded" as const,
-              refundMethod,
-              refundAmount: (b.refundAmount || 0) + refundAmount,
-              cancellationReason: refundReason, // Store refund reason
-            }
-          : b,
-      ),
-    );
-    alert(
-      `Refund of $${refundAmount} has been processed via ${refundMethod.replace("_", " ")} for booking #${bookingId}.`,
-    );
-  };
+  // The cancel, payment and refund modals used to live here with their
+  // handlers. NOTHING EVER OPENED THEM: `setProcessingPayment`,
+  // `setCancellingBooking` and `setRefundingBooking` were only ever called with
+  // null, to close a dialog that could not be opened. This DataTable has no
+  // actions column at all — a row is a link to the booking, which is where
+  // those three now record real money.
 
   const handleSaveBooking = (updatedBooking: Booking) => {
-    setBookings((prev) => {
-      const exists = prev.some((b) => b.id === updatedBooking.id);
-      return exists
-        ? prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b))
-        : [updatedBooking, ...prev];
-    });
     setEditingBooking(null);
-    // If this booking originated from a booking request, mark that request as scheduled.
-    const special = updatedBooking.specialRequests ?? "";
-    const match =
-      typeof special === "string"
-        ? special.match(/Scheduled from request\s+([A-Za-z0-9-]+)/)
-        : null;
-    const requestId = match?.[1];
-    if (requestId) {
-      setBookingRequests((prev) =>
-        prev.map((r) =>
-          r.id === requestId ? { ...r, status: "scheduled" } : r,
-        ),
-      );
-    }
-    alert(`Booking #${updatedBooking.id} has been updated.`);
+    saveBooking.mutate(updatedBooking, {
+      onSuccess: (saved) => {
+        // If this booking originated from a booking request, mark that request
+        // as scheduled. Only after the write lands — a request marked scheduled
+        // against a booking that failed to save points at nothing.
+        const special = updatedBooking.specialRequests ?? "";
+        const match =
+          typeof special === "string"
+            ? special.match(/Scheduled from request\s+([A-Za-z0-9-]+)/)
+            : null;
+        const requestId = match?.[1];
+        if (requestId) {
+          setBookingRequests((prev) =>
+            prev.map((r) =>
+              r.id === requestId ? { ...r, status: "scheduled" } : r,
+            ),
+          );
+        }
+        toast.success(`Booking #${saved?.id ?? updatedBooking.id} saved`);
+      },
+      onError: (error) => toast.error(error.message),
+    });
   };
 
   return (
@@ -825,36 +768,6 @@ export default function FacilityBookingsPage() {
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Cancel Booking Modal */}
-      {cancellingBooking && (
-        <CancelBookingModal
-          booking={cancellingBooking}
-          open={!!cancellingBooking}
-          onOpenChange={(open) => !open && setCancellingBooking(null)}
-          onConfirm={handleCancelBooking}
-        />
-      )}
-
-      {/* Process Payment Modal */}
-      {processingPayment && (
-        <ProcessPaymentModal
-          booking={processingPayment}
-          open={!!processingPayment}
-          onOpenChange={(open) => !open && setProcessingPayment(null)}
-          onConfirm={handleProcessPayment}
-        />
-      )}
-
-      {/* Refund Booking Modal */}
-      {refundingBooking && (
-        <RefundBookingModal
-          booking={refundingBooking}
-          open={!!refundingBooking}
-          onOpenChange={(open) => !open && setRefundingBooking(null)}
-          onConfirm={handleProcessRefund}
-        />
-      )}
 
       {/* Edit Booking Modal */}
       {editingBooking && (

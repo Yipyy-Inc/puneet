@@ -436,6 +436,111 @@ exception when others then
   reset role; perform pg_temp.t('P11 rejected column', false, sqlerrm);
 end $$;
 
+-- ── R1: a refund can go back as store credit ───────────────────────────────
+--
+-- `CancelBookingModal` and `RefundModal` have always offered the choice, and
+-- until 20260806760000 `record_payment` could only do the card half — the
+-- store-credit option would have recorded a refund and granted nothing. Both
+-- rows are written in one transaction, so a refund that says it gave credit
+-- cannot exist without the credit.
+do $$
+declare v_b uuid; v_bal numeric; r public.bookings; v_entries integer;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  perform pg_temp.pay(v_b, 100);
+  reset role;
+
+  -- Refunds need `process_refund`; the accountant has it, retail does not.
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0003');
+  set local role authenticated;
+  perform public.record_payment(
+    '00000000-0000-0000-0000-0000001c0020', 'store-credit',
+    -100, 0, 0, -100, -100,
+    v_b, '00000000-0000-0000-0000-0000001c0040',
+    0, 0, 0, null, null, null, '{}', 'goodwill');
+  reset role;
+
+  select coalesce(sum(amount), 0) into v_bal
+    from public.store_credit_entries
+   where client_id = '00000000-0000-0000-0000-0000001c0040';
+  select count(*) into v_entries
+    from public.store_credit_entries
+   where client_id = '00000000-0000-0000-0000-0000001c0040' and reason = 'refund';
+  select * into r from public.bookings where id = v_b;
+
+  perform pg_temp.t('R1  a refund to store credit lands on the balance',
+    v_bal = 100 and v_entries = 1,
+    format('balance=%s refund entries=%s', v_bal, v_entries));
+  perform pg_temp.t('R1b and the booking reads refunded, not merely unpaid',
+    r.payment_status = 'refunded' and r.amount_paid = 0,
+    format('status=%s paid=%s', r.payment_status, r.amount_paid));
+exception when others then
+  reset role; perform pg_temp.t('R1  refund to credit', false, sqlerrm);
+end $$;
+
+-- ── R2: giving money back is still an authority ────────────────────────────
+--
+-- The new branch must not have become a way around `process_refund`. `retail`
+-- can take payments all day and cannot give a penny back, in either currency.
+do $$
+declare v_b uuid; v_err text := 'no error'; v_entries integer;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  perform pg_temp.pay(v_b, 100);
+  reset role;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0002');
+  set local role authenticated;
+  begin
+    perform public.record_payment(
+      '00000000-0000-0000-0000-0000001c0020', 'store-credit',
+      -100, 0, 0, -100, -100,
+      v_b, '00000000-0000-0000-0000-0000001c0040',
+      0, 0, 0, null, null, null, '{}', 'nope');
+  exception when others then v_err := sqlerrm;
+  end;
+  reset role;
+
+  select count(*) into v_entries
+    from public.store_credit_entries
+   where booking_id = v_b;
+
+  perform pg_temp.t('R2  retail cannot refund to store credit, and grants nothing',
+    v_err <> 'no error' and v_entries = 0,
+    format('err=%s entries=%s', left(v_err, 50), v_entries));
+end $$;
+
+-- ── R3: the sign is what tells the two apart ───────────────────────────────
+--
+-- `method = 'store-credit'` on a POSITIVE payment means paid WITH credit, and
+-- must still deduct. If the new branch had keyed on the method alone, this
+-- would grant instead — the same fact read backwards.
+do $$
+declare v_b uuid; v_bal numeric;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  perform public.record_payment(
+    '00000000-0000-0000-0000-0000001c0020', 'store-credit',
+    30, 0, 0, 0, 30,
+    v_b, '00000000-0000-0000-0000-0000001c0040',
+    30, 0, 0, null, null, null, '{}', 'spend');
+  reset role;
+
+  select coalesce(sum(amount), 0) into v_bal
+    from public.store_credit_entries where booking_id = v_b;
+
+  perform pg_temp.t('R3  paying WITH store credit still deducts it',
+    v_bal = -30, format('ledger movement=%s', v_bal));
+exception when others then
+  reset role; perform pg_temp.t('R3  spending credit', false, sqlerrm);
+end $$;
+
 -- ── Results ────────────────────────────────────────────────────────────────
 
 do $$
