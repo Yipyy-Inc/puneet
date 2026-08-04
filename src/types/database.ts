@@ -14,6 +14,110 @@ export type Database = {
   };
   public: {
     Tables: {
+      boarding_rooms: {
+        Row: {
+          allowed_pet_types: string[];
+          allows_shared: boolean;
+          capacity: number;
+          created_at: string;
+          display_order: number;
+          facility_id: string;
+          id: string;
+          is_active: boolean;
+          legacy_id: string;
+          name: string;
+          restrictions: string[];
+          room_type: string;
+          updated_at: string;
+        };
+        Insert: {
+          allowed_pet_types?: string[];
+          allows_shared?: boolean;
+          capacity?: number;
+          created_at?: string;
+          display_order?: number;
+          facility_id: string;
+          id?: string;
+          is_active?: boolean;
+          legacy_id: string;
+          name: string;
+          restrictions?: string[];
+          room_type: string;
+          updated_at?: string;
+        };
+        Update: {
+          allowed_pet_types?: string[];
+          allows_shared?: boolean;
+          capacity?: number;
+          created_at?: string;
+          display_order?: number;
+          facility_id?: string;
+          id?: string;
+          is_active?: boolean;
+          legacy_id?: string;
+          name?: string;
+          restrictions?: string[];
+          room_type?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "boarding_rooms_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      boarding_stays: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          facility_id: string;
+          occupies: string;
+          override_reason: string | null;
+          released_at: string | null;
+          room_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          facility_id: string;
+          occupies: string;
+          override_reason?: string | null;
+          released_at?: string | null;
+          room_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          facility_id?: string;
+          occupies?: string;
+          override_reason?: string | null;
+          released_at?: string | null;
+          room_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "boarding_stays_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "boarding_stays_room_id_fkey";
+            columns: ["room_id"];
+            isOneToOne: false;
+            referencedRelation: "boarding_rooms";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       booking_pets: {
         Row: {
           booking_id: string;

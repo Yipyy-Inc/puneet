@@ -23,15 +23,22 @@ function canDrop({
   pet,
   assignedPetIds,
   allowOverride,
+  takenByAnotherStay,
 }: {
   room: BoardingRoom;
   pet: AssignablePet;
   assignedPetIds: number[];
   allowOverride: boolean;
+  takenByAnotherStay: boolean;
 }) {
   if (allowOverride) return true;
   if (!pet.eligible) return false;
   if (!room.allowedPetTypes.includes(pet.petType)) return false;
+  // `assignedPetIds` only ever describes THIS booking, so this line was never
+  // a capacity rule — it could not see another guest. `takenByAnotherStay`
+  // comes from /api/boarding/rooms and is what the exclusion constraint on
+  // boarding_stays will judge, so the board and the save now agree.
+  if (takenByAnotherStay) return false;
   if (assignedPetIds.length >= room.capacity) return false;
   return true;
 }
@@ -41,6 +48,7 @@ export function RoomAssignmentBoard({
   pets,
   assignments,
   allowOverride,
+  occupiedRoomIds = [],
   onAssign,
   onUnassign,
   onToggleOverride,
@@ -49,10 +57,13 @@ export function RoomAssignmentBoard({
   pets: AssignablePet[];
   assignments: RoomAssignments;
   allowOverride: boolean;
+  /** Rooms already held by another stay across these dates. */
+  occupiedRoomIds?: string[];
   onAssign: (petId: number, roomId: string) => void;
   onUnassign: (petId: number) => void;
   onToggleOverride: (checked: boolean) => void;
 }) {
+  const takenIds = useMemo(() => new Set(occupiedRoomIds), [occupiedRoomIds]);
   const assignedPetIds = useMemo(() => {
     const all = new Set<number>();
     Object.values(assignments).forEach((petIds) =>
@@ -162,7 +173,8 @@ export function RoomAssignmentBoard({
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {rooms.map((room) => {
               const assigned = assignments[room.id] ?? [];
-              const isFull = assigned.length >= room.capacity;
+              const taken = takenIds.has(room.id);
+              const isFull = taken || assigned.length >= room.capacity;
               return (
                 <div
                   key={room.id}
@@ -184,6 +196,7 @@ export function RoomAssignmentBoard({
                         pet,
                         assignedPetIds: assigned,
                         allowOverride,
+                        takenByAnotherStay: takenIds.has(room.id),
                       })
                     ) {
                       return;
@@ -200,6 +213,11 @@ export function RoomAssignmentBoard({
                         {room.typeId.toUpperCase()} • Cap {assigned.length}/
                         {room.capacity}
                       </div>
+                      {taken && (
+                        <div className="text-muted-foreground text-xs">
+                          Booked for these dates
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-wrap justify-end gap-1">
                       <Badge variant="outline" className="capitalize">

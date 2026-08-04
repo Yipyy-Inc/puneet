@@ -18,13 +18,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ColumnDef } from "@/components/ui/DataTable";
 import { clients } from "@/data/clients";
 import { clientDocuments } from "@/data/documents";
+// `BOARDING_ROOMS` is gone from this import: the kennels come from
+// /api/boarding/rooms, which returns the same rows the exclusion constraint
+// judges — so this board and the save can no longer disagree about a room.
 import {
   BoardingBookingRequest,
-  BOARDING_ROOMS,
   PaymentStatus,
   PreCheckAuditEvent,
   YipyyGoPreCheckForm,
 } from "@/data/boarding-ops";
+import { useBoardingRoomsForStay } from "@/lib/api/boarding-rooms";
 import { PetEligibilityList, EligibilityRow } from "./PetEligibilityList";
 import { RoomAssignmentBoard, RoomAssignments } from "./RoomAssignmentBoard";
 import { PreCheckReviewPanel } from "./PreCheckReviewPanel";
@@ -70,6 +73,16 @@ export function BoardingRequestDialog({
 }) {
   const [allowOverride, setAllowOverride] = useState(false);
   const [assignments, setAssignments] = useState<RoomAssignments>({});
+
+  // The kennels, and who already has them for THESE dates. Asked for the
+  // request's own window rather than "now", because a stay three weeks out
+  // competes with the guests booked for those nights, not with today's.
+  const { data: roomsPayload } = useBoardingRoomsForStay(
+    request?.checkInDate,
+    request?.checkOutDate,
+  );
+  const liveRooms = roomsPayload?.rooms ?? [];
+  const occupiedRoomIds = (roomsPayload?.occupied ?? []).map((o) => o.roomId);
   const [workingPreCheck, setWorkingPreCheck] =
     useState<YipyyGoPreCheckForm | null>(null);
   const [staffPaymentNote, setStaffPaymentNote] = useState("");
@@ -267,7 +280,8 @@ export function BoardingRequestDialog({
 
               <TabsContent value="rooms" className="space-y-4">
                 <RoomAssignmentBoard
-                  rooms={BOARDING_ROOMS}
+                  rooms={liveRooms}
+                  occupiedRoomIds={occupiedRoomIds}
                   pets={assignablePets}
                   assignments={assignments}
                   allowOverride={allowOverride}

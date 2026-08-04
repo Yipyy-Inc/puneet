@@ -21,13 +21,15 @@ import {
   Utensils,
   BookOpen,
 } from "lucide-react";
+// `boardingCapacity` and `getOccupancyStats` are gone from this import: both
+// counted against a hardcoded 30 kennels that matched no room list. Occupancy
+// comes from the rooms table now.
 import {
   boardingGuests,
-  boardingCapacity,
   getCurrentGuests,
-  getOccupancyStats,
   BoardingGuest,
 } from "@/data/boarding";
+import { useBoardingRooms, summariseOccupancy } from "@/lib/api/boarding-rooms";
 import { boardingAnalytics } from "@/lib/report-data-sources";
 import { formatCurrency, formatPercent } from "@/lib/format";
 
@@ -35,7 +37,14 @@ export default function BoardingDashboardPage() {
   const [guests] = useState<BoardingGuest[]>(boardingGuests);
 
   const currentGuests = getCurrentGuests();
-  const occupancyStats = getOccupancyStats();
+  // Occupancy from the kennels themselves. `getOccupancyStats()` counted
+  // fixture guests by a `packageType` STRING and divided by a hardcoded total
+  // of 30 — a number that matched no room list, in a vocabulary
+  // (standard/premium/luxury) that was not the room types
+  // (standard/deluxe/vip/cat-suite). Three names for one idea, none of which
+  // could be checked against another.
+  const { data: roomsPayload } = useBoardingRooms();
+  const occupancy = summariseOccupancy(roomsPayload);
   const analytics = boardingAnalytics();
 
   // Filter for today's arrivals and departures (using mock date for demo)
@@ -77,7 +86,7 @@ export default function BoardingDashboardPage() {
     return { label: "Available", variant: "success" as const };
   };
 
-  const status = getCapacityStatus(occupancyStats.percentage);
+  const status = getCapacityStatus(occupancy.percentage);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -109,45 +118,36 @@ export default function BoardingDashboardPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
-              {occupancyStats.current} of {boardingCapacity.total} kennels
-              occupied
+              {occupancy.occupied} of {occupancy.total} kennels occupied
             </span>
-            <span className="font-medium">{occupancyStats.percentage}%</span>
+            <span className="font-medium">{occupancy.percentage}%</span>
           </div>
           <div className="bg-muted relative h-4 w-full overflow-hidden rounded-full">
             <div
-              className={`h-full transition-all ${getCapacityColor(occupancyStats.percentage)} `}
-              style={{ width: `${occupancyStats.percentage}%` }}
+              className={`h-full transition-all ${getCapacityColor(occupancy.percentage)} `}
+              style={{ width: `${occupancy.percentage}%` }}
             />
           </div>
 
-          {/* Occupancy by Suite Type */}
-          <div className="grid grid-cols-3 gap-4 pt-2">
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">
-                {occupancyStats.byType.standard}
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Standard / {boardingCapacity.standard}
-              </p>
+          {/* Occupancy by room type — one tile per type the facility actually
+              has, rather than three hardcoded ones named after a vocabulary no
+              room used. A facility with no kennels gets no tiles, which is the
+              honest rendering of an unbuilt room list. */}
+          {Object.keys(occupancy.byType).length > 0 && (
+            <div className="grid grid-cols-2 gap-4 pt-2 sm:grid-cols-3">
+              {Object.entries(occupancy.byType).map(([typeId, counts]) => (
+                <div
+                  key={typeId}
+                  className="bg-muted/50 rounded-lg p-3 text-center"
+                >
+                  <p className="text-2xl font-bold">{counts.occupied}</p>
+                  <p className="text-muted-foreground text-xs capitalize">
+                    {typeId.replace(/-/g, " ")} / {counts.total}
+                  </p>
+                </div>
+              ))}
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">
-                {occupancyStats.byType.premium}
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Premium / {boardingCapacity.premium}
-              </p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">
-                {occupancyStats.byType.luxury}
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Luxury / {boardingCapacity.luxury}
-              </p>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

@@ -660,6 +660,40 @@ So a stay may carry `override_reason`; overridden stays are excluded from the ch
 
 **Do instead:** a test whose assertion survives the bug is a precondition. Label it as one, or give it something only the fix can satisfy.
 
+## Snapshot (2026-08-06, the kennel list is the facility's)
+
+### 🔴 Three vocabularies for one idea, none of which joined
+
+Boarding occupancy was three fixtures that could not be checked against each other:
+
+| Source             | Where                      | Says                                              |
+| ------------------ | -------------------------- | ------------------------------------------------- |
+| `BOARDING_ROOMS`   | `src/data/boarding-ops.ts` | **6 rooms** — standard / deluxe / vip / cat-suite |
+| `boardingCapacity` | `src/data/boarding.ts`     | **total 30** — standard / premium / luxury        |
+| `BoardingGuest`    | `packageType` strings      | "Standard Kennel" / "Premium Suite" / …           |
+
+`premium` and `luxury` are not room types and never were. The boarding page rendered **"X of 30 kennels occupied"** with hardcoded Standard/Premium/Luxury tiles, beside an assignment board offering six rooms, while `getOccupancyStats()` counted fixture guests by matching a `packageType` **string**.
+
+Occupancy now counts the rooms table — the only version that cannot drift from what you can actually assign — and the per-type tiles are generated from the types the facility has. **The headline number changed from "of 30" to "of 6"**, which is the true one.
+
+**Do instead:** when two sources claim the same total, find which one an operator acts on. You assign an animal to a room, not to a capacity constant.
+
+### 🟡 A capacity check that could not see the other guests
+
+`RoomAssignmentBoard.canDrop` refused a drop on `assignedPetIds.length >= room.capacity`, where `assignedPetIds` came from _the current booking's own_ assignment map. It could not observe any other stay, so it was a within-this-form check wearing the clothes of a capacity rule — and the board would happily offer a kennel that the exclusion constraint then refused on save.
+
+It now takes `occupiedRoomIds` from `/api/boarding/rooms` for the request's own dates, so the board and the write judge the same facts. The constraint is still what guarantees it; this is the courtesy, not the rule.
+
+**Do instead:** a client-side availability check must be fed by the same query the server constraint uses, or it is decoration.
+
+### 🟢 Two more dead query factories served fixtures
+
+`boardingQueries.rooms()` and `.capacity()` had **no callers** — the screens imported `BOARDING_ROOMS` and `boardingCapacity` straight from `src/data/`. That is how the two totals disagreed unnoticed: the query layer looked like it owned the data while nothing went through it.
+
+Deleted rather than repointed, the same call made for `groomingQueries.packages` and `prepaidPackages`.
+
+**Do instead:** before repointing a factory at an API, grep its callers. A factory with none is not a migration target, it is dead code with a plausible name.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

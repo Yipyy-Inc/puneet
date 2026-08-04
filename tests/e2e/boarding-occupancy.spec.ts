@@ -96,22 +96,29 @@ test.afterAll(async ({ browser }) => {
 });
 
 test.describe("boarding occupancy", () => {
-  // A PRECONDITION, NOT A PROOF, and the difference is worth stating because
-  // this test passes whether or not the room was recorded.
+  // This used to assert only the 201, which passed WITH THE FIX DISABLED —
+  // a created booking says nothing about whether its room was recorded.
+  // Confirmed at the time by removing `p_boarding` from the route: this stayed
+  // green while the double-booking test dropped from 409 to 201.
   //
-  // Confirmed by removing `p_boarding` from the route and re-running: this
-  // still went green on its 201 while the double-booking test dropped to 201
-  // as well. There is no boarding read endpoint yet, so the only
-  // HTTP-observable evidence that the kennel was stored is the CONFLICT the
-  // next test provokes. That test is the assertion; this one just puts a guest
-  // in the room.
-  test("a stay can be created with a kennel", async ({ page }) => {
+  // Now that /api/boarding/rooms exists it can ask directly, so it does.
+  test("a kennel assignment reaches the database", async ({ page }) => {
     await signIn(page, ACCOUNTS.owner);
 
-    const res = await page.request.post("/api/bookings", {
-      data: stayBody(),
-    });
+    const body = stayBody();
+    const res = await page.request.post("/api/bookings", { data: body });
     expect(res.status(), await res.text()).toBe(201);
+
+    const rooms = (await (
+      await page.request.get(
+        `/api/boarding/rooms?from=${body.startDate}&to=${body.endDate}`,
+      )
+    ).json()) as { occupied: { roomId: string }[] };
+
+    expect(
+      rooms.occupied.some((o) => o.roomId === ROOM),
+      "the room reads occupied for the nights just booked",
+    ).toBe(true);
   });
 
   test("the same kennel on the same nights is refused with a sentence", async ({
@@ -164,5 +171,123 @@ test.describe("boarding occupancy", () => {
     // 422 — the room does not exist, which is a malformed request rather than
     // a conflict with another guest.
     expect(res.status()).toBe(422);
+  });
+});
+
+// ============================================================================
+// The read path: /api/boarding/rooms
+//
+// This is what lets the assignment board show the same rooms the constraint
+// judges, and what gives the first test above something to assert directly
+// rather than through a conflict.
+// ============================================================================
+
+interface RoomsPayload {
+  rooms: {
+    id: string;
+    name: string;
+    typeId: string;
+    capacity: number;
+    allowsShared: boolean;
+    allowedPetTypes: string[];
+    restrictions: string[];
+  }[];
+  occupied: {
+    roomId: string;
+    bookingRef: number;
+    from: string;
+    to: string;
+    isOverride: boolean;
+  }[];
+}
+
+test.describe("the kennel list comes from the facility", () => {
+  test("the rooms are the seeded ones, in the shape the board expects", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const res = await page.request.get("/api/boarding/rooms");
+    expect(res.status()).toBe(200);
+    const payload = (await res.json()) as RoomsPayload;
+
+    // Six, not the fixture's `boardingCapacity.total` of 30 — the number that
+    // matched no room list and was rendered as "X of 30 kennels occupied".
+    expect(payload.rooms.length).toBe(6);
+
+    const std = payload.rooms.find((r) => r.id === "R-STD-01");
+    expect(std, "R-STD-01 is on the list").toBeTruthy();
+    expect(std?.typeId).toBe("standard");
+    expect(std?.capacity).toBe(1);
+    expect(std?.allowsShared).toBe(false);
+    expect(std?.allowedPetTypes).toEqual(["dog"]);
+
+    // The Deluxe rooms are the only ones that may hold more than one pet, and
+    // the constraint that says so lives in the database.
+    const dlx = payload.rooms.find((r) => r.id === "R-DLX-01");
+    expect(dlx?.capacity).toBe(2);
+    expect(dlx?.allowsShared).toBe(true);
+  });
+
+  test("occupancy is derived from the stays, per window", async ({ page }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const when = nights(120);
+    const created = await page.request.post("/api/bookings", {
+      data: stayBody({ ...when, unitAssignment: "R-VIP-01" }),
+    });
+    expect(created.status(), await created.text()).toBe(201);
+
+    // The window the stay covers: the kennel reads occupied.
+    const during = (await (
+      await page.request.get(
+        `/api/boarding/rooms?from=${when.startDate}&to=${when.endDate}`,
+      )
+    ).json()) as RoomsPayload;
+    const held = during.occupied.find((o) => o.roomId === "R-VIP-01");
+    expect(held, "the VIP suite reads occupied for its own dates").toBeTruthy();
+    expect(held?.isOverride).toBe(false);
+
+    // A window nowhere near it: free. This is the assertion that would fail if
+    // the route ignored the dates and returned every stay it could see.
+    const elsewhere = nights(300);
+    const after = (await (
+      await page.request.get(
+        `/api/boarding/rooms?from=${elsewhere.startDate}&to=${elsewhere.endDate}`,
+      )
+    ).json()) as RoomsPayload;
+    expect(after.occupied.some((o) => o.roomId === "R-VIP-01")).toBe(false);
+  });
+
+  test("the boarding page counts the kennels it actually has", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    await page.goto("/facility/dashboard/services/boarding");
+
+    // Six seeded rooms. The old card read "X of 30 kennels occupied" from
+    // `boardingCapacity.total` — a number no room list produced.
+    await expect(page.getByText(/of 6 kennels occupied/i)).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByText(/of 30 kennels occupied/i)).toHaveCount(0);
+
+    // Per-type tiles come from the room types that exist. "Premium" and
+    // "Luxury" were hardcoded headings for types no room had.
+    await expect(page.getByText(/cat suite \//i)).toBeVisible();
+    await expect(page.getByText(/premium \//i)).toHaveCount(0);
+  });
+
+  test("signed out gets 401, not an empty room list", async ({ browser }) => {
+    // A fresh context: an empty list would read as "this facility has no
+    // kennels" rather than "you are not signed in".
+    const anon = await browser.newContext();
+    const page = await anon.newPage();
+    try {
+      const res = await page.request.get("/api/boarding/rooms");
+      expect(res.status()).toBe(401);
+    } finally {
+      await anon.close();
+    }
   });
 });
