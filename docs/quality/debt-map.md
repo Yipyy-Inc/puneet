@@ -420,6 +420,24 @@ This is the **same shape** as the customer-package policies a day earlier: gate 
 
 **Do instead:** `staff_read` already had the answer — any facility member may read the roster. A grooming profile is _less_ sensitive than the staff record it hangs off, so making it harder to read is incoherent. Fixed in 20260806540000 to mirror `staff_read`; writes still need `manage_staff`. When adding a policy, list the roles that will _call_ the screen before choosing the permission, and write a positive assertion for each.
 
+### 🔴 An RLS-denied UPDATE or DELETE does not raise — it matches nothing and reports success
+
+The most transferable finding in this schema, and the second time its shape has bitten (the first was `SELECT … FOR UPDATE` returning zero rows, above).
+
+An **INSERT** that fails `with check` raises `42501`, and `writeFailure` turns that into a 403. An **UPDATE** that fails `using` does not: the row is simply not visible to the statement, so it affects zero rows and PostgREST returns success. **DELETE** behaves the same way.
+
+Measured on the first version of the stylist write route — a groomer, who holds no `manage_staff`, sent a skill-tier change:
+
+```
+PUT /api/grooming/stylists/fs-groom-08   →   204 No Content
+```
+
+Nothing was written; RLS held. But the API said it had been, and the screen would have shown "Grooming profile updated" over a profile that never changed — the exact failure the write path was built to remove.
+
+**A test that only asserts the data is unchanged passes on this.** The assertion that caught it was on the _status code_.
+
+**Do instead:** every UPDATE and DELETE behind RLS asks for the rows it touched (`.select("id")`) and treats an empty result as a refusal. For a DELETE where "nothing to delete" is legitimate, count first and compare — that is the only way to tell a refusal from an empty set. See `src/app/api/grooming/stylists/[staffId]/route.ts`. The other write routes in this repo predate the finding and should be audited for it.
+
 ### 🟡 `stylistIdForStaff` was synchronous because it searched an array
 
 It now reads an index primed by a fetch, which changes what "no answer" means. A component calling the bare function gets `undefined` on first paint and never re-renders, because nothing it subscribes to changed — the groomer's board would render empty and stay empty.

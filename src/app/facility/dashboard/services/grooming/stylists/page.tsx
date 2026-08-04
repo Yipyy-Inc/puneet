@@ -3,7 +3,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
-import { useStylists } from "@/lib/api/stylists";
+import {
+  useSaveStylistAvailability,
+  useSaveStylistProfile,
+  useStylists,
+} from "@/lib/api/stylists";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -286,6 +290,8 @@ export default function StylistsPage() {
   });
 
   const { data: stylistProfiles = [] } = useStylists();
+  const { mutate: saveProfile } = useSaveStylistProfile();
+  const { mutate: saveAvailability } = useSaveStylistAvailability();
   const { data: stylistHours = [] } = useQuery(
     groomingQueries.allStylistAvailability(),
   );
@@ -460,18 +466,77 @@ export default function StylistsPage() {
   };
 
   const toggleGroomerVisibility = (staffId: string) => {
-    setGroomerVisibility((prev) => ({
-      ...prev,
-      [staffId]: !prev[staffId],
-    }));
-    toast.success(
-      `Groomer ${groomerVisibility[staffId] ? "hidden from" : "shown on"} online booking`,
+    const next = !groomerVisibility[staffId];
+    // Flipped locally first so the switch answers immediately, then reverted
+    // if the server refuses -- a toggle that waits a round trip reads as
+    // broken, and one that never reverts lies.
+    setGroomerVisibility((prev) => ({ ...prev, [staffId]: next }));
+    saveProfile(
+      { staffId, patch: { visibleOnline: next } },
+      {
+        onSuccess: () => {
+          toast.success(
+            `Groomer ${next ? "shown on" : "hidden from"} online booking`,
+          );
+        },
+        onError: (error: Error) => {
+          setGroomerVisibility((prev) => ({ ...prev, [staffId]: !next }));
+          toast.error("Could not change online visibility", {
+            description: error.message,
+          });
+        },
+      },
     );
   };
 
   const handleSave = () => {
-    setIsEditModalOpen(false);
-    toast.success("Grooming profile updated");
+    if (!editingGroomer) return;
+    const groomerName = editingGroomer.name;
+    // Comma-separated in the form, arrays in the record. Blanks are dropped so
+    // "a, , b" does not save an empty specialisation.
+    const list = (value: string) =>
+      value
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+
+    saveProfile(
+      {
+        staffId: editingGroomer.staffId,
+        patch: {
+          specializations: list(formData.specializations),
+          certifications: list(formData.certifications),
+          yearsExperience: formData.yearsExperience,
+          bio: formData.bio,
+          visibleOnline: formData.visibleOnline,
+          calendarColor: formData.calendarColor,
+          qualifiedPackageIds: formData.qualifiedPackageIds,
+          capacity: {
+            maxDailyAppointments: formData.maxDailyAppointments,
+            maxWeeklyAppointments: formData.maxWeeklyAppointments,
+            maxConcurrentAppointments: formData.maxConcurrentAppointments,
+            skillLevel: formData.skillLevel,
+            canHandleMatted: formData.canHandleMatted,
+            canHandleAnxious: formData.canHandleAnxious,
+            canHandleAggressive: formData.canHandleAggressive,
+          },
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsEditModalOpen(false);
+          toast.success("Grooming profile updated");
+        },
+        onError: (error: Error) => {
+          // The modal stays OPEN on failure. Closing it would lose the edits
+          // and leave a success-shaped silence over a profile that did not
+          // change.
+          toast.error(`Could not save ${groomerName}'s profile`, {
+            description: error.message,
+          });
+        },
+      },
+    );
   };
 
   const handlePreviewSummary = (groomer: MergedStylist) => {
@@ -640,13 +705,24 @@ export default function StylistsPage() {
 
   const handleSaveNotifPrefs = () => {
     if (!notifPrefsGroomer) return;
-    setNotifPrefs((prev) => ({
-      ...prev,
-      [notifPrefsGroomer.staffId]: notifDraft,
-    }));
-    setIsNotifPrefsOpen(false);
-    toast.success(
-      `Notification preferences saved for ${notifPrefsGroomer.name}`,
+    const groomer = notifPrefsGroomer;
+    saveProfile(
+      { staffId: groomer.staffId, patch: { notificationPrefs: notifDraft } },
+      {
+        onSuccess: () => {
+          setNotifPrefs((prev) => ({
+            ...prev,
+            [groomer.staffId]: notifDraft,
+          }));
+          setIsNotifPrefsOpen(false);
+          toast.success(`Notification preferences saved for ${groomer.name}`);
+        },
+        onError: (error: Error) => {
+          toast.error(`Could not save preferences for ${groomer.name}`, {
+            description: error.message,
+          });
+        },
+      },
     );
   };
 
@@ -683,8 +759,30 @@ export default function StylistsPage() {
   };
 
   const handleSaveAvailability = () => {
-    setIsAvailabilityModalOpen(false);
-    toast.success("Availability updated");
+    if (!selectedGroomer) return;
+    const groomerName = selectedGroomer.name;
+    saveAvailability(
+      {
+        staffId: selectedGroomer.staffId,
+        availability: Object.entries(availabilityData).map(([day, slot]) => ({
+          dayOfWeek: Number(day),
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          isAvailable: slot.isAvailable,
+        })),
+      },
+      {
+        onSuccess: () => {
+          setIsAvailabilityModalOpen(false);
+          toast.success("Availability updated");
+        },
+        onError: (error: Error) => {
+          toast.error(`Could not save ${groomerName}'s hours`, {
+            description: error.message,
+          });
+        },
+      },
+    );
   };
 
   const columns: ColumnDef<MergedStylist>[] = [
