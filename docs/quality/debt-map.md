@@ -481,6 +481,48 @@ The fixture's 4.9 / 4.95 / 4.7 were typed, not measured — there is no reviews 
 
 It is employment data and lives on the staff record. The stylists page already fell back to `staff.employment.hireDate` when a profile had none; that fallback is now the only path.
 
+## Snapshot (2026-08-06, a grooming booking creates its appointment)
+
+### 🔴 A missing write looked like a working screen, because the mapper had a fallback
+
+`/api/grooming/appointments` has GET and PATCH and **no POST**. Every row in that table arrived through a backfill migration (`20260805220000`, `20260805230000`). `/api/bookings` POST wrote a `bookings` row and its `booking_pets` and stopped — so nothing in the running app ever created a `grooming_appointments` row.
+
+What made it survive: the board's GET reads `bookings` and **left**-joins the extension, and `rowToGroomingAppointment` falls back with `packageName: ext?.service_name ?? row.status`. A grooming booking therefore did **not** disappear from the board. It appeared as a card named **"confirmed"**, with no service, no price and no duration. Measured, not assumed — reverting `create_booking` to the two-insert path and running `tests/e2e/booking-write-integrity.spec.ts` reports `Expected: "Full Groom"  Received: "confirmed"`.
+
+Three separate things hid it: the board was seeded, so it never looked empty; `booking-write-integrity.spec.ts` asserted only against `/api/bookings`, the surface that worked; and its fixture posted `service: "grooming"` with **no `serviceType` at all** and got a 201, because nothing downstream needed one.
+
+**Do instead:** when a table is an extension (`PRIMARY KEY (booking_id)`), test it from the surface that reads the extension, not from the parent. And treat a `?? row.status`-shaped fallback as a bug report waiting to happen: it converts a missing join into a plausible string, which is strictly worse than a blank.
+
+### 🔴 Three sequential writes, and `bookings` has no DELETE policy
+
+The old POST inserted the booking, then the pets, then (for grooming) would have needed the appointment and its add-ons. A refusal on write two left a booking nobody could withdraw. The route worked around exactly that by validating pets **before** the insert — correct, and it covered only the case somebody had thought of. Every new child row would have needed its own pre-check.
+
+`create_booking` (`20260806560000`) is SECURITY INVOKER, so RLS still judges every insert as the caller, and any refusal rolls back all of them. The pre-check stays, demoted to what it is now: a better error message.
+
+**Do instead:** when a create spans more than one table and the parent cannot be deleted, the transaction is the fix. A pre-check per child does not scale and silently stops being complete the moment a child is added.
+
+### 🟡 An `INSERT … SELECT … JOIN` is a silent-drop machine
+
+The add-on insert joins requested legacy ids against `grooming_add_ons`. A join that matches nothing inserts nothing and **raises nothing** — the pet arrives without the nail trim the booking screen charged for. Same family as the RLS-denied UPDATE above: absence of an error is not evidence of a write.
+
+It now compares `get diagnostics row_count` against `jsonb_array_length` and raises on a mismatch (B9).
+
+**Do instead:** any `insert … select … join` on caller-supplied keys needs a row count compared against what was asked for.
+
+### 🟡 `SELECT … INTO` sets its target to NULL when nothing matches
+
+Caught in my own draft before it shipped. `select sp.price into v_price from grooming_service_size_prices where …` was meant to _override_ the base price for that size band — but a service with no row for the pet's tier nulls `v_price` instead of leaving it. It reads like a conditional assignment and is an unconditional one.
+
+**Do instead:** select into a separate variable and assign only if it came back non-null.
+
+### 🟢 Two mock add-on catalogues, and only one matches Postgres
+
+`src/data/grooming-add-ons.ts` (`ao-01` … `ao-08`, Teeth Brushing at 15) seeded `grooming_add_ons` and is what the booking modal sends. `src/data/grooming-pricing-rules.ts` has the same eight add-ons as `ao_teeth`-style ids at different prices (Teeth Brushing at 12); the check-in dialog uses it, matching **by name**.
+
+Nothing is broken today — the booking path keys on the list that matches the table. The hazard is that they look interchangeable and are not, and the seed migration's header claims "the booking form … keys on them" about ids that only half the app uses.
+
+**Do instead:** when the check-in dialog is migrated, it takes add-ons from the API, and the `ao_teeth` list goes.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

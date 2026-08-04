@@ -127,48 +127,67 @@ export async function POST(request: NextRequest) {
     timeZone: facility.timeZone,
   });
 
-  const { data: created, error } = await supabase
-    .from("bookings")
-    .insert(row as never)
-    .select("id, ref")
-    .single();
+  // THE BOOKING, ITS PETS AND — FOR GROOMING — ITS APPOINTMENT, IN ONE
+  // TRANSACTION.
+  //
+  // This used to be three sequential writes from here, and a grooming booking
+  // got only the first two: `grooming_appointments` is what the board reads,
+  // nothing wrote it, and so a groom booked in this app was invisible to the
+  // person who had to do it. The appointments route has no POST at all — every
+  // row in that table arrived through a backfill migration.
+  //
+  // Sequential writes were also why the pet check above has to happen first:
+  // `bookings` has no DELETE policy, so a refusal on write two left a booking
+  // that could not be withdrawn. create_booking (20260806560000) is SECURITY
+  // INVOKER, so RLS still judges every insert as this caller, and a refusal
+  // anywhere rolls back the lot. The pre-check stays because it produces a far
+  // better message than a constraint name — but it is no longer the thing
+  // standing between us and an orphan row.
+  //
+  // The grooming payload carries CHOICES, not money: which service, which
+  // add-ons, which station. The RPC reads the prices from the catalogue,
+  // because a price in a request body is a suggestion.
+  const grooming =
+    input.service === "grooming"
+      ? {
+          serviceId: input.serviceType ?? null,
+          addOnIds: input.groomingAddOns ?? [],
+          stationId: input.stationAssignment ?? null,
+          durationOverrideMin: input.groomingDurationOverrideMin ?? null,
+        }
+      : null;
+
+  const { data: createdRows, error } = await supabase.rpc("create_booking", {
+    p_booking: row,
+    p_pet_ids: resolved.map((p) => p.id),
+    p_grooming: grooming,
+  });
 
   if (error) {
     // 403 for a policy refusal, because "you may not do this" is not a bug in
-    // the request body and should not read as one in the client.
+    // the request body and should not read as one in the client. 422 for the
+    // RPC's own rejections — an unknown service or add-on is a bad request,
+    // not a server fault and not a permission problem.
     const denied = error.code === "42501";
+    const badRequest = error.code === "23503" || error.code === "22023";
     return NextResponse.json(
       { error: denied ? "Not allowed to create bookings." : error.message },
-      { status: denied ? 403 : 500 },
+      { status: denied ? 403 : badRequest ? 422 : 500 },
     );
   }
 
-  // The join rows. Pre-validated above, so a refusal here means the caller
-  // may create a booking but not crew one — reported rather than swallowed,
-  // because an unchecked insert would answer 201 for a booking with no
-  // animals on it.
-  if (resolved.length > 0) {
-    const { error: petError } = await supabase
-      .from("booking_pets")
-      .insert(resolved.map((p) => ({ booking_id: created.id, pet_id: p.id })));
-
-    if (petError) {
-      // Deliberately NOT "the booking was not created" — it was, and there is
-      // no delete policy to undo it. Saying so is better than a tidy lie.
-      return NextResponse.json(
-        {
-          error:
-            "The booking was created but its pets could not be attached. Ask a manager to add them.",
-        },
-        { status: petError.code === "42501" ? 403 : 500 },
-      );
-    }
+  const created = createdRows?.[0];
+  if (!created) {
+    return NextResponse.json(
+      { error: "The booking could not be created." },
+      { status: 500 },
+    );
   }
 
   const { data: full } = await supabase
     .from("bookings")
     .select(BOOKING_SELECT)
-    .eq("id", created.id)
+    .eq("id", created.booking_id)
     .single();
 
   return NextResponse.json(full ? rowToBooking(full) : null, { status: 201 });

@@ -3435,6 +3435,14 @@ export type Database = {
       };
     };
     Functions: {
+      create_booking: {
+        Args: {
+          p_booking: Json;
+          p_grooming?: Json;
+          p_pet_ids?: string[];
+        };
+        Returns: { booking_id: string; booking_ref: number }[];
+      };
       link_client_record: { Args: never; Returns: string };
       link_staff_invite: {
         Args: { p_email: string; p_staff_legacy_id: string; p_user_id: string };

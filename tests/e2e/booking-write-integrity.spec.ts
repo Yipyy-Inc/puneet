@@ -32,6 +32,8 @@ import { PASSWORD } from "./_auth";
 const CUSTOMER_CLIENT_REF = 15;
 const OWN_PET_REF = 1; // Buddy
 const STRANGER_PET_REF = 3; // Max, belonging to client 16
+/** "Full Groom" — seeded into grooming_services for facility 11. */
+const GROOMING_SERVICE = "groom-pkg-002";
 
 async function signIn(page: Page, email: string) {
   await page.goto("/login");
@@ -57,7 +59,15 @@ async function signIn(page: Page, email: string) {
  */
 const MARKER = "[e2e booking-write-integrity]";
 
-/** The shape the booking modal actually posts — facility wall-clock dates. */
+/**
+ * The shape the booking modal actually posts — facility wall-clock dates.
+ *
+ * `serviceType` was missing here until create_booking (20260806560000) started
+ * requiring it, and the omission was invisible: the route wrote a `bookings`
+ * row and nothing else, so a body that never said WHICH groom was booked
+ * produced a 201 and an appointment the grooming board could not show. The
+ * modal has always sent the package id in this field.
+ */
 function bookingBody(overrides: Record<string, unknown> = {}) {
   const day = new Date(Date.now() + 6 * 86_400_000).toISOString().slice(0, 10);
   return {
@@ -65,6 +75,7 @@ function bookingBody(overrides: Record<string, unknown> = {}) {
     petId: OWN_PET_REF,
     facilityId: 11,
     service: "grooming",
+    serviceType: GROOMING_SERVICE,
     startDate: day,
     endDate: day,
     checkInTime: "09:00",
@@ -188,5 +199,69 @@ test.describe("booking write integrity", () => {
     // the trigger zeroed everything for everybody.
     expect(booking.status).toBe("confirmed");
     expect(Number(booking.totalCost ?? 0)).toBe(80);
+  });
+
+  // ── The bug this route existed with ──────────────────────────────────────
+  //
+  // Everything above passed while grooming bookings were unworkable, because
+  // every assertion read /api/bookings — the one surface that was fine. The
+  // board reads /api/grooming/appointments, and nothing wrote the extension
+  // row: /api/bookings stopped after the booking, and the appointments route
+  // has no POST at all.
+  //
+  // WHAT IT LOOKED LIKE, measured by reverting create_booking to the old
+  // two-insert path and running this test: the appointment is NOT absent from
+  // the board. It is present and nameless. The GET reads `bookings` and left-
+  // joins the extension, and the mapper falls back with
+  // `packageName: ext?.service_name ?? row.status` — so the card renders with
+  // the booking's STATUS where the service should be:
+  //
+  //   Expected: "Full Groom"     Received: "confirmed"
+  //
+  // Which is why `toBeTruthy()` on its own would have proved nothing here, and
+  // why the name is asserted: a phantom card that says "confirmed" is worse
+  // than a missing one, because nobody reports it as broken.
+  test("a groom booked here shows up on the grooming board, named", async ({
+    page,
+  }) => {
+    await signIn(page, "owner@yipyy.dev");
+
+    const res = await page.request.post("/api/bookings", {
+      data: bookingBody({ status: "confirmed", basePrice: 65, totalCost: 65 }),
+    });
+    expect(res.status()).toBe(201);
+    const booking = (await res.json()) as { id?: number };
+
+    const board = (await (
+      await page.request.get("/api/grooming/appointments")
+    ).json()) as {
+      id?: string | number;
+      packageName?: string;
+      basePrice?: number;
+    }[];
+
+    const mine = board.find((a) => String(a.id) === String(booking.id));
+    expect(
+      mine,
+      "the new booking is missing from the grooming board",
+    ).toBeTruthy();
+
+    // Named and priced from the catalogue, not from the request: the
+    // appointment carries the snapshot the counter later bills against. 65 is
+    // what the request asked for too, so the price is checked against the
+    // service row rather than trusted to differ.
+    expect(mine?.packageName).toBe("Full Groom");
+    expect(Number(mine?.basePrice ?? 0)).toBeGreaterThan(0);
+  });
+
+  test("a groom with no service named is refused", async ({ page }) => {
+    await signIn(page, "owner@yipyy.dev");
+
+    const res = await page.request.post("/api/bookings", {
+      data: { ...bookingBody(), serviceType: undefined },
+    });
+
+    // 422, not 201-and-invisible. This is the shape the old route accepted.
+    expect(res.status()).toBe(422);
   });
 });
