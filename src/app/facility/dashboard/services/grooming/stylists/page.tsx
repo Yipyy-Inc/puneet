@@ -175,7 +175,11 @@ function buildMergedStylists(
       bio: profile?.bio ?? "",
       rating: profile?.rating ?? 0,
       totalAppointments: profile?.totalAppointments ?? 0,
-      hireDate: profile?.hireDate ?? staff.employment.hireDate,
+      // `||`, not `??`: the API returns an EMPTY STRING for a profile's hire
+      // date, because a hire date is employment data and lives on the staff
+      // record. An empty string is not nullish, so `??` would have kept it and
+      // shown a blank where the staff date belongs.
+      hireDate: profile?.hireDate || staff.employment.hireDate,
       capacity: profile?.capacity ?? defaultCapacity,
       visibleOnline: profile?.visibleOnline ?? false,
       hasGroomingProfile: !!profile,

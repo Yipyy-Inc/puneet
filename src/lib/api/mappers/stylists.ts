@@ -32,9 +32,15 @@ import type { PetSize } from "@/types/base";
 // ── `hireDate` IS NOT A GROOMING FACT ─────────────────────────────────────
 //
 // It belongs to employment, which lives on the staff record and is not exposed
-// through this route. The stylists page already falls back to
-// `staff.employment.hireDate` when a profile has none — that fallback is now
-// the only path.
+// through this route. The stylists page falls back to
+// `staff.employment.hireDate`, and that fallback is now the only path.
+//
+// The empty string below is load-bearing and was nearly a bug: `Stylist`
+// requires `hireDate: string`, so it cannot be omitted, and the page's
+// fallback was written with `??`. An empty string is not nullish, so `??`
+// would have kept the blank. That call site uses `||` now — a consumer adding
+// a new one should do the same, or read the date from the staff record
+// directly, which is where it actually lives.
 // ============================================================================
 
 export interface StaffRow {
@@ -117,7 +123,8 @@ export function rowToStylist(
     // See the header: no source, so no number.
     rating: 0,
     totalAppointments: Number(stats?.total_appointments ?? 0),
-    // Employment data, read from the staff record by the screens that show it.
+    // Employment data. Empty means "ask the staff record" -- see the header,
+    // and use `||` rather than `??` when falling back.
     hireDate: "",
     capacity: {
       maxDailyAppointments: row.max_daily_appointments,
