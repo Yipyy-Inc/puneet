@@ -2,8 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import type { BoardingRoom } from "@/types/boarding";
+import type { FacilityRoom, RoomCategory } from "@/types/rooms";
 import type { RoomOccupancy } from "@/lib/api/mappers/boarding";
+import { effectiveCapacity } from "@/lib/api/mappers/boarding";
 
 // ============================================================================
 // The kennels, from Postgres.
@@ -19,7 +20,8 @@ import type { RoomOccupancy } from "@/lib/api/mappers/boarding";
 // ============================================================================
 
 export interface BoardingRoomsPayload {
-  rooms: BoardingRoom[];
+  categories: RoomCategory[];
+  rooms: FacilityRoom[];
   occupied: RoomOccupancy[];
 }
 
@@ -104,12 +106,19 @@ export function useBoardingRoomsForStay(from?: string, to?: string) {
  * against another. Counting the rooms is the only version that cannot drift.
  */
 export function summariseOccupancy(payload: BoardingRoomsPayload | undefined) {
-  const rooms = payload?.rooms ?? [];
+  const categories = payload?.categories ?? [];
+  // Inactive rooms are excluded: a kennel out for a deep clean is not capacity
+  // the facility has tonight, and counting it would understate how full it is.
+  const rooms = (payload?.rooms ?? []).filter((r) => r.active);
   const occupiedIds = new Set((payload?.occupied ?? []).map((o) => o.roomId));
+  const nameById = new Map(categories.map((c) => [c.id, c.name]));
 
   const byType: Record<string, { total: number; occupied: number }> = {};
   for (const room of rooms) {
-    const entry = (byType[room.typeId] ??= { total: 0, occupied: 0 });
+    // Grouped by the CATEGORY's name, which is what the facility calls it —
+    // "Deluxe Suite", not a `typeId` from an enum no room row ever had.
+    const label = nameById.get(room.categoryId) ?? room.categoryId;
+    const entry = (byType[label] ??= { total: 0, occupied: 0 });
     entry.total += 1;
     if (occupiedIds.has(room.id)) entry.occupied += 1;
   }
@@ -123,4 +132,12 @@ export function summariseOccupancy(payload: BoardingRoomsPayload | undefined) {
     percentage: total > 0 ? Math.round((occupied / total) * 100) : 0,
     byType,
   };
+}
+
+/** How many pets a room holds — its own number, or its category's default. */
+export function roomCapacity(
+  room: FacilityRoom,
+  payload: BoardingRoomsPayload | undefined,
+): number {
+  return effectiveCapacity(room, payload?.categories ?? []);
 }

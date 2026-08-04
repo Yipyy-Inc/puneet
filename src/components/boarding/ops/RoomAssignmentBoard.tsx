@@ -5,7 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { BoardingRoom, PetType } from "@/data/boarding-ops";
+// `BoardingRoom` is gone from this import: rooms come from the facility's own
+// model now (20260806660000), where a room belongs to a CATEGORY that carries
+// its capacity, its booking rules and the messages shown to clients. The old
+// shape flattened all of that onto the room and had a `typeId` enum no row
+// ever held.
+import { PetType } from "@/data/boarding-ops";
+import type { FacilityRoom, RoomCategory, RoomRule } from "@/types/rooms";
 import { GripVertical, X } from "lucide-react";
 
 export interface AssignablePet {
@@ -18,14 +24,29 @@ export interface AssignablePet {
 
 export type RoomAssignments = Record<string, number[]>;
 
+/**
+ * The pet types a category admits, from its `pet_type` rules.
+ *
+ * No rule means no restriction — an empty list here would refuse every pet,
+ * which is the opposite of what "unrestricted" means.
+ */
+function allowedPetTypes(rules: RoomRule[]): PetType[] | null {
+  const values = rules
+    .filter((r) => r.enabled && r.type === "pet_type")
+    .flatMap((r) => (Array.isArray(r.value) ? r.value : [String(r.value)]));
+  return values.length > 0 ? (values as PetType[]) : null;
+}
+
 function canDrop({
-  room,
+  category,
+  capacity,
   pet,
   assignedPetIds,
   allowOverride,
   takenByAnotherStay,
 }: {
-  room: BoardingRoom;
+  category: RoomCategory | undefined;
+  capacity: number;
   pet: AssignablePet;
   assignedPetIds: number[];
   allowOverride: boolean;
@@ -33,18 +54,20 @@ function canDrop({
 }) {
   if (allowOverride) return true;
   if (!pet.eligible) return false;
-  if (!room.allowedPetTypes.includes(pet.petType)) return false;
+  const admits = allowedPetTypes(category?.rules ?? []);
+  if (admits && !admits.includes(pet.petType)) return false;
   // `assignedPetIds` only ever describes THIS booking, so this line was never
   // a capacity rule — it could not see another guest. `takenByAnotherStay`
   // comes from /api/boarding/rooms and is what the exclusion constraint on
   // boarding_stays will judge, so the board and the save now agree.
   if (takenByAnotherStay) return false;
-  if (assignedPetIds.length >= room.capacity) return false;
+  if (assignedPetIds.length >= capacity) return false;
   return true;
 }
 
 export function RoomAssignmentBoard({
   rooms,
+  categories,
   pets,
   assignments,
   allowOverride,
@@ -53,7 +76,8 @@ export function RoomAssignmentBoard({
   onUnassign,
   onToggleOverride,
 }: {
-  rooms: BoardingRoom[];
+  rooms: FacilityRoom[];
+  categories: RoomCategory[];
   pets: AssignablePet[];
   assignments: RoomAssignments;
   allowOverride: boolean;
@@ -64,6 +88,10 @@ export function RoomAssignmentBoard({
   onToggleOverride: (checked: boolean) => void;
 }) {
   const takenIds = useMemo(() => new Set(occupiedRoomIds), [occupiedRoomIds]);
+  const categoryById = useMemo(
+    () => new Map(categories.map((c) => [c.id, c])),
+    [categories],
+  );
   const assignedPetIds = useMemo(() => {
     const all = new Set<number>();
     Object.values(assignments).forEach((petIds) =>
@@ -174,7 +202,13 @@ export function RoomAssignmentBoard({
             {rooms.map((room) => {
               const assigned = assignments[room.id] ?? [];
               const taken = takenIds.has(room.id);
-              const isFull = taken || assigned.length >= room.capacity;
+              const category = categoryById.get(room.categoryId);
+              // The room's own number when it has one, otherwise the
+              // category's default. NULL means "whatever the category says",
+              // so it is resolved here rather than copied onto the room.
+              const capacity = room.capacity ?? category?.defaultCapacity ?? 1;
+              const admits = allowedPetTypes(category?.rules ?? []);
+              const isFull = taken || assigned.length >= capacity;
               return (
                 <div
                   key={room.id}
@@ -192,7 +226,8 @@ export function RoomAssignmentBoard({
                     if (!pet) return;
                     if (
                       !canDrop({
-                        room,
+                        category,
+                        capacity,
                         pet,
                         assignedPetIds: assigned,
                         allowOverride,
@@ -210,8 +245,8 @@ export function RoomAssignmentBoard({
                         {room.name}
                       </div>
                       <div className="text-muted-foreground text-xs">
-                        {room.typeId.toUpperCase()} • Cap {assigned.length}/
-                        {room.capacity}
+                        {(category?.name ?? "Uncategorised").toUpperCase()} •
+                        Cap {assigned.length}/{capacity}
                       </div>
                       {taken && (
                         <div className="text-muted-foreground text-xs">
@@ -221,9 +256,9 @@ export function RoomAssignmentBoard({
                     </div>
                     <div className="flex flex-wrap justify-end gap-1">
                       <Badge variant="outline" className="capitalize">
-                        {room.allowedPetTypes.join(", ")}
+                        {admits ? admits.join(", ") : "any pet"}
                       </Badge>
-                      {room.allowsShared ? (
+                      {capacity > 1 ? (
                         <Badge variant="secondary">Shared</Badge>
                       ) : (
                         <Badge variant="outline">Private</Badge>
@@ -231,9 +266,16 @@ export function RoomAssignmentBoard({
                     </div>
                   </div>
 
-                  {room.restrictions.length > 0 && (
+                  {/* The category's own client-facing rule messages, which the
+                      old model had nowhere to keep — it carried opaque
+                      `restrictions` strings on each room instead. */}
+                  {(category?.rules ?? []).filter((r) => r.enabled).length >
+                    0 && (
                     <div className="text-muted-foreground mt-2 text-[11px]">
-                      {room.restrictions.join(" • ")}
+                      {(category?.rules ?? [])
+                        .filter((r) => r.enabled)
+                        .map((r) => r.clientMessage)
+                        .join(" • ")}
                     </div>
                   )}
 

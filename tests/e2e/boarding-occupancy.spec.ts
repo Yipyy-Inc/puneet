@@ -27,9 +27,9 @@ import { ACCOUNTS, signIn } from "./_auth";
 /** Alice Johnson — the seeded client behind customer@yipyy.dev. */
 const CUSTOMER_CLIENT_REF = 15;
 const OWN_PET_REF = 1; // Buddy
-/** Seeded into boarding_rooms for facility 11 by 20260806600000. */
-const ROOM = "R-STD-01";
-const OTHER_ROOM = "R-STD-02";
+/** Seeded into facility_rooms for facility 11 by 20260806660000. */
+const ROOM = "room-s-01";
+const OTHER_ROOM = "room-s-02";
 
 const MARKER = "[e2e boarding-occupancy]";
 
@@ -165,7 +165,7 @@ test.describe("boarding occupancy", () => {
     await signIn(page, ACCOUNTS.owner);
 
     const res = await page.request.post("/api/bookings", {
-      data: stayBody({ unitAssignment: "R-NOPE-99", ...nights(90) }),
+      data: stayBody({ unitAssignment: "room-nope-99", ...nights(90) }),
     });
 
     // 422 — the room does not exist, which is a malformed request rather than
@@ -183,14 +183,20 @@ test.describe("boarding occupancy", () => {
 // ============================================================================
 
 interface RoomsPayload {
-  rooms: {
+  categories: {
     id: string;
     name: string;
-    typeId: string;
-    capacity: number;
-    allowsShared: boolean;
-    allowedPetTypes: string[];
-    restrictions: string[];
+    defaultCapacity: number;
+    defaultBasePrice?: number;
+    rules: { type: string; value: unknown; enabled: boolean }[];
+  }[];
+  rooms: {
+    id: string;
+    categoryId: string;
+    name: string;
+    active: boolean;
+    capacity?: number;
+    staffNotes?: string;
   }[];
   occupied: {
     roomId: string;
@@ -211,22 +217,40 @@ test.describe("the kennel list comes from the facility", () => {
     expect(res.status()).toBe(200);
     const payload = (await res.json()) as RoomsPayload;
 
-    // Six, not the fixture's `boardingCapacity.total` of 30 — the number that
-    // matched no room list and was rendered as "X of 30 kennels occupied".
-    expect(payload.rooms.length).toBe(6);
+    // The facility's own 29 units across 4 categories — the model its Rooms
+    // page edits. Before 20260806660000 this route served 6 rows from a
+    // separate table that page could not touch.
+    expect(payload.rooms.length).toBe(29);
+    expect(payload.categories.length).toBe(4);
 
-    const std = payload.rooms.find((r) => r.id === "R-STD-01");
-    expect(std, "R-STD-01 is on the list").toBeTruthy();
-    expect(std?.typeId).toBe("standard");
-    expect(std?.capacity).toBe(1);
-    expect(std?.allowsShared).toBe(false);
-    expect(std?.allowedPetTypes).toEqual(["dog"]);
+    const suite = payload.rooms.find((r) => r.id === "room-s-01");
+    expect(suite, "room-s-01 is on the list").toBeTruthy();
+    expect(suite?.categoryId).toBe("cat-suite");
+    expect(suite?.active).toBe(true);
+    // NULL capacity, not a copy of the category's — resolving it is the
+    // caller's job, so the category stays the single place it is stated.
+    expect(suite?.capacity).toBeUndefined();
 
-    // The Deluxe rooms are the only ones that may hold more than one pet, and
-    // the constraint that says so lives in the database.
-    const dlx = payload.rooms.find((r) => r.id === "R-DLX-01");
-    expect(dlx?.capacity).toBe(2);
-    expect(dlx?.allowsShared).toBe(true);
+    const suiteCat = payload.categories.find((c) => c.id === "cat-suite");
+    expect(suiteCat?.defaultCapacity).toBe(1);
+    expect(suiteCat?.defaultBasePrice).toBe(55);
+    // The rules the old model had nowhere to keep.
+    expect(suiteCat?.rules.length).toBeGreaterThan(0);
+
+    // Deluxe holds two; Private Care is the premium suite at 125.
+    expect(
+      payload.categories.find((c) => c.id === "cat-deluxe")?.defaultCapacity,
+    ).toBe(2);
+    expect(
+      payload.categories.find((c) => c.id === "cat-private-care")
+        ?.defaultBasePrice,
+    ).toBe(125);
+
+    // Inactive units are still listed — the Rooms page has to show them — and
+    // Condo 14 is one of the two out for a deep clean.
+    const condo14 = payload.rooms.find((r) => r.id === "room-c-14");
+    expect(condo14?.active).toBe(false);
+    expect(condo14?.staffNotes).toContain("deep clean");
   });
 
   test("occupancy is derived from the stays, per window", async ({ page }) => {
@@ -234,7 +258,7 @@ test.describe("the kennel list comes from the facility", () => {
 
     const when = nights(120);
     const created = await page.request.post("/api/bookings", {
-      data: stayBody({ ...when, unitAssignment: "R-VIP-01" }),
+      data: stayBody({ ...when, unitAssignment: "room-pcs-01" }),
     });
     expect(created.status(), await created.text()).toBe(201);
 
@@ -244,7 +268,7 @@ test.describe("the kennel list comes from the facility", () => {
         `/api/boarding/rooms?from=${when.startDate}&to=${when.endDate}`,
       )
     ).json()) as RoomsPayload;
-    const held = during.occupied.find((o) => o.roomId === "R-VIP-01");
+    const held = during.occupied.find((o) => o.roomId === "room-pcs-01");
     expect(held, "the VIP suite reads occupied for its own dates").toBeTruthy();
     expect(held?.isOverride).toBe(false);
 
@@ -256,7 +280,7 @@ test.describe("the kennel list comes from the facility", () => {
         `/api/boarding/rooms?from=${elsewhere.startDate}&to=${elsewhere.endDate}`,
       )
     ).json()) as RoomsPayload;
-    expect(after.occupied.some((o) => o.roomId === "R-VIP-01")).toBe(false);
+    expect(after.occupied.some((o) => o.roomId === "room-pcs-01")).toBe(false);
   });
 
   test("the boarding page counts the kennels it actually has", async ({
@@ -267,14 +291,16 @@ test.describe("the kennel list comes from the facility", () => {
 
     // Six seeded rooms. The old card read "X of 30 kennels occupied" from
     // `boardingCapacity.total` — a number no room list produced.
-    await expect(page.getByText(/of 6 kennels occupied/i)).toBeVisible({
+    // 26 ACTIVE units of the 29 — a kennel out for a deep clean is not
+    // capacity the facility has tonight. Neither number is the fixture's 30.
+    await expect(page.getByText(/of 26 kennels occupied/i)).toBeVisible({
       timeout: 20_000,
     });
     await expect(page.getByText(/of 30 kennels occupied/i)).toHaveCount(0);
 
-    // Per-type tiles come from the room types that exist. "Premium" and
-    // "Luxury" were hardcoded headings for types no room had.
-    await expect(page.getByText(/cat suite \//i)).toBeVisible();
+    // Tiles are the facility's own category names now. "Premium" and "Luxury"
+    // were hardcoded headings for types no room ever had.
+    await expect(page.getByText(/Condominium \//i)).toBeVisible();
     await expect(page.getByText(/premium \//i)).toHaveCount(0);
   });
 

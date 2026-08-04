@@ -81,7 +81,9 @@ export function BoardingRequestDialog({
     request?.checkInDate,
     request?.checkOutDate,
   );
-  const liveRooms = roomsPayload?.rooms ?? [];
+  // Active only: a room out for a deep clean is not somewhere to put a guest.
+  const liveRooms = (roomsPayload?.rooms ?? []).filter((r) => r.active);
+  const liveCategories = roomsPayload?.categories ?? [];
   const occupiedRoomIds = (roomsPayload?.occupied ?? []).map((o) => o.roomId);
   const [workingPreCheck, setWorkingPreCheck] =
     useState<YipyyGoPreCheckForm | null>(null);
@@ -281,6 +283,7 @@ export function BoardingRequestDialog({
               <TabsContent value="rooms" className="space-y-4">
                 <RoomAssignmentBoard
                   rooms={liveRooms}
+                  categories={liveCategories}
                   occupiedRoomIds={occupiedRoomIds}
                   pets={assignablePets}
                   assignments={assignments}

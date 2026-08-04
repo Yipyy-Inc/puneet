@@ -742,6 +742,32 @@ This is on top of the three counting vocabularies recorded above, making **four*
 
 **Do instead:** settle the model before building the ops board. If `facilityRooms` wins, migrate it into `boarding_rooms` (plus a categories table) and re-key `unitAssignment`; if `boarding_rooms` wins, point the Rooms admin page at it and retire the localStorage store. Do not add a third consumer to either until then.
 
+> **Settled 2026-08-06** (`20260806660000`). `facilityRooms` + `roomCategories` won. `room_categories` and `facility_rooms` are in Postgres with the fixture's 4 categories and 29 units; `boarding_rooms` is dropped; `boarding_stays.room_id`, `create_booking` and `assign_boarding_room` all resolve the new tables; `unitAssignment` now carries `room-*`. **Still open:** `useRooms` writes to localStorage, so the Rooms admin page still edits a copy — see below.
+
+## Snapshot (2026-08-06, one room model — the reads)
+
+### 🔴 `useRooms` still writes to localStorage
+
+The room MODEL is settled and the booking path reads it from Postgres. The Rooms admin page does not: `useRooms` loads from and saves to `facility-room-categories` / `facility-rooms` in localStorage, seeded from the same fixture.
+
+So the split is narrower than it was — one model, one id space, one seed — but a manager editing a room there still edits a browser-local copy that the booking path will not see. **This is the half that makes the page real, and it is the next change.** Categories and units both need create/update/delete against the new tables (`manage_services` gates them already).
+
+**Do instead:** move `useRooms` onto `/api/rooms` wholesale — reads and writes together. A read-only migration would leave Save buttons that appear to work, which is worse than the current state where at least the page is consistently local.
+
+### 🟡 `RoomCategory.facilityId` is a number the rows do not carry
+
+`RoomCategory` and `FacilityRoom` both declare `facilityId: number` — the app's legacy ref — while the tables key on the facility uuid. The mapper fills it from `DEMO_FACILITY_LEGACY_ID` rather than reshaping the app's types.
+
+That is fine while there is one facility and RLS scopes every read to it, and it is a lie the moment there are two.
+
+**Do instead:** when multi-facility reads land, either carry the ref on the row or drop the field from the app type. Don't compute it from a constant twice.
+
+### 🟢 The counting vocabularies are down from four to two
+
+`boardingCapacity` (total 30, standard/premium/luxury) and `BoardingGuest.packageType` ("Premium Suite") are still in `src/data/boarding.ts`, no longer read by the boarding page — its occupancy card counts active `facility_rooms` and groups by category name. `getOccupancyStats()` remains exported and is now unused by that page.
+
+**Do instead:** delete them with the rest of the boarding fixture when guests move to Postgres; they are harmless while nothing reads them, and misleading if something starts.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

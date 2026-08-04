@@ -14,61 +14,112 @@ export type Database = {
   };
   public: {
     Tables: {
-      boarding_rooms: {
+      facility_rooms: {
         Row: {
-          allowed_pet_types: string[];
-          allows_shared: boolean;
-          capacity: number;
+          active: boolean;
+          capacity: number | null;
+          category_id: string;
           created_at: string;
-          display_order: number;
           facility_id: string;
           id: string;
-          is_active: boolean;
+          image_url: string | null;
           legacy_id: string;
           name: string;
-          restrictions: string[];
-          room_type: string;
+          sort_order: number;
+          staff_notes: string | null;
           updated_at: string;
         };
         Insert: {
-          allowed_pet_types?: string[];
-          allows_shared?: boolean;
-          capacity?: number;
+          active?: boolean;
+          capacity?: number | null;
+          category_id: string;
           created_at?: string;
-          display_order?: number;
           facility_id: string;
           id?: string;
-          is_active?: boolean;
+          image_url?: string | null;
           legacy_id: string;
           name: string;
-          restrictions?: string[];
-          room_type: string;
+          sort_order?: number;
+          staff_notes?: string | null;
           updated_at?: string;
         };
         Update: {
-          allowed_pet_types?: string[];
-          allows_shared?: boolean;
-          capacity?: number;
+          active?: boolean;
+          capacity?: number | null;
+          category_id?: string;
           created_at?: string;
-          display_order?: number;
           facility_id?: string;
           id?: string;
-          is_active?: boolean;
+          image_url?: string | null;
           legacy_id?: string;
           name?: string;
-          restrictions?: string[];
-          room_type?: string;
+          sort_order?: number;
+          staff_notes?: string | null;
           updated_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "boarding_rooms_facility_id_fkey";
-            columns: ["facility_id"];
+            foreignKeyName: "facility_rooms_category_id_fkey";
+            columns: ["category_id"];
             isOneToOne: false;
-            referencedRelation: "facilities";
+            referencedRelation: "room_categories";
             referencedColumns: ["id"];
           },
         ];
+      };
+      room_categories: {
+        Row: {
+          color: string;
+          created_at: string;
+          default_base_price: number | null;
+          default_capacity: number;
+          description: string | null;
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          legacy_id: string;
+          name: string;
+          rules: Json;
+          service: Database["public"]["Enums"]["service_module"];
+          sort_order: number;
+          updated_at: string;
+          visible_to_clients: boolean;
+        };
+        Insert: {
+          color?: string;
+          created_at?: string;
+          default_base_price?: number | null;
+          default_capacity?: number;
+          description?: string | null;
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          legacy_id: string;
+          name: string;
+          rules?: Json;
+          service: Database["public"]["Enums"]["service_module"];
+          sort_order?: number;
+          updated_at?: string;
+          visible_to_clients?: boolean;
+        };
+        Update: {
+          color?: string;
+          created_at?: string;
+          default_base_price?: number | null;
+          default_capacity?: number;
+          description?: string | null;
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          legacy_id?: string;
+          name?: string;
+          rules?: Json;
+          service?: Database["public"]["Enums"]["service_module"];
+          sort_order?: number;
+          updated_at?: string;
+          visible_to_clients?: boolean;
+        };
+        Relationships: [];
       };
       boarding_stays: {
         Row: {
@@ -113,7 +164,7 @@ export type Database = {
             foreignKeyName: "boarding_stays_room_id_fkey";
             columns: ["room_id"];
             isOneToOne: false;
-            referencedRelation: "boarding_rooms";
+            referencedRelation: "facility_rooms";
             referencedColumns: ["id"];
           },
         ];

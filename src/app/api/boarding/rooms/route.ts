@@ -1,46 +1,41 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { DEMO_FACILITY_LEGACY_ID } from "@/lib/api/facility-context";
 import {
-  BOARDING_ROOM_SELECT,
-  rowToBoardingRoom,
+  ROOM_CATEGORY_SELECT,
+  FACILITY_ROOM_SELECT,
+  rowToRoomCategory,
+  rowToFacilityRoom,
   rowToOccupancy,
-  type BoardingRoomRow,
+  type RoomCategoryRow,
+  type FacilityRoomRow,
   type BoardingStayRow,
 } from "@/lib/api/mappers/boarding";
 
 // ============================================================================
-// The facility's kennels, and who is in them.
+// The facility's rooms, their categories, and who is in them.
 //
-// Replaces `BOARDING_ROOMS` in src/data/boarding-ops.ts, which the assignment
-// board read directly. The rooms are now the same rows the exclusion
-// constraint judges (20260806600000) -- so a board that says a kennel is free
-// and a POST that answers 409 can no longer disagree.
+// Serves `RoomCategory[]` and `FacilityRoom[]` — the types the Rooms admin
+// screen already uses — so the page a manager edits rooms on and the path a
+// booking takes now describe a room the same way. Before 20260806660000 they
+// were disjoint models: 29 units in localStorage that no booking could reach,
+// and 6 rows in Postgres that nothing could edit.
 //
-// ── THE OCCUPANCY IS DERIVED, AND SO IS THE CAPACITY ──────────────────────
+// ── THE OCCUPANCY IS DERIVED ──────────────────────────────────────────────
 //
-// Nothing here stores an occupancy count. The response is the rooms and the
-// stays overlapping the window asked about; totals, percentages and per-type
-// breakdowns are the caller's to compute from those.
-//
-// That matters because the fixture this replaces had THREE disagreeing
-// vocabularies for one idea:
-//
-//   BOARDING_ROOMS      6 rooms, types standard / deluxe / vip / cat-suite
-//   boardingCapacity    total 30, keyed standard / premium / luxury
-//   BoardingGuest       packageType "Standard Kennel" / "Premium Suite" / ...
-//
-// none of which join. The boarding page read "X of 30 kennels" from the
-// middle one while the assignment board offered six rooms from the first.
-// Rooms are the only operational truth -- you assign an animal to one -- so
-// they are what the count comes from now.
+// Nothing stores an occupancy count. The response is the rooms and the stays
+// overlapping the window asked about; totals, percentages and per-category
+// breakdowns are the caller's to compute. Capacity is likewise derived —
+// `facility_rooms.capacity` when set, otherwise the category's default, which
+// is why it is NULL rather than a copy.
 //
 // ── SCOPED BY RLS ─────────────────────────────────────────────────────────
 //
-// `boarding_rooms_read` admits any active member of the facility, mirroring
-// `staff_read`: the person doing the kennel round needs the kennel list, and
-// gating it on `view_services` would hide the board from the people standing
-// at it (the mistake 20260806540000 corrected for stylists).
+// `facility_rooms_read` admits any active member of the facility: the person
+// doing the kennel round needs the kennel list, and gating it on a management
+// permission would hide the board from the people standing at it (the mistake
+// 20260806540000 corrected for stylists).
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -52,36 +47,54 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  // `RoomCategory.facilityId` and `FacilityRoom.facilityId` are the app's
+  // NUMERIC ref, which these rows do not carry — they key on the uuid. Every
+  // row RLS returns belongs to the caller's facility, so the ref is a constant
+  // here for the same reason the rest of the app still passes `facilityId: 11`.
+  const facilityRef = Number(DEMO_FACILITY_LEGACY_ID);
   const url = new URL(request.url);
 
-  // Default window is "right now": the board's usual question is which kennels
+  // Default window is "right now": the board's usual question is which rooms
   // are occupied at this moment. A booking flow asks about its own dates.
   const from = url.searchParams.get("from") ?? new Date().toISOString();
   const to = url.searchParams.get("to") ?? from;
 
+  const { data: categoryRows, error: categoryError } = await supabase
+    .from("room_categories")
+    .select(ROOM_CATEGORY_SELECT)
+    .order("sort_order", { ascending: true });
+
+  if (categoryError) {
+    return NextResponse.json({ error: categoryError.message }, { status: 500 });
+  }
+
+  const catRows = (categoryRows ?? []) as unknown as RoomCategoryRow[];
+  const categories = catRows.map((row) => rowToRoomCategory(row, facilityRef));
+  const categoryIdByUuid = new Map(
+    catRows.map((row) => [row.id, row.legacy_id ?? row.id]),
+  );
+
   const { data: roomRows, error: roomError } = await supabase
-    .from("boarding_rooms")
-    .select(BOARDING_ROOM_SELECT)
-    .eq("is_active", true)
-    .order("display_order", { ascending: true });
+    .from("facility_rooms")
+    .select(FACILITY_ROOM_SELECT)
+    .order("sort_order", { ascending: true });
 
   if (roomError) {
     return NextResponse.json({ error: roomError.message }, { status: 500 });
   }
 
-  const rows = (roomRows ?? []) as unknown as BoardingRoomRow[];
-  const rooms = rows.map(rowToBoardingRoom);
+  const rows = (roomRows ?? []) as unknown as FacilityRoomRow[];
+  const rooms = rows.map((row) =>
+    rowToFacilityRoom(row, facilityRef, categoryIdByUuid),
+  );
   const roomIdByUuid = new Map(
     rows.map((row) => [row.id, row.legacy_id ?? row.id]),
   );
 
   // Overlap, not containment: a stay that started before this window and runs
-  // through it still occupies the kennel. `to > from AND from < to` is the
-  // half-open overlap the constraint itself uses.
-  //
-  // A zero-width window (the default, where from === to) would match nothing
-  // under a strict comparison, so the instant is nudged to a range of itself
-  // and the bounds do the rest.
+  // through it still occupies the room. A zero-width window (the default,
+  // where from === to) would match nothing under a strict comparison, so the
+  // instant is used as both bounds and the range operator does the rest.
   const windowEnd = to === from ? from : to;
   const { data: stayRows, error: stayError } = await supabase
     .from("boarding_stays")
@@ -99,5 +112,5 @@ export async function GET(request: NextRequest) {
     .map((row) => rowToOccupancy(row, roomIdByUuid))
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
-  return NextResponse.json({ rooms, occupied });
+  return NextResponse.json({ categories, rooms, occupied });
 }

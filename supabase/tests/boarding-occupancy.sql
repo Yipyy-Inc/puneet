@@ -1,5 +1,6 @@
 -- ============================================================================
--- A kennel holds one booking at a time (20260806600000 + 20260806620000).
+-- A kennel holds one booking at a time
+-- (20260806600000 + 20260806620000 + 20260806660000).
 --
 --   psql "$(supabase status -o json | jq -r .DB_URL)" \
 --     -f supabase/tests/boarding-occupancy.sql
@@ -86,16 +87,27 @@ insert into public.pets (id, client_id, name, species) values
   ('00000000-0000-0000-0000-0000001b0050', '00000000-0000-0000-0000-0000001b0040', 'Rex', 'dog'),
   ('00000000-0000-0000-0000-0000001b0051', '00000000-0000-0000-0000-0000001b0041', 'Bo', 'dog');
 
-insert into public.boarding_rooms
-  (id, facility_id, legacy_id, name, room_type, capacity, allows_shared, allowed_pet_types)
+-- Rooms belong to a CATEGORY now (20260806660000), which is where capacity and
+-- the booking rules live. Two categories so the cross-facility case (K8) has a
+-- room that genuinely belongs elsewhere.
+insert into public.room_categories
+  (id, facility_id, legacy_id, service, name, default_capacity, sort_order)
+values
+  ('00000000-0000-0000-0000-0000001b0070', '00000000-0000-0000-0000-0000001b0020',
+   'bd-cat', 'boarding', 'Kennels', 1, 1),
+  ('00000000-0000-0000-0000-0000001b0071', '00000000-0000-0000-0000-0000001b0021',
+   'bd-cat-b', 'boarding', 'Kennels at B', 1, 1);
+
+insert into public.facility_rooms
+  (id, facility_id, category_id, legacy_id, name, active)
 values
   ('00000000-0000-0000-0000-0000001b0060', '00000000-0000-0000-0000-0000001b0020',
-   'BD-01', 'Kennel 1', 'standard', 1, false, '{dog}'),
+   '00000000-0000-0000-0000-0000001b0070', 'BD-01', 'Kennel 1', true),
   ('00000000-0000-0000-0000-0000001b0061', '00000000-0000-0000-0000-0000001b0020',
-   'BD-02', 'Kennel 2', 'standard', 1, false, '{dog}'),
+   '00000000-0000-0000-0000-0000001b0070', 'BD-02', 'Kennel 2', true),
   -- The other facility's room. This facility's bookings must not reach it.
   ('00000000-0000-0000-0000-0000001b0062', '00000000-0000-0000-0000-0000001b0021',
-   'BD-ELSEWHERE', 'Kennel at B', 'standard', 1, false, '{dog}');
+   '00000000-0000-0000-0000-0000001b0071', 'BD-ELSEWHERE', 'Kennel at B', true);
 
 /** A boarding booking body for the given nights. */
 create or replace function pg_temp.stay(p_client uuid, p_from text, p_to text)
@@ -424,7 +436,7 @@ begin
   select r.legacy_id into v_still
     from public.boarding_stays s
     join public.bookings b on b.id = s.booking_id
-    join public.boarding_rooms r on r.id = s.room_id
+    join public.facility_rooms r on r.id = s.room_id
    where b.ref = v_b;
 
   perform pg_temp.t('A2  a refused move does not cost the guest the kennel they had',
