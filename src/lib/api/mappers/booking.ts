@@ -60,7 +60,10 @@ export function rowToBooking(row: BookingRow): BookingWithRowId {
     service: row.service,
     serviceType: row.service_type ?? undefined,
     status: row.status,
+    // Both DERIVED from the payments ledger (20260806680000). No caller sets
+    // them; `bookings_set_derived_payment` recomputes them on every write.
     paymentStatus: row.payment_status as Booking["paymentStatus"],
+    amountPaid: Number(row.amount_paid),
 
     startDate: start.date,
     endDate: end.date,
@@ -95,7 +98,14 @@ export const BOOKING_SELECT = `
 
 // ── Writing ─────────────────────────────────────────────────────────────────
 
-/** Fields hoisted into columns; everything else on a booking becomes `details`. */
+/**
+ * Fields hoisted into columns; everything else on a booking becomes `details`.
+ *
+ * `paymentStatus` and `amountPaid` are listed but never written — the database
+ * derives both. They belong here anyway: a name missing from this list is
+ * copied into the `details` jsonb, and a stale copy of a derived number is the
+ * exact thing the derivation exists to prevent.
+ */
 const COLUMN_FIELDS = [
   "id",
   "rowId",
@@ -106,6 +116,7 @@ const COLUMN_FIELDS = [
   "serviceType",
   "status",
   "paymentStatus",
+  "amountPaid",
   "startDate",
   "endDate",
   "checkInTime",
@@ -149,9 +160,10 @@ export function bookingToRow(
   if (input.status !== undefined) {
     row.status = input.status as TablesInsert<"bookings">["status"];
   }
-  if (input.paymentStatus !== undefined) {
-    row.payment_status = input.paymentStatus;
-  }
+  // paymentStatus is NOT written. It is derived from the payments ledger
+  // (20260806680000) and `create_booking` no longer accepts the column at all —
+  // sending it raises rather than being quietly discarded. A caller who wants a
+  // booking to read as paid records a payment.
   if (input.assignedStaff !== undefined) {
     row.assigned_staff_name = input.assignedStaff;
   }

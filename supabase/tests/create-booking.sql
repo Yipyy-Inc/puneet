@@ -123,7 +123,8 @@ returns jsonb language sql as $$
     'service',     'grooming',
     'service_type','cb-svc-1',
     'status',      'confirmed',
-    'payment_status', 'pending',
+    -- No payment_status: create_booking rejects the column outright since
+    -- 20260806720000, because the database derives it.
     'start_at',    '2026-08-10T14:00:00Z',
     'end_at',      '2026-08-10T15:30:00Z',
     'base_price',  p_price,

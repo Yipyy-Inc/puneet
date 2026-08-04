@@ -1,0 +1,455 @@
+-- ============================================================================
+-- A booking is paid when the ledger says so
+-- (20260806680000 + 20260806700000 + 20260806720000 + 20260806740000).
+--
+--   psql "$(supabase status -o json | jq -r .DB_URL)" \
+--     -f supabase/tests/booking-payment-derivation.sql
+--
+-- One transaction, rolled back. Fixture emails are @example.invalid.
+--
+-- ── WHAT THIS FILE IS REALLY ABOUT ─────────────────────────────────────────
+--
+-- 1. THE NUMBER MOVES (P1/P2/P3). The positive control, and the one that has
+--    to come first: a derivation that answered 'pending' unconditionally would
+--    make most of the denials below pass. A booking starts at zero, a full
+--    payment settles it, and a PART payment moves the figure without settling
+--    anything — so the number is real, not a flag in disguise.
+--
+-- 2. A TIP DOES NOT PAY THE BILL (P4). `grand_total = subtotal + tax + tip`,
+--    so the naive sum lets a generous tip close a shortfall. $80 against a
+--    $100 booking with a $25 tip is $105 received and $20 still owed.
+--
+-- 3. CREDIT AND PASSES DO PAY IT (P5). They reduce what the CARD is asked for,
+--    not what the customer owes — which is why the measure is `grand_total`
+--    and not `amount_charged`. A booking settled entirely with store credit is
+--    settled.
+--
+-- 4. NOBODY CAN SAY OTHERWISE (P6). Not a customer, not staff with
+--    `edit_bookings`, not the seed path. The seed is the pointed one: thirteen
+--    bookings claiming $790.75 with an empty ledger is what the old rule
+--    produced, and it produced it silently.
+--
+-- 5. A REFUND IS NOT THE SAME AS NEVER PAYING (P7). Paid then fully refunded
+--    sums to ZERO, exactly like a booking nobody paid. One needs chasing and
+--    one is closed. This is the bug 20260806740000 exists for, and it was
+--    found by writing this test rather than by reading the code.
+--
+-- 6. THE CASHIER IS NOT A BOOKING EDITOR (P8). `retail` holds
+--    `financial_take_payment` and NOT `edit_bookings` — a real preset, not a
+--    hypothetical. Without the DEFINER trigger the booking would never move
+--    and nothing would raise; without the pass-through in
+--    `enforce_booking_integrity` the payment itself would be refused. Both
+--    halves are load-bearing and this is the test that would catch either.
+--
+-- 7. THE STATUS SURVIVES A READER WHO CANNOT SEE MONEY (P9). A groomer has no
+--    `financial_view_amounts`, so a read-time `sum(payments)` would return
+--    ZERO for them and every paid booking would read 'pending'. Not an error —
+--    a wrong answer. This is why the figure is denormalised onto the booking.
+--
+-- 8. THE DERIVATION IS NOT A PUBLIC API (P10). Both helpers see every payment
+--    regardless of the caller, so being able to call them would be a way to
+--    ask "how much has been paid" without the permission that question needs.
+-- ============================================================================
+
+begin;
+
+set local client_min_messages to warning;
+
+create temp table tap (n serial, name text, ok boolean, detail text);
+grant all on tap to authenticated;
+
+create or replace function pg_temp.t(p_name text, p_ok boolean, p_detail text default '')
+returns void language sql as $$
+  insert into tap(name, ok, detail) values (p_name, p_ok, p_detail);
+$$;
+
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-0000001c0001', 'pay-owner@example.invalid'),
+  ('00000000-0000-0000-0000-0000001c0002', 'pay-retail@example.invalid'),
+  ('00000000-0000-0000-0000-0000001c0003', 'pay-acct@example.invalid'),
+  ('00000000-0000-0000-0000-0000001c0004', 'pay-groomer@example.invalid'),
+  ('00000000-0000-0000-0000-0000001c0005', 'pay-customer@example.invalid')
+on conflict (id) do nothing;
+
+insert into public.profiles (id, email, full_name) values
+  ('00000000-0000-0000-0000-0000001c0001', 'pay-owner@example.invalid',   'Owner'),
+  ('00000000-0000-0000-0000-0000001c0002', 'pay-retail@example.invalid',  'Retail'),
+  ('00000000-0000-0000-0000-0000001c0003', 'pay-acct@example.invalid',    'Accountant'),
+  ('00000000-0000-0000-0000-0000001c0004', 'pay-groomer@example.invalid', 'Groomer'),
+  ('00000000-0000-0000-0000-0000001c0005', 'pay-customer@example.invalid','Customer')
+on conflict (id) do update set full_name = excluded.full_name;
+
+insert into public.orgs (id, name, slug) values
+  ('00000000-0000-0000-0000-0000001c0010', 'Pay Org', 'pay-org')
+on conflict do nothing;
+
+insert into public.facilities (id, org_id, name, slug, legacy_id) values
+  ('00000000-0000-0000-0000-0000001c0020', '00000000-0000-0000-0000-0000001c0010',
+   'Pay Facility', 'pay-a', 'pay-a')
+on conflict do nothing;
+
+-- retail:     financial_take_payment, NO edit_bookings, NO process_refund
+-- accountant: financial_take_payment + process_refund, NO edit_bookings
+-- groomer:    view_bookings, NO financial_view_amounts
+insert into public.facility_memberships (id, facility_id, profile_id, role, is_active) values
+  ('00000000-0000-0000-0000-0000001c0030', '00000000-0000-0000-0000-0000001c0020',
+   '00000000-0000-0000-0000-0000001c0001', 'owner', true),
+  ('00000000-0000-0000-0000-0000001c0031', '00000000-0000-0000-0000-0000001c0020',
+   '00000000-0000-0000-0000-0000001c0002', 'retail', true),
+  ('00000000-0000-0000-0000-0000001c0032', '00000000-0000-0000-0000-0000001c0020',
+   '00000000-0000-0000-0000-0000001c0003', 'accountant', true),
+  ('00000000-0000-0000-0000-0000001c0033', '00000000-0000-0000-0000-0000001c0020',
+   '00000000-0000-0000-0000-0000001c0004', 'groomer', true)
+on conflict (id) do nothing;
+
+insert into public.clients (id, facility_id, name, email, profile_id) values
+  ('00000000-0000-0000-0000-0000001c0040', '00000000-0000-0000-0000-0000001c0020',
+   'Payer', 'pay-c1@example.invalid', '00000000-0000-0000-0000-0000001c0005');
+
+create or replace function pg_temp.as_user(p_uid uuid) returns void
+language plpgsql as $$
+begin
+  perform set_config('request.jwt.claim.sub', p_uid::text, true);
+end $$;
+
+/** A $100 confirmed booking, written straight to the table as the owner. */
+create or replace function pg_temp.new_booking(p_total numeric default 100)
+returns uuid language plpgsql as $$
+declare v_id uuid;
+begin
+  insert into public.bookings
+    (facility_id, client_id, service, status, start_at, end_at,
+     base_price, discount, total_cost)
+  values
+    ('00000000-0000-0000-0000-0000001c0020', '00000000-0000-0000-0000-0000001c0040',
+     'daycare', 'confirmed', now() + interval '1 day', now() + interval '1 day 8 hours',
+     p_total, 0, p_total)
+  returning id into v_id;
+  return v_id;
+end $$;
+
+/** A payment row. Signed: negative is a refund. */
+create or replace function pg_temp.pay(
+  p_booking uuid, p_subtotal numeric, p_tip numeric default 0,
+  p_credit numeric default 0, p_pass numeric default 0,
+  p_method text default 'new-card')
+returns void language plpgsql as $$
+declare v_grand numeric := p_subtotal + p_tip;
+begin
+  insert into public.payments
+    (facility_id, booking_id, client_id, method,
+     subtotal, tax, tip, store_credit_applied, package_pass_applied,
+     loyalty_discount_applied, amount_charged, grand_total,
+     cash_received, receipt_channels, author_name)
+  values
+    ('00000000-0000-0000-0000-0000001c0020', p_booking,
+     '00000000-0000-0000-0000-0000001c0040', p_method,
+     p_subtotal, 0, p_tip, p_credit, p_pass, 0,
+     v_grand - p_credit - p_pass, v_grand,
+     case when p_method = 'cash' then v_grand - p_credit - p_pass else null end,
+     '{}', 'Test');
+end $$;
+
+-- ── P1: a booking starts owing everything ──────────────────────────────────
+do $$
+declare v_b uuid; r public.bookings;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  reset role;
+
+  select * into r from public.bookings where id = v_b;
+  perform pg_temp.t('P1  a new booking is pending, and nothing has been paid',
+    r.payment_status = 'pending' and r.amount_paid = 0,
+    format('status=%s paid=%s', r.payment_status, r.amount_paid));
+exception when others then
+  reset role; perform pg_temp.t('P1  a new booking', false, sqlerrm);
+end $$;
+
+-- ── P2: paying it settles it ───────────────────────────────────────────────
+do $$
+declare v_b uuid; r public.bookings;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  perform pg_temp.pay(v_b, 100);
+  reset role;
+
+  select * into r from public.bookings where id = v_b;
+  perform pg_temp.t('P2  a payment for the full amount settles the booking',
+    r.payment_status = 'paid' and r.amount_paid = 100,
+    format('status=%s paid=%s', r.payment_status, r.amount_paid));
+exception when others then
+  reset role; perform pg_temp.t('P2  a full payment', false, sqlerrm);
+end $$;
+
+-- ── P3: a part payment moves the figure and settles nothing ────────────────
+do $$
+declare v_b uuid; r public.bookings;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  perform pg_temp.pay(v_b, 40);
+  reset role;
+
+  select * into r from public.bookings where id = v_b;
+  -- 'pending' rather than a fourth status: see Decision 3 in 20260806680000.
+  -- The FIGURE is what carries the detail, and it has to be right.
+  perform pg_temp.t('P3  $40 of $100 moves the figure without settling the booking',
+    r.payment_status = 'pending' and r.amount_paid = 40,
+    format('status=%s paid=%s', r.payment_status, r.amount_paid));
+exception when others then
+  reset role; perform pg_temp.t('P3  a part payment', false, sqlerrm);
+end $$;
+
+-- ── P4: a tip is not payment toward the bill ───────────────────────────────
+do $$
+declare v_b uuid; r public.bookings;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  -- $105 received: $80 against the bill and a $25 tip.
+  perform pg_temp.pay(v_b, 80, 25);
+  reset role;
+
+  select * into r from public.bookings where id = v_b;
+  perform pg_temp.t('P4  a $25 tip does not close a $20 shortfall',
+    r.payment_status = 'pending' and r.amount_paid = 80,
+    format('status=%s paid=%s (sum of grand_total would be 105)',
+           r.payment_status, r.amount_paid));
+exception when others then
+  reset role; perform pg_temp.t('P4  a tip', false, sqlerrm);
+end $$;
+
+-- ── P5: store credit and passes settle the bill ────────────────────────────
+do $$
+declare v_b uuid; r public.bookings; v_charged numeric;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  -- Entirely store credit: the card is charged nothing.
+  perform pg_temp.pay(v_b, 100, 0, 100);
+  reset role;
+
+  select * into r from public.bookings where id = v_b;
+  select amount_charged into v_charged from public.payments where booking_id = v_b;
+  perform pg_temp.t('P5  a booking settled with store credit is settled, though the card took nothing',
+    r.payment_status = 'paid' and r.amount_paid = 100 and v_charged = 0,
+    format('status=%s paid=%s charged=%s', r.payment_status, r.amount_paid, v_charged));
+exception when others then
+  reset role; perform pg_temp.t('P5  store credit', false, sqlerrm);
+end $$;
+
+-- ── P6: nobody may declare a booking paid ──────────────────────────────────
+--
+-- The owner has `edit_bookings`, so the UPDATE is ALLOWED and matches its row.
+-- It is not refused — it is overwritten, which is the distinction that matters:
+-- a refusal would surface as an error, and this has to hold when nothing
+-- surfaces at all.
+do $$
+declare v_b uuid; r public.bookings;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  update public.bookings set payment_status = 'paid', amount_paid = 100
+   where id = v_b;
+  reset role;
+
+  select * into r from public.bookings where id = v_b;
+  perform pg_temp.t('P6  an owner with edit_bookings cannot declare a booking paid',
+    r.payment_status = 'pending' and r.amount_paid = 0,
+    format('status=%s paid=%s', r.payment_status, r.amount_paid));
+exception when others then
+  reset role; perform pg_temp.t('P6  declaring paid', false, sqlerrm);
+end $$;
+
+-- ── P7: refunded is not the same as never paid ─────────────────────────────
+do $$
+declare v_paid uuid; v_never uuid; r_paid public.bookings; r_never public.bookings;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+
+  v_paid  := pg_temp.new_booking(100);
+  v_never := pg_temp.new_booking(100);
+
+  perform pg_temp.pay(v_paid, 100);
+  reset role;
+
+  -- The refund needs `process_refund`, which the owner has and retail does not.
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0003');
+  set local role authenticated;
+  perform pg_temp.pay(v_paid, -100);
+  reset role;
+
+  select * into r_paid  from public.bookings where id = v_paid;
+  select * into r_never from public.bookings where id = v_never;
+
+  -- Both sum to zero. Only the ledger's SHAPE tells them apart.
+  perform pg_temp.t('P7  paid then refunded reads refunded, not pending',
+    r_paid.payment_status = 'refunded' and r_paid.amount_paid = 0,
+    format('status=%s paid=%s', r_paid.payment_status, r_paid.amount_paid));
+  perform pg_temp.t('P7b a booking nobody paid still reads pending, on the same total',
+    r_never.payment_status = 'pending' and r_never.amount_paid = 0,
+    format('status=%s paid=%s', r_never.payment_status, r_never.amount_paid));
+exception when others then
+  reset role; perform pg_temp.t('P7  refund', false, sqlerrm);
+end $$;
+
+-- ── P7c: a part refund leaves a balance, so it is not closed ───────────────
+do $$
+declare v_b uuid; r public.bookings;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  perform pg_temp.pay(v_b, 100);
+  reset role;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0003');
+  set local role authenticated;
+  perform pg_temp.pay(v_b, -30);
+  reset role;
+
+  select * into r from public.bookings where id = v_b;
+  perform pg_temp.t('P7c $30 back on a $100 booking leaves it owing, not closed',
+    r.payment_status = 'pending' and r.amount_paid = 70,
+    format('status=%s paid=%s', r.payment_status, r.amount_paid));
+exception when others then
+  reset role; perform pg_temp.t('P7c part refund', false, sqlerrm);
+end $$;
+
+-- ── P8: a cashier without edit_bookings still moves the booking ────────────
+--
+-- The whole reason `payment_moves_the_booking` is DEFINER and
+-- `enforce_booking_integrity` has a pass-through. `retail` is a shipped preset
+-- with `financial_take_payment` and no `edit_bookings`.
+do $$
+declare v_b uuid; r public.bookings; v_can_edit boolean;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  reset role;
+
+  -- The booking is CHECKED IN: past the point where the customer path in
+  -- enforce_booking_integrity raises "This booking can no longer be changed".
+  update public.bookings set status = 'checked_in' where id = v_b;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0002');
+  set local role authenticated;
+  v_can_edit := private.has_permission(
+    '00000000-0000-0000-0000-0000001c0020', 'edit_bookings');
+  perform pg_temp.pay(v_b, 100, 0, 0, 0, 'cash');
+  reset role;
+
+  select * into r from public.bookings where id = v_b;
+  perform pg_temp.t('P8  retail cannot edit bookings (the precondition)',
+    v_can_edit = false, format('edit_bookings=%s', v_can_edit));
+  perform pg_temp.t('P8b retail takes the payment and the CHECKED-IN booking moves anyway',
+    r.payment_status = 'paid' and r.amount_paid = 100,
+    format('status=%s paid=%s', r.payment_status, r.amount_paid));
+exception when others then
+  reset role; perform pg_temp.t('P8  cashier', false, sqlerrm);
+end $$;
+
+-- ── P9: the status survives a reader who cannot see the money ──────────────
+--
+-- A groomer has `view_bookings` and NOT `financial_view_amounts`. Under a
+-- read-time `sum(payments)` they would see zero rows and read 'pending' on a
+-- booking that is paid — no error, just a wrong number.
+do $$
+declare v_b uuid; v_status text; v_visible integer;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  v_b := pg_temp.new_booking(100);
+  perform pg_temp.pay(v_b, 100);
+  reset role;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0004');
+  set local role authenticated;
+  select payment_status into v_status from public.bookings where id = v_b;
+  select count(*) into v_visible from public.payments where booking_id = v_b;
+  reset role;
+
+  perform pg_temp.t('P9  a groomer cannot see the payment row (the precondition)',
+    v_visible = 0, format('visible payments=%s', v_visible));
+  perform pg_temp.t('P9b and still reads the booking as paid',
+    v_status = 'paid', format('status=%s', v_status));
+exception when others then
+  reset role; perform pg_temp.t('P9  groomer read', false, sqlerrm);
+end $$;
+
+-- ── P10: the derivation helpers are not callable ───────────────────────────
+do $$
+declare v_amount boolean; v_refunded boolean;
+begin
+  v_amount := has_function_privilege(
+    'authenticated', 'private.booking_amount_paid(uuid)', 'execute');
+  v_refunded := has_function_privilege(
+    'authenticated', 'private.booking_was_refunded(uuid)', 'execute');
+
+  perform pg_temp.t('P10 booking_amount_paid is granted to nobody',
+    v_amount = false, format('authenticated can execute=%s', v_amount));
+  perform pg_temp.t('P10b booking_was_refunded is granted to nobody',
+    v_refunded = false, format('authenticated can execute=%s', v_refunded));
+exception when others then
+  perform pg_temp.t('P10 grants', false, sqlerrm);
+end $$;
+
+-- ── P11: create_booking refuses the column outright ────────────────────────
+--
+-- Not silently discarded. A caller who thinks they are setting it gets a
+-- sentence naming the column, which is the difference between a bug found in
+-- five seconds and one found in production.
+do $$
+declare v_raised boolean := false; v_msg text := '';
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001c0001');
+  set local role authenticated;
+  begin
+    perform public.create_booking(jsonb_build_object(
+      'facility_id', '00000000-0000-0000-0000-0000001c0020',
+      'client_id',   '00000000-0000-0000-0000-0000001c0040',
+      'service',     'daycare',
+      'status',      'confirmed',
+      'payment_status', 'paid',
+      'start_at',    '2026-09-01T09:00:00Z',
+      'end_at',      '2026-09-01T17:00:00Z',
+      'base_price',  100, 'discount', 0, 'total_cost', 100
+    ));
+  exception when others then
+    v_raised := true; v_msg := sqlerrm;
+  end;
+  reset role;
+
+  perform pg_temp.t('P11 create_booking names payment_status as a column it does not handle',
+    v_raised and v_msg like '%payment_status%', format('raised=%s msg=%s', v_raised, v_msg));
+exception when others then
+  reset role; perform pg_temp.t('P11 rejected column', false, sqlerrm);
+end $$;
+
+-- ── Results ────────────────────────────────────────────────────────────────
+
+do $$
+declare v_failed integer;
+begin
+  select count(*) into v_failed from tap where not ok;
+  if v_failed > 0 then
+    raise warning '% assertion(s) FAILED', v_failed;
+  else
+    raise warning 'all % assertions passed', (select count(*) from tap);
+  end if;
+end $$;
+
+select n, case when ok then 'PASS' else 'FAIL' end as result, name, detail
+  from tap order by n;
+
+rollback;

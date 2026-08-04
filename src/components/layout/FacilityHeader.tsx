@@ -134,7 +134,10 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
       discount: bookingData.discount,
       discountReason: bookingData.discountReason,
       totalCost: bookingData.totalCost,
-      paymentStatus: bookingData.paymentStatus,
+      // Not carried from the form — a booking being created has no payments
+      // against it. Through the API the database derives this; here the list is
+      // local state, so it is stated once at the only moment it is knowable.
+      paymentStatus: "pending",
       specialRequests: bookingData.specialRequests,
       checkInTime: bookingData.checkInTime,
       checkOutTime: bookingData.checkOutTime,

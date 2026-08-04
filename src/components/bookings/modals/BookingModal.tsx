@@ -2221,7 +2221,6 @@ export function BookingModal({
             basePrice: evaluationConfig.price,
             discount: 0,
             totalCost: evaluationConfig.price,
-            paymentStatus: "pending",
             notificationEmail: true,
             notificationSMS: false,
           };
@@ -2266,7 +2265,8 @@ export function BookingModal({
       basePrice: calculatePrice.basePrice,
       discount: calculatePrice.discount,
       totalCost: calculatePrice.total,
-      paymentStatus: "pending",
+      // No paymentStatus: a new booking has taken no money, and the database
+      // says so rather than being told. See 20260806680000.
       daycareSelectedDates:
         daycareSelectedDates.length > 0
           ? daycareSelectedDates.map((d) => d.toISOString().split("T")[0])

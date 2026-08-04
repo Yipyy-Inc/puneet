@@ -117,7 +117,8 @@ returns jsonb language sql as $$
     'client_id',   p_client,
     'service',     'boarding',
     'status',      'confirmed',
-    'payment_status', 'pending',
+    -- No payment_status: create_booking rejects the column outright since
+    -- 20260806720000, because the database derives it.
     'start_at',    p_from,
     'end_at',      p_to,
     'base_price',  100, 'discount', 0, 'total_cost', 100

@@ -796,6 +796,70 @@ Stated rather than assumed. The alternative is an RPC, which buys atomicity for 
 
 **Do instead:** if a third write joins them, make it an RPC rather than adding another partial-failure message.
 
+## Snapshot (2026-08-06, a booking is paid when the ledger says so)
+
+### 🔴 Thirteen bookings claimed $790.75 that no payment row backed
+
+`bookings.payment_status` was a text column, and the derivation was nobody's job. The database said:
+
+```
+payment_status   count    billed
+pending            45    $4,624.00
+paid               13      $790.75
+```
+
+with `public.payments` holding **zero rows**. Every "Paid" badge in the demo was a string somebody typed.
+
+`enforce_booking_integrity` (20260802120000) had already closed half of this — a customer's insert is forced to `pending` and their update puts the old value back. The half nobody noticed is that **staff and the seed were waved straight through**: `v_is_staff → return new`, and `auth.uid() is null → return new`. The seed is what wrote the thirteen.
+
+Fixed in 20260806680000: `bookings.amount_paid` is denormalised onto the booking and recomputed by trigger from `sum(grand_total - tip)`, and `payment_status` is derived from it. No writer sets either — not staff, not the seed, not `postgres` with BYPASSRLS, which is the probe that proves it.
+
+**Do instead:** when a status describes something that happened elsewhere, derive it from the record of that thing. A status column with no writer designated ends up with every writer.
+
+### 🔴 Three screens have a "Process Payment" button that has never taken a payment
+
+`ProcessPaymentModal` is mounted on `bookings/page.tsx`, `bookings/[id]/page.tsx` and `clients/[id]/bookings/[bookingId]/page.tsx`. Its `onConfirm` is `handleProcessPayment`, which is a local `setBookings(...)` and an `alert()`. Nothing reaches the server; nothing ever has.
+
+It was not wired up in this change, and the reason is worth recording: `src/app/facility/dashboard/bookings/page.tsx` imports `bookings as initialBookings` from `@/data/bookings` into `useState`. **The whole facility bookings list is still fixture-backed.** Wiring the payment button means migrating that page onto `bookingQueries` first, which is its own slice.
+
+Until then the button is now _visibly_ wrong rather than invisibly wrong: it flips a row to Paid, and a refresh reads the real answer from the ledger.
+
+**Do instead:** migrate the list to the API, then point `handleProcessPayment` at `POST /api/payments` with `bookingRef`. Do not add a second write path that sets `payment_status` — it is derived, and an update naming it is discarded.
+
+### 🟡 A refund is not the same as never paying, and the sum cannot tell them apart
+
+The first version derived `'refunded'` from `amount_paid < 0`. A booking paid $65 and then refunded $65 sums to **exactly zero** — identical to a booking nobody ever paid, and one of those needs chasing for money. Only an _over_-refund reached `'refunded'`, which is the rarest of the three cases and the one nobody would have checked.
+
+No amount distinguishes the two histories, because they have the same total. What distinguishes them is whether a negative row EXISTS, which is a second question (`private.booking_was_refunded`, 20260806740000).
+
+Found by writing `supabase/tests/booking-payment-derivation.sql`, not by reading the code.
+
+**Do instead:** when a derived status collapses several histories into one number, check whether two different histories can produce the same number. If they can, the number is not the whole input.
+
+### 🟡 The cashier is not a booking editor, and three separate pieces make that work
+
+`retail` holds `financial_take_payment` and **not** `edit_bookings` — a shipped preset, not a hypothetical. `accountant` is the same with `process_refund` on top. So the trigger that moves a booking when a payment lands runs as someone who cannot edit bookings, on a booking that is checked-in.
+
+Three pieces are load-bearing, and each was verified by breaking it:
+
+| Piece                                           | Removed → what happens                                                 |
+| ----------------------------------------------- | ---------------------------------------------------------------------- |
+| `bookings_set_derived_payment`                  | a plain `UPDATE ... set payment_status = 'paid'` **sticks**            |
+| `payment_moves_the_booking` is SECURITY DEFINER | the payment lands, the booking never moves, and **no error is raised** |
+| the pass-through in `enforce_booking_integrity` | the whole payment is refused: "This booking can no longer be changed." |
+
+The middle row is the dangerous one. Under `SECURITY INVOKER` the UPDATE matches zero rows under RLS and reports success — the fourth time this project has hit that exact shape.
+
+**Do instead:** when a trigger writes to a second table, ask which permission the _writer_ holds rather than which one the operation feels like it needs. Then check the row count, or make it DEFINER and say why in the header.
+
+### 🟢 `NewBooking` no longer carries `paymentStatus`, and `Booking` still does
+
+Moved from `newBookingSchema` to `bookingSchema.extend({...})`: it is not something a booking is _created_ with, but it is very much something you _read_. Five call sites broke, all of them writing `"pending"` at creation, and each deleted a line.
+
+`COLUMN_FIELDS` in the booking mapper still lists both `paymentStatus` and `amountPaid` even though neither is written — a name missing from that list is copied into the `details` jsonb, and a stale copy of a derived number is the exact thing the derivation exists to prevent.
+
+**Do instead:** don't drop a derived field from `COLUMN_FIELDS` on the grounds that it is never written. That list controls what lands in `details`, not what lands in columns.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

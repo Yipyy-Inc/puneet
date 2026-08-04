@@ -179,7 +179,10 @@ export const newBookingSchema = z.object({
   discount: z.number(),
   discountReason: z.string().optional(),
   totalCost: z.number(),
-  paymentStatus: newBookingPaymentStatusEnum,
+  // paymentStatus is NOT here. It is not something a booking is CREATED with:
+  // the database derives it from the payments ledger (20260806680000), so a
+  // value supplied at creation is discarded. It lives on `bookingSchema`
+  // below, which is the shape you READ.
   specialRequests: z.string().optional(),
   notificationEmail: z.boolean().optional(),
   notificationSMS: z.boolean().optional(),
@@ -629,6 +632,21 @@ export type BelongingEntry = z.infer<typeof belongingEntrySchema>;
 
 export const bookingSchema = newBookingSchema.extend({
   id: z.number(),
+  /**
+   * DERIVED from the payments ledger, never sent. See `amountPaid` below and
+   * 20260806680000: 'paid' once `amountPaid` covers `totalCost`, 'refunded'
+   * once it goes negative, 'pending' otherwise.
+   */
+  paymentStatus: newBookingPaymentStatusEnum,
+  /**
+   * What the payments ledger says has been paid toward this booking:
+   * `sum(grand_total - tip)`. DERIVED — see 20260806680000. Writing it does
+   * nothing; `paymentStatus` is computed from it and `total_cost`.
+   *
+   * Optional because the mock fixtures predate the ledger and cannot supply it.
+   * Anything read through `src/lib/api` always carries it.
+   */
+  amountPaid: z.number().optional(),
   paymentMethod: bookingPaymentMethodEnum.optional(),
   refundMethod: bookingRefundMethodEnum.optional(),
   refundAmount: z.number().optional(),

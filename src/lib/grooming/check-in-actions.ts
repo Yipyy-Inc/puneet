@@ -461,7 +461,13 @@ export interface PaymentActionSummary {
    * claiming to have spent credit that was never deducted.
    */
   paymentRecord: {
-    appointmentId: string;
+    /**
+     * The BOOKING this money is against, by reference number — not a grooming
+     * id. `payments.booking_id` is service-agnostic and always was; the field
+     * was called `appointmentId` only because grooming checkout was the first
+     * caller, which read as "grooming is the only thing you can pay for".
+     */
+    bookingRef: string;
     method: PaymentResult["method"];
     subtotal: number;
     tax: number;
@@ -603,7 +609,7 @@ export function applyPaymentResult(
     packagePassesLeft,
     storeCreditAfter,
     paymentRecord: {
-      appointmentId: apt.id,
+      bookingRef: apt.id,
       method: result.method,
       subtotal: result.subtotal,
       tax: result.tax,

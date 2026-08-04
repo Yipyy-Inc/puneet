@@ -201,6 +201,7 @@ export type Database = {
       };
       bookings: {
         Row: {
+          amount_paid: number;
           assigned_staff_id: string | null;
           assigned_staff_name: string | null;
           base_price: number;
@@ -224,6 +225,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          amount_paid?: number;
           assigned_staff_id?: string | null;
           assigned_staff_name?: string | null;
           base_price?: number;
@@ -247,6 +249,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          amount_paid?: number;
           assigned_staff_id?: string | null;
           assigned_staff_name?: string | null;
           base_price?: number;

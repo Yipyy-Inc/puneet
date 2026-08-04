@@ -341,7 +341,8 @@ export function useRecordPayment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
-      appointmentId?: string;
+      /** The booking's reference number. Any service, not just grooming. */
+      bookingRef?: string;
       method: string;
       subtotal: number;
       tax: number;

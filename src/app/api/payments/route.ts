@@ -20,6 +20,13 @@ import { getFacilityContext } from "@/lib/api/facility-context";
 // a payment still needs `financial_take_payment`, a refund still needs
 // `process_refund`, and a groomer still cannot do either.
 //
+// ── THE BOOKING MOVES ITSELF ───────────────────────────────────────────────
+//
+// Nothing here marks the booking paid, and nothing should: `payment_status` and
+// `amount_paid` are derived from this ledger by trigger (20260806680000). A
+// route that also set them would be a second answer to the same question, and
+// the two would disagree the first time a refund was taken somewhere else.
+//
 // ── THE ARITHMETIC IS NOT RE-DERIVED HERE ──────────────────────────────────
 //
 // Every figure comes from the dialog, which computed them together. The route
@@ -31,7 +38,12 @@ import { getFacilityContext } from "@/lib/api/facility-context";
 export const dynamic = "force-dynamic";
 
 interface PaymentInput {
-  appointmentId?: string;
+  /**
+   * The booking this money is against, by reference number. ANY service — the
+   * ledger column is `payments.booking_id` and never was grooming-specific.
+   * Optional: a retail sale belongs to no booking.
+   */
+  bookingRef?: string;
   method?: string;
   subtotal?: number;
   tax?: number;
@@ -95,16 +107,19 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createServerClient();
 
-  // The appointment is optional — a payment need not belong to a booking, and
-  // retail sales will not. When one is named it is resolved here so the RPC
-  // gets a uuid it can validate rather than a reference number it cannot.
+  // The booking is optional — a payment need not belong to one, and retail
+  // sales will not. When one is named it is resolved here so the RPC gets a
+  // uuid it can validate rather than a reference number it cannot.
+  //
+  // Resolved through a read the caller must be able to make, so a booking they
+  // cannot see is "no such booking" rather than an RLS error deeper in.
   let bookingId: string | null = null;
   let clientId: string | null = null;
-  if (body.appointmentId) {
-    const ref = Number(body.appointmentId);
+  if (body.bookingRef) {
+    const ref = Number(body.bookingRef);
     if (!Number.isFinite(ref)) {
       return NextResponse.json(
-        { error: "That is not an appointment reference." },
+        { error: "That is not a booking reference." },
         { status: 422 },
       );
     }
@@ -115,7 +130,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     if (!booking) {
       return NextResponse.json(
-        { error: "That appointment does not exist, or is not yours." },
+        { error: "That booking does not exist, or is not yours." },
         { status: 404 },
       );
     }

@@ -154,6 +154,12 @@ test.describe("booking write integrity", () => {
     expect(booking.status).toBe("request_submitted");
     expect(Number(booking.totalCost ?? 0)).toBe(0);
     expect(Number(booking.basePrice ?? 0)).toBe(0);
+    // Since 20260806680000 this holds for a stronger reason than the others:
+    // not "the customer path put it back", but "no writer sets it at all". The
+    // body's `paymentStatus` never even reaches the database — `bookingToRow`
+    // stops sending it and `create_booking` would refuse the column.
+    expect(booking.paymentStatus).toBe("pending");
+    expect(Number(booking.amountPaid ?? -1)).toBe(0);
   });
 
   test("a stranger's pet is refused, and no booking is left behind", async ({

@@ -18,9 +18,16 @@
 -- it cannot collide with facility 11.
 --
 -- TO CONFIRM THESE FAIL WITHOUT THE FIX: move 20260802120000 out of
--- supabase/migrations, `supabase db reset`, and re-run. 11 of the 20 go red —
+-- supabase/migrations, `supabase db reset`, and re-run. 11 of them go red —
 -- among them a customer confirming their own booking, paying nothing for it,
 -- and filing it against a facility they have never been to.
+--
+-- T7b and T15b are NOT among those 11: they belong to 20260806680000, which
+-- took `payment_status` away from staff and the seed as well. Their siblings T7
+-- and T15 used to assert the opposite — that a 'paid' written by staff or by
+-- the seed was KEPT — which is how thirteen seeded bookings came to claim
+-- $790.75 against an empty ledger. The full case is in
+-- supabase/tests/booking-payment-derivation.sql.
 -- ============================================================================
 
 begin;
@@ -105,6 +112,10 @@ begin
   returning * into r;
 
   reset role;
+  -- payment_status is still 'pending', but no longer BECAUSE the customer path
+  -- put it back — that assignment is gone (20260806700000). It is 'pending'
+  -- because the ledger is empty, which is a stronger reason: it holds for
+  -- staff and for the seed too, and T7 and T15 below now say so.
   perform pg_temp.t('T1  customer cannot self-confirm',
             r.status = 'request_submitted' and r.payment_status = 'pending',
             format('status=%s payment=%s', r.status, r.payment_status));
@@ -239,10 +250,17 @@ begin
   returning * into r;
   reset role;
 
+  -- The price, the status and the rota ARE staff's to set. `payment_status` is
+  -- NOT, and was until 20260806680000 — this insert asks for 'paid' over an
+  -- empty ledger and gets 'pending', which is how thirteen seeded bookings came
+  -- to claim $790.75 that no payment row backed.
   perform pg_temp.t('T7  staff price and status are kept',
-            r.status = 'confirmed' and r.payment_status = 'paid'
+            r.status = 'confirmed'
             and r.total_cost = 80 and r.assigned_staff_name = 'Jules',
             format('status=%s total=%s staff=%s', r.status, r.total_cost, r.assigned_staff_name));
+  perform pg_temp.t('T7b staff cannot declare a booking paid',
+            r.payment_status = 'pending' and r.amount_paid = 0,
+            format('payment=%s amount_paid=%s', r.payment_status, r.amount_paid));
 exception when others then
   reset role;
   perform pg_temp.t('T7  staff booking', false, sqlerrm);
@@ -421,8 +439,15 @@ begin
   returning * into r;
 
   perform pg_temp.t('T15 seeds keep their prices and statuses',
-            r.status = 'completed' and r.total_cost = 125 and r.payment_status = 'paid',
+            r.status = 'completed' and r.total_cost = 125,
             format('status=%s total=%s', r.status, r.total_cost));
+  -- The seed path bypasses enforce_booking_integrity entirely (auth.uid() is
+  -- null) and it does NOT bypass the derivation. There is no writer left that
+  -- can say 'paid' without a payment — which is the whole point, since the seed
+  -- is the writer that did.
+  perform pg_temp.t('T15b not even the seed can declare a booking paid',
+            r.payment_status = 'pending' and r.amount_paid = 0,
+            format('payment=%s amount_paid=%s', r.payment_status, r.amount_paid));
 exception when others then
   perform pg_temp.t('T15 seed path', false, sqlerrm);
 end $$;

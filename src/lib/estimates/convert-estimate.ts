@@ -50,8 +50,6 @@ export function buildBookingDataFromEstimate(
     discount: estimate.discount,
     discountReason: estimate.discountReason,
     totalCost: estimate.total,
-    // A paid deposit is a partial payment — the balance is still due.
-    paymentStatus: "pending",
     kennel: estimate.roomType,
     specialRequests: notes || undefined,
     initialDeposit: depositPaid
@@ -76,7 +74,12 @@ export function finalizeEstimateConversion(
   now: Date = new Date(),
 ): number {
   const bookingId = nextBookingId();
-  const booking: Booking = { ...data, id: bookingId };
+  // A paid deposit is a PARTIAL payment and the balance is still due, so a
+  // converted estimate is 'pending' however much was taken up front. The
+  // database reaches the same answer for the same reason — it has no 'partial'
+  // yet (Decision 3 in 20260806680000) — but this list is local, so it is said
+  // here too.
+  const booking: Booking = { ...data, id: bookingId, paymentStatus: "pending" };
   bookings.push(booking);
 
   estimate.status = "converted";
