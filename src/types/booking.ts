@@ -227,7 +227,15 @@ export const newBookingSchema = z.object({
     .enum(["pending", "in_progress", "completed", "skipped"])
     .optional(),
   kennel: z.string().optional(),
-  /** Boarding: the specific FacilityRoom.id auto-assigned to this booking */
+  /**
+   * Boarding: the room assigned to this booking, as a `boarding_rooms.legacy_id`
+   * ("R-STD-01"). `create_booking` resolves it against that table.
+   *
+   * This comment used to say `FacilityRoom.id`, which was never what it held.
+   * `FacilityRoom` ids look like "room-ds-01" and live in a DIFFERENT room
+   * model — the one the facility's own Rooms admin page edits, in localStorage.
+   * The two id spaces are disjoint; see the debt map.
+   */
   unitAssignment: z.string().optional(),
   /** Daycare: the DaycareSection.id the pet was assigned to */
   sectionId: z.string().optional(),

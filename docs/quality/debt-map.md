@@ -721,6 +721,27 @@ Two ways to stop occupying a kennel, deliberately different. A cancelled booking
 
 **Do instead:** don't unify them. The asymmetry is the meaning.
 
+## Snapshot (2026-08-06, a fourth room model, found before building on it)
+
+### 🔴 The facility's Rooms admin edits a different room model than bookings use
+
+Found while starting the boarding ops board, and the reason it was not built. There are **two disjoint room models**, and the facility's own admin screen manages the one bookings cannot reach:
+
+| Model                              | Ids            | Count              | Stored in        | Edited from                                   | Used by                                                      |
+| ---------------------------------- | -------------- | ------------------ | ---------------- | --------------------------------------------- | ------------------------------------------------------------ |
+| `boarding_rooms`                   | `R-STD-01` …   | 6                  | **Postgres**     | nothing — seeded only                         | assignment board, `create_booking`, the exclusion constraint |
+| `facilityRooms` + `roomCategories` | `room-ds-01` … | 10 in 4 categories | **localStorage** | `/facility/dashboard/services/boarding/rooms` | nothing that books                                           |
+
+So a manager who adds a kennel on the Rooms page adds it **to one browser**, and no booking can ever be placed in it. The rooms that bookings actually use cannot be edited anywhere.
+
+`NewBooking.unitAssignment` documented itself as "the specific **FacilityRoom.id**" while carrying a `boarding_rooms` legacy id — corrected in this change, since the comment named the model the value has never belonged to.
+
+This is on top of the three counting vocabularies recorded above, making **four** representations of "a room" in the boarding module.
+
+**Why it was not resolved here:** deciding which model wins is a product decision with real weight. `roomCategories` carries per-category booking rules and pricing that `boarding_rooms` has no equivalent for; adopting it means a `room_categories` table, re-seeding, and changing the id space the assignment board and the existing tests key on. Picking silently would entrench whichever I chose.
+
+**Do instead:** settle the model before building the ops board. If `facilityRooms` wins, migrate it into `boarding_rooms` (plus a categories table) and re-key `unitAssignment`; if `boarding_rooms` wins, point the Rooms admin page at it and retire the localStorage store. Do not add a third consumer to either until then.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
