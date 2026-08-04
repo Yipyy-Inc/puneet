@@ -57,18 +57,34 @@ export function deniedIfUntouched(
 }
 
 /**
- * The delete variant, for when "nothing to remove" is a legitimate outcome.
+ * Did a DELETE get refused, given what was there before it?
  *
  * A refused DELETE and an empty table give the same answer — zero rows — so the
- * only way to tell them apart is to know what was there first. Count before,
- * pass both, and a caller who had rows and removed none is being refused.
+ * only way to tell them apart is to know the count first. Rows existed and none
+ * were removed means refused.
+ *
+ * Separate from the response builder below because not every caller answers a
+ * refusal with a 403: `grooming/services` reports it through a `pricesWritten`
+ * flag on an otherwise-successful patch, and reaching for a NextResponse it
+ * then discards would be using a builder as a predicate.
+ */
+export function deleteWasRefused(
+  expectedCount: number | null,
+  removed: unknown[] | null,
+): boolean {
+  if ((expectedCount ?? 0) === 0) return false;
+  return !removed || removed.length === 0;
+}
+
+/**
+ * The delete variant of `deniedIfUntouched`, for when "nothing to remove" is a
+ * legitimate outcome. Count before, pass both.
  */
 export function deniedIfExpectedRowsSurvived(
   expectedCount: number | null,
   removed: unknown[] | null,
   message: string,
 ): NextResponse | null {
-  if ((expectedCount ?? 0) === 0) return null;
-  if (removed && removed.length > 0) return null;
+  if (!deleteWasRefused(expectedCount, removed)) return null;
   return NextResponse.json({ error: message }, { status: 403 });
 }

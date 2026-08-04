@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import {
+  deniedIfExpectedRowsSurvived,
+  deniedIfUntouched,
+} from "@/lib/api/rls-write";
 
 // ============================================================================
 // Editing a groomer's grooming profile.
@@ -209,12 +213,11 @@ export async function PUT(
       });
     }
     // Zero rows with no error means the UPDATE policy refused. See the header.
-    if (!touched || touched.length === 0) {
-      return NextResponse.json(
-        { error: "Not allowed to edit grooming profiles at this facility." },
-        { status: 403 },
-      );
-    }
+    const denied = deniedIfUntouched(
+      touched,
+      "Not allowed to edit grooming profiles at this facility.",
+    );
+    if (denied) return denied;
     return new NextResponse(null, { status: 204 });
   }
 
@@ -321,12 +324,12 @@ export async function PATCH(
       duplicate: "",
     });
   }
-  if ((existingHours ?? 0) > 0 && (cleared?.length ?? 0) === 0) {
-    return NextResponse.json(
-      { error: "Not allowed to set working hours at this facility." },
-      { status: 403 },
-    );
-  }
+  const denied = deniedIfExpectedRowsSurvived(
+    existingHours,
+    cleared,
+    "Not allowed to set working hours at this facility.",
+  );
+  if (denied) return denied;
 
   if (working.length > 0) {
     const { error } = await supabase

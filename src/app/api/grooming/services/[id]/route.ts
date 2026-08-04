@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
-import { deniedIfUntouched } from "@/lib/api/rls-write";
+import { deleteWasRefused, deniedIfUntouched } from "@/lib/api/rls-write";
 import {
   SERVICE_SELECT,
   rowToService,
@@ -114,10 +114,15 @@ export async function PATCH(
   let pricesWritten = true;
   if (input.sizePricing !== undefined) {
     const rows = sizePricesToRows(input.sizePricing);
-    // `.select()` matters most when `rows` is EMPTY -- clearing every size
-    // price. With rows to insert, a refusal surfaces on the insert; with none,
-    // a refused delete would otherwise report success and leave the old prices
-    // in place while the response said they were gone.
+    // Counted first. With rows to insert, a refused delete surfaces on the
+    // insert that follows; with NONE -- the caller clearing every size price --
+    // there is no later statement to fail, so a refusal would report success
+    // and leave the old prices in place while the response said they were gone.
+    const { count: existingPrices } = await supabase
+      .from("grooming_service_size_prices")
+      .select("service_id", { count: "exact", head: true })
+      .eq("service_id", resolved.id);
+
     const { data: clearedPrices, error: delError } = await supabase
       .from("grooming_service_size_prices")
       .delete()
@@ -125,11 +130,10 @@ export async function PATCH(
       .select("service_id");
     if (delError) {
       pricesWritten = false;
-    } else if (rows.length === 0 && (clearedPrices?.length ?? 0) === 0) {
-      // Nothing removed and nothing to add: either there was nothing there, or
-      // the policy refused. `pricesWritten` already carries the uncertainty to
-      // the response, which is what it is for.
-      pricesWritten = true;
+    } else if (deleteWasRefused(existingPrices, clearedPrices)) {
+      // Refused. `pricesWritten: false` is how this route already tells the
+      // caller the prices did not move, and the service patch above stands.
+      pricesWritten = false;
     } else if (rows.length > 0) {
       const { error: insError } = await supabase
         .from("grooming_service_size_prices")
