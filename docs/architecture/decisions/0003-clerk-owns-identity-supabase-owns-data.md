@@ -106,9 +106,29 @@ written against `auth.jwt()->>'sub'`.
   (`daycare_attendance_read`, `daycare_config_read`, `facility_rooms_read`,
   `room_categories_read`), contradicting the tenancy migration's own comment.
   Recreated as found; tightening them is a behaviour change and its own decision.
-- Production needs a separate Clerk domain registered against the production
-  Supabase project, and live keys set **before** the build — `NEXT_PUBLIC_*` is
-  inlined at build time.
+- **One Supabase project serves both environments** (decided 2026-08-06). Safe
+  while nothing is launched: the data is demo, and there are no customers a bad
+  migration could reach. Supabase accepts several third-party auth providers on
+  one project, so the development and production Clerk instances are registered
+  side by side and their subjects cannot collide — Clerk mints different user
+  ids per instance.
+
+  **Revisit before the first real customer.** From that point the two costs
+  become real: a local migration lands directly on production data, and demo
+  records sit in the same tables as customer records with nothing distinguishing
+  them. Splitting later means standing up a second project and replaying
+  `supabase/migrations/` into it, which is cheap now and expensive once there is
+  data worth keeping.
+
+- Production needs its own Clerk instance — a separate domain, its own live
+  keys, its own webhook endpoint, and its own Google/Apple OAuth credentials
+  (development uses Clerk's shared test credentials; production requires a real
+  Google Cloud OAuth client and an Apple Services ID). Nothing carries over
+  from development except the code.
+
+- Live keys must be set **before** the build — `NEXT_PUBLIC_*` is inlined at
+  build time, so changing them afterwards requires a redeploy and a green build
+  proves nothing about their values.
 - The `user_role` cookie and `scheduling-current-user-role` localStorage role
   systems still steer UI. Nothing about access depends on them; removing them is
   UI work.
