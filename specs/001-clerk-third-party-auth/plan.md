@@ -2,6 +2,49 @@
 
 Spec: [spec.md](spec.md). Decisions: start clean, big-bang, defer production.
 
+## Verified inventory (read from the live catalog, 2026-08-05)
+
+Counted with `pg_policies` / `pg_proc`, not by grepping migrations — the files
+include superseded definitions and disagree with the database. **The database is
+the authority.**
+
+| Measure                                    | Count   |
+| ------------------------------------------ | ------- |
+| Policies in `public`                        | **220** |
+| …delegating to the private helpers          | **192** |
+| …calling `auth.uid()` directly              | **10**  |
+| Views depending on the identity columns     | **0**   |
+| Functions calling `auth.uid()`              | **22**  |
+
+**The 10 direct policies:** `clients_read`, `clients_update`,
+`daycare_attendance_read`, `daycare_config_read`, `memberships_read`,
+`facility_rooms_read`, `membership_permissions_read`, `profiles_read`,
+`profiles_update_self`, `room_categories_read`.
+
+**The 22 functions, split by idiom — this split is the security boundary:**
+
+_13 "compare" (resolve the caller; rewrite to `(select auth.jwt()->>'sub')`):_
+`private.client_facility_ids`, `former_staff_ids`, `grooming_adjustment_actor`,
+`grooming_note_author`, `has_permission(uuid,text)`, `is_platform_admin`,
+`member_facility_ids`, `own_client_ids`, `own_staff_ids`, `stamp_author`,
+`public.link_client_record`, `my_permissions`,
+`set_booking_tip_split(bigint,text,jsonb)`.
+
+_7 TRIGGERS — null subject is a **service_role bypass**, keep `return new`:_
+`private.enforce_booking_integrity`, `enforce_change_request_integrity`,
+`enforce_client_integrity`, `enforce_onboarding_instance_integrity`,
+`enforce_pet_integrity`, `enforce_staff_integrity`,
+`enforce_template_role_uniqueness`.
+
+_2 RPCs — null subject is a **refusal**, must keep raising 🔴:_
+`public.link_staff_invite(text,uuid,text)`, `public.offboard_staff(text,text,uuid,date)`.
+
+Corrections to the assumptions above: the plan said "8 trigger bypasses" from a
+file grep; the catalog says **7 triggers + 2 RPCs**. It also named only 3 helpers;
+there are **13** identity-resolving functions. And `link_staff_invite`'s
+`p_user_id uuid` parameter must become `text` — a signature change, so the old
+overload must be dropped, not just replaced.
+
 ## What grounding changed about the shape of this
 
 **The 55 `auth.uid()` sites are not 55 independent rewrites.** Three
