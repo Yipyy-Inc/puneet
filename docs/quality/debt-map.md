@@ -87,7 +87,9 @@ The document builders (`src/lib/quickbooks/documents/`) and their enqueue points
 
 Two shipped RPCs were exploitable from the **publishable key** — the one in every browser bundle — with no session, no cookie and no account. Both had the same root cause and both are fixed (`20260804200000_rpc_require_session.sql`, plus the guard at source in `20260804180000_offboarding.sql`), with the exploits kept as tests in `supabase/tests/rpc-session-required.sql`.
 
-The write-integrity **triggers** legitimately open with `if (select auth.uid()) is null then return new; end if;` — a trigger only fires on a write that already cleared RLS, so a missing JWT subject really does mean service_role, and the early return is how a seed inserts a catalogue without tripping its own rules. That reasoning **does not transfer to a function**. An RPC is a front door: `anon` reaches `/rest/v1/rpc/<name>` directly with no subject at all, so the carve-out written to admit the seed script admits the internet.
+The write-integrity **triggers** legitimately open with `if (select auth.jwt()->>'sub') is null then return new; end if;` — a trigger only fires on a write that already cleared RLS, so a missing JWT subject really does mean service_role, and the early return is how a seed inserts a catalogue without tripping its own rules. That reasoning **does not transfer to a function**. An RPC is a front door: `anon` reaches `/rest/v1/rpc/<name>` directly with no subject at all, so the carve-out written to admit the seed script admits the internet.
+
+> Written as `auth.uid()` until 2026-08-05. Clerk now owns identity (ADR 0003), so the subject is a text id and `auth.uid()`'s cast to `uuid` raises `22P02` rather than returning null — a guard written the old way errors instead of taking the bypass. The **principle** is unchanged; only the expression moved.
 
 What it cost, both proven against the live project before the fix:
 
@@ -102,8 +104,8 @@ Both migrations already carried `revoke all on function … from public`, which 
 
 **Do instead**, for every new SECURITY DEFINER function in `public`:
 
-1. Treat a null `auth.uid()` as a **refusal**, not a bypass — and check it _before_ any lookup, so a "no such record" error can't be used as an existence oracle by an unauthenticated caller.
-2. `revoke execute … from anon` **by name**. The `from public` line is not a substitute.
+1. Treat a null subject — `(select auth.jwt()->>'sub')` — as a **refusal**, not a bypass, and check it _before_ any lookup, so a "no such record" error can't be used as an existence oracle by an unauthenticated caller. **Not `auth.uid()`:** since Clerk owns identity (ADR 0003) that function casts the subject to `uuid` and a Clerk id like `user_3HVlmtt…` makes the cast _raise_ `22P02`, so a guard written with it fails instead of refusing.
+2. `revoke execute … from anon` **by name**, _and_ `from public`. Neither is a substitute for the other — see the entry below.
 3. Add it to the `V7` sweep in `supabase/tests/rpc-session-required.sql`, which fails on any anon-callable function in `public` outside the four token RPCs.
 
 The four onboarding token RPCs (`onboarding_by_token`, `save_onboarding_section`, `submit_onboarding`, `set_onboarding_account_complete`) **keep** their `anon` grant deliberately — a new hire has no account by definition, the token is the credential, and it is verified by hash _inside_ the function rather than as a policy predicate (`20260803180000`). Locking those down would break every invite; `V4` exists to catch a fix that overreaches in that direction.
