@@ -1,0 +1,31 @@
+-- ============================================================================
+-- The other half of the revoke. Follow-up to
+-- 20260805210403_revoke_anon_execute_on_public_functions, which closed two of
+-- four — the other two stayed anon-callable and the V7 sweep stayed red.
+--
+-- THE MIRROR OF THE DEBT-MAP LESSON. docs/quality/debt-map.md records:
+--
+--   "revoking from the `public` pseudo-role is a different grant and leaves
+--    anon=X standing"
+--
+-- The inverse is equally true and is what bit here. These two functions carried
+-- an ACL beginning `=X/postgres` — an empty grantee means PUBLIC — so `anon`
+-- held EXECUTE by inheritance, not through its own entry. Revoking from `anon`
+-- removed a grant that was not the one doing the work, and
+-- has_function_privilege('anon', …) stayed true:
+--
+--   record_boarding_arrival   acl: postgres=X, anon=X, …       → revoke anon    ✔
+--   prevent_money_mutation    acl: =X, postgres=X, anon=X, …   → needs BOTH
+--
+-- THE RULE: to make a function unreachable by anon, revoke from `anon` AND from
+-- `public`, then assert with has_function_privilege() rather than by reading the
+-- grant statements. Checking one and not the other is how this class of hole
+-- keeps reappearing — three occurrences so far.
+--
+-- Revoking EXECUTE does not disarm a trigger: triggers fire as the table owner,
+-- not the calling role. Verified after applying — the write path raises no
+-- privilege error and V1–V7 all pass.
+-- ============================================================================
+
+revoke execute on function public.prevent_grooming_history_mutation() from public;
+revoke execute on function public.prevent_money_mutation()            from public;
