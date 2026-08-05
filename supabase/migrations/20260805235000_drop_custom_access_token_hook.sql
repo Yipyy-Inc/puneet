@@ -1,0 +1,29 @@
+-- ============================================================================
+-- Drop the access-token hook. Clerk owns identity now.
+--
+-- The hook injected `app_metadata.memberships` into a Supabase-minted JWT so
+-- application code could read tenancy from claims instead of re-querying. It is
+-- obsolete rather than replaced, and the distinction matters:
+--
+--   • GoTrue only calls it while SUPABASE Auth mints a token. Clerk sessions
+--     never trigger it, so the claim was simply absent after the cutover.
+--   • RLS never depended on it. private.member_facility_ids(),
+--     is_platform_admin() and has_permission() always queried the membership
+--     tables directly — they read no claims. Nothing in the policy layer loses
+--     anything here.
+--   • Its one consumer was src/lib/auth/viewer.ts, which now resolves
+--     memberships with two indexed queries. That costs a round trip and fixes a
+--     staleness bug: a claim was a snapshot from token-mint time, so a revoked
+--     membership stayed live until the token refreshed.
+--
+-- ORDER MATTERS, and this migration is the second half of it. The hook was
+-- first cleared in Supabase Dashboard > Authentication > Hooks. Dropping the
+-- function while Auth still pointed at it is the one sequence that could throw
+-- during token minting, which is why it was deferred until the cutover was done
+-- and the dashboard entry removed.
+--
+-- Verified immediately before dropping: 0 functions reference it, 0 policies
+-- read app_metadata, and no code path initiates a Supabase sign-in.
+-- ============================================================================
+
+drop function if exists private.custom_access_token_hook(jsonb);
