@@ -997,6 +997,50 @@ Note the two payment surfaces still disagree about tenders: grooming checkout of
 
 **Do instead:** don't map an unknown tender onto a known one to satisfy a CHECK. Widen the CHECK or drop the option.
 
+## Snapshot (2026-08-06, a booking can have things added to it)
+
+### 🔴 A stored generated column is invisible to a BEFORE trigger
+
+`bookings.amount_due` is `generated always as (total_cost + extras_total) stored`, and Postgres computes stored generated columns **after** before-row triggers. So inside `private.derive_booking_payment` — a BEFORE trigger — `NEW.amount_due` is not the value about to be written.
+
+Verified by writing it the naive way: a $100 booking with $100 paid came back **`pending`**, while the stored `amount_due` was correctly 100. That is the dangerous shape — 'pending' is the right answer often enough that the bug reads as normal behaviour, and only fully-settled bookings would have been wrong.
+
+The trigger adds `new.total_cost + new.extras_total` itself. The other two derivations are ordinary reads of committed rows and use the column.
+
+**Do instead:** never read a generated column from a BEFORE trigger. Recompute its expression, and say in the header that you are doing so on purpose — the duplication looks like a mistake otherwise.
+
+### 🔴 A bill that can grow means every balance has to move at once
+
+`total_cost` is the BOOKING's price. It says nothing about a bag of food added at pickup. Three things compared against it:
+
+| function                             | was                         | now                            |
+| ------------------------------------ | --------------------------- | ------------------------------ |
+| `private.derive_booking_payment`     | `amount_paid >= total_cost` | `>= total_cost + extras_total` |
+| `private.client_outstanding_balance` | `total_cost - amount_paid`  | `amount_due - amount_paid`     |
+| `public.settle_bookings`             | `total_cost - amount_paid`  | `amount_due - amount_paid`     |
+
+Landing `booking_line_items` without repointing all three would mean a $100 booking with $30 of extras reading **paid at $100**, with the $30 never chased and nothing anywhere disagreeing. That is why 20260806820000 and 20260806840000 are one change in two files.
+
+Same on the app side: `balanceOf` measures against `amountDue`, and `ProcessPaymentModal` stopped computing `alreadyPaid` as `totalCost - balance` — arithmetic that was right only while the bill could not grow.
+
+**Do instead:** when a new column changes what a number _means_, grep every comparison against the old one before writing the table. `total_cost` had three readers; a fourth added later will need finding the same way.
+
+### 🟡 Only the additions are stored; the rest of an invoice still derives
+
+`booking.invoice` carries `subtotal`, `total`, `depositCollected`, `remainingDue`, `tipTotal` and a `payments[]` array. All of those are derivable from the booking plus `public.payments` — and `payments[]` in particular would be a **second payment ledger**, with the on-screen one going stale.
+
+So `booking_line_items` holds only what has no other record: products, add-ons, fees. Nothing else got a table.
+
+**Do instead:** when porting a fixture object, list which of its fields are facts and which are arithmetic. Only the facts need storage.
+
+### 🟢 `retail_process_sale`, not `edit_bookings`
+
+Putting something on a customer's bill is a till job. `retail_process_sale` covers owner, admin, manager, supervisor, reception **and** retail — the people at the counter. `edit_bookings` would exclude `retail`; `financial_manage_invoices` would include the accountant, who reconciles rather than sells.
+
+That choice makes the pass-through in `enforce_booking_integrity` load-bearing again: `retail` has no `edit_bookings`, so without `extras_total` and `amount_due` in its exclusion list, adding food to a completed booking is refused with "This booking can no longer be changed." Verified by removing them.
+
+**Do instead:** when adding a derived column to `bookings`, add it to that exclusion list in the same change, or the trigger that maintains it will be refused for whoever lacks `edit_bookings`.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

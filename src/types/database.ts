@@ -199,8 +199,55 @@ export type Database = {
           },
         ];
       };
+      booking_line_items: {
+        Row: {
+          author_name: string;
+          booking_id: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          kind: string;
+          name: string;
+          price: number;
+          quantity: number;
+          source_id: string | null;
+          unit_price: number;
+          updated_at: string;
+        };
+        Insert: {
+          author_name?: string;
+          booking_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          kind: string;
+          name: string;
+          quantity?: number;
+          source_id?: string | null;
+          unit_price: number;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string;
+          booking_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          name?: string;
+          quantity?: number;
+          source_id?: string | null;
+          unit_price?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       bookings: {
         Row: {
+          amount_due: number;
           amount_paid: number;
           assigned_staff_id: string | null;
           assigned_staff_name: string | null;
@@ -210,6 +257,7 @@ export type Database = {
           details: Json;
           discount: number;
           end_at: string;
+          extras_total: number;
           facility_id: string;
           id: string;
           location_id: string | null;
@@ -234,6 +282,7 @@ export type Database = {
           details?: Json;
           discount?: number;
           end_at: string;
+          extras_total?: number;
           facility_id: string;
           id?: string;
           location_id?: string | null;
@@ -258,6 +307,7 @@ export type Database = {
           details?: Json;
           discount?: number;
           end_at?: string;
+          extras_total?: number;
           facility_id?: string;
           id?: string;
           location_id?: string | null;

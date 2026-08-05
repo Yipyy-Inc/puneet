@@ -647,6 +647,19 @@ export const bookingSchema = newBookingSchema.extend({
    * Anything read through `src/lib/api` always carries it.
    */
   amountPaid: z.number().optional(),
+  /**
+   * The price of anything added to this booking at the counter — products,
+   * add-ons, a late fee. DERIVED from `booking_line_items` (20260806820000).
+   */
+  extrasTotal: z.number().optional(),
+  /**
+   * What the booking COSTS in total: `totalCost + extrasTotal`.
+   *
+   * The number every balance is measured against. `totalCost` is the booking's
+   * own price and says nothing about the bag of food added at pickup — use
+   * `balanceOf()` rather than subtracting from `totalCost` by hand.
+   */
+  amountDue: z.number().optional(),
   paymentMethod: bookingPaymentMethodEnum.optional(),
   refundMethod: bookingRefundMethodEnum.optional(),
   refundAmount: z.number().optional(),

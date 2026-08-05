@@ -22,10 +22,10 @@ import { bookingMutations } from "./booking";
 //
 // ── THE AMOUNT IS THE BALANCE, NOT THE PRICE ───────────────────────────────
 //
-// What is owed is `totalCost - amountPaid`, and `amountPaid` only started
-// existing in 20260806680000. Before it there was no way to charge the balance,
-// so the modals charged the full price — which is right exactly once and wrong
-// on every part-paid booking.
+// What is owed is `amountDue - amountPaid`: the price, PLUS anything added at
+// the counter (20260806820000), less what the ledger has taken. Neither figure
+// existed before 20260806680000, so the modals charged the full price — right
+// exactly once, and wrong on every booking that is part-paid or added to.
 //
 // ── NOTHING HERE SETS paymentStatus ────────────────────────────────────────
 //
@@ -135,12 +135,24 @@ export function refundTender(method: string): "card" | "store_credit" | "cash" {
   return "card";
 }
 
-/** What is still owed on a booking. Never negative: an overpayment is not a debt. */
+/**
+ * What is still owed on a booking. Never negative: an overpayment is not a debt.
+ *
+ * Measured against `amountDue` — the price PLUS anything added at the counter
+ * (20260806820000). Subtracting from `totalCost` instead understates the bill
+ * by exactly the bag of food somebody just put on it, and the database would
+ * disagree with the screen.
+ *
+ * `amountDue` falls back to `totalCost` only for the mock fixtures, which
+ * predate line items and have no extras by definition.
+ */
 export function balanceOf(booking: {
   totalCost: number;
+  amountDue?: number;
   amountPaid?: number;
 }): number {
-  return Math.max(0, booking.totalCost - (booking.amountPaid ?? 0));
+  const due = booking.amountDue ?? booking.totalCost;
+  return Math.max(0, due - (booking.amountPaid ?? 0));
 }
 
 /** The statuses `clients.outstanding_balance` counts — see Decision 1 in 20260806780000. */
@@ -158,7 +170,12 @@ const DELIVERED = new Set(["ready", "completed"]);
  * second derived figure on `clients` would be a second thing to keep right.
  */
 export function upcomingUnpaid(
-  bookings: { status: string; totalCost: number; amountPaid?: number }[],
+  bookings: {
+    status: string;
+    totalCost: number;
+    amountDue?: number;
+    amountPaid?: number;
+  }[],
 ): number {
   return bookings
     .filter(
@@ -182,7 +199,12 @@ export function useTakeBookingPayment() {
   const invalidate = useSettleInvalidation();
   return useMutation({
     mutationFn: async (input: {
-      booking: { id: number; totalCost: number; amountPaid?: number };
+      booking: {
+        id: number;
+        totalCost: number;
+        amountDue?: number;
+        amountPaid?: number;
+      };
       method: "cash" | "card";
       tipAmount?: number;
     }) => {

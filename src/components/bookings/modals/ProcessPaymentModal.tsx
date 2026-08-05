@@ -50,12 +50,14 @@ export function ProcessPaymentModal({
   const client = clients.find((c) => c.id === booking.clientId);
   const pet = client?.pets.find((p) => p.id === booking.petId);
 
-  // What is being taken is the BALANCE, not the price. `useTakeBookingPayment`
-  // charges `totalCost - amountPaid`, so showing the price here would name a
-  // different number from the one that reaches the ledger on anything
-  // part-paid. Same helper, so the two cannot drift.
+  // What is being taken is the BALANCE, not the price: `amountDue - amountPaid`,
+  // where `amountDue` includes anything added at the counter. Showing the price
+  // here would name a different number from the one that reaches the ledger on
+  // anything part-paid or added to. Same helper, so the two cannot drift.
   const balance = balanceOf(booking);
-  const alreadyPaid = booking.totalCost - balance;
+  // Straight from the ledger, not `totalCost - balance` — that arithmetic was
+  // right only while the bill could not grow.
+  const alreadyPaid = booking.amountPaid ?? 0;
   const grandTotal = balance + tipAmount;
 
   const handleConfirm = () => {

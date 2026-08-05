@@ -64,6 +64,10 @@ export function rowToBooking(row: BookingRow): BookingWithRowId {
     // them; `bookings_set_derived_payment` recomputes them on every write.
     paymentStatus: row.payment_status as Booking["paymentStatus"],
     amountPaid: Number(row.amount_paid),
+    extrasTotal: Number(row.extras_total),
+    // What it COSTS, price plus extras. Not the same as totalCost the moment
+    // anything is added at the counter — see 20260806820000.
+    amountDue: Number(row.amount_due),
 
     startDate: start.date,
     endDate: end.date,
@@ -117,6 +121,8 @@ const COLUMN_FIELDS = [
   "status",
   "paymentStatus",
   "amountPaid",
+  "extrasTotal",
+  "amountDue",
   "startDate",
   "endDate",
   "checkInTime",
