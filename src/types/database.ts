@@ -124,32 +124,41 @@ export type Database = {
       boarding_stays: {
         Row: {
           booking_id: string;
+          checked_in_at: string | null;
+          checked_out_at: string | null;
           created_at: string;
           facility_id: string;
           occupies: string;
           override_reason: string | null;
           released_at: string | null;
           room_id: string;
+          status: string | null;
           updated_at: string;
         };
         Insert: {
           booking_id: string;
+          checked_in_at?: string | null;
+          checked_out_at?: string | null;
           created_at?: string;
           facility_id: string;
           occupies: string;
           override_reason?: string | null;
           released_at?: string | null;
           room_id: string;
+          status?: never;
           updated_at?: string;
         };
         Update: {
           booking_id?: string;
+          checked_in_at?: string | null;
+          checked_out_at?: string | null;
           created_at?: string;
           facility_id?: string;
           occupies?: string;
           override_reason?: string | null;
           released_at?: string | null;
           room_id?: string;
+          status?: never;
           updated_at?: string;
         };
         Relationships: [
@@ -3714,6 +3723,13 @@ export type Database = {
           p_room_id?: string | null;
         };
         Returns: string | null;
+      };
+      record_boarding_arrival: {
+        Args: {
+          p_booking_ref: number;
+          p_action: string;
+        };
+        Returns: string;
       };
       create_booking: {
         Args: {

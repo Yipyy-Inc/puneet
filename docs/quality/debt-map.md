@@ -1179,6 +1179,50 @@ The same asymmetry boarding draws between clearing a stay and releasing one (202
 
 **Do instead:** don't unify them into one status field. The asymmetry is the meaning.
 
+## Snapshot (2026-08-06, the boarding check-in board)
+
+### 🔴 The boarding check-in screen was the daycare board
+
+`/facility/dashboard/services/boarding/check-in` rendered `<DaycareCheckInOutSection />`. It had been the daycare fixture on the boarding page for as long as both existed, and nobody noticed because both boards moved objects around in `useState` and a dog is a dog.
+
+The moment the daycare board became real it started posting to `/api/daycare/attendance`, which refuses a non-daycare booking with a 422 — so the boarding check-in screen could not check anybody in at all. **Making one screen real broke a second screen that was quietly borrowing it.**
+
+**Do instead:** before wiring a shared component, grep every page that renders it. A component named for one module can be mounted by another, and a fixture makes that invisible.
+
+### 🔴 The person at the door could not open it
+
+`boarding_stays` is written under `private.can_write_booking`, which asks for `edit_bookings` or `create_bookings`. `boarding_attendant` holds NEITHER — it holds `check_in_out` and `boarding_assign_kennels`.
+
+So the first cut of the arrival columns was unusable by the only role whose job is meeting guests, and the failure was **silent**: an UPDATE refused by a policy's `using` clause matches zero rows and raises nothing. Probed on the live database — `UPDATE 0`, no error, status still `scheduled`.
+
+`record_boarding_arrival` (20260806920000) is the fix: SECURITY DEFINER, gated on `check_in_out`, raising 42501 when refused. Not a second RLS policy, because policies decide which ROWS you may write and never which COLUMNS — one keyed on `check_in_out` would also have handed every holder the right to rewrite `room_id` and `override_reason`.
+
+This is the third time in this run of work: the daycare board nearly gated on `daycare_view_dashboard` (a manager's permission), the kennel read on another manager's. **The permission that names the screen and the permission held by the people standing at it are rarely the same one.**
+
+**Do instead:** before gating a write, list the roles that will perform it and check `role_preset_permissions` for what they actually hold. Then probe the refusal — if it does not raise, it is not a gate, it is a trapdoor.
+
+### 🟡 Three unrendered check-in boards, 3,242 lines
+
+`CheckInOutSection.tsx` (2,008) and `GroomingCheckInOutSection.tsx` (1,234) were imported nowhere; knip listed both under unused files. I had reported the first to the user as "shared by boarding, grooming and training" — read off two comments in other files saying "layout matching CheckInOutSection", not off an import.
+
+**Do instead:** AGENTS.md already says confirm the component is wired before editing it. The same check belongs before _describing_ one — a claim about what a file is used by is as checkable as a claim about what it does.
+
+### 🟢 The paperwork loses to the headcount
+
+`boarding_stays.status` is generated, and `released_at` is deliberately NOT the top of the CASE. A guest who is physically checked in and whose booking is then cancelled reads `checked-in`, not `released` — because the dog is in the building, and a board that drops it off the list is how an animal gets left behind at closing.
+
+The day query makes the same choice twice more: it pulls in anyone checked in and not checked out regardless of dates (an overstay overlaps neither today's arrivals nor today's departures), and it does not exclude cancelled bookings on that second pass.
+
+**Do instead:** when a derived status has to order two facts, ask which one a person could get hurt by not seeing.
+
+### 🟢 Reverting a boarding arrival keeps the kennel; the daycare revert deletes its row
+
+Opposite implementations of the same button, and both are right. `daycare_attendance` means "this dog arrived", so a mistaken check-in leaves nothing to say. `boarding_stays` is the KENNEL ASSIGNMENT, so deleting it would give the kennel away as a side effect of correcting a mistyped arrival — two acts, one press.
+
+Undo also runs backwards: "never arrived" cannot be reached in one step from "collected".
+
+**Do instead:** don't harmonise the two reverts. Check what the row means before deciding what removing it says.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,19 @@ import {
   DoorOpen,
 } from "lucide-react";
 
+const OPS_TABS = ["requests", "eligibility", "kennels"] as const;
+
 export default function BoardingOpsPage() {
+  // `?tab=kennels` is a link the check-in board hands out when a guest has no
+  // kennel — "assign one first" is only useful if it lands on the right tab.
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const initialTab = (OPS_TABS as readonly string[]).includes(
+    requestedTab ?? "",
+  )
+    ? requestedTab!
+    : "requests";
+
   const [requests, setRequests] = useState<BoardingBookingRequest[]>(
     BOARDING_BOOKING_REQUESTS,
   );
@@ -125,7 +138,7 @@ export default function BoardingOpsPage() {
         </Alert>
       )}
 
-      <Tabs defaultValue="requests" className="space-y-4">
+      <Tabs defaultValue={initialTab} className="space-y-4">
         <TabsList className="flex flex-wrap">
           <TabsTrigger value="requests" className="flex items-center gap-2">
             Requests
