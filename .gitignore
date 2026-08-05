@@ -57,3 +57,7 @@ pnpm-lock.yaml
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# clerk skills are installed to .agents/ (tracked, see skills-lock.json);
+# these are generated Claude Code mirrors of the same files, not a second source
+.claude/skills/clerk*/
