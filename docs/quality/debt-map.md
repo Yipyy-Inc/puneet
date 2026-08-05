@@ -1390,6 +1390,36 @@ And the ledger being append-only shaped the e2e: cleanup is a **balancing entry*
 
 **Do instead:** if the cleanup for a test cannot be a delete, that is the schema telling you something about the domain — write the test the way the domain works.
 
+## Snapshot (2026-08-06, where the pet actually is)
+
+### 🟡 I had the "two vocabularies" problem framed wrong
+
+I wrote in three commit messages that grooming and daycare/boarding record arrival differently and that this needed reconciling — implying daycare and boarding should move `bookings.status` too. That would have been wrong twice.
+
+**It does not work.** `enforce_booking_integrity` lets a caller through only if they hold `edit_bookings`; everyone else gets "You may only cancel this booking." `boarding_attendant` and `daycare_attendant` hold neither `edit_bookings` nor `create_bookings`. So an attendance write that also moved the status would have been refused for the only people who perform it — and the way out would have been a bypass flag on the one guard that stops a customer editing a booking's price.
+
+**And it is the wrong model.** `bookings.status` is a lifecycle: requested → confirmed → completed → cancelled. Whether a dog is standing in the building is a different axis. Grooming's `checked_in`/`in_progress`/`ready` are a workflow parked in the lifecycle column; copying that into two more services would have spread the mistake, not reconciled it.
+
+`booking_presence` derives the answer instead. Nothing is copied, so nothing can drift.
+
+**Do instead:** before "making X consistent with Y", check which of the two is right. A repeated note in commit messages is not evidence — it is the same guess, restated.
+
+### 🟡 `unknown` meant two things, and the first cut of the view shipped that
+
+The view began as a UNION over the three attendance tables. A daycare booking has **no** `daycare_attendance` row until check-in — 20260806880000 decided that deliberately so "booked and not here yet" is a real state — so it came back `unknown`, indistinguishable from training, which has no table at all.
+
+Driving off `bookings` and left-joining fixes it: the SERVICE decides whether attendance is tracked, the join decides what has happened. `unknown` now means exactly one thing.
+
+**Do instead:** when adding a sentinel like `unknown`, enumerate every path that reaches it. Two causes with one name is the ambiguity the view existed to remove.
+
+### 🟢 The view immediately found nine dogs that had been on site for days
+
+All nine were e2e leftovers: `daycare-attendance.spec.ts` cancelled its bookings but never reverted the check-ins, so the attendance rows stood with `checked_in_at` set for ever. Invisible until something asked the question across services.
+
+The suite's `afterAll` now reverts the check-in before cancelling, and so does the new one.
+
+**Do instead:** a cleanup should undo what the test did, in reverse order. Cancelling the parent is not the same as undoing the child, and the child is what the derived reads see.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

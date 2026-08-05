@@ -639,6 +639,24 @@ export const bookingSchema = newBookingSchema.extend({
    */
   paymentStatus: newBookingPaymentStatusEnum,
   /**
+   * Is the pet here, and since when.
+   *
+   * DERIVED, from `booking_presence` (20260806960000) — whichever of
+   * `grooming_appointments`, `daycare_attendance` or `boarding_stays` owns the
+   * answer for this service. A SEPARATE AXIS FROM `status`, deliberately:
+   * `status` is the booking's lifecycle (requested → confirmed → completed →
+   * cancelled) and says nothing about whether a dog is standing in the
+   * building.
+   *
+   * `unknown` where no attendance table exists — training and custom services
+   * have none — and for a boarding booking with no kennel assigned yet.
+   *
+   * Optional because the mock fixtures cannot supply it.
+   */
+  presence: z.enum(["expected", "on-site", "departed", "unknown"]).optional(),
+  arrivedAt: z.string().nullable().optional(),
+  departedAt: z.string().nullable().optional(),
+  /**
    * What the payments ledger says has been paid toward this booking:
    * `sum(grand_total - tip)`. DERIVED — see 20260806680000. Writing it does
    * nothing; `paymentStatus` is computed from it and `total_cost`.

@@ -53,7 +53,45 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data.map(rowToBooking));
+  // ── Where the pet actually is ────────────────────────────────────────────
+  //
+  // A SECOND QUERY, not an embed. `booking_presence` (20260806960000) is a
+  // UNION over three tables and carries no foreign key of its own, so PostgREST
+  // has no relationship to follow. Merged here instead, which is also cheaper
+  // than the join it would have written.
+  //
+  // A booking with no row is `unknown`, and that is the honest answer for
+  // training and custom services — they have no attendance table at all — and
+  // for a boarding booking whose kennel has not been assigned yet.
+  const bookings = data.map(rowToBooking);
+  const { data: presenceRows } = await supabase
+    .from("booking_presence")
+    .select("booking_id, presence, arrived_at, departed_at");
+
+  const presenceById = new Map(
+    (
+      (presenceRows ?? []) as unknown as {
+        booking_id: string;
+        presence: string;
+        arrived_at: string | null;
+        departed_at: string | null;
+      }[]
+    ).map((row) => [row.booking_id, row]),
+  );
+
+  return NextResponse.json(
+    bookings.map((booking, index) => {
+      const row = presenceById.get(
+        (data[index] as unknown as { id: string }).id,
+      );
+      return {
+        ...booking,
+        presence: row?.presence ?? "unknown",
+        arrivedAt: row?.arrived_at ?? null,
+        departedAt: row?.departed_at ?? null,
+      };
+    }),
+  );
 }
 
 export async function POST(request: NextRequest) {

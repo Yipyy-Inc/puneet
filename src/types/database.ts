@@ -3662,6 +3662,16 @@ export type Database = {
       };
     };
     Views: {
+      booking_presence: {
+        Row: {
+          arrived_at: string | null;
+          booking_id: string | null;
+          departed_at: string | null;
+          presence: string | null;
+          source: string | null;
+        };
+        Relationships: [];
+      };
       client_store_credit: {
         Row: {
           balance: number | null;

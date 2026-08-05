@@ -408,6 +408,46 @@ export default function FacilityBookingsPage() {
       sortValue: (booking) => booking.status,
       render: (booking) => <StatusBadge type="status" value={booking.status} />,
     },
+    {
+      // ── Where the pet is, and it means the same thing for every service ──
+      //
+      // A SEPARATE AXIS FROM `status`. Grooming records arrival by moving
+      // `bookings.status` ('checked_in', 'in_progress', 'ready'); daycare and
+      // boarding leave the status alone and stamp a timestamp on their own
+      // table. So this list could tell you a groom was in the building and
+      // could not tell you the same about a boarding guest — it showed
+      // "Confirmed" for a dog that had been in kennel 4 since Tuesday.
+      //
+      // `booking_presence` (20260806960000) derives one answer from whichever
+      // table owns it. `unknown` is honest: training and custom services have
+      // no attendance table at all.
+      key: "presence",
+      label: "On site",
+      icon: CircleDot,
+      defaultVisible: true,
+      sortable: true,
+      sortValue: (booking) => booking.presence ?? "unknown",
+      render: (booking) => {
+        const presence = booking.presence ?? "unknown";
+        if (presence === "unknown") {
+          return <span className="text-muted-foreground text-xs">—</span>;
+        }
+        const label =
+          presence === "on-site"
+            ? "On site"
+            : presence === "departed"
+              ? "Gone home"
+              : "Expected";
+        return (
+          <span
+            data-presence={presence}
+            className="data-[presence=departed]:text-muted-foreground inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium data-[presence=expected]:border-amber-200 data-[presence=expected]:text-amber-700 data-[presence=on-site]:border-emerald-200 data-[presence=on-site]:text-emerald-700 dark:data-[presence=expected]:text-amber-400 dark:data-[presence=on-site]:text-emerald-400"
+          >
+            {label}
+          </span>
+        );
+      },
+    },
     // Payment-status column — omitted without view_booking_financials (3C).
     ...(canSeeBookingAmounts
       ? [

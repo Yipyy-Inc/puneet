@@ -90,15 +90,27 @@ test.afterAll(async ({ browser }) => {
       await page.request.get("/api/bookings")
     ).json()) as BookingPayload[];
     let cancelled = 0;
+    let reverted = 0;
     for (const b of all) {
       if (!b.specialRequests?.includes(MARKER)) continue;
       if (b.status === "cancelled") continue;
+
+      // THE ATTENDANCE ROW FIRST. Cancelling the booking takes it off the day
+      // query but leaves the check-in standing, so the pet reads "on-site" for
+      // ever — `booking_presence` (20260806960000) found nine of these left by
+      // earlier runs of this very suite. A 422 here just means the visit was
+      // never checked in, which is most of them.
+      const undo = await page.request.delete(`/api/daycare/attendance/${b.id}`);
+      if (undo.ok()) reverted++;
+
       const res = await page.request.patch(`/api/bookings/${b.id}`, {
         data: { status: "cancelled" },
       });
       if (res.ok()) cancelled++;
     }
-    console.log(`cleanup: ${cancelled} booking(s) cancelled`);
+    console.log(
+      `cleanup: ${reverted} check-in(s) reverted, ${cancelled} booking(s) cancelled`,
+    );
   } finally {
     await page.close();
   }
