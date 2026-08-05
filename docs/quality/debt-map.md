@@ -1366,6 +1366,30 @@ Two of the remaining entries were in the page deleted above. The list is now 26,
 
 **Do instead:** a sweep that cannot resolve an alias produces a number, not a finding. Quote it as "candidates, N audited" or do not quote it.
 
+## Snapshot (2026-08-06, prepaid credit is store credit)
+
+### 🔴 Two balances for one customer, and only one was honoured
+
+`store_credit_entries` is the real ledger — `record_payment` spends from it, a refund to credit writes into it, `client_store_credit` sums it. Meanwhile `/facility/services/memberships` kept `prepaidCredits`: a fixture list in `useState` whose "Add credits" dialog took a **typed-in customer name** and invented an id to hang it on (`cust-${Date.now()}`).
+
+So a facility could issue $200 of credit to a customer who did not exist, see the balance on screen, and the customer's real balance would never move. The two row actions were worse: "Refund balance" toasted _"Refund initiated"_ and did nothing at all, and "Remove" deleted the row from local state.
+
+**Do instead:** when a screen names a person by a typed string, ask what the write keys on. A free-text customer field over a table with a `client_id` foreign key is the tell.
+
+### 🟡 The expiry date is gone, on purpose
+
+The fixture had `expiresAt` per credit. The ledger has no such column, and that is the better model: `expired` is one of its _reasons_, so expiry is recorded as a negative entry on the day it happens. A date typed into the dialog would have been a promise with nothing to keep it — no job reads it, so the credit would have stayed spendable past the date the screen displayed.
+
+**Do instead:** don't carry a fixture field across just because the form had it. Ask what enforces it.
+
+### 🟢 Three numbers for one fact, again
+
+`balance`, `totalPurchased`, `totalUsed` and `lastUsedAt` were stored side by side with nothing keeping them in step — the same shape as `payment_status`/`amountPaid` and `boardingCapacity`. All four are sums over the entries now.
+
+And the ledger being append-only shaped the e2e: cleanup is a **balancing entry**, not a delete, because there is no delete policy. That is the same act the "Return balance" button performs, which is a decent sign the model is right.
+
+**Do instead:** if the cleanup for a test cannot be a delete, that is the schema telling you something about the domain — write the test the way the domain works.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

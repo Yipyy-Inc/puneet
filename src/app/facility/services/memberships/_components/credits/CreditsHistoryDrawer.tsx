@@ -15,13 +15,27 @@ import {
   RotateCcw,
   CalendarX,
 } from "lucide-react";
-import type { PrepaidCredits } from "@/data/services-pricing";
+import type {
+  StoreCreditAccount,
+  StoreCreditEntry,
+} from "@/lib/api/store-credit";
 
+// The account and its entries come in separately because the ledger is not
+// nested: a balance is a sum over rows, not an object that owns them.
 interface Props {
-  credits: PrepaidCredits | null;
+  account: StoreCreditAccount | null;
+  entries: StoreCreditEntry[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const REASON_LABEL: Record<string, string> = {
+  added: "Credit added",
+  redeemed: "Spent at checkout",
+  expired: "Expired",
+  refund: "Refunded to credit",
+  adjustment: "Adjustment",
+};
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -30,37 +44,46 @@ function fmt(n: number) {
   }).format(n);
 }
 
-export function CreditsHistoryDrawer({ credits, open, onOpenChange }: Props) {
-  if (!credits) return null;
+export function CreditsHistoryDrawer({
+  account,
+  entries,
+  open,
+  onOpenChange,
+}: Props) {
+  if (!account) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="p-0 sm:max-w-[520px]">
         <SheetHeader className="border-b px-6 py-5">
-          <SheetTitle>{credits.customerName}</SheetTitle>
-          <SheetDescription>Prepaid credits history</SheetDescription>
+          <SheetTitle>{account.clientName}</SheetTitle>
+          <SheetDescription>Store credit history</SheetDescription>
 
           <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-            <Stat label="Balance" value={fmt(credits.balance)} tone="emerald" />
-            <Stat label="Purchased" value={fmt(credits.totalPurchased)} />
-            <Stat label="Used" value={fmt(credits.totalUsed)} />
+            <Stat label="Balance" value={fmt(account.balance)} tone="emerald" />
+            <Stat label="Issued" value={fmt(account.totalIssued)} />
+            <Stat label="Spent" value={fmt(account.totalSpent)} />
           </div>
         </SheetHeader>
 
         <div className="overflow-y-auto px-6 py-4">
-          {credits.transactions.length === 0 ? (
+          {entries.length === 0 ? (
             <div className="text-muted-foreground rounded-lg border border-dashed py-8 text-center text-sm">
-              No transactions.
+              No entries.
             </div>
           ) : (
             <ol className="space-y-2">
-              {credits.transactions.map((t) => {
+              {entries.map((t) => {
+                // The ledger's own vocabulary: added, redeemed, expired,
+                // refund, adjustment. The sign is part of the reason -- the
+                // CHECK enforces it -- so the icon follows the reason rather
+                // than second-guessing it from the amount.
                 const icon =
-                  t.type === "purchase" ? (
+                  t.reason === "added" ? (
                     <ArrowUpRight className="size-3.5 text-emerald-600" />
-                  ) : t.type === "usage" ? (
+                  ) : t.reason === "redeemed" ? (
                     <ArrowDownRight className="size-3.5 text-red-600" />
-                  ) : t.type === "refund" ? (
+                  ) : t.reason === "refund" ? (
                     <RotateCcw className="size-3.5 text-blue-600" />
                   ) : (
                     <CalendarX className="size-3.5 text-slate-500" />
@@ -75,9 +98,12 @@ export function CreditsHistoryDrawer({ credits, open, onOpenChange }: Props) {
                         {icon}
                       </div>
                       <div>
-                        <div className="font-medium">{t.description}</div>
+                        <div className="font-medium">
+                          {t.note || REASON_LABEL[t.reason] || t.reason}
+                        </div>
                         <div className="text-muted-foreground text-xs">
-                          {new Date(t.date).toLocaleString()}
+                          {new Date(t.createdAt).toLocaleString()}
+                          {t.authorName ? ` · ${t.authorName}` : ""}
                         </div>
                       </div>
                     </div>
@@ -93,7 +119,7 @@ export function CreditsHistoryDrawer({ credits, open, onOpenChange }: Props) {
                         {fmt(t.amount)}
                       </span>
                       <Badge variant="outline" className="capitalize">
-                        {t.type}
+                        {t.reason}
                       </Badge>
                     </div>
                   </li>
