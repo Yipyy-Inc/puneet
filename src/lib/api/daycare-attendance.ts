@@ -156,3 +156,30 @@ export function useDaycareVisitUpdate() {
     onSuccess: invalidate,
   });
 }
+
+/**
+ * Back to scheduled — the check-in was a mistake.
+ *
+ * Deletes the attendance record rather than moving a status back, because the
+ * two are different claims: checking out says the visit happened and ended,
+ * reverting says it never began. Boarding draws the same line between
+ * releasing a stay and clearing one (20260806640000).
+ */
+export function useDaycareRevert() {
+  const invalidate = useFloorInvalidation();
+  return useMutation({
+    mutationFn: async (bookingRef: number) => {
+      const response = await fetch(`/api/daycare/attendance/${bookingRef}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const parsed = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(parsed?.error ?? "Could not revert that check-in.");
+      }
+      return bookingRef;
+    },
+    onSuccess: invalidate,
+  });
+}

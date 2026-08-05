@@ -250,6 +250,78 @@ test.describe("the daycare floor", () => {
     );
   });
 
+  test("the check-in board survives a reload, which useState could not", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const created = (await (
+      await page.request.post("/api/bookings", { data: bookingBody() })
+    ).json()) as BookingPayload;
+
+    await page.goto("/facility/dashboard/services/daycare/check-in");
+    // The pet is on the board as a scheduled arrival — a state the fixture had
+    // no way to express, because a visit did not exist until check-in.
+    const visit = (await day(page)).visits.find(
+      (v) => v.id === String(created.id),
+    );
+    await expect(
+      page.getByText(visit!.petName, { exact: false }).first(),
+    ).toBeVisible({ timeout: 60_000 });
+
+    // Check in through the API, then RELOAD. The old board held its arrivals
+    // in `useState<DaycareCheckIn[]>` seeded from a module array, so a reload
+    // put every dog back where the fixture said it was.
+    const res = await page.request.post("/api/daycare/attendance", {
+      data: { bookingRef: created.id },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+
+    await page.reload();
+    await expect
+      .poll(
+        async () =>
+          (await day(page)).visits.find((v) => v.id === String(created.id))
+            ?.status,
+        { timeout: 20_000, message: "the arrival outlives the tab" },
+      )
+      .toBe("checked-in");
+    await expect(
+      page.getByText(visit!.petName, { exact: false }).first(),
+    ).toBeVisible({ timeout: 30_000 });
+  });
+
+  test("reverting to scheduled removes the record, not the booking", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const created = (await (
+      await page.request.post("/api/bookings", { data: bookingBody() })
+    ).json()) as BookingPayload;
+
+    await page.request.post("/api/daycare/attendance", {
+      data: { bookingRef: created.id },
+    });
+    expect(
+      (await day(page)).visits.find((v) => v.id === String(created.id))?.status,
+    ).toBe("checked-in");
+
+    // The check-in was a mistake — the wrong dog. Checking OUT would say the
+    // visit happened and ended; this says it never began.
+    const reverted = await page.request.delete(
+      `/api/daycare/attendance/${created.id}`,
+    );
+    expect(reverted.status()).toBe(204);
+
+    const after = (await day(page)).visits.find(
+      (v) => v.id === String(created.id),
+    );
+    expect(after, "the booking is still on today's floor").toBeTruthy();
+    expect(after!.status, "back to scheduled").toBe("scheduled");
+    expect(after!.checkOutTime).toBeNull();
+  });
+
   test("the dashboard counts the floor, not a fixture", async ({ page }) => {
     await signIn(page, ACCOUNTS.owner);
 

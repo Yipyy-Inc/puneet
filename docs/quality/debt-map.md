@@ -1155,6 +1155,30 @@ Also fixed while passing: the dashboard's per-size row had `Giant / 5` typed int
 
 **Do instead:** an upsert is allowed when the earlier note's condition holds. Cite the condition rather than the conclusion.
 
+## Snapshot (2026-08-06, the check-in board writes)
+
+### 🔴 An Undo that restores a local object is not an undo
+
+`DaycareCheckInOutSection` flipped a status in `useState` and offered "Undo" on the toast, which put the previous object back. That is the easy half — undoing a check-in that never reached a server always works.
+
+The Undo is now the **inverse request**: a check-out undoes by `reopen`, and if that request fails the toast says so instead of reporting success. Check-in has no Undo at all, deliberately — reverting a check-in is a different operation with a different meaning, and it is already a button on the card.
+
+**Do instead:** when wiring a local action to an API, the Undo needs wiring too. A restored copy beside a real write is an Undo that lies.
+
+### 🟡 Points were awarded for a stay the database had no record of
+
+The check-out branch fired `recordEvent` (loyalty points, tier progress, badges) and `recordCheckout` (the review-request scheduler) immediately after the local `setState` — so a customer earned points and got queued for a review request whether or not anything was recorded anywhere.
+
+Both now run inside `onSuccess`, after the write lands.
+
+**Do instead:** side effects of a completed action belong after the action completes. Next to an optimistic `setState` they are not optimistic, they are unconditional.
+
+### 🟢 Reverting a check-in deletes the record; checking out keeps it
+
+The same asymmetry boarding draws between clearing a stay and releasing one (20260806640000). Checking out says the visit happened and then ended, so the row and its times survive. Reverting says the check-in was a mistake — the wrong dog, the wrong booking — and a row reading "arrived at 08:02, no longer considered to have arrived" would be a fiction. `DELETE /api/daycare/attendance/[ref]` removes it; the booking stays on the floor as `scheduled`.
+
+**Do instead:** don't unify them into one status field. The asymmetry is the meaning.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

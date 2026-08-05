@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,13 @@ import {
   ClipboardCheck,
   CheckCircle2,
 } from "lucide-react";
-import { daycareCheckIns, DaycareCheckIn, daycareRates } from "@/data/daycare";
+import { DaycareCheckIn, daycareRates } from "@/data/daycare";
+import {
+  useDaycareDay,
+  useDaycareCheckIn,
+  useDaycareVisitUpdate,
+  useDaycareRevert,
+} from "@/lib/api/daycare-attendance";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
 import { useReputation } from "@/hooks/use-reputation";
 import { clients } from "@/data/clients";
@@ -105,9 +111,6 @@ export function DaycareCheckInOutSection() {
   >(null);
   const [selectedItem, setSelectedItem] = useState<UnifiedCheckIn | null>(null);
 
-  // For undo functionality
-  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   // Helper function to find client for a pet
   const findClientForPet = (petId: number) => {
     return clients.find((client) =>
@@ -120,9 +123,16 @@ export function DaycareCheckInOutSection() {
   const [showScheduled, setShowScheduled] = useState(true);
   const [showCheckedOut, setShowCheckedOut] = useState(true);
 
-  // Local state for data
-  const [daycareData, setDaycareData] =
-    useState<DaycareCheckIn[]>(daycareCheckIns);
+  // Today's floor, from `daycare_attendance` (20260806880000). This was
+  // `useState<DaycareCheckIn[]>(daycareCheckIns)`: a module array whose
+  // arrivals are dated March 2024, and every check-in made here was lost the
+  // moment the tab closed.
+  const { data: day } = useDaycareDay();
+  const daycareData: DaycareCheckIn[] = useMemo(() => day?.visits ?? [], [day]);
+
+  const checkIn = useDaycareCheckIn();
+  const updateVisit = useDaycareVisitUpdate();
+  const revertVisit = useDaycareRevert();
 
   const unifiedData = useMemo(
     () => normalizeToUnifiedCheckIn(daycareData),
@@ -181,77 +191,22 @@ export function DaycareCheckInOutSection() {
     setCheckInOutMode("view");
   };
 
+  // ── The three writes ──────────────────────────────────────────────────────
+  //
+  // All of these used to be `setDaycareData` plus a toast with an Undo that
+  // put the old object back. Nothing left the tab. They are requests now, and
+  // the Undo is the INVERSE REQUEST rather than a restored copy — undoing a
+  // check-in that never reached the server was the easy half.
+
+  /** The dog was never here: the check-in was a mistake. Deletes the record. */
   const revertToScheduled = (item: UnifiedCheckIn) => {
-    const previousData = daycareData.find((c) => c.id === item.id);
-    setDaycareData((prev) =>
-      prev.map((checkIn) => {
-        if (checkIn.id === item.id) {
-          return {
-            ...checkIn,
-            status: "scheduled" as const,
-            checkInTime: "",
-            checkOutTime: null,
-          };
-        }
-        return checkIn;
-      }),
-    );
-
-    toast.success(`${item.petName} - Reverted to Scheduled`, {
-      description: "Status has been reset",
-      action: {
-        label: "Undo",
-        onClick: () => {
-          if (previousData) {
-            setDaycareData((prev) =>
-              prev.map((checkIn) =>
-                checkIn.id === item.id ? previousData : checkIn,
-              ),
-            );
-            toast.info("Action undone");
-          }
-        },
-      },
-      duration: 5000,
+    revertVisit.mutate(Number(item.id), {
+      onSuccess: () =>
+        toast.success(`${item.petName} — reverted to scheduled`, {
+          description: "The check-in record was removed",
+        }),
+      onError: (error) => toast.error(error.message),
     });
-
-    setCheckInOutMode(null);
-    setSelectedItem(null);
-  };
-
-  const revertToCheckedIn = (item: UnifiedCheckIn) => {
-    const previousData = daycareData.find((c) => c.id === item.id);
-    setDaycareData((prev) =>
-      prev.map((checkIn) => {
-        if (checkIn.id === item.id) {
-          return {
-            ...checkIn,
-            status: "checked-in" as const,
-            checkOutTime: null,
-          };
-        }
-        return checkIn;
-      }),
-    );
-
-    toast.success(`${item.petName} - Reverted to Checked In`, {
-      description: "Status has been reset",
-      action: {
-        label: "Undo",
-        onClick: () => {
-          if (previousData) {
-            setDaycareData((prev) =>
-              prev.map((checkIn) =>
-                checkIn.id === item.id ? previousData : checkIn,
-              ),
-            );
-            toast.info("Action undone");
-          }
-        },
-      },
-      duration: 5000,
-    });
-
     setCheckInOutMode(null);
     setSelectedItem(null);
   };
@@ -260,83 +215,31 @@ export function DaycareCheckInOutSection() {
     if (!selectedItem) return;
 
     const now = new Date().toISOString();
-    const previousStatus = selectedItem.status;
-    const actionLabel =
-      checkInOutMode === "check-in" ? "Checked In" : "Checked Out";
-    const newStatus =
-      checkInOutMode === "check-in" ? "checked-in" : "checked-out";
+    const bookingRef = Number(selectedItem.id);
+    const isCheckIn = checkInOutMode === "check-in";
+    const actionLabel = isCheckIn ? "Checked In" : "Checked Out";
+    const visit = daycareData.find((c) => c.id === selectedItem.id);
 
-    // Set in the check-out branch below; the Undo handler cancels it if used.
-    let scheduledRequestId: string | undefined;
-
-    const previousData = daycareData.find((c) => c.id === selectedItem.id);
-    setDaycareData((prev) =>
-      prev.map((checkIn) => {
-        if (checkIn.id === selectedItem.id) {
-          if (checkInOutMode === "check-in") {
-            return {
-              ...checkIn,
-              status: "checked-in" as const,
-              checkInTime: now,
-            };
-          } else {
-            return {
-              ...checkIn,
-              status: "checked-out" as const,
-              checkOutTime: now,
-            };
-          }
-        }
-        return checkIn;
-      }),
-    );
-
-    // Show toast with undo
-    if (undoTimeoutRef.current) {
-      clearTimeout(undoTimeoutRef.current);
-    }
-
-    toast.success(`${selectedItem.petName} - ${actionLabel}`, {
-      description: `Daycare ${newStatus.replace("-", " ")}`,
-      action: {
-        label: "Undo",
-        onClick: () => {
-          if (previousData) {
-            setDaycareData((prev) =>
-              prev.map((checkIn) =>
-                checkIn.id === selectedItem.id ? previousData : checkIn,
-              ),
-            );
-            if (scheduledRequestId) cancelScheduled(scheduledRequestId);
-            toast.info("Action undone", {
-              description: `${selectedItem.petName} restored to ${previousStatus.replace("-", " ")}`,
-            });
-          }
-        },
-      },
-      duration: 5000,
-    });
-
-    // Loyalty automation: a completed daycare stay earns rewards (points, tier
-    // discount, tier upgrade, badges) for the pet's owner.
-    if (checkInOutMode === "check-out") {
+    // The loyalty and reputation side effects belong to a completed stay, so
+    // they run only after the CHECK-OUT lands. Firing them beside a local
+    // setState — which is what happened before — awarded points for a stay the
+    // database had no record of.
+    const afterCheckOut = () => {
       const loyaltyClient = findClientForPet(selectedItem.petId);
       if (loyaltyClient) {
         recordEvent({
           type: "booking_completed",
           id: selectedItem.id,
           customerId: loyaltyClient.id,
-          amount: previousData
-            ? calculateDaycarePrice(previousData.rateType, previousData.petSize)
+          amount: visit
+            ? calculateDaycarePrice(visit.rateType, visit.petSize)
             : 0,
           serviceType: "daycare",
           isService: true,
         });
       }
-
-      // Reputation Booster (Step 1): log checkout (T0) → schedule review request.
       const repResult = recordCheckout({
-        bookingId: Number(selectedItem.id) || selectedItem.petId,
+        bookingId: bookingRef || selectedItem.petId,
         clientId: loyaltyClient?.id ?? selectedItem.petId,
         clientName: loyaltyClient?.name ?? selectedItem.ownerName,
         petName: selectedItem.petName,
@@ -345,9 +248,76 @@ export function DaycareCheckInOutSection() {
         triggerEvent: "daycare_checkout",
         checkoutAt: now,
       });
-      scheduledRequestId = repResult.request?.id;
+      return repResult.request?.id;
+    };
+
+    const onError = (error: Error) => toast.error(error.message);
+
+    if (isCheckIn) {
+      checkIn.mutate(
+        { bookingRef },
+        {
+          onSuccess: () =>
+            // NO UNDO on the toast. It used to restore the previous object,
+            // which is meaningless now the write is real — undoing a check-in
+            // is "revert to scheduled", a button that exists on the card and
+            // deletes the record.
+            toast.success(`${selectedItem.petName} - ${actionLabel}`, {
+              description: "Daycare checked in",
+            }),
+          onError,
+        },
+      );
+    } else {
+      updateVisit.mutate(
+        { bookingRef, checkOut: true },
+        {
+          onSuccess: () => {
+            const scheduledRequestId = afterCheckOut();
+            toast.success(`${selectedItem.petName} - ${actionLabel}`, {
+              description: "Daycare checked out",
+              action: {
+                label: "Undo",
+                onClick: () => {
+                  updateVisit.mutate(
+                    { bookingRef, reopen: true },
+                    {
+                      onSuccess: () => {
+                        if (scheduledRequestId)
+                          cancelScheduled(scheduledRequestId);
+                        toast.info("Action undone", {
+                          description: `${selectedItem.petName} is back on the floor`,
+                        });
+                      },
+                      onError,
+                    },
+                  );
+                },
+              },
+              duration: 5000,
+            });
+          },
+          onError,
+        },
+      );
     }
 
+    setCheckInOutMode(null);
+    setSelectedItem(null);
+  };
+
+  /** Collected by mistake — they are still here. Clears the checkout time. */
+  const revertToCheckedIn = (item: UnifiedCheckIn) => {
+    updateVisit.mutate(
+      { bookingRef: Number(item.id), reopen: true },
+      {
+        onSuccess: () =>
+          toast.success(`${item.petName} — back on the floor`, {
+            description: "The check-out was cleared",
+          }),
+        onError: (error) => toast.error(error.message),
+      },
+    );
     setCheckInOutMode(null);
     setSelectedItem(null);
   };

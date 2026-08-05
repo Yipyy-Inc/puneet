@@ -112,3 +112,69 @@ export async function PATCH(
 
   return new NextResponse(null, { status: 204 });
 }
+
+/**
+ * Back to scheduled — the dog was never actually here.
+ *
+ * A DELETE, not a status flip, and the asymmetry is the meaning. It is the
+ * same distinction boarding draws (20260806640000): checking OUT records that
+ * the visit happened and then ended, so it keeps its row and its times.
+ * Reverting says the check-in was a mistake — the wrong dog, the wrong
+ * booking — and a row reading "arrived at 08:02, no longer considered to have
+ * arrived" would be a fiction.
+ *
+ * The booking survives: it is still on today's floor, as `scheduled`.
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ ref: string }> },
+) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const { ref } = await params;
+  const bookingRef = Number(ref);
+  if (!Number.isFinite(bookingRef)) {
+    return NextResponse.json(
+      { error: "That is not a booking reference." },
+      { status: 422 },
+    );
+  }
+
+  const supabase = await createServerClient();
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("ref", bookingRef)
+    .maybeSingle();
+
+  if (!booking) {
+    return NextResponse.json(
+      { error: "That booking does not exist, or is not yours." },
+      { status: 404 },
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("daycare_attendance")
+    .delete()
+    .eq("booking_id", (booking as { id: string }).id)
+    .select("booking_id");
+
+  if (error) {
+    return writeFailure(error, {
+      denied: "Not allowed to change daycare attendance at this facility.",
+      duplicate: "That visit cannot be reverted.",
+    });
+  }
+
+  const denied = deniedIfUntouched(
+    data,
+    "Not allowed to revert this visit, or it was never checked in.",
+  );
+  if (denied) return denied;
+
+  return new NextResponse(null, { status: 204 });
+}
