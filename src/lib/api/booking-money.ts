@@ -440,3 +440,37 @@ export function useCancelBooking() {
     onSuccess: invalidate,
   });
 }
+
+/**
+ * Nobody came.
+ *
+ * A NO-SHOW IS NOT A CHECKOUT, and the dashboard treated it as one: the
+ * check-in dialog sent `checked-out` with a `noShow` flag, which under the real
+ * write paths asks the database to record a departure for a guest who never
+ * arrived. Boarding refuses that outright ("This guest has not been checked in
+ * yet"); daycare's CHECK constraint refuses it too.
+ *
+ * `no_show` is already in the booking vocabulary and already load-bearing —
+ * `sync_boarding_stay` (20260806600000) releases the kennel on it, exactly as it
+ * does for a cancellation, so the room does not stay blocked for a guest who
+ * is not coming.
+ *
+ * Lives beside `useCancelBooking` because it is the same kind of transition:
+ * terminal, non-arrival, and it frees whatever the booking was holding.
+ */
+export function useMarkBookingNoShow() {
+  const invalidate = useSettleInvalidation();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (bookingId: number) => {
+      await bookingMutations.update(bookingId, { status: "no_show" });
+      return bookingId;
+    },
+    onSuccess: () => {
+      invalidate();
+      // The two arrival boards derive from this row too.
+      void queryClient.invalidateQueries({ queryKey: ["boarding-attendance"] });
+      void queryClient.invalidateQueries({ queryKey: ["daycare-attendance"] });
+    },
+  });
+}

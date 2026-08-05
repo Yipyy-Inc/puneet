@@ -24,6 +24,15 @@ export type BoardingArrivalStatus =
 export interface BoardingArrival {
   /** The BOOKING's ref, which is what every write here takes. */
   id: string;
+  /**
+   * The first pet's ref.
+   *
+   * The dashboard card keys its photo, its pet link and its loyalty lookup on a
+   * single numeric pet id, so the multi-pet `petNames` above is not enough for
+   * it. 0 when the booking somehow has no pet — a state the card renders as the
+   * generic paw rather than a broken link.
+   */
+  petId: number;
   petNames: string[];
   petBreed: string;
   petType: string;
@@ -73,7 +82,14 @@ export interface BoardingArrivalRow {
   status: string;
   clients: { ref: number; name: string; phone: string | null } | null;
   booking_pets:
-    | { pets: { name: string; breed: string | null; species: string } | null }[]
+    | {
+        pets: {
+          ref: number;
+          name: string;
+          breed: string | null;
+          species: string;
+        } | null;
+      }[]
     | null;
   boarding_stays: BoardingStayJoin | null;
 }
@@ -81,7 +97,7 @@ export interface BoardingArrivalRow {
 export const BOARDING_ARRIVAL_SELECT = `
   id, ref, start_at, end_at, status,
   clients ( ref, name, phone ),
-  booking_pets ( pets ( name, breed, species ) ),
+  booking_pets ( pets ( ref, name, breed, species ) ),
   boarding_stays ( room_id, checked_in_at, checked_out_at, status, released_at,
                    facility_rooms ( legacy_id, name ) )
 ` as const;
@@ -128,6 +144,7 @@ export function rowToBoardingArrival(
 
   return {
     id: String(row.ref),
+    petId: pets[0]?.ref ?? 0,
     petNames: pets.map((p) => p.name),
     petBreed: pets[0]?.breed ?? "",
     petType: pets[0]?.species ?? "dog",

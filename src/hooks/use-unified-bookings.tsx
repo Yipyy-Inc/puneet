@@ -8,11 +8,26 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { boardingGuests, type BoardingGuest } from "@/data/boarding";
-import { daycareCheckIns, type DaycareCheckIn } from "@/data/daycare";
-import { groomingAppointments } from "@/data/grooming";
+import type { DaycareCheckIn } from "@/types/daycare";
 import { trainingSessions, enrollments } from "@/data/training";
+import {
+  useBoardingCheckIn,
+  useBoardingDay,
+  useBoardingRevert,
+  useBoardingStayUpdate,
+} from "@/lib/api/boarding-attendance";
+import type { BoardingArrival } from "@/lib/api/mappers/boarding-arrival";
+import {
+  useDaycareCheckIn,
+  useDaycareDay,
+  useDaycareRevert,
+  useDaycareVisitUpdate,
+} from "@/lib/api/daycare-attendance";
+import { groomingQueries } from "@/lib/api/grooming";
+import { useMarkBookingNoShow } from "@/lib/api/booking-money";
+import { useSetGroomingAppointmentStatus } from "@/lib/api/grooming-appointments";
 import {
   customServiceCheckIns,
   type CustomServiceCheckIn,
@@ -22,6 +37,31 @@ import { COLOR_HEX_MAP, getCategoryMeta } from "@/data/custom-services";
 import type { CustomServiceModule } from "@/types/facility";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { deriveLocationId } from "@/data/locations";
+
+// ============================================================================
+// One list of everyone in the building today.
+//
+// ── WHAT THIS WAS, AND WHY IT HAD TO CHANGE NOW ───────────────────────────
+//
+// Five module arrays in `useState`. That was uniformly wrong and therefore
+// harmless — until boarding and daycare arrivals became real (20260806880000,
+// 20260806900000). Then the facility home page counted arrivals from fixtures
+// dated March 2024 while the check-in board one click away counted them from
+// Postgres. SAME FACILITY, SAME DAY, TWO ANSWERS. A stale screen is a
+// nuisance; two live screens that disagree is the thing people stop trusting.
+//
+// ── THREE SOURCES ARE REAL, TWO ARE NOT, AND THE SEAM IS DELIBERATE ───────
+//
+// Boarding, daycare and grooming have tables and endpoints, so they are read
+// through them. Training and custom services have neither — no table, no API —
+// so they stay `useState` over a fixture and are marked as such at every point
+// they are used. Inventing tables for them to make this file tidy would be a
+// schema decision smuggled in as a refactor.
+//
+// The counts are therefore honest for three services and fictional for two,
+// which is worse-looking and better than one number that averages the two
+// kinds together without saying so.
+// ============================================================================
 
 export type UnifiedStatus = "scheduled" | "checked-in" | "checked-out";
 
@@ -141,14 +181,22 @@ function endOfTodayMs(): number {
   return d.getTime();
 }
 
-function normalizeBoarding(g: BoardingGuest): UnifiedBooking {
+/**
+ * A boarding guest, from `/api/boarding/attendance`.
+ *
+ * `released` collapses into `checked-out` for the board's three-state view. The
+ * day query cannot actually produce it — a released stay is a cancelled booking,
+ * which the overlap query excludes, and the on-site query only returns guests
+ * who are checked in. It is mapped rather than left to fall through to
+ * `scheduled`, which would put a cancelled booking in Today's Arrivals.
+ */
+function normalizeBoarding(g: BoardingArrival): UnifiedBooking {
   const status: UnifiedStatus =
-    g.status === "checked-out" || g.status === "cancelled"
+    g.status === "checked-out" || g.status === "released"
       ? "checked-out"
       : g.status === "checked-in"
         ? "checked-in"
         : "scheduled";
-  const scheduledEndMs = new Date(g.checkOutDate).getTime();
   return {
     id: `boarding:${g.id}`,
     rawId: g.id,
@@ -158,22 +206,28 @@ function normalizeBoarding(g: BoardingGuest): UnifiedBooking {
     serviceColor: "#a855f7",
     serviceIcon: "Bed",
     petId: g.petId,
-    petName: g.petName,
+    // A boarding booking can cover several pets and they stay together — the
+    // stay keys on the booking, not the pet. One card, both names.
+    petName: g.petNames.join(", ") || "Guest",
     petBreed: g.petBreed,
     ownerId: g.ownerId,
     ownerName: g.ownerName,
     ownerPhone: g.ownerPhone,
     status,
-    scheduledStart: g.checkInDate,
-    actualStart: g.actualCheckIn ?? null,
-    scheduledEnd: g.checkOutDate,
-    actualEnd: g.actualCheckOut ?? null,
+    scheduledStart: g.scheduledArrival,
+    actualStart: g.checkedInAt,
+    scheduledEnd: g.scheduledDeparture,
+    actualEnd: g.checkedOutAt,
+    // `isOverdue` counts too. A guest who should have gone home on Sunday is
+    // still going home today, and the old computation — end date within today —
+    // silently dropped them off the departures tile.
     isGoingHomeToday:
-      status === "checked-in" && scheduledEndMs <= endOfTodayMs(),
-    resourceLabel: g.kennelName,
-    notes: g.notes,
-    price: g.totalPrice,
-    totalNights: g.totalNights,
+      status === "checked-in" &&
+      (g.isDepartingToday ||
+        g.isOverdue ||
+        new Date(g.scheduledDeparture).getTime() <= endOfTodayMs()),
+    ...(g.roomName ? { resourceLabel: g.roomName } : {}),
+    totalNights: g.nights,
   };
 }
 
@@ -323,15 +377,38 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
   const { activeModules } = useCustomServices();
   const { currentLocationId, isHQView } = useLocationContext();
 
-  const [boardingState, setBoardingState] =
-    useState<BoardingGuest[]>(boardingGuests);
-  const [daycareState, setDaycareState] =
-    useState<DaycareCheckIn[]>(daycareCheckIns);
-  const [groomingState, setGroomingState] = useState(
-    groomingAppointments.map((a) => ({
-      ...a,
-    })),
-  );
+  // ── The three that are real ──────────────────────────────────────────────
+  const { data: boardingDay } = useBoardingDay();
+  const { data: daycareDay } = useDaycareDay();
+  const { data: groomingData } = useQuery(groomingQueries.appointments());
+
+  const boardingState = useMemo(() => boardingDay?.guests ?? [], [boardingDay]);
+  const daycareState = useMemo(() => daycareDay?.visits ?? [], [daycareDay]);
+
+  /**
+   * Grooming, narrowed to today.
+   *
+   * The other two endpoints are day-scoped; this one is not — it serves the
+   * calendar and the appointment detail page as well, so it returns every
+   * appointment there has ever been. Unfiltered, a groom completed in June
+   * would land in "Checked Out" on a tile labelled *today*, and the board would
+   * fill with pets who are not in the building.
+   *
+   * Filtered here rather than by adding a day variant to `groomingQueries`:
+   * that entry is already cached for six other screens, so reusing it costs no
+   * request, and a second key would fetch the same rows again.
+   */
+  const groomingState = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return (groomingData ?? []).filter((a) => a.date === today);
+  }, [groomingData]);
+
+  // ── The two that are not ─────────────────────────────────────────────────
+  //
+  // No table, no endpoint. These keep the old `useState` shape, and every count
+  // they feed is a count of a fixture. Marked here rather than fixed here: the
+  // schema for a training session and for a custom-module visit are two designs,
+  // not a rider on this change.
   const [trainingState, setTrainingState] = useState(trainingSessions);
   const [customState, setCustomState] = useState<CustomServiceCheckIn[]>(
     customServiceCheckIns,
@@ -421,9 +498,21 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
       const mod = moduleMap.get(c.moduleId);
       list.push(normalizeCustom(c, mod));
     }
+    // THE LOCATION FILTER APPLIES TO FIXTURE ROWS ONLY, and that is a fix.
+    //
+    // `deriveLocationId` is `trailingNumber % 3` — a fixture-era stand-in for a
+    // location the mock data never carried. Applied to real rows it would hide
+    // two thirds of a facility's actual bookings, chosen by booking reference,
+    // the moment somebody picked a location from the selector. The rows that
+    // come from Postgres are already scoped by `facility_id`; they have no
+    // location to derive and must not be guessed at.
     if (!isHQView && currentLocationId) {
       return list.filter(
-        (b) => deriveLocationId(b.rawId) === currentLocationId,
+        (b) =>
+          b.source === "boarding" ||
+          b.source === "daycare" ||
+          b.source === "grooming" ||
+          deriveLocationId(b.rawId) === currentLocationId,
       );
     }
     return list;
@@ -463,6 +552,21 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
     };
   }, [bookings]);
 
+  // ── The writes ───────────────────────────────────────────────────────────
+  //
+  // Every one of these used to be a `setState` followed by an UNCONDITIONAL
+  // success toast. The toast is in `onSuccess` now, and there is an `onError`,
+  // because "Checked In" over a request that was refused is the failure mode
+  // this whole run of work keeps finding.
+  const boardingCheckIn = useBoardingCheckIn();
+  const boardingUpdate = useBoardingStayUpdate();
+  const boardingRevert = useBoardingRevert();
+  const daycareCheckIn = useDaycareCheckIn();
+  const daycareUpdate = useDaycareVisitUpdate();
+  const daycareRevert = useDaycareRevert();
+  const setGroomingStatus = useSetGroomingAppointmentStatus();
+  const markNoShow = useMarkBookingNoShow();
+
   const updateStatus = useCallback(
     (
       bookingId: string,
@@ -479,59 +583,101 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
       const isNoShow = options?.noShow === true;
       const earlyCheckout = options?.earlyCheckout;
 
+      const verb = isNoShow
+        ? "Marked No-Show"
+        : next === "checked-in"
+          ? "Checked In"
+          : next === "checked-out"
+            ? earlyCheckout && earlyCheckout.unusedNights > 0
+              ? "Early Checkout"
+              : "Checked Out"
+            : "Reset to Scheduled";
+
+      let description = target.serviceLabel;
+      if (earlyCheckout && earlyCheckout.unusedNights > 0) {
+        const parts: string[] = [
+          `${earlyCheckout.unusedNights} night${earlyCheckout.unusedNights > 1 ? "s" : ""} unused`,
+        ];
+        if (earlyCheckout.refundAmount > 0)
+          parts.push(`refund $${earlyCheckout.refundAmount.toFixed(2)}`);
+        if (earlyCheckout.creditAmount > 0)
+          parts.push(`credit $${earlyCheckout.creditAmount.toFixed(2)}`);
+        if (earlyCheckout.feeAmount > 0)
+          parts.push(`fee $${earlyCheckout.feeAmount.toFixed(2)}`);
+        // "to action", not a past tense. NOTHING APPLIES THESE. The old code
+        // wrote the adjustment onto a local fixture object, so the money was
+        // never moved then either — but the toast read as though it had been.
+        description = `${target.serviceLabel} · ${parts.join(" · ")} to action`;
+      }
+
+      const succeeded = () =>
+        toast.success(`${target.petName} — ${verb}`, { description });
+      const failed = (error: Error) =>
+        toast.error(`${target.petName} — not ${verb.toLowerCase()}`, {
+          description: error.message,
+        });
+      const handlers = { onSuccess: succeeded, onError: failed };
+
+      // A no-show is a booking transition, not a departure. Sending `check_out`
+      // for one asks the database to record a guest leaving who never arrived,
+      // and both boarding and daycare refuse it — correctly, and uselessly.
+      if (
+        isNoShow &&
+        target.source !== "training" &&
+        target.source !== "custom"
+      ) {
+        if (target.source === "grooming") {
+          setGroomingStatus.mutate(
+            { id: target.rawId, status: "no-show" },
+            handlers,
+          );
+        } else {
+          markNoShow.mutate(Number(target.rawId), handlers);
+        }
+        return;
+      }
+
       switch (target.source) {
-        case "boarding":
-          setBoardingState((prev) =>
-            prev.map((g) =>
-              g.id === target.rawId
-                ? {
-                    ...g,
-                    status: next,
-                    actualCheckIn:
-                      next === "checked-in" ? now : g.actualCheckIn,
-                    actualCheckOut:
-                      next === "checked-out" ? now : g.actualCheckOut,
-                    ...(next === "checked-out" && earlyCheckout
-                      ? { earlyCheckoutAdjustment: earlyCheckout }
-                      : {}),
-                  }
-                : g,
-            ),
-          );
+        case "boarding": {
+          const ref = Number(target.rawId);
+          if (next === "checked-in") boardingCheckIn.mutate(ref, handlers);
+          else if (next === "checked-out")
+            boardingUpdate.mutate(
+              { bookingRef: ref, checkOut: true },
+              handlers,
+            );
+          else boardingRevert.mutate(ref, handlers);
           break;
-        case "daycare":
-          setDaycareState((prev) =>
-            prev.map((d) =>
-              d.id === target.rawId
-                ? {
-                    ...d,
-                    status: next,
-                    checkInTime: next === "checked-in" ? now : d.checkInTime,
-                    checkOutTime: next === "checked-out" ? now : d.checkOutTime,
-                  }
-                : d,
-            ),
-          );
+        }
+        case "daycare": {
+          const ref = Number(target.rawId);
+          if (next === "checked-in")
+            daycareCheckIn.mutate({ bookingRef: ref }, handlers);
+          else if (next === "checked-out")
+            daycareUpdate.mutate({ bookingRef: ref, checkOut: true }, handlers);
+          else daycareRevert.mutate(ref, handlers);
           break;
+        }
         case "grooming":
-          setGroomingState((prev) =>
-            prev.map((g) =>
-              g.id === target.rawId
-                ? {
-                    ...g,
-                    status:
-                      next === "checked-in"
-                        ? "in-progress"
-                        : next === "checked-out"
-                          ? "completed"
-                          : "scheduled",
-                    checkInTime: next === "checked-in" ? now : g.checkInTime,
-                    checkOutTime: next === "checked-out" ? now : g.checkOutTime,
-                  }
-                : g,
-            ),
+          setGroomingStatus.mutate(
+            {
+              id: target.rawId,
+              status:
+                next === "checked-in"
+                  ? "in-progress"
+                  : next === "checked-out"
+                    ? "completed"
+                    : "scheduled",
+            },
+            handlers,
           );
           break;
+
+        // ── Fixture-backed from here down ────────────────────────────────
+        //
+        // No table, no request. The state change is local and dies with the
+        // tab, and the toast SAYS SO rather than claiming a record that does
+        // not exist.
         case "training": {
           const [sessionId] = target.rawId.split(":");
           setTrainingState((prev) =>
@@ -549,6 +695,9 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
                 : s,
             ),
           );
+          toast.success(`${target.petName} — ${verb}`, {
+            description: `${target.serviceLabel} · not recorded yet (no training table)`,
+          });
           break;
         }
         case "custom":
@@ -569,34 +718,23 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
                 : c,
             ),
           );
+          toast.success(`${target.petName} — ${verb}`, {
+            description: `${target.serviceLabel} · not recorded yet (no custom-service table)`,
+          });
           break;
       }
-
-      const verb = isNoShow
-        ? "Marked No-Show"
-        : next === "checked-in"
-          ? "Checked In"
-          : next === "checked-out"
-            ? earlyCheckout && earlyCheckout.unusedNights > 0
-              ? "Early Checkout"
-              : "Checked Out"
-            : "Reset to Scheduled";
-      let description = target.serviceLabel;
-      if (earlyCheckout && earlyCheckout.unusedNights > 0) {
-        const parts: string[] = [
-          `${earlyCheckout.unusedNights} night${earlyCheckout.unusedNights > 1 ? "s" : ""} unused`,
-        ];
-        if (earlyCheckout.refundAmount > 0)
-          parts.push(`refund $${earlyCheckout.refundAmount.toFixed(2)}`);
-        if (earlyCheckout.creditAmount > 0)
-          parts.push(`credit $${earlyCheckout.creditAmount.toFixed(2)}`);
-        if (earlyCheckout.feeAmount > 0)
-          parts.push(`fee $${earlyCheckout.feeAmount.toFixed(2)}`);
-        description = `${target.serviceLabel} · ${parts.join(" · ")}`;
-      }
-      toast.success(`${target.petName} — ${verb}`, { description });
     },
-    [bookings],
+    [
+      bookings,
+      boardingCheckIn,
+      boardingUpdate,
+      boardingRevert,
+      daycareCheckIn,
+      daycareUpdate,
+      daycareRevert,
+      setGroomingStatus,
+      markNoShow,
+    ],
   );
 
   const value = useMemo<UnifiedBookingsContextValue>(

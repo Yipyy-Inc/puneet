@@ -1223,6 +1223,50 @@ Undo also runs backwards: "never arrived" cannot be reached in one step from "co
 
 **Do instead:** don't harmonise the two reverts. Check what the row means before deciding what removing it says.
 
+## Snapshot (2026-08-06, the facility home board)
+
+### 🔴 Making one screen real made two screens disagree
+
+`use-unified-bookings` held five module arrays in `useState`, which was uniformly wrong and therefore harmless. Once boarding and daycare arrivals became real, `/facility/dashboard` counted arrivals from fixtures dated March 2024 while `/services/*/check-in` counted them from Postgres. Same facility, same day, two answers, one click apart.
+
+A stale screen is a nuisance. Two live screens that disagree is the thing people stop trusting.
+
+**Do instead:** when a slice makes a source real, grep for every OTHER reader of the fixture it replaced. The divergence arrives with the fix, not before it.
+
+### 🔴 `deriveLocationId` is `ref % 3`, and it was about to hide real bookings
+
+The pseudo-location filter hashes the trailing number of a fixture id into one of three locations. Harmless over mock data designed to spread evenly; applied to real rows it would have hidden roughly two thirds of a facility's actual bookings, chosen by booking reference, the moment anyone picked a location from the selector. Dormant by default only because facility 11 defaults to the HQ view.
+
+The filter now applies to the fixture-backed sources only. Rows from Postgres are already scoped by `facility_id` and have no location to derive.
+
+**Do instead:** a fixture-era derivation is not a neutral default. Check what it does to real data before letting real data reach it.
+
+### 🟡 A no-show is not a departure
+
+The dashboard's check-in dialog sent `checked-out` with a `noShow` flag. Against the real write paths that asks the database to record a guest LEAVING who never arrived — boarding refuses it outright, daycare's CHECK constraint refuses it too. It "worked" for as long as the destination was a local array.
+
+`useMarkBookingNoShow` writes `bookings.status = 'no_show'`, which is already load-bearing: `sync_boarding_stay` releases the kennel on it exactly as on a cancellation, so a guest who is not coming stops holding a room.
+
+Found while wiring it: the boarding day query excluded `cancelled,declined` but not `no_show`, so a no-show kept its place on today's board reading `released`, and the dashboard mapped that to "Checked Out" — counting a departure for somebody who never arrived.
+
+**Do instead:** when a flag rides on a status that is about to become real, check whether the flag names a DIFFERENT transition. `noShow` was never a kind of checkout.
+
+### 🟡 Grooming's read is not day-scoped, and three of five sources still are not real
+
+`groomingQueries.appointments()` serves the calendar and the detail page as well, so it returns every appointment there has ever been. Unfiltered on the dashboard, a groom completed in June landed in "Checked Out" on a tile labelled _today_. Filtered in the hook rather than by adding a day variant, because that query is already cached for six other screens.
+
+Training and custom services have no table and no endpoint. They stay `useState` over a fixture, and their toasts now say `not recorded yet` rather than claiming a record that does not exist.
+
+**Do instead:** don't invent tables to make one file tidy. Mark the seam at every point it is used and leave the schema decision to its own change.
+
+### 🟢 Waiting for a heading is not waiting for hydration
+
+Three of the four dashboard tests failed on a tile click that Playwright reported as successful. Actionability checks pass as soon as an element is visible and stable — they cannot know whether React has attached the handler. The board stayed on the arrivals tab and the assertion failed somewhere else entirely, which is what made it take four rounds to find.
+
+`expect(async () => { click; assert active }).toPass()` re-clicks until the tile reports itself active, which is the only observable proof the handler ran.
+
+**Do instead:** for a click on a freshly navigated client page, assert the CONSEQUENCE inside a retry, not the click.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

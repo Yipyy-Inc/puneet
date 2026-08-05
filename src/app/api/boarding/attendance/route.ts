@@ -48,11 +48,21 @@ export async function GET(request: NextRequest) {
   const dayEnd = `${date}T23:59:59.999Z`;
 
   // Booked across this day: arriving, staying, or leaving.
+  //
+  // `no_show` belongs in this exclusion list beside `cancelled`, and leaving it
+  // out was a real bug found by the dashboard suite: a guest marked no-show kept
+  // their place on today's board, reading `released` because
+  // `sync_boarding_stay` had freed the kennel. The dashboard then mapped that to
+  // "Checked Out" and counted a departure for somebody who never arrived.
+  //
+  // The second query below still catches the case that matters — a booking
+  // marked no-show by mistake while the dog is actually in the building comes
+  // back through `on site`, reading `checked-in`.
   const { data: overlapping, error: overlapError } = await supabase
     .from("bookings")
     .select(BOARDING_ARRIVAL_SELECT)
     .eq("service", "boarding")
-    .not("status", "in", "(cancelled,declined)")
+    .not("status", "in", "(cancelled,declined,no_show)")
     .lte("start_at", dayEnd)
     .gte("end_at", dayStart)
     .order("start_at", { ascending: true });
