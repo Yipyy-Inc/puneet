@@ -1335,6 +1335,37 @@ Fourth time this shape has come up in this run of work (daycare board, kennel re
 
 **Do instead:** check whether a per-line calculation can produce two rows for one key before putting a unique constraint behind it.
 
+## Snapshot (2026-08-06, the booking-detail link)
+
+### 🔴 A redirect that resolved its destination from the mock array
+
+`/facility/dashboard/bookings/[id]` was 1,197 lines of booking-detail UI behind a mount-time `router.replace` — and the replace looked the booking up in `initialBookings`:
+
+```
+const booking = initialBookings.find((b) => b.id === bookingId);
+useEffect(() => { if (booking?.clientId) router.replace(...) }, [booking, router]);
+```
+
+A booking created since the migration is not in that array, so the effect never fired and the page fell through to its own "Booking not found." **Every link to this route was broken for real data**, and there are eight of them: Billing (×5), the check-in screen, the client page, the kennel view.
+
+It is a server component that resolves the destination from Postgres and answers with a redirect, or a 404 for a booking that genuinely is not there — which under RLS is the same answer as "not yours", correctly.
+
+**Do instead:** a redirect is a route's contract, not a detail. When one is computed from data, check which data — a fixture lookup fails open into whatever the page renders next, and here that was a dead end nobody could get past.
+
+### 🟡 The hollow-money-handler count was never trustworthy
+
+I have been quoting "27 candidates" for several changes. The detector could not see a destructured mutation:
+
+```
+const { mutate: recordPayment } = useRecordPayment();
+```
+
+`recordPayment(...)` contains none of the words it looked for, so three grooming payment handlers that DO record payments were on the list. It also matched inside comments, so every note written about a bug just fixed came back as a fresh instance of it.
+
+Two of the remaining entries were in the page deleted above. The list is now 26, and it is still a list of CANDIDATES — the only entries I have read and confirmed are the four already fixed and the three grooming ones confirmed fine.
+
+**Do instead:** a sweep that cannot resolve an alias produces a number, not a finding. Quote it as "candidates, N audited" or do not quote it.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
