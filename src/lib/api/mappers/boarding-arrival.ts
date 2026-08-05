@@ -49,6 +49,18 @@ export interface BoardingArrival {
   checkedInAt: string | null;
   checkedOutAt: string | null;
   status: BoardingArrivalStatus;
+  /**
+   * The booking's money.
+   *
+   * `amountDue` is the price plus anything added at the counter
+   * (20260806820000) and `amountPaid` is the sum of the ledger — both derived
+   * columns, neither writable. Carried here so the pickup till charges the
+   * BALANCE instead of a figure a screen worked out from the nightly rate; that
+   * is how three screens end up charging three different numbers.
+   */
+  totalCost: number;
+  amountDue: number;
+  amountPaid: number;
   nights: number;
   isArrivingToday: boolean;
   isDepartingToday: boolean;
@@ -80,6 +92,9 @@ export interface BoardingArrivalRow {
   start_at: string;
   end_at: string;
   status: string;
+  total_cost: number | string;
+  amount_due: number | string | null;
+  amount_paid: number | string | null;
   clients: { ref: number; name: string; phone: string | null } | null;
   booking_pets:
     | {
@@ -96,6 +111,7 @@ export interface BoardingArrivalRow {
 
 export const BOARDING_ARRIVAL_SELECT = `
   id, ref, start_at, end_at, status,
+  total_cost, amount_due, amount_paid,
   clients ( ref, name, phone ),
   booking_pets ( pets ( ref, name, breed, species ) ),
   boarding_stays ( room_id, checked_in_at, checked_out_at, status, released_at,
@@ -160,6 +176,10 @@ export function rowToBoardingArrival(
     // Straight from the generated column. No stay row means no kennel yet,
     // which is `scheduled` — the guest is expected, nothing has happened.
     status: (stay?.status ?? "scheduled") as BoardingArrivalStatus,
+    // Numeric columns come over PostgREST as strings.
+    totalCost: Number(row.total_cost),
+    amountDue: Number(row.amount_due ?? row.total_cost),
+    amountPaid: Number(row.amount_paid ?? 0),
     nights,
     isArrivingToday: sameDay(row.start_at, day),
     isDepartingToday: sameDay(row.end_at, day),

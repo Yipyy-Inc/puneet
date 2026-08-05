@@ -107,6 +107,18 @@ export interface UnifiedBooking {
   staffLabel?: string;
   notes?: string;
   price?: number;
+  /**
+   * The booking's money, for the till at pickup.
+   *
+   * `price` alone was not enough and was often absent: the card computed
+   * "amount due" as `price + lateFee`, which for boarding and daycare was
+   * `undefined + 0`. These come from the booking's derived columns, so a
+   * payment taken here is for what is actually outstanding.
+   *
+   * Absent for training and custom services, which have no bookings table.
+   */
+  amountDue?: number;
+  amountPaid?: number;
   totalNights?: number;
   groupNote?: string;
 }
@@ -227,6 +239,9 @@ function normalizeBoarding(g: BoardingArrival): UnifiedBooking {
         g.isOverdue ||
         new Date(g.scheduledDeparture).getTime() <= endOfTodayMs()),
     ...(g.roomName ? { resourceLabel: g.roomName } : {}),
+    price: g.totalCost,
+    amountDue: g.amountDue,
+    amountPaid: g.amountPaid,
     totalNights: g.nights,
   };
 }
@@ -260,6 +275,9 @@ function normalizeDaycare(d: DaycareCheckIn): UnifiedBooking {
     isGoingHomeToday: status === "checked-in",
     resourceLabel: d.playGroup ?? undefined,
     notes: d.notes,
+    ...(d.totalCost !== undefined ? { price: d.totalCost } : {}),
+    ...(d.amountDue !== undefined ? { amountDue: d.amountDue } : {}),
+    ...(d.amountPaid !== undefined ? { amountPaid: d.amountPaid } : {}),
   };
 }
 
@@ -278,6 +296,8 @@ interface MinimalGroomingAppt {
   packageName: string;
   status: string;
   totalPrice: number;
+  amountDue?: number;
+  amountPaid?: number;
   checkInTime: string | null;
   checkOutTime: string | null;
   notes: string;
@@ -319,6 +339,8 @@ function normalizeGrooming(a: MinimalGroomingAppt): UnifiedBooking {
     staffLabel: a.stylistName,
     notes: a.notes,
     price: a.totalPrice,
+    amountDue: a.amountDue ?? a.totalPrice,
+    amountPaid: a.amountPaid ?? 0,
   };
 }
 

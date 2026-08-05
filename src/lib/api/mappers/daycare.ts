@@ -71,6 +71,9 @@ export interface DaycareBookingRow {
   end_at: string;
   status: string;
   service_type: string | null;
+  total_cost: number | string;
+  amount_due: number | string | null;
+  amount_paid: number | string | null;
   clients: { ref: number; name: string; phone: string | null } | null;
   booking_pets:
     | {
@@ -88,6 +91,7 @@ export interface DaycareBookingRow {
 
 export const DAYCARE_BOOKING_SELECT = `
   id, ref, start_at, end_at, status, service_type,
+  total_cost, amount_due, amount_paid,
   clients ( ref, name, phone ),
   booking_pets ( pets ( ref, name, breed, weight, image_url ) ),
   daycare_attendance ( booking_id, checked_in_at, checked_out_at, status,
@@ -134,6 +138,11 @@ export function rowToDaycareCheckIn(
       "full-day") as DaycareCheckIn["rateType"],
     // Straight from the generated column. No row means booked and not arrived.
     status: (attendance?.status ?? "scheduled") as DaycareCheckInStatus,
+    // Numeric columns arrive as strings over PostgREST; a screen adding them up
+    // without this gets string concatenation and a bill of "4545".
+    totalCost: Number(row.total_cost),
+    amountDue: Number(row.amount_due ?? row.total_cost),
+    amountPaid: Number(row.amount_paid ?? 0),
     notes: attendance?.notes ?? "",
     playGroup: attendance?.play_group ?? null,
     ...(pet.image_url ? { photoUrl: pet.image_url } : {}),

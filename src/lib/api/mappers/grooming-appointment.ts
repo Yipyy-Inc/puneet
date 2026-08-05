@@ -139,6 +139,8 @@ export interface AppointmentRow {
   payment_status: string;
   base_price: number;
   total_cost: number;
+  amount_due: number | string | null;
+  amount_paid: number | string | null;
   tip_amount: number | null;
   special_requests: string | null;
   created_at: string;
@@ -364,6 +366,11 @@ export function rowToGroomingAppointment(
       : {}),
 
     paymentStatus: row.payment_status as GroomingAppointment["paymentStatus"],
+    // Derived columns (20260806680000, 20260806820000). Carried so a till can
+    // charge the balance rather than the list price — the difference is a
+    // deposit already taken, or a bag of food added at the counter.
+    amountDue: Number(row.amount_due ?? row.total_cost),
+    amountPaid: Number(row.amount_paid ?? 0),
     ...(row.tip_amount != null ? { tipAmount: Number(row.tip_amount) } : {}),
 
     notes: ext?.groomer_notes ?? "",
@@ -481,6 +488,7 @@ export function rowToGroomingAppointment(
  *  drift — a column added here without a field there fails to compile. */
 export const APPOINTMENT_SELECT = `
   id, ref, status, start_at, end_at, payment_status, base_price, total_cost,
+  amount_due, amount_paid,
   tip_amount, special_requests, created_at,
   assigned_staff_id, assigned_staff_name,
   staff:assigned_staff_id ( legacy_id ),

@@ -31,6 +31,10 @@ interface BookingPayload {
   id: number;
   status?: string;
   specialRequests?: string;
+  paymentStatus?: string;
+  amountPaid?: number;
+  amountDue?: number;
+  totalCost?: number;
 }
 
 interface BoardingGuest {
@@ -38,6 +42,19 @@ interface BoardingGuest {
   petNames: string[];
   roomId: string | null;
   status: string;
+  amountDue: number;
+  amountPaid: number;
+}
+
+/** One booking, read back off the list — there is no GET for a single one. */
+async function readBooking(
+  page: import("@playwright/test").Page,
+  ref: number,
+): Promise<BookingPayload | undefined> {
+  const all = (await (
+    await page.request.get("/api/bookings")
+  ).json()) as BookingPayload[];
+  return all.find((b) => b.id === ref);
 }
 
 interface RoomsPayload {
@@ -68,6 +85,24 @@ function boardingBody(roomId: string) {
   };
 }
 
+/**
+ * A stay that ENDS today, so the guest lands on "Going Home Today".
+ *
+ * The Check Out button only exists on that tab — the board derives
+ * `primaryAction` from the selected tile. The first version of the payment test
+ * booked three more nights and then looked for a Check Out button that the card
+ * correctly did not have.
+ */
+function departingTodayBody(roomId: string) {
+  const start = new Date();
+  start.setDate(start.getDate() - 1);
+  return {
+    ...boardingBody(roomId),
+    startDate: start.toISOString().slice(0, 10),
+    endDate: new Date().toISOString().slice(0, 10),
+  };
+}
+
 async function createBooking(
   page: import("@playwright/test").Page,
   body: Record<string, unknown>,
@@ -85,10 +120,24 @@ async function boardingGuests(
   return ((await res.json()) as { guests: BoardingGuest[] }).guests;
 }
 
+/**
+ * A kennel free for the WHOLE window these bookings occupy.
+ *
+ * The rooms endpoint defaults to "right now", so asking it bare returned a
+ * kennel that was free this instant and taken for the nights the new booking
+ * wanted — the exclusion constraint then refused the creation with a 409, three
+ * tests into the run. The window is passed explicitly, matching `boardingBody`.
+ */
 async function freeRoom(
   page: import("@playwright/test").Page,
 ): Promise<string> {
-  const res = await page.request.get("/api/boarding/rooms");
+  const from = new Date();
+  from.setDate(from.getDate() - 2);
+  const to = new Date();
+  to.setDate(to.getDate() + 3);
+  const res = await page.request.get(
+    `/api/boarding/rooms?from=${from.toISOString()}&to=${to.toISOString()}`,
+  );
   expect(res.ok(), await res.text()).toBe(true);
   const payload = (await res.json()) as RoomsPayload;
   const room = payload.rooms.find(
@@ -131,6 +180,27 @@ async function selectTile(
       timeout: 2_000,
     });
   }).toPass({ timeout: 45_000 });
+}
+
+/**
+ * The card for one booking.
+ *
+ * VIA THE BOARD'S SEARCH BOX, which matches the reservation id. Every booking
+ * in this suite uses the same demo pet, so `filter({hasText: petName})` picked
+ * whichever "Buddy" card came first — the test then checked in a different
+ * booking and polled the one it had created, for ever. The card does not render
+ * its reference anywhere, so the search is the only handle on a single one.
+ */
+async function cardFor(
+  page: import("@playwright/test").Page,
+  ref: number,
+): Promise<import("@playwright/test").Locator> {
+  const search = page.getByPlaceholder(/search reservation id/i).first();
+  await expect(search).toBeVisible({ timeout: 60_000 });
+  await search.fill(String(ref));
+  const card = page.locator("[data-status]").first();
+  await expect(card).toBeVisible({ timeout: 15_000 });
+  return card;
 }
 
 test.describe.configure({ mode: "serial" });
@@ -193,10 +263,16 @@ test.describe("the facility home board", () => {
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
+    // Its own guest. The first version reused whatever the previous test had
+    // left scheduled, which made the suite order-dependent and meant a failure
+    // here could be caused by a booking this test never created.
+    const room = await freeRoom(page);
+    const created = await createBooking(page, boardingBody(room));
     const before = (await boardingGuests(page)).find(
-      (g) => g.status === "scheduled" && g.roomId !== null,
+      (g) => g.id === String(created.id),
     );
     expect(before, "a guest to check in").toBeTruthy();
+    expect(before!.status).toBe("scheduled");
 
     await page.goto("/facility/dashboard");
     await expect(
@@ -207,10 +283,7 @@ test.describe("the facility home board", () => {
     // derives `primaryAction` from the selected tile.
     await selectTile(page, /today's arrivals/i);
 
-    const card = page
-      .locator("[data-status]")
-      .filter({ hasText: before!.petNames[0] })
-      .first();
+    const card = await cardFor(page, created.id);
     await card
       .getByRole("button", { name: /check in/i })
       .first()
@@ -236,10 +309,17 @@ test.describe("the facility home board", () => {
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
+    const room = await freeRoom(page);
+    const created = await createBooking(page, boardingBody(room));
+    const checkedIn = await page.request.post("/api/boarding/attendance", {
+      data: { bookingRef: created.id },
+    });
+    expect(checkedIn.status(), await checkedIn.text()).toBe(201);
+
     const onSite = (await boardingGuests(page)).filter(
-      (g) => g.status === "checked-in",
+      (g) => g.status === "checked-in" && g.id === String(created.id),
     );
-    expect(onSite.length, "at least one guest on site").toBeGreaterThan(0);
+    expect(onSite.length, "the guest this test put on site").toBe(1);
 
     // Both screens, one after the other, same names. This is the whole point of
     // the change: before it, the dashboard's list came from a March-2024
@@ -267,6 +347,91 @@ test.describe("the facility home board", () => {
         `${guest.petNames[0]} on the home board`,
       ).toBeVisible({ timeout: 60_000 });
     }
+  });
+
+  test("checking out from the dashboard records the payment", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const room = await freeRoom(page);
+    const created = await createBooking(page, departingTodayBody(room));
+    const arrived = await page.request.post("/api/boarding/attendance", {
+      data: { bookingRef: created.id },
+    });
+    expect(arrived.status(), await arrived.text()).toBe(201);
+
+    const before = await readBooking(page, created.id);
+    expect(before?.paymentStatus, "nothing paid yet").toBe("pending");
+    expect(Number(before?.amountPaid ?? -1)).toBe(0);
+    const due = Number(before?.amountDue ?? 0);
+    expect(due, "the booking has a bill").toBeGreaterThan(0);
+
+    await page.goto("/facility/dashboard");
+    // Departures live on the Going Home tab, which is where Check Out is.
+    await selectTile(page, /going home today/i);
+
+    const card = await cardFor(page, created.id);
+    await card
+      .getByRole("button", { name: /check out/i })
+      .first()
+      .click();
+
+    // Each dialog located by its OWN title, not by `getByRole("dialog")`. Two
+    // of them open in sequence here, and a bare role lookup cannot say which
+    // one it found — an earlier version clicked into the wrong one and the only
+    // evidence was "element detached from the DOM".
+    const checkOut = page.getByRole("dialog").filter({ hasText: /check out/i });
+    await expect(checkOut).toBeVisible({ timeout: 15_000 });
+    await checkOut.getByRole("button", { name: /^check out$/i }).click();
+
+    // The payment modal. TERMINAL, not cash: the cash path keeps the confirm
+    // button disabled until a tendered amount covering the balance is typed in,
+    // and this test is about the ledger rather than about counting change.
+    // `terminal` is a tender the books recognise — `checkoutTender` throws on
+    // "custom", which is the whole reason that helper exists.
+    const payment = page
+      .getByRole("dialog")
+      .filter({ hasText: /payment checkout/i });
+    await expect(payment).toBeVisible({ timeout: 15_000 });
+    await payment.getByRole("button", { name: /^terminal$/i }).click();
+
+    // Two presses by design: "Checkout & Charge" arms it, "Confirm & Charge"
+    // takes the money.
+    await payment.getByRole("button", { name: /checkout & charge/i }).click();
+    await payment.getByRole("button", { name: /confirm & charge/i }).click();
+
+    // THE ASSERTION THAT WOULD HAVE FAILED BEFORE THIS CHANGE. The handler
+    // toasted "Charged $X" and called no payment endpoint at all, so the
+    // booking stayed pending for ever.
+    await expect
+      .poll(async () => (await readBooking(page, created.id))?.paymentStatus, {
+        timeout: 30_000,
+        message: "the payment reached the ledger",
+      })
+      .toBe("paid");
+
+    const after = await readBooking(page, created.id);
+
+    // THE LATE FEE IS ON THE BILL, not stapled to the payment row.
+    //
+    // This stay was booked out at 11:00 and collected in the afternoon, so the
+    // card computes a late-pickup fee and adds it as a LINE ITEM first — which
+    // raises the booking's `amount_due`. Charging it as a loose extra on the
+    // payment instead would leave the booking owing a fee its own bill had no
+    // record of.
+    //
+    // So the bill GREW, and the assertion is against the grown one. Comparing
+    // to the figure read before the checkout is what the first version of this
+    // did, and it failed by exactly the fee.
+    expect(
+      Number(after?.amountDue ?? 0),
+      "the late fee joined the bill",
+    ).toBeGreaterThan(due);
+    expect(
+      Number(after?.amountPaid ?? 0),
+      "and the payment covered the whole of it",
+    ).toBeCloseTo(Number(after?.amountDue ?? 0), 2);
   });
 
   test("a no-show is a booking transition, not a departure", async ({

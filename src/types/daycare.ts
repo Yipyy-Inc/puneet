@@ -49,6 +49,14 @@ export const daycareCheckInSchema = z
     notes: z.string(),
     playGroup: z.string().nullable(),
     photoUrl: z.string().optional(),
+    // The booking's money, so a screen taking a payment at pickup charges the
+    // BALANCE rather than a figure it worked out from the rate card. Optional
+    // because the fixture predates them; every row from Postgres carries all
+    // three. `amountDue` is the price plus anything added at the counter and
+    // `amountPaid` is the ledger's sum — both derived, neither editable.
+    totalCost: z.number().optional(),
+    amountDue: z.number().optional(),
+    amountPaid: z.number().optional(),
     includesEvaluation: z.boolean().optional(),
     evaluationStatus: z
       .enum(["pending", "in_progress", "completed", "skipped"])

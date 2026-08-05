@@ -1267,6 +1267,42 @@ Three of the four dashboard tests failed on a tile click that Playwright reporte
 
 **Do instead:** for a click on a freshly navigated client page, assert the CONSEQUENCE inside a retry, not the click.
 
+## Snapshot (2026-08-06, checkout takes the money)
+
+### 🔴 A checkout that took a payment and recorded nothing
+
+`handlePaymentConfirm` on the dashboard booking card toasted `Charged $X via card`, awarded loyalty points, consumed a discount voucher, "sent" a report card and marked the booking checked out — and **called no payment endpoint at all**. The money was never recorded, so the booking stayed unpaid, the client's balance never moved, and the only trace of the transaction was a toast that had already faded.
+
+It now goes through `useTakeBookingPayment`, which takes the BOOKING and works the balance out itself against `amount_due`. Every side effect moved inside the success path.
+
+**Do instead:** a handler named `onConfirm` for money is the first place to check for this shape. The tell is a `toast.success` with an amount in it and no `await` above it.
+
+### 🔴 A React portal bubbles up the React tree, not the DOM tree
+
+The check-in and check-out dialogs are portalled to `document.body` but are JSX children of the card, so every click inside them also fired the card's own `onClick` — which routes to the booking overview.
+
+Confirming a check-**in** navigated the operator away from the board (the write had already fired, so it looked merely rude). Confirming a check-**out** was worse: the route change tore the card down before `setPaymentOpen(true)` could render anything, **so the payment step never appeared at all**. The guest was marked departed and nobody was ever asked for the money.
+
+The payment flow was already wrapped in a `stopPropagation` div — somebody hit this once and fixed only the symptom in front of them. All three are wrapped now.
+
+**Do instead:** if a card is clickable and renders a dialog, the dialog needs the wrapper. Fixing one and leaving its siblings is how this survived.
+
+### 🟡 The modal was showing the wrong bill
+
+`depositPaid` was hardcoded to `0` and the total was `price + lateFee`, so a booking with a deposit against it was presented for the full amount again. Worse for boarding and daycare, whose `price` was `undefined`: the modal offered to charge the late fee on its own.
+
+`amountDue`, `amountPaid` and `totalCost` now travel from the booking through all three real sources onto `UnifiedBooking`.
+
+**Do instead:** when a screen has to show money, carry the derived columns to it. A screen that recomputes a bill is a second answer to a question the database already answers.
+
+### 🟢 The late fee goes on the bill, not on the payment row
+
+`computeLatePickupFee` produced an amount that was toasted and then forgotten. It is written as a LINE ITEM first (20260806820000), which raises `amount_due`, and the payment that follows covers it. Stapling it to the payment instead would leave the booking owing a fee its own bill had no record of.
+
+Caught while writing this: the first draft added the fee when deciding whether anything was owed and left it out of the amount charged — taking the money for everything except the fee that triggered the charge.
+
+**Do instead:** one figure, computed once, used for both the check and the charge.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

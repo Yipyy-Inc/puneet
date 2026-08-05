@@ -40,6 +40,12 @@ import {
 } from "@/lib/late-pickup-fee";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
+import {
+  balanceOf,
+  checkoutTender,
+  useTakeBookingPayment,
+} from "@/lib/api/booking-money";
+import { useAddLineItems } from "@/lib/api/booking-line-items";
 
 const findClient = (petId: number) =>
   clients.find((c) => c.pets.some((p) => p.id === petId));
@@ -105,6 +111,8 @@ export function BookingCard({
 }: BookingCardProps) {
   const router = useRouter();
   const { updateStatus } = useUnifiedBookings();
+  const takePayment = useTakeBookingPayment();
+  const addLineItems = useAddLineItems();
   const { recordEvent } = useLoyaltyEngine();
   const { discount: loyaltyDiscount, consume: consumeLoyaltyDiscount } =
     useActiveLoyaltyDiscount({
@@ -196,6 +204,86 @@ export function BookingCard({
     setPaymentOpen(true);
   };
 
+  /**
+   * The report-card side of checkout. Unchanged, and still local.
+   */
+  const sendReportCard = () => {
+    if (reportCardSent) return;
+    const mode = reportCardConfig.autoSend.mode;
+    if (mode === "immediate" || mode === "checkout") {
+      toast.success(`Report card sent to ${booking.ownerName}`);
+      setReportCardSent(true);
+    } else if (mode === "scheduled") {
+      toast.success(
+        `Report card scheduled for ${reportCardConfig.autoSend.sendTime ?? "18:00"}`,
+      );
+      setReportCardSent(true);
+    }
+  };
+
+  /**
+   * Everything that follows a payment landing.
+   *
+   * INSIDE the mutation's success path, all of it. It used to run beside a
+   * toast that announced a charge nobody had made: loyalty points were awarded,
+   * a discount voucher was consumed and a report card was "sent" for a payment
+   * that reached no ledger. The same defect the daycare board had, one screen
+   * over.
+   */
+  const afterPayment = (charged: number) => {
+    updateStatus(booking.id, "checked-out", {
+      timestamp: pendingCheckout?.timestamp ?? new Date().toISOString(),
+      earlyCheckout: pendingCheckout?.earlyCheckout,
+    });
+    setPendingCheckout(null);
+    setPendingLateFee(null);
+
+    if (loyaltyDiscount) consumeLoyaltyDiscount();
+
+    if (booking.ownerId != null) {
+      recordEvent({
+        type: "booking_completed",
+        id: booking.id,
+        customerId: booking.ownerId,
+        amount: charged,
+        serviceType: booking.serviceKey,
+        isService: true,
+      });
+    }
+
+    toast.success(
+      charged > 0
+        ? `Charged $${charged.toFixed(2)}`
+        : "Checked out — nothing left to pay",
+    );
+    sendReportCard();
+  };
+
+  /**
+   * Take the money.
+   *
+   * ── WHAT THIS DID BEFORE ────────────────────────────────────────────────
+   *
+   * Nothing. It toasted `Charged $X via card`, awarded loyalty points and
+   * marked the booking checked out — and called no payment endpoint at all. The
+   * money was never recorded, so the booking stayed unpaid, the client's
+   * balance never moved, and the only trace of the transaction was a toast that
+   * had already faded.
+   *
+   * ── THE AMOUNT IS THE BALANCE, NOT WHAT THE MODAL ADDED UP ──────────────
+   *
+   * `useTakeBookingPayment` takes the booking and works the balance out itself,
+   * against `amount_due` — the price plus anything added at the counter, minus
+   * what the ledger already holds. The modal's figure was `price + lateFee`,
+   * and `price` was undefined for boarding and daycare, so it offered to charge
+   * the late fee alone.
+   *
+   * ── THE LATE FEE GOES ON THE BILL FIRST ─────────────────────────────────
+   *
+   * As a LINE ITEM, which raises `amount_due`, so the payment that follows
+   * covers it. Charging it as a loose extra on the payment row would leave the
+   * booking owing a fee the bill has no record of.
+   */
   const handlePaymentConfirm = (payment: {
     method: string;
     amount: number;
@@ -203,49 +291,103 @@ export function BookingCard({
     includedInvoices?: string[];
   }) => {
     if (!pendingCheckout) return;
-    updateStatus(booking.id, "checked-out", {
-      timestamp: pendingCheckout.timestamp,
-      earlyCheckout: pendingCheckout.earlyCheckout,
-    });
-    setPendingCheckout(null);
-    setPendingLateFee(null);
 
-    // Mark the auto-applied loyalty discount voucher used now that the invoice
-    // is finalized.
-    if (loyaltyDiscount) consumeLoyaltyDiscount();
-
-    // Loyalty automation: a completed booking earns rewards (points, tier
-    // discount, tier upgrade, badges) for the owner.
-    if (booking.ownerId != null) {
-      recordEvent({
-        type: "booking_completed",
-        id: booking.id,
-        customerId: booking.ownerId,
-        amount: payment.amount,
-        serviceType: booking.serviceKey,
-        isService: true,
+    // Training and custom services have no booking row to pay against — no
+    // table, no ref. They keep the old behaviour and the toast says so rather
+    // than claiming a charge.
+    const ref = Number(booking.rawId);
+    if (
+      booking.source === "training" ||
+      booking.source === "custom" ||
+      !Number.isFinite(ref)
+    ) {
+      updateStatus(booking.id, "checked-out", {
+        timestamp: pendingCheckout.timestamp,
+        earlyCheckout: pendingCheckout.earlyCheckout,
       });
+      setPendingCheckout(null);
+      setPendingLateFee(null);
+      toast.success(`Checked out — payment not recorded`, {
+        description: `${booking.serviceLabel} has no booking to charge against yet`,
+      });
+      sendReportCard();
+      return;
     }
 
-    const extra = payment.includedInvoices?.length
-      ? ` + ${payment.includedInvoices.length} other invoices`
-      : "";
-    toast.success(
-      `Charged $${payment.amount.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
-    );
+    let tender;
+    try {
+      tender = checkoutTender(payment.method);
+    } catch (error) {
+      // "custom" reaches here. A tender the books do not recognise is not
+      // something to guess at — the money arrived somehow, and which way it
+      // came is the thing being recorded.
+      toast.error((error as Error).message);
+      return;
+    }
 
-    if (!reportCardSent) {
-      const mode = reportCardConfig.autoSend.mode;
-      if (mode === "immediate" || mode === "checkout") {
-        toast.success(`Report card sent to ${booking.ownerName}`);
-        setReportCardSent(true);
-      } else if (mode === "scheduled") {
-        toast.success(
-          `Report card scheduled for ${reportCardConfig.autoSend.sendTime ?? "18:00"}`,
-        );
-        setReportCardSent(true);
+    const lateFee = pendingLateFee;
+    const chargeIt = () => {
+      // ONE FIGURE, used for both the check and the charge. The first draft of
+      // this added the late fee when deciding whether anything was owed and
+      // left it out of the amount charged — taking the money for everything
+      // except the fee that triggered the charge.
+      //
+      // The fee is already on the server's `amount_due` by the time this runs:
+      // the line item is written first, on purpose.
+      const money = {
+        id: ref,
+        totalCost: booking.price ?? 0,
+        amountDue:
+          (booking.amountDue ?? booking.price ?? 0) + (lateFee?.amount ?? 0),
+        amountPaid: booking.amountPaid ?? 0,
+      };
+
+      if (balanceOf(money) <= 0) {
+        // Already settled — a deposit that covered it, or a payment taken at
+        // the counter a minute ago. Checking out is still the right thing to do.
+        afterPayment(0);
+        return;
       }
+      takePayment.mutate(
+        {
+          booking: money,
+          method: tender,
+          tipAmount: payment.tip > 0 ? payment.tip : undefined,
+        },
+        {
+          onSuccess: (charged) => afterPayment(charged),
+          onError: (error) =>
+            toast.error("The payment was not recorded", {
+              description: error.message,
+            }),
+        },
+      );
+    };
+
+    if (lateFee && lateFee.amount > 0) {
+      addLineItems.mutate(
+        {
+          bookingRef: ref,
+          items: [
+            {
+              kind: "fee",
+              name: `Late pickup (${lateFee.minutesLate} min)`,
+              unitPrice: lateFee.amount,
+            },
+          ],
+        },
+        {
+          onSuccess: chargeIt,
+          onError: (error) =>
+            toast.error("The late fee was not added to the bill", {
+              description: error.message,
+            }),
+        },
+      );
+      return;
     }
+
+    chargeIt();
   };
 
   return (
@@ -384,12 +526,21 @@ export function BookingCard({
               Check In
             </Button>
             {checkInOpen && (
-              <CheckInDialog
-                booking={booking}
-                open={checkInOpen}
-                onOpenChange={setCheckInOpen}
-                onConfirm={handleCheckInConfirm}
-              />
+              // Wrapped, like the payment flow below, and for the reason
+              // somebody already discovered there: A REACT PORTAL BUBBLES UP THE
+              // REACT TREE, NOT THE DOM TREE. The dialog renders into
+              // document.body but is a JSX child of this card, so every click
+              // inside it also fires the card's own onClick — which routes to
+              // the booking overview. Confirming a check-in navigated the
+              // operator away from the board.
+              <div onClick={(e) => e.stopPropagation()}>
+                <CheckInDialog
+                  booking={booking}
+                  open={checkInOpen}
+                  onOpenChange={setCheckInOpen}
+                  onConfirm={handleCheckInConfirm}
+                />
+              </div>
             )}
           </>
         )}
@@ -404,24 +555,41 @@ export function BookingCard({
               Check Out
             </Button>
             {checkOutOpen && (
-              <CheckOutDialog
-                booking={booking}
-                open={checkOutOpen}
-                onOpenChange={setCheckOutOpen}
-                onConfirm={handleCheckOutConfirm}
-              />
+              // Same wrapper, same reason — and here the consequence was worse
+              // than a stray navigation. Confirming the check-out routed the
+              // page away BEFORE `setPaymentOpen(true)` could render anything,
+              // so the payment step simply never appeared: the guest was marked
+              // departed and nobody was ever asked for the money.
+              <div onClick={(e) => e.stopPropagation()}>
+                <CheckOutDialog
+                  booking={booking}
+                  open={checkOutOpen}
+                  onOpenChange={setCheckOutOpen}
+                  onConfirm={handleCheckOutConfirm}
+                />
+              </div>
             )}
             {paymentOpen && (
               <div onClick={(e) => e.stopPropagation()}>
+                {/* The bill, and what is left of it.
+                    `depositPaid` was hardcoded to 0 and the total was
+                    `price + lateFee` — so a booking with a deposit against it
+                    was presented for the full amount again, and for boarding
+                    and daycare, whose `price` was undefined, the modal offered
+                    to charge the late fee on its own. */}
                 <PaymentCheckoutFlow
                   open={paymentOpen}
                   onOpenChange={setPaymentOpen}
-                  amountDue={
-                    (booking.price ?? 0) + (pendingLateFee?.amount ?? 0)
-                  }
-                  depositPaid={0}
+                  amountDue={Math.max(
+                    0,
+                    (booking.amountDue ?? booking.price ?? 0) +
+                      (pendingLateFee?.amount ?? 0) -
+                      (booking.amountPaid ?? 0),
+                  )}
+                  depositPaid={booking.amountPaid ?? 0}
                   invoiceTotal={
-                    (booking.price ?? 0) + (pendingLateFee?.amount ?? 0)
+                    (booking.amountDue ?? booking.price ?? 0) +
+                    (pendingLateFee?.amount ?? 0)
                   }
                   loyaltyDiscount={loyaltyDiscount ?? undefined}
                   onConfirm={handlePaymentConfirm}

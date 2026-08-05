@@ -737,6 +737,11 @@ export const groomingAppointmentSchema = z.object({
    *  `refunded` if the booking was reversed. Defaults to `pending` for new
    *  appointments. */
   paymentStatus: z.enum(["pending", "paid", "refunded"]).optional(),
+  // Derived on the booking: the bill including anything added at the counter,
+  // and what the ledger says has been paid against it. Optional because the
+  // fixtures predate both.
+  amountDue: z.number().optional(),
+  amountPaid: z.number().optional(),
   /** ISO timestamp of payment confirmation. */
   paidAt: z.string().optional(),
   /** Method used at pickup. */
