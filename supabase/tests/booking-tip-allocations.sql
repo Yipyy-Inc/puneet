@@ -87,7 +87,11 @@ insert into public.staff
 create or replace function pg_temp.as_user(p_uid uuid) returns void
 language plpgsql as $$
 begin
-  perform set_config('request.jwt.claim.sub', p_uid::text, true);
+  perform set_config('request.jwt.claims',
+    case when p_uid is null then ''
+         else json_build_object('sub', p_uid::text,
+                                'role', 'authenticated')::text end,
+    true);
 end $$;
 
 /** A completed booking with a tip of `p_tip` collected on it. */

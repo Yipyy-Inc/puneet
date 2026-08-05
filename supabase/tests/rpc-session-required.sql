@@ -113,7 +113,7 @@ values
 do $$
 declare refused boolean; n integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);   -- no session at all
+  perform set_config('request.jwt.claims', '', true);   -- no session at all
   set local role anon;
   begin
     perform public.link_staff_invite('rs-owner',
@@ -124,7 +124,7 @@ begin
   end;
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select count(*) into n from public.facility_memberships
    where profile_id = '00000000-0000-0000-0000-0000000000f1';
   perform pg_temp.t('V1 EXPLOIT: anon link_staff_invite refused, no membership granted',
@@ -137,7 +137,7 @@ end $$;
 do $$
 declare refused boolean; st text;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   set local role anon;
   begin
     perform public.offboard_staff('rs-owner', 'Termination', null, null);
@@ -147,7 +147,7 @@ begin
   end;
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select status into st from public.staff where id = '00000000-0000-0000-0000-00000000f101';
   perform pg_temp.t('V2 EXPLOIT: anon offboard_staff refused, staff untouched',
     refused and st = 'active', format('refused=%s status=%s', refused, st));
@@ -190,7 +190,7 @@ end $$;
 do $$
 declare r jsonb;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   r := public.link_staff_invite('rs-hire',
     '00000000-0000-0000-0000-0000000000f1', 'rs-hire@example.invalid');
@@ -205,7 +205,7 @@ end $$;
 do $$
 declare r jsonb;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   r := public.offboard_staff('rs-hire', 'Resignation', null, current_date);
   reset role;

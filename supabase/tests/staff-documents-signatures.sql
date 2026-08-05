@@ -128,7 +128,7 @@ select '00000000-0000-0000-0000-00000000f201', '00000000-0000-0000-0000-00000000
 do $$
 declare d integer; s integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select count(*) into d from public.staff_documents;
   select count(*) into s from public.staff_signatures;
   perform pg_temp.t('T0  fixture: 2 documents, 1 signature', d = 2 and s = 1,
@@ -139,7 +139,7 @@ end $$;
 do $$
 declare mine integer; theirs integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000e1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into mine   from public.staff_documents
    where staff_id = '00000000-0000-0000-0000-00000000e101';
@@ -155,7 +155,7 @@ end $$;
 do $$
 declare v_ok boolean; c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000e1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     delete from public.staff_signatures where id = '00000000-0000-0000-0000-00000000f201';
@@ -163,7 +163,7 @@ begin
   exception when insufficient_privilege then v_ok := true;
   end;
   reset role;
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select count(*) into c from public.staff_signatures
    where id = '00000000-0000-0000-0000-00000000f201';
   perform pg_temp.t('T2  a staff member cannot delete their own signature',
@@ -178,7 +178,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   begin
     delete from public.staff_signatures where id = '00000000-0000-0000-0000-00000000f201';
     v_ok := false;
@@ -195,7 +195,7 @@ end $$;
 do $$
 declare c integer; sg integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e3', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000e3', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c  from public.staff_documents;
   select count(*) into sg from public.staff_signatures;
@@ -209,7 +209,7 @@ end $$;
 do $$
 declare c integer; sg integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000e0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c  from public.staff_documents;
   select count(*) into sg from public.staff_signatures;
@@ -231,7 +231,7 @@ end $$;
 do $$
 declare v_task text; v_sig text;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select config ->> 'agreementText' into v_task from public.onboarding_employee_tasks
    where id = '00000000-0000-0000-0000-00000000e902';
   select agreement_text into v_sig from public.staff_signatures
@@ -243,7 +243,7 @@ end $$;
 do $$
 declare v_task text; v_sig text; v_hash text; v_verifies boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   update public.onboarding_employee_tasks
      set config = jsonb_set(config, '{agreementText}', '"Clause 4: no notice required."')
    where id = '00000000-0000-0000-0000-00000000e902';
@@ -263,7 +263,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   delete from public.onboarding_employee_tasks
    where id = '00000000-0000-0000-0000-00000000e902';
   select count(*) into c from public.staff_signatures
@@ -276,7 +276,7 @@ end $$;
 do $$
 declare v_ok boolean; v_text text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000e0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.staff_signatures
@@ -286,7 +286,7 @@ begin
   exception when insufficient_privilege then v_ok := true;
   end;
   reset role;
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select agreement_text into v_text from public.staff_signatures
    where id = '00000000-0000-0000-0000-00000000f201';
   perform pg_temp.t('T7  a manager cannot rewrite what was signed',
@@ -300,11 +300,11 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000e1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   delete from public.staff_documents where id = '00000000-0000-0000-0000-00000000f101';
   reset role;
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select count(*) into c from public.staff_documents
    where id = '00000000-0000-0000-0000-00000000f101';
   perform pg_temp.t('T8  an employee cannot delete their own document', c = 1,
@@ -318,7 +318,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000e0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.staff_documents set doc_type = 'tax_form'
@@ -335,7 +335,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000e1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.staff_documents
@@ -357,7 +357,7 @@ end $$;
 do $$
 declare v_type boolean; v_size boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   begin
     insert into public.staff_documents
       (facility_id, staff_id, file_name, content_type, size_bytes, storage_path)

@@ -106,7 +106,7 @@ values ('00000000-0000-0000-0000-00000012d070', '00000000-0000-0000-0000-0000001
 do $$
 declare who text; cnt integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000012d002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000012d002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.payments
     (id, facility_id, booking_id, client_id, method, subtotal, tax, tip,
@@ -129,7 +129,7 @@ end $$;
 do $$
 declare blocked boolean; allowed boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000012d002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000012d002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.payments
@@ -142,7 +142,7 @@ begin
   exception when insufficient_privilege then blocked := true; end;
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000012d001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000012d001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.payments
     (facility_id, booking_id, client_id, method, subtotal, tax, tip,
@@ -162,7 +162,7 @@ end $$;
 do $$
 declare bad integer := 0;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000012d001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000012d001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin  -- the total is not its parts
     insert into public.payments (facility_id, method, subtotal, tax, tip, amount_charged, grand_total)
@@ -206,7 +206,7 @@ end $$;
 do $$
 declare blocked integer := 0;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   begin
     update public.payments set grand_total = 1
      where id = '00000000-0000-0000-0000-00000012d080';
@@ -225,7 +225,7 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000012d001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000012d001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.payments (facility_id, client_id, method, subtotal, tax, tip,
@@ -245,11 +245,11 @@ end $$;
 do $$
 declare g integer; r integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000012d003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000012d003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into g from public.payments;
   reset role;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000012d004', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000012d004', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into r from public.payments;
   reset role;
@@ -263,7 +263,7 @@ end $$;
 do $$
 declare bad integer := 0; bal numeric;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000012d001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000012d001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin  -- "redeemed" that ADDS money is how a ledger silently mints it
     insert into public.store_credit_entries (facility_id, client_id, amount, reason)
@@ -282,7 +282,7 @@ begin
           '00000000-0000-0000-0000-00000012d040', 100, 'added');
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000012d002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000012d002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.store_credit_entries (facility_id, client_id, amount, reason)
   values ('00000000-0000-0000-0000-00000012d020',
@@ -300,7 +300,7 @@ end $$;
 do $$
 declare blocked boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000012d002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000012d002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.store_credit_entries (facility_id, client_id, amount, reason)

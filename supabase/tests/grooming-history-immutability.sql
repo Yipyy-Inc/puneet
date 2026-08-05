@@ -100,7 +100,7 @@ values
 do $$
 declare rows integer; who text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.grooming_appointment_history
     (id, booking_id, facility_id, kind, description)
@@ -127,7 +127,7 @@ end $$;
 do $$
 declare bad integer := 0;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   -- a field_change with no field
   begin
@@ -166,7 +166,7 @@ end $$;
 do $$
 declare blocked integer := 0; attempts integer := 0; still text;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   begin
     attempts := attempts + 1;
     update public.grooming_appointment_history set description = 'Never happened'
@@ -196,7 +196,7 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.grooming_appointment_history
@@ -215,7 +215,7 @@ end $$;
 do $$
 declare stored uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.grooming_appointment_history
     (id, booking_id, facility_id, kind, description)
@@ -238,11 +238,11 @@ end $$;
 do $$
 declare rival integer; client_hist integer; client_bookings integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0004', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0004', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into rival from public.grooming_appointment_history;
   reset role;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into client_hist from public.grooming_appointment_history;
   select count(*) into client_bookings from public.bookings;
@@ -261,7 +261,7 @@ end $$;
 do $$
 declare survived integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   delete from public.bookings where id = '00000000-0000-0000-0000-0000000f0070';
   select count(*) into survived from public.grooming_appointment_history;
   perform pg_temp.t('T7  deleting the booking does not erase its history',

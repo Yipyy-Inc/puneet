@@ -109,7 +109,11 @@ insert into public.clients (id, facility_id, name, email, profile_id) values
 create or replace function pg_temp.as_user(p_uid uuid) returns void
 language plpgsql as $$
 begin
-  perform set_config('request.jwt.claim.sub', p_uid::text, true);
+  perform set_config('request.jwt.claims',
+    case when p_uid is null then ''
+         else json_build_object('sub', p_uid::text,
+                                'role', 'authenticated')::text end,
+    true);
 end $$;
 
 /** A $100 confirmed booking, written straight to the table as the owner. */

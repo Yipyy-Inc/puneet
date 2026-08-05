@@ -20,7 +20,7 @@
 -- clamp under test dutifully reverted the very state the test was trying to
 -- arm. Two red tests, both reporting that the code works.
 --
--- So: `perform set_config('request.jwt.claim.sub', '', true)` opens every block
+-- So: `perform set_config('request.jwt.claims', '', true)` opens every block
 -- that means to act as service_role, and T14/T15 additionally ASSERT that the
 -- state they armed actually took. A test that arms nothing proves nothing.
 --
@@ -118,7 +118,7 @@ values
 do $$
 declare c integer; h bytea;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select count(*) into c from public.onboarding_instances;
   select token_hash into h from public.onboarding_instances
    where id = '00000000-0000-0000-0000-00000000c101';
@@ -133,7 +133,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   set local role anon;
   select count(*) into c from public.onboarding_instances;
   reset role;
@@ -146,7 +146,7 @@ end $$;
 do $$
 declare s integer; c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   set local role anon;
   select count(*) into s from public.onboarding_sections;
   select count(*) into c from public.onboarding_change_requests;
@@ -160,7 +160,7 @@ end $$;
 do $$
 declare v jsonb;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   set local role anon;
   v := public.onboarding_by_token('TOKEN-LIVE-aaaaaaaaaaaa');
   reset role;
@@ -176,7 +176,7 @@ end $$;
 do $$
 declare v jsonb; w jsonb;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   set local role anon;
   v := public.onboarding_by_token('TOKEN-LIVE-aaaaaaaaaaaa');
   w := public.onboarding_by_token('TOKEN-GUESSED-zzzzzzzzzz');
@@ -191,7 +191,7 @@ end $$;
 do $$
 declare v jsonb;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   set local role anon;
   v := public.onboarding_by_token('TOKEN-EXPIRED-ccccccccc');
   reset role;
@@ -206,7 +206,7 @@ end $$;
 do $$
 declare ok boolean; v jsonb;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   set local role anon;
   ok := public.save_onboarding_section('TOKEN-LIVE-aaaaaaaaaaaa', 'task-bank', 'banking',
         jsonb_build_object('iban','GB00TEST'), 'complete');
@@ -226,12 +226,12 @@ end $$;
 do $$
 declare r public.onboarding_instances;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.onboarding_instances set submitted_at = now(), reviewed_at = now()
    where id = '00000000-0000-0000-0000-00000000c101';
   reset role;
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select * into r from public.onboarding_instances
    where id = '00000000-0000-0000-0000-00000000c101';
   perform pg_temp.t('T7  an employee cannot self-submit-and-review',
@@ -246,7 +246,7 @@ end $$;
 do $$
 declare v_ok boolean; r public.onboarding_instances;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.onboarding_instances set token_expires_at = now() + interval '365 days'
@@ -255,7 +255,7 @@ begin
   exception when insufficient_privilege then v_ok := true;
   end;
   reset role;
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select * into r from public.onboarding_instances
    where id = '00000000-0000-0000-0000-00000000c101';
   perform pg_temp.t('T8  an employee cannot extend their own link',
@@ -267,7 +267,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c from public.onboarding_instances;
   reset role;
@@ -281,7 +281,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c from public.onboarding_instances;
   reset role;
@@ -296,17 +296,17 @@ end $$;
 do $$
 declare r public.onboarding_instances;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into public.facility_role_permissions (facility_id, role, permission_key, scope)
   values ('00000000-0000-0000-0000-0000000000ba', 'manager', 'manage_staff', 'none')
   on conflict (facility_id, role, permission_key) do update set scope = 'none';
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.onboarding_instances set reviewed_at = now()
    where id = '00000000-0000-0000-0000-00000000c101';
   reset role;
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select * into r from public.onboarding_instances
    where id = '00000000-0000-0000-0000-00000000c101';
   perform pg_temp.t('T11 a manager WITHOUT manage_staff cannot activate',
@@ -318,17 +318,17 @@ end $$;
 do $$
 declare r public.onboarding_instances;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   delete from public.facility_role_permissions
    where facility_id = '00000000-0000-0000-0000-0000000000ba'
      and permission_key = 'manage_staff';
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.onboarding_instances set reviewed_at = now()
    where id = '00000000-0000-0000-0000-00000000c101';
   reset role;
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select * into r from public.onboarding_instances
    where id = '00000000-0000-0000-0000-00000000c101';
   perform pg_temp.t('T12 the control: WITH manage_staff the manager CAN activate',
@@ -341,18 +341,18 @@ end $$;
 do $$
 declare r public.onboarding_change_requests;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into public.onboarding_change_requests
     (id, instance_id, facility_id, task_key, section_type, note)
   values ('00000000-0000-0000-0000-00000000d101', '00000000-0000-0000-0000-00000000c101',
           '00000000-0000-0000-0000-0000000000ba', 'task-bank', 'banking', 'IBAN looks wrong');
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.onboarding_change_requests set resolved_at = now(), note = 'all fine actually'
    where id = '00000000-0000-0000-0000-00000000d101';
   reset role;
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select * into r from public.onboarding_change_requests
    where id = '00000000-0000-0000-0000-00000000d101';
   perform pg_temp.t('T13 an employee cannot resolve or reword their own change request',
@@ -368,7 +368,7 @@ end $$;
 do $$
 declare v jsonb; ok boolean; s timestamptz;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   update public.onboarding_instances set submitted_at = now()
    where id = '00000000-0000-0000-0000-00000000c102';
   select submitted_at into s from public.onboarding_instances
@@ -391,7 +391,7 @@ end $$;
 do $$
 declare v jsonb; st text;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   update public.staff set status = 'active'
    where id = '00000000-0000-0000-0000-00000000b101';
   select status into st from public.staff where id = '00000000-0000-0000-0000-00000000b101';
@@ -400,7 +400,7 @@ begin
   v := public.onboarding_by_token('TOKEN-LIVE-aaaaaaaaaaaa');
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   update public.staff set status = 'invited'
    where id = '00000000-0000-0000-0000-00000000b101';
   perform pg_temp.t('T15 a staff row no longer `invited` kills the link',
@@ -413,7 +413,7 @@ end $$;
 do $$
 declare v_dup boolean; c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   begin
     insert into public.onboarding_sections
       (instance_id, facility_id, task_key, section_type)

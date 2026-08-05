@@ -114,7 +114,7 @@ declare
   attempts integer := 0;
   detail text := '';
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
 
   -- 1a range with no dates
@@ -196,7 +196,7 @@ declare
   today date := (now() at time zone 'America/Toronto')::date;
   a_asap date; a_spec date; a_range date; a_dow date;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
 
   insert into public.grooming_waitlist_entries
@@ -245,7 +245,7 @@ declare
   today date := (now() at time zone 'America/Toronto')::date;
   a date;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.grooming_waitlist_entries
      set owner_phone = '(514) 555-0000', anchor_date = today + 999
@@ -264,7 +264,7 @@ declare
   today date := (now() at time zone 'America/Toronto')::date;
   a date;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.grooming_waitlist_entries
      set expected_date = today + 20
@@ -281,7 +281,7 @@ end $$;
 do $$
 declare at_ timestamptz; until_ timestamptz; mins numeric;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.grooming_waitlist_entries
      set status = 'offered', offered_slot = '10:00-11:30', offer_window_minutes = 120
@@ -301,7 +301,7 @@ end $$;
 do $$
 declare until_ timestamptz;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.grooming_waitlist_entries
      set offered_until = now() + interval '100 days'
@@ -319,7 +319,7 @@ end $$;
 do $$
 declare at_ timestamptz; until_ timestamptz; slot text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.grooming_waitlist_entries set status = 'waiting'
    where id = '00000000-0000-0000-0000-0000000d0070'
@@ -336,7 +336,7 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.grooming_waitlist_entries
@@ -356,7 +356,7 @@ end $$;
 do $$
 declare ok boolean; ok_own boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.grooming_waitlist_entries
@@ -385,7 +385,7 @@ end $$;
 do $$
 declare visible integer; ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into visible from public.grooming_waitlist_entries;
   begin
@@ -404,7 +404,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c from public.grooming_waitlist_entries;
   reset role;
@@ -417,7 +417,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0004', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0004', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c from public.grooming_waitlist_entries;
   reset role;
@@ -433,7 +433,7 @@ end $$;
 do $$
 declare deleted integer; still_there integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000d0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000d0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   delete from public.grooming_waitlist_entries
    where id = '00000000-0000-0000-0000-0000000d0070';
@@ -454,7 +454,7 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   begin
     -- service_role path, so the trigger is the only thing between this and the
     -- table. Forcing both columns null alongside status='offered' is the state

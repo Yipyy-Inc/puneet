@@ -117,7 +117,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c from public.onboarding_templates;
   reset role;
@@ -131,7 +131,7 @@ end $$;
 do $$
 declare m integer; e integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into m from public.onboarding_manager_tasks;
   select count(*) into e from public.onboarding_employee_tasks;
@@ -148,7 +148,7 @@ end $$;
 do $$
 declare v_id uuid; v_fac uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.onboarding_templates (facility_id, name, status, applies_to_roles)
   values ('00000000-0000-0000-0000-0000000000aa', 'Reception Onboarding', 'active',
@@ -171,7 +171,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.onboarding_templates (facility_id, name)
@@ -192,7 +192,7 @@ end $$;
 do $$
 declare v_name text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.onboarding_templates set name = 'Hijacked'
    where id = '00000000-0000-0000-0000-00000000a001';
@@ -209,7 +209,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   delete from public.onboarding_templates
    where id = '00000000-0000-0000-0000-00000000a001';
@@ -228,7 +228,7 @@ end $$;
 do $$
 declare t integer; m integer; e integer; h integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into t from public.onboarding_templates;
   select count(*) into m from public.onboarding_manager_tasks;
@@ -246,7 +246,7 @@ end $$;
 do $$
 declare v_ok boolean; v_msg text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.onboarding_templates (facility_id, name, status, applies_to_roles)
@@ -268,7 +268,7 @@ end $$;
 do $$
 declare v_id uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.onboarding_templates (facility_id, name, status, applies_to_roles)
   values ('00000000-0000-0000-0000-0000000000aa', 'Groomer v2 (draft)', 'draft',
@@ -286,7 +286,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.onboarding_templates (facility_id, name, status)
   values ('00000000-0000-0000-0000-0000000000aa', 'Universal A', 'active');
@@ -308,7 +308,7 @@ end $$;
 do $$
 declare v_a integer; v_b integer; v_tpl uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.onboarding_templates (facility_id, name, status)
   values ('00000000-0000-0000-0000-0000000000aa', 'Ordering fixture', 'draft')
@@ -337,7 +337,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.onboarding_manager_tasks
@@ -357,7 +357,7 @@ end $$;
 do $$
 declare v_days integer; v_after integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select invite_expiry_days into v_days from public.staff_hr_config;
   update public.staff_hr_config set invite_expiry_days = 365
@@ -377,7 +377,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   delete from public.staff_hr_config
    where facility_id = '00000000-0000-0000-0000-0000000000aa';
@@ -396,7 +396,7 @@ end $$;
 do $$
 declare v_id uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into public.onboarding_templates (facility_id, name, status, applies_to_roles)
   values ('00000000-0000-0000-0000-0000000000aa', 'Seeded duplicate', 'active',
           array['groomer'])

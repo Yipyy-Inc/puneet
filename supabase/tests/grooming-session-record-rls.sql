@@ -99,7 +99,7 @@ values
 do $$
 declare alerts integer; comments integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000e0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000e0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.grooming_alert_notes
     (id, booking_id, facility_id, body, applies_to_future)
@@ -126,7 +126,7 @@ end $$;
 do $$
 declare a_name text; a_uid uuid; c_name text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000e0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000e0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   -- A forged author on the way in. Both should be replaced by the trigger.
   insert into public.grooming_ticket_comments
@@ -155,7 +155,7 @@ end $$;
 do $$
 declare updated integer; deleted integer; body text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000e0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000e0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.grooming_ticket_comments set message = 'Rewritten after the fact.'
    where id = '00000000-0000-0000-0000-0000000e0081';
@@ -178,7 +178,7 @@ end $$;
 do $$
 declare remaining integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000e0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000e0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.grooming_alert_notes (id, booking_id, facility_id, body)
   values ('00000000-0000-0000-0000-0000000e0083',
@@ -199,7 +199,7 @@ end $$;
 do $$
 declare stored uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000e0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000e0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.grooming_alert_notes (id, booking_id, facility_id, body)
   values ('00000000-0000-0000-0000-0000000e0084',
@@ -229,12 +229,12 @@ do $$
 declare rival_alerts integer; rival_comments integer;
         client_alerts integer; client_comments integer; client_bookings integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000e0004', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000e0004', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into rival_alerts   from public.grooming_alert_notes;
   select count(*) into rival_comments from public.grooming_ticket_comments;
   reset role;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000e0003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000e0003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into client_alerts   from public.grooming_alert_notes;
   select count(*) into client_comments from public.grooming_ticket_comments;
@@ -253,7 +253,7 @@ end $$;
 do $$
 declare bad integer := 0;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000e0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000e0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.grooming_appointments set session_progress = '{"step":"bath"}'::jsonb
@@ -281,7 +281,7 @@ end $$;
 do $$
 declare alerts integer; comments integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   delete from public.bookings where id = '00000000-0000-0000-0000-0000000e0070';
   select count(*) into alerts   from public.grooming_alert_notes;
   select count(*) into comments from public.grooming_ticket_comments;

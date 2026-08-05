@@ -111,7 +111,7 @@ end $$;
 do $$
 declare r public.clients;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.clients
      set is_blocked = false, blocked_reason = null, blocked_at = null,
@@ -132,7 +132,7 @@ end $$;
 do $$
 declare r public.clients;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.clients
      set name = 'Renamed Customer', phone = '+1-555-0100',
@@ -152,7 +152,7 @@ end $$;
 do $$
 declare r public.clients;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.clients
      set details = jsonb_build_object(
@@ -181,7 +181,7 @@ end $$;
 do $$
 declare r public.clients;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.clients
      set details = jsonb_build_object('additionalContacts',
@@ -203,7 +203,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.clients set facility_id = '00000000-0000-0000-0000-0000000000fb'
@@ -221,7 +221,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.clients set profile_id = '00000000-0000-0000-0000-0000000000f1'
@@ -241,7 +241,7 @@ end $$;
 do $$
 declare r public.clients;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.clients
      set is_blocked = false, blocked_reason = null, outstanding_balance = 0,
@@ -263,7 +263,7 @@ end $$;
 do $$
 declare r public.pets;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.pets
      set details = jsonb_build_object('evaluations',
@@ -282,7 +282,7 @@ end $$;
 do $$
 declare r public.pets;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.pets set status = 'deceased'
    where id = '00000000-0000-0000-0000-000000000f02';
@@ -298,7 +298,7 @@ end $$;
 do $$
 declare r public.pets;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.pets
      set name = 'Rexy', breed = 'Beagle mix', weight = 13.5,
@@ -320,7 +320,7 @@ begin
   insert into public.clients (id, facility_id, name, email)
   values ('00000000-0000-0000-0000-000000000f03', '00000000-0000-0000-0000-0000000000fa',
           'Other Owner', 'cp-test-other@example.invalid');
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.pets set client_id = '00000000-0000-0000-0000-000000000f03'
@@ -338,7 +338,7 @@ end $$;
 do $$
 declare r public.pets;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.pets (id, client_id, facility_id, name, species, status, details)
   values ('00000000-0000-0000-0000-000000000f04', '00000000-0000-0000-0000-000000000f01',
@@ -361,7 +361,7 @@ end $$;
 do $$
 declare r public.pets;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.pets
      set status = 'inactive',
@@ -383,7 +383,7 @@ end $$;
 do $$
 declare r public.clients;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into public.clients (id, facility_id, name, email, is_blocked, outstanding_balance, details)
   values ('00000000-0000-0000-0000-000000000f05', '00000000-0000-0000-0000-0000000000fa',
           'Seeded', 'cp-test-seed@example.invalid', true, 99.00,

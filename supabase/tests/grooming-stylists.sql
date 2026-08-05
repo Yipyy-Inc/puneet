@@ -188,13 +188,13 @@ do $$
 declare groomer_sees integer; groomer_hours integer;
         cust_sees integer; cust_names text; cust_hours integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000180003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000180003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into groomer_sees from public.grooming_stylist_profiles;
   select count(*) into groomer_hours from public.grooming_stylist_availability;
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000180005', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000180005', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*), string_agg(legacy_id, ',') into cust_sees, cust_names
     from public.grooming_stylist_profiles;
@@ -214,14 +214,14 @@ end $$;
 do $$
 declare groomer_rows integer; cust_rows integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000180003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000180003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.grooming_stylist_profiles set skill_level = 'platinum'
    where legacy_id = 'sy-001';
   get diagnostics groomer_rows = row_count;
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000180005', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000180005', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.grooming_stylist_profiles set visible_online = false
    where legacy_id = 'sy-001';

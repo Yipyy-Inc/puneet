@@ -127,7 +127,7 @@ $$;
 
 create or replace function pg_temp.as_owner() returns void language plpgsql as $$
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000001b0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000001b0001', 'role', 'authenticated')::text, true);
 end $$;
 
 -- ── K1: the kennel is still bookable ───────────────────────────────────────
@@ -316,7 +316,7 @@ do $$
 declare v_recep_raised boolean; v_owner_id uuid; v_reason text;
 begin
   -- Reception holds create_bookings and edit_bookings, not the override.
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000001b0002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000001b0002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     perform public.create_booking(
@@ -461,7 +461,7 @@ begin
     array['00000000-0000-0000-0000-0000001b0050']::uuid[], null, null);
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000001b0002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000001b0002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   v_moved := public.assign_boarding_room(v_ref, 'BD-01');
   begin

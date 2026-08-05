@@ -142,7 +142,7 @@ declare
   v_id uuid; v_size text; v_price numeric; v_dur integer; v_addons integer;
   v_pets integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000190001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
   set local role authenticated;
 
   select booking_id into v_id from public.create_booking(
@@ -177,7 +177,7 @@ begin
   select count(*) into v_before from public.bookings
    where client_id = '00000000-0000-0000-0000-000000190040';
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000190001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     perform public.create_booking(
@@ -210,7 +210,7 @@ begin
   select count(*) into v_before from public.bookings
    where client_id = '00000000-0000-0000-0000-000000190040';
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000190001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     perform public.create_booking(
@@ -236,7 +236,7 @@ end $$;
 do $$
 declare v_id uuid; v_price numeric;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000190001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select booking_id into v_id from public.create_booking(
     pg_temp.booking('00000000-0000-0000-0000-000000190040', 5),
@@ -262,7 +262,7 @@ end $$;
 do $$
 declare v_id uuid; v_price numeric; v_addon numeric; v_booking numeric; v_status text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000190005', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190005', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select booking_id into v_id from public.create_booking(
     pg_temp.booking('00000000-0000-0000-0000-000000190040'),
@@ -292,7 +292,7 @@ end $$;
 do $$
 declare v_raised boolean; v_message text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000190001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     perform public.create_booking(
@@ -319,7 +319,7 @@ end $$;
 do $$
 declare v_raised boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000190001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     perform public.create_booking(
@@ -371,7 +371,7 @@ begin
   select count(*) into v_before from public.bookings
    where client_id = '00000000-0000-0000-0000-000000190040';
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000190001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     perform public.create_booking(

@@ -86,7 +86,11 @@ insert into public.facility_rooms (id, facility_id, category_id, legacy_id, name
 create or replace function pg_temp.as_user(p_uid uuid) returns void
 language plpgsql as $$
 begin
-  perform set_config('request.jwt.claim.sub', p_uid::text, true);
+  perform set_config('request.jwt.claims',
+    case when p_uid is null then ''
+         else json_build_object('sub', p_uid::text,
+                                'role', 'authenticated')::text end,
+    true);
 end $$;
 
 /** A boarding booking, optionally with a kennel. Returns its ref. */

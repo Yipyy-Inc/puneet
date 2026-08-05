@@ -106,7 +106,7 @@ values
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select count(*) into c from public.grooming_services;
   perform pg_temp.t('T0  fixture: 3 services across 2 facilities', c = 3,
     format('services=%s', c));
@@ -116,7 +116,7 @@ end $$;
 do $$
 declare c integer; nm text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0004', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0004', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*), min(name) into c, nm from public.grooming_services;
   reset role;
@@ -132,7 +132,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c from public.grooming_services;
   reset role;
@@ -148,7 +148,7 @@ end $$;
 do $$
 declare c integer; nm text; drafts integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*), min(name) into c, nm from public.grooming_services;
   select count(*) into drafts from public.grooming_services where not is_active;
@@ -164,7 +164,7 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.grooming_services (facility_id, name, base_price, duration_min)
@@ -183,7 +183,7 @@ end $$;
 do $$
 declare got uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.grooming_service_size_prices (service_id, facility_id, size_label, price)
   values ('00000000-0000-0000-0000-0000000f0050',
@@ -206,7 +206,7 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.grooming_service_default_add_ons (service_id, add_on_id, facility_id)
@@ -226,7 +226,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.grooming_service_default_add_ons (service_id, add_on_id, facility_id)
   values ('00000000-0000-0000-0000-0000000f0050',
@@ -248,11 +248,11 @@ end $$;
 do $$
 declare added boolean; priced boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into public.membership_permissions (membership_id, permission_key, scope)
   values ('00000000-0000-0000-0000-0000000f0031', 'manage_services', 'anytime');
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.grooming_services (facility_id, name, base_price, duration_min)
@@ -277,11 +277,11 @@ end $$;
 do $$
 declare priced boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into public.membership_permissions (membership_id, permission_key, scope)
   values ('00000000-0000-0000-0000-0000000f0031', 'manage_rates', 'anytime');
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.grooming_service_size_prices (service_id, facility_id, size_label, price)
@@ -300,11 +300,11 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   delete from public.membership_permissions
    where membership_id = '00000000-0000-0000-0000-0000000f0031';
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.grooming_add_ons (facility_id, name, price, duration_min)
@@ -323,16 +323,16 @@ end $$;
 do $$
 declare staff_sees integer; client_sees integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into public.grooming_config (facility_id)
   values ('00000000-0000-0000-0000-0000000f0020');
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into staff_sees from public.grooming_config;
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000f0003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into client_sees from public.grooming_config;
   reset role;

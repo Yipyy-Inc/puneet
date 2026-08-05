@@ -112,7 +112,7 @@ values
 do $$
 declare sc timestamptz;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select status_changed_at into sc from public.grooming_stations
    where id = '00000000-0000-0000-0000-0000000c0050';
   perform pg_temp.t('T1  status_changed_at is stamped on insert', sc is not null);
@@ -122,7 +122,7 @@ end $$;
 do $$
 declare b timestamptz; a timestamptz;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000c0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000c0001', 'role', 'authenticated')::text, true);
   select status_changed_at into b from public.grooming_stations
    where id = '00000000-0000-0000-0000-0000000c0050';
   set local role authenticated;
@@ -143,7 +143,7 @@ end $$;
 do $$
 declare b timestamptz; a timestamptz;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000c0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000c0001', 'role', 'authenticated')::text, true);
   select status_changed_at into b from public.grooming_stations
    where id = '00000000-0000-0000-0000-0000000c0050';
   set local role authenticated;
@@ -164,7 +164,7 @@ end $$;
 do $$
 declare a timestamptz;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000c0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000c0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.grooming_stations
      set status = 'out-of-service', status_changed_at = '2020-01-01T00:00:00Z'
@@ -182,7 +182,7 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000c0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000c0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.grooming_appointments
@@ -203,7 +203,7 @@ end $$;
 do $$
 declare sid uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000c0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000c0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.grooming_appointments
     (booking_id, facility_id, service_id, service_name, service_price,
@@ -225,7 +225,7 @@ end $$;
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000c0003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000c0003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c from public.grooming_stations;
   reset role;
@@ -238,7 +238,7 @@ end $$;
 do $$
 declare c integer; nm text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000c0004', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000c0004', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*), min(name) into c, nm from public.grooming_stations;
   reset role;
@@ -253,7 +253,7 @@ end $$;
 do $$
 declare occupied integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   update public.bookings set status = 'checked_in'
    where id = '00000000-0000-0000-0000-0000000c0070';
 
@@ -271,7 +271,7 @@ end $$;
 do $$
 declare cnt integer; sid uuid;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000c0001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000c0001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   delete from public.grooming_stations where id = '00000000-0000-0000-0000-0000000c0052';
   reset role;

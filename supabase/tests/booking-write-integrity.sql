@@ -98,7 +98,7 @@ insert into public.pets (id, client_id, name) values
 do $$
 declare r public.bookings;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
 
   insert into public.bookings
@@ -129,7 +129,7 @@ end $$;
 do $$
 declare r public.bookings;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
 
   insert into public.bookings
@@ -158,7 +158,7 @@ end $$;
 do $$
 declare v_booking uuid; v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
 
   select id into v_booking from public.bookings
@@ -168,7 +168,7 @@ begin
   reset role;
   perform pg_temp.t('T4  customer attaches their own pet', true);
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.booking_pets (booking_id, pet_id) values (v_booking, '00000000-0000-0000-0000-0000000000e2');
@@ -192,7 +192,7 @@ begin
   -- on it. Picking "whatever booking exists" made this pass for the wrong
   -- reason before the fix: the forged booking had landed at Facility B, where
   -- the groomer has no membership and so could not see it either way.
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.bookings (facility_id, client_id, service, status, start_at, end_at)
   values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000d1', 'grooming', 'confirmed',
@@ -201,7 +201,7 @@ begin
   insert into public.booking_pets (booking_id, pet_id) values (v_booking, '00000000-0000-0000-0000-0000000000e1');
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   -- The groomer holds view_bookings and can read this row. That is the point:
   -- being able to see it must not be the same as being able to re-crew it.
@@ -222,7 +222,7 @@ end $$;
 do $$
 declare v_seen int;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into v_seen from public.bookings
    where facility_id = '00000000-0000-0000-0000-0000000000f1' and client_id = '00000000-0000-0000-0000-0000000000d1';
@@ -237,7 +237,7 @@ end $$;
 do $$
 declare r public.bookings;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
 
   insert into public.bookings
@@ -271,7 +271,7 @@ declare v_booking uuid;
 begin
   -- Reception holds create_bookings but NOT edit_bookings. Creating a booking
   -- and then attaching its pets must work in one breath.
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a3', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a3', 'role', 'authenticated')::text, true);
   set local role authenticated;
 
   insert into public.bookings
@@ -297,7 +297,7 @@ begin
   select id into v_booking from public.bookings
    where client_id = '00000000-0000-0000-0000-0000000000d1' and status = 'confirmed' and service = 'daycare' limit 1;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.bookings set status = 'cancelled' where id = v_booking;
   reset role;
@@ -317,7 +317,7 @@ begin
   select id into v_booking from public.bookings
    where client_id = '00000000-0000-0000-0000-0000000000d1' and status = 'request_submitted' limit 1;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.bookings set status = 'confirmed' where id = v_booking;
@@ -339,7 +339,7 @@ begin
   select id into v_booking from public.bookings
    where client_id = '00000000-0000-0000-0000-0000000000d1' and status = 'request_submitted' limit 1;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   -- The shape the PATCH route sends: the whole merged booking, cancelled, with
   -- the money quietly rewritten.
@@ -364,7 +364,7 @@ begin
   -- Checked in BY STAFF, which is the only way a booking reaches that status.
   -- Inserting it as the session role would work here but not against a real
   -- caller, and a fixture that only exists under a superuser proves nothing.
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.bookings
     (facility_id, client_id, service, status, start_at, end_at)
@@ -373,7 +373,7 @@ begin
   returning id into v_booking;
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.bookings set status = 'cancelled' where id = v_booking;
@@ -393,7 +393,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.bookings (facility_id, client_id, service, start_at, end_at, base_price, total_cost)
@@ -410,7 +410,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.bookings (facility_id, client_id, service, start_at, end_at, base_price, discount, total_cost)
@@ -429,7 +429,7 @@ do $$
 declare r public.bookings;
 begin
   -- No JWT subject at all: this is `bun run db:seed:apply` / any service_role job.
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into public.bookings
     (facility_id, client_id, service, status, payment_status, start_at, end_at,
      base_price, discount, total_cost)
@@ -456,7 +456,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.bookings (facility_id, client_id, location_id, service, start_at, end_at)
@@ -475,7 +475,7 @@ do $$
 declare v_booking uuid; v_updated int;
 begin
   select id into v_booking from public.bookings where client_id = '00000000-0000-0000-0000-0000000000d1' limit 1;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000a2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.bookings set total_cost = 1 where id = v_booking;
   get diagnostics v_updated = row_count;
@@ -494,7 +494,7 @@ begin
   select id into v_booking from public.bookings
    where client_id = '00000000-0000-0000-0000-0000000000d1' and status = 'request_submitted' limit 1;
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   -- The whole merged object, as the PATCH route sends it, with only the note
   -- actually changed — and a hopeful attempt on the service and the price.

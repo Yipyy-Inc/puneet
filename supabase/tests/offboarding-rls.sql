@@ -133,7 +133,7 @@ values
 do $$
 declare c integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select count(*) into c from public.offboarding_tasks
    where template_id = '00000000-0000-0000-0000-00000000c601';
   perform pg_temp.t('T0  fixture: template with 2 tasks, leaver has history',
@@ -145,7 +145,7 @@ end $$;
 do $$
 declare cl integer; bk integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into cl from public.clients;
   select count(*) into bk from public.bookings;
@@ -160,7 +160,7 @@ end $$;
 do $$
 declare r jsonb;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   r := public.offboard_staff('ob-leaver', 'Resignation', null, current_date + 5);
   reset role;
@@ -177,7 +177,7 @@ end $$;
 do $$
 declare st text; act boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select status into st from public.staff where id = '00000000-0000-0000-0000-00000000c101';
   select is_active into act from public.facility_memberships
    where id = '00000000-0000-0000-0000-0000000000cd';
@@ -191,7 +191,7 @@ end $$;
 do $$
 declare cl integer; bk integer; stf integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into cl  from public.clients;
   select count(*) into bk  from public.bookings;
@@ -210,7 +210,7 @@ end $$;
 do $$
 declare bk integer; asg uuid; sg integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into bk from public.bookings
    where assigned_staff_id = '00000000-0000-0000-0000-00000000c101';
@@ -234,7 +234,7 @@ end $$;
 do $$
 declare d integer; sg integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into d  from public.staff_documents;
   select count(*) into sg from public.staff_signatures;
@@ -252,7 +252,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.staff_documents
@@ -276,7 +276,7 @@ end $$;
 do $$
 declare c integer; ts integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c  from public.offboarding_instances;
   select count(*) into ts from public.offboarding_task_states;
@@ -294,7 +294,7 @@ end $$;
 do $$
 declare c integer; d date;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into c from public.offboarding_task_states;
   select due_date into d from public.offboarding_task_states where name = 'Submit ROE';
@@ -313,13 +313,13 @@ end $$;
 do $$
 declare v_ok boolean; st text;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into public.staff
     (id, facility_id, membership_id, legacy_id, first_name, last_name, email, primary_role, status)
   values ('00000000-0000-0000-0000-00000000c102', '00000000-0000-0000-0000-0000000000ca',
           null, 'ob-other', 'Other', 'Person', 'ob-other@example.invalid', 'groomer', 'active');
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     perform public.offboard_staff('ob-other', 'Resignation', null, null);
@@ -329,7 +329,7 @@ begin
   end;
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select status into st from public.staff where id = '00000000-0000-0000-0000-00000000c102';
   perform pg_temp.t('T10 a caller without manage_staff cannot offboard anyone',
     v_ok and st = 'active', format('refused=%s status=%s', v_ok, st));
@@ -347,7 +347,7 @@ end $$;
 do $$
 declare refused boolean; st text; act boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);   -- no session at all
+  perform set_config('request.jwt.claims', '', true);   -- no session at all
   set local role anon;
   begin
     perform public.offboard_staff('ob-other', 'Termination', null, null);
@@ -357,7 +357,7 @@ begin
   end;
   reset role;
 
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select status into st from public.staff where id = '00000000-0000-0000-0000-00000000c102';
   perform pg_temp.t('T11 anon cannot offboard anybody, and nothing was written',
     refused and st = 'active', format('refused=%s status=%s', refused, st));
@@ -394,7 +394,7 @@ end $$;
 do $$
 declare drift integer; n integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   select count(*) into n from public.offboarding_task_states;
   select count(*) into drift
     from public.offboarding_task_states s

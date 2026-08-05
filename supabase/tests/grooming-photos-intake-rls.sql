@@ -118,7 +118,7 @@ end $$;
 do $$
 declare pf uuid; pa text; if_ uuid; ia text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.grooming_photos
     (id, booking_id, facility_id, kind, storage_path, content_type, size_bytes, author_name)
@@ -145,7 +145,7 @@ end $$;
 do $$
 declare bad integer := 0;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin  -- a PDF recorded as a photo
     insert into public.grooming_photos (booking_id, facility_id, kind, storage_path, content_type, size_bytes)
@@ -183,7 +183,7 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into public.grooming_intake (booking_id, facility_id)
@@ -200,13 +200,13 @@ end $$;
 do $$
 declare cph integer; cin integer; cbk integer; rph integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into cph from public.grooming_photos;
   select count(*) into cin from public.grooming_intake;
   select count(*) into cbk from public.bookings;
   reset role;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a004', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a004', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into rph from public.grooming_photos;
   reset role;
@@ -224,7 +224,7 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into storage.objects (bucket_id, name)
   values ('grooming-photos', '00000000-0000-0000-0000-00000010a020/bk/a.jpg');
@@ -239,7 +239,7 @@ end $$;
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into storage.objects (bucket_id, name)
@@ -256,11 +256,11 @@ end $$;
 do $$
 declare mine integer; theirs integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into mine from storage.objects where bucket_id = 'grooming-photos';
   reset role;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a004', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a004', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into theirs from storage.objects where bucket_id = 'grooming-photos';
   reset role;
@@ -276,10 +276,10 @@ end $$;
 do $$
 declare visible integer;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into storage.objects (bucket_id, name)
   values ('grooming-photos', 'not-a-uuid/bk/x.jpg');
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into visible from storage.objects where bucket_id = 'grooming-photos';
   reset role;
@@ -322,7 +322,7 @@ values ('00000000-0000-0000-0000-00000011c050', '00000000-0000-0000-0000-0000001
 do $$
 declare ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000011c001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000011c001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into storage.objects (bucket_id, name)
   values ('staff-documents',
@@ -337,11 +337,11 @@ end $$;
 do $$
 declare mgr integer; emp integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000011c001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000011c001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into mgr from storage.objects where bucket_id = 'staff-documents';
   reset role;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000011c002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000011c002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into emp from storage.objects where bucket_id = 'staff-documents';
   reset role;
@@ -354,7 +354,7 @@ end $$;
 do $$
 declare seen integer; blocked boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000010a004', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000010a004', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into seen from storage.objects where bucket_id = 'staff-documents';
   begin
@@ -373,7 +373,7 @@ end $$;
 do $$
 declare blocked boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000011c002', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000011c002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     insert into storage.objects (bucket_id, name)

@@ -106,7 +106,7 @@ values
 do $$
 declare v_ok boolean; v_scope text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.staff set primary_role = 'owner'
@@ -126,7 +126,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.staff set additional_roles = array['owner']::public.facility_staff_role[]
@@ -144,7 +144,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.staff set facility_id = '00000000-0000-0000-0000-0000000000e2'
@@ -162,7 +162,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.staff set membership_id = '00000000-0000-0000-0000-0000000000c1'
@@ -180,7 +180,7 @@ end $$;
 do $$
 declare v_ok boolean;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     update public.staff set status = 'terminated'
@@ -198,7 +198,7 @@ end $$;
 do $$
 declare r public.staff;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.staff
      set phone = '555-0199',
@@ -235,7 +235,7 @@ end $$;
 do $$
 declare r public.staff;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.staff
      set details = coalesce(details, '{}'::jsonb) || jsonb_build_object(
@@ -255,7 +255,7 @@ end $$;
 do $$
 declare r public.staff;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b2', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b2', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.staff
      set details = coalesce(details, '{}'::jsonb) || jsonb_build_object(
@@ -275,7 +275,7 @@ end $$;
 do $$
 declare r public.staff;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b0', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b0', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.staff
      set primary_role = 'reception',
@@ -304,7 +304,7 @@ end $$;
 do $$
 declare r public.staff;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b3', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b3', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.staff
      set job_title = 'Senior Groomer',
@@ -332,7 +332,7 @@ end $$;
 do $$
 declare r public.staff;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b1', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.staff
      set details = coalesce(details, '{}'::jsonb) || jsonb_build_object(
@@ -352,7 +352,7 @@ end $$;
 do $$
 declare r public.staff;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b3', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b3', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.staff
      set details = coalesce(details, '{}'::jsonb) || jsonb_build_object(
@@ -373,7 +373,7 @@ end $$;
 do $$
 declare r public.staff;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b3', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000b3', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.staff
     (id, facility_id, legacy_id, first_name, last_name, email, primary_role, status, details)
@@ -393,7 +393,7 @@ end $$;
 do $$
 declare r public.staff;
 begin
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claims', '', true);
   insert into public.staff
     (id, facility_id, legacy_id, first_name, last_name, email, primary_role, status, details)
   values ('00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-0000000000e1',

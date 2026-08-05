@@ -125,7 +125,7 @@ grant all on pk2_sale to authenticated;
 do $$
 declare v_cp uuid; nm text; paid numeric; pools integer; total integer; st text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select public.purchase_package(
     '00000000-0000-0000-0000-000000160040'::uuid,
@@ -150,7 +150,7 @@ do $$
 declare modules text; v_cp uuid;
 begin
   select id into v_cp from pk2_sale;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select string_agg(distinct l.module::text, ',') into modules
     from public.customer_package_lines l where l.customer_package_id = v_cp;
@@ -166,7 +166,7 @@ do $$
 declare paid numeric; nm text; total integer; v_cp uuid;
 begin
   select id into v_cp from pk2_sale;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   update public.prepaid_packages
      set package_price = 999, name = 'Puppy Plan (2027 pricing)'
@@ -196,7 +196,7 @@ end $$;
 do $$
 declare blocked boolean; orphans integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     perform public.purchase_package(
@@ -218,7 +218,7 @@ do $$
 declare bath_left integer; groom_left integer; wrong_pool boolean; v_cp uuid;
 begin
   select id into v_cp from pk2_sale;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select public.redeem_package_pass(v_cp, 'svc-bath', 'Basic Bath') into bath_left;
   select s.passes_remaining into groom_left
@@ -243,7 +243,7 @@ do $$
 declare last_left integer; blocked boolean; used integer; v_cp uuid;
 begin
   select id into v_cp from pk2_sale;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select public.redeem_package_pass(v_cp, 'svc-bath', 'Basic Bath') into last_left;
   begin
@@ -265,7 +265,7 @@ do $$
 declare rem integer; bad integer := 0; updated integer; deleted integer; v_cp uuid;
 begin
   select id into v_cp from pk2_sale;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.package_pass_entries
     (facility_id, customer_package_id, service_id, passes, reason, note)
@@ -297,7 +297,7 @@ end $$;
 do $$
 declare blocked boolean; st text;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   insert into public.customer_packages
     (id, facility_id, client_id, package_name, price_paid, expires_at)
@@ -325,7 +325,7 @@ end $$;
 do $$
 declare blocked boolean; leaked integer;
 begin
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160001', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160001', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
     perform public.purchase_package(
@@ -350,7 +350,7 @@ do $$
 declare seen integer; spend_blocked boolean; sell_blocked boolean; v_cp uuid;
 begin
   select id into v_cp from pk2_sale;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160003', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160003', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into seen from public.customer_packages;
   begin
@@ -418,7 +418,7 @@ begin
   select count(*) into actually_theirs from public.customer_packages
    where client_id = '00000000-0000-0000-0000-000000160041';
 
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160005', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160005', 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into mine from public.customer_packages
    where client_id = '00000000-0000-0000-0000-000000160040';
@@ -446,7 +446,7 @@ declare spent integer; reversal_blocked boolean; gift_blocked boolean;
         bulk_blocked boolean; v_cp uuid;
 begin
   select id into v_cp from pk2_sale;
-  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000160005', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000160005', 'role', 'authenticated')::text, true);
   set local role authenticated;
 
   -- The positive half. It failed until 20260806480000: `for update` applies
