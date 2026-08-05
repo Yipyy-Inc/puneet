@@ -1,42 +1,45 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
-import type { NextFetchEvent, NextRequest } from "next/server";
-
-import { updateSession } from "@/lib/supabase/proxy";
+import {
+  NextResponse,
+  type NextFetchEvent,
+  type NextRequest,
+} from "next/server";
 
 // ============================================================================
 // The only proxy in this app, and it stays that way deliberately.
 //
 // (`proxy.ts` is what Next 16 renamed the `middleware.ts` convention to — same
-// signature, same matcher, the function is just called `proxy` now. Supabase's
-// own docs still show this as middleware.ts.)
+// signature, same matcher, the function is just called `proxy` now.)
 //
-// Its job is refreshing the Supabase session — Server Components cannot write
-// cookies, so without this a rotated token has nowhere to land and reads
-// quietly start returning empty. Authorisation lives in the layouts, where the
-// requested portal is known.
+// It used to refresh the Supabase session. That job is GONE, not forgotten:
+// Clerk owns the session now, so there is no Supabase cookie to rotate and
+// nothing that expires mid-request. `clerkMiddleware` establishes the auth
+// context and that is the whole of it.
 //
-// Clerk is layered around that, not in place of it. `clerkMiddleware` only
-// establishes the Clerk auth context for the request; the response we hand back
-// is still the one `updateSession` built, so the rotated Supabase cookies
-// survive. Reversing the order — returning Clerk's own response — would drop
-// those cookies and reintroduce exactly the silent-empty-reads failure above.
+// WHAT SURVIVED THE DELETION, and must. Stamping `x-pathname` had nothing to do
+// with sessions — it was riding along in the same response. Layouts cannot see
+// the pathname (Next deliberately does not pass it) and `src/lib/auth/
+// portal-gate.ts:33` reads this header for two things: leaving the sign-in
+// screens reachable, and building the `?next=` that returns a bounced user
+// where they were headed. Drop it and every portal gate loses its bearings.
 //
-// Clerk does NOT gate anything here yet. Supabase Auth is still the live
-// identity provider (see src/lib/auth/actions.ts and the portal login pages).
-// Until the identity-ownership question is settled, this wiring is deliberately
-// inert: it makes Clerk available without giving it authority over a request.
+// `set` rather than `append`, so a client that sends its own x-pathname header
+// cannot smuggle a value past the gate.
 //
-// Keeping it thin is also what keeps self-hosting cheap: this runs at the edge
-// and is the least portable part of the platform, so business logic here would
-// be the hardest thing to move.
+// Nothing is gated HERE. Authorisation stays in the layouts, where the
+// requested portal is known, and the real boundary stays in RLS. Keeping this
+// thin is also what keeps self-hosting cheap: it runs at the edge and is the
+// least portable part of the platform.
 // ============================================================================
 
 // Named `proxy` export, not `export default`: the named form is what this app
-// already ran on, so composing inside it keeps the convention proven rather
-// than betting the session refresh on a different export being picked up.
-const withClerk = clerkMiddleware(async (_auth, request) =>
-  updateSession(request),
-);
+// already ran on and is verified to register (the build prints
+// `ƒ Proxy (Middleware)`), so composing inside it keeps the convention proven.
+const withClerk = clerkMiddleware(async (_auth, request) => {
+  const headers = new Headers(request.headers);
+  headers.set("x-pathname", request.nextUrl.pathname);
+  return NextResponse.next({ request: { headers } });
+});
 
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
   return withClerk(request, event);
@@ -46,16 +49,20 @@ export const config = {
   matcher: [
     /*
      * Everything except:
-     *   _next/static, _next/image  — build output, no session needed
+     *   _next/static, _next/image  — build output, no auth context needed
      *   favicon / image files      — static assets
      *   api/twilio, api/health     — machine-to-machine; Twilio signs its own
-     *                                webhooks and has no Supabase session, so
-     *                                refreshing one would be pure latency
+     *                                webhooks and carries no session, so
+     *                                establishing one would be pure latency
+     *
+     * api/webhooks is NOT excluded: Clerk's own webhook route wants the
+     * middleware to run (it verifies by signature, not by session), and adding
+     * exclusions here is how a route quietly stops being seen at all.
      */
     "/((?!_next/static|_next/image|favicon.ico|api/twilio|api/health|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
     // Clerk's auto-proxy path. Kept as its own entry because the pattern above
-    // is an exclusion list built around Supabase's needs, and /__clerk/* must
-    // be routed even if that list later grows an exclusion that would catch it.
+    // is an exclusion list, and /__clerk/* must be routed even if that list
+    // later grows an exclusion that would catch it.
     "/__clerk/:path*",
   ],
 };

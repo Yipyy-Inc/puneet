@@ -50,7 +50,7 @@ export default async function EmployeeShellLayout({
     // person with no staff record picks one, a signed-out one signs in. Sending
     // both to the picker made the destination depend on whether this layout or
     // the portal guard above it finished first.
-    redirect(mayPick ? "/employee/select" : "/login");
+    redirect(mayPick ? "/employee/select" : "/sign-in");
   }
 
   return (

@@ -1,13 +1,25 @@
 import "server-only";
 
+import { auth } from "@clerk/nextjs/server";
+
 import type { FacilityStaffRole } from "@/types/facility-staff";
-import { createServerClient } from "@/lib/supabase/server";
+import { createClerkServerClient } from "@/lib/supabase/clerk-server";
 
 // ============================================================================
 // Who is asking — the one place a Server Component should ask.
 //
-// The answer is the signed JWT, whose app_metadata carries active memberships
-// via private.custom_access_token_hook. There is no other answer.
+// The answer is a Clerk session for the subject, and the membership tables for
+// what that subject may do. There is no other answer.
+//
+// It used to read `app_metadata.memberships` off the Supabase JWT, injected by
+// private.custom_access_token_hook. That hook is only called when SUPABASE Auth
+// mints a token, so a Clerk session never triggers it and the claim is simply
+// absent — which is why this reads the tables instead.
+//
+// Two indexed queries per request rather than one claim read. That is the cost,
+// and it buys correctness: a claim is a snapshot taken when the token was
+// minted, so revoking a membership left the old one live until the token
+// refreshed. A query sees the revocation immediately.
 //
 // It used to have three, all client-writable from devtools: the `user_role`
 // cookie (portal gate), the `facility_role` cookie (finer facility role), and
@@ -62,70 +74,54 @@ const ANONYMOUS: Viewer = {
   memberships: [],
 };
 
-/**
- * Claims are read from the verified JWT, not from the user record: the hook
- * injects memberships into the *token*, and `getUser()` returns stored
- * user metadata, which is a different (and user-editable) thing.
- */
-function readMemberships(claims: unknown): ViewerMembership[] {
-  const appMetadata = (claims as { app_metadata?: unknown } | null)
-    ?.app_metadata;
-  const raw = (appMetadata as { memberships?: unknown } | undefined)
-    ?.memberships;
-  if (!Array.isArray(raw)) return [];
-
-  return raw.flatMap((entry): ViewerMembership[] => {
-    if (typeof entry !== "object" || entry === null) return [];
-    const { membership_id, facility_id, role } = entry as Record<
-      string,
-      unknown
-    >;
-    if (
-      typeof membership_id !== "string" ||
-      typeof facility_id !== "string" ||
-      typeof role !== "string"
-    ) {
-      return [];
-    }
-    return [
-      {
-        membershipId: membership_id,
-        facilityId: facility_id,
-        role: role as FacilityStaffRole,
-      },
-    ];
-  });
-}
-
 async function viewerFromSession(): Promise<Viewer | null> {
-  let supabase: Awaited<ReturnType<typeof createServerClient>>;
+  // Clerk owns the subject. `userId` here is the token's `sub` — the same value
+  // RLS reads as auth.jwt()->>'sub', which is what makes the two queries below
+  // return this person's rows and nobody else's.
+  const { userId } = await auth();
+  if (!userId) return null;
+
+  let supabase: ReturnType<typeof createClerkServerClient>;
   try {
-    supabase = await createServerClient();
+    supabase = createClerkServerClient();
   } catch {
-    // Supabase not configured in this environment. There is no longer a legacy
-    // path to fall through to, so this resolves to anonymous and every portal
-    // refuses — which is the correct answer to "we cannot verify anyone".
+    // Supabase not configured in this environment. There is no legacy path to
+    // fall through to, so this resolves to anonymous and every portal refuses —
+    // which is the correct answer to "we cannot verify anyone".
     return null;
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  // Both reads go through RLS as the caller, not around it. `profiles_read`
+  // admits your own row and `memberships_read` your own memberships, so a
+  // tampered id returns nothing rather than someone else's tenancy.
+  const [profile, memberships] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("email, is_platform_admin")
+      .eq("id", userId)
+      .maybeSingle(),
+    supabase
+      .from("facility_memberships")
+      .select("id, facility_id, role")
+      .eq("profile_id", userId)
+      .eq("is_active", true),
+  ]);
 
-  const { data } = await supabase.auth.getClaims();
-  const claims = data?.claims ?? null;
-  const appMetadata = (claims as { app_metadata?: unknown } | null)
-    ?.app_metadata;
-
+  // A signed-in Clerk user with no profile row yet is a real state, not an
+  // error: the sync webhook is asynchronous, so the first request after sign-up
+  // can arrive first. They resolve to a session with no memberships, every
+  // portal gate refuses, and the next request — once the webhook has landed —
+  // resolves normally.
   return {
     source: "session",
-    userId: user.id,
-    email: user.email ?? null,
-    isPlatformAdmin:
-      (appMetadata as { is_platform_admin?: unknown } | undefined)
-        ?.is_platform_admin === true,
-    memberships: readMemberships(claims),
+    userId,
+    email: profile.data?.email ?? null,
+    isPlatformAdmin: profile.data?.is_platform_admin === true,
+    memberships: (memberships.data ?? []).map((m) => ({
+      membershipId: m.id,
+      facilityId: m.facility_id,
+      role: m.role as FacilityStaffRole,
+    })),
   };
 }
 

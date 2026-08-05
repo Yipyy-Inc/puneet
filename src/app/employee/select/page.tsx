@@ -36,7 +36,7 @@ export default async function EmployeeSelectPage() {
     // both to /employee worked only because the shell there bounced the
     // signed-out case onward to /login — a second hop that existed purely
     // because this page did not distinguish them.
-    redirect(staffId ? "/employee" : "/login");
+    redirect(staffId ? "/employee" : "/sign-in");
   }
 
   return <EmployeeSelectClient />;

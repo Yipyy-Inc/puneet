@@ -59,7 +59,7 @@ export async function guardPortal({
   // needs a login, the other needs somewhere else to go.
   if (viewer.source !== "session") {
     const next = pathname ? `?next=${encodeURIComponent(pathname)}` : "";
-    redirect(`/login${next}`);
+    redirect(`/sign-in${next}`);
   }
 
   // Send them where they DO belong, computed from their own claims.
@@ -75,5 +75,5 @@ export async function guardPortal({
   // because the unenforced regime had no claims to route by. There is no such
   // regime now, so there is nothing to guess with.
   const home = landingPathFor(viewer);
-  redirect(home === pathname ? "/login" : home);
+  redirect(home === pathname ? "/sign-in" : home);
 }
