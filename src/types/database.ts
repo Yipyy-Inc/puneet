@@ -232,6 +232,53 @@ export type Database = {
           },
         ];
       };
+      training_attendance: {
+        Row: {
+          author_name: string | null;
+          booking_id: string;
+          checked_in_at: string | null;
+          checked_out_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          session_notes: string;
+          status: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          author_name?: string | null;
+          booking_id: string;
+          checked_in_at?: string | null;
+          checked_out_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          session_notes?: string;
+          status?: never;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string | null;
+          booking_id?: string;
+          checked_in_at?: string | null;
+          checked_out_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          session_notes?: string;
+          status?: never;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_attendance_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       booking_pets: {
         Row: {
           booking_id: string;

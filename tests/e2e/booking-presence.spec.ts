@@ -154,21 +154,26 @@ test.describe("booking presence", () => {
   test("a service with no attendance table reads unknown", async ({ page }) => {
     await signIn(page, ACCOUNTS.owner);
 
+    // A CUSTOM-SERVICE MODULE. This test used `training` until training got a
+    // table of its own (20260806980000) and moved from `unknown` to `expected`
+    // — which is the change working, and the test being right about the wrong
+    // example. Custom modules still have none.
     const today = new Date().toISOString().slice(0, 10);
     const created = await page.request.post("/api/bookings", {
       data: {
         ...daycareBody(),
-        service: "training",
+        service: "paws-express",
         startDate: today,
         endDate: today,
       },
     });
     expect(created.status(), await created.text()).toBe(201);
-    const trainingRef = ((await created.json()) as BookingPayload).id;
+    const customRef = ((await created.json()) as BookingPayload).id;
 
     // Not "expected" — that would claim the pet is booked in somewhere that
-    // tracks arrivals. Training has no table at all, and `unknown` says so.
-    const booking = await readBooking(page, trainingRef);
+    // tracks arrivals. Nothing records arrivals for a custom module, and
+    // `unknown` says exactly that.
+    const booking = await readBooking(page, customRef);
     expect(booking?.presence).toBe("unknown");
   });
 

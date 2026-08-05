@@ -11,7 +11,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { DaycareCheckIn } from "@/types/daycare";
-import { trainingSessions, enrollments } from "@/data/training";
 import {
   useBoardingCheckIn,
   useBoardingDay,
@@ -26,6 +25,12 @@ import {
   useDaycareVisitUpdate,
 } from "@/lib/api/daycare-attendance";
 import { groomingQueries } from "@/lib/api/grooming";
+import {
+  useTrainingCheckIn,
+  useTrainingDay,
+  useTrainingRevert,
+  useTrainingVisitUpdate,
+} from "@/lib/api/training-attendance";
 import { useMarkBookingNoShow } from "@/lib/api/booking-money";
 import { useSetGroomingAppointmentStatus } from "@/lib/api/grooming-appointments";
 import {
@@ -403,6 +408,7 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
   const { data: boardingDay } = useBoardingDay();
   const { data: daycareDay } = useDaycareDay();
   const { data: groomingData } = useQuery(groomingQueries.appointments());
+  const { data: trainingDay } = useTrainingDay();
 
   const boardingState = useMemo(() => boardingDay?.guests ?? [], [boardingDay]);
   const daycareState = useMemo(() => daycareDay?.visits ?? [], [daycareDay]);
@@ -425,13 +431,14 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
     return (groomingData ?? []).filter((a) => a.date === today);
   }, [groomingData]);
 
-  // ── The two that are not ─────────────────────────────────────────────────
+  // ── The one that is not ──────────────────────────────────────────────────
   //
-  // No table, no endpoint. These keep the old `useState` shape, and every count
-  // they feed is a count of a fixture. Marked here rather than fixed here: the
-  // schema for a training session and for a custom-module visit are two designs,
-  // not a rider on this change.
-  const [trainingState, setTrainingState] = useState(trainingSessions);
+  // Custom-service modules have no table and no endpoint, so they keep the old
+  // `useState` shape and every count they feed is a count of a fixture. Marked
+  // here rather than fixed here.
+  //
+  // Training used to be in this paragraph. It has `training_attendance` now
+  // (20260806980000) and reads through it above.
   const [customState, setCustomState] = useState<CustomServiceCheckIn[]>(
     customServiceCheckIns,
   );
@@ -466,49 +473,55 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
     [customServiceMetas],
   );
 
-  const trainingBookings = useMemo(() => {
-    const enrollMap = new Map(enrollments.map((e) => [e.id, e]));
-    const out: UnifiedBooking[] = [];
-    for (const session of trainingState) {
-      const status: UnifiedStatus =
-        session.status === "completed"
-          ? "checked-out"
-          : session.status === "in-progress"
-            ? "checked-in"
-            : "scheduled";
-      const scheduledStart = `${session.date}T${session.startTime}:00`;
-      const scheduledEnd = `${session.date}T${session.endTime}:00`;
-      for (const aId of session.attendees ?? []) {
-        const e = enrollMap.get(aId);
-        if (!e) continue;
-        out.push({
-          id: `training:${session.id}:${aId}`,
-          rawId: `${session.id}:${aId}`,
+  /**
+   * Training, from `/api/training/attendance`.
+   *
+   * This was `trainingSessions` and `enrollments` — two module arrays fanned
+   * out into one row per attendee with a composite id (`sess-3:enr-12`) that
+   * referred to nothing. A booking is already per-pet, so there is one row per
+   * booking now and `rawId` is the booking's own ref, which is what the write
+   * path takes.
+   *
+   * `groupNote` is gone with the fixture: "Class size: 6" was a count of an
+   * `attendees` array, and no table holds a class yet. `resourceLabel` is the
+   * booking's service variant rather than a class name, for the same reason.
+   */
+  const trainingBookings = useMemo<UnifiedBooking[]>(
+    () =>
+      (trainingDay?.attendees ?? []).map((a) => {
+        const status: UnifiedStatus =
+          a.status === "checked-out"
+            ? "checked-out"
+            : a.status === "checked-in"
+              ? "checked-in"
+              : "scheduled";
+        return {
+          id: `training:${a.id}`,
+          rawId: a.id,
           source: "training",
           serviceKey: "training",
           serviceLabel: "Training",
           serviceColor: "#f59e0b",
           serviceIcon: "GraduationCap",
-          petId: e.petId,
-          petName: e.petName,
-          petBreed: e.petBreed,
-          ownerId: e.ownerId,
-          ownerName: e.ownerName,
-          ownerPhone: e.ownerPhone,
+          petId: a.petId,
+          petName: a.petName,
+          petBreed: a.petBreed,
+          ownerId: a.ownerId,
+          ownerName: a.ownerName,
+          ownerPhone: a.ownerPhone,
           status,
-          scheduledStart,
-          actualStart: status !== "scheduled" ? scheduledStart : null,
-          scheduledEnd,
-          actualEnd: status === "checked-out" ? scheduledEnd : null,
+          scheduledStart: a.scheduledStart,
+          actualStart: a.checkedInAt,
+          scheduledEnd: a.scheduledEnd,
+          actualEnd: a.checkedOutAt,
           isGoingHomeToday: status === "checked-in",
-          resourceLabel: session.className,
-          staffLabel: session.trainerName,
-          groupNote: `Class size: ${session.attendees.length}`,
-        });
-      }
-    }
-    return out;
-  }, [trainingState]);
+          ...(a.sessionType ? { resourceLabel: a.sessionType } : {}),
+          ...(a.trainerName ? { staffLabel: a.trainerName } : {}),
+          notes: a.notes,
+        };
+      }),
+    [trainingDay],
+  );
 
   const bookings = useMemo<UnifiedBooking[]>(() => {
     const list: UnifiedBooking[] = [];
@@ -587,6 +600,9 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
   const daycareUpdate = useDaycareVisitUpdate();
   const daycareRevert = useDaycareRevert();
   const setGroomingStatus = useSetGroomingAppointmentStatus();
+  const trainingCheckIn = useTrainingCheckIn();
+  const trainingUpdate = useTrainingVisitUpdate();
+  const trainingRevert = useTrainingRevert();
   const markNoShow = useMarkBookingNoShow();
 
   const updateStatus = useCallback(
@@ -695,33 +711,24 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
           );
           break;
 
+        case "training": {
+          const ref = Number(target.rawId);
+          if (next === "checked-in")
+            trainingCheckIn.mutate({ bookingRef: ref }, handlers);
+          else if (next === "checked-out")
+            trainingUpdate.mutate(
+              { bookingRef: ref, checkOut: true },
+              handlers,
+            );
+          else trainingRevert.mutate(ref, handlers);
+          break;
+        }
+
         // ── Fixture-backed from here down ────────────────────────────────
         //
         // No table, no request. The state change is local and dies with the
         // tab, and the toast SAYS SO rather than claiming a record that does
         // not exist.
-        case "training": {
-          const [sessionId] = target.rawId.split(":");
-          setTrainingState((prev) =>
-            prev.map((s) =>
-              s.id === sessionId
-                ? {
-                    ...s,
-                    status:
-                      next === "checked-in"
-                        ? "in-progress"
-                        : next === "checked-out"
-                          ? "completed"
-                          : "scheduled",
-                  }
-                : s,
-            ),
-          );
-          toast.success(`${target.petName} — ${verb}`, {
-            description: `${target.serviceLabel} · not recorded yet (no training table)`,
-          });
-          break;
-        }
         case "custom":
           setCustomState((prev) =>
             prev.map((c) =>
@@ -755,6 +762,9 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
       daycareUpdate,
       daycareRevert,
       setGroomingStatus,
+      trainingCheckIn,
+      trainingUpdate,
+      trainingRevert,
       markNoShow,
     ],
   );

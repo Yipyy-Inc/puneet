@@ -1420,6 +1420,36 @@ The suite's `afterAll` now reverts the check-in before cancelling, and so does t
 
 **Do instead:** a cleanup should undo what the test did, in reverse order. Cancelling the parent is not the same as undoing the child, and the child is what the derived reads see.
 
+## Snapshot (2026-08-06, training joins the building)
+
+### 🔴 The training check-in board was two module arrays
+
+`ServiceCheckInBoard` reads `useUnifiedBookings`, which built its training rows from `trainingSessions` and `enrollments` — fanned out into one row per attendee with a composite id (`sess-3:enr-12`) that referred to nothing in the database. Checking a dog into a class flipped a status in `useState` and was gone when the tab closed. `booking_presence` reported every training booking as `unknown` for the same reason: there was no table to ask.
+
+`training_attendance` is keyed on `booking_id`, exactly as daycare and boarding are, so the three read identically and the presence view joins all of them the same way.
+
+**Do instead:** a composite id built from two fixture arrays is a reliable sign the screen has no backing. Grep the id format before estimating.
+
+### 🟡 The permission was checked first this time
+
+`run_training_sessions` is the obvious gate and it is wrong: owner, admin and trainer hold it, and **reception does not**. The person meeting a dog at the door for a six-o'clock class is whoever is on the desk. The policies use `check_in_out`.
+
+Fourth occurrence of this shape in one run of work — daycare's board, the kennel read, the boarding attendant, now training. The difference is that this one was checked against `role_preset_permissions` before the migration was written rather than after it failed.
+
+`run_training_sessions` remains right for what a trainer does _inside_ a session — progress, skills, certificates. Different table, different change.
+
+### 🟢 One row per booking, not per session
+
+The tempting model is a `training_sessions` table with an attendee list. But a booking is already per-pet, and attendance is a fact about a dog turning up rather than about a class happening. The class itself — name, curriculum, size — still has no table, so `groupNote: "Class size: 6"` is gone rather than faked, and `resourceLabel` is the booking's service variant.
+
+**Do instead:** when a fixture models a group and the database models the individual, follow the database. Adding the group later is additive; splitting the individual out of a group row is not.
+
+### 🟢 A test made obsolete by the change it was guarding
+
+`booking-presence.spec.ts` used training as its example of "a service with no attendance table". Training now has one, so the test failed by reading `expected` — the change working, and the test right about the wrong example. It uses a custom-service module now, which genuinely has none.
+
+**Do instead:** when a test picks an example to stand for a category, expect the example to graduate out of it. Name the category in the comment so the next person knows what to substitute.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
