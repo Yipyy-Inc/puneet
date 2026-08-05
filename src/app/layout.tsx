@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
@@ -111,19 +112,28 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <div className="flex min-h-screen flex-col" suppressHydrationWarning>
-          <main className="flex-1">
-            <QueryProvider>{children}</QueryProvider>
-          </main>
-          {/* Footer in normal flow (was fixed bottom-0, which permanently
-              overlaid content). It now only appears at the true end of the
-              page. Extra bottom padding on phones clears the facility mobile
-              bottom-nav (fixed, md:hidden); removed at md where no nav exists. */}
-          <footer className="bg-background text-muted-foreground flex items-center justify-center border-t px-4 py-4 pb-20 text-xs md:pb-4">
-            © 2026 Yipyy. All rights reserved.
-          </footer>
-        </div>
-        <Toaster />
+        {/* Clerk's quickstart puts a Sign In / Sign Up / UserButton header here.
+            That is written for a bare scaffold; this root layout wraps all 266
+            routes, so a global header would stamp auth buttons over the customer
+            portal, the facility dashboard and the public booking/review pages,
+            each of which already has its own chrome and its own login screen.
+            The provider is what the SDK actually needs — it is mounted, and the
+            sign-in surface belongs on a dedicated route instead. */}
+        <ClerkProvider>
+          <div className="flex min-h-screen flex-col" suppressHydrationWarning>
+            <main className="flex-1">
+              <QueryProvider>{children}</QueryProvider>
+            </main>
+            {/* Footer in normal flow (was fixed bottom-0, which permanently
+                overlaid content). It now only appears at the true end of the
+                page. Extra bottom padding on phones clears the facility mobile
+                bottom-nav (fixed, md:hidden); removed at md where no nav exists. */}
+            <footer className="bg-background text-muted-foreground flex items-center justify-center border-t px-4 py-4 pb-20 text-xs md:pb-4">
+              © 2026 Yipyy. All rights reserved.
+            </footer>
+          </div>
+          <Toaster />
+        </ClerkProvider>
       </body>
     </html>
   );

@@ -54,3 +54,6 @@ pnpm-lock.yaml
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# clerk configuration (can include secrets)
+/.clerk/
