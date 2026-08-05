@@ -8,13 +8,13 @@ Counted with `pg_policies` / `pg_proc`, not by grepping migrations — the files
 include superseded definitions and disagree with the database. **The database is
 the authority.**
 
-| Measure                                    | Count   |
-| ------------------------------------------ | ------- |
-| Policies in `public`                        | **220** |
-| …delegating to the private helpers          | **192** |
-| …calling `auth.uid()` directly              | **10**  |
-| Views depending on the identity columns     | **0**   |
-| Functions calling `auth.uid()`              | **22**  |
+| Measure                                 | Count   |
+| --------------------------------------- | ------- |
+| Policies in `public`                    | **220** |
+| …delegating to the private helpers      | **192** |
+| …calling `auth.uid()` directly          | **10**  |
+| Views depending on the identity columns | **0**   |
+| Functions calling `auth.uid()`          | **22**  |
 
 **The 10 direct policies:** `clients_read`, `clients_update`,
 `daycare_attendance_read`, `daycare_config_read`, `memberships_read`,
