@@ -1450,6 +1450,36 @@ The tempting model is a `training_sessions` table with an attendee list. But a b
 
 **Do instead:** when a test picks an example to stand for a category, expect the example to graduate out of it. Name the category in the comment so the next person knows what to substitute.
 
+## Snapshot (2026-08-07, a trainer is a member of staff)
+
+### 🔴 The instructor picker offered four people who do not work here
+
+`trainers` in src/data/training.ts: four invented people with their own ids ("trainer-001") and their own @yipyy.com addresses. This facility employs two trainers — Marcus Bélanger and Noémie Fortin — and **neither was on that list**. Somebody assigned to a class from the old picker could not be paid for it, rostered against it, or messaged about it.
+
+The list is `staff` now, filtered by role.
+
+**Do instead:** when a fixture array holds PEOPLE, check `staff` before anything else. A parallel roster is the one kind of fixture that produces a name nobody can act on.
+
+### 🟡 The profile is optional here and mandatory for stylists, on purpose
+
+`grooming_stylist_profiles` takes the opposite line: a groomer with no grooming profile is deliberately absent from the picker, because `Stylist` promises a skill level and a daily capacity that a scheduler reasons about, and inventing those would put a fabricated groomer into an assignment decision.
+
+Nothing on a trainer profile is load-bearing like that — specialisations, a bio and a certification list are things a customer reads. So the list comes from the role and the profile only decorates it. A trainer nobody has written a bio for is still a trainer, and the migration seeds nothing.
+
+`additional_roles` counts too: a caretaker who also runs the puppy class has `trainer` there and `caretaker` as their primary, and filtering on `primary_role` alone would have hidden them.
+
+**Do instead:** copy a precedent only after asking what made it right. The stylist rule protects a scheduling input; there is no scheduling input here to protect.
+
+### 🟢 Nothing invents a rating
+
+The fixture carried `rating: 4.9` and `totalClasses: 342` for people who do not exist. Both are derivable once sessions and reviews are real; neither is guessed at, and the payload simply omits them.
+
+### 🟢 Two test lessons, both costly in wall-clock
+
+An eight-minute timeout on a button label I guessed at (`/new series|add series/`) — the real one is "Create Series", and reading `series-list.tsx` would have taken ten seconds. And the test then passed alone and failed in sequence, which is the pre-hydration click again: Playwright's actionability checks pass before React attaches the handler. Wrapped in `toPass`, the suite runs in 18 seconds.
+
+**Do instead:** read the label out of the component. Retry any click that opens something on a freshly navigated client page.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

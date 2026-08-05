@@ -232,6 +232,56 @@ export type Database = {
           },
         ];
       };
+      training_trainer_profiles: {
+        Row: {
+          bio: string;
+          calendar_color: string | null;
+          certifications: string[];
+          created_at: string;
+          facility_id: string;
+          id: string;
+          specializations: string[];
+          staff_id: string;
+          updated_at: string;
+          visible_online: boolean;
+          years_experience: number | null;
+        };
+        Insert: {
+          bio?: string;
+          calendar_color?: string | null;
+          certifications?: string[];
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          specializations?: string[];
+          staff_id: string;
+          updated_at?: string;
+          visible_online?: boolean;
+          years_experience?: number | null;
+        };
+        Update: {
+          bio?: string;
+          calendar_color?: string | null;
+          certifications?: string[];
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          specializations?: string[];
+          staff_id?: string;
+          updated_at?: string;
+          visible_online?: boolean;
+          years_experience?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_trainer_profiles_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       training_attendance: {
         Row: {
           author_name: string | null;

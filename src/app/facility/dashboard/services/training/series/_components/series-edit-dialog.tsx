@@ -25,7 +25,10 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { toast } from "sonner";
 import { defaultTrainingCourseTypes } from "@/lib/training-config";
-import { trainers } from "@/data/training";
+import {
+  assignableTrainers,
+  useTrainingTrainers,
+} from "@/lib/api/training-trainers";
 import {
   calculateSessionDates,
   generateSeriesSessions,
@@ -143,6 +146,12 @@ export function SeriesEditDialog({
   onSave,
 }: Props) {
   const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
+
+  // The facility's own trainers, from `staff`. `assignableTrainers` drops the
+  // invited and the inactive: somebody who has not accepted their invitation
+  // cannot be given a class.
+  const { data: trainers = [] } = useTrainingTrainers();
+  const assignable = useMemo(() => assignableTrainers(trainers), [trainers]);
   const defaultDropInMax =
     moduleSettings?.defaultDropInMaxPerSession ??
     DEFAULT_DROP_IN_MAX_PER_SESSION;
@@ -523,13 +532,21 @@ export function SeriesEditDialog({
                     <SelectValue placeholder="Select instructor…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {trainers
-                      .filter((t) => t.status === "active")
-                      .map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
+                    {/* The facility's own trainers. This offered four invented
+                        people ("trainer-001", marcus.chen@yipyy.com) and
+                        omitted the two who actually teach here — anybody
+                        assigned from the old list could not be paid for the
+                        class or rostered against it. */}
+                    {assignable.length === 0 && (
+                      <div className="text-muted-foreground px-2 py-3 text-xs">
+                        Nobody here has the trainer role yet.
+                      </div>
+                    )}
+                    {assignable.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
