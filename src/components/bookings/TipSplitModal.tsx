@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,14 +21,49 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertTriangle, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { calculateTipSplit, type TipSplitEntry } from "@/lib/invoice-lifecycle";
+import { calculateTipSplit } from "@/lib/invoice-lifecycle";
+
+// ============================================================================
+// Splitting a tip between the people who earned it.
+//
+// ── WHAT THIS DID BEFORE ──────────────────────────────────────────────────
+//
+// `onSave={() => {}}`. It computed the split four ways, refused to submit
+// unless the allocations balanced to the cent, said "Tip split saved" — and
+// threw the result away. The tip itself was real money in `payments.tip`; who
+// earned it was recorded nowhere.
+//
+// The staff it offered to split between were five hardcoded strings
+// ("Jessica M.", "Amy C.", …). Not the facility's people, and not anything
+// payroll could pay.
+//
+// ── AN ALLOCATION NAMES A PERSON BY ID ────────────────────────────────────
+//
+// The rows key on `staffId`, because `booking_tip_allocations.staff_id` is a
+// foreign key and a display name is not one. Two services handled by the same
+// person MERGE into one allocation before saving — the table holds one row per
+// person per booking, and two rows for one person is the same allocation
+// written twice.
+// ============================================================================
 
 interface StaffService {
+  /** The staff row's uuid, when the invoice line names somebody real. */
+  staffId?: string;
   staffName: string;
   serviceName: string;
   serviceValue: number;
   multiStaff?: boolean;
+}
+
+export interface TipSplitOption {
+  /** The staff row's uuid — what the write path takes. */
+  id: string;
+  name: string;
+}
+
+export interface TipAllocationDraft {
+  staffId: string;
+  amount: number;
 }
 
 interface TipSplitModalProps {
@@ -36,8 +71,17 @@ interface TipSplitModalProps {
   onOpenChange: (open: boolean) => void;
   totalTip: number;
   staffServices: StaffService[];
+  /** The facility's actual people, from /api/staff. */
+  staffOptions: TipSplitOption[];
   defaultSplitMethod?: SplitMethod;
-  onSave: (entries: TipSplitEntry[]) => void;
+  /**
+   * Saves the split. May reject — the database refuses a total above the tips
+   * actually collected — and the modal stays open when it does.
+   */
+  onSave: (
+    method: SplitMethod,
+    allocations: TipAllocationDraft[],
+  ) => Promise<void>;
 }
 
 type SplitMethod = "by_service" | "equal" | "custom_percent" | "custom_amount";
@@ -49,37 +93,54 @@ const METHODS: { value: SplitMethod; label: string }[] = [
   { value: "custom_amount", label: "Custom ($)" },
 ];
 
-const AVAILABLE_STAFF = [
-  "Jessica M.",
-  "Amy C.",
-  "Sarah K.",
-  "Mike R.",
-  "Emily T.",
-];
+const UNASSIGNED = "__unassigned__";
 
 export function TipSplitModal({
   open,
   onOpenChange,
   totalTip,
   staffServices,
+  staffOptions,
   defaultSplitMethod = "by_service",
   onSave,
 }: TipSplitModalProps) {
   const [method, setMethod] = useState<SplitMethod>(defaultSplitMethod);
   const [customValues, setCustomValues] = useState<Record<string, number>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Which real person each invoice line belongs to.
+   *
+   * Seeded from the line's own `staffId` when it has one, and otherwise by
+   * matching the name the invoice recorded against the facility's staff list.
+   * A line whose name matches nobody starts UNASSIGNED rather than being
+   * quietly attached to the first person in the dropdown.
+   */
   const [assignments, setAssignments] = useState<Record<string, string>>(() => {
+    const byName = new Map(
+      staffOptions.map((s) => [s.name.toLowerCase(), s.id]),
+    );
     const init: Record<string, string> = {};
-    staffServices.forEach((s) => {
-      init[s.serviceName] = s.staffName;
-    });
+    for (const s of staffServices) {
+      init[s.serviceName] =
+        s.staffId ?? byName.get(s.staffName.toLowerCase()) ?? UNASSIGNED;
+    }
     return init;
   });
 
+  const nameFor = useMemo(() => {
+    const map = new Map(staffOptions.map((s) => [s.id, s.name]));
+    return (id: string) => map.get(id) ?? "Unassigned";
+  }, [staffOptions]);
+
   const hasMultiStaff = staffServices.some((s) => s.multiStaff);
 
-  // Build entries using current assignments
+  // `calculateTipSplit` keys on a name, so the id travels as the name and the
+  // display name is looked up. That keeps the arithmetic — which is tested and
+  // used elsewhere — untouched.
   const currentStaffServices = staffServices.map((s) => ({
-    staffName: assignments[s.serviceName] ?? s.staffName,
+    staffName: assignments[s.serviceName] ?? UNASSIGNED,
     serviceValue: s.serviceValue,
   }));
 
@@ -92,11 +153,37 @@ export function TipSplitModal({
 
   const totalAllocated = entries.reduce((s, e) => s + e.tipAmount, 0);
   const isBalanced = Math.abs(totalAllocated - totalTip) < 0.02;
+  const anyUnassigned = entries.some((e) => e.staffName === UNASSIGNED);
 
-  const handleSave = () => {
-    onSave(entries);
-    onOpenChange(false);
-    toast.success("Tip split saved");
+  /** One row per PERSON. Two services by the same groomer is one allocation. */
+  const merged = useMemo(() => {
+    const byStaff = new Map<string, number>();
+    for (const entry of entries) {
+      if (entry.staffName === UNASSIGNED) continue;
+      byStaff.set(
+        entry.staffName,
+        (byStaff.get(entry.staffName) ?? 0) + entry.tipAmount,
+      );
+    }
+    return [...byStaff.entries()].map(([staffId, amount]) => ({
+      staffId,
+      amount: Math.round(amount * 100) / 100,
+    }));
+  }, [entries]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(method, merged);
+      onOpenChange(false);
+    } catch (err) {
+      // The modal STAYS OPEN. It used to close and toast success regardless,
+      // which is the same thing as not saving at all but harder to notice.
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -113,7 +200,17 @@ export function TipSplitModal({
             <p className="font-[tabular-nums] text-2xl font-bold">
               ${totalTip.toFixed(2)}
             </p>
+            <p className="text-muted-foreground mt-0.5 text-[11px]">
+              Collected on this booking
+            </p>
           </div>
+
+          {totalTip <= 0 && (
+            <div className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-xs">
+              No tip has been collected on this booking, so there is nothing to
+              split.
+            </div>
+          )}
 
           {/* Multi-staff warning */}
           {hasMultiStaff && (
@@ -151,7 +248,7 @@ export function TipSplitModal({
                     </Badge>
                   ) : (
                     <Select
-                      value={assignments[s.serviceName] ?? s.staffName}
+                      value={assignments[s.serviceName] ?? UNASSIGNED}
                       onValueChange={(v) =>
                         setAssignments((prev) => ({
                           ...prev,
@@ -159,13 +256,17 @@ export function TipSplitModal({
                         }))
                       }
                     >
-                      <SelectTrigger className="h-7 w-32 text-xs">
+                      <SelectTrigger className="h-7 w-36 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {AVAILABLE_STAFF.map((name) => (
-                          <SelectItem key={name} value={name}>
-                            {name}
+                        {/* A sentinel, never "" — a Radix SelectItem with an
+                            empty value throws, and the resulting blank modal
+                            looks like a screen that does nothing. */}
+                        <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                        {staffOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -220,8 +321,13 @@ export function TipSplitModal({
                 key={entry.staffName}
                 className="grid grid-cols-4 items-center gap-2 rounded-md px-1 py-1"
               >
-                <span className="truncate text-sm font-medium">
-                  {entry.staffName}
+                <span
+                  className={cn(
+                    "truncate text-sm font-medium",
+                    entry.staffName === UNASSIGNED && "text-destructive",
+                  )}
+                >
+                  {nameFor(entry.staffName)}
                 </span>
                 <span className="text-muted-foreground text-right font-[tabular-nums] text-sm">
                   ${entry.serviceValue.toFixed(2)}
@@ -271,6 +377,18 @@ export function TipSplitModal({
                 Total doesn&apos;t match tip amount — adjust values
               </div>
             )}
+            {anyUnassigned && (
+              <div className="text-destructive flex items-center gap-1.5 text-xs">
+                <AlertTriangle className="size-3" />
+                Every line needs a staff member before the split can be saved
+              </div>
+            )}
+            {error && (
+              <div className="text-destructive flex items-start gap-1.5 text-xs">
+                <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                {error}
+              </div>
+            )}
           </div>
         </div>
 
@@ -278,8 +396,17 @@ export function TipSplitModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!isBalanced}>
-            Save Tip Split
+          <Button
+            onClick={handleSave}
+            disabled={
+              !isBalanced ||
+              anyUnassigned ||
+              saving ||
+              totalTip <= 0 ||
+              merged.length === 0
+            }
+          >
+            {saving ? "Saving…" : "Save Tip Split"}
           </Button>
         </DialogFooter>
       </DialogContent>

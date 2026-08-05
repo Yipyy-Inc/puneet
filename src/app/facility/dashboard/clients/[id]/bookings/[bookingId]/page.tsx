@@ -96,6 +96,8 @@ import {
   type Tender,
 } from "@/lib/api/booking-money";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
+import { useBookingTips, useSetTipSplit } from "@/lib/api/booking-tips";
+import { staffQueries } from "@/lib/api/staff";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
@@ -361,6 +363,38 @@ export default function ClientBookingDetailPage({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [earlyCheckoutOpen, setEarlyCheckoutOpen] = useState(false);
   const [tipSplitOpen, setTipSplitOpen] = useState(false);
+
+  // ── The tip, and who is owed it ──────────────────────────────────────────
+  //
+  // Read only while the modal is open: the booking page is already heavy, and
+  // nothing else on it shows a tip allocation.
+  // `bookingId` rather than `booking.id`: this runs above the guard that
+  // narrows `booking`, and it is the same number — the route param IS the ref.
+  const { data: tips } = useBookingTips(tipSplitOpen ? bookingId : null);
+  const setTipSplit = useSetTipSplit();
+  const { data: staffProfiles } = useQuery({
+    ...staffQueries.profiles(),
+    enabled: tipSplitOpen,
+  });
+
+  /**
+   * The facility's actual people.
+   *
+   * The modal used to offer five hardcoded names. `rowId` is the staff row's
+   * uuid — `id` is the legacy string ("fs-003") and cannot be a foreign key —
+   * and anyone without one is dropped rather than sent as an id the database
+   * will reject.
+   */
+  const tipStaffOptions = useMemo(
+    () =>
+      (staffProfiles ?? [])
+        .filter((p) => p.status === "active" && p.rowId)
+        .map((p) => ({
+          id: p.rowId!,
+          name: `${p.firstName} ${p.lastName}`.trim(),
+        })),
+    [staffProfiles],
+  );
   const [depositOpen, setDepositOpen] = useState(false);
   const [prepaymentOpen, setPrepaymentOpen] = useState(false);
   const [estimateOpen, setEstimateOpen] = useState(false);
@@ -1729,9 +1763,13 @@ export default function ClientBookingDetailPage({
         <TipSplitModal
           open={tipSplitOpen}
           onOpenChange={setTipSplitOpen}
-          // Was `?? 5` — a tip amount invented at render time. Zero is the
-          // truth until `payments.tip` is surfaced on the booking.
-          totalTip={invoice?.tipTotal ?? 0}
+          // THE LEDGER'S FIGURE, not the invoice's. `invoice.tipTotal` is
+          // assembled on the client (and before that the prop read `?? 5` — a
+          // five-dollar tip conjured at render time). This is the signed sum of
+          // `payments.tip` for the booking, which is the only number the
+          // database will let the split be measured against.
+          totalTip={tips?.tipCollected ?? 0}
+          staffOptions={tipStaffOptions}
           staffServices={
             invoice?.items
               ? invoice.items
@@ -1754,7 +1792,18 @@ export default function ClientBookingDetailPage({
                   },
                 ]
           }
-          onSave={() => {}}
+          onSave={async (method, allocations) => {
+            // Was `() => {}`. The modal balanced to the cent, said "Tip split
+            // saved" and dropped the result on the floor.
+            await setTipSplit.mutateAsync({
+              bookingRef: bookingId,
+              method,
+              allocations,
+            });
+            toast.success("Tip split saved", {
+              description: `${allocations.length} staff member${allocations.length === 1 ? "" : "s"}`,
+            });
+          }}
         />
         <DepositChargeModal
           open={depositOpen}

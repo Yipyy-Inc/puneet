@@ -275,7 +275,17 @@ export interface ClockInSettings {
 }
 
 export interface StaffProfile {
+  /** The app-facing id — `legacy_id` ("fs-003") when there is one. */
   id: string;
+  /**
+   * The database row's uuid.
+   *
+   * Present on anything read from `/api/staff`, absent on the mock fixtures.
+   * Needed wherever a write has to name a staff member as a FOREIGN KEY rather
+   * than as a label — tip allocations, for one. `id` above is a legacy string
+   * and cannot be used for that.
+   */
+  rowId?: string;
   firstName: string;
   lastName: string;
   email: string;

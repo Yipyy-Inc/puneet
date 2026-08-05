@@ -178,6 +178,60 @@ export type Database = {
           },
         ];
       };
+      booking_tip_allocations: {
+        Row: {
+          amount: number;
+          author_name: string | null;
+          booking_id: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          method: string;
+          staff_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          amount: number;
+          author_name?: string | null;
+          booking_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          method: string;
+          staff_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          amount?: number;
+          author_name?: string | null;
+          booking_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          method?: string;
+          staff_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_tip_allocations_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_tip_allocations_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       booking_pets: {
         Row: {
           booking_id: string;
@@ -3723,6 +3777,14 @@ export type Database = {
           p_room_id?: string | null;
         };
         Returns: string | null;
+      };
+      set_booking_tip_split: {
+        Args: {
+          p_booking_ref: number;
+          p_method: string;
+          p_allocations: Json;
+        };
+        Returns: number;
       };
       record_boarding_arrival: {
         Args: {

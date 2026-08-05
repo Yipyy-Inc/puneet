@@ -1303,6 +1303,38 @@ Caught while writing this: the first draft added the fee when deciding whether a
 
 **Do instead:** one figure, computed once, used for both the check and the charge.
 
+## Snapshot (2026-08-06, a tip is owed to somebody)
+
+### 🔴 `onSave={() => {}}`
+
+`TipSplitModal` computed the split four ways, refused to submit unless the allocations balanced to the cent, said "Tip split saved" — and threw the result away. The tip was real money (`payments.tip` has been real since 20260806680000); who earned it was recorded nowhere, so payroll had nothing to pay out.
+
+The staff it offered to split between were five hardcoded strings: "Jessica M.", "Amy C.", "Sarah K.", "Mike R.", "Emily T." Not the facility's people, and not anything a wage could be attached to.
+
+**Do instead:** a `() => {}` handler on a modal that validates to the cent is the highest-value thing on any sweep. The care taken over the arithmetic is what makes it look finished.
+
+### 🟡 The ceiling lives in another table, so it is a trigger
+
+Allocations may not exceed `sum(payments.tip)` for the booking. A CHECK cannot see another table, and the trigger is SECURITY DEFINER because `payments` is FORCE ROW LEVEL SECURITY — a till operator who may split a tip cannot necessarily read every payment row it came from, and a guard that sees only some of them is not a guard.
+
+It compares the whole booking's allocations against the whole booking's tips rather than row by row: the modal saves a set, and any single row of a valid set can exceed the total on its own.
+
+**Do instead:** when a limit spans tables, write the trigger and give it a positive control. T2/T3 in the suite are that pair — remove the ceiling and T2 goes green while T3 stays green.
+
+### 🟡 `take_payment`, not `edit_payroll`
+
+`edit_payroll` is owner and admin only. Splitting a tip already in the drawer is a till operation — recording who earned it, not changing what anyone is paid — and the person doing it is whoever closed the ticket. Gating on `edit_payroll` would have locked reception out of a modal they are standing in front of.
+
+Fourth time this shape has come up in this run of work (daycare board, kennel read, boarding attendant, now tips).
+
+**Do instead:** name the roles who will perform the action before choosing the permission, and check `role_preset_permissions` rather than guessing from the permission's name.
+
+### 🟢 An allocation names a person by id, and two services by one groomer merge
+
+`staff_id` with ON DELETE RESTRICT: a name is not something payroll can pay, and a row saying $12 is owed to a deleted staff member is a debt with no creditor. `calculateTipSplit` maps 1:1 over invoice lines, so two lines handled by the same person produced two entries — and `unique (booking_id, staff_id)` would have rejected the second. They are merged before saving.
+
+**Do instead:** check whether a per-line calculation can produce two rows for one key before putting a unique constraint behind it.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
