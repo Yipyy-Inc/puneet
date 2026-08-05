@@ -35,12 +35,26 @@ import { bookingMutations } from "./booking";
 // arrived last.
 // ============================================================================
 
-/** `payments.method` — what the modals offer, in the ledger's vocabulary. */
-const TENDER = {
+/**
+ * `payments.method`, keyed by what a dialog means rather than what it says.
+ *
+ * Four dialogs offer four different tender lists and "Card" means a NEW card in
+ * one of them and a SAVED card in two others (20260806860000). So the mapping
+ * cannot be done centrally from the dialog's own string — each call site picks
+ * the key that matches its label, and this is the list of what the ledger will
+ * accept.
+ */
+export const TENDER = {
   card: "new-card",
+  card_on_file: "card-on-file",
   cash: "cash",
+  terminal: "terminal",
+  e_transfer: "e-transfer",
+  ach: "ach",
   store_credit: "store-credit",
 } as const;
+
+export type Tender = keyof typeof TENDER;
 
 interface PaymentRow {
   bookingRef: string;
@@ -68,29 +82,54 @@ interface PaymentRow {
  */
 function paymentRow(input: {
   bookingId: number;
-  method: keyof typeof TENDER;
+  method: Tender;
   subtotal: number;
   tip?: number;
   note?: string;
 }): PaymentRow {
   const tip = input.tip ?? 0;
   const grandTotal = input.subtotal + tip;
+
+  // Paying WITH store credit has to say so, or `record_payment` records the
+  // payment and never writes the ledger entry that spends the credit — the
+  // customer settles their bill and keeps the balance. Its branch fires on
+  // `store_credit_applied > 0`, not on the method (20260806760000).
+  const fromCredit = input.method === "store_credit" && grandTotal > 0;
+  const storeCreditApplied = fromCredit ? grandTotal : 0;
+
   return {
     bookingRef: String(input.bookingId),
     method: TENDER[input.method],
     subtotal: input.subtotal,
     tax: 0,
     tip,
-    storeCreditApplied: 0,
+    storeCreditApplied,
     packagePassApplied: 0,
     loyaltyDiscountApplied: 0,
-    amountCharged: grandTotal,
+    // What the tender was asked for, after anything that did not come from it.
+    amountCharged: grandTotal - storeCreditApplied,
     grandTotal,
     // Only cash carries a tender, and the CHECK refuses it on anything else.
     ...(input.method === "cash" ? { cashReceived: grandTotal } : {}),
     receiptChannels: [],
     creditNote: input.note ?? "",
   };
+}
+
+/**
+ * The checkout flow's tender, in this module's vocabulary.
+ *
+ * `lib/invoice-lifecycle.ts` is the FIFTH tender list in this codebase
+ * (20260806860000 lists the other four). Its values line up with `TENDER`'s
+ * keys — except `custom`, which means "something not on this list" and
+ * therefore has no honest ledger value. Recording it as a card would be a
+ * statement about how money arrived that nobody made.
+ */
+export function checkoutTender(method: string): Tender {
+  if (method in TENDER) return method as Tender;
+  throw new Error(
+    `"${method}" is not a tender the books recognise — choose how the money actually arrived.`,
+  );
 }
 
 async function postPayment(row: PaymentRow): Promise<void> {
@@ -205,7 +244,7 @@ export function useTakeBookingPayment() {
         amountDue?: number;
         amountPaid?: number;
       };
-      method: "cash" | "card";
+      method: Tender;
       tipAmount?: number;
     }) => {
       const balance = balanceOf(input.booking);
@@ -253,6 +292,59 @@ export function useRefundBooking() {
           method: input.method,
           subtotal: -input.amount,
           note: input.reason,
+        }),
+      );
+      return input.amount;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * Take a NAMED amount against a booking — a deposit, a prepayment, a final
+ * settlement of part of the bill.
+ *
+ * Distinct from `useTakeBookingPayment`, which charges the whole balance and
+ * computes it. Here the operator has typed a figure: a deposit is $50 because
+ * the deposit rule says $50, not because that is what is owed.
+ *
+ * It refuses to take MORE than is owed. Overpaying is a real thing customers do
+ * and the ledger can hold it, but not by accident from a dialog whose default
+ * was computed before somebody else took a payment.
+ */
+export function useChargeBooking() {
+  const invalidate = useSettleInvalidation();
+  return useMutation({
+    mutationFn: async (input: {
+      booking: {
+        id: number;
+        totalCost: number;
+        amountDue?: number;
+        amountPaid?: number;
+      };
+      amount: number;
+      method: Tender;
+      tipAmount?: number;
+      note?: string;
+    }) => {
+      if (!(input.amount > 0)) {
+        throw new Error("That is not an amount to charge.");
+      }
+      const balance = balanceOf(input.booking);
+      if (input.amount > balance) {
+        throw new Error(
+          balance === 0
+            ? "This booking has already been paid in full."
+            : `Only $${balance.toFixed(2)} is still owed on this booking.`,
+        );
+      }
+      await postPayment(
+        paymentRow({
+          bookingId: input.booking.id,
+          method: input.method,
+          subtotal: input.amount,
+          tip: input.tipAmount,
+          note: input.note,
         }),
       );
       return input.amount;

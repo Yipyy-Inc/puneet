@@ -86,11 +86,16 @@ import { useFieldMask } from "@/lib/staff/mask";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { bookingQueries, isBookingAssignedTo } from "@/lib/api/booking";
 import {
+  balanceOf,
+  checkoutTender,
   refundTender,
   useCancelBooking,
+  useChargeBooking,
   useRefundBooking,
   useTakeBookingPayment,
+  type Tender,
 } from "@/lib/api/booking-money";
+import { useAddLineItems } from "@/lib/api/booking-line-items";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
@@ -104,7 +109,7 @@ import { ReservationJournalPanel } from "@/components/guest-journal/ReservationJ
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { formatBookingRef } from "@/lib/booking-id";
 import { facilityBookingFlowConfig } from "@/data/settings";
-import type { InvoiceLineItem, ExtraService } from "@/types/booking";
+import type { ExtraService } from "@/types/booking";
 import {
   daycareConfig,
   boardingConfig,
@@ -178,6 +183,8 @@ export default function ClientBookingDetailPage({
   const takePayment = useTakeBookingPayment();
   const cancelBooking = useCancelBooking();
   const refundBooking = useRefundBooking();
+  const chargeBooking = useChargeBooking();
+  const addLineItems = useAddLineItems();
   const initialBooking = useMemo(
     () => clientBookings.find((b) => b.id === bookingId),
     [clientBookings, bookingId],
@@ -366,7 +373,10 @@ export default function ClientBookingDetailPage({
   const [checkoutLock, setCheckoutLock] = useState<null | { run: () => void }>(
     null,
   );
-  const [addedItems, setAddedItems] = useState<InvoiceLineItem[]>([]);
+  // Was `useState<InvoiceLineItem[]>` — items lived here until checkout cleared
+  // them. They are rows now, summed into `extras_total` by the database
+  // (20260806820000), so this reads what the booking actually carries rather
+  // than what this tab happens to remember.
   const [destructiveConfirm, setDestructiveConfirm] = useState<{
     title: string;
     description: string;
@@ -449,7 +459,7 @@ export default function ClientBookingDetailPage({
   }
 
   const invoice = booking.invoice;
-  const addedSubtotal = addedItems.reduce((s, i) => s + i.price, 0);
+  const addedSubtotal = booking.extrasTotal ?? 0;
   // Incident-medication charges (2B.3) — gated by the med's chargeFee + the
   // facility toggle (2G.1); per_admin lines recompute as care logs accrue.
   const incidentCareItems = getIncidentCareCharges(booking.id);
@@ -1645,54 +1655,62 @@ export default function ClientBookingDetailPage({
           onConfirm={(payment) => {
             if (loyaltyDiscount) consumeLoyaltyDiscount();
             const lateFee = pendingLateFee;
-            setBooking((prev) => {
-              if (!prev) return prev;
-              const existing = prev.invoice;
-              const newPayment = {
-                date: new Date().toISOString(),
-                method: payment.method,
-                amount: payment.amount,
-                kind: "final" as const,
-              };
-              const lateFeeAmount = lateFee?.amount ?? 0;
-              const lateFeeLineItem: InvoiceLineItem | null = lateFee
-                ? {
-                    name: lateFee.label,
-                    unitPrice: lateFee.amount,
-                    quantity: 1,
-                    price: lateFee.amount,
-                  }
-                : null;
-              return {
-                ...prev,
-                status: "completed",
-                paymentStatus: "paid",
-                invoice: existing
-                  ? {
-                      ...existing,
-                      status: "closed",
-                      remainingDue: 0,
-                      items: [...existing.items, ...addedItems],
-                      fees: lateFeeLineItem
-                        ? [...existing.fees, lateFeeLineItem]
-                        : existing.fees,
-                      subtotal: existing.subtotal + addedSubtotal,
-                      total: existing.total + addedSubtotal + lateFeeAmount,
-                      tipTotal: (existing.tipTotal ?? 0) + payment.tip,
-                      payments: [...existing.payments, newPayment],
-                    }
-                  : existing,
-              };
-            });
-            setAddedItems([]);
-            setPendingLateFee(null);
 
-            const extra = payment.includedInvoices?.length
-              ? ` + ${payment.includedInvoices.length} other invoices`
-              : "";
-            toast.success(
-              `Charged $${payment.amount.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
-            );
+            // ── Checkout ────────────────────────────────────────────────────
+            //
+            // This used to build a whole invoice in `setBooking` — items, fees,
+            // subtotal, total, tipTotal, a payments[] array — and send none of
+            // it. Everything it assembled either lives in a table now or is
+            // derived from one.
+            //
+            // A late fee is a LINE on the bill, so it goes on before the money
+            // is taken: charging first and adding it after would settle the
+            // booking and immediately reopen it.
+            void (async () => {
+              try {
+                if (lateFee) {
+                  await addLineItems.mutateAsync({
+                    bookingRef: booking.id,
+                    items: [
+                      {
+                        kind: "fee",
+                        name: lateFee.label,
+                        unitPrice: lateFee.amount,
+                        quantity: 1,
+                      },
+                    ],
+                  });
+                }
+                await chargeBooking.mutateAsync({
+                  booking: {
+                    ...booking,
+                    // The line just added is not in `booking` yet — the refetch
+                    // has not landed — and `useChargeBooking` refuses more than
+                    // the balance. Tell it what the bill now is.
+                    amountDue:
+                      (booking.amountDue ?? booking.totalCost) +
+                      (lateFee?.amount ?? 0),
+                  },
+                  amount: payment.amount,
+                  // Throws on "Custom", which has no ledger meaning.
+                  method: checkoutTender(payment.method),
+                  ...(payment.tip > 0 ? { tipAmount: payment.tip } : {}),
+                });
+                setPendingLateFee(null);
+                const extra = payment.includedInvoices?.length
+                  ? ` + ${payment.includedInvoices.length} other invoices`
+                  : "";
+                toast.success(
+                  `Charged $${payment.amount.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
+                );
+              } catch (error) {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Could not complete that checkout.",
+                );
+              }
+            })();
 
             if (!reportCardSent) {
               const mode = reportCardConfig.autoSend.mode;
@@ -1711,7 +1729,9 @@ export default function ClientBookingDetailPage({
         <TipSplitModal
           open={tipSplitOpen}
           onOpenChange={setTipSplitOpen}
-          totalTip={invoice?.tipTotal ?? 5}
+          // Was `?? 5` — a tip amount invented at render time. Zero is the
+          // truth until `payments.tip` is surfaced on the booking.
+          totalTip={invoice?.tipTotal ?? 0}
           staffServices={
             invoice?.items
               ? invoice.items
@@ -1741,20 +1761,56 @@ export default function ClientBookingDetailPage({
           onOpenChange={setDepositOpen}
           ruleAmount={ruleDepositAmount}
           ruleLabel={ruleDepositLabel}
+          // "Card on File" on this dialog, so `card_on_file` rather than
+          // `card` — which the bulk dialog uses for a NEW card. Same word,
+          // different tender (20260806860000).
           onCharge={(amount, method) => {
-            toast.success(
-              `Deposit of $${amount.toFixed(2)} charged via ${method}`,
+            chargeBooking.mutate(
+              {
+                booking,
+                amount,
+                method: method === "card" ? "card_on_file" : (method as Tender),
+                note: `Deposit — ${ruleDepositLabel}`,
+              },
+              {
+                onSuccess: (charged) =>
+                  toast.success(
+                    `Deposit of $${charged.toFixed(2)} taken by ${method}`,
+                  ),
+                onError: (error) => toast.error(error.message),
+              },
             );
           }}
         />
         <PrepaymentModal
           open={prepaymentOpen}
           onOpenChange={setPrepaymentOpen}
-          remainingDue={invoice?.remainingDue ?? booking.totalCost}
-          invoiceTotal={invoice?.total ?? booking.totalCost}
-          alreadyCollected={invoice?.depositCollected ?? 0}
-          onConfirm={() => {
-            // Invoice stays Open; staff can still add items and run final checkout later.
+          // From the ledger. `invoice` is fixture data in the details jsonb and
+          // its `remainingDue` never moved when money was taken.
+          remainingDue={balanceOf(booking)}
+          invoiceTotal={booking.amountDue ?? booking.totalCost}
+          alreadyCollected={booking.amountPaid ?? 0}
+          onConfirm={(result) => {
+            setPrepaymentOpen(false);
+            chargeBooking.mutate(
+              {
+                booking,
+                amount: result.amount,
+                // "Card on file" here too.
+                method:
+                  result.method === "card"
+                    ? "card_on_file"
+                    : (result.method as Tender),
+                ...(result.note ? { note: result.note } : {}),
+              },
+              {
+                onSuccess: (charged) =>
+                  toast.success(
+                    `$${charged.toFixed(2)} taken in advance — the bill stays open`,
+                  ),
+                onError: (error) => toast.error(error.message),
+              },
+            );
           }}
         />
         <SendEstimateModal
@@ -1808,16 +1864,30 @@ export default function ClientBookingDetailPage({
         <AddRetailItemModal
           open={retailOpen}
           onOpenChange={setRetailOpen}
+          // These used to go into a `useState` and get cleared at checkout. A
+          // bag of food is a row now, which is what makes the balance, the
+          // client's debt and any bulk settle include it.
           onAddItems={(items) => {
-            setAddedItems((prev) => [
-              ...prev,
-              ...items.map((i) => ({
-                name: i.name,
-                unitPrice: i.price / i.quantity,
-                quantity: i.quantity,
-                price: i.price,
-              })),
-            ]);
+            addLineItems.mutate(
+              {
+                bookingRef: booking.id,
+                items: items.map((i) => ({
+                  kind: "item" as const,
+                  name: i.name,
+                  // The dialog reports the LINE total; the row stores the unit
+                  // price and multiplies it back.
+                  unitPrice: i.price / i.quantity,
+                  quantity: i.quantity,
+                })),
+              },
+              {
+                onSuccess: (result) =>
+                  toast.success(
+                    `${result.items.length} item${result.items.length === 1 ? "" : "s"} added to ${bookingRef}`,
+                  ),
+                onError: (error) => toast.error(error.message),
+              },
+            );
           }}
         />
         <CareCompletionGateDialog

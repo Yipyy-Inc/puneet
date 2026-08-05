@@ -1041,6 +1041,48 @@ That choice makes the pass-through in `enforce_booking_integrity` load-bearing a
 
 **Do instead:** when adding a derived column to `bookings`, add it to that exclusion list in the same change, or the trigger that maintains it will be refused for whoever lacks `edit_bookings`.
 
+## Snapshot (2026-08-06, the counter writes to the bill)
+
+### 🔴 Paying with store credit would not have deducted the credit
+
+`record_payment`'s store-credit branch fires on `store_credit_applied > 0`, **not** on `method = 'store-credit'` (20260806760000). The checkout flow offers "Store Credit" as a tender, so wiring it naively — method set, `storeCreditApplied: 0` — records the payment, settles the booking, and never writes the ledger entry that spends the credit. The customer clears their bill and keeps the balance.
+
+`paymentRow` now sets `storeCreditApplied` from the method and drops `amountCharged` to what the tender was actually asked for.
+
+**Do instead:** when a tender IS a balance the business holds, the payment row has to say how much of it was consumed. The method string alone spends nothing.
+
+### 🔴 Five tender vocabularies, and "card" means two different things
+
+| surface                    | tenders                                                            |
+| -------------------------- | ------------------------------------------------------------------ |
+| grooming checkout          | card-on-file, new-card, cash, package-pass, store-credit           |
+| bulk payment               | card, cash, terminal, e_transfer                                   |
+| prepayment                 | card _(on file)_, cash, terminal, **ach**                          |
+| deposit charge             | card _(on file)_, cash, terminal                                   |
+| `lib/invoice-lifecycle.ts` | card_on_file, cash, terminal, e_transfer, store_credit, **custom** |
+
+None is a subset of another, and `"card"` means a NEW card in the bulk dialog and a SAVED card in two others — so the string cannot be mapped centrally without losing which was meant. `payments.method` is now the union (`ach` added in 20260806860000) and each call site maps at the point the label is visible.
+
+`custom` has no honest ledger value at all: `checkoutTender()` throws rather than picking one.
+
+**Do instead:** the real fix is one tender list the dialogs share, which is a product decision about what this business accepts. Until then, map where the label is — and never widen a CHECK to include a value that means "something else".
+
+### 🟡 A late fee has to go on the bill before the money is taken
+
+Checkout adds a late fee and charges in one gesture. Charging first would settle the booking and then reopen it a moment later when the fee lands, so the sequence is: write the line, then take the payment.
+
+The charge also has to be told what the bill now is — `useChargeBooking` refuses more than the balance, and the booking in React state predates the line just written. The refetch has not landed at that point.
+
+**Do instead:** when two writes change a total in the same action, order them so the total only moves once, and pass the new figure forward rather than reading it back.
+
+### 🟢 The tip split still saves nowhere, and now says zero
+
+`TipSplitModal` divides a tip across staff, and there is no per-staff tip table — that belongs to payroll, and building one as a rider on this change would be designing a table to store one dialog's output. `onSave` is still empty.
+
+What did change: `totalTip={invoice?.tipTotal ?? 5}` was a tip amount invented at render time. It reads 0 now, which is true until `payments.tip` is surfaced on the booking.
+
+**Do instead:** when leaving a handler unwired, make sure the numbers around it are at least honest. A fabricated default makes a dead dialog look alive.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
