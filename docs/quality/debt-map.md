@@ -108,6 +108,29 @@ Both migrations already carried `revoke all on function … from public`, which 
 
 The four onboarding token RPCs (`onboarding_by_token`, `save_onboarding_section`, `submit_onboarding`, `set_onboarding_account_complete`) **keep** their `anon` grant deliberately — a new hire has no account by definition, the token is the credential, and it is verified by hash _inside_ the function rather than as a policy predicate (`20260803180000`). Locking those down would break every invite; `V4` exists to catch a fix that overreaches in that direction.
 
+### 🔴 …and `revoke … from anon` is not `revoke … from public` either (2026-08-05, third occurrence)
+
+The mirror of the entry above, and it cost a second migration to notice. `V7` was found **red** on the live project: four functions in `public` were `anon`-callable — `record_boarding_arrival`, `set_booking_tip_split` (both SECURITY DEFINER), `prevent_grooming_history_mutation` and `prevent_money_mutation`.
+
+`revoke execute … from anon` closed the first two and left the other two open. Their ACLs began `=X/postgres` — **an empty grantee means `PUBLIC`** — so `anon` held EXECUTE by inheritance rather than through its own entry, and revoking its own entry removed a grant that was not the one doing the work.
+
+So the two entries together are the whole rule: **revoke from `anon` AND from `public`, then assert with `has_function_privilege()`** rather than by reading the grant statements. Whichever one you check, the other is the one that bites.
+
+Neither SECURITY DEFINER function was privilege escalation — `private.has_permission()` returns false without a subject. But both looked the booking up **before** the permission check and raised a distinguishable `P0002` ("That booking does not exist.") versus `42501`, and under SECURITY DEFINER that lookup bypasses RLS. An unauthenticated caller could enumerate valid booking refs by comparing error messages: the existence oracle that rule 1 above already warns about, shipped anyway. Fixed in `20260805210403` + `20260805210435`.
+
+### 🟡 The RLS test harness sets `request.jwt.claims`, not `request.jwt.claim.sub`
+
+Do not "simplify" it back. The two are not interchangeable:
+
+```
+auth.uid()  → request.jwt.claim.sub (scalar), FALLING BACK to the claims JSON
+auth.jwt()  → request.jwt.claim / request.jwt.claims (JSON) only
+```
+
+A harness that sets the **scalar** is invisible to `auth.jwt()`. Every policy written against `auth.jwt()->>'sub'` would then see a null subject and the suite would fail — or worse, pass vacuously — for a reason that has nothing to do with the policy under test. The JSON form satisfies **both** functions, which is why all 27 suites use it.
+
+Note also that "no session" is `set_config('request.jwt.claims', '', true)`, **not** `{"sub":""}`. The latter leaves `auth.jwt()->>'sub'` as an empty string rather than NULL, which silently weakens every unauthenticated assertion.
+
 ---
 
 ## Snapshot (2026-08-05, grooming migration)
