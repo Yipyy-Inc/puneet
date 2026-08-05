@@ -14,14 +14,32 @@ import { PetType } from "@/data/boarding-ops";
 import type { FacilityRoom, RoomCategory, RoomRule } from "@/types/rooms";
 import { GripVertical, X } from "lucide-react";
 
-export interface AssignablePet {
-  petId: number;
-  petName: string;
+/**
+ * Something that can be dragged onto a kennel.
+ *
+ * `id` is WHATEVER THE CALLER ASSIGNS BY, and the two callers differ:
+ *
+ *   BoardingRequestDialog  a pet id — a request is placed pet by pet, and the
+ *                          whole thing is local until it becomes a booking
+ *   BoardingKennelBoard    a BOOKING ref — `PUT /api/boarding/stays` moves a
+ *                          booking, and a booking may cover several pets
+ *
+ * It was called `AssignablePet` with a `petId`, which was true of the first
+ * caller only. Passing a booking ref in a field named `petId` is how this
+ * codebase ended up with four room models and five tender lists; the field is
+ * neutral instead, and this comment says what each caller puts in it.
+ */
+export interface AssignableOccupant {
+  id: number;
+  name: string;
   petType: PetType;
   eligible: boolean;
   reason?: string;
+  /** Shown under the name — the client, or the nights being stayed. */
+  detail?: string;
 }
 
+/** Kennel id → the occupant ids in it. */
 export type RoomAssignments = Record<string, number[]>;
 
 /**
@@ -47,7 +65,7 @@ function canDrop({
 }: {
   category: RoomCategory | undefined;
   capacity: number;
-  pet: AssignablePet;
+  pet: AssignableOccupant;
   assignedPetIds: number[];
   allowOverride: boolean;
   takenByAnotherStay: boolean;
@@ -78,13 +96,13 @@ export function RoomAssignmentBoard({
 }: {
   rooms: FacilityRoom[];
   categories: RoomCategory[];
-  pets: AssignablePet[];
+  pets: AssignableOccupant[];
   assignments: RoomAssignments;
   allowOverride: boolean;
   /** Rooms already held by another stay across these dates. */
   occupiedRoomIds?: string[];
-  onAssign: (petId: number, roomId: string) => void;
-  onUnassign: (petId: number) => void;
+  onAssign: (occupantId: number, roomId: string) => void;
+  onUnassign: (occupantId: number) => void;
   onToggleOverride: (checked: boolean) => void;
 }) {
   const takenIds = useMemo(() => new Set(occupiedRoomIds), [occupiedRoomIds]);
@@ -101,12 +119,12 @@ export function RoomAssignmentBoard({
   }, [assignments]);
 
   const unassignedPets = useMemo(() => {
-    return pets.filter((p) => !assignedPetIds.has(p.petId));
+    return pets.filter((p) => !assignedPetIds.has(p.id));
   }, [pets, assignedPetIds]);
 
   const petById = useMemo(() => {
-    const map = new Map<number, AssignablePet>();
-    pets.forEach((p) => map.set(p.petId, p));
+    const map = new Map<number, AssignableOccupant>();
+    pets.forEach((p) => map.set(p.id, p));
     return map;
   }, [pets]);
 
@@ -166,7 +184,7 @@ export function RoomAssignmentBoard({
               ) : (
                 unassignedPets.map((pet) => (
                   <div
-                    key={pet.petId}
+                    key={pet.id}
                     className={[
                       "bg-background flex items-center justify-between gap-2 rounded-md border px-3 py-2",
                       "data-[eligible=false]:border-destructive/40 data-[eligible=false]:bg-destructive/5",
@@ -175,16 +193,18 @@ export function RoomAssignmentBoard({
                     data-eligible={pet.eligible}
                     draggable
                     onDragStart={(e) => {
-                      e.dataTransfer.setData("text/plain", String(pet.petId));
+                      e.dataTransfer.setData("text/plain", String(pet.id));
                       e.dataTransfer.effectAllowed = "move";
                     }}
                   >
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium">
-                        {pet.petName}
+                        {pet.name}
                       </div>
                       <div className="text-muted-foreground text-xs">
-                        <span className="capitalize">{pet.petType}</span>
+                        <span className="capitalize">
+                          {pet.detail ?? pet.petType}
+                        </span>
                         {!pet.eligible && pet.reason ? (
                           <span className="ml-2">• {pet.reason}</span>
                         ) : null}
@@ -290,15 +310,21 @@ export function RoomAssignmentBoard({
                         if (!pet) return null;
                         return (
                           <div
-                            key={pet.petId}
+                            key={pet.id}
                             className="bg-muted/20 flex items-center justify-between gap-2 rounded-md border px-2 py-1.5"
                           >
                             <div className="min-w-0">
                               <div className="truncate text-sm font-medium">
-                                {pet.petName}
+                                {pet.name}
                               </div>
+                              {/* `detail` over `petType` here for the same
+                                  reason as the pool card: on the Kennels board
+                                  it names the owner and the booking, which is
+                                  what somebody standing at the kennel needs.
+                                  The request dialog passes no detail and keeps
+                                  the species. */}
                               <div className="text-muted-foreground text-xs capitalize">
-                                {pet.petType}
+                                {pet.detail ?? pet.petType}
                               </div>
                             </div>
                             <Button
@@ -306,7 +332,7 @@ export function RoomAssignmentBoard({
                               size="icon"
                               variant="ghost"
                               className="size-7"
-                              onClick={() => onUnassign(pet.petId)}
+                              onClick={() => onUnassign(pet.id)}
                             >
                               <X className="size-4" />
                             </Button>

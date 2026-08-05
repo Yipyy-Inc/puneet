@@ -8,6 +8,7 @@ import {
   rowToRoomCategory,
   rowToFacilityRoom,
   rowToOccupancy,
+  BOARDING_STAY_SELECT,
   type RoomCategoryRow,
   type FacilityRoomRow,
   type BoardingStayRow,
@@ -98,9 +99,7 @@ export async function GET(request: NextRequest) {
   const windowEnd = to === from ? from : to;
   const { data: stayRows, error: stayError } = await supabase
     .from("boarding_stays")
-    .select(
-      "booking_id, room_id, occupies, override_reason, bookings(ref, status)",
-    )
+    .select(BOARDING_STAY_SELECT)
     .is("released_at", null)
     .overlaps("occupies", `[${from},${windowEnd}]`);
 

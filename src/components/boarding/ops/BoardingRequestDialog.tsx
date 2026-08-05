@@ -136,10 +136,13 @@ export function BoardingRequestDialog({
     });
   }, [request]);
 
+  // `id` is the PET id here: a request is placed pet by pet and stays local
+  // until it becomes a booking. The Kennels board puts a booking ref in the
+  // same field — see the doc on `AssignableOccupant`.
   const assignablePets = useMemo(() => {
     return eligibilityRows.map((r) => ({
-      petId: r.petId,
-      petName: r.petName,
+      id: r.petId,
+      name: r.petName,
       petType: r.petType,
       eligible: r.eligible,
       reason: r.reasons[0],

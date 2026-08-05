@@ -12,7 +12,14 @@ import {
 } from "@/data/boarding-ops";
 import { BoardingOpsRequestsTable } from "@/components/boarding/ops/BoardingOpsRequestsTable";
 import { BoardingRequestDialog } from "@/components/boarding/ops/BoardingRequestDialog";
-import { Bell, ClipboardList, ShieldAlert, AlertTriangle } from "lucide-react";
+import { BoardingKennelBoard } from "@/components/boarding/ops/BoardingKennelBoard";
+import {
+  Bell,
+  ClipboardList,
+  ShieldAlert,
+  AlertTriangle,
+  DoorOpen,
+} from "lucide-react";
 
 export default function BoardingOpsPage() {
   const [requests, setRequests] = useState<BoardingBookingRequest[]>(
@@ -130,6 +137,13 @@ export default function BoardingOpsPage() {
             Eligibility
             <ShieldAlert className="size-4" />
           </TabsTrigger>
+          {/* The only surface in the app that shows a BOOKED guest's kennel.
+              Everything above it operates on requests, which is why
+              `PUT /api/boarding/stays` had no caller for four changes. */}
+          <TabsTrigger value="kennels" className="flex items-center gap-2">
+            Kennels
+            <DoorOpen className="size-4" />
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="requests" className="space-y-4">
@@ -164,6 +178,10 @@ export default function BoardingOpsPage() {
               indicators per pet.
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="kennels" className="space-y-4">
+          <BoardingKennelBoard />
         </TabsContent>
       </Tabs>
 

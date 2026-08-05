@@ -1083,6 +1083,40 @@ What did change: `totalTip={invoice?.tipTotal ?? 5}` was a tip amount invented a
 
 **Do instead:** when leaving a handler unwired, make sure the numbers around it are at least honest. A fabricated default makes a dead dialog look alive.
 
+## Snapshot (2026-08-06, the kennel board finally has a caller)
+
+> **Resolves** "🔴 There is no screen that shows a booked guest's kennel" (2026-08-06, moving a guest between kennels). It stood open for four changes.
+
+### 🔴 An endpoint tested end to end is not a shipped feature
+
+`PUT /api/boarding/stays` and `assign_boarding_room` had a passing e2e suite and **no caller in `src/`** — the only reference was the comment in `boarding-rooms.ts` explaining why. A guest who needed moving had to be moved in the database.
+
+The deferral itself was right: the note said a hook with no component is dead code with a plausible name, and it refused to write `useAssignBoardingRoom` until the board existed. What the note could not do is make the board happen, and four slices went past.
+
+**Do instead:** when deferring the caller, put the missing SCREEN on the list, not the missing hook. "No `useAssignBoardingRoom` yet" reads as a small gap; "no screen shows a booked guest's kennel" reads as the feature it is.
+
+### 🟡 The occupancy read knew which booking, not whose dog
+
+`RoomOccupancy` was `{roomId, bookingRef, from, to, isOverride}` — enough to grey out a square, not enough to draw a board. "Kennel 3 is taken by #1042" is not a sentence anyone doing the rounds can act on.
+
+It now carries `petNames`, `clientName` and `petType`, joined through `bookings → booking_pets → pets`. `petType` is the FIRST pet's species: a booking with a dog and a cat is not something a category's `pet_type` rule can express, and pretending otherwise would let the board offer a move the constraint then refuses.
+
+**Do instead:** when a read exists to gate an action, check whether it also has to _describe_ the thing. Occupancy for validation and occupancy for a board are different payloads from the same rows.
+
+### 🟡 `AssignablePet.petId` was about to receive a booking ref
+
+`RoomAssignmentBoard` was written for the request dialog, which places a request **pet by pet**. The Kennels board assigns a **booking** — `boarding_stays` keys on `booking_id`, and a booking may cover several pets.
+
+The cheap move was to pass a booking ref in the field called `petId`. That is exactly how this codebase got four room models, three "tag" concepts and five tender lists. It is `AssignableOccupant.id` now, with a doc comment naming what each of the two callers puts in it.
+
+**Do instead:** when a second caller needs a field to mean something else, rename the field. A comment saying "sometimes this is a booking" is the bug, written down.
+
+### 🟢 A near-miss query key invalidates nothing
+
+`useAssignBoardingRoom` first invalidated `["boarding", "rooms"]`. The actual key is `["boarding-rooms", from, to]`. The mutation would have succeeded, the board would have kept showing the old kennel, and nothing anywhere would have errored.
+
+**Do instead:** invalidate with the key factory (`boardingRoomKeys.all`), never a hand-written array. A key that is one hyphen wrong looks exactly like a key that works.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

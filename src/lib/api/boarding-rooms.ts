@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { FacilityRoom, RoomCategory } from "@/types/rooms";
 import type { RoomOccupancy } from "@/lib/api/mappers/boarding";
@@ -83,19 +83,60 @@ export function useBoardingRoomsForStay(from?: string, to?: string) {
   });
 }
 
-// NO `useAssignBoardingRoom` HOOK HERE YET, on purpose.
-//
-// `PUT /api/boarding/stays` exists and is covered end to end, but nothing in
-// the app can call it: the only room-assignment surface is
-// BoardingRequestDialog, which operates on a `BoardingBookingRequest` — a
-// PRE-booking object with no booking ref — so its assignments are genuinely
-// local until the request becomes a booking. There is no screen that shows a
-// booked guest's kennel, let alone changes it.
-//
-// A hook with no component is the thing the previous commit's debt-map entry
-// warned about ("a factory with no callers is not a migration target, it is
-// dead code with a plausible name"). It gets written when the ops board that
-// needs it does.
+/**
+ * Move a booked guest between kennels, or take them out of one.
+ *
+ * This hook was deliberately absent for four changes, with a note where it now
+ * sits saying why: `PUT /api/boarding/stays` was covered end to end and nothing
+ * could call it, because the only assignment surface was
+ * `BoardingRequestDialog` — a PRE-booking object with no booking ref. A hook
+ * with no component is dead code with a plausible name. It is written now
+ * because the Kennels board that needs it is.
+ *
+ * `roomId: null` CLEARS the assignment, which is not the same as cancelling the
+ * booking: cancelling releases the stay and keeps the row (who had the kennel
+ * matters), clearing deletes it (they were never placed there). That asymmetry
+ * is the meaning — see 20260806640000.
+ *
+ * The board greys out taken kennels before the drag, but the exclusion
+ * constraint is what decides. A 409 here is that constraint, not a bug: two
+ * people moved guests at once and one of them lost.
+ */
+export function useAssignBoardingRoom() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      bookingRef: number;
+      roomId: string | null;
+      overrideReason?: string;
+    }) => {
+      const response = await fetch("/api/boarding/stays", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const parsed = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(
+          parsed?.error ??
+            (response.status === 409
+              ? "That kennel was taken while you were moving them."
+              : "Could not move that guest."),
+        );
+      }
+      return input;
+    },
+    onSuccess: () => {
+      // `boardingRoomKeys.all`, not a hand-written `["boarding","rooms"]` —
+      // the key here is `["boarding-rooms", from, to]`, and a near-miss
+      // invalidates nothing while looking exactly like it does.
+      void queryClient.invalidateQueries({ queryKey: boardingRoomKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
+}
 
 /**
  * Occupancy totals, derived.

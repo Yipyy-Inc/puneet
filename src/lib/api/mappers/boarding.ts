@@ -56,8 +56,19 @@ export interface BoardingStayRow {
   room_id: string;
   occupies: string;
   override_reason: string | null;
-  bookings: { ref: number; status: string } | null;
+  bookings: {
+    ref: number;
+    status: string;
+    clients: { name: string } | null;
+    booking_pets: { pets: { name: string; species: string } | null }[] | null;
+  } | null;
 }
+
+/** The joins `rowToOccupancy` needs. Kept beside it so the two agree. */
+export const BOARDING_STAY_SELECT = `
+  booking_id, room_id, occupies, override_reason,
+  bookings ( ref, status, clients ( name ), booking_pets ( pets ( name, species ) ) )
+` as const;
 
 /**
  * `facilityId` is the app's numeric ref, which these rows do not carry — the
@@ -115,6 +126,19 @@ export interface RoomOccupancy {
   from: string;
   to: string;
   isOverride: boolean;
+  /**
+   * Who is actually in the kennel.
+   *
+   * The occupancy read knew WHICH BOOKING held a room and not whose dog it
+   * was, which is enough to grey out a square and not enough to draw a board
+   * an operator can use — "kennel 3 is taken by #1042" is not a sentence
+   * anybody doing the rounds can act on.
+   */
+  petNames: string[];
+  clientName: string;
+  /** Drives the board's pet-type rules when a guest is dragged elsewhere. */
+  petType: string;
+  status: string;
 }
 
 /**
@@ -138,12 +162,23 @@ export function rowToOccupancy(
   const roomId = roomIdByUuid.get(row.room_id);
   if (!roomId) return null;
   const { from, to } = parseOccupies(row.occupies);
+  const pets = (row.bookings?.booking_pets ?? [])
+    .map((bp) => bp.pets)
+    .filter((p): p is { name: string; species: string } => p !== null);
   return {
     roomId,
     bookingRef: row.bookings?.ref ?? 0,
     from,
     to,
     isOverride: row.override_reason !== null,
+    petNames: pets.map((p) => p.name),
+    clientName: row.bookings?.clients?.name ?? "",
+    // The first pet's species decides which categories will admit this guest.
+    // A booking with two pets of different species is not something the room
+    // rules can express, and pretending otherwise would let the board offer a
+    // move the constraint would then have to refuse.
+    petType: pets[0]?.species ?? "dog",
+    status: row.bookings?.status ?? "",
   };
 }
 
