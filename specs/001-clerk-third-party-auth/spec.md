@@ -242,15 +242,44 @@ All three were settled from the live database rather than by preference
    tolerating either session, which is more work and more failure modes than one
    cutover on a system nobody depends on yet. This option expires as soon as real
    users exist.
-3. **Production Clerk instance: deferred.** No `NEXT_PUBLIC_APP_URL`, no `.vercel`
-   link, so there is no production Supabase project to register a Clerk domain
-   against. Becomes a deploy-checklist item:
-   - register the production Clerk domain as a TPA provider on the production
-     Supabase project;
+3. **Production Clerk instance: deferred, and production is knowingly left
+   broken until then.**
+
+   > **CORRECTION (2026-08-06).** This item originally read "there is no
+   > production deployment", inferred from a missing `.vercel` link and an unset
+   > `NEXT_PUBLIC_APP_URL`. That inference was wrong: **www.yipyy.com is live on
+   > Vercel and is this app.** A repo that is not _linked on one machine_ says
+   > nothing about whether the project is deployed — the only reliable check is
+   > to look at the domain, which was not done until after the migration.
+   >
+   > It carried weight: "no production deployment" was one of the reasons the
+   > big-bang cutover was judged safe.
+
+   Measured 2026-08-06: production serves a **pre-Clerk build** — `/login` and
+   `/customer/auth/login` return 200 and render the old form, `/sign-in` 404s —
+   against the same Supabase project this migration changed. So production
+   sign-in is broken: Supabase Auth can still authenticate against the 9
+   remaining `auth.users` rows, but their `profiles` were retired, RLS now reads
+   `auth.jwt()->>'sub'`, and every portal gate refuses. `/facility/dashboard`
+   returns a 34KB redirect shell with zero portal content.
+
+   **Accepted deliberately** (product owner, 2026-08-06): the platform is
+   unlaunched, the data is demo, and nobody depends on the site. The cost is a
+   broken demo, not lost business. Rejected alternatives: deploying today's code
+   immediately (gated on Clerk production setup), and pointing production at the
+   Clerk _development_ keys as a stopgap.
+
+   Deploy-checklist item, unchanged in substance:
+   - create the production Clerk instance (own domain + DNS) and add it as a
+     **second** TPA provider on the existing Supabase project — the development
+     entry stays, and the two cannot collide because instances mint different
+     user ids;
+   - enable Google and Apple on production with **your own** OAuth credentials;
+     development uses Clerk's shared test credentials and nothing carries over;
    - set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` (live keys) and
-     `CLERK_WEBHOOK_SIGNING_SECRET` in the deploy environment **before** the build
-     — `NEXT_PUBLIC_*` is inlined at build time, not read at runtime;
-   - point the Clerk webhook endpoint at the production URL.
+     `CLERK_WEBHOOK_SIGNING_SECRET` in Vercel **before** the build —
+     `NEXT_PUBLIC_*` is inlined at build time, not read at runtime;
+   - point the Clerk webhook endpoint at `https://yipyy.com/api/webhooks/clerk`.
 
 ## Open questions
 

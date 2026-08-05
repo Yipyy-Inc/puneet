@@ -55,8 +55,20 @@ Supabase's native third-party auth, not by the deprecated JWT template.**
    tenancy would let anyone with a sign-up form join a facility.
 5. **Big-bang cutover, start clean.** Chosen because the conditions that make a
    staged migration worth its cost were absent: 9 internal users, one authored
-   row in the entire database, no paying customers, no production deployment.
+   row in the entire database, no paying customers, and an unlaunched platform.
    This option expires the moment real users exist.
+
+   > **CORRECTION (2026-08-06).** This originally also said "no production
+   > deployment", inferred from a missing `.vercel` link and an unset
+   > `NEXT_PUBLIC_APP_URL`. **www.yipyy.com is in fact live on Vercel and is this
+   > app**, serving a pre-Clerk build against the same Supabase project this
+   > migration changed — so production sign-in has been broken since the cutover.
+   >
+   > The decision still stands: the platform is unlaunched and the data is demo,
+   > so nothing was lost. But the reasoning was luckier than it was sound. **A
+   > repo that is not linked on one machine is not evidence that nothing is
+   > deployed** — check the domain. Left broken deliberately until the production
+   > Clerk instance exists (product owner, 2026-08-06).
 
 ## Consequences
 
