@@ -52,6 +52,28 @@ import { BuyPackagesSection } from "./packages/BuyPackagesSection";
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = "15";
 
+/**
+ * Why the four membership dialogs no longer report success.
+ *
+ * All four -- upgrade, downgrade, pause, cancel -- called `toast.success` and
+ * nothing else. There is no membership table, no schedule, and no mail: the
+ * customer saw "Cancellation scheduled. We've emailed you a confirmation with
+ * details about your refund and access", and none of those three things had
+ * happened.
+ *
+ * A customer who believes they have cancelled stops watching their statements,
+ * which is the one outcome worth preventing while the schema does not exist.
+ *
+ * There is nowhere honest to put the request either -- there is no messaging,
+ * ticket or request table for a facility, so "we have passed this on" would be
+ * the same lie one step removed. So the dialogs say what is true: the request
+ * is not recorded, contact the facility. When memberships get a table this
+ * constant is the thing to delete, and the four call sites will fail to
+ * compile until they are wired properly.
+ */
+const MEMBERSHIP_NOT_RECORDED =
+  "This request is not recorded automatically yet — please contact the facility to action it.";
+
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -692,8 +714,11 @@ export function PackagesTab() {
           allPlans={availablePlans}
           onConfirm={(newPlanId) => {
             const newPlan = availablePlans.find((p) => p.id === newPlanId);
-            toast.success("Upgrade submitted", {
-              description: `Switched to ${newPlan?.name}. New perks are active now.`,
+            // NOT "New perks are active now." Nothing switched: memberships
+            // have no table, so there is no plan to change and no schedule to
+            // put a change on. See the note above `MEMBERSHIP_NOT_RECORDED`.
+            toast.warning("Not submitted yet", {
+              description: `${MEMBERSHIP_NOT_RECORDED} Ask about ${newPlan?.name ?? "this plan"} directly.`,
             });
           }}
         />
@@ -711,8 +736,8 @@ export function PackagesTab() {
           allPlans={availablePlans}
           onConfirm={(newPlanId) => {
             const newPlan = availablePlans.find((p) => p.id === newPlanId);
-            toast.success("Downgrade scheduled", {
-              description: `You'll switch to ${newPlan?.name} on your next billing cycle.`,
+            toast.warning("Not scheduled yet", {
+              description: `${MEMBERSHIP_NOT_RECORDED} Ask about ${newPlan?.name ?? "this plan"} directly.`,
             });
           }}
         />
@@ -726,10 +751,8 @@ export function PackagesTab() {
           membership={pauseMembership}
           plan={pausePlan}
           onConfirm={(months) => {
-            toast.success("Pause scheduled", {
-              description: `Your membership will pause for ${months} month${
-                months === 1 ? "" : "s"
-              } from your next billing date.`,
+            toast.warning("Not scheduled yet", {
+              description: `${MEMBERSHIP_NOT_RECORDED} Ask about a ${months}-month pause directly.`,
             });
           }}
         />
@@ -745,9 +768,12 @@ export function PackagesTab() {
           membership={cancelMembership}
           plan={cancelPlan}
           onConfirm={() => {
-            toast.success("Cancellation scheduled", {
-              description:
-                "We've emailed you a confirmation with details about your refund and access.",
+            // The worst of the four. "We've emailed you a confirmation" was
+            // false twice over -- no cancellation was recorded and no email was
+            // sent -- and a customer who believes they have cancelled stops
+            // watching their statements.
+            toast.warning("Not cancelled yet", {
+              description: `${MEMBERSHIP_NOT_RECORDED} Your membership is still active.`,
             });
           }}
         />
