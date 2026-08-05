@@ -199,6 +199,70 @@ export type Database = {
           },
         ];
       };
+      daycare_attendance: {
+        Row: {
+          author_name: string;
+          booking_id: string;
+          checked_in_at: string | null;
+          checked_out_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          notes: string;
+          play_group: string | null;
+          rate_type: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_name?: string;
+          booking_id: string;
+          checked_in_at?: string | null;
+          checked_out_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          notes?: string;
+          play_group?: string | null;
+          rate_type?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string;
+          booking_id?: string;
+          checked_in_at?: string | null;
+          checked_out_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          notes?: string;
+          play_group?: string | null;
+          rate_type?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      daycare_config: {
+        Row: {
+          capacity_by_size: Json;
+          capacity_total: number;
+          facility_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          capacity_by_size?: Json;
+          capacity_total?: number;
+          facility_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          capacity_by_size?: Json;
+          capacity_total?: number;
+          facility_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       booking_line_items: {
         Row: {
           author_name: string;

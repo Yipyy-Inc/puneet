@@ -11,27 +11,23 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
-import {
-  daycareCheckIns,
-  daycareCapacity,
-  getCurrentCheckedInCount,
-  getCheckedInBySize,
-} from "@/data/daycare";
+import { useDaycareDay, summariseFloor } from "@/lib/api/daycare-attendance";
 import { daycareAnalytics } from "@/lib/report-data-sources";
 import { formatCurrency, formatCount } from "@/lib/format";
 
 export default function DaycareDashboardPage() {
   const analytics = daycareAnalytics();
-  const currentCount = getCurrentCheckedInCount();
-  const capacityPercentage = (currentCount / daycareCapacity.total) * 100;
-  const checkedInBySize = getCheckedInBySize();
+  // Today's floor, from `daycare_attendance`. This page counted a module array
+  // whose arrivals were dated March 2024 — every dog on it had been here for
+  // five hundred days.
+  const { data: day } = useDaycareDay();
+  const floor = summariseFloor(day);
+  const capacityPercentage = floor.percentage;
 
-  const checkedInPets = daycareCheckIns.filter(
+  const checkedInPets = (day?.visits ?? []).filter(
     (c) => c.status === "checked-in",
   );
-  const checkedOutToday = daycareCheckIns.filter(
-    (c) => c.status === "checked-out",
-  ).length;
+  const checkedOutToday = floor.goneHome;
 
   const getCapacityColor = (percentage: number) => {
     if (percentage >= 90) return "bg-destructive";
@@ -65,7 +61,7 @@ export default function DaycareDashboardPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
-              {currentCount} of {daycareCapacity.total} spots filled
+              {floor.present} of {floor.capacity} spots filled
             </span>
             <span className="font-medium">
               {Math.round(capacityPercentage)}%
@@ -81,26 +77,28 @@ export default function DaycareDashboardPage() {
           {/* Capacity by Size */}
           <div className="grid grid-cols-4 gap-4 pt-2">
             <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">{checkedInBySize.small}</p>
+              <p className="text-2xl font-bold">{floor.bySize.small ?? 0}</p>
               <p className="text-muted-foreground text-xs">
-                Small / {daycareCapacity.smallDogs}
+                Small / {floor.capacityBySize.small ?? 0}
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">{checkedInBySize.medium}</p>
+              <p className="text-2xl font-bold">{floor.bySize.medium ?? 0}</p>
               <p className="text-muted-foreground text-xs">
-                Medium / {daycareCapacity.mediumDogs}
+                Medium / {floor.capacityBySize.medium ?? 0}
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">{checkedInBySize.large}</p>
+              <p className="text-2xl font-bold">{floor.bySize.large ?? 0}</p>
               <p className="text-muted-foreground text-xs">
-                Large / {daycareCapacity.largeDogs}
+                Large / {floor.capacityBySize.large ?? 0}
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">{checkedInBySize.giant}</p>
-              <p className="text-muted-foreground text-xs">Giant / 5</p>
+              <p className="text-2xl font-bold">{floor.bySize.giant ?? 0}</p>
+              <p className="text-muted-foreground text-xs">
+                Giant / {floor.capacityBySize.giant ?? 0}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -110,7 +108,7 @@ export default function DaycareDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Currently Checked In"
-          value={formatCount(currentCount)}
+          value={formatCount(floor.present)}
           subtitle="Active daycare guests"
           icon={PawPrint}
           variant="primary"

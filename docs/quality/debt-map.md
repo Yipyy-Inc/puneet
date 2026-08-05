@@ -1117,6 +1117,44 @@ The cheap move was to pass a booking ref in the field called `petId`. That is ex
 
 **Do instead:** invalidate with the key factory (`boardingRoomKeys.all`), never a hand-written array. A key that is one hyphen wrong looks exactly like a key that works.
 
+## Snapshot (2026-08-06, the daycare floor)
+
+### 🔴 The check-in board showed dogs who arrived in March 2024
+
+`daycareCheckIns` was a module array read into `useState`, so every arrival and departure was lost on reload. Its own check-in times are dated **2024-03-09 and 2024-03-10** — against a system date of August 2026, the board showed dogs who had been on the floor for five hundred days.
+
+It was not one screen's data either. That array is read by `use-unified-bookings`, `operations-calendar`, `report-data-sources` and `scheduling-workload` — the calendar, the facility reports and the staff workload planner all took daycare attendance from it.
+
+`daycare_attendance` keys on `booking_id` as both PK and FK, exactly as `grooming_appointments` does: a visit is not a second kind of appointment, it is what a daycare booking looks like on the day. The fixture modelled it as free-standing (`petId`, `ownerId`, no booking), which cannot survive contact with the rest of the system — payments, the balance and anything added at the counter all hang off a booking.
+
+**Do instead:** when a fixture array is read by cross-cutting libs, migrating "the module" is not optional scope. Grep for its importers before estimating.
+
+### 🟡 "Booked and not here yet" was not a state the fixture could hold
+
+A visit did not exist until somebody checked in, so there was no way to show a dog due at two o'clock. The day query is now a left join — a booking with no attendance row is `scheduled`.
+
+The status itself is a **generated column** over the two timestamps, which makes it unwritable by anyone: `column "status" can only be updated to DEFAULT`. The fixture stored `status` beside `checkInTime` and `checkOutTime`, the same one-fact-in-two-places defect `payment_status` had.
+
+**Do instead:** when a status is a pure function of the row's own columns, generate it. No trigger, and no writer to police.
+
+### 🟡 One weight→size policy, and it lives in a grooming table
+
+`pets` has `weight`, not a size. The band comes from `grooming_config.pet_size_tiers`, which `create_booking` already uses to price a groom — so daycare reads the same rows rather than inventing a second list. A dog that is "large" at the till and "medium" on the floor is two answers to one question, and the per-size capacity ceilings would count it against the wrong band.
+
+The table is misnamed: those tiers are the FACILITY's size policy, not grooming's. Moving them is a rename with callers, not a rider on this change.
+
+Related: an unknown weight resolves to the LARGEST band. Guessing small would quietly make room under a ceiling that exists to cap big dogs.
+
+**Do instead:** don't add a second size list. If the location bothers you, move the column — don't copy the policy.
+
+### 🟢 The upsert this project usually refuses
+
+`POST /api/daycare/attendance` uses `ON CONFLICT DO UPDATE`, which 20260806640000 rewrote out of `assign_boarding_room` because the two halves fail differently under RLS. The note gave the condition under which it is safe — identical policies for both — and here both are `daycare_check_in_out`, so whoever can insert can update and the update path cannot be the refused one. Written down at the call site, with what has to change if those policies ever diverge.
+
+Also fixed while passing: the dashboard's per-size row had `Giant / 5` typed into the JSX, against a fixture with no giant band at all.
+
+**Do instead:** an upsert is allowed when the earlier note's condition holds. Cite the condition rather than the conclusion.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
