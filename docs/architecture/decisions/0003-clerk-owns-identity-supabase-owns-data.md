@@ -122,8 +122,22 @@ written against `auth.jwt()->>'sub'`.
   while nothing is launched: the data is demo, and there are no customers a bad
   migration could reach. Supabase accepts several third-party auth providers on
   one project, so the development and production Clerk instances are registered
-  side by side and their subjects cannot collide — Clerk mints different user
-  ids per instance.
+  side by side.
+
+  **Their subjects cannot collide, and that is the problem, not the safeguard.**
+  This bullet originally offered "Clerk mints different user ids per instance" as
+  reassurance. Different ids per instance is the mechanism, not the protection:
+  one human signing up in both instances gets two subjects, and therefore two
+  `profiles` rows for one address. It happened the same day — see migration
+  `20260806160000` — and it matters because grants hang off `profiles.id`, so
+  the answer to "what may this person do" starts depending on which instance
+  minted their token. Signing in works on Tuesday and fails on Wednesday with
+  nothing on screen explaining the difference.
+
+  `profiles_email_lower_key` now makes a second identity for a known address
+  impossible, and the sync webhook refuses it legibly rather than letting Svix
+  retry a write that can never land. Both were added after the fact; neither
+  removes the reason to split the projects.
 
   **Revisit before the first real customer.** From that point the two costs
   become real: a local migration lands directly on production data, and demo

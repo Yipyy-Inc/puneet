@@ -90,6 +90,40 @@ export async function POST(request: NextRequest) {
           return new Response("OK (no email)", { status: 200 });
         }
 
+        // ── One address, one identity ──────────────────────────────────────
+        // Two Clerk instances (Development and Production) share this Supabase
+        // project, and each keeps its own user namespace. The same person
+        // signing up in both yields two Clerk ids for one address — and grants
+        // hang off profiles.id, so "what may this person do" would depend on
+        // which instance minted their token. It has happened once already; see
+        // migration 20260806160000.
+        //
+        // Checked here AND enforced by profiles_email_lower_key, because the
+        // two catch different things: this branch can name both ids in the log,
+        // while the index catches what a check cannot — two deliveries racing,
+        // and addresses that differ only in case.
+        const { data: claimed, error: lookupError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", email)
+          .limit(1);
+        if (lookupError) throw lookupError;
+
+        const owner = claimed?.[0]?.id;
+        if (owner && owner !== event.data.id) {
+          // 200, not 500. A retry cannot resolve this — the address is claimed
+          // and will still be claimed on the next delivery — so a non-2xx would
+          // put Svix into a redelivery loop that never ends. Acknowledging stops
+          // the loop; the log is the part a human acts on.
+          console.error(
+            `[clerk-webhook] ${event.type}: ${email} already belongs to ` +
+              `${owner}; refusing a second identity for ${event.data.id}. ` +
+              `Delete one of these accounts in Clerk — keep the one the live ` +
+              `instance knows.`,
+          );
+          return new Response("OK (address already claimed)", { status: 200 });
+        }
+
         const { error } = await supabase.from("profiles").upsert(
           {
             id: event.data.id,
@@ -99,7 +133,22 @@ export async function POST(request: NextRequest) {
           },
           { onConflict: "id" },
         );
-        if (error) throw error;
+        if (error) {
+          // 23505 is unique_violation — profiles_email_lower_key. Same reasoning
+          // as above: unreachable by retrying, so acknowledge rather than loop.
+          // Without this branch the index would turn a duplicate signup into a
+          // person with a Clerk account, no profile, and no way to be told why.
+          if (error.code === "23505") {
+            console.error(
+              `[clerk-webhook] ${event.type}: ${email} is already claimed by ` +
+                `another identity; ${event.data.id} was not written.`,
+            );
+            return new Response("OK (address already claimed)", {
+              status: 200,
+            });
+          }
+          throw error;
+        }
         break;
       }
 

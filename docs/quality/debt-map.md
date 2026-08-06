@@ -1505,6 +1505,27 @@ An eight-minute timeout on a button label I guessed at (`/new series|add series/
 
 **Do instead:** read the label out of the component. Retry any click that opens something on a freshly navigated client page.
 
+## Snapshot (2026-08-06, one address, two identities)
+
+### 🔴 Two Clerk instances share one Supabase project, so one person can hold two profiles
+
+`houssemsina123@gmail.com` held two rows in `profiles` — `user_3HVlmtt…` (Development instance, 22:08 on 08-05) and `user_3HXXALre…` (Production, 11:21 on 08-06). Both were written by the sync webhook; neither was inserted by hand.
+
+The proximate cause was a window during the migration: the production webhook secret reached Vercel _after_ the Development instance had been pointed at the live site, so dev-instance events verified successfully against the production database for a few hours. That window is closed.
+
+**Why it's risky:** the shape that allowed it is permanent while one project serves both environments. ADR 0003 explicitly reasoned that "subjects cannot collide — Clerk mints different user ids per instance," which is true and is exactly backwards as reassurance — different ids per instance is how one human ends up with two rows. Grants hang off `profiles.id` (`facility_memberships.profile_id`, `clients.profile_id`, `is_platform_admin`), so a duplicate silently makes authorization depend on which instance issued the token. It fails on a different day than it breaks, and nothing on screen connects the two.
+
+**Do instead:** nothing manual — `profiles_email_lower_key` (migration `20260806160000`) now makes it impossible. Two things to know before touching that area:
+
+- **The index alone would be a trap.** The webhook upserts on `id`, so a new Clerk id carrying a known address is an INSERT, which raises `23505`. Left unhandled that 500s, Svix retries on a fixed schedule forever, and the person owns a Clerk account with no profile — refused by every gate with nothing explaining why. `src/app/api/webhooks/clerk/route.ts` handles `23505` and the pre-flight case explicitly, returning **200** because a retry can never resolve a claimed address. Do not "fix" those 200s into 500s.
+- **Both layers earn their place.** The pre-flight lookup can name both ids in the log; the index catches what a lookup cannot — two deliveries racing, and addresses differing only in case.
+
+### 🟢 A dry-run guard beats `duplicate key value violates unique constraint`
+
+The migration refuses with the offending rows named (`houssemsina123@gmail.com — 2 profiles: user_3HVlmtt…, user_3HXXALre…`) rather than Postgres's generic unique-violation text, which tells you a duplicate exists but not which one or how many.
+
+**Do instead:** when adding a uniqueness constraint to a table that already has rows, front it with a `do $$` block that aggregates and raises the conflicts. It costs six lines and turns "the migration failed" into a work item.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
