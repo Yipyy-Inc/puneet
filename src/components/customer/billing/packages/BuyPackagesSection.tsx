@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import {
   Dialog,
   DialogContent,
@@ -22,8 +23,6 @@ import {
 
 // The signed-in customer. Same placeholder the rest of the portal uses; it is
 // the id the purchase is recorded against, so it stops being a constant when
-// the portal reads a real session.
-const MOCK_CUSTOMER_ID = 15;
 
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("en-US", {
@@ -54,6 +53,9 @@ function rankBadge(rank?: number) {
  * package purchase surface the portal was missing.
  */
 export function BuyPackagesSection() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const [selected, setSelected] = useState<ServicePackage | null>(null);
   const { data: catalogue = [] } = useServicePackages();
   const { mutate: buy, isPending } = usePurchasePackage();
@@ -71,14 +73,14 @@ export function BuyPackagesSection() {
   );
 
   const confirmPurchase = () => {
-    if (!selected) return;
+    if (!selected || customerId == null) return;
     // The sale is one transaction server-side: the purchase and its pass pools
     // land together or not at all. The price is NOT sent — the database reads
     // it off the catalogue row, because a price that arrives from a browser is
     // a price the browser chose.
     const pkg = selected;
     buy(
-      { clientId: MOCK_CUSTOMER_ID, packageId: pkg.id },
+      { clientId: customerId, packageId: pkg.id },
       {
         onSuccess: () => {
           toast.success(`${pkg.name} purchased`, {

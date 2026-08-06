@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { customerCredits, giftCards, invoices } from "@/data/payments";
 import {
@@ -13,28 +14,26 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Wallet, Gift, TrendingUp, Calendar } from "lucide-react";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 export function BalancesTab() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
 
   const customerCreditsList = useMemo(() => {
-    let filtered = customerCredits.filter(
-      (c) => c.clientId === MOCK_CUSTOMER_ID,
-    );
+    let filtered = customerCredits.filter((c) => c.clientId === customerId);
 
     if (selectedFacility) {
       filtered = filtered.filter((c) => c.facilityId === selectedFacility.id);
     }
 
     return filtered.filter((c) => c.status === "active");
-  }, [selectedFacility]);
+  }, [customerId, selectedFacility]);
 
   const customerGiftCards = useMemo(() => {
     let filtered = giftCards.filter(
       (gc) =>
-        gc.purchasedByClientId === MOCK_CUSTOMER_ID ||
+        gc.purchasedByClientId === customerId ||
         gc.recipientEmail?.includes("@example.com"), // Simplified check
     );
 
@@ -43,15 +42,15 @@ export function BalancesTab() {
     }
 
     return filtered.filter((gc) => gc.status === "active");
-  }, [selectedFacility]);
+  }, [customerId, selectedFacility]);
 
   const customerOutstandingInvoices = useMemo(() => {
     return invoices.filter(
       (inv) =>
-        inv.clientId === MOCK_CUSTOMER_ID &&
+        inv.clientId === customerId &&
         (inv.status === "sent" || inv.status === "overdue"),
     );
-  }, []);
+  }, [customerId]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {

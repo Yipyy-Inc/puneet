@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,10 +51,6 @@ import { useRedeemPackagePass } from "@/lib/api/customer-packages";
 import type { Booking } from "@/types/booking";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { clients } from "@/data/clients";
-
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
 
 interface Props {
   purchase: CustomerPackagePurchase;
@@ -109,6 +106,9 @@ export function PurchasedPackageCard({
   onRequestRefund,
   onRedeemed,
 }: Props) {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const [historyOpen, setHistoryOpen] = useState(false);
   const [policyOpen, setPolicyOpen] = useState(false);
   const [nowMs] = useState(() => Date.now());
@@ -471,10 +471,7 @@ function BookWithPassButton({
   const { selectedFacility } = useCustomerFacility();
   const { openBookingModal } = useBookingModal();
   const { mutateAsync: redeemPass } = useRedeemPackagePass();
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
+  const { client: customer } = useCurrentCustomer();
 
   const handleBook = () => {
     if (!selectedFacility || !customer) return;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { paymentMethods } from "@/data/payments";
 import {
@@ -48,16 +49,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 export function PaymentMethodsTab() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
   const [customerPaymentMethods, setCustomerPaymentMethods] = useState(() =>
-    paymentMethods.filter((pm) => pm.clientId === MOCK_CUSTOMER_ID),
+    paymentMethods.filter((pm) => pm.clientId === customerId),
   );
   const [removeTarget, setRemoveTarget] = useState<
     (typeof customerPaymentMethods)[number] | null

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,27 +13,28 @@ import { CustomerInvoiceCard } from "@/components/customer/billing/CustomerInvoi
 
 type Filter = "all" | "paid" | "pending" | "overdue";
 
-const MOCK_CUSTOMER_ID = 15;
-
 export function BookingInvoicesTab() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
   const client = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID) ?? null,
-    [],
+    () => clients.find((c) => c.id === customerId) ?? null,
+    [customerId],
   );
 
   const savedCards = useMemo(
-    () => paymentMethods.filter((pm) => pm.clientId === MOCK_CUSTOMER_ID),
-    [],
+    () => paymentMethods.filter((pm) => pm.clientId === customerId),
+    [customerId],
   );
 
   const invoiceRows = useMemo(() => {
     if (!client) return [];
     const today = new Date();
     return allBookings
-      .filter((b) => b.clientId === MOCK_CUSTOMER_ID && b.invoice)
+      .filter((b) => b.clientId === customerId && b.invoice)
       .filter((b) => {
         const inv = b.invoice!;
         if (filter === "paid") return inv.status === "closed";
@@ -70,7 +72,7 @@ export function BookingInvoicesTab() {
           new Date(b.booking.startDate).getTime() -
           new Date(a.booking.startDate).getTime(),
       );
-  }, [client, filter, searchQuery]);
+  }, [customerId, client, filter, searchQuery]);
 
   if (!client) {
     return (

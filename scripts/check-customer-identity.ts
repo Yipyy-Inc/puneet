@@ -18,7 +18,7 @@
  *
  * ── A RATCHET, NOT A CLIFF ────────────────────────────────────────────────
  *
- * 29 files still declare it. Failing on all of them would make the gate
+ * 20 files still declare it. Failing on all of them would make the gate
  * unrunnable and it would be disabled within a day, so the known set is
  * BASELINED and only new occurrences fail. Convert a file, delete its entry —
  * the list is meant to shrink and the build tells you when it grows.
@@ -62,15 +62,6 @@ const BASELINE = new Set<string>([
   "src/app/customer/training/page.tsx",
   "src/components/customer/CustomerBookingModal.tsx",
   "src/components/customer/QuickBookButton.tsx",
-  "src/components/customer/billing/BalanceSummaryCards.tsx",
-  "src/components/customer/billing/BalancesTab.tsx",
-  "src/components/customer/billing/BookingInvoicesTab.tsx",
-  "src/components/customer/billing/InvoicesTab.tsx",
-  "src/components/customer/billing/PackagesTab.tsx",
-  "src/components/customer/billing/PaymentMethodsTab.tsx",
-  "src/components/customer/billing/packages/ActiveMembershipCard.tsx",
-  "src/components/customer/billing/packages/BuyPackagesSection.tsx",
-  "src/components/customer/billing/packages/PurchasedPackageCard.tsx",
   "src/components/customer/report-cards/report-card-detail.tsx",
   "src/components/grooming/GroomingBookingFlow.tsx",
 ]);

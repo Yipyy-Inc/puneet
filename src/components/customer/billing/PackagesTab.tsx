@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import Link from "next/link";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import {
@@ -48,9 +49,6 @@ import { PauseMembershipDialog } from "./packages/PauseMembershipDialog";
 import { CancelMembershipDialog } from "./packages/CancelMembershipDialog";
 import { PurchasedPackageCard } from "./packages/PurchasedPackageCard";
 import { BuyPackagesSection } from "./packages/BuyPackagesSection";
-
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = "15";
 
 /**
  * Why the four membership dialogs no longer report success.
@@ -142,6 +140,9 @@ function ZoneHeader({
 }
 
 export function PackagesTab() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
 
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -172,8 +173,8 @@ export function PackagesTab() {
   );
 
   const customerMemberships = useMemo(
-    () => memberships.filter((m) => m.customerId === MOCK_CUSTOMER_ID),
-    [],
+    () => memberships.filter((m) => m.customerId === String(customerId)),
+    [customerId],
   );
 
   // Plan IDs the customer is actively subscribed to — used to mark the
@@ -205,8 +206,8 @@ export function PackagesTab() {
   }, [availablePlans]);
 
   const customerPrepaidCredits = useMemo(
-    () => prepaidCredits.filter((c) => c.customerId === MOCK_CUSTOMER_ID),
-    [],
+    () => prepaidCredits.filter((c) => c.customerId === String(customerId)),
+    [customerId],
   );
 
   // From Postgres, scoped to this customer server-side. A pack bought in "Buy
@@ -215,9 +216,10 @@ export function PackagesTab() {
   // The catalogue, only so a card can show the package's refund/transfer
   // policy beside what the customer owns.
   const { data: catalogue = [] } = useServicePackages();
-  const { data: ownedRecords = [] } = useQuery(
-    groomingQueries.customerPackagesForClient(Number(MOCK_CUSTOMER_ID)),
-  );
+  const { data: ownedRecords = [] } = useQuery({
+    ...groomingQueries.customerPackagesForClient(customerId ?? -1),
+    enabled: customerId != null,
+  });
   const customerPackages = useMemo(
     () => ownedRecords.map(recordToPurchase),
     [ownedRecords],

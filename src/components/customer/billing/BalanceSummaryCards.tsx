@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import Link from "next/link";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { customerCredits, giftCards, invoices } from "@/data/payments";
@@ -14,9 +15,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
     n,
@@ -27,39 +25,42 @@ const fmt = (n: number) =>
  * stay visible regardless of the active tab.
  */
 export function BalanceSummaryCards() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
 
   const totalCredits = useMemo(() => {
     let filtered = customerCredits.filter(
-      (c) => c.clientId === MOCK_CUSTOMER_ID && c.status === "active",
+      (c) => c.clientId === customerId && c.status === "active",
     );
     if (selectedFacility)
       filtered = filtered.filter((c) => c.facilityId === selectedFacility.id);
     return filtered.reduce((sum, c) => sum + c.remainingAmount, 0);
-  }, [selectedFacility]);
+  }, [customerId, selectedFacility]);
 
   const totalGiftCardBalance = useMemo(() => {
     let filtered = giftCards.filter(
       (gc) =>
-        (gc.purchasedByClientId === MOCK_CUSTOMER_ID ||
+        (gc.purchasedByClientId === customerId ||
           gc.recipientEmail?.includes("@example.com")) &&
         gc.status === "active",
     );
     if (selectedFacility)
       filtered = filtered.filter((gc) => gc.facilityId === selectedFacility.id);
     return filtered.reduce((sum, gc) => sum + gc.currentBalance, 0);
-  }, [selectedFacility]);
+  }, [customerId, selectedFacility]);
 
   const totalOutstanding = useMemo(
     () =>
       invoices
         .filter(
           (inv) =>
-            inv.clientId === MOCK_CUSTOMER_ID &&
+            inv.clientId === customerId &&
             (inv.status === "sent" || inv.status === "overdue"),
         )
         .reduce((sum, inv) => sum + inv.amountDue, 0),
-    [],
+    [customerId],
   );
 
   const hasOutstanding = totalOutstanding > 0;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +34,6 @@ import type {
 import { defaultMembershipChangePolicy } from "@/data/services-pricing";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useBookingModal } from "@/hooks/use-booking-modal";
-import { clients } from "@/data/clients";
 
 interface Props {
   membership: Membership;
@@ -43,9 +43,6 @@ interface Props {
   onPause: () => void;
   onCancel: () => void;
 }
-
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("en-US", {
@@ -116,13 +113,12 @@ export function ActiveMembershipCard({
   onPause,
   onCancel,
 }: Props) {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const [nowMs] = useState(() => Date.now());
   const { selectedFacility } = useCustomerFacility();
   const { openBookingModal } = useBookingModal();
-  const customer = useMemo(
-    () => clients.find((client) => client.id === MOCK_CUSTOMER_ID),
-    [],
-  );
 
   const policy: MembershipChangePolicy =
     plan?.changePolicy ?? defaultMembershipChangePolicy;

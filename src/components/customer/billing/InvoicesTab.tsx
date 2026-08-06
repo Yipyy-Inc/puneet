@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { invoices, payments, paymentMethods } from "@/data/payments";
 import {
@@ -27,10 +28,10 @@ import { InvoiceLoyaltySection } from "@/components/loyalty/InvoiceLoyaltySectio
 import { facilities } from "@/data/facilities";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 export function InvoicesTab() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -38,7 +39,7 @@ export function InvoicesTab() {
   >("all");
 
   const customerInvoices = useMemo(() => {
-    let filtered = invoices.filter((inv) => inv.clientId === MOCK_CUSTOMER_ID);
+    let filtered = invoices.filter((inv) => inv.clientId === customerId);
 
     if (selectedFacility) {
       filtered = filtered.filter(
@@ -71,7 +72,7 @@ export function InvoicesTab() {
         new Date(b.issuedDate).getTime() - new Date(a.issuedDate).getTime()
       );
     });
-  }, [selectedFacility, statusFilter, searchQuery]);
+  }, [customerId, selectedFacility, statusFilter, searchQuery]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -381,7 +382,7 @@ export function InvoicesTab() {
     if (!invoice || invoice.amountDue <= 0) return;
 
     const defaultCard = paymentMethods.find(
-      (pm) => pm.clientId === MOCK_CUSTOMER_ID && pm.isDefault,
+      (pm) => pm.clientId === customerId && pm.isDefault,
     );
 
     if (!defaultCard) {
