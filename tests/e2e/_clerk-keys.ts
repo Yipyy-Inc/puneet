@@ -16,8 +16,19 @@ import { readFileSync } from "node:fs";
 //
 // 2. `.clerk/.tmp/keyless.json`. Clerk's keyless mode writes a throwaway
 //    DEVELOPMENT instance there the first time `bun run dev` runs without keys.
-//    Falling back to it is what keeps `bun run test:e2e` working from a cold
-//    clone, which is the property playwright.config.ts's header already claims.
+//    Falling back to it keeps the app BOOTING from a cold clone — but it will
+//    not get you a passing suite, and the reason is worth stating up front:
+//
+//    A KEYLESS INSTANCE IS NOT REGISTERED WITH SUPABASE. Supabase's third-party
+//    auth accepts tokens from the Clerk instances registered on the project
+//    (ADR 0003: the development and production instances, side by side). A
+//    keyless instance is created on the fly and is registered nowhere, so
+//    Clerk signs you in perfectly and then every Supabase read comes back
+//    `PGRST301 No suitable key or wrong key type` — which surfaces as
+//    "Not signed in." from /api/permissions, and as a portal bounce.
+//
+//    So the fallback WARNS. It is a last resort for getting the app up, not a
+//    working test configuration.
 //
 // The fallback is also what stops a WORSE failure. Without keys the dev server
 // re-enters keyless mode and writes its own into `.env.local` — mutating a file
@@ -86,6 +97,20 @@ export function resolveClerkTestKeys(): ClerkTestKeys {
               ].join("\n"),
             );
           }
+          console.warn(
+            [
+              "",
+              "  ⚠ Falling back to Clerk's KEYLESS instance — the suite will fail.",
+              "",
+              "    A keyless instance is created on the fly and is not registered",
+              "    with Supabase as a third-party auth provider, so sign-in will",
+              "    succeed and every database read will be refused.",
+              "",
+              "    Set CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY to the",
+              "    development instance registered on the Supabase project.",
+              "",
+            ].join("\n"),
+          );
           return { ...keyless, source: "keyless" as const };
         })();
 

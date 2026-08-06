@@ -1,5 +1,5 @@
 import { clerk, setupClerkTestingToken } from "@clerk/testing/playwright";
-import { expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 // ============================================================================
 // Signing in, in one place.
@@ -27,6 +27,13 @@ import { expect, type Page } from "@playwright/test";
 // auth.users rows, and a GoTrue user authenticates nothing now.
 // ============================================================================
 
+/**
+ * The shared dev-account password.
+ *
+ * `signIn` below no longer uses it — it goes through Clerk's Backend API — but
+ * scripts/provision-e2e-identities.ts sets the accounts up with it, and a spec
+ * that exercises the sign-in SCREEN needs it. Kept exported for both.
+ */
 export const PASSWORD = process.env.E2E_PASSWORD ?? "YipyyDev!2026";
 
 /**
@@ -88,20 +95,89 @@ export async function signIn(page: Page, email: string): Promise<void> {
   await page.goto("/sign-in");
   await clerk.loaded({ page });
 
-  await clerk.signIn({
-    page,
-    signInParams: {
-      strategy: "password",
-      identifier: email,
-      password: PASSWORD,
-    },
+  // `emailAddress`, not `signInParams`. The latter is a CLIENT-side first-factor
+  // attempt, so it only works if that exact strategy is enabled on the instance
+  // — and when it is not, it RESOLVES WITHOUT THROWING and leaves
+  // window.Clerk.user null. Measured: every spec then failed 60s later at the
+  // permissions poll, pointing at the server rather than at sign-in.
+  //
+  // This form signs in through the Backend API with CLERK_SECRET_KEY and
+  // bypasses first-factor configuration entirely, so the suite does not break
+  // when somebody turns password sign-in off in the dashboard. The password
+  // journey is a thing to TEST, not a thing to depend on 36 times.
+  await clerk.signIn({ page, emailAddress: email });
+
+  let status = 0;
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline) {
+    status = (await page.request.get("/api/permissions")).status();
+    if (status === 200) return;
+    await page.waitForTimeout(1_000);
+  }
+
+  // ── The diagnosis, because the 401 is ambiguous and expensive ────────────
+  //
+  // /api/permissions answers `401 Not signed in.` for two unrelated failures:
+  // no Clerk session, and a Clerk session Supabase will not accept. They need
+  // completely different fixes and look identical from here, so the difference
+  // is worked out ONCE rather than in whichever spec happens to run first.
+  //
+  // The second is the one that cost an afternoon. Supabase's third-party auth
+  // is registered against a SPECIFIC Clerk instance; a token from any other one
+  // is refused with `PGRST301 No suitable key or wrong key type`, so
+  // getCurrentUser() throws, the route catches it, and the message says the
+  // caller is not signed in when they demonstrably are.
+  throw new Error(
+    [
+      `Signed in as ${email}, but the server does not accept the session (/api/permissions -> ${status}).`,
+      "",
+      await diagnose(page),
+    ].join("\n"),
+  );
+}
+
+/** Which of the two 401s this is — asked of the browser, which can see both halves. */
+async function diagnose(page: Page): Promise<string> {
+  const state = await page.evaluate(async () => {
+    const w = window as unknown as {
+      Clerk?: {
+        user?: { id?: string } | null;
+        session?: { getToken(): Promise<string | null> } | null;
+      };
+    };
+    if (!w.Clerk?.session) return { signedIn: false, issuer: null };
+    const token = await w.Clerk.session.getToken().catch(() => null);
+    let issuer: string | null = null;
+    try {
+      issuer =
+        (JSON.parse(atob(token!.split(".")[1]!)) as { iss?: string }).iss ??
+        null;
+    } catch {
+      /* leave null */
+    }
+    return { signedIn: true, userId: w.Clerk.user?.id ?? null, issuer };
   });
 
-  await expect
-    .poll(async () => (await page.request.get("/api/permissions")).status(), {
-      timeout: 60_000,
-    })
-    .toBe(200);
+  if (!state.signedIn) {
+    return [
+      "Clerk has no session in the browser either, so sign-in itself failed.",
+      "Check the account exists: bun scripts/provision-e2e-identities.ts",
+    ].join("\n");
+  }
+
+  return [
+    `Clerk DID sign in (${state.userId}) — the break is between Clerk and Supabase.`,
+    `Token issuer: ${state.issuer}`,
+    "",
+    "Supabase accepts tokens from the Clerk instances registered on it as",
+    "third-party auth providers, and refuses every other one with",
+    "`PGRST301 No suitable key or wrong key type`.",
+    "",
+    "Set CLERK_PUBLISHABLE_KEY / CLERK_SECRET_KEY to a REGISTERED instance —",
+    "or register this issuer in Supabase Dashboard -> Authentication -> Sign In",
+    "/ Providers -> Third Party Auth. Clerk's keyless fallback is a throwaway",
+    "instance and is never registered; see tests/e2e/_clerk-keys.ts.",
+  ].join("\n");
 }
 
 /**
