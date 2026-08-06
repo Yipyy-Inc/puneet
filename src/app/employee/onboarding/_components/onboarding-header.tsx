@@ -3,7 +3,7 @@
 import { CheckCircle2, Clock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { signOutEverywhere } from "@/lib/auth/sign-out-client";
+import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 
 // A client component for one reason: the sign-out button. Everything it
 // displays is a prop computed on the server.
@@ -16,6 +16,7 @@ export function OnboardingHeader({
   facilityName: string;
   submitted: boolean;
 }) {
+  const signOutEverywhere = useSignOutEverywhere();
   return (
     <header className="space-y-3">
       <div className="flex items-start justify-between gap-4">

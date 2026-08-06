@@ -1,6 +1,6 @@
 "use client";
 
-import { signOutEverywhere } from "@/lib/auth/sign-out-client";
+import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 import { useMemo } from "react";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
 import { NAV_SECTIONS, type NavItem } from "@/lib/nav/facility-nav";
 
 export function FacilitySidebar() {
+  const signOutEverywhere = useSignOutEverywhere();
   const isMounted = useHydrated();
 
   // The acting user's effective permissions (F0.2). Owner/Admin resolve to the

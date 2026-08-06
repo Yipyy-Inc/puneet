@@ -1,6 +1,6 @@
 "use client";
 
-import { signOutEverywhere } from "@/lib/auth/sign-out-client";
+import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 import {
   Activity,
   AlertTriangle,
@@ -68,6 +68,7 @@ function SidebarLogo() {
 }
 
 export function AppSidebar() {
+  const signOutEverywhere = useSignOutEverywhere();
   // 8-section platform-admin architecture. Canonical routes only — the legacy
   // /analytics, /subscriptions, /financial, /communication, /facility-config
   // duplicates are intentionally consolidated into the sections below.

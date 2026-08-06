@@ -1,6 +1,6 @@
 "use client";
 
-import { signOutEverywhere } from "@/lib/auth/sign-out-client";
+import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 import { useState, useEffect, useTransition } from "react";
 
 import Link from "next/link";
@@ -167,6 +167,7 @@ export function UserProfileSheet({
 }: {
   showNotifications?: boolean;
 }) {
+  const signOutEverywhere = useSignOutEverywhere();
   const { t } = useUiText();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();

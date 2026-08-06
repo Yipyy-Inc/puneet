@@ -1,6 +1,6 @@
 "use client";
 
-import { signOutEverywhere } from "@/lib/auth/sign-out-client";
+import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 import { useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { FacilitySwitcher } from "./FacilitySwitcher";
@@ -52,6 +52,7 @@ const availableMembershipCredits = memberships
   .reduce((sum, m) => sum + Math.max(0, m.creditsRemaining), 0);
 
 export function CustomerHeader() {
+  const signOutEverywhere = useSignOutEverywhere();
   const { selectedFacility } = useCustomerFacility();
   const { t } = useUiText();
   const [isPending, startTransition] = useTransition();

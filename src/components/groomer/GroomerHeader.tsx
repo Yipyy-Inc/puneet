@@ -5,9 +5,10 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Scissors } from "lucide-react";
 import { getCurrentUserId } from "@/lib/role-utils";
 import { useStylists } from "@/lib/api/stylists";
-import { signOutEverywhere } from "@/lib/auth/sign-out-client";
+import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 
 export function GroomerHeader() {
+  const signOutEverywhere = useSignOutEverywhere();
   const userId = getCurrentUserId();
   const { data: stylists = [] } = useStylists();
   const groomer = userId

@@ -1,6 +1,6 @@
 "use client";
 
-import { signOutEverywhere } from "@/lib/auth/sign-out-client";
+import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -100,6 +100,7 @@ const MY_WORKSPACE_LINKS = [
 ] as const;
 
 export function EmployeeHeader({ staffId }: { staffId: string }) {
+  const signOutEverywhere = useSignOutEverywhere();
   // The acting person comes from the shell's RBAC boundary — the same viewer
   // every permission decision in this tree resolves against.
   //

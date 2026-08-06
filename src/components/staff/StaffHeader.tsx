@@ -5,9 +5,10 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Calendar } from "lucide-react";
 import { getCurrentUserId } from "@/lib/role-utils";
 import { users } from "@/data/users";
-import { signOutEverywhere } from "@/lib/auth/sign-out-client";
+import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 
 export function StaffHeader() {
+  const signOutEverywhere = useSignOutEverywhere();
   const userId = getCurrentUserId();
   const staffMember = userId
     ? users.find((u) => u.id.toString() === userId || u.email === userId)
