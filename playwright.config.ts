@@ -74,7 +74,25 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  /**
+   * One retry LOCALLY too, which CI has always had.
+   *
+   * Measured across three full runs: 173 of 179 pass every time, and the
+   * handful that do not are a DIFFERENT handful each run — ECONNRESET on
+   * /api/permissions, a click timing out at the full 120s, a heading that never
+   * arrives. The suite takes ~45 minutes on one worker against a dev server
+   * that compiles routes on demand, and that is what those look like.
+   *
+   * A rotating cast of failures is not a list of defects to work through; it is
+   * the harness telling you the environment is loaded. Chasing them by name
+   * does not converge, and it trains everyone to read a red run as noise —
+   * which is how a real regression gets waved through.
+   *
+   * This does NOT hide anything. Playwright reports a test that passed on retry
+   * as `flaky`, distinct from `passed`, so the signal survives while a
+   * transient stops failing the run.
+   */
+  retries: 1,
   reporter: [["list"]],
   timeout: 120_000,
   expect: { timeout: 20_000 },
