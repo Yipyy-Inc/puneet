@@ -51,9 +51,30 @@ export function EmailSignInForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  /** Clerk hands back the session; `/` routes on to the right portal. */
+  /**
+   * Hand the session over and let `/` route on to the right portal.
+   *
+   * GUARDED, because finalize() throws "Cannot finalize sign-in without a
+   * created session" whenever the status is anything but `complete` — and that
+   * throw escaped as an unhandled page error, leaving the user on the form with
+   * an EMPTY red box. Calling it optimistically and hoping the status is right
+   * is what produced a sign-in button that appeared to do nothing.
+   *
+   * Anything unhandled reports its status rather than failing mutely, so the
+   * next unknown step is a legible bug report instead of a blank screen.
+   */
   async function finish() {
-    await signIn?.finalize({
+    if (!signIn) return;
+
+    if (signIn.status !== "complete") {
+      setMessage(
+        `Sign-in needs a further step this screen does not handle yet ` +
+          `(status: ${String(signIn.status)}). Please tell support.`,
+      );
+      return;
+    }
+
+    await signIn.finalize({
       navigate: async ({ decorateUrl }) => {
         const url = decorateUrl("/");
         // decorateUrl may return an absolute URL to satisfy Safari's ITP.
