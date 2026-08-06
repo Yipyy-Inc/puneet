@@ -18,9 +18,10 @@ import { CancelBookingDialog } from "@/components/customer/CancelBookingDialog";
 import { AddNoteModal } from "@/components/shared/AddNoteModal";
 import { CustomerUnfinishedBookings } from "@/components/bookings/CustomerUnfinishedBookings";
 import { TipPromptDialog } from "@/components/bookings/TipPromptDialog";
-import { bookings } from "@/data/bookings";
-import { clients } from "@/data/clients";
 import { getUnfinishedBookingsForCustomer } from "@/data/unfinished-bookings";
+import { bookingQueries } from "@/lib/api/booking";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
+import { useQuery } from "@tanstack/react-query";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
 import {
@@ -31,8 +32,8 @@ import { UpcomingBookingCard } from "./_components/UpcomingBookingCard";
 import { PastBookingCard } from "./_components/PastBookingCard";
 import { getPetForBooking, type Booking } from "./_components/booking-helpers";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
+// WHO THIS PAGE IS FOR comes from the session. It was MOCK_CUSTOMER_ID = 15
+// (Alice Johnson), so every signed-in pet owner saw her bookings.
 
 export default function CustomerBookingsPage() {
   const searchParams = useSearchParams();
@@ -58,16 +59,22 @@ export default function CustomerBookingsPage() {
     () => false,
   );
 
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
 
   const customerPets = customer?.pets ?? [];
 
+  // Their real bookings. bookings_read admits client_id in own_client_ids(),
+  // so the database would refuse anyone else's regardless of the id passed.
+  const { data: allBookings = [] } = useQuery({
+    ...bookingQueries.byClient(customerId ?? -1),
+    enabled: customerId != null,
+  });
+
   const myUnfinishedBookings = useMemo(
-    () => getUnfinishedBookingsForCustomer(MOCK_CUSTOMER_ID),
-    [],
+    () =>
+      customerId == null ? [] : getUnfinishedBookingsForCustomer(customerId),
+    [customerId],
   );
 
   // Redirect to new-booking page when ?service=... is present
@@ -79,11 +86,12 @@ export default function CustomerBookingsPage() {
   }, [searchParams]);
 
   const customerBookings = useMemo(() => {
-    const all = bookings.filter((b) => b.clientId === MOCK_CUSTOMER_ID);
-    if (!selectedFacility) return all;
-    const filtered = all.filter((b) => b.facilityId === selectedFacility.id);
-    return filtered.length > 0 ? filtered : all;
-  }, [selectedFacility]);
+    if (!selectedFacility) return allBookings;
+    const filtered = allBookings.filter(
+      (b) => b.facilityId === selectedFacility.id,
+    );
+    return filtered.length > 0 ? filtered : allBookings;
+  }, [allBookings, selectedFacility]);
 
   // Apply search + service filter before splitting upcoming/past
   const filteredBookings = useMemo(() => {

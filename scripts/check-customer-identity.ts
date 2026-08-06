@@ -18,7 +18,7 @@
  *
  * ── A RATCHET, NOT A CLIFF ────────────────────────────────────────────────
  *
- * 33 files still declare it. Failing on all of them would make the gate
+ * 31 files still declare it. Failing on all of them would make the gate
  * unrunnable and it would be disabled within a day, so the known set is
  * BASELINED and only new occurrences fail. Convert a file, delete its entry —
  * the list is meant to shrink and the build tells you when it grows.
@@ -48,14 +48,12 @@ const BASELINE = new Set<string>([
   "src/app/customer/bookings/[id]/page.tsx",
   "src/app/customer/bookings/[id]/yipyygo-form/page.tsx",
   "src/app/customer/bookings/new/page.tsx",
-  "src/app/customer/bookings/page.tsx",
   "src/app/customer/cameras/page.tsx",
   "src/app/customer/documents/page.tsx",
   "src/app/customer/gift-cards/_components/BuyGiftCardFlow.tsx",
   "src/app/customer/household/page.tsx",
   "src/app/customer/pets/[petId]/page.tsx",
   "src/app/customer/pets/add/page.tsx",
-  "src/app/customer/pets/page.tsx",
   "src/app/customer/refer/page.tsx",
   "src/app/customer/report-cards/page.tsx",
   "src/app/customer/rewards/page.tsx",

@@ -3,9 +3,8 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { clientQueries } from "@/lib/api/client";
-import { clients } from "@/data/clients";
-import { bookings } from "@/data/bookings";
+import { bookingQueries } from "@/lib/api/booking";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import {
   Card,
   CardContent,
@@ -24,31 +23,23 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { TagList } from "@/components/shared/TagList";
 
-// The signed-out fallback only. Signed in, RLS answers this question — see below.
-const MOCK_CUSTOMER_ID = 15;
-
 export default function CustomerPetsPage() {
   const { selectedFacility } = useCustomerFacility();
   const [searchQuery, setSearchQuery] = useState("");
 
   // WHOSE PETS THESE ARE IS NOT A CLIENT-SIDE DECISION.
   //
-  // This picked client 15 out of the mock array by hardcoded id, with a TODO
-  // about auth. There is auth now, and the answer is better than a lookup:
-  // `clients_read` admits `profile_id = auth.uid()`, so /api/clients returns
-  // exactly ONE record to a customer — their own. Taking the first row is not a
-  // shortcut, it is the whole list.
+  // This asked /api/clients for the WHOLE roster and then picked id 15 out of
+  // it, falling back to the first row. For a customer that happened to work —
+  // `clients_read` returns exactly their own record — but it fetched a list to
+  // find the one row RLS had already narrowed to, and for a STAFF member
+  // opening the portal it returned the entire facility and then chose Alice.
   //
-  // The mock id survives only for the signed-out fallback, where there is no
-  // session to ask and the array is all there is.
-  const { data: roster } = useQuery(clientQueries.all());
-  const customer = useMemo(
-    () =>
-      roster?.length
-        ? (roster.find((c) => c.id === MOCK_CUSTOMER_ID) ?? roster[0])
-        : clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [roster],
-  );
+  // useCurrentCustomer() asks the question directly: /api/clients/me resolves
+  // the caller's own record, and claims it on first use if the link has not
+  // been made yet (20260807180000).
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
 
   const customerPets = useMemo(() => customer?.pets || [], [customer]);
 
@@ -64,9 +55,15 @@ export default function CustomerPetsPage() {
     );
   }, [customerPets, searchQuery]);
 
+  // Their real bookings, used for the per-pet visit count below.
+  const { data: myBookings = [] } = useQuery({
+    ...bookingQueries.byClient(customerId ?? -1),
+    enabled: customerId != null,
+  });
+
   // Get pet statistics
   const getPetStats = (petId: number) => {
-    const petBookings = bookings.filter(
+    const petBookings = myBookings.filter(
       (b) => b.petId === petId && b.status === "completed",
     );
     const petVaccinations = vaccinationRecords.filter((v) => v.petId === petId);
@@ -228,7 +225,7 @@ export default function CustomerPetsPage() {
                       <div className="pt-2">
                         <PetComplianceChecklist
                           pet={pet}
-                          clientId={MOCK_CUSTOMER_ID}
+                          clientId={customerId ?? 0}
                           facilityId={selectedFacility.id}
                           compact={true}
                         />
