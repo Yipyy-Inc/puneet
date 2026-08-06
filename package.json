@@ -29,7 +29,8 @@
     "test:e2e:ui": "playwright test --ui",
     "prepare": "husky",
     "db:seed:apply": "bun scripts/apply-operational-seed.ts",
-    "db:seed:operational": "bun scripts/generate-operational-seed.ts"
+    "db:seed:operational": "bun scripts/generate-operational-seed.ts",
+    "check:customer-identity": "bun scripts/check-customer-identity.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.91.1",

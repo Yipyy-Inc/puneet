@@ -39,8 +39,6 @@ import {
   ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
-import { clients } from "@/data/clients";
-import { bookings } from "@/data/bookings";
 import { estimates } from "@/data/estimates";
 import { businessProfile } from "@/data/settings";
 import { vaccinationRecords } from "@/data/pet-data";
@@ -52,6 +50,8 @@ import { clientCommunications } from "@/data/communications";
 import { reportCards } from "@/data/pet-data";
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
+import { bookingQueries } from "@/lib/api/booking";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { customerLoyaltyData, loyaltySettings } from "@/data/marketing";
 import {
   getUnfinishedBookingsForCustomer,
@@ -59,8 +59,19 @@ import {
 } from "@/data/unfinished-bookings";
 import { CustomerTrainingCreditsBanner } from "@/components/customer/training/customer-training-credits-banner";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
+// ============================================================================
+// WHO THIS PAGE IS FOR comes from the session now.
+//
+// It was `const MOCK_CUSTOMER_ID = 15` — Alice Johnson — hardcoded here and in
+// 34 other customer-portal files. Every signed-in pet owner was shown her
+// bookings, her pets and her household, on a live site, while Clerk knew
+// exactly who was asking.
+//
+// `customerId` is undefined until useCurrentCustomer() resolves, and stays
+// undefined for somebody with no client record. The filters below over
+// fixtures that have no backend yet (loyalty, estimates, report cards) then
+// match nothing, which is the honest answer — better than showing a stranger's.
+// ============================================================================
 
 // Mood → tinted thumbnail tone for the "new report card" notification.
 const MOOD_TONE: Record<string, string> = {
@@ -79,27 +90,33 @@ export default function CustomerDashboardPage() {
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [nowMs] = useState(() => Date.now());
 
+  // The signed-in person, and everything keyed off them.
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   // Expiry is derived from the clock server-side, so a pack that lapsed while
   // nobody was looking arrives already marked expired and drops out below.
-  const { data: ownedPackages = [] } = useQuery(
-    groomingQueries.customerPackagesForClient(MOCK_CUSTOMER_ID),
-  );
+  const { data: ownedPackages = [] } = useQuery({
+    ...groomingQueries.customerPackagesForClient(customerId ?? -1),
+    enabled: customerId != null,
+  });
 
-  // Get customer data
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
   const customerPets = useMemo(() => customer?.pets || [], [customer]);
 
-  // Get customer bookings for selected facility
+  // Their real bookings. RLS scopes these already — `bookings_read` admits
+  // `client_id in own_client_ids()` — so this asks for their own rows and the
+  // database would refuse anyone else's regardless of the id passed.
+  const { data: allCustomerBookings = [] } = useQuery({
+    ...bookingQueries.byClient(customerId ?? -1),
+    enabled: customerId != null,
+  });
+
   const customerBookings = useMemo(() => {
     if (!selectedFacility) return [];
-    return bookings.filter(
-      (b) =>
-        b.clientId === MOCK_CUSTOMER_ID && b.facilityId === selectedFacility.id,
+    return allCustomerBookings.filter(
+      (b) => b.facilityId === selectedFacility.id,
     );
-  }, [selectedFacility]);
+  }, [allCustomerBookings, selectedFacility]);
 
   // Get upcoming bookings (sorted by date)
   const upcomingBookings = useMemo(() => {
@@ -143,9 +160,7 @@ export default function CustomerDashboardPage() {
   // Get messages count
   const messagesData = useMemo(() => {
     const customerMessages = clientCommunications.filter(
-      (m) =>
-        m.clientId === MOCK_CUSTOMER_ID &&
-        m.facilityId === selectedFacility?.id,
+      (m) => m.clientId === customerId && m.facilityId === selectedFacility?.id,
     );
     const unreadCount = customerMessages.filter(
       (m) => m.status !== "read",
@@ -161,16 +176,16 @@ export default function CustomerDashboardPage() {
       unread: unreadCount,
       recent: recentMessages,
     };
-  }, [selectedFacility]);
+  }, [customerId, selectedFacility]);
 
   // Get report cards count
   const reportCardsData = useMemo(() => {
+    // Matched against the caller's REAL bookings. Report cards are still a
+    // fixture, so this is a fixture joined to live rows — but the join key is
+    // now the signed-in person's, so somebody else's cards cannot appear.
     const customerReportCards = reportCards.filter((rc) => {
-      const booking = bookings.find((b) => b.id === rc.bookingId);
-      return (
-        booking?.clientId === MOCK_CUSTOMER_ID &&
-        booking?.facilityId === selectedFacility?.id
-      );
+      const booking = allCustomerBookings.find((b) => b.id === rc.bookingId);
+      return booking != null && booking.facilityId === selectedFacility?.id;
     });
     const latestReportCard = customerReportCards.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
@@ -179,12 +194,12 @@ export default function CustomerDashboardPage() {
       total: customerReportCards.length,
       latest: latestReportCard ? new Date(latestReportCard.date) : null,
     };
-  }, [selectedFacility]);
+  }, [allCustomerBookings, selectedFacility]);
 
   // Get loyalty data
   const loyaltyData = useMemo(() => {
     const customerLoyalty = customerLoyaltyData.find(
-      (l) => l.clientId === MOCK_CUSTOMER_ID,
+      (l) => l.clientId === customerId,
     );
     if (!customerLoyalty) return null;
 
@@ -211,15 +226,13 @@ export default function CustomerDashboardPage() {
       pointsToNextTier,
       progressPercentage: Math.min(100, Math.max(0, progressPercentage)),
     };
-  }, []);
+  }, [customerId]);
 
   // Pending (Awaiting Response) estimates for this customer.
   const pendingEstimates = useMemo(
     () =>
-      estimates.filter(
-        (e) => e.clientId === MOCK_CUSTOMER_ID && e.status === "sent",
-      ),
-    [],
+      estimates.filter((e) => e.clientId === customerId && e.status === "sent"),
+    [customerId],
   );
 
   // Passes expiring within 14 days (with passes remaining), soonest first.
@@ -260,11 +273,12 @@ export default function CustomerDashboardPage() {
   // Get unfinished bookings for this customer + facility
   const unfinishedBookings = useMemo(() => {
     if (!selectedFacility) return [];
-    return getUnfinishedBookingsForCustomer(MOCK_CUSTOMER_ID).filter(
+    if (customerId == null) return [];
+    return getUnfinishedBookingsForCustomer(customerId).filter(
       (ub) =>
         ub.facilityId === selectedFacility.id && ub.status !== "recovered",
     );
-  }, [selectedFacility]);
+  }, [customerId, selectedFacility]);
 
   // Check for urgent actions
   const urgentActions = useMemo(() => {
@@ -396,9 +410,7 @@ export default function CustomerDashboardPage() {
 
     // Check for failed payments
     const customerPayments = payments.filter(
-      (p) =>
-        p.clientId === MOCK_CUSTOMER_ID &&
-        p.facilityId === selectedFacility?.id,
+      (p) => p.clientId === customerId && p.facilityId === selectedFacility?.id,
     );
     const failedPayments = customerPayments.filter(
       (p) => p.status === "failed",
@@ -417,8 +429,7 @@ export default function CustomerDashboardPage() {
     // Check for overdue invoices
     const customerInvoices = invoices.filter(
       (inv) =>
-        inv.clientId === MOCK_CUSTOMER_ID &&
-        inv.facilityId === selectedFacility?.id,
+        inv.clientId === customerId && inv.facilityId === selectedFacility?.id,
     );
     const overdueInvoices = customerInvoices.filter(
       (inv) => inv.status === "overdue",
@@ -441,6 +452,7 @@ export default function CustomerDashboardPage() {
     });
   }, [
     customer,
+    customerId,
     customerPets,
     customerBookings,
     upcomingBookings,
@@ -843,7 +855,9 @@ export default function CustomerDashboardPage() {
           </Link>
         )}
 
-        <CustomerTrainingCreditsBanner customerId={MOCK_CUSTOMER_ID} />
+        {customerId != null && (
+          <CustomerTrainingCreditsBanner customerId={customerId} />
+        )}
 
         {/* Loyalty Rewards Section */}
         {loyaltyData && (
