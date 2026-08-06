@@ -100,6 +100,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@clerk/testing": "^2.2.18",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.1.17",
     "@types/node": "^20.19.25",

@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 
 import { defineConfig, devices } from "@playwright/test";
 
+import { applyClerkTestKeys } from "./tests/e2e/_clerk-keys";
+
 /**
  * E2E smoke harness for the staff-portal nav-parity work (see the spec in
  * tests/e2e/). Deliberately minimal: one Chromium project against the dev
@@ -53,6 +55,19 @@ try {
   /* no .env.local — CI, or a fresh clone */
 }
 
+/**
+ * Clerk keys, resolved BEFORE anything else so the failure is one sentence at
+ * startup rather than 36 identical sign-in timeouts.
+ *
+ * Set here rather than in global.setup.ts because the WEB SERVER needs them
+ * too: Playwright passes process.env down to the `bun run dev` it starts, and
+ * an app on a different Clerk instance from the harness would reject every
+ * session the harness creates. It also stops the dev server re-entering keyless
+ * mode and writing keys into the developer's .env.local as a side effect of
+ * running tests.
+ */
+applyClerkTestKeys();
+
 export default defineConfig({
   testDir: "./tests/e2e",
   // The dev server is a single shared process; serialise to avoid compile races.
@@ -69,7 +84,18 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    // Mints the Clerk Testing Token the specs sign in with. A dependency
+    // rather than `globalSetup` because clerkSetup() wants a Playwright test
+    // context, and because a failure here should read as a failed setup step
+    // rather than as the whole run refusing to start for an unstated reason.
+    { name: "setup", testMatch: /global\.setup\.ts/ },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
+    },
+  ],
   // Nothing to start when pointing at a deployed URL — and starting a local
   // dev server would be worse than pointless, since Playwright would wait for
   // it and then test somewhere else entirely.
