@@ -112,13 +112,30 @@ test.describe("an invited account is not an admitted one", () => {
     ).not.toContain("Add new staff");
   });
 
-  test("…and once activated, the same person gets in", async ({ page }) => {
+  test("…and once activated, the same person gets in", async ({
+    page,
+    browser,
+  }) => {
     // The control. Without it, the refusal above is satisfied by a gate that
     // refuses everyone, which is not the behaviour anyone wants.
-    await signIn(page, ACCOUNTS.owner);
-    await page.request.patch(`/api/staff/${SUBJECT}`, {
-      data: { status: "active" },
-    });
+    //
+    // The owner's write goes in ITS OWN CONTEXT, matching the test above. Doing
+    // both sign-ins on one page cost two full authentication cycles inside a
+    // single 120s budget — each one navigates, waits for Clerk to load, and
+    // then polls /api/permissions until the database answers — and the test
+    // timed out in the second one. That reads as "the caretaker cannot sign
+    // in", which is precisely the claim under test, so the false failure was
+    // indistinguishable from a true one.
+    const manager = await browser.newContext();
+    const managerPage = await manager.newPage();
+    try {
+      await signIn(managerPage, ACCOUNTS.owner);
+      await managerPage.request.patch(`/api/staff/${SUBJECT}`, {
+        data: { status: "active" },
+      });
+    } finally {
+      await manager.close();
+    }
 
     await signIn(page, ACCOUNTS.caretaker);
     const body = await (await page.request.get("/facility/dashboard")).text();

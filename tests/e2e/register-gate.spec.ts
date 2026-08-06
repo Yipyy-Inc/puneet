@@ -1,4 +1,10 @@
-import { test, expect, type BrowserContext, type Page } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 import { ACCOUNTS, signIn } from "./_auth";
 import path from "node:path";
 
@@ -24,32 +30,55 @@ import path from "node:path";
 // does not hold it at all. So the gated and un-gated cases are two real accounts
 // and no overrides — nothing to set up, and nothing to tear down.
 //
-// The HR config below is still seeded through localStorage. That is not a
-// permission; it is facility configuration, and it has no backend yet.
+// The HR config used to be seeded through localStorage, on the grounds that it
+// "has no backend yet". It has one now (staff_hr_config + /api/staff-onboarding/
+// hr-config), so the seeding silently stopped applying and these tests were
+// running against the DEFAULTS. See setHrConfig below — it writes the real row
+// and afterAll puts it back.
 // ============================================================================
 
-const HR_KEY = "yipyy-staff-onboarding-v2"; // StaffHrConfig persistence
 const SHOTS =
   process.env.PWV_SHOTS ??
   "C:/Users/merie/AppData/Local/Temp/claude/c--dev-puneet/972b865b-3d4c-498d-8480-5f5908c6c228/scratchpad";
 
 type HrConfig = Record<string, unknown>;
 
+/**
+ * Change the facility's HR config, as the owner, in its own context.
+ *
+ * It used to be seeded into `yipyy-staff-onboarding-v2` in localStorage before
+ * any app JS ran. That worked while the config was a mock store and stopped
+ * working silently when it moved to Postgres: `useStaffHrConfig()` reads
+ * /api/staff-onboarding/hr-config and falls back to DEFAULT_STAFF_HR_CONFIG,
+ * so the seeded value was simply ignored.
+ *
+ * The handover test is what noticed. It needs `registerCloseReminder: manual`;
+ * without it the default `closing_time` applies, and that DOES pop the close
+ * flow once the facility's closing time has passed — so the test passed in the
+ * morning and failed in the evening, which is the worst way for a test to be
+ * wrong.
+ *
+ * FACILITY-WIDE, so callers restore it.
+ */
+async function setHrConfig(browser: Browser, patch: HrConfig): Promise<number> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await signIn(page, ACCOUNTS.owner);
+    const res = await page.request.put("/api/staff-onboarding/hr-config", {
+      data: patch,
+    });
+    return res.status();
+  } finally {
+    await context.close();
+  }
+}
+
 async function enterPortalAs(
-  context: BrowserContext,
+  _context: BrowserContext,
   page: Page,
   email: string,
-  hrConfig: HrConfig = {},
 ) {
-  if (Object.keys(hrConfig).length > 0) {
-    // Before any app JS runs. Deep-merged into the default config on load.
-    await context.addInitScript(
-      ({ hrKey, hr }) => {
-        window.localStorage.setItem(hrKey, JSON.stringify({ config: hr }));
-      },
-      { hrKey: HR_KEY, hr: hrConfig },
-    );
-  }
   await signIn(page, email);
   await page.goto("/employee");
 }
@@ -58,6 +87,17 @@ const sidebar = (page: Page) =>
   page.locator('[data-slot="sidebar-inner"]').first();
 
 test.describe("Daily Register open/close gate", () => {
+  // registerCloseReminder is a row in a shared project, so it comes out however
+  // the run ends. Restored to the seeded default rather than left on manual —
+  // the first test in this file asserts the gate DOES appear.
+  test.afterAll(async ({ browser }) => {
+    try {
+      await setHrConfig(browser, { registerCloseReminder: "closing_time" });
+    } catch {
+      // Teardown must never turn a green run red.
+    }
+  });
+
   test("reception is forced to count the drawer open, then the portal unlocks", async ({
     page,
     context,
@@ -89,11 +129,11 @@ test.describe("Daily Register open/close gate", () => {
   test("[opener-closes mode] the opener's clock-out pops the close-count reminder", async ({
     page,
     context,
+    browser,
   }) => {
     // Single-cashier mode: the person who opened is reminded on clock-out.
-    await enterPortalAs(context, page, ACCOUNTS.reception, {
-      registerCloseReminder: "opener_clock_out",
-    });
+    await setHrConfig(browser, { registerCloseReminder: "opener_clock_out" });
+    await enterPortalAs(context, page, ACCOUNTS.reception);
 
     // Open the register through the gate (this staff is now the opener).
     await page.getByRole("spinbutton").first().fill("12");
@@ -116,14 +156,15 @@ test.describe("Daily Register open/close gate", () => {
   test("[handover] a mid-shift clock-out does NOT force the register closed", async ({
     page,
     context,
+    browser,
   }) => {
     // Manual mode stands in for the shift-handover guarantee: clocking out with
     // the drawer open must NOT pop the close flow, so a morning cashier can
     // leave and an evening cashier closes later. (closing_time behaves the same
-    // before the facility's closing time.)
-    await enterPortalAs(context, page, ACCOUNTS.reception, {
-      registerCloseReminder: "manual",
-    });
+    // before the facility's closing time — which is why this must be set rather
+    // than assumed: after closing time the default DOES prompt.)
+    await setHrConfig(browser, { registerCloseReminder: "manual" });
+    await enterPortalAs(context, page, ACCOUNTS.reception);
 
     await page.getByRole("spinbutton").first().fill("12");
     await page.getByRole("button", { name: /Open register/i }).click();

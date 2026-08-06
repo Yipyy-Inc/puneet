@@ -132,15 +132,27 @@ export async function signIn(page: Page, email: string): Promise<void> {
   // bypasses first-factor configuration entirely, so the suite does not break
   // when somebody turns password sign-in off in the dashboard. The password
   // journey is a thing to TEST, not a thing to depend on 36 times.
+  // Retried on TRANSIENT failures only. Two kinds show up, and neither means
+  // the account is wrong:
+  //
+  //   the navigation race above, and
+  //   "There was an internal error on our servers" — Clerk 5xx. A development
+  //   instance is rate-limited and this suite signs in once per test, so under
+  //   a full run it is hit occasionally.
+  //
+  // A wrong identifier still fails on the first attempt, which is the point:
+  // retrying a real failure just delays it by six seconds.
   for (let attempt = 0; ; attempt++) {
     try {
       await clerk.signIn({ page, emailAddress: email });
       break;
     } catch (error) {
-      const navigated = /execution context was destroyed|navigation/i.test(
-        String(error),
-      );
-      if (!navigated || attempt >= 2) throw error;
+      const transient =
+        /execution context was destroyed|navigation|internal error|rate limit|too many requests|5\d\d/i.test(
+          String(error),
+        );
+      if (!transient || attempt >= 2) throw error;
+      await page.waitForTimeout(2_000 * (attempt + 1));
       await page.goto("/sign-in");
       await clerk.loaded({ page });
     }

@@ -38,26 +38,19 @@ import { ACCOUNTS, signIn } from "./_auth";
 //     to leak into the next spec.
 // ============================================================================
 
-const HR_KEY = "yipyy-staff-onboarding-v2";
-
 const GROOMER_STAFF_ID = "fs-dev-groomer";
 const CARETAKER_STAFF_ID = "fs-dev-caretaker";
 
 /** Enter the employee portal as a real account, with the register gate off. */
 async function enterPortalAs(
-  context: BrowserContext,
+  _context: BrowserContext,
   page: Page,
   email: string,
 ) {
-  await context.addInitScript(
-    ({ hrKey }) => {
-      window.localStorage.setItem(
-        hrKey,
-        JSON.stringify({ config: { requireRegisterOpenOnLogin: false } }),
-      );
-    },
-    { hrKey: HR_KEY },
-  );
+  // The opening-count gate is turned off for the whole describe (beforeAll),
+  // not per context. It used to be seeded into localStorage here, which stopped
+  // having any effect when the HR config moved to Postgres — see
+  // setRegisterGate above.
   await signIn(page, email);
   await page.goto("/employee");
 }
@@ -79,6 +72,37 @@ async function setStaffOverride(
     await signIn(page, ACCOUNTS.owner);
     const res = await page.request.put("/api/roles/overrides", {
       data: { kind: "staff", staffId, key, setting },
+    });
+    return res.status();
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Turn the mandatory opening-count gate off (or back on) for the facility.
+ *
+ * This spec is about NAV PARITY, and RegisterOpenGate blocks the entire portal
+ * — sidebar included — until today's drawer is counted. It used to be disabled
+ * by seeding `yipyy-staff-onboarding-v2` into localStorage, which worked while
+ * the HR config was a mock store and stopped working silently when it moved to
+ * Postgres: `useStaffHrConfig()` reads /api/staff-onboarding/hr-config, falls
+ * back to DEFAULT_STAFF_HR_CONFIG, and that default has the gate ON. The
+ * precondition simply stopped applying and the sidebar was never rendered.
+ *
+ * FACILITY-WIDE, so it is restored in afterAll. register-gate.spec.ts asserts
+ * the gate DOES block, and would fail against a facility this spec left open.
+ */
+async function setRegisterGate(
+  browser: Browser,
+  required: boolean,
+): Promise<number> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await signIn(page, ACCOUNTS.owner);
+    const res = await page.request.put("/api/staff-onboarding/hr-config", {
+      data: { requireRegisterOpenOnLogin: required },
     });
     return res.status();
   } finally {
@@ -110,10 +134,19 @@ const BESPOKE = [
 test.describe.configure({ mode: "serial" });
 
 test.describe("Staff portal nav parity", () => {
+  test.beforeAll(async ({ browser }) => {
+    await setRegisterGate(browser, false);
+  });
+
   // Overrides are rows in a shared project, so they come out however the run
   // ends — the same lesson recorded in role-editor-writes.spec.ts, where one
   // leftover grant sent five unrelated specs red.
   test.afterAll(async ({ browser }) => {
+    try {
+      await setRegisterGate(browser, true);
+    } catch {
+      // Teardown must never turn a green run red.
+    }
     for (const [staffId, key] of [
       [GROOMER_STAFF_ID, "view_petcams"],
       [CARETAKER_STAFF_ID, "view_petcams"],

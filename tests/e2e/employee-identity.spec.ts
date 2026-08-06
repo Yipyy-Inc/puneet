@@ -43,7 +43,6 @@ test.describe("employee portal identity", () => {
     ]);
 
     await page.goto("/employee");
-    await page.waitForTimeout(8000);
 
     // THE ACCOUNT MENU, not the page text.
     //
@@ -57,13 +56,28 @@ test.describe("employee portal identity", () => {
     // question.
     const header = page.locator("header").first();
     await expect(header).toBeVisible({ timeout: 30_000 });
-    const shown = (await header.innerText()).replace(/\s+/g, " ").trim();
+
+    // WAITED FOR, not slept on. This used to be waitForTimeout(8000) followed
+    // by a single innerText() snapshot, and the header deliberately renders NO
+    // name until the roster query resolves — `viewerResolved` gates it, so that
+    // a session-derived id which has not arrived yet cannot briefly render a
+    // COLLEAGUE (use-facility-rbac.tsx:279). On a cold dev-server compile of
+    // /employee the roster lands after those eight seconds, and the assertion
+    // read the placeholder: "Off the clock Clock in EN 9+ ?" — the `?` being
+    // the empty-initials avatar.
+    //
+    // Failing that way is indistinguishable from the bug this test exists to
+    // catch, so it went on the list of real regressions for an afternoon.
+    await expect(header, "the acting groomer is named").toContainText(
+      /Jessica/,
+      { timeout: 60_000 },
+    );
 
     // Scoped to the header so the assertion reads as "who is acting", and
     // reported with the actual text so a failure says which of the two ways it
     // went: the wrong person, or nobody at all (a cookie id with no matching
     // row renders a blank account menu).
-    expect(shown, `header showed: "${shown}"`).toMatch(/Jessica/);
+    const shown = (await header.innerText()).replace(/\s+/g, " ").trim();
     expect(shown, `header showed: "${shown}"`).not.toMatch(/Dana/);
   });
 

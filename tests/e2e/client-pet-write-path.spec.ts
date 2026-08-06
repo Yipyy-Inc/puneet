@@ -21,6 +21,10 @@ import { ACCOUNTS, signIn } from "./_auth";
 
 const CUSTOMER_REF = 15; // Alice Johnson — the client record customer@yipyy.dev owns.
 
+/** Stamped on the booking that arms the debt, so teardown can find it again. */
+const MARKER = "[e2e client-pet-write-path]";
+const DEBT = 125.5;
+
 interface ClientBody {
   id: number;
   name: string;
@@ -60,13 +64,29 @@ test.describe("client and pet write path", () => {
         data: {
           name: "Alice Johnson",
           phone: null,
-          outstandingBalance: 0,
           isBlocked: false,
           blockedReason: null,
           noShowCount: 0,
           storeCredit: { balance: 0, transactions: [] },
         },
       });
+
+      // The debt is a BOOKING now, so clearing it means cancelling that
+      // booking — writing `outstandingBalance: 0` here would be teardown that
+      // silently does nothing, and the next run would start with a client who
+      // already owes money and a test that "passes" for the wrong reason.
+      const bookings = (await (
+        await page.request.get("/api/bookings")
+      ).json()) as
+        | { id: string; status?: string; specialRequests?: string }[]
+        | null;
+      for (const b of bookings ?? []) {
+        if (!b.specialRequests?.includes(MARKER)) continue;
+        if (b.status === "cancelled") continue;
+        await page.request.patch(`/api/bookings/${b.id}`, {
+          data: { status: "cancelled" },
+        });
+      }
     } catch {
       // Teardown must never turn a green run red.
     } finally {
@@ -106,15 +126,49 @@ test.describe("client and pet write path", () => {
     //
     // So a staff caller puts a real debt and a block on the account, and only
     // then does the customer try to wipe it.
+    //
+    // THE DEBT IS A DELIVERED BOOKING, not a written figure.
+    // `clients.outstanding_balance` stopped being a stored column in
+    // 20260806780000 — what a client owes is now derived from bookings that
+    // have been delivered and not settled. So PATCHing 125.5 wrote nothing and
+    // the route correctly echoed the derived 0, and this test failed on its own
+    // arming step rather than on the rule it exists to check.
+    //
+    // Deriving it also makes the customer's attack impossible by construction
+    // rather than by trigger, which is stronger — but only if the balance is
+    // genuinely non-zero when they try, hence a real booking.
+    let owed = 0;
     const staff = await browser.newContext();
     const staffPage = await staff.newPage();
     try {
       await signIn(staffPage, ACCOUNTS.owner);
+
+      const day = new Date(Date.now() - 3 * 86_400_000)
+        .toISOString()
+        .slice(0, 10);
+      const created = await staffPage.request.post("/api/bookings", {
+        data: {
+          clientId: CUSTOMER_REF,
+          petId: 1,
+          facilityId: 11,
+          service: "daycare",
+          startDate: day,
+          endDate: day,
+          checkInTime: "09:00",
+          checkOutTime: "17:00",
+          status: "completed",
+          basePrice: DEBT,
+          discount: 0,
+          totalCost: DEBT,
+          specialRequests: MARKER,
+        },
+      });
+      expect(created.status(), await created.text()).toBe(201);
+
       const armed = await staffPage.request.patch(
         `/api/clients/${CUSTOMER_REF}`,
         {
           data: {
-            outstandingBalance: 125.5,
             isBlocked: true,
             blockedReason: "Test arrangement",
             noShowCount: 3,
@@ -122,7 +176,14 @@ test.describe("client and pet write path", () => {
         },
       );
       expect(armed.status()).toBe(200);
-      expect((await body<ClientBody>(armed)).outstandingBalance).toBe(125.5);
+
+      // Read as an ABSOLUTE only after arming, and carried into the assertion
+      // below as a delta baseline: client 15 is a seeded account with its own
+      // history, so "the balance is 125.5" would only hold on a fresh database.
+      owed = Number((await body<ClientBody>(armed)).outstandingBalance ?? 0);
+      expect(owed, "the delivered booking is owed").toBeGreaterThanOrEqual(
+        DEBT,
+      );
     } finally {
       await staff.close();
     }
@@ -139,7 +200,9 @@ test.describe("client and pet write path", () => {
     // show a customer a balance the database refused to change.
     expect(res.status()).toBe(200);
     const stored = await body<ClientBody>(res);
-    expect(stored.outstandingBalance, "the debt is still owed").toBe(125.5);
+    expect(Number(stored.outstandingBalance), "the debt is still owed").toBe(
+      owed,
+    );
     expect(stored.isBlocked, "still blocked").toBe(true);
     expect(stored.noShowCount, "no-shows still counted").toBe(3);
   });
