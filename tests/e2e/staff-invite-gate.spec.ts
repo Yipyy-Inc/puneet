@@ -52,16 +52,22 @@ test.describe("an invited account is not an admitted one", () => {
   test("an account with no password cannot sign in at all", async ({
     page,
   }) => {
-    // An invited GoTrue user has no password, so there is nothing to
-    // authenticate with. An account that does not exist gives the same answer,
+    // An address with no Clerk account has nothing to authenticate with, and an
+    // account that exists but has not been invited gives the same answer —
     // which is the correct answer either way.
-    await page.goto("/login");
-    await page.fill("#email", "invited-nobody@example.invalid");
+    //
+    // Driven through the form rather than through the shared signIn(): that
+    // helper goes via the Backend API and THROWS on an unknown identifier, so
+    // it can only prove sign-in succeeds. Proving it fails means asking the
+    // screen a real person would use.
+    // Ids read off src/components/auth/EmailSignInForm.tsx, not guessed at.
+    await page.goto("/sign-in");
+    await page.fill("#identifier", "invited-nobody@example.invalid");
     await page.fill("#password", PASSWORD);
     await page.getByRole("button", { name: /sign in/i }).click();
     await page.waitForTimeout(4000);
 
-    expect(new URL(page.url()).pathname).toMatch(/^\/login/);
+    expect(new URL(page.url()).pathname).toMatch(/^\/sign-in/);
     expect(
       (await page.request.get("/api/permissions")).status(),
       "/api/permissions is the check only a real session passes",
@@ -97,7 +103,7 @@ test.describe("an invited account is not an admitted one", () => {
     // A soft redirect: HTTP 200 with NEXT_REDIRECT in the RSC payload, because
     // the layout streams. The status is not the answer — the body is.
     expect(body, "not left in the admin portal").toContain("NEXT_REDIRECT");
-    expect(body, "and sent somewhere useful, not to /login").toContain(
+    expect(body, "and sent somewhere useful, not to /sign-in").toContain(
       "/employee/onboarding",
     );
     expect(

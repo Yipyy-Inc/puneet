@@ -151,6 +151,6 @@ test.describe("employee portal identity", () => {
   test("signed out cannot reach the portal at all", async ({ page }) => {
     await page.goto("/employee");
     await page.waitForTimeout(6000);
-    expect(new URL(page.url()).pathname).toMatch(/^\/login/);
+    expect(new URL(page.url()).pathname).toMatch(/^\/sign-in/);
   });
 });

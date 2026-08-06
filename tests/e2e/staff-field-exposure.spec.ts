@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { PASSWORD } from "./_auth";
+import { signIn } from "./_auth";
 
 // ============================================================================
 // /api/staff does not hand out what the caller may not see.
@@ -31,18 +31,6 @@ interface StaffRow {
   employment: { notes?: string };
   clockIn?: { requireAccessCode: boolean; accessCode?: string };
   statusNote?: string;
-}
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/login");
-  await page.fill("#email", email);
-  await page.fill("#password", PASSWORD);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect
-    .poll(async () => (await page.request.get("/api/permissions")).status(), {
-      timeout: 30_000,
-    })
-    .toBe(200);
 }
 
 async function staffAs(page: Page, email: string): Promise<StaffRow[]> {

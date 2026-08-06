@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { PASSWORD } from "./_auth";
+import { test, expect } from "@playwright/test";
+import { signIn } from "./_auth";
 
 // ============================================================================
 // The platform portal requires a real session.
@@ -17,18 +17,6 @@ import { PASSWORD } from "./_auth";
 // asks the API rather than the page.
 // ============================================================================
 
-async function signIn(page: Page, email: string) {
-  await page.goto("/login");
-  await page.fill("#email", email);
-  await page.fill("#password", PASSWORD);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect
-    .poll(async () => (await page.request.get("/api/permissions")).status(), {
-      timeout: 30_000,
-    })
-    .toBe(200);
-}
-
 test.describe.configure({ mode: "serial" });
 
 test.describe("admin portal enforcement", () => {
@@ -36,7 +24,7 @@ test.describe("admin portal enforcement", () => {
     page,
   }) => {
     await page.goto("/dashboard");
-    await page.waitForURL(/\/login/, { timeout: 30_000 });
+    await page.waitForURL(/\/sign-in/, { timeout: 30_000 });
 
     // The destination carries where they were going, so signing in lands them
     // there rather than dumping them at a default.

@@ -3,9 +3,8 @@ import {
   expect,
   type Browser,
   type BrowserContext,
-  type Page,
 } from "@playwright/test";
-import { PASSWORD } from "./_auth";
+import { signIn } from "./_auth";
 
 // ============================================================================
 // No hydration mismatches on the surfaces a signed-in person lands on.
@@ -39,18 +38,6 @@ const FACILITY_ROUTES = [
   "/facility/dashboard/staff",
   "/facility/dashboard/settings",
 ];
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/login");
-  await page.fill("#email", email);
-  await page.fill("#password", PASSWORD);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect
-    .poll(async () => (await page.request.get("/api/permissions")).status(), {
-      timeout: 30_000,
-    })
-    .toBe(200);
-}
 
 /** Sign in, then drop the warm JS context so each route is a first arrival. */
 async function sessionFor(

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { PASSWORD } from "./_auth";
+import { signIn } from "./_auth";
 
 // ============================================================================
 // The facility portal knows who you are.
@@ -18,18 +18,6 @@ import { PASSWORD } from "./_auth";
 // ============================================================================
 
 const STORAGE_KEY = "facility-rbac-state-v1";
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/login");
-  await page.fill("#email", email);
-  await page.fill("#password", PASSWORD);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect
-    .poll(async () => (await page.request.get("/api/permissions")).status(), {
-      timeout: 30_000,
-    })
-    .toBe(200);
-}
 
 /**
  * The "Signed in as … · Role" line the staff section renders, once the roster

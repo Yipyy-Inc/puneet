@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { PASSWORD } from "./_auth";
+import { signIn } from "./_auth";
 
 // ============================================================================
 // The role editor edits what Postgres enforces.
@@ -33,20 +33,6 @@ import { PASSWORD } from "./_auth";
 // ============================================================================
 
 type PermissionMap = Record<string, string>;
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/login");
-  await page.fill("#email", email);
-  await page.fill("#password", PASSWORD);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  // The landing path differs per role and some portals redirect again; wait for
-  // the session cookie to be usable rather than for any particular URL.
-  await expect
-    .poll(async () => (await page.request.get("/api/permissions")).status(), {
-      timeout: 30_000,
-    })
-    .toBe(200);
-}
 
 async function signOut(page: Page) {
   await page.context().clearCookies();

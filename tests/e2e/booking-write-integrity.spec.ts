@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { PASSWORD } from "./_auth";
+import { test, expect } from "@playwright/test";
+import { signIn } from "./_auth";
 
 // ============================================================================
 // A customer cannot book on their own terms.
@@ -34,18 +34,6 @@ const OWN_PET_REF = 1; // Buddy
 const STRANGER_PET_REF = 3; // Max, belonging to client 16
 /** "Full Groom" — seeded into grooming_services for facility 11. */
 const GROOMING_SERVICE = "groom-pkg-002";
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/login");
-  await page.fill("#email", email);
-  await page.fill("#password", PASSWORD);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect
-    .poll(async () => (await page.request.get("/api/permissions")).status(), {
-      timeout: 30_000,
-    })
-    .toBe(200);
-}
 
 /**
  * Every booking this file creates carries this marker, and afterAll cancels

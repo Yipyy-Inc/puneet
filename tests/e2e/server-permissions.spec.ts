@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { PASSWORD } from "./_auth";
+import { signIn } from "./_auth";
 
 // ============================================================================
 // The SERVER renders the right permissions, not owner defaults.
@@ -23,18 +23,6 @@ import { PASSWORD } from "./_auth";
 
 const STAFF_PAGE = "/facility/dashboard/staff";
 const OWNER_ONLY = "Add new staff";
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/login");
-  await page.fill("#email", email);
-  await page.fill("#password", PASSWORD);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect
-    .poll(async () => (await page.request.get("/api/permissions")).status(), {
-      timeout: 30_000,
-    })
-    .toBe(200);
-}
 
 /** The HTML the server sent, before React has touched it. */
 async function serverHtml(page: Page, path: string): Promise<string> {

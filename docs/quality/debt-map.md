@@ -1564,6 +1564,42 @@ An address is a claim anyone can type into a sign-up form. What makes a grant-by
 
 **Do instead:** read `role_preset_permissions` for the role before naming a permission in a test, and read the policy before asserting on a row count. This is the fourth occurrence of the screen-name-versus-permission-name trap in this map.
 
+## Snapshot (2026-08-06, the e2e suite under Clerk)
+
+### 🔴 Clerk's keyless instance signs you in and then Supabase refuses everything
+
+`bun run dev` without `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` drops into Clerk's **keyless mode**, which provisions a throwaway instance into `.clerk/.tmp/keyless.json` and boots cleanly. Sign-in works. `auth()` resolves a subject. And then every database read fails.
+
+Supabase's third-party auth accepts tokens from the instances **registered on the project** — per ADR 0003, the development and production Clerk instances side by side. A keyless instance is created on the fly and is registered nowhere, so its tokens come back:
+
+```
+PGRST301  No suitable key or wrong key type   (HTTP 401)
+```
+
+**Why it's risky:** nothing surfaces the real cause. `getCurrentUser()` throws, `/api/permissions` catches it and answers `401 "Not signed in."` — to a caller who is demonstrably signed in — and every portal bounces to `/sign-in?next=…` as if the session were absent. Three plausible explanations (instance mismatch, stale keys, Playwright's cookie jar) all had to be measured and eliminated before the fourth was even visible. A temporary route reporting `auth()`, the token's `iss` and the raw Supabase error found it in one request.
+
+**Do instead:** treat "the app boots" and "the app can read its database" as different bars. `tests/e2e/_clerk-keys.ts` now warns loudly when it falls back to keyless rather than presenting it as a working configuration, and `signIn()` in `tests/e2e/_auth.ts` distinguishes the two 401s and prints the token issuer plus the fix. If you are debugging an inexplicable "not signed in", **decode the JWT's `iss` first** — it is one line and it is the answer.
+
+### 🔴 `clerk.signIn({ signInParams })` resolves without throwing when the strategy is disabled
+
+The client-side form (`strategy: "password"`) only works if that first factor is enabled on the instance. When it is not, it does **not** raise — it returns normally and leaves `window.Clerk.user` null.
+
+**Why it's risky:** the failure surfaces 60 seconds later at whatever the next assertion is, pointing at the server. Two separate debugging sessions blamed `auth()`, the proxy and the Supabase client before anyone checked whether sign-in had happened at all.
+
+**Do instead:** `clerk.signIn({ page, emailAddress })`. It goes through the Backend API with `CLERK_SECRET_KEY`, bypasses first-factor configuration, and cannot be silently disabled from the Clerk dashboard. The password journey is a thing to **test in one spec**, not a thing 36 specs depend on.
+
+### 🟡 Next 16 refuses a second dev server for the same directory, whatever the port
+
+`--port 3001` does not help: the guard is per-directory (`Another next dev server is already running… Dir: C:\dev\puneet`). So a second developer — or an agent — cannot stand up an isolated server to test against while one is running, and silently ends up testing against **someone else's**, with their keys and their half-finished edits.
+
+**Do instead:** check `Get-NetTCPConnection -LocalPort 3000` before concluding anything about a dev-server behaviour you cannot explain. Confirm which process owns it and when it started; `.next/dev/logs/next-development.log` is readable and says what that server has been doing.
+
+### 🟢 The account seed is a script now, because a Clerk id cannot be written down in advance
+
+`supabase/seed/dev-accounts.sql` could choose its own uuids because it created the accounts. Clerk mints the subject, so `scripts/provision-e2e-identities.ts` creates the identity first and writes the profile, membership and `fs-dev-<role>` staff row second. The role mapping is copied from the SQL seed rather than reinvented — this is a change of identity provider, not of what the fixtures mean.
+
+It also deletes a stale profile for the same address before upserting, which is what makes re-pointing the suite at a different Clerk instance a one-command operation rather than a `23505` on `profiles_email_lower_key`.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
