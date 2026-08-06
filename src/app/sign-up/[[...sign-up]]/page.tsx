@@ -1,22 +1,41 @@
 import { SignUp } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import Link from "next/link";
 
-export const metadata: Metadata = { title: "Sign up with Clerk — Yipyy" };
+import { AuthCard } from "@/components/auth/AuthCard";
+import { yipyyClerkAppearance } from "@/components/auth/clerk-appearance";
+
+export const metadata: Metadata = { title: "Create an account — Yipyy" };
 
 // ============================================================================
-// The Clerk sign-up surface. Counterpart to ../sign-in; see that file for why
-// this lives alongside the existing Supabase login rather than replacing it.
+// Sign-up. Counterpart to ../sign-in; see that file for why the page chrome is
+// ours and only the credential controls are Clerk's.
 //
-// A new user created here exists in CLERK ONLY until the sync webhook is
-// pointed at a destination — they will have no profiles row, no
-// facility_memberships row, and therefore no access to anything the app gates.
-// That is expected at this stage, not a bug to work around by loosening RLS.
+// A new account exists in Clerk immediately, but its `profiles` row arrives via
+// the sync webhook (src/app/api/webhooks/clerk/route.ts), which is
+// asynchronous. So a brand-new user can land signed in with no memberships and
+// be refused by every portal gate for a moment. That is expected: membership is
+// a grant an admin makes, never a consequence of filling in a form.
 // ============================================================================
 
-export default function ClerkSignUpPage() {
+export default function SignUpPage() {
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4 py-12">
-      <SignUp />
-    </div>
+    <AuthCard
+      title="Create your account"
+      description="One account for booking, your pets and your visits."
+      footer={
+        <p className="text-muted-foreground text-center text-sm">
+          Already have an account?{" "}
+          <Link
+            href="/sign-in"
+            className="text-primary font-medium hover:underline"
+          >
+            Sign in
+          </Link>
+        </p>
+      }
+    >
+      <SignUp appearance={yipyyClerkAppearance} />
+    </AuthCard>
   );
 }

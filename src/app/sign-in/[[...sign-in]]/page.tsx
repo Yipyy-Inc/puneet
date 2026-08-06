@@ -1,31 +1,46 @@
 import { SignIn } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import Link from "next/link";
 
-export const metadata: Metadata = { title: "Sign in with Clerk — Yipyy" };
+import { AuthCard } from "@/components/auth/AuthCard";
+import { yipyyClerkAppearance } from "@/components/auth/clerk-appearance";
+
+export const metadata: Metadata = { title: "Sign in — Yipyy" };
 
 // ============================================================================
-// The Clerk sign-in surface. This is where Google and Apple appear.
+// The canonical sign-in, and the one every portal gate redirects to.
 //
-// Deliberately a SEPARATE route from /login rather than a replacement for it.
-// /login is still the canonical door: it drives Supabase Auth, which still owns
-// every session the app actually authorises against (55 auth.uid() call sites
-// across the RLS layer). Swapping /login over to Clerk before that layer can
-// read a Clerk identity would sign people in successfully and then show them
-// empty pages, which is the worst of both.
+// Deliberately portal-neutral: it does not ask who you are. The token is read
+// afterwards and routes accordingly (see landingPathForClaims). One person may
+// be a groomer at one facility and an owner at another; asking them to pick a
+// portal before signing in asks a question they should not have to answer.
 //
-// Google and Apple are not configured here. Clerk renders whichever social
-// providers are enabled on the instance, so they are turned on in the Clerk
-// dashboard (User & Authentication > Social Connections) and this file does not
-// change. That is why there is no per-provider button code below.
+// The page is ours and the credentials are Clerk's. AuthCard draws the
+// gradient, the wordmark, the heading and the footer link — the same shell the
+// pre-Clerk login used — and Clerk renders only the provider buttons inside it.
+// That split is why swapping identity provider did not cost the brand.
 //
-// A Server Component — <SignIn /> is a client component internally and carries
-// its own boundary.
+// A Server Component; <SignIn /> carries its own client boundary.
 // ============================================================================
 
-export default function ClerkSignInPage() {
+export default function SignInPage() {
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4 py-12">
-      <SignIn />
-    </div>
+    <AuthCard
+      title="Sign in"
+      description="Use your Yipyy account — we'll take you to the right place."
+      footer={
+        <p className="text-muted-foreground text-center text-sm">
+          Booking as a pet owner?{" "}
+          <Link
+            href="/sign-up"
+            className="text-primary font-medium hover:underline"
+          >
+            Create an account
+          </Link>
+        </p>
+      }
+    >
+      <SignIn appearance={yipyyClerkAppearance} />
+    </AuthCard>
   );
 }
