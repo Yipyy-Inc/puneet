@@ -2,7 +2,7 @@
 
 import { useSignIn } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,54 @@ export function EmailSignInForm() {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** Set after a credential attempt; the effect below decides what happens. */
+  const [awaitingOutcome, setAwaitingOutcome] = useState(false);
+
+  // ── Reacting to the status, rather than reading it ────────────────────────
+  //
+  // `useSignIn()` returns a SIGNAL-BACKED object. The `signIn` captured by an
+  // event handler is the snapshot from the render that created it, so reading
+  // `signIn.status` straight after `await signIn.password(...)` always returns
+  // the value from BEFORE the call — measured as `needs_identifier`, the state
+  // that means "nothing has been submitted yet".
+  //
+  // That single mistake produced every symptom: the client-trust branch never
+  // fired, finalize() was called with no session, its throw escaped as an
+  // unhandled page error, and the user got an empty red box.
+  //
+  // The fix is to stop asking and start listening. React re-renders when the
+  // signal changes, so an effect keyed on the status sees the real one.
+  useEffect(() => {
+    if (!awaitingOutcome || !signIn) return;
+    const status = signIn.status;
+
+    if (status === "complete") {
+      setAwaitingOutcome(false);
+      void finish();
+      return;
+    }
+
+    // Client Trust: a correct password from an unrecognised device does not
+    // create a session until an emailed code confirms the device. Nearly every
+    // FIRST sign-in is from a new device, so this is the common path, not the
+    // exotic one.
+    if (status === "needs_client_trust" || status === "needs_second_factor") {
+      setAwaitingOutcome(false);
+      void (async () => {
+        const sent = await run(() => signIn.mfa.sendEmailCode());
+        if (sent) {
+          setNotice(
+            "New device — we've emailed you a code to confirm it's you.",
+          );
+          setStep("client-trust");
+        }
+      })();
+    }
+
+    // Any other status: leave `awaitingOutcome` set and wait. The signal may
+    // still be settling, and finish() reports anything it cannot handle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingOutcome, signIn?.status]);
 
   /**
    * Hand the session over and let `/` route on to the right portal.
@@ -116,28 +164,11 @@ export function EmailSignInForm() {
     const ok = await run(() =>
       signIn.password({ identifier: email.trim(), password }),
     );
-    if (!ok) return;
-
-    // A correct password is not always the end of it. Client Trust is enabled
-    // on this instance, so signing in from an unrecognised device leaves the
-    // status at `needs_client_trust` and Clerk expects a code before it will
-    // issue a session. Calling finalize() here instead would appear to succeed
-    // and leave the person on the form with no session and no explanation —
-    // and since practically every FIRST sign-in is from a new device, that
-    // would be almost everyone.
-    if (
-      signIn.status === "needs_client_trust" ||
-      signIn.status === "needs_second_factor"
-    ) {
-      const sent = await run(() => signIn.mfa.sendEmailCode());
-      if (sent) {
-        setNotice("New device — we've emailed you a code to confirm it's you.");
-        setStep("client-trust");
-      }
-      return;
-    }
-
-    await finish();
+    // Deliberately nothing else here. What happens next depends on the status
+    // Clerk sets, and that value is NOT readable from this closure — see the
+    // effect below. Awaiting the resource and asking it what happened is the
+    // mistake this component was written with twice.
+    if (ok) setAwaitingOutcome(true);
   }
 
   async function submitClientTrustCode(e: React.FormEvent) {
@@ -151,7 +182,8 @@ export function EmailSignInForm() {
     const ok = await run(() =>
       signIn.mfa.verifyEmailCode({ code: code.trim() }),
     );
-    if (ok) await finish();
+    // Same reason as submitCredentials: the status is not readable here.
+    if (ok) setAwaitingOutcome(true);
   }
 
   async function startReset() {
@@ -210,7 +242,8 @@ export function EmailSignInForm() {
     const ok = await run(() =>
       signIn.resetPasswordEmailCode.submitPassword({ password: newPassword }),
     );
-    if (ok) await finish();
+    // Same reason as submitCredentials: the status is not readable here.
+    if (ok) setAwaitingOutcome(true);
   }
 
   return (
