@@ -95,6 +95,22 @@ export async function signIn(page: Page, email: string): Promise<void> {
   await page.goto("/sign-in");
   await clerk.loaded({ page });
 
+  // Sign out anything already there. clerk.signIn REFUSES to replace a live
+  // session — "Clerk: Failed to sign in: You're already signed in." — so a spec
+  // that signs in twice in one context (switching roles mid-test, which several
+  // do deliberately) fails on its second call. The old form-driven helper had
+  // no such rule: posting /login simply replaced the cookie.
+  //
+  // Cheap when there is no session, and it keeps signIn() meaning "this page is
+  // now this person", which is what all 36 specs assume.
+  if (
+    await page.evaluate(() =>
+      Boolean((window as { Clerk?: { session?: unknown } }).Clerk?.session),
+    )
+  ) {
+    await clerk.signOut({ page });
+  }
+
   // RETRIED, because clerk.signIn drives the browser through page.evaluate and
   // the sign-in screen can still be settling — `?next=` handling and Clerk's
   // own post-load work both navigate, and a navigation mid-evaluate kills the
