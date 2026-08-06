@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
+import { bookingQueries } from "@/lib/api/booking";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useMemo } from "react";
 import Link from "next/link";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
@@ -28,10 +30,8 @@ import {
   type MenuSection,
 } from "@/components/ui/generic-sidebar";
 import { petCams, mobileAppSettings } from "@/data/additional-features";
-import { bookings } from "@/data/bookings";
 import { estimates } from "@/data/estimates";
 import { reportCards } from "@/data/pet-data";
-import { clients } from "@/data/clients";
 import {
   cameraIntegrationConfig,
   petCamAccessConfigs,
@@ -42,29 +42,60 @@ import type {
   CameraServiceType,
 } from "@/types/camera-integration";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
-// Estimates awaiting the customer's response (sent, not yet accepted/declined).
-const awaitingEstimateCount = estimates.filter(
-  (e) => e.clientId === MOCK_CUSTOMER_ID && e.status === "sent",
-).length;
-
-// Unread report cards for this customer's pets (viewedByCustomer === false).
-const customerPetIds = new Set(
-  clients.find((c) => c.id === MOCK_CUSTOMER_ID)?.pets.map((p) => p.id) ?? [],
-);
-const unreadReportCardCount = reportCards.filter(
-  (rc) => customerPetIds.has(rc.petId) && rc.viewedByCustomer === false,
-).length;
+// ============================================================================
+// THE BADGES USED TO BE COMPUTED AT MODULE LEVEL, off MOCK_CUSTOMER_ID = 15.
+//
+// Two problems, and the second is the one that made it visible. They were
+// Alice Johnson's counts shown to whoever signed in — and because they were
+// evaluated at IMPORT time rather than in the component, they could not have
+// responded to a session even if one had been consulted. Frozen at the value
+// they had when the bundle loaded.
+//
+// It showed up as one screen disagreeing with itself: the sidebar said
+// "Report Cards 1" while the dashboard tile beside it said 0, because the tile
+// had been converted and the badge had not.
+//
+// They live inside the component now, keyed to the signed-in person.
+// ============================================================================
 
 export function CustomerSidebar() {
   const signOutEverywhere = useSignOutEverywhere();
   const { selectedFacility } = useCustomerFacility();
   const isMounted = useHydrated();
-  const { data: ownedPackages = [] } = useQuery(
-    groomingQueries.customerPackagesForClient(MOCK_CUSTOMER_ID),
+
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
+  const { data: ownedPackages = [] } = useQuery({
+    ...groomingQueries.customerPackagesForClient(customerId ?? -1),
+    enabled: customerId != null,
+  });
+
+  const { data: myBookings = [] } = useQuery({
+    ...bookingQueries.byClient(customerId ?? -1),
+    enabled: customerId != null,
+  });
+
+  // Estimates awaiting the customer's response (sent, not yet accepted/declined).
+  // Still a fixture — estimates have no backend yet — but keyed off the real
+  // person, so it now counts nothing rather than counting somebody else's.
+  const awaitingEstimateCount = useMemo(
+    () =>
+      customerId == null
+        ? 0
+        : estimates.filter(
+            (e) => e.clientId === customerId && e.status === "sent",
+          ).length,
+    [customerId],
   );
+
+  // Unread report cards for this customer's pets (viewedByCustomer === false).
+  const unreadReportCardCount = useMemo(() => {
+    const petIds = new Set((customer?.pets ?? []).map((p) => p.id));
+    return reportCards.filter(
+      (rc) => petIds.has(rc.petId) && rc.viewedByCustomer === false,
+    ).length;
+  }, [customer]);
 
   // Build access context for rule evaluation (only on client after mount)
   const accessContext = useMemo(() => {
@@ -78,10 +109,9 @@ export function CustomerSidebar() {
       training: "training",
     };
 
-    const activeStayServices: CameraServiceType[] = bookings
+    const activeStayServices: CameraServiceType[] = myBookings
       .filter(
         (b) =>
-          b.clientId === MOCK_CUSTOMER_ID &&
           b.facilityId === selectedFacility.id &&
           b.status === "confirmed" &&
           b.startDate <= today &&
@@ -92,8 +122,7 @@ export function CustomerSidebar() {
 
     const membershipPlanIds = memberships
       .filter(
-        (m) =>
-          m.customerId === String(MOCK_CUSTOMER_ID) && m.status === "active",
+        (m) => m.customerId === String(customerId) && m.status === "active",
       )
       .map((m) => m.planId);
 
@@ -107,12 +136,10 @@ export function CustomerSidebar() {
 
     const customerServiceTypes: CameraServiceType[] = [
       ...new Set(
-        bookings
+        myBookings
           .filter(
             (b) =>
-              b.clientId === MOCK_CUSTOMER_ID &&
-              b.facilityId === selectedFacility.id &&
-              b.status === "confirmed",
+              b.facilityId === selectedFacility.id && b.status === "confirmed",
           )
           .map((b) => serviceMap[b.service])
           .filter((s): s is CameraServiceType => Boolean(s)),
@@ -129,7 +156,7 @@ export function CustomerSidebar() {
       customerServiceTypes,
       isWithinOperatingHours,
     };
-  }, [isMounted, selectedFacility, ownedPackages]);
+  }, [isMounted, selectedFacility, ownedPackages, myBookings, customerId]);
 
   function passesRuleSet(ruleSet: CameraRuleSet): boolean {
     if (!accessContext || !ruleSet.enabled || ruleSet.rules.length === 0)
@@ -298,7 +325,11 @@ export function CustomerSidebar() {
     });
 
     return sections;
-  }, [camerasEnabled, isMounted]);
+    // The two counts became component state when they stopped being module
+    // constants, so they belong here. Without them the badges render once with
+    // the loading value and never update when the customer resolves — the
+    // conversion would have had no visible effect at all.
+  }, [camerasEnabled, isMounted, awaitingEstimateCount, unreadReportCardCount]);
 
   const header = (
     <div className="flex flex-col gap-0.5">

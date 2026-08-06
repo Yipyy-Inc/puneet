@@ -1,7 +1,7 @@
 "use client";
 
 import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { FacilitySwitcher } from "./FacilitySwitcher";
 import { QuickBookButton } from "./QuickBookButton";
@@ -38,18 +38,8 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUiText } from "@/hooks/use-ui-text";
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { memberships } from "@/data/services-pricing";
-
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
-// Memberships are still a fixture; passes are not. This half stays a
-// module constant because nothing changes it at runtime.
-const availableMembershipCredits = memberships
-  .filter(
-    (m) => m.customerId === String(MOCK_CUSTOMER_ID) && m.status === "active",
-  )
-  .reduce((sum, m) => sum + Math.max(0, m.creditsRemaining), 0);
 
 export function CustomerHeader() {
   const signOutEverywhere = useSignOutEverywhere();
@@ -57,13 +47,41 @@ export function CustomerHeader() {
   const { t } = useUiText();
   const [isPending, startTransition] = useTransition();
 
+  // WHOSE CREDITS THESE ARE comes from the session. The membership half was a
+  // module constant keyed to MOCK_CUSTOMER_ID = 15, so the header offered
+  // Alice Johnson's 14 credits to every signed-in pet owner — on every page,
+  // because this component is in the customer shell.
+  //
+  // The note that used to sit here said the constant was safe "because nothing
+  // changes it at runtime". True of the number, and it missed that the PERSON
+  // changes: a value computed once at import cannot belong to whoever is
+  // signed in.
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
+  // Still a fixture — memberships have no backend yet — but keyed off the real
+  // person, so it contributes nothing rather than somebody else's balance.
+  const availableMembershipCredits = useMemo(
+    () =>
+      customerId == null
+        ? 0
+        : memberships
+            .filter(
+              (m) =>
+                m.customerId === String(customerId) && m.status === "active",
+            )
+            .reduce((sum, m) => sum + Math.max(0, m.creditsRemaining), 0),
+    [customerId],
+  );
+
   // The pass count used to be computed at MODULE level, once, when the bundle
   // loaded — so redeeming a pass could not change it without a full reload.
   // It is a query now for the same reason it is derived in the database: the
   // number is a consequence of a ledger, and a snapshot of it goes stale.
-  const { data: ownedPackages = [] } = useQuery(
-    groomingQueries.customerPackagesForClient(MOCK_CUSTOMER_ID),
-  );
+  const { data: ownedPackages = [] } = useQuery({
+    ...groomingQueries.customerPackagesForClient(customerId ?? -1),
+    enabled: customerId != null,
+  });
   const availableCredits =
     ownedPackages
       .filter((p) => p.status === "active")
