@@ -548,29 +548,40 @@ export function GenericSidebar({
           isExpanded ? "px-3 py-4" : "px-1 py-2",
         )}
       >
-        {footer || (
-          <SidebarMenuButton
-            asChild
-            tooltip={t("Logout")}
-            className={cn(
-              "w-full text-sm font-medium",
-              isExpanded ? "rounded-xl px-3 py-2.5" : "rounded-lg",
-              `text-destructive hover:bg-destructive/10`,
-              "transition-all duration-200",
-            )}
-            onClick={onLogout}
-          >
-            <button
+        {/* A Logout button is rendered ONLY when something is wired to it.
+            This previously rendered unconditionally with `onClick={onLogout}`,
+            and `onLogout` is optional — so the customer portal, which never
+            passed one, showed a Logout button whose onClick was `undefined`.
+            It did nothing, said nothing, and looked completely normal.
+
+            A control that cannot act must not be drawn. Offering to end
+            someone's session and silently declining is the worst version of
+            this, and it is what the comment at the top of
+            src/lib/auth/sign-out-client.ts was written about. */}
+        {footer ||
+          (onLogout && (
+            <SidebarMenuButton
+              asChild
+              tooltip={t("Logout")}
               className={cn(
-                "flex items-center",
-                isExpanded ? "gap-3" : "justify-center",
+                "w-full text-sm font-medium",
+                isExpanded ? "rounded-xl px-3 py-2.5" : "rounded-lg",
+                `text-destructive hover:bg-destructive/10`,
+                "transition-all duration-200",
               )}
+              onClick={onLogout}
             >
-              <LogOut className="size-4 shrink-0" />
-              {isExpanded && <span>{t("Logout")}</span>}
-            </button>
-          </SidebarMenuButton>
-        )}
+              <button
+                className={cn(
+                  "flex items-center",
+                  isExpanded ? "gap-3" : "justify-center",
+                )}
+              >
+                <LogOut className="size-4 shrink-0" />
+                {isExpanded && <span>{t("Logout")}</span>}
+              </button>
+            </SidebarMenuButton>
+          ))}
       </SidebarFooter>
     </Sidebar>
   );

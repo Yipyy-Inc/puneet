@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 import {
   Home,
   Dog,
@@ -58,6 +59,7 @@ const unreadReportCardCount = reportCards.filter(
 ).length;
 
 export function CustomerSidebar() {
+  const signOutEverywhere = useSignOutEverywhere();
   const { selectedFacility } = useCustomerFacility();
   const isMounted = useHydrated();
   const { data: ownedPackages = [] } = useQuery(
@@ -307,5 +309,13 @@ export function CustomerSidebar() {
     </div>
   );
 
-  return <GenericSidebar header={header} menuSections={menuSections} />;
+  return (
+    <GenericSidebar
+      header={header}
+      menuSections={menuSections}
+      // Without this the sidebar still renders a Logout button, but its
+      // onClick is undefined and pressing it does nothing at all.
+      onLogout={() => void signOutEverywhere()}
+    />
+  );
 }
