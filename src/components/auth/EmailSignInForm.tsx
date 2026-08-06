@@ -70,9 +70,11 @@ export function EmailSignInForm() {
       const result = await fn();
       const err = result && "error" in result ? result.error : null;
       if (err) {
+        // ClerkError.message is documented as developer-facing and not
+        // stable; longMessage is the one meant to be shown to a user.
+        const e = err as { longMessage?: string; message?: string };
         setMessage(
-          (err as { message?: string }).message ??
-            "That didn't work. Please try again.",
+          e.longMessage ?? e.message ?? "That didn't work. Please try again.",
         );
         return false;
       }
@@ -84,7 +86,12 @@ export function EmailSignInForm() {
 
   async function submitCredentials(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn) return;
+    if (!signIn) {
+      setMessage(
+        "Sign-in is still starting up. Give it a moment and try again.",
+      );
+      return;
+    }
     const ok = await run(() =>
       signIn.password({ identifier: email.trim(), password }),
     );
@@ -114,7 +121,12 @@ export function EmailSignInForm() {
 
   async function submitClientTrustCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn) return;
+    if (!signIn) {
+      setMessage(
+        "Sign-in is still starting up. Give it a moment and try again.",
+      );
+      return;
+    }
     const ok = await run(() =>
       signIn.mfa.verifyEmailCode({ code: code.trim() }),
     );
@@ -122,7 +134,12 @@ export function EmailSignInForm() {
   }
 
   async function startReset() {
-    if (!signIn) return;
+    if (!signIn) {
+      setMessage(
+        "Sign-in is still starting up. Give it a moment and try again.",
+      );
+      return;
+    }
     if (!email.trim()) {
       setMessage(
         "Enter your username or email first, then choose Forgot password.",
@@ -146,7 +163,12 @@ export function EmailSignInForm() {
 
   async function submitResetCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn) return;
+    if (!signIn) {
+      setMessage(
+        "Sign-in is still starting up. Give it a moment and try again.",
+      );
+      return;
+    }
     const ok = await run(() =>
       signIn.resetPasswordEmailCode.verifyCode({ code: code.trim() }),
     );
@@ -158,7 +180,12 @@ export function EmailSignInForm() {
 
   async function submitNewPassword(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn) return;
+    if (!signIn) {
+      setMessage(
+        "Sign-in is still starting up. Give it a moment and try again.",
+      );
+      return;
+    }
     const ok = await run(() =>
       signIn.resetPasswordEmailCode.submitPassword({ password: newPassword }),
     );

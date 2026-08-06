@@ -50,9 +50,11 @@ export function EmailSignUpForm() {
       const result = await fn();
       const err = result && "error" in result ? result.error : null;
       if (err) {
+        // ClerkError.message is documented as developer-facing and not
+        // stable; longMessage is the one meant to be shown to a user.
+        const e = err as { longMessage?: string; message?: string };
         setMessage(
-          (err as { message?: string }).message ??
-            "That didn't work. Please try again.",
+          e.longMessage ?? e.message ?? "That didn't work. Please try again.",
         );
         return false;
       }
@@ -64,7 +66,12 @@ export function EmailSignUpForm() {
 
   async function submitDetails(e: React.FormEvent) {
     e.preventDefault();
-    if (!signUp) return;
+    if (!signUp) {
+      setMessage(
+        "Sign-in is still starting up. Give it a moment and try again.",
+      );
+      return;
+    }
     const ok = await run(async () => {
       const created = await signUp.password({
         emailAddress: email.trim(),
@@ -84,7 +91,12 @@ export function EmailSignUpForm() {
 
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!signUp) return;
+    if (!signUp) {
+      setMessage(
+        "Sign-in is still starting up. Give it a moment and try again.",
+      );
+      return;
+    }
     const ok = await run(() =>
       signUp.verifications.verifyEmailCode({ code: code.trim() }),
     );
