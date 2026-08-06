@@ -72,17 +72,21 @@ returns void language sql as $$
 $$;
 
 -- ── Fixture ─────────────────────────────────────────────────────────────────
--- The attacker is an ORDINARY SIGNED-UP CUSTOMER: a real auth user with no
+-- The attacker is an ORDINARY SIGNED-UP CUSTOMER: a real identity with no
 -- facility membership anywhere. That is the realistic starting position, and it
 -- is what makes the escalation meaningful.
+--
+-- No auth.users rows. Clerk owns identity since 20260805223000 and a GoTrue
+-- user is no longer part of the picture — `profiles` is where a subject exists.
 
-insert into auth.users (id, email) values
-  ('00000000-0000-0000-0000-0000000000f1', 'rs-attacker@example.invalid'),
-  ('00000000-0000-0000-0000-0000000000f0', 'rs-manager@example.invalid')
-on conflict (id) do nothing;
-
+-- Clerk-shaped subjects since 20260805223000. Both profiles are real, and the
+-- ATTACKER'S ONE IS DELIBERATE: link_staff_invite now refuses an unknown
+-- profile and refuses anything that is not `user_…`, so if the attacker had
+-- neither, V1 would pass because the id looked wrong rather than because the
+-- session gate held. A test that can pass for the wrong reason is not a test.
 insert into public.profiles (id, email, full_name) values
-  ('00000000-0000-0000-0000-0000000000f0', 'rs-manager@example.invalid', 'Manager')
+  ('user_rsManager0000000000000000000', 'rs-manager@example.invalid',  'Manager'),
+  ('user_rsAttacker000000000000000000', 'rs-attacker@example.invalid', 'Attacker')
 on conflict (id) do nothing;
 
 insert into public.orgs (id, name, slug) values
@@ -96,7 +100,7 @@ on conflict (id) do nothing;
 
 insert into public.facility_memberships (id, facility_id, profile_id, role, is_active) values
   ('00000000-0000-0000-0000-0000000000fc', '00000000-0000-0000-0000-0000000000fa',
-   '00000000-0000-0000-0000-0000000000f0', 'manager', true)
+   'user_rsManager0000000000000000000', 'manager', true)
 on conflict (id) do nothing;
 
 -- The target: an OWNER's staff row. Aiming link_staff_invite here is what made
@@ -116,8 +120,7 @@ begin
   perform set_config('request.jwt.claims', '', true);   -- no session at all
   set local role anon;
   begin
-    perform public.link_staff_invite('rs-owner',
-      '00000000-0000-0000-0000-0000000000f1', 'rs-attacker@example.invalid');
+    perform public.link_staff_invite('rs-owner', 'user_rsAttacker000000000000000000');
     refused := false;
   exception when others then
     refused := true;
@@ -126,7 +129,7 @@ begin
 
   perform set_config('request.jwt.claims', '', true);
   select count(*) into n from public.facility_memberships
-   where profile_id = '00000000-0000-0000-0000-0000000000f1';
+   where profile_id = 'user_rsAttacker000000000000000000';
   perform pg_temp.t('V1 EXPLOIT: anon link_staff_invite refused, no membership granted',
     refused and n = 0, format('refused=%s memberships=%s', refused, n));
 exception when others then
@@ -160,12 +163,29 @@ end $$;
 -- is the rule, the grant is what stops a future edit to the body from silently
 -- reopening the door.
 do $$
-declare g1 boolean; g2 boolean;
+declare g1 boolean; g2 boolean; g3 boolean;
 begin
-  select has_function_privilege('anon', 'public.link_staff_invite(text,uuid,text)', 'execute') into g1;
+  select has_function_privilege('anon', 'public.link_staff_invite(text,text)', 'execute') into g1;
   select has_function_privilege('anon', 'public.offboard_staff(text,text,uuid,date)', 'execute') into g2;
-  perform pg_temp.t('V3 anon holds no EXECUTE grant on either function',
-    not g1 and not g2, format('link=%s offboard=%s', g1, g2));
+  select has_function_privilege('anon', 'public.record_membership_grant(text,timestamptz)', 'execute') into g3;
+  perform pg_temp.t('V3 anon holds no EXECUTE grant on the three granting functions',
+    not g1 and not g2 and not g3, format('link=%s offboard=%s grant=%s', g1, g2, g3));
+end $$;
+
+-- ── V3b: the uuid overload is GONE, not shadowed ────────────────────────────
+-- `create or replace` with a different argument type makes an OVERLOAD. Had
+-- 20260807120000 replaced rather than dropped, the uuid version would still be
+-- resolvable — and PostgREST picks the overload that matches the argument it is
+-- handed, so the old exploit would work exactly as before.
+do $$
+declare n integer;
+begin
+  select count(*) into n
+    from pg_proc p join pg_namespace n2 on n2.oid = p.pronamespace
+   where n2.nspname = 'public' and p.proname = 'link_staff_invite'
+     and pg_get_function_identity_arguments(p.oid) like '%uuid%';
+  perform pg_temp.t('V3b no uuid overload of link_staff_invite survives',
+    n = 0, format('uuid overloads=%s', n));
 end $$;
 
 -- ── V4: the token RPCs KEEP their anon grant ────────────────────────────────
@@ -190,10 +210,9 @@ end $$;
 do $$
 declare r jsonb;
 begin
-  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', 'user_rsManager0000000000000000000', 'role', 'authenticated')::text, true);
   set local role authenticated;
-  r := public.link_staff_invite('rs-hire',
-    '00000000-0000-0000-0000-0000000000f1', 'rs-hire@example.invalid');
+  r := public.link_staff_invite('rs-hire', 'user_rsAttacker000000000000000000');
   reset role;
   perform pg_temp.t('V5 a manager with manage_staff can still invite',
     r->>'membershipId' is not null, format('membership=%s', r->>'membershipId'));
@@ -201,11 +220,37 @@ exception when others then
   reset role; perform pg_temp.t('V5 manager invite', false, sqlerrm);
 end $$;
 
+-- ── V5b: a uuid is refused even from a legitimate manager ───────────────────
+-- The regression that started 20260807120000. Before it, this call SUCCEEDED
+-- and granted a real membership to a profile no Clerk session can present —
+-- measured on the live project, profile 11111111-2222-3333-4444-555555555555.
+do $$
+declare refused boolean; n integer;
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', 'user_rsManager0000000000000000000', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  begin
+    perform public.link_staff_invite('rs-hire', '11111111-2222-3333-4444-555555555555');
+    refused := false;
+  exception when others then
+    refused := true;
+  end;
+  reset role;
+
+  perform set_config('request.jwt.claims', '', true);
+  select count(*) into n from public.facility_memberships
+   where profile_id = '11111111-2222-3333-4444-555555555555';
+  perform pg_temp.t('V5b a uuid identity is refused, no ghost membership',
+    refused and n = 0, format('refused=%s ghosts=%s', refused, n));
+exception when others then
+  reset role; perform pg_temp.t('V5b uuid guard', false, sqlerrm);
+end $$;
+
 -- ── V6: …and can still offboard ─────────────────────────────────────────────
 do $$
 declare r jsonb;
 begin
-  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000f0', 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', 'user_rsManager0000000000000000000', 'role', 'authenticated')::text, true);
   set local role authenticated;
   r := public.offboard_staff('rs-hire', 'Resignation', null, current_date);
   reset role;

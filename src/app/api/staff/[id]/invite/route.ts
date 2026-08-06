@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { buildStaffInviteEmail } from "@/lib/staff-invite-email";
 import {
   mintOnboardingToken,
@@ -10,42 +9,49 @@ import {
 import { ROLE_META, type FacilityStaffRole } from "@/types/facility-staff";
 
 // ============================================================================
-// Invite a staff member for real: an account, a membership, and one email.
+// Invite a staff member: a membership grant, an onboarding link, one email.
 //
-// Mirrors /api/admin/invite exactly — env-gated on RESEND_API_KEY, and when the
-// key is absent it returns `sent:false, reason:"not_configured"` plus the link
-// rather than pretending. Same response shape, same convention. What it adds is
-// that a facility hire needs an ACCOUNT, which a platform admin invite does not.
+// Mirrors /api/admin/invite — env-gated on RESEND_API_KEY, and when the key is
+// absent it returns `sent:false, reason:"not_configured"` plus the link rather
+// than pretending.
 //
-// ── generateLink, not inviteUserByEmail ────────────────────────────────────
+// ── WHY THIS NO LONGER CREATES AN ACCOUNT ──────────────────────────────────
 //
-// `admin.inviteUserByEmail` creates the user AND makes Supabase send its own
-// invitation email. That would mean the hire receives two emails — Supabase's
-// and ours — and the approved copy in staff-invite-copy.ts would be the one
-// they ignore. `admin.generateLink({ type: "invite" })` creates the same user
-// and returns the action link WITHOUT sending, so there is exactly one email
-// and it is the one the facility approved.
+// It used to call `admin.auth.admin.generateLink({type:"invite"})`, which
+// created a GoTrue user, and hand that uuid to link_staff_invite. Clerk owns
+// identity now (20260805223000): profiles.id holds a Clerk sub, and a GoTrue
+// uuid matches no session. Measured on the live project before the fix — the
+// invite reported success and granted a real membership to profile
+// 11111111-2222-3333-4444-555555555555, which nobody can ever sign in as, and
+// which 20260805233000's `id !~ '^user_'` rule marks for deletion.
 //
-// ── WHAT IS ATOMIC AND WHAT IS COMPENSATED ─────────────────────────────────
+// So there is no account to create here. Clerk mints the subject when the hire
+// signs up — with Google or with an email and password, whichever they pick —
+// and the sync webhook writes the profile.
 //
-// ATOMIC: profile + membership + staff.status, in public.link_staff_invite —
-// one function, one Postgres transaction. The half-linked state the task asks
-// about (an account that signs in with no facility) is not reachable, because
-// the membership and the profile are written by the same statement.
+// ── THE GRANT COMES FIRST, THE IDENTITY ARRIVES LATER ──────────────────────
 //
-// COMPENSATED, not atomic: the auth user. It lives in GoTrue, a separate
-// service with its own storage; no transaction spans it and Postgres. So if the
-// RPC fails after THIS CALL created the user, we delete that user — and only
-// then. A user who already existed is left alone: deleting somebody's existing
-// account to clean up our own failure would turn a recoverable error into an
-// unrecoverable one.
+// public.record_membership_grant records the admin's decision against the
+// address on the staff row, and a trigger on `profiles` turns it into a real
+// membership the moment a Clerk profile appears carrying that address
+// (20260807120000). If they have already signed up, the RPC claims it inline
+// and comes back `claimed: true`.
 //
-// ORDERED so the email cannot lie: the send happens BEFORE the staff row is
-// marked `invited`, and the row is only marked when the provider accepted it
-// (or when we deliberately handed the link back for manual delivery). A
-// rejected send leaves `status` untouched — and since onboarding_by_token
-// requires `status = 'invited'`, the undelivered link would not work either.
-// The two facts agree instead of contradicting each other.
+// The address is NOT a parameter — the RPC reads it off the staff row, the
+// same way it reads the facility and the role. An email argument would let
+// somebody with manage_staff grant their own facility's owner role to an
+// address they control.
+//
+// ── WHAT IS ATOMIC ─────────────────────────────────────────────────────────
+//
+// All of it. Grant + staff.status + any inline claim happen inside one
+// Postgres function, so the half-linked states the old flow had to compensate
+// for — an auth user with no membership, a membership with no account — are
+// not reachable. The compensating delete is gone with the thing it compensated.
+//
+// ORDERED so the email cannot lie: `status = 'invited'` is set by the RPC, and
+// a rejected send puts it back. onboarding_by_token requires `invited`, so an
+// undelivered link does not work either — the two facts agree.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -118,144 +124,65 @@ export async function POST(
 
   const expiryDays = template?.invite_expiry_days ?? 7;
 
-  if (!hasServiceRoleKey()) {
-    // The same honesty as the Resend gate, for the other key. Inviting creates
-    // an account; without the service-role key it cannot, and reporting success
-    // would leave a manager believing someone can sign in.
-    return NextResponse.json(
-      {
-        sent: false,
-        reason: "not_configured",
-        message:
-          "Accounts cannot be created (set SUPABASE_SERVICE_ROLE_KEY). No invitation was sent.",
-      },
-      { status: 503 },
-    );
-  }
-
-  const admin = createAdminClient();
   const origin =
     request.headers.get("origin") ??
     process.env.NEXT_PUBLIC_APP_URL ??
     new URL(request.url).origin;
 
-  // ── 1. The account (GoTrue). Compensated below, not atomic. ──────────────
-  //
-  // `redirectTo` is where they land once the password is set: their onboarding
-  // checklist, signed in. That is the whole point of doing this through auth
-  // rather than a bare token — the hire arrives authenticated.
-  let userId: string | null = null;
-  let createdUserHere = false;
-
-  const { data: link, error: linkError } = await admin.auth.admin.generateLink({
-    type: "invite",
-    email: staff.email,
-    options: { redirectTo: `${origin}/employee/onboarding` },
-  });
-
-  if (link?.user?.id) {
-    userId = link.user.id;
-    // `generateLink type:"invite"` fails on an existing user, so reaching here
-    // means we made them. Recorded so the compensation below only deletes an
-    // account this request is responsible for.
-    createdUserHere = true;
-  } else {
-    // Already registered — a returning employee, or a resend. Find them and
-    // issue a RECOVERY link instead, which is the same "set your password"
-    // journey for someone who already has a row.
-    const { data: existing } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("email", staff.email)
-      .maybeSingle();
-
-    if (!existing) {
-      console.error("Staff invite: could not create or find user", linkError);
-      return NextResponse.json(
-        {
-          sent: false,
-          reason: "error",
-          message: "Could not create an account for that email address.",
-        },
-        { status: 502 },
-      );
-    }
-    userId = existing.id;
-  }
-
-  const { data: recovery } = createdUserHere
-    ? { data: link }
-    : await admin.auth.admin.generateLink({
-        type: "recovery",
-        email: staff.email,
-        options: { redirectTo: `${origin}/employee/onboarding` },
-      });
-
-  const actionUrl =
-    recovery?.properties?.action_link ?? `${origin}/employee/onboarding`;
-
-  // ── 2. Profile + membership + status, atomically ─────────────────────────
-  //
-  // Through the CALLER's client, not the admin one: link_staff_invite checks
-  // manage_staff against auth.uid(), and calling it as service_role would skip
-  // the only permission check in this route.
-  if (!userId) {
-    // Unreachable in practice — both branches above either set it or return —
-    // but narrowing it here beats a non-null assertion on a value that decides
-    // which account gets a membership.
-    return NextResponse.json(
-      {
-        sent: false,
-        reason: "error",
-        message: "Could not resolve an account.",
-      },
-      { status: 500 },
-    );
-  }
-
-  const { error: linkRpcError } = await supabase.rpc("link_staff_invite", {
-    p_staff_legacy_id: staff.legacy_id!,
-    p_user_id: userId,
-    p_email: staff.email,
-  });
-
-  if (linkRpcError) {
-    // THE COMPENSATION. Only for a user this request created — see the header.
-    if (createdUserHere && userId) {
-      const { error: cleanupError } = await admin.auth.admin.deleteUser(userId);
-      if (cleanupError) {
-        // Reported, not swallowed: an auth user with no membership is exactly
-        // the orphan this route exists to avoid, and if the cleanup itself
-        // failed somebody has to know which id to go and remove.
-        console.error(
-          `Staff invite: ORPHANED auth user ${userId} — link failed and cleanup failed`,
-          cleanupError,
-        );
-      }
-    }
-    return NextResponse.json(
-      {
-        sent: false,
-        reason: linkRpcError.code === "42501" ? "denied" : "error",
-        message:
-          linkRpcError.code === "42501"
-            ? "You may not invite staff at this facility."
-            : "Could not link that account to the facility. Nothing was sent.",
-      },
-      { status: linkRpcError.code === "42501" ? 403 : 500 },
-    );
-  }
-
-  // ── 3. The onboarding instance and its token ─────────────────────────────
-  //
-  // Minted AFTER the account exists, so a failure above never leaves a live
-  // onboarding link pointing at a hire who cannot sign in. Re-inviting replaces
-  // the hash, which invalidates the previous link — that is what resending
-  // means, and it is why the token is stored as a hash rather than kept.
-  const { token, hash } = mintOnboardingToken();
-  const expiresAt = new Date(
+  const grantExpiresAt = new Date(
     Date.now() + expiryDays * 24 * 60 * 60 * 1000,
   ).toISOString();
+
+  // ── 1. The grant: membership + staff.status, atomically ──────────────────
+  //
+  // Through the CALLER's client, not the admin one: record_membership_grant
+  // checks manage_staff against the session, and calling it as service_role
+  // would skip the only permission check in this route.
+  //
+  // The grant EXPIRES with the invitation. A hire who never signs up does not
+  // leave a live route into the facility sitting in the table forever.
+  const { data: grant, error: grantError } = await supabase.rpc(
+    "record_membership_grant",
+    {
+      p_staff_legacy_id: staff.legacy_id!,
+      p_expires_at: grantExpiresAt,
+    },
+  );
+
+  if (grantError) {
+    return NextResponse.json(
+      {
+        sent: false,
+        reason: grantError.code === "42501" ? "denied" : "error",
+        message:
+          grantError.code === "42501"
+            ? "You may not invite staff at this facility."
+            : "Could not grant that person access to the facility. Nothing was sent.",
+      },
+      { status: grantError.code === "42501" ? 403 : 500 },
+    );
+  }
+
+  // Clerk's own sign-up, not a Supabase action link. Whether they use Google or
+  // an email and password is their choice at that screen, and neither needs
+  // anything from us: the grant is already recorded against their address and
+  // is claimed by the profiles trigger the moment the sync webhook lands.
+  const alreadyRegistered = (grant as { claimed?: boolean } | null)?.claimed;
+  const actionUrl = alreadyRegistered
+    ? `${origin}/employee/onboarding`
+    : `${origin}/sign-up`;
+
+  // ── 2. The onboarding instance and its token ─────────────────────────────
+  //
+  // Minted AFTER the grant, so a failure above never leaves a live onboarding
+  // link pointing at a hire with no access. Re-inviting replaces the hash,
+  // which invalidates the previous link — that is what resending means, and it
+  // is why the token is stored as a hash rather than kept.
+  //
+  // Same expiry as the grant, deliberately: an onboarding link that outlived
+  // the membership behind it would open a checklist the hire cannot complete.
+  const { token, hash } = mintOnboardingToken();
+  const expiresAt = grantExpiresAt;
 
   await supabase.from("onboarding_instances").upsert(
     {
@@ -271,7 +198,7 @@ export async function POST(
 
   const onboardingUrl = `${origin}/onboard/${token}`;
 
-  // ── 4. The email ─────────────────────────────────────────────────────────
+  // ── 3. The email ─────────────────────────────────────────────────────────
   const hireDetails = (staff.details ?? {}) as {
     employment?: { hireDate?: string };
   };
@@ -292,18 +219,20 @@ export async function POST(
       : "—",
     welcomeMessage: template?.welcome_message ?? undefined,
     expiresInDays: expiryDays,
-    // The ACCOUNT link, not the onboarding one: setting a password is the first
-    // step and lands them on the checklist signed in. The onboarding URL is
-    // returned separately for the manager to share if email is unavailable.
+    // The SIGN-UP link, not the onboarding one: creating the account is the
+    // first step, and their access is already waiting for the address they use.
+    // A hire who has signed up before skips straight to the checklist. The
+    // onboarding URL is returned separately for the manager to share if email
+    // is unavailable.
     actionUrl,
   });
 
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    // Not configured: the account and membership ARE real, and the manager can
-    // deliver the link by hand — so this counts as issued, and the status the
-    // RPC set stands. Mirrors /api/admin/invite, which does the same.
+    // Not configured: the GRANT is real, and the manager can deliver the link
+    // by hand — so this counts as issued, and the status the RPC set stands.
+    // Mirrors /api/admin/invite, which does the same.
     return NextResponse.json({
       sent: false,
       reason: "not_configured",
@@ -312,6 +241,7 @@ export async function POST(
       setupUrl: actionUrl,
       onboardingUrl,
       expiresAt,
+      alreadyRegistered,
     });
   }
 
@@ -343,6 +273,7 @@ export async function POST(
       setupUrl: actionUrl,
       onboardingUrl,
       expiresAt,
+      alreadyRegistered,
     });
   } catch (error) {
     console.error("Staff invite email error:", error);
@@ -354,9 +285,9 @@ export async function POST(
  * FAILURE MODE A, handled rather than swallowed.
  *
  * The provider rejected the send, so the row must not claim an invitation the
- * hire never received. The account and membership stay — they are correct and
- * re-usable, and tearing down someone's account because an SMTP call 500'd
- * would be destroying good work to tidy up a transient error.
+ * hire never received. The GRANT stays — it is correct and re-usable, and
+ * withdrawing somebody's access because an SMTP call 500'd would be destroying
+ * good work to tidy up a transient error.
  *
  * What goes back is `status = 'inactive'`: not `invited`, because nothing was
  * sent. The onboarding RPC requires `invited`, so the token minted above is

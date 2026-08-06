@@ -909,6 +909,60 @@ export type Database = {
           },
         ];
       };
+      facility_membership_grants: {
+        Row: {
+          claimed_at: string | null;
+          claimed_profile_id: string | null;
+          created_at: string;
+          email: string;
+          expires_at: string | null;
+          facility_id: string;
+          granted_by: string | null;
+          id: string;
+          role: Database["public"]["Enums"]["facility_staff_role"];
+          staff_id: string;
+        };
+        Insert: {
+          claimed_at?: string | null;
+          claimed_profile_id?: string | null;
+          created_at?: string;
+          email: string;
+          expires_at?: string | null;
+          facility_id: string;
+          granted_by?: string | null;
+          id?: string;
+          role: Database["public"]["Enums"]["facility_staff_role"];
+          staff_id: string;
+        };
+        Update: {
+          claimed_at?: string | null;
+          claimed_profile_id?: string | null;
+          created_at?: string;
+          email?: string;
+          expires_at?: string | null;
+          facility_id?: string;
+          granted_by?: string | null;
+          id?: string;
+          role?: Database["public"]["Enums"]["facility_staff_role"];
+          staff_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_membership_grants_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_membership_grants_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       facility_memberships: {
         Row: {
           created_at: string;
@@ -3911,7 +3965,11 @@ export type Database = {
       };
       link_client_record: { Args: never; Returns: string };
       link_staff_invite: {
-        Args: { p_email: string; p_staff_legacy_id: string; p_user_id: string };
+        Args: { p_profile_id: string; p_staff_legacy_id: string };
+        Returns: Json;
+      };
+      record_membership_grant: {
+        Args: { p_expires_at?: string | null; p_staff_legacy_id: string };
         Returns: Json;
       };
       my_permissions: {

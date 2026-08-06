@@ -1526,6 +1526,44 @@ The migration refuses with the offending rows named (`houssemsina123@gmail.com �
 
 **Do instead:** when adding a uniqueness constraint to a table that already has rows, front it with a `do $$` block that aggregates and raises the conflicts. It costs six lines and turns "the migration failed" into a work item.
 
+## Snapshot (2026-08-06, the grant path the cutover left behind)
+
+### 🔴 A type change that Postgres did not complain about, so nothing failed
+
+`20260805223000` turned `profiles.id` and `facility_memberships.profile_id` into `text` holding a Clerk sub, and rewrote the 13 identity helpers. It did **not** change `link_staff_invite`, which still declared `p_user_id uuid` — and `specs/001-clerk-third-party-auth/plan.md:44` had named that exact step:
+
+> "`link_staff_invite`'s `p_user_id uuid` parameter must become `text` — a signature change, so the old overload must be dropped, not just replaced."
+
+Postgres casts uuid to text without a murmur, so the function kept working and kept being wrong. Measured on the live project: inviting a hire wrote profile id `11111111-2222-3333-4444-555555555555` and granted it a real `facility_memberships` row. No Clerk session can present that subject, and `20260805233000`'s `id !~ '^user_'` rule classifies it as a pre-Clerk identity to be deleted.
+
+**Why it's risky:** this was the ONLY code path that creates a membership, and `has_permission()` resolves entirely through that table. So `facility_memberships` was empty and could not refill — the two people who had signed in through Clerk held no membership, `viewer.ts` routed both to `/customer/dashboard`, and RLS showed them nothing anywhere else. **Every screen looked fine and was empty, with no error in any log.** Nothing in typecheck, lint or the build could see it: the defect was a live-database fact.
+
+**Do instead:** when a migration changes a column's type, check the FUNCTIONS that take that column as an argument, not only the ones that read it. `information_schema.columns` and `pg_get_function_identity_arguments` disagreeing is the signal, and only a catalog query finds it. `supabase/tests/rpc-session-required.sql` V3b now asserts no uuid overload survives.
+
+### 🟡 The invite could not create an account any more, and did not say so
+
+The route called `admin.auth.admin.generateLink({type:"invite"})` to make a GoTrue user. Clerk owns sign-up now, so that account authenticates nothing — but the route still returned `sent: true`. A manager invited a hire, saw a green toast, and the hire could never sign in.
+
+**Why it's risky:** the chicken-and-egg is permanent, not transitional. Clerk will not mint a subject for somebody who has not signed up, so **there is no id to grant to at invite time.** Any future "just create the user" instinct hits the same wall.
+
+**Do instead:** `20260807120000` records the grant against the ADDRESS on the staff row (`facility_membership_grants`) and a trigger on `profiles` claims it when a profile appears carrying that address. Three properties are load-bearing:
+
+- **No email argument.** `record_membership_grant` reads the address off the staff row, exactly as it reads the facility and the role. An email parameter would let anyone with `manage_staff` grant their own facility's owner role to an address they control.
+- **The claim is a trigger, not an RPC.** It needs to write a membership for somebody who is not the caller. As a `public` function that is a tenancy-granting front door on PostgREST — and `revoke ... from public` does not revoke from `anon`, which is why we shipped that bug twice already. A trigger has no URL.
+- **Grants expire.** The route passes the template's invite window. An invitation nobody took up must not stay a live route into the facility.
+
+### 🟢 The safety rests on Clerk verifying the address, and that is the part to keep
+
+An address is a claim anyone can type into a sign-up form. What makes a grant-by-email safe is that Clerk verifies the address (Google, or a confirmed email/password sign-up) **before** the webhook writes the profile — so the trigger only ever fires for somebody who proved it. `supabase/tests/membership-grants.sql` fixes the parts that are ours: no self-service grant (D4/D5), no claim by another address (D2), no claim after expiry (D3), and no tenancy for an ungranted sign-up (D1).
+
+**Do instead:** if the profile write ever moves off the verified-webhook path, this trigger becomes an escalation. Re-read D1 before changing who may insert into `profiles`.
+
+### 🟢 Two wrong assertions, both mine, both caught by running it
+
+`G4` first asserted `grooming_check_in_out` (a key that does not exist — a groomer holds `check_in_out` and `perform_grooming`) and counted memberships unfiltered, which returns 2 because `memberships_read` deliberately admits colleagues at the same facility. The code was right both times.
+
+**Do instead:** read `role_preset_permissions` for the role before naming a permission in a test, and read the policy before asserting on a row count. This is the fourth occurrence of the screen-name-versus-permission-name trap in this map.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

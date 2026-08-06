@@ -159,6 +159,11 @@ export async function POST(request: NextRequest) {
         // facility_memberships cascades from profiles; clients.profile_id is
         // ON DELETE SET NULL, so a customer's booking history survives losing
         // its login rather than vanishing with it.
+        //
+        // rls-write-ok: this is the service-role client (see WHY THE SERVICE
+        // ROLE above), so there is no policy that could refuse the delete and
+        // no silent zero-row case to distinguish. The check that matters here
+        // is the signature verification at the top of the handler, not RLS.
         const { error } = await supabase
           .from("profiles")
           .delete()
