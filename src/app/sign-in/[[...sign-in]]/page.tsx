@@ -1,9 +1,9 @@
-import { SignIn } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AuthCard } from "@/components/auth/AuthCard";
-import { yipyyClerkAppearance } from "@/components/auth/clerk-appearance";
+import { EmailSignInForm } from "@/components/auth/EmailSignInForm";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export const metadata: Metadata = { title: "Sign in — Yipyy" };
 
@@ -15,12 +15,10 @@ export const metadata: Metadata = { title: "Sign in — Yipyy" };
 // be a groomer at one facility and an owner at another; asking them to pick a
 // portal before signing in asks a question they should not have to answer.
 //
-// The page is ours and the credentials are Clerk's. AuthCard draws the
-// gradient, the wordmark, the heading and the footer link — the same shell the
-// pre-Clerk login used — and Clerk renders only the provider buttons inside it.
-// That split is why swapping identity provider did not cost the brand.
+// No Clerk component is rendered here — see GoogleSignInButton for why. The
+// whole screen is Yipyy's markup; Clerk is the mechanism behind the button.
 //
-// A Server Component; <SignIn /> carries its own client boundary.
+// A Server Component; only the button carries a client boundary.
 // ============================================================================
 
 export default function SignInPage() {
@@ -30,17 +28,25 @@ export default function SignInPage() {
       description="Use your Yipyy account — we'll take you to the right place."
       footer={
         <p className="text-muted-foreground text-center text-sm">
-          Booking as a pet owner?{" "}
+          Don&apos;t have an account?{" "}
           <Link
             href="/sign-up"
             className="text-primary font-medium hover:underline"
           >
-            Create an account
+            Sign up
           </Link>
         </p>
       }
     >
-      <SignIn appearance={yipyyClerkAppearance} />
+      <EmailSignInForm />
+
+      <div className="flex items-center gap-3">
+        <span className="bg-border h-px flex-1" />
+        <span className="text-muted-foreground text-xs">or</span>
+        <span className="bg-border h-px flex-1" />
+      </div>
+
+      <GoogleSignInButton mode="sign-in" />
     </AuthCard>
   );
 }

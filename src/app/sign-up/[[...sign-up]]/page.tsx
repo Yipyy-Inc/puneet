@@ -1,15 +1,19 @@
-import { SignUp } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AuthCard } from "@/components/auth/AuthCard";
-import { yipyyClerkAppearance } from "@/components/auth/clerk-appearance";
+import { EmailSignUpForm } from "@/components/auth/EmailSignUpForm";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export const metadata: Metadata = { title: "Create an account — Yipyy" };
 
 // ============================================================================
-// Sign-up. Counterpart to ../sign-in; see that file for why the page chrome is
-// ours and only the credential controls are Clerk's.
+// Sign-up. Counterpart to ../sign-in; see GoogleSignInButton for why neither
+// screen renders a Clerk component.
+//
+// With OAuth-only there is nothing to fill in, so this differs from sign-in
+// only in wording and in which Clerk resource starts the flow. Someone who
+// already has an account and presses the button here still just signs in.
 //
 // A new account exists in Clerk immediately, but its `profiles` row arrives via
 // the sync webhook (src/app/api/webhooks/clerk/route.ts), which is
@@ -35,7 +39,15 @@ export default function SignUpPage() {
         </p>
       }
     >
-      <SignUp appearance={yipyyClerkAppearance} />
+      <EmailSignUpForm />
+
+      <div className="flex items-center gap-3">
+        <span className="bg-border h-px flex-1" />
+        <span className="text-muted-foreground text-xs">or</span>
+        <span className="bg-border h-px flex-1" />
+      </div>
+
+      <GoogleSignInButton mode="sign-up" />
     </AuthCard>
   );
 }
