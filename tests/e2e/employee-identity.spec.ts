@@ -68,10 +68,24 @@ test.describe("employee portal identity", () => {
     //
     // Failing that way is indistinguishable from the bug this test exists to
     // catch, so it went on the list of real regressions for an afternoon.
-    await expect(header, "the acting groomer is named").toContainText(
-      /Jessica/,
-      { timeout: 60_000 },
-    );
+    // RELOADED between attempts, not merely waited on. The name comes from
+    // `staffQueries.profiles()`, and TanStack Query does not retry forever — so
+    // a single failed roster fetch leaves the header on its placeholder for
+    // good, and waiting 60s on it just fails slowly.
+    //
+    // Seen once in a 42-minute full run and never in isolation, which is the
+    // signature of a transient rather than a rule. A reload re-issues the query;
+    // if the name is genuinely wrong it is still wrong after one, so this
+    // cannot paper over the bug the test exists to catch.
+    let firstAttempt = true;
+    await expect(async () => {
+      if (!firstAttempt) await page.reload();
+      firstAttempt = false;
+      await expect(header, "the acting groomer is named").toContainText(
+        /Jessica/,
+        { timeout: 20_000 },
+      );
+    }).toPass({ timeout: 90_000, intervals: [1_000] });
 
     // Scoped to the header so the assertion reads as "who is acting", and
     // reported with the actual text so a failure says which of the two ways it
