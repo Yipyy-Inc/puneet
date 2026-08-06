@@ -42,6 +42,22 @@ const FACILITY_ID = "a0000000-0000-4000-8000-0000000000f1"; // legacy_id '11'
 const LOCATION_ID = "a0000000-0000-4000-8000-0000000000c1";
 
 /**
+ * The client record the customer account owns.
+ *
+ * Alice Johnson, ref 15 — named as such in boarding-occupancy.spec.ts,
+ * booking-write-integrity.spec.ts and client-pet-write-path.spec.ts, which
+ * assert against her bookings and pets.
+ *
+ * Set EXPLICITLY, because public.link_client_record() matches on address and
+ * would never make this link: her `clients.email` is alice@example.com, not
+ * customer@yipyy.dev. The link existed before the cutover and 20260805233000
+ * nulled it along with the identity it pointed at ("1 clients profile_id ->
+ * NULL" in that migration's own measurements). Without it the customer portal
+ * has no records to show and every customer-facing spec reads zero rows.
+ */
+const CUSTOMER_CLIENT_REF = 15;
+
+/**
  * One per portal the app exposes, so every gate can be exercised:
  *   platform admin -> /dashboard
  *   owner/manager  -> /facility/dashboard
@@ -227,6 +243,15 @@ async function ensureMembershipAndStaff(
   if (staffError) throw new Error(`staff ${email}: ${staffError.message}`);
 }
 
+/** Point the seeded client record at the customer identity. */
+async function ensureCustomerClientLink(clerkUserId: string): Promise<void> {
+  const { error } = await db
+    .from("clients")
+    .update({ profile_id: clerkUserId } as never)
+    .eq("ref", CUSTOMER_CLIENT_REF);
+  if (error) throw new Error(`client link: ${error.message}`);
+}
+
 let failed = 0;
 for (const account of ACCOUNTS) {
   try {
@@ -244,6 +269,9 @@ for (const account of ACCOUNTS) {
         account.fullName,
         account.role,
       );
+    }
+    if (account.email === "customer@yipyy.dev") {
+      await ensureCustomerClientLink(clerkUserId);
     }
     console.log(
       `  ${account.email.padEnd(22)} ${clerkUserId}  ${account.role ?? ("isAdmin" in account && account.isAdmin ? "platform admin" : "customer — no membership")}`,

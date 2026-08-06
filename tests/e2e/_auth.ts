@@ -95,6 +95,17 @@ export async function signIn(page: Page, email: string): Promise<void> {
   await page.goto("/sign-in");
   await clerk.loaded({ page });
 
+  // RETRIED, because clerk.signIn drives the browser through page.evaluate and
+  // the sign-in screen can still be settling — `?next=` handling and Clerk's
+  // own post-load work both navigate, and a navigation mid-evaluate kills the
+  // execution context:
+  //
+  //   Execution context was destroyed, most likely because of a navigation
+  //
+  // It is a race, not a wrong credential, so retrying once is the fix. Losing
+  // it looks exactly like a broken account, which sent an earlier run looking
+  // at the wrong thing entirely.
+  //
   // `emailAddress`, not `signInParams`. The latter is a CLIENT-side first-factor
   // attempt, so it only works if that exact strategy is enabled on the instance
   // — and when it is not, it RESOLVES WITHOUT THROWING and leaves
@@ -105,7 +116,19 @@ export async function signIn(page: Page, email: string): Promise<void> {
   // bypasses first-factor configuration entirely, so the suite does not break
   // when somebody turns password sign-in off in the dashboard. The password
   // journey is a thing to TEST, not a thing to depend on 36 times.
-  await clerk.signIn({ page, emailAddress: email });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await clerk.signIn({ page, emailAddress: email });
+      break;
+    } catch (error) {
+      const navigated = /execution context was destroyed|navigation/i.test(
+        String(error),
+      );
+      if (!navigated || attempt >= 2) throw error;
+      await page.goto("/sign-in");
+      await clerk.loaded({ page });
+    }
+  }
 
   let status = 0;
   const deadline = Date.now() + 60_000;
