@@ -2,6 +2,7 @@
 
 import { useClerk } from "@clerk/nextjs";
 import { useCallback } from "react";
+import { toast } from "sonner";
 
 // ============================================================================
 // The one way to sign out of this app.
@@ -54,7 +55,30 @@ export function useSignOutEverywhere(): () => Promise<void> {
       sessionStorage.removeItem("yipyy-employee-welcome-ts");
     }
 
-    // Redirects, so nothing after this runs.
-    await signOut({ redirectUrl: "/sign-in" });
+    // WHY THE NAVIGATION IS OURS AND NOT CLERK'S.
+    // This previously passed `{ redirectUrl: "/sign-in" }` and trusted Clerk to
+    // move the browser. It did not, and the symptom is indistinguishable from a
+    // dead button: the session ends, the page stays put still rendering the
+    // signed-in UI, and the person presses Logout again. Ending the session and
+    // leaving someone looking at a logged-in screen is the exact failure this
+    // file exists to prevent.
+    //
+    // So: end the session, then navigate ourselves, unconditionally.
+    try {
+      await signOut();
+    } catch (error) {
+      // Every call site wraps this in `void`, which turns a rejection into an
+      // unhandled promise and shows the user nothing. Surface it here instead —
+      // a logout that failed must say so, on a shared machine especially.
+      toast.error("Could not sign you out. Please close this browser.");
+      throw error;
+    }
+
+    if (typeof window !== "undefined") {
+      // A hard navigation, not router.push: it discards every client-side cache
+      // of the signed-out user — React state, Clerk's in-memory session, the
+      // TanStack Query cache — rather than carrying them into the next page.
+      window.location.href = "/sign-in";
+    }
   }, [signOut]);
 }
