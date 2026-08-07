@@ -55,6 +55,10 @@ import { notFound } from "next/navigation";
 
 import { NotYetReal } from "./_components/not-yet-real";
 import { FacilityOverview } from "./_components/facility-overview";
+import { FacilityStaff } from "./_components/facility-staff";
+import { FacilityClients } from "./_components/facility-clients";
+import { FacilityLocations } from "./_components/facility-locations";
+import { FacilityBilling } from "./_components/facility-billing";
 
 // Real per-facility module usage, derived from the facility's activity log
 // (activity + audit trail) filtered by module. Every module in availableModules
@@ -216,36 +220,16 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
         return <FacilityOverview facility={facility} />;
 
       case "locations":
-        return (
-          <NotYetReal
-            title="Locations"
-            description="Adding, editing and configuring this facility's locations."
-          />
-        );
+        return <FacilityLocations facility={facility} />;
 
       case "clients":
-        return (
-          <NotYetReal
-            title="Clients"
-            description="This facility's client list, with contact details and history."
-          />
-        );
+        return <FacilityClients facilityId={facility.id} />;
 
       case "staff":
-        return (
-          <NotYetReal
-            title="Staff"
-            description="The people who work at this facility."
-          />
-        );
+        return <FacilityStaff facilityId={facility.id} />;
 
       case "billing":
-        return (
-          <NotYetReal
-            title="Billing"
-            description="Invoices, payment method and plan changes for this facility."
-          />
-        );
+        return <FacilityBilling facility={facility} />;
 
       case "data":
         return (

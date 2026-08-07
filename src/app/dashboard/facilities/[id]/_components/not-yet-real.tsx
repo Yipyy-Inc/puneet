@@ -11,9 +11,9 @@ import {
 // ============================================================================
 // "This tab cannot show a real facility yet."
 //
-// Five tabs on the facility detail page — Agreements, Modules, Reports, Logs
-// and the suspension banner — read demo data keyed by a NUMERIC facility id.
-// A provisioned facility has a uuid, so those lookups match nothing.
+// Five tabs on the facility detail page — Modules, Data, Agreements, Reports
+// and Logs — have no table behind them at all. Not "a table keyed differently":
+// nothing stores an entitlement, a signed agreement or an activity entry.
 //
 // The alternative was to pass the uuid in anyway and let each tab render its
 // own empty state. That reads as "this facility has no agreements", which is a
@@ -41,9 +41,10 @@ export function NotYetReal({
       </CardHeader>
       <CardContent>
         <p className="text-muted-foreground text-sm">
-          This section still reads demo data, which is keyed differently from a
-          real facility — so it would show nothing rather than something wrong.
-          It becomes available when this data moves into the database.
+          Nothing stores this yet. An empty list here would read as &ldquo;this
+          facility has none&rdquo;, which is a different and stronger claim than
+          the truth — we have never recorded any. It becomes available when this
+          data gets a table.
         </p>
       </CardContent>
     </Card>

@@ -1,7 +1,11 @@
 import "server-only";
 
 import { createServerClient } from "@/lib/supabase/server";
-import type { AdminFacilityRow } from "@/types/admin-facility";
+import type {
+  AdminClientRow,
+  AdminFacilityRow,
+  AdminStaffRow,
+} from "@/types/admin-facility";
 
 // ============================================================================
 // Every facility on the platform, for the superadmin's list.
@@ -54,9 +58,12 @@ export async function listFacilitiesForAdmin(): Promise<AdminFacilityRow[]> {
       supabase
         .from("facility_subscriptions")
         .select(
-          "facility_id, tier_name, status, amount_cents, billing_cycle, period_end",
+          "facility_id, tier_id, tier_name, status, amount_cents, billing_cycle, currency, trial_ends_at, period_start, period_end, cancelled_at",
         ),
-      supabase.from("locations").select("facility_id, name"),
+      supabase
+        .from("locations")
+        .select("id, facility_id, name, is_primary, timezone, created_at")
+        .order("is_primary", { ascending: false }),
       supabase.from("facility_memberships").select("facility_id, profile_id"),
       supabase.from("clients").select("facility_id, status"),
       supabase
@@ -126,7 +133,25 @@ export async function listFacilitiesForAdmin(): Promise<AdminFacilityRow[]> {
         email: owner?.email ?? "",
         phone: owner?.phone ?? "",
       },
+      subscription: subscription
+        ? {
+            tierId: subscription.tier_id,
+            tierName: subscription.tier_name,
+            status: subscription.status,
+            billingCycle: subscription.billing_cycle,
+            amountCents: subscription.amount_cents,
+            currency: subscription.currency,
+            trialEndsAt: subscription.trial_ends_at,
+            periodStart: subscription.period_start,
+            periodEnd: subscription.period_end,
+            cancelledAt: subscription.cancelled_at,
+          }
+        : null,
       locationsList: (locationsFor.get(facility.id) ?? []).map((location) => ({
+        id: location.id,
+        isPrimary: location.is_primary,
+        timezone: location.timezone,
+        createdAt: location.created_at,
         name: location.name,
         // `locations` has no address column. The wizard collects one and
         // discards it; until it lands, an empty string is the honest answer and
@@ -165,4 +190,172 @@ export async function getFacilityForAdmin(
 ): Promise<AdminFacilityRow | null> {
   const all = await listFacilitiesForAdmin();
   return all.find((facility) => facility.id === facilityId) ?? null;
+}
+
+// ============================================================================
+// The people at one facility.
+//
+// ── WHY THE FACILITY ID FROM THE PATH IS SAFE HERE ────────────────────────
+//
+// It is not trusted. Both routes refuse anyone who is not a platform admin,
+// and RLS refuses them a second time — `staff_read` and `clients_read` admit
+// `private.is_platform_admin()` or a MEMBER of that facility, so a facility
+// owner who guesses another facility's uuid gets an empty array rather than a
+// list. The path is a filter over rows the caller may already read; it is not
+// the thing granting access. That is the same reasoning check-facility-from-
+// session encodes for the request body and query string.
+// ============================================================================
+
+/**
+ * Who works at a facility, and — separately — who can actually sign in.
+ *
+ * The account state is the reason this tab is worth building. A staff record
+ * is something we hold ABOUT a person; a membership is that person's route
+ * into the software. Provisioning creates the first and only promises the
+ * second, and until now no screen could tell a superadmin which of their
+ * facility's people had ever got in.
+ */
+export async function listFacilityStaffForAdmin(
+  facilityId: string,
+): Promise<AdminStaffRow[]> {
+  const supabase = await createServerClient();
+
+  const [staff, memberships, grants] = await Promise.all([
+    supabase
+      .from("staff")
+      .select(
+        "id, first_name, last_name, email, phone, job_title, primary_role, status, membership_id, last_active, created_at",
+      )
+      .eq("facility_id", facilityId)
+      .order("created_at"),
+    supabase
+      .from("facility_memberships")
+      .select("id, profile_id, role, is_active, created_at")
+      .eq("facility_id", facilityId),
+    supabase
+      .from("facility_membership_grants")
+      .select("staff_id, expires_at")
+      .eq("facility_id", facilityId)
+      .is("claimed_at", null),
+  ]);
+
+  if (staff.error) throw new Error(staff.error.message);
+
+  const membershipActive = new Map(
+    (memberships.data ?? []).map((m) => [m.id, m.is_active]),
+  );
+  const invited = new Set((grants.data ?? []).map((g) => g.staff_id));
+
+  const rows: AdminStaffRow[] = (staff.data ?? []).map((person) => ({
+    id: person.id,
+    name: `${person.first_name} ${person.last_name ?? ""}`.trim(),
+    email: person.email,
+    phone: person.phone,
+    jobTitle: person.job_title,
+    role: person.primary_role,
+    status: person.status,
+    source: "staff",
+    account:
+      person.membership_id && membershipActive.get(person.membership_id)
+        ? "active"
+        : invited.has(person.id)
+          ? "invited"
+          : "none",
+    lastActive: person.last_active,
+    joinedAt: person.created_at.slice(0, 10),
+  }));
+
+  // ── The people with a login and no staff record ──────────────────────────
+  //
+  // Found by measuring rather than by reasoning: the demo facility has 23 staff
+  // rows, NONE of which carries a membership_id, and one active owner
+  // membership that belongs to none of them. Listing staff alone would have
+  // answered "who can get into this facility?" by showing 23 people who cannot
+  // and omitting the one person who can.
+  const linked = new Set(
+    (staff.data ?? []).map((person) => person.membership_id).filter(Boolean),
+  );
+  const unlinked = (memberships.data ?? []).filter((m) => !linked.has(m.id));
+
+  if (unlinked.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .in(
+        "id",
+        unlinked.map((m) => m.profile_id),
+      );
+    const profileFor = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+    for (const membership of unlinked) {
+      const profile = profileFor.get(membership.profile_id);
+      rows.push({
+        id: membership.id,
+        name: profile?.full_name || profile?.email || membership.profile_id,
+        email: profile?.email ?? "",
+        phone: null,
+        jobTitle: null,
+        role: membership.role,
+        // There is no employment record to report a status from, and inventing
+        // "active" would state something nobody wrote down.
+        status: "—",
+        source: "membership",
+        account: membership.is_active ? "active" : "none",
+        lastActive: null,
+        joinedAt: membership.created_at.slice(0, 10),
+      });
+    }
+  }
+
+  return rows;
+}
+
+/**
+ * A facility's clients, with their pet count.
+ *
+ * `hasAccount` is the customer-side twin of the staff account state: a client
+ * row is a record the facility holds, and `profile_id` is that person having
+ * signed up for themselves. A facility can have hundreds of the first and none
+ * of the second, and the two have been indistinguishable on every screen.
+ */
+export async function listFacilityClientsForAdmin(
+  facilityId: string,
+): Promise<AdminClientRow[]> {
+  const supabase = await createServerClient();
+
+  const [clients, pets] = await Promise.all([
+    supabase
+      .from("clients")
+      .select(
+        "id, name, email, phone, status, profile_id, last_visit_date, outstanding_balance, created_at",
+      )
+      .eq("facility_id", facilityId)
+      .order("created_at", { ascending: false }),
+    // Ids only, counted here. `count` per client would be one round trip per
+    // row; a facility's pet ids are small next to that.
+    supabase.from("pets").select("client_id").eq("facility_id", facilityId),
+  ]);
+
+  if (clients.error) throw new Error(clients.error.message);
+
+  const petsPerClient = new Map<string, number>();
+  for (const pet of pets.data ?? []) {
+    petsPerClient.set(
+      pet.client_id,
+      (petsPerClient.get(pet.client_id) ?? 0) + 1,
+    );
+  }
+
+  return (clients.data ?? []).map((client) => ({
+    id: client.id,
+    name: client.name,
+    email: client.email,
+    phone: client.phone,
+    status: client.status,
+    hasAccount: Boolean(client.profile_id),
+    pets: petsPerClient.get(client.id) ?? 0,
+    lastVisit: client.last_visit_date,
+    outstandingBalance: Number(client.outstanding_balance ?? 0),
+    joinedAt: client.created_at.slice(0, 10),
+  }));
 }
