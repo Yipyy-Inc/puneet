@@ -203,6 +203,7 @@ export async function POST(
     employment?: { hireDate?: string };
   };
   const email = buildStaffInviteEmail({
+    origin,
     firstName: staff.first_name,
     facilityName: facility?.name ?? "your facility",
     roleLabel:

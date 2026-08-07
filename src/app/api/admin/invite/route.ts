@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
   const roleLabel = roleDisplayNames[role as AdminRole] ?? role;
 
   const email_ = buildInviteEmail({
+    origin,
     name,
     roleLabel,
     department,

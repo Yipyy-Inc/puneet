@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { buildMfaSetupEmail } from "@/lib/mfa-setup-email";
+
 // Honest, env-gated "Resend MFA Setup Email". Sends a real email via Resend when
 // RESEND_API_KEY is configured; otherwise returns sent:false + reason
 // "not_configured" (never fakes a send). Mirrors /api/admin/invite.
@@ -37,6 +39,12 @@ export async function POST(req: Request) {
     });
   }
 
+  const origin =
+    req.headers.get("origin") ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    new URL(req.url).origin;
+  const message = buildMfaSetupEmail({ userName, origin });
+
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -45,10 +53,14 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Yipyy Security <security@yipyy.com>",
+        // EMAIL_FROM, like every other send here. This route hardcoded
+        // "security@yipyy.com", so changing the verified sending domain
+        // would have silently broken this one email and nothing else.
+        from: process.env.EMAIL_FROM ?? "Yipyy <onboarding@resend.dev>",
         to: [email],
-        subject: "Finish setting up two-factor authentication",
-        text: `Hi ${userName || "there"},\n\nYour administrator asked you to set up two-factor authentication (MFA) on your Yipyy account. Open Yipyy → Settings → Security to complete enrollment.\n\nIf you didn't expect this, contact your administrator.`,
+        subject: message.subject,
+        html: message.html,
+        text: message.text,
       }),
     });
 
