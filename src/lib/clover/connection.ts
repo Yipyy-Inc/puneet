@@ -3,7 +3,7 @@ import "server-only";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import { cloverEnvironment } from "./config";
-import type { CloverTokens } from "./oauth";
+import { refreshTokens, type CloverTokens } from "./oauth";
 
 // ============================================================================
 // Recording a connection, and reading whether there is one.
@@ -111,6 +111,101 @@ export async function recordConnection(params: {
   });
 
   if (error) throw new Error(error.message);
+}
+
+/**
+ * A token that will still be valid when the request lands.
+ *
+ * ── THIRTY MINUTES ────────────────────────────────────────────────────────
+ *
+ * Measured against the sandbox on the first real connection: Clover's access
+ * token expires in THIRTY MINUTES, and the refresh token in a year. That makes
+ * this function mandatory rather than an optimisation — a facility that takes
+ * one payment an hour would fail every single one if the stored token were used
+ * as-is, and the failure would be a 401 at the moment a customer is standing at
+ * the counter.
+ *
+ * The five-minute margin is for the request itself: a token with ninety seconds
+ * left passes any "is it expired" check and then expires mid-charge, which is
+ * the worst possible moment because the outcome is genuinely unknown.
+ *
+ * Returns null rather than throwing when there is nothing usable, because the
+ * caller has a better error to give than this layer does — it knows whether a
+ * customer is waiting.
+ */
+const REFRESH_MARGIN_MS = 5 * 60 * 1000;
+
+export interface ActiveToken {
+  accessToken: string;
+  merchantId: string;
+  environment: string;
+}
+
+export async function validAccessToken(
+  facilityId: string,
+): Promise<ActiveToken | null> {
+  if (!hasServiceRoleKey()) return null;
+  const admin = createAdminClient();
+
+  const { data, error } = await admin.rpc("payment_access_token", {
+    p_facility_id: facilityId,
+  });
+  if (error) return null;
+
+  const row = (data as unknown as CredentialRow[] | null)?.[0];
+  if (!row?.access_token) return null;
+
+  const expiresAt = row.access_token_expires_at
+    ? Date.parse(row.access_token_expires_at)
+    : 0;
+
+  // Still comfortably alive — nothing to do.
+  if (expiresAt - Date.now() > REFRESH_MARGIN_MS) {
+    return {
+      accessToken: row.access_token,
+      merchantId: row.merchant_id,
+      environment: row.environment,
+    };
+  }
+
+  if (!row.refresh_token) {
+    await recordConnectionError(
+      facilityId,
+      "The access token expired and no refresh token is stored. The facility must reconnect.",
+    );
+    return null;
+  }
+
+  try {
+    const refreshed = await refreshTokens(row.refresh_token);
+    await recordConnection({
+      facilityId,
+      merchantId: row.merchant_id,
+      tokens: refreshed,
+      connectedBy: null,
+    });
+    return {
+      accessToken: refreshed.accessToken,
+      merchantId: row.merchant_id,
+      environment: row.environment,
+    };
+  } catch (error) {
+    await recordConnectionError(
+      facilityId,
+      error instanceof Error ? error.message : "Token refresh failed.",
+    );
+    return null;
+  }
+}
+
+interface CredentialRow {
+  access_token: string;
+  refresh_token: string | null;
+  access_token_expires_at: string | null;
+  refresh_token_expires_at: string | null;
+  merchant_id: string;
+  environment: string;
+  connection_status: string;
 }
 
 /**

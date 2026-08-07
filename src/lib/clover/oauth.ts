@@ -136,18 +136,42 @@ export interface CloverTokens {
 }
 
 /**
- * Clover returns expiry as an ABSOLUTE epoch in seconds on some endpoints and
- * as a relative lifetime on others. Both are accepted and normalised here,
- * because guessing wrong means either refreshing constantly or never.
+ * An ABSOLUTE epoch, in seconds. What `*_token_expiration` actually contains.
+ *
+ * This was first written to sniff absolute-versus-relative by magnitude, with
+ * the boundary at 10^10 seconds. That is backwards: 10^10 is the year 2286, so
+ * EVERY epoch for the next two and a half centuries falls below it and was
+ * treated as a duration. The first real connection stored an expiry of
+ * 2083-03-14 — Clover's ten-day epoch, added to today.
+ *
+ * A wrong expiry here is not cosmetic. Too far out and the refresh never runs,
+ * so the token quietly dies and every payment at that facility starts failing
+ * with a 401 that nothing anticipated.
+ *
+ * The fix is to stop guessing. Clover names the two shapes differently and the
+ * caller knows which it has, so the field decides, not the magnitude. The range
+ * check that remains is a sanity guard, not a classifier: it rejects a value
+ * that cannot be a plausible expiry at all.
  */
-function toIso(value: unknown): string | null {
+function fromEpochSeconds(value: unknown): string | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     return null;
   }
-  // Anything below this is a duration in seconds, not a date. 10^10 seconds is
-  // the year 2286; 10^10 as a duration would be 300 years.
-  const ms = value < 10_000_000_000 ? Date.now() + value * 1000 : value * 1000;
+  const ms = value * 1000;
+  // Anything in the past, or more than ten years out, is not an expiry we
+  // should act on — record nothing rather than a number that would silently
+  // disable refreshing.
+  const now = Date.now();
+  if (ms <= now || ms > now + 10 * 365 * 24 * 60 * 60 * 1000) return null;
   return new Date(ms).toISOString();
+}
+
+/** A RELATIVE lifetime, in seconds. What `expires_in` contains. */
+function fromDurationSeconds(value: unknown): string | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return new Date(Date.now() + value * 1000).toISOString();
 }
 
 interface TokenResponse {
@@ -197,10 +221,12 @@ async function postToken(
   return {
     accessToken: payload.access_token,
     refreshToken: payload.refresh_token ?? null,
-    accessExpiresAt: toIso(
-      payload.access_token_expiration ?? payload.expires_in,
-    ),
-    refreshExpiresAt: toIso(payload.refresh_token_expiration),
+    // By field, not by magnitude: `*_expiration` is an epoch, `expires_in` is
+    // a lifetime, and Clover sends whichever the endpoint uses.
+    accessExpiresAt:
+      fromEpochSeconds(payload.access_token_expiration) ??
+      fromDurationSeconds(payload.expires_in),
+    refreshExpiresAt: fromEpochSeconds(payload.refresh_token_expiration),
   };
 }
 
