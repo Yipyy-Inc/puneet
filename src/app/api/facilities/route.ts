@@ -5,6 +5,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { writeFailure } from "@/lib/api/write-failure";
 import { listFacilitiesForAdmin } from "@/lib/api/admin-facilities";
+import { attachFacilityDomain } from "@/lib/vercel/domains";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 // ============================================================================
@@ -237,6 +238,24 @@ export async function POST(request: NextRequest) {
   //
   // Skipped on a replay. Retrying a request must not re-send an email the
   // owner already has.
+  // ── The subdomain, also after the commit, and also non-fatal ─────────────
+  //
+  // Spec 002 D2 gives every facility its own host. Doing it here rather than
+  // leaving it to a superadmin is the difference between "provisioning is one
+  // action" and "provisioning is one action plus a note to open Vercel".
+  //
+  // Attempted on a REPLAY too, unlike the invitation: attaching a domain that
+  // is already attached is a no-op that Vercel reports as 409, whereas sending
+  // an email twice is a second email. Retrying an idempotent thing is how a
+  // half-finished provisioning gets finished.
+  const domain = result?.facilityId
+    ? await attachFacilityDomain(slug)
+    : { attached: false as const, host: null, reason: "No facility created." };
+
+  if (!domain.attached) {
+    console.error(`Subdomain for "${slug}" not attached: ${domain.reason}`);
+  }
+
   let invite: unknown = null;
   if (result?.facilityId && !result.replayed) {
     const origin =
@@ -267,7 +286,7 @@ export async function POST(request: NextRequest) {
   // honestly reported as "this already existed" instead of claiming to have
   // made a second facility.
   return NextResponse.json(
-    { ...result, invite },
+    { ...result, invite, domain },
     { status: result?.replayed ? 200 : 201 },
   );
 }

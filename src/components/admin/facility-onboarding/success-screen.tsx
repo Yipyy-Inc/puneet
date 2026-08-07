@@ -31,16 +31,26 @@ export interface OwnerInviteOutcome {
   alreadyRegistered?: boolean;
 }
 
+/** What happened to `<slug>.yipyy.com` — see lib/vercel/domains.ts. */
+export interface DomainOutcome {
+  attached?: boolean;
+  host?: string | null;
+  verified?: boolean;
+  reason?: string;
+}
+
 export function SuccessScreen({
   facilityName,
   ownerEmail,
   invite,
+  domain,
   onViewProfile,
   onClose,
 }: {
   facilityName: string;
   ownerEmail?: string;
   invite?: OwnerInviteOutcome | null;
+  domain?: DomainOutcome | null;
   onViewProfile: () => void;
   onClose: () => void;
 }) {
@@ -94,9 +104,34 @@ export function SuccessScreen({
         </div>
       )}
 
+      {domain?.attached && domain.host && (
+        <p className="text-muted-foreground mx-auto max-w-sm text-sm">
+          Their own web address is{" "}
+          <strong className="text-foreground">{domain.host}</strong>
+          {domain.verified
+            ? "."
+            : " — the certificate takes a few minutes to issue."}
+        </p>
+      )}
+
+      {domain && !domain.attached && (
+        <p className="mx-auto flex max-w-md items-start gap-2 text-left text-sm text-amber-700 dark:text-amber-500">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <span>
+            <strong>Their web address is not live yet.</strong> {domain.reason}{" "}
+            The facility itself is fine — attach it from the facility&apos;s
+            Overview tab.
+          </span>
+        </p>
+      )}
+
+      {/* The old note here said the facilities list "still reads demo data, so
+          it will not appear there yet". That stopped being true when the list
+          was moved onto Postgres, and a stale reassurance is worse than none:
+          it tells a superadmin not to look for the thing they should look
+          for. */}
       <p className="text-muted-foreground mx-auto max-w-sm text-xs">
-        This facility lives in the database. The facilities list still reads
-        demo data, so it will not appear there yet.
+        It is in the facilities list now.
       </p>
 
       <div className="flex items-center gap-2">

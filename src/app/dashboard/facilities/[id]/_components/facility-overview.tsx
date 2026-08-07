@@ -3,6 +3,7 @@ import { Building2, MapPin, Users, UserCheck, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminFacilityRow } from "@/types/admin-facility";
+import { FacilityWebAddress } from "./facility-web-address";
 
 // ============================================================================
 // A facility, from what is actually stored about it.
@@ -75,9 +76,12 @@ export function FacilityOverview({ facility }: { facility: AdminFacilityRow }) {
             <CardTitle className="text-base">Facility</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between gap-4">
+            <div className="space-y-2">
               <span className="text-muted-foreground">Web address</span>
-              <span className="font-medium">{facility.slug}</span>
+              <FacilityWebAddress
+                facilityId={facility.id}
+                slug={facility.slug}
+              />
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Joined</span>

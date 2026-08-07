@@ -23,6 +23,7 @@ import { PrimaryAdminStep } from "./facility-onboarding/primary-admin-step";
 import { ReviewStep } from "./facility-onboarding/review-step";
 import {
   SuccessScreen,
+  type DomainOutcome,
   type OwnerInviteOutcome,
 } from "./facility-onboarding/success-screen";
 
@@ -30,6 +31,7 @@ type Created = {
   facilityId?: string;
   slug?: string;
   invite?: OwnerInviteOutcome | null;
+  domain?: DomainOutcome | null;
 };
 
 export function FacilityOnboardingWizard({
@@ -182,6 +184,7 @@ export function FacilityOnboardingWizard({
             facilityName={draft.displayName || draft.legalName}
             ownerEmail={draft.adminEmail}
             invite={create.data?.invite ?? null}
+            domain={create.data?.domain ?? null}
             onViewProfile={handleViewProfile}
             onClose={onClose}
           />
