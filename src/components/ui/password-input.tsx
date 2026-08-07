@@ -53,8 +53,21 @@ export function PasswordInput({
         {...props}
         id={id}
         type={visible ? "text" : "password"}
-        // Room for the button, so a long password does not run underneath it.
-        className={cn("pr-10", className)}
+        className={cn(
+          // Room for the button, so a long password does not run underneath it.
+          "pr-10",
+          // Edge draws its OWN reveal control inside password inputs
+          // (::-ms-reveal), so the field showed two eyes side by side — and
+          // the two disagree, because Edge's does not know about ours.
+          //
+          // Hidden HERE and not globally on purpose: a password field with no
+          // toggle of its own — the change-password flow, an API-key box —
+          // still wants Edge's, and a rule in globals.css would take it away
+          // from all of them. ::-ms-clear goes too, since the field becomes
+          // type="text" while revealed and Edge then offers a clear X.
+          "[&::-ms-clear]:hidden [&::-ms-reveal]:hidden",
+          className,
+        )}
       />
       <button
         type="button"
