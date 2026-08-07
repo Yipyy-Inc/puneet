@@ -4123,6 +4123,11 @@ export type Database = {
         Args: { p_enabled: boolean; p_facility_id: string };
         Returns: boolean;
       };
+      /** Re-aim an unclaimed owner invitation at a corrected address. */
+      set_facility_owner_email: {
+        Args: { p_facility_id: string; p_email: string };
+        Returns: Json;
+      };
       link_staff_invite: {
         Args: { p_profile_id: string; p_staff_legacy_id: string };
         Returns: Json;

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminFacilityRow } from "@/types/admin-facility";
 import { FacilityWebAddress } from "./facility-web-address";
+import { OwnerInvitation } from "./owner-invitation";
 
 // ============================================================================
 // A facility, from what is actually stored about it.
@@ -97,6 +98,13 @@ export function FacilityOverview({ facility }: { facility: AdminFacilityRow }) {
                 <span className="font-medium">{facility.owner.email}</span>
               </div>
             )}
+            {/* Whether that person can actually get in — a different question
+                from whether we hold their address, and the one that goes
+                unanswered when an invitation goes astray. */}
+            <div className="space-y-2 border-t pt-3">
+              <span className="text-muted-foreground">Invitation</span>
+              <OwnerInvitation facilityId={facility.id} />
+            </div>
             <div className="flex items-start justify-between gap-4">
               <span className="text-muted-foreground">Services</span>
               <span className="flex flex-wrap justify-end gap-1">

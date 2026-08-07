@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
@@ -51,6 +52,11 @@ export const dynamic = "force-dynamic";
  * answer to a forgotten one.
  */
 const EXPIRY_DAYS = 14;
+
+/** Shape only; the address is proved by them signing up with it. */
+const AddressInput = z.object({
+  email: z.email("Enter a valid email address."),
+});
 
 async function requirePlatformAdmin() {
   const viewer = await getViewer().catch(() => null);
@@ -270,6 +276,59 @@ export async function GET(
     expiresAt: data.expires_at,
     acceptedAt: data.claimed_at,
   });
+}
+
+/**
+ * Correct the address an invitation is aimed at.
+ *
+ * Withdrawing was only half an answer to a mistyped address: the staff row
+ * still held the wrong one, so re-inviting sent to the same place and the only
+ * exit was editing the database by hand. Which is what happened the afternoon
+ * an owner's invitation went astray.
+ *
+ * `set_facility_owner_email` refuses once the invitation has been ACCEPTED —
+ * at that point a Clerk identity holds a membership, and changing the address
+ * would not move that access one inch. It would leave the real owner signed in
+ * and the record naming somebody else: a correction that corrects nothing.
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const denied = await requirePlatformAdmin();
+  if (denied) return denied;
+
+  const parsed = AddressInput.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid email address." },
+      { status: 422 },
+    );
+  }
+
+  const { id: facilityId } = await params;
+  const supabase = await createServerClient();
+  const { data, error } = await supabase.rpc("set_facility_owner_email", {
+    p_facility_id: facilityId,
+    p_email: parsed.data.email,
+  });
+
+  if (error) {
+    // 23505 is staff_facility_email_key — somebody at this facility already
+    // holds that address, which is a sentence rather than a code.
+    if (error.code === "23505") {
+      return NextResponse.json(
+        { error: "Somebody at this facility already uses that address." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json(
+      { error: error.message },
+      { status: error.code === "42501" ? 403 : 400 },
+    );
+  }
+
+  return NextResponse.json(data);
 }
 
 /** Withdraw an invitation sent to the wrong address. */
