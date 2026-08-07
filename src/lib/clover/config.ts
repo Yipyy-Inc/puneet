@@ -39,18 +39,35 @@ export interface CloverConfig {
   environment: CloverEnvironment;
   /** Where the merchant is sent to approve. */
   authorizeOrigin: string;
-  /** Where the code is exchanged and the API lives. */
+  /** Where the code is exchanged, and where the v3 platform API lives. */
   apiOrigin: string;
+  /**
+   * A THIRD host. Ecommerce — the public key and /v1/charges — is not served
+   * by apiOrigin: `GET /pakms/apikey` there is a flat 404, while the same path
+   * on this host returns the key. Established by probing the live sandbox
+   * rather than from the documentation, which covers only the single-merchant
+   * dashboard flow.
+   */
+  ecommerceOrigin: string;
+  /** The SDK the browser loads to tokenise a card. */
+  checkoutSdkUrl: string;
 }
 
-const HOSTS: Record<CloverEnvironment, { authorize: string; api: string }> = {
+const HOSTS: Record<
+  CloverEnvironment,
+  { authorize: string; api: string; ecommerce: string; sdk: string }
+> = {
   sandbox: {
     authorize: "https://sandbox.dev.clover.com",
     api: "https://apisandbox.dev.clover.com",
+    ecommerce: "https://scl-sandbox.dev.clover.com",
+    sdk: "https://checkout.sandbox.dev.clover.com/sdk.js",
   },
   production: {
     authorize: "https://www.clover.com",
     api: "https://api.clover.com",
+    ecommerce: "https://scl.clover.com",
+    sdk: "https://checkout.clover.com/sdk.js",
   },
 };
 
@@ -73,6 +90,8 @@ export function cloverConfig(): CloverConfig | null {
     environment,
     authorizeOrigin: HOSTS[environment].authorize,
     apiOrigin: HOSTS[environment].api,
+    ecommerceOrigin: HOSTS[environment].ecommerce,
+    checkoutSdkUrl: HOSTS[environment].sdk,
   };
 }
 

@@ -839,6 +839,8 @@ export type Database = {
           environment: string;
           merchant_id: string;
           public_api_key: string | null;
+          currency: string | null;
+          country: string | null;
           status: string;
           scopes: string[];
           connected_by: string | null;
@@ -4477,6 +4479,8 @@ export type Database = {
           p_scopes?: string[];
           p_connected_by?: string | null;
           p_processor?: string;
+          p_currency?: string | null;
+          p_country?: string | null;
         };
         Returns: undefined;
       };

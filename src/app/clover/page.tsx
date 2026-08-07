@@ -8,6 +8,7 @@ import {
   recordConnectionError,
 } from "@/lib/clover/connection";
 import { exchangeCode, readOAuthState } from "@/lib/clover/oauth";
+import { fetchMerchantProfile } from "@/lib/clover/merchant";
 
 import { CloverResult, type CloverOutcome } from "./_components/clover-result";
 
@@ -111,11 +112,23 @@ async function completeConnection(
 
   try {
     const tokens = await exchangeCode(params.code);
+    // Asked for now, while we hold a fresh token and know the merchant: the
+    // currency, the country and the public key the browser will need. Each can
+    // come back null without costing us the connection — a merchant who has
+    // already approved must not be left unconnected because an enrichment
+    // lookup timed out.
+    const profile = await fetchMerchantProfile(
+      tokens.accessToken,
+      params.merchant_id,
+    );
     await recordConnection({
       facilityId: state.facilityId,
       merchantId: params.merchant_id,
       tokens,
       connectedBy: viewer.userId,
+      publicApiKey: profile.publicApiKey,
+      currency: profile.currency,
+      country: profile.country,
     });
     return {
       kind: "connected",

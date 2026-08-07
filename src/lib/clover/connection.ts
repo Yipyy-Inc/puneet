@@ -32,6 +32,9 @@ export interface ConnectionStatus {
   merchantId: string | null;
   environment: string | null;
   publicApiKey: string | null;
+  /** From the merchant, never defaulted. NULL means we have not asked. */
+  currency: string | null;
+  country: string | null;
   connectedAt: string | null;
   lastError: string | null;
 }
@@ -42,6 +45,8 @@ const ABSENT: ConnectionStatus = {
   merchantId: null,
   environment: null,
   publicApiKey: null,
+  currency: null,
+  country: null,
   connectedAt: null,
   lastError: null,
 };
@@ -55,7 +60,7 @@ export async function connectionStatus(
   const { data } = await supabase
     .from("payment_connections")
     .select(
-      "status, merchant_id, environment, public_api_key, connected_at, last_error",
+      "status, merchant_id, environment, public_api_key, currency, country, connected_at, last_error",
     )
     .eq("facility_id", facilityId)
     .eq("processor", "clover")
@@ -69,6 +74,8 @@ export async function connectionStatus(
     merchantId: data.merchant_id,
     environment: data.environment,
     publicApiKey: data.public_api_key,
+    currency: data.currency,
+    country: data.country,
     connectedAt: data.connected_at,
     lastError: data.last_error,
   };
@@ -88,6 +95,8 @@ export async function recordConnection(params: {
   tokens: CloverTokens;
   connectedBy: string | null;
   publicApiKey?: string | null;
+  currency?: string | null;
+  country?: string | null;
 }): Promise<void> {
   if (!hasServiceRoleKey()) {
     throw new Error(
@@ -108,6 +117,10 @@ export async function recordConnection(params: {
     p_refresh_expires: params.tokens.refreshExpiresAt,
     p_public_api_key: params.publicApiKey ?? null,
     p_connected_by: params.connectedBy,
+    // NULL leaves whatever connecting already discovered — a token refresh
+    // does not re-read the merchant and must not blank these.
+    p_currency: params.currency ?? null,
+    p_country: params.country ?? null,
   });
 
   if (error) throw new Error(error.message);
