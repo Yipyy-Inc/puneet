@@ -41,6 +41,15 @@ export interface FacilityBranding {
   primaryColor: string | null;
   accentColor: string | null;
   tagline: string | null;
+  /**
+   * Whether this facility takes online registrations.
+   *
+   * Public by nature — it decides what the signed-out sign-up page offers, so
+   * publishing it discloses nothing that page would not. Defaults FALSE in the
+   * database: a business that never asked for public sign-up must not acquire
+   * it because we shipped a feature.
+   */
+  allowCustomerSignup: boolean;
 }
 
 /**
@@ -82,5 +91,6 @@ export async function getBrandingBySlug(
     primaryColor: data.primary_color,
     accentColor: data.accent_color,
     tagline: data.tagline,
+    allowCustomerSignup: data.allow_customer_signup === true,
   };
 }

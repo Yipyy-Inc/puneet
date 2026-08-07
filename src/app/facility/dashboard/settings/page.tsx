@@ -43,6 +43,7 @@ import { NotificationRoleDefaults } from "@/components/facility/NotificationRole
 import { FeedingMedicationConfig } from "@/components/facility/FeedingMedicationConfig";
 import { TaxSettings } from "@/components/facility/TaxSettings";
 import { BrandingSettings } from "@/components/facility/BrandingSettings";
+import { CustomerSignupSettings } from "@/components/facility/CustomerSignupSettings";
 import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
 import { RetailSettings } from "@/components/facility/RetailSettings";
 import { CheckinRequirementsSettings } from "@/components/facility/CheckinRequirementsSettings";
@@ -4718,8 +4719,15 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Branding — what customers see before they sign in (spec 002 §3.3) */}
-          {activeSection === "branding" && <BrandingSettings />}
+          {/* Branding — what customers see before they sign in (spec 002 §3.3),
+              and whether they can let themselves in (§5). Both are the facility's
+              public front door and both gate on settings_general. */}
+          {activeSection === "branding" && (
+            <div className="space-y-6">
+              <BrandingSettings />
+              <CustomerSignupSettings />
+            </div>
+          )}
 
           {/* Care Tasks */}
           {activeSection === "care-tasks" && (

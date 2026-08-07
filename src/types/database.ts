@@ -790,6 +790,7 @@ export type Database = {
       };
       facilities: {
         Row: {
+          allow_customer_signup: boolean;
           business_types: string[];
           created_at: string;
           id: string;
@@ -801,6 +802,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          allow_customer_signup?: boolean;
           business_types?: string[];
           created_at?: string;
           id?: string;
@@ -812,6 +814,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          allow_customer_signup?: boolean;
           business_types?: string[];
           created_at?: string;
           id?: string;
@@ -4139,7 +4142,13 @@ export type Database = {
           primary_color: string | null;
           accent_color: string | null;
           tagline: string | null;
+          allow_customer_signup: boolean;
         }[];
+      };
+      /** The caller's own client id at a facility, by slug, or null. */
+      my_client_at: {
+        Args: { p_facility_slug: string };
+        Returns: string | null;
       };
       set_subscription_status: {
         Args: {
