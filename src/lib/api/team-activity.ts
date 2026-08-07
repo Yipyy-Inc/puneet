@@ -1,5 +1,5 @@
 import { roleDisplayNames, type AdminUser } from "@/data/admin-users";
-import { getAuditLogs } from "@/lib/api/audit-log";
+import type { AuditLogEntry } from "@/lib/api/audit-log";
 
 // Unifies the platform's real logged-action sources into one row model so the
 // Activity Tracking page's three tabs and shared filter bar can work over them:
@@ -109,8 +109,18 @@ export function buildLoginEntries(team: AdminUser[]): TeamLogEntry[] {
     .sort(byTimestampDesc);
 }
 
-export function buildAuditEntries(): TeamLogEntry[] {
-  return getAuditLogs()
+/**
+ * Takes the entries rather than fetching them.
+ *
+ * It used to call getAuditLogs(), which read a frozen mock array synchronously.
+ * The trail is a database table now, so the fetch belongs to the screen's
+ * query and this stays a pure transform — which is also what makes it testable
+ * without a server.
+ */
+export function buildAuditEntries(
+  entries: readonly AuditLogEntry[],
+): TeamLogEntry[] {
+  return entries
     .map((e) => ({
       id: e.id,
       kind: "audit" as const,

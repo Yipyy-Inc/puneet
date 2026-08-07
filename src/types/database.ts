@@ -788,6 +788,40 @@ export type Database = {
           },
         ];
       };
+      /**
+       * The immutable audit trail (20260807460000).
+       *
+       * No Update type, deliberately: a trigger refuses UPDATE and DELETE for
+       * every role, and INSERT is revoked from `authenticated` — entries are
+       * written only by private.record_audit() from triggers on the tables the
+       * audited acts touch. Declaring a writable shape here would describe an
+       * API that does not exist.
+       */
+      audit_log: {
+        Row: {
+          id: string;
+          occurred_at: string;
+          user_id: string | null;
+          user_name: string | null;
+          user_role: string | null;
+          action: string;
+          category: string;
+          entity_type: string | null;
+          entity_id: string | null;
+          entity_name: string | null;
+          changes: Json;
+          ip_address: string | null;
+          user_agent: string | null;
+          facility_id: string | null;
+          facility_name: string | null;
+          severity: string;
+          status: string;
+          description: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       facilities: {
         Row: {
           allow_customer_signup: boolean;

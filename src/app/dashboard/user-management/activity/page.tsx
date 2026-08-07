@@ -16,7 +16,10 @@ import {
   User,
 } from "lucide-react";
 
+import { useQuery } from "@tanstack/react-query";
+
 import { useAdminTeam } from "@/lib/admin-team-store";
+import { auditLogQueries } from "@/lib/api/audit-log";
 import {
   actionTypeOptions,
   buildActivityEntries,
@@ -84,7 +87,14 @@ export default function ActivityTrackingPage() {
 
   const activity = useMemo(() => buildActivityEntries(team), [team]);
   const logins = useMemo(() => buildLoginEntries(team), [team]);
-  const audit = useMemo(() => buildAuditEntries(), []);
+
+  // The Audit tab reads the real, immutable trail now — it used to be a frozen
+  // array of eleven fictional events in src/data.
+  const { data: auditEntries } = useQuery(auditLogQueries.all());
+  const audit = useMemo(
+    () => buildAuditEntries(auditEntries ?? []),
+    [auditEntries],
+  );
 
   const members = useMemo(
     () => memberOptions(activity, logins, audit),

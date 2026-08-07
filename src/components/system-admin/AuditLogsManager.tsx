@@ -14,8 +14,8 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { auditStatistics } from "@/data/system-administration";
-import { getAuditLogs } from "@/lib/api/audit-log";
+import { useQuery } from "@tanstack/react-query";
+import { auditLogQueries, summariseAuditLog } from "@/lib/api/audit-log";
 import {
   Shield,
   AlertTriangle,
@@ -138,9 +138,19 @@ export function AuditLogsManager() {
   );
   const [resourceSearch, setResourceSearch] = useState("");
 
-  // Audit Trail is read-only / append-only: read an immutable snapshot via the
-  // sanctioned access path. There is no edit/delete path anywhere in this view.
-  const auditLogs = useMemo(() => getAuditLogs(), []);
+  // Audit Trail is read-only: the database refuses UPDATE, DELETE and TRUNCATE
+  // for every role, and there is no writer to call from here — entries are
+  // recorded by triggers on the tables the audited acts touch.
+  //
+  // This was `useMemo(() => getAuditLogs(), [])` over a frozen mock array.
+  const { data: auditLogs = [] } = useQuery(auditLogQueries.all());
+
+  // Derived from the rows on screen, not from a module-level constant computed
+  // over eleven fictional events.
+  const auditStatistics = useMemo(
+    () => summariseAuditLog(auditLogs),
+    [auditLogs],
+  );
 
   // Export audit logs to CSV
   const exportToCSV = () => {
@@ -235,7 +245,11 @@ export function AuditLogsManager() {
     });
 
     return index;
-  }, []);
+    // `auditLogs` was a module-level constant when this was written, so an
+    // empty dependency list was correct. It is a query result now and the
+    // index has to be rebuilt when it arrives — without this the resource
+    // index stays empty forever and the React Compiler refuses the component.
+  }, [auditLogs]);
 
   // Get resource type summary
   const resourceTypeSummary = useMemo(() => {
@@ -265,7 +279,9 @@ export function AuditLogsManager() {
         return false;
       return true;
     });
-  }, [selectedResourceType, selectedResourceId]);
+    // Same reason as resourceIndex above: auditLogs is a query result now, so
+    // it belongs in the dependencies.
+  }, [auditLogs, selectedResourceType, selectedResourceId]);
 
   // Filter resources by search
   const filteredResources = useMemo(() => {
