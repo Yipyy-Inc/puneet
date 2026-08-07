@@ -4358,6 +4358,15 @@ export type Database = {
           missing_dependencies: string[];
         }[];
       };
+      /**
+       * One facility's bookings and takings by SERVICE month. Revenue excludes
+       * tips. Returns a whole report as jsonb — see the header of
+       * 20260807620000 for why each of those is the way it is.
+       */
+      facility_report: {
+        Args: { p_facility_id: string; p_months?: number };
+        Returns: Json;
+      };
       facility_has_module: {
         Args: { p_facility_id: string; p_module_id: string };
         Returns: boolean;

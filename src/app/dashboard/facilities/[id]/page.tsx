@@ -61,6 +61,7 @@ import { FacilityLocations } from "./_components/facility-locations";
 import { FacilityBilling } from "./_components/facility-billing";
 import { FacilityLogs } from "./_components/facility-logs";
 import { FacilityModules } from "./_components/facility-modules";
+import { FacilityReport } from "./_components/facility-report";
 
 const tabs = [
   {
@@ -250,12 +251,7 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
         );
 
       case "reports":
-        return (
-          <NotYetReal
-            title="Reports"
-            description="Revenue, bookings and occupancy reports for this facility."
-          />
-        );
+        return <FacilityReport facilityId={facility.id} />;
 
       case "logs":
         return <FacilityLogs facilityId={facility.id} />;
