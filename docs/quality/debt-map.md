@@ -1628,6 +1628,22 @@ The first cut of the `facility_modules` audit trigger derived its action from `n
 
 **Why it matters beyond wording:** on an append-only table the entry can never be edited or removed, and a plausible-but-wrong entry ends the question that a missing entry would have prompted.
 
+### 🔴 The owner-only section is gated by a cookie the browser can write
+
+`requireFacilityOwner` ([src/lib/facility-owner-guard.ts](../../src/lib/facility-owner-guard.ts)) reads the `facility_role` cookie and calls `forbidden()` if it does not say owner. That cookie is one of the three [viewer.ts](../../src/lib/auth/viewer.ts) names as client-writable from devtools — the scheme the Clerk cutover replaced for access, and kept only for steering UI.
+
+It guards four pages: Yipyy Agreements, Subscription, Payment Method and Export Data.
+
+**Why it's risky:** not because data leaks — RLS decides that from the Clerk subject, and the architecture note in viewer.ts is explicit that these gates are routing rather than access. The risk is that it _reads_ like an access check, so the next person to add an owner-only route may put a real capability behind it and believe it is protected.
+
+**Do instead:** in a route, resolve the role from `getViewer().memberships` — as `GET /api/facility/export` does — and never from the cookie. If you add an owner-only page, assume its guard is decorative and put the real check in whatever the page calls.
+
+### 🟢 A hardcoded id in a client page reached a real user
+
+`/facility/account/export` passed `defaultFacilityId={11}` into a component reading `src/data/*`, so every owner exporting their data received facility 11's fictional records — not an empty file, somebody else's, on the screen that answers a portability request.
+
+The standing note that the ~97 client-side `facilityId: 11` occurrences are mock-only and should not be converted still holds for the rest of them. This one was different because a real signed-in owner could reach it and be handed a wrong answer. The distinction to apply: is the screen reachable by a real user, and does it make a claim about _their_ data?
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
