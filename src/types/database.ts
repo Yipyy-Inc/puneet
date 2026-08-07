@@ -3996,6 +3996,14 @@ export type Database = {
         Args: { p_expires_at?: string | null; p_staff_legacy_id: string };
         Returns: Json;
       };
+      invite_facility_owner: {
+        Args: { p_expires_at?: string | null; p_facility_id: string };
+        Returns: Json;
+      };
+      revoke_facility_owner_invite: {
+        Args: { p_facility_id: string };
+        Returns: Json;
+      };
       provision_facility: {
         Args: {
           p_contact_email?: string | null;

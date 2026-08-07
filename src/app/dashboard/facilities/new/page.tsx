@@ -349,6 +349,19 @@ export default function NewFacilityPage() {
   // ──────────────────────────────────────────────────────────────────────────
   const [requestId] = useState(() => crypto.randomUUID());
 
+  type Created = {
+    facilityId?: string;
+    slug?: string;
+    ownerEmail?: string;
+    invite?: {
+      sent?: boolean;
+      reason?: string;
+      message?: string;
+      signUpUrl?: string;
+      alreadyRegistered?: boolean;
+    } | null;
+  };
+
   const provision = useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/facilities", {
@@ -371,24 +384,27 @@ export default function NewFacilityPage() {
         }),
       });
 
-      const body = (await response.json().catch(() => null)) as {
-        facilityId?: string;
-        error?: string;
-      } | null;
+      const body = (await response.json().catch(() => null)) as Created | null;
 
       if (!response.ok) {
-        throw new Error(body?.error ?? `Could not create the facility.`);
+        throw new Error(
+          (body as { error?: string } | null)?.error ??
+            `Could not create the facility.`,
+        );
       }
       return body;
     },
-    // The facility that was just made, not the list — so the superadmin sees
-    // the result of their action rather than having to find it.
-    onSuccess: (result) =>
-      router.push(
-        result?.facilityId
-          ? `/dashboard/facilities/${result.facilityId}`
-          : "/dashboard/facilities",
-      ),
+    // Deliberately NOT a redirect.
+    //
+    // The obvious destination is /dashboard/facilities/<id>, and it 404s: that
+    // page resolves its facility with `facilities.find(f => f.id ===
+    // Number(params.id))` against the mock array, and Number(uuid) is NaN. The
+    // list is mock-driven too, so the new facility is not there either.
+    //
+    // Sending a superadmin to an empty list after a successful creation would
+    // read as a failure. So the outcome is shown HERE, where they are — and it
+    // carries the one fact a redirect could never show them: whether the owner
+    // actually got their invitation.
   });
 
   const handleComplete = () => {
@@ -1874,6 +1890,90 @@ export default function NewFacilityPage() {
         return Building;
     }
   };
+
+  // ── Created. The wizard is done; what matters now is whether the owner can
+  // actually get in, which is the one thing a redirect could not have shown.
+  const created = provision.data;
+  if (created?.facilityId) {
+    const invite = created.invite;
+    return (
+      <div className="flex-1 space-y-6 p-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/dashboard/facilities")}
+          >
+            <ArrowLeft className="size-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {formData.name} is set up
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              The facility, its location and its owner have been created.
+            </p>
+          </div>
+        </div>
+
+        <Card className="shadow-card border-0">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CheckCircle className="size-4 text-emerald-600" />
+              Owner access
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            {invite?.sent && (
+              <p>
+                An invitation is on its way to{" "}
+                <strong>{created.ownerEmail}</strong>.{" "}
+                {invite.alreadyRegistered
+                  ? "They already had a Yipyy account, so their access is live now."
+                  : "They set their own password when they sign up — nobody here ever sees it."}
+              </p>
+            )}
+
+            {/* The email did not go. Saying so plainly, with the link, is the
+                difference between a facility somebody can fix and one that
+                silently nobody can enter. */}
+            {invite && !invite.sent && (
+              <div className="space-y-3">
+                <p className="text-amber-700 dark:text-amber-500">
+                  <strong>The invitation email was not sent.</strong>{" "}
+                  {invite.message ??
+                    "Their access is recorded, so sending the link by hand works just as well."}
+                </p>
+                {invite.signUpUrl && (
+                  <div className="bg-muted rounded-md border p-3">
+                    <p className="text-muted-foreground mb-1 text-xs">
+                      Send {created.ownerEmail} this link — they must sign up
+                      with that exact address:
+                    </p>
+                    <code className="text-xs break-all">
+                      {invite.signUpUrl}
+                    </code>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <p className="text-muted-foreground text-xs">
+              This facility lives in the database. The facilities list and
+              detail screens still read demo data, so it will not appear there
+              yet.
+            </p>
+          </CardContent>
+        </Card>
+
+        <div className="flex gap-3">
+          <Button onClick={() => router.push("/dashboard/facilities")}>
+            Back to facilities
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-6 p-6">

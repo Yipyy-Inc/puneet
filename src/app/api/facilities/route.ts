@@ -191,10 +191,51 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const result = data as { replayed?: boolean } | null;
+  const result = data as { replayed?: boolean; facilityId?: string } | null;
+
+  // ── The invitation, AFTER the transaction has committed ──────────────────
+  //
+  // Order matters and only in this direction. An email about a facility whose
+  // insert then rolled back is unrecoverable — the owner clicks into nothing
+  // and nobody knows. A facility whose email failed is one click from fixed,
+  // and the GET below tells a superadmin which facilities are in that state.
+  //
+  // So a failed send does not fail the request: the facility is real, the
+  // grant is real, and `invite` reports honestly what happened to the email.
+  //
+  // Skipped on a replay. Retrying a request must not re-send an email the
+  // owner already has.
+  let invite: unknown = null;
+  if (result?.facilityId && !result.replayed) {
+    const origin =
+      request.headers.get("origin") ??
+      process.env.NEXT_PUBLIC_APP_URL ??
+      new URL(request.url).origin;
+
+    invite = await fetch(
+      `${origin}/api/facilities/${result.facilityId}/invite-owner`,
+      {
+        method: "POST",
+        headers: {
+          // The caller's session, forwarded — the invite route checks
+          // is_platform_admin against it, and this must not become a way to
+          // send an invitation without one.
+          cookie: request.headers.get("cookie") ?? "",
+        },
+      },
+    )
+      .then((response) => response.json())
+      .catch((caught) => {
+        console.error("Owner invitation could not be sent:", caught);
+        return { sent: false, reason: "send_failed" };
+      });
+  }
 
   // A replay is not a creation. 200 rather than 201 so a retried request is
   // honestly reported as "this already existed" instead of claiming to have
   // made a second facility.
-  return NextResponse.json(result, { status: result?.replayed ? 200 : 201 });
+  return NextResponse.json(
+    { ...result, invite },
+    { status: result?.replayed ? 200 : 201 },
+  );
 }
