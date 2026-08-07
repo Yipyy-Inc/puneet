@@ -59,6 +59,7 @@ import { FacilityStaff } from "./_components/facility-staff";
 import { FacilityClients } from "./_components/facility-clients";
 import { FacilityLocations } from "./_components/facility-locations";
 import { FacilityBilling } from "./_components/facility-billing";
+import { FacilityLogs } from "./_components/facility-logs";
 
 // Real per-facility module usage, derived from the facility's activity log
 // (activity + audit trail) filtered by module. Every module in availableModules
@@ -264,12 +265,7 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
         );
 
       case "logs":
-        return (
-          <NotYetReal
-            title="Activity log"
-            description="What has happened in this facility, and who did it."
-          />
-        );
+        return <FacilityLogs facilityId={facility.id} />;
 
       default:
         return null;

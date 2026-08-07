@@ -162,8 +162,9 @@ suspended or cancelled). New Facilities begin on a **[TRIAL LENGTH]** trial.
 
 > **The Service does not currently charge anyone.** No payment processor is
 > integrated. The subscription record determines what a Facility may access; it
-> does not itself take money. Fees are invoiced and collected **[HOW: OUTSIDE
-> > THE PLATFORM / BY INVOICE / OTHER — confirm]**.
+> does not itself take money. Fees are invoiced and collected \*\*[HOW: OUTSIDE
+>
+> > THE PLATFORM / BY INVOICE / OTHER — confirm]\*\*.
 
 Fees, plan inclusions and any usage-based charges are as set out at
 **[PRICING PAGE URL]** or in your order form. **[REFUND POLICY — confirm.

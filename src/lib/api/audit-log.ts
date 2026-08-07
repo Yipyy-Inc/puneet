@@ -96,6 +96,78 @@ export interface AuditLogEntry {
   description: string;
 }
 
+/** The database row, as PostgREST hands it back. */
+export interface AuditLogRow {
+  id: string;
+  occurred_at: string;
+  user_id: string | null;
+  user_name: string | null;
+  user_role: string | null;
+  action: string;
+  category: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  entity_name: string | null;
+  changes: unknown;
+  ip_address: string | null;
+  user_agent: string | null;
+  facility_id: string | null;
+  facility_name: string | null;
+  severity: string;
+  status: string;
+  description: string | null;
+}
+
+/** One side of a recorded change, as it should read on screen. */
+function shown(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  return String(value);
+}
+
+/**
+ * Row to entry, in ONE place.
+ *
+ * Two routes read this table — the platform-wide trail and a single facility's
+ * — and a mapping duplicated across them is a mapping that eventually disagrees
+ * with itself. The severity/status/category casts are safe: all three are CHECK
+ * constraints, so a value outside the union cannot exist to be read.
+ */
+export function toAuditLogEntry(row: AuditLogRow): AuditLogEntry {
+  return {
+    id: row.id,
+    timestamp: row.occurred_at,
+    // A null actor is an act with no signed-in person behind it — a migration,
+    // a scheduled job. "System" is what that means, not a stand-in for a value
+    // we failed to read.
+    userId: row.user_id ?? "system",
+    userName: row.user_name ?? "System",
+    userRole: row.user_role ?? "System",
+    action: row.action,
+    category: row.category as AuditCategory,
+    entityType: row.entity_type ?? "",
+    entityId: row.entity_id ?? "",
+    entityName: row.entity_name ?? "",
+    changes: Array.isArray(row.changes)
+      ? (row.changes as { field: string; from: unknown; to: unknown }[]).map(
+          (change): AuditChange => ({
+            field: change.field,
+            oldValue: shown(change.from),
+            newValue: shown(change.to),
+          }),
+        )
+      : [],
+    ipAddress: row.ip_address ?? "—",
+    userAgent: row.user_agent ?? "—",
+    // Empty rather than "—": these two are filtered on, and a dash would
+    // become a selectable facility named "—".
+    facilityId: row.facility_id ?? "",
+    facilityName: row.facility_name ?? "",
+    severity: row.severity as AuditSeverity,
+    status: row.status as AuditStatus,
+    description: row.description ?? "",
+  };
+}
+
 export interface AuditSummary {
   totalLogs: number;
   financialChanges: number;
