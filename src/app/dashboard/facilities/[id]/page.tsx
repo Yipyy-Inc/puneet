@@ -52,7 +52,6 @@ import {
   Power,
   Pause,
   Archive,
-  Settings,
   Key,
   Scissors,
   Dog,
@@ -547,13 +546,6 @@ export default function FacilityDetailPage() {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-
-                  <DropdownMenuItem
-                    onClick={() => router.push(`/dashboard/facilities/new`)}
-                  >
-                    <Settings className="mr-2 size-4" />
-                    Edit Facility
-                  </DropdownMenuItem>
 
                   <DropdownMenuItem>
                     <Key className="mr-2 size-4" />
