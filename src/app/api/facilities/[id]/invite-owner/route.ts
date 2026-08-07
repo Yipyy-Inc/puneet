@@ -103,10 +103,43 @@ export async function POST(
     ownerName: string;
   };
 
-  const origin =
+  // ── The link goes to THEIR facility, not to whoever pressed the button ───
+  //
+  // Reported from production: the invitation for Doggieville Mtl contained
+  // `https://pawradise.yipyy.com/sign-up`. The origin below is the host the
+  // SUPERADMIN happened to be on, and a superadmin browsing one facility's
+  // host while creating another is not exotic — it is a tab they left open.
+  //
+  // The new owner then lands on a different business's branded login page, is
+  // told to create an account at a company they have never heard of, and the
+  // one email that hands somebody their business looks like a phishing
+  // attempt. It still WORKED — access is tied to the address, not the host —
+  // which is worse, because nothing failed loudly.
+  //
+  // So the address is derived from the facility's own slug. That is the door
+  // spec 002 D2 gives them, it is the page carrying their own name and logo,
+  // and it cannot be influenced by the caller's browser.
+  const requestOrigin =
     request.headers.get("origin") ??
     process.env.NEXT_PUBLIC_APP_URL ??
     new URL(request.url).origin;
+
+  // Read from the facility row, never from the request. `facilities_read`
+  // admits platform admins, and this route has already established the caller
+  // is one.
+  const { data: facility } = await supabase
+    .from("facilities")
+    .select("slug")
+    .eq("id", facilityId)
+    .maybeSingle();
+
+  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN?.trim();
+  // Falls back to the request origin when there is no app domain configured —
+  // a preview deploy, or local — where per-facility hosts do not exist at all.
+  const origin =
+    facility?.slug && appDomain
+      ? `https://${facility.slug}.${appDomain}`
+      : requestOrigin;
 
   // Already registered means the grant was claimed inline and their access is
   // live now — so send them to sign IN, not to a sign-up screen that would
