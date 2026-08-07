@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -253,9 +254,6 @@ export default function NewFacilityPage() {
     ownerName: "",
     ownerEmail: "",
     ownerPhone: "",
-    adminPassword: "",
-    adminConfirmPassword: "",
-    autoGeneratePassword: true,
 
     // Staff Members
     staffMembers: [] as StaffMember[],
@@ -301,13 +299,6 @@ export default function NewFacilityPage() {
         newErrors.ownerName = "Owner name is required";
       if (!formData.ownerEmail.trim())
         newErrors.ownerEmail = "Owner email is required";
-      if (!formData.autoGeneratePassword) {
-        if (!formData.adminPassword)
-          newErrors.adminPassword = "Password is required";
-        if (formData.adminPassword !== formData.adminConfirmPassword) {
-          newErrors.adminConfirmPassword = "Passwords do not match";
-        }
-      }
     } else if (step === 4) {
       // Staff validation - optional, just validate if any are added
       formData.staffMembers.forEach((staff, index) => {
@@ -344,12 +335,64 @@ export default function NewFacilityPage() {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // Creating the facility.
+  //
+  // This used to be `console.log(formData)` and a redirect: six steps of
+  // collected detail were discarded and the superadmin was returned to a list
+  // that did not contain their facility.
+  //
+  // `requestId` is minted ONCE per wizard, not per attempt, and that is the
+  // whole point. If the first request times out and the superadmin clicks
+  // again, the second call carries the same id and `provision_facility`
+  // returns the first call's answer instead of creating a second business.
+  // ──────────────────────────────────────────────────────────────────────────
+  const [requestId] = useState(() => crypto.randomUUID());
+
+  const provision = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/facilities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          name: formData.name,
+          // The wizard has no timezone field yet, so the server default stands.
+          // Sending it explicitly would look like a choice nobody made.
+          ownerName: formData.ownerName,
+          ownerEmail: formData.ownerEmail,
+          ownerPhone: formData.ownerPhone,
+          contactEmail: formData.email,
+          contactPhone: formData.phone,
+          website: formData.website,
+          locations: formData.locations.map((location) => ({
+            name: location.name,
+          })),
+        }),
+      });
+
+      const body = (await response.json().catch(() => null)) as {
+        facilityId?: string;
+        error?: string;
+      } | null;
+
+      if (!response.ok) {
+        throw new Error(body?.error ?? `Could not create the facility.`);
+      }
+      return body;
+    },
+    // The facility that was just made, not the list — so the superadmin sees
+    // the result of their action rather than having to find it.
+    onSuccess: (result) =>
+      router.push(
+        result?.facilityId
+          ? `/dashboard/facilities/${result.facilityId}`
+          : "/dashboard/facilities",
+      ),
+  });
+
   const handleComplete = () => {
-    if (validateStep(currentStep)) {
-      // In a real app, this would submit to an API
-      console.log("Creating facility with data:", formData);
-      router.push("/dashboard/facilities");
-    }
+    if (validateStep(currentStep)) provision.mutate();
   };
 
   const toggleBusinessType = (typeId: string) => {
@@ -1172,80 +1215,13 @@ export default function NewFacilityPage() {
               />
             </div>
 
-            <div className="space-y-4 border-t pt-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base">Auto-generate Password</Label>
-                  <p className="text-muted-foreground text-sm">
-                    Generate a secure password and send it via email
-                  </p>
-                </div>
-                <Checkbox
-                  checked={formData.autoGeneratePassword}
-                  onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
-                      autoGeneratePassword: !!checked,
-                    })
-                  }
-                />
-              </div>
-
-              {!formData.autoGeneratePassword && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="adminPassword">
-                      Password <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="adminPassword"
-                      type="password"
-                      value={formData.adminPassword}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          adminPassword: e.target.value,
-                        })
-                      }
-                      placeholder="Enter password"
-                      className={
-                        errors.adminPassword ? "border-destructive" : ""
-                      }
-                    />
-                    {errors.adminPassword && (
-                      <p className="text-destructive text-sm">
-                        {errors.adminPassword}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="adminConfirmPassword">
-                      Confirm Password{" "}
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="adminConfirmPassword"
-                      type="password"
-                      value={formData.adminConfirmPassword}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          adminConfirmPassword: e.target.value,
-                        })
-                      }
-                      placeholder="Confirm password"
-                      className={
-                        errors.adminConfirmPassword ? "border-destructive" : ""
-                      }
-                    />
-                    {errors.adminConfirmPassword && (
-                      <p className="text-destructive text-sm">
-                        {errors.adminConfirmPassword}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
+            <div className="space-y-2 border-t pt-4">
+              <Label className="text-base">How they get in</Label>
+              <p className="text-muted-foreground text-sm">
+                We email the owner an invitation and they set their own
+                password. Nobody at Yipyy ever holds a credential for their
+                business, and a superadmin never has a password to relay.
+              </p>
             </div>
           </div>
         );
@@ -1769,11 +1745,9 @@ export default function NewFacilityPage() {
                   <span className="font-medium">{formData.ownerEmail}</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-muted-foreground">Password</span>
+                  <span className="text-muted-foreground">Access</span>
                   <span className="font-medium">
-                    {formData.autoGeneratePassword
-                      ? "Auto-generated (sent via email)"
-                      : "Manually set"}
+                    Invited by email — they set their own password
                   </span>
                 </div>
               </CardContent>
@@ -1990,16 +1964,32 @@ export default function NewFacilityPage() {
             <CardTitle>{steps[currentStep].title}</CardTitle>
           </CardHeader>
           <CardContent>{renderStepContent()}</CardContent>
+
+          {/* A failure now has somewhere to go. Before this there was no
+              request, so there was no failure path to show. */}
+          {provision.isError && (
+            <div className="px-6 pb-2">
+              <p
+                role="alert"
+                className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm"
+              >
+                {provision.error.message}
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-between p-6 pt-0">
             <Button
               variant="outline"
               onClick={handlePrevious}
-              disabled={currentStep === 0}
+              disabled={currentStep === 0 || provision.isPending}
             >
               Previous
             </Button>
             {currentStep === steps.length - 1 ? (
-              <Button onClick={handleComplete}>Create Facility</Button>
+              <Button onClick={handleComplete} disabled={provision.isPending}>
+                {provision.isPending ? "Creating…" : "Create Facility"}
+              </Button>
             ) : (
               <Button onClick={handleNext}>Continue</Button>
             )}

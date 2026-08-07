@@ -2930,6 +2930,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      provisioning_requests: {
+        Row: {
+          created_at: string;
+          facility_id: string;
+          id: string;
+          requested_by: string;
+          response: Json;
+        };
+        Insert: {
+          created_at?: string;
+          facility_id: string;
+          id: string;
+          requested_by: string;
+          response: Json;
+        };
+        Update: {
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          requested_by?: string;
+          response?: Json;
+        };
+        Relationships: [];
+      };
       package_pass_entries: {
         Row: {
           author_name: string;
@@ -3970,6 +3994,22 @@ export type Database = {
       };
       record_membership_grant: {
         Args: { p_expires_at?: string | null; p_staff_legacy_id: string };
+        Returns: Json;
+      };
+      provision_facility: {
+        Args: {
+          p_contact_email?: string | null;
+          p_contact_phone?: string | null;
+          p_locations?: Json;
+          p_name: string;
+          p_owner_email: string;
+          p_owner_name: string;
+          p_owner_phone?: string | null;
+          p_request_id: string;
+          p_slug: string;
+          p_timezone: string;
+          p_website?: string | null;
+        };
         Returns: Json;
       };
       my_permissions: {
