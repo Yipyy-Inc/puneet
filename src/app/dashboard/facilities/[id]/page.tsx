@@ -62,6 +62,7 @@ import { FacilityBilling } from "./_components/facility-billing";
 import { FacilityLogs } from "./_components/facility-logs";
 import { FacilityModules } from "./_components/facility-modules";
 import { FacilityReport } from "./_components/facility-report";
+import { FacilityData } from "./_components/facility-data";
 
 const tabs = [
   {
@@ -228,10 +229,7 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
 
       case "data":
         return (
-          <NotYetReal
-            title="Data export"
-            description="A GDPR-shaped export of everything this facility holds."
-          />
+          <FacilityData facilityId={facility.id} facilityName={facility.name} />
         );
 
       case "agreements":

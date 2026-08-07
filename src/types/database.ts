@@ -4367,6 +4367,18 @@ export type Database = {
         Args: { p_facility_id: string; p_months?: number };
         Returns: Json;
       };
+      /**
+       * Records that a facility's data was exported. The one audited act with
+       * no row to hang a trigger on — see the header of 20260807640000.
+       */
+      record_facility_export: {
+        Args: {
+          p_facility_id: string;
+          p_datasets: string[];
+          p_row_count: number;
+        };
+        Returns: string;
+      };
       facility_has_module: {
         Args: { p_facility_id: string; p_module_id: string };
         Returns: boolean;

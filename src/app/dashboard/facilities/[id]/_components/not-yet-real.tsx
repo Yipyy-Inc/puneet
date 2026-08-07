@@ -11,15 +11,17 @@ import {
 // ============================================================================
 // "This tab cannot show a real facility yet."
 //
-// Two tabs on the facility detail page — Data and Agreements — have nothing
-// behind them. Not "a table keyed differently": nothing stores a signed
-// agreement, and nothing has ever produced an export.
+// ONE tab on the facility detail page is left: Agreements. Nothing stores a
+// signed agreement — not "a table keyed differently", nothing at all.
 //
 // It was five. `audit_log` (20260807460000) gave Logs a real source; `modules`
 // and `facility_modules` (20260807540000, 20260807560000) gave one to Modules;
-// and Reports needed no new table at all (20260807620000) — bookings and
-// payments were already real and nothing had put them together. Worth checking
-// for the last two before assuming the claim still holds.
+// Reports needed no new table at all (20260807620000) — bookings and payments
+// were already real and nothing had put them together; and Data export needed
+// none either, only a reader that points at Postgres instead of the fixtures.
+//
+// Two of the four turned out not to need a table. Check before believing this
+// component: "nothing stores this" is a claim that goes stale.
 //
 // The alternative was to pass the uuid in anyway and let each tab render its
 // own empty state. That reads as "this facility has no agreements", which is a
