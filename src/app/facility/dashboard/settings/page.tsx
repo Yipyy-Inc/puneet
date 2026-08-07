@@ -42,6 +42,7 @@ import { StaffNotificationPreferences } from "@/components/facility/StaffNotific
 import { NotificationRoleDefaults } from "@/components/facility/NotificationRoleDefaults";
 import { FeedingMedicationConfig } from "@/components/facility/FeedingMedicationConfig";
 import { TaxSettings } from "@/components/facility/TaxSettings";
+import { BrandingSettings } from "@/components/facility/BrandingSettings";
 import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
 import { RetailSettings } from "@/components/facility/RetailSettings";
 import { CheckinRequirementsSettings } from "@/components/facility/CheckinRequirementsSettings";
@@ -4716,6 +4717,9 @@ export default function SettingsPage() {
               <TaxSettings />
             </div>
           )}
+
+          {/* Branding — what customers see before they sign in (spec 002 §3.3) */}
+          {activeSection === "branding" && <BrandingSettings />}
 
           {/* Care Tasks */}
           {activeSection === "care-tasks" && (

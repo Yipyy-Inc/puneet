@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import {
   Building2,
+  Palette,
   DollarSign,
   Bell,
   Plug,
@@ -62,6 +63,7 @@ export interface SettingsSection {
  *  page reuses this to guard deep-links and pick a visible default. */
 export const SETTINGS_SECTION_KEYS: Record<string, PermissionKey> = {
   business: "settings_general",
+  branding: "settings_general",
   notifications: "settings_manage_notifications",
   "smart-insights": "manage_facility_settings",
   "custom-email-domain": "manage_facility_settings",
@@ -136,6 +138,15 @@ const STATIC_GROUPS: SettingsGroup[] = [
         id: "business",
         label: "Business",
         icon: Building2,
+        permKey: "settings_general",
+      },
+      {
+        id: "branding",
+        label: "Branding",
+        icon: Palette,
+        // The same key the RLS policies check (facility_branding_insert /
+        // _update), so the nav and the database agree about who may do this
+        // rather than each deciding separately.
         permKey: "settings_general",
       },
       { id: "notifications", label: "Notifications", icon: Bell },

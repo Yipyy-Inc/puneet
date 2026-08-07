@@ -104,6 +104,74 @@ select pg_temp.t(7, 'B7 facility-logos is public, capped, and refuses SVG',
   (select array_to_string(allowed_mime_types, ', ')
      from storage.buckets where id = 'facility-logos'));
 
+-- ── Who may set it (phase 3.3) ─────────────────────────────────────────────
+--
+-- The Branding settings section is gated on `settings_general` in the sidebar.
+-- That is the NAV, and a nav is a suggestion. These assert the database agrees,
+-- because /api/facility/branding is reachable without the sidebar.
+
+insert into public.profiles (id, email, full_name) values
+  ('user_brandOwner00000000000000000', 'bowner@demo.invalid', 'Brand Owner'),
+  ('user_brandRecep00000000000000000', 'brecep@demo.invalid', 'Brand Recep')
+on conflict (id) do nothing;
+
+insert into public.facility_memberships (profile_id, facility_id, role, is_active)
+select 'user_brandOwner00000000000000000', f.id, 'owner', true
+  from public.facilities f where f.legacy_id = '11'
+on conflict (profile_id, facility_id) do nothing;
+
+insert into public.facility_memberships (profile_id, facility_id, role, is_active)
+select 'user_brandRecep00000000000000000', f.id, 'reception', true
+  from public.facilities f where f.legacy_id = '11'
+on conflict (profile_id, facility_id) do nothing;
+
+-- Reception is a member of this facility and holds no settings_general
+-- (role_preset_permissions grants it to owner, admin and manager only).
+select set_config('request.jwt.claims',
+  json_build_object('sub','user_brandRecep00000000000000000','role','authenticated')::text, true);
+set local role authenticated;
+
+do $$
+declare state text;
+begin
+  begin
+    insert into public.facility_branding (facility_id, primary_color)
+    values ((select id from public.facilities where legacy_id = '11'), '#111111');
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+  perform pg_temp.t(8, 'B8 a member WITHOUT settings_general cannot write branding',
+    state = '42501', 'state=' || state);
+end $$;
+
+reset role;
+select set_config('request.jwt.claims',
+  json_build_object('sub','user_brandOwner00000000000000000','role','authenticated')::text, true);
+set local role authenticated;
+
+do $$
+declare state text;
+begin
+  begin
+    insert into public.facility_branding (facility_id, primary_color, tagline)
+    values ((select id from public.facilities where legacy_id = '11'),
+            '#7C3AED', 'Set by the owner');
+    state := 'ALLOWED';
+  exception when others then state := sqlstate || ' ' || sqlerrm;
+  end;
+  perform pg_temp.t(9, 'B9 an OWNER can write their own branding',
+    state = 'ALLOWED', state);
+end $$;
+
+-- The round trip, which is the only assertion that proves the feature works
+-- rather than that two policies exist.
+reset role;
+set local role anon;
+select pg_temp.t(10, 'B10 and a signed-out visitor sees it on the login page',
+  (select tagline from public.facility_branding_by_slug('yipyy-demo-facility'))
+    = 'Set by the owner');
+reset role;
+
 -- ── Report ──────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result, name, detail
   from tap order by n;
