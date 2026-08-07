@@ -823,6 +823,69 @@ export type Database = {
         Relationships: [];
       };
       /**
+       * A facility's own payment-processor account — the NON-SECRET half.
+       * The OAuth tokens live in private.payment_credentials as Vault secret
+       * ids; `public_api_key` is the PAKMS key Clover's hosted iframe needs in
+       * the browser, and is safe there by design.
+       *
+       * No Insert/Update shape: connecting is an OAuth callback on the server,
+       * through the service role. There is no client-side write path and
+       * declaring one here would describe an API that does not exist.
+       */
+      payment_connections: {
+        Row: {
+          facility_id: string;
+          processor: string;
+          environment: string;
+          merchant_id: string;
+          public_api_key: string | null;
+          status: string;
+          scopes: string[];
+          connected_by: string | null;
+          connected_at: string | null;
+          revoked_at: string | null;
+          last_error: string | null;
+          last_verified_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /**
+       * Written BEFORE the processor is called. Amounts are in CENTS here,
+       * unlike the dollars in `payments`: this is the number sent to Clover and
+       * it exists to be compared with what Clover reports.
+       */
+      payment_intents: {
+        Row: {
+          id: string;
+          facility_id: string;
+          booking_id: string | null;
+          client_id: string | null;
+          processor: string;
+          environment: string;
+          kind: string;
+          amount_cents: number;
+          currency: string;
+          idempotency_key: string;
+          status: string;
+          processor_payment_id: string | null;
+          device_id: string | null;
+          failure_code: string | null;
+          failure_message: string | null;
+          payment_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          completed_at: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /**
        * The plans Yipyy sells. A NULL limit column means unlimited, not
        * unknown — the mock's -1 sentinel does not survive into the database.
        */
@@ -3351,10 +3414,27 @@ export type Database = {
           subtotal: number;
           tax: number;
           tip: number;
+          // The processor half (20260807680000). NULL on everything recorded
+          // by hand — cash, and every payment taken before Clover.
+          processor: string | null;
+          processor_payment_id: string | null;
+          card_brand: string | null;
+          /** Exactly four digits or NULL. Never a masked PAN. */
+          card_last4: string | null;
+          auth_code: string | null;
+          entry_method: string | null;
+          refund_of_payment_id: string | null;
         };
         Insert: {
           amount_charged: number;
           author_name?: string;
+          processor?: string | null;
+          processor_payment_id?: string | null;
+          card_brand?: string | null;
+          card_last4?: string | null;
+          auth_code?: string | null;
+          entry_method?: string | null;
+          refund_of_payment_id?: string | null;
           booking_id?: string | null;
           cash_received?: number | null;
           client_id?: string | null;
