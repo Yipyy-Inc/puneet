@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 
 // ============================================================================
 // Email + password sign-up, with the email verification step Clerk requires
@@ -178,9 +179,8 @@ export function EmailSignUpForm() {
 
           <div className="space-y-2">
             <Label htmlFor="signup-password">Password</Label>
-            <Input
+            <PasswordInput
               id="signup-password"
-              type="password"
               autoComplete="new-password"
               required
               minLength={8}
