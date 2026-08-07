@@ -258,6 +258,10 @@ export async function POST(request: NextRequest) {
 
   let invite: unknown = null;
   if (result?.facilityId && !result.replayed) {
+    // link-origin-ok: this is not a link anyone sees — it is this server
+    // calling its own invite route, so it must resolve to the host actually
+    // serving this request. The URL that ends up IN the email is derived from
+    // the facility's slug inside that route (lib/public-origin.ts).
     const origin =
       request.headers.get("origin") ??
       process.env.NEXT_PUBLIC_APP_URL ??

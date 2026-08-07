@@ -32,6 +32,7 @@
     "db:seed:operational": "bun scripts/generate-operational-seed.ts",
     "check:customer-identity": "bun scripts/check-customer-identity.ts",
     "check:facility-from-session": "bun scripts/check-facility-from-session.ts",
+    "check:link-origin": "bun scripts/check-link-origin.ts",
     "check:success-claims": "bun scripts/check-success-claims.ts"
   },
   "dependencies": {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { buildMfaSetupEmail } from "@/lib/mfa-setup-email";
+import { platformOrigin } from "@/lib/public-origin";
 
 // Honest, env-gated "Resend MFA Setup Email". Sends a real email via Resend when
 // RESEND_API_KEY is configured; otherwise returns sent:false + reason
@@ -39,10 +40,9 @@ export async function POST(req: Request) {
     });
   }
 
-  const origin =
-    req.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    new URL(req.url).origin;
+  // A platform security notice, so Yipyy's own address — not whichever host
+  // the administrator sending it happened to be looking at.
+  const origin = platformOrigin(req);
   const message = buildMfaSetupEmail({ userName, origin });
 
   try {

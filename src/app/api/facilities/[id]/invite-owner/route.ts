@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { buildOwnerInviteEmail } from "@/lib/facility-owner-invite-email";
+import { facilityOrigin } from "@/lib/public-origin";
 
 // ============================================================================
 // Inviting a facility's owner — sending, re-sending, withdrawing, and reading
@@ -119,12 +120,7 @@ export async function POST(
   // So the address is derived from the facility's own slug. That is the door
   // spec 002 D2 gives them, it is the page carrying their own name and logo,
   // and it cannot be influenced by the caller's browser.
-  const requestOrigin =
-    request.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    new URL(request.url).origin;
-
-  // Read from the facility row, never from the request. `facilities_read`
+  // Read from the facility ROW, never from the request. `facilities_read`
   // admits platform admins, and this route has already established the caller
   // is one.
   const { data: facility } = await supabase
@@ -133,13 +129,7 @@ export async function POST(
     .eq("id", facilityId)
     .maybeSingle();
 
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN?.trim();
-  // Falls back to the request origin when there is no app domain configured —
-  // a preview deploy, or local — where per-facility hosts do not exist at all.
-  const origin =
-    facility?.slug && appDomain
-      ? `https://${facility.slug}.${appDomain}`
-      : requestOrigin;
+  const origin = facilityOrigin(facility?.slug, request);
 
   // Already registered means the grant was claimed inline and their access is
   // live now — so send them to sign IN, not to a sign-up screen that would

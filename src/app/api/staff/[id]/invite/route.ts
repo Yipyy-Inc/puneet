@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { buildStaffInviteEmail } from "@/lib/staff-invite-email";
+import { facilityOrigin } from "@/lib/public-origin";
 import {
   mintOnboardingToken,
   toByteaLiteral,
@@ -98,7 +99,7 @@ export async function POST(
 
   const { data: facility } = await supabase
     .from("facilities")
-    .select("name")
+    .select("name, slug")
     .eq("id", staff.facility_id)
     .maybeSingle();
 
@@ -124,10 +125,11 @@ export async function POST(
 
   const expiryDays = template?.invite_expiry_days ?? 7;
 
-  const origin =
-    request.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    new URL(request.url).origin;
+  // The hire's OWN facility, from the facility row — not the host whoever
+  // pressed Invite happened to be on. See lib/public-origin.ts: a superadmin
+  // (or a manager of two businesses) with the wrong tab open used to send
+  // somebody to a different company's branded login page.
+  const origin = facilityOrigin(facility?.slug, request);
 
   const grantExpiresAt = new Date(
     Date.now() + expiryDays * 24 * 60 * 60 * 1000,

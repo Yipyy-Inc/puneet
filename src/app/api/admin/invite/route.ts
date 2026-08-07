@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { roleDisplayNames, type AdminRole } from "@/data/admin-users";
 import { buildInviteEmail } from "@/lib/admin-invite-email";
 import { createInviteToken, INVITE_TOKEN_TTL_MS } from "@/lib/invitation-token";
+import { platformOrigin } from "@/lib/public-origin";
 
 // Sends a real admin-team invitation email with a 48-hour setup link.
 // Env-gated like the AI routes: when RESEND_API_KEY is absent we don't fake a
@@ -38,10 +39,10 @@ export async function POST(req: NextRequest) {
   }
 
   const token = createInviteToken({ id, name, email, role, department });
-  const origin =
-    req.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    new URL(req.url).origin;
+  // Yipyy's OWN address. This invites somebody onto the PLATFORM team, so
+  // sending them to a customer's branded host to set up their account would be
+  // the facility-invite bug pointing the other way — see lib/public-origin.ts.
+  const origin = platformOrigin(req);
   const setupUrl = `${origin}/setup/${token}`;
   const expiresAt = Date.now() + INVITE_TOKEN_TTL_MS;
   const roleLabel = roleDisplayNames[role as AdminRole] ?? role;
