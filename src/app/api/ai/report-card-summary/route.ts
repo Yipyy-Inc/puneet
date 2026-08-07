@@ -2,12 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
 import { recordAiUsage } from "@/lib/ai-usage-recorder";
+import { getCurrentUser } from "@/lib/supabase/server";
+import { getFacilityContext } from "@/lib/api/facility-context";
 
 const MODEL = "claude-haiku-4-5-20251001";
 
 interface ReportCardInput {
   petName: string;
-  facilityId?: number;
   facilityName: string;
   serviceType: string;
   date: string;
@@ -27,6 +28,15 @@ const FALLBACK_SUMMARY =
   "Unable to generate summary at this time. Please try again or write the summary manually.";
 
 export async function POST(req: NextRequest) {
+  // This route SPENDS MONEY — it calls Anthropic on every request. It had no
+  // auth check, and nothing gated it upstream: proxy.ts establishes the Clerk
+  // context but authorises nothing, and the portal gates live in layouts,
+  // which an /api/* request never renders.
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
   const input: ReportCardInput = await req.json();
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -69,7 +79,10 @@ Write a warm, natural 3-4 sentence summary of the pet's day. Address the pet by 
 
     const usage = message.usage;
     recordAiUsage({
-      facilityId: input.facilityId,
+      // From the SESSION, not the body. No caller ever sent the old optional
+      // `facilityId`, so every generation was filed against facility 0 /
+      // "Platform" — and a caller could have filed spend against any tenant.
+      facilityId: (await getFacilityContext())?.legacyRef ?? undefined,
       type: "report_card_summary",
       model: MODEL,
       inputTokens: usage?.input_tokens ?? 0,

@@ -2,6 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
 import { recordAiUsage } from "@/lib/ai-usage-recorder";
+import { getCurrentUser } from "@/lib/supabase/server";
+import { getFacilityContext } from "@/lib/api/facility-context";
 
 const MODEL = "claude-haiku-4-5-20251001";
 
@@ -9,7 +11,6 @@ interface EvaluationInput {
   petName: string;
   petBreed: string;
   petAge?: string;
-  facilityId?: number;
   facilityName: string;
   evaluatorName: string;
   evaluationDate: string;
@@ -38,6 +39,15 @@ const FALLBACK_SUMMARY =
   "Unable to generate summary at this time. Please try again or write the summary manually.";
 
 export async function POST(req: NextRequest) {
+  // This route SPENDS MONEY — it calls Anthropic on every request. It had no
+  // auth check, and nothing gated it upstream: proxy.ts establishes the Clerk
+  // context but authorises nothing, and the portal gates live in layouts,
+  // which an /api/* request never renders.
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
   const input: EvaluationInput = await req.json();
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -97,7 +107,10 @@ Keep the total under 200 words. Be warm, professional, and reassuring. Avoid cli
 
     const usage = message.usage;
     recordAiUsage({
-      facilityId: input.facilityId,
+      // From the SESSION, not the body. No caller ever sent the old optional
+      // `facilityId`, so every generation was filed against facility 0 /
+      // "Platform" — and a caller could have filed spend against any tenant.
+      facilityId: (await getFacilityContext())?.legacyRef ?? undefined,
       type: "evaluation_summary",
       model: MODEL,
       inputTokens: usage?.input_tokens ?? 0,

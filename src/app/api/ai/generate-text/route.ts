@@ -2,6 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
 import { recordAiUsage } from "@/lib/ai-usage-recorder";
+import { getCurrentUser } from "@/lib/supabase/server";
+import { getFacilityContext } from "@/lib/api/facility-context";
 
 const MODEL = "claude-haiku-4-5-20251001";
 
@@ -24,8 +26,6 @@ interface GenerateTextInput {
   context: Record<string, unknown>;
   tone?: "warm" | "professional" | "playful";
   maxWords?: number;
-  /** Facility this generation is for — attributes token usage to the tenant. */
-  facilityId?: number;
 }
 
 const SYSTEM_PROMPTS: Record<TextType, string> = {
@@ -63,6 +63,18 @@ const TONE_MODIFIERS: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
+  // This route SPENDS MONEY — it calls Anthropic on every request. It had no
+  // auth check of any kind, and nothing gated it upstream either: proxy.ts
+  // establishes the Clerk context but deliberately authorises nothing, and the
+  // portal gates live in layouts, which an /api/* request never renders.
+  //
+  // So this was an open endpoint that bills the platform's API key, reachable
+  // by anyone who could resolve the host.
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
   const input: GenerateTextInput = await req.json();
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -95,8 +107,13 @@ export async function POST(req: NextRequest) {
 
     // Token usage tracking — persist the real usage for the AI console.
     const usage = message.usage;
+    // Attributed from the SESSION, not the request body. The body carried an
+    // optional `facilityId` that no caller ever sent, so every generation was
+    // filed against facility 0 / "Platform" — the per-facility AI cost console
+    // was reporting nothing. Taking it from the membership fixes that and means
+    // a caller cannot file their token spend against another tenant.
     recordAiUsage({
-      facilityId: input.facilityId,
+      facilityId: (await getFacilityContext())?.legacyRef ?? undefined,
       type: input.type,
       model: MODEL,
       inputTokens: usage?.input_tokens ?? 0,
