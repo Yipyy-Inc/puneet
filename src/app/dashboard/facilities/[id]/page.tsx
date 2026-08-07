@@ -60,15 +60,8 @@ import { FacilityClients } from "./_components/facility-clients";
 import { FacilityLocations } from "./_components/facility-locations";
 import { FacilityBilling } from "./_components/facility-billing";
 import { FacilityLogs } from "./_components/facility-logs";
+import { FacilityModules } from "./_components/facility-modules";
 
-// Real per-facility module usage, derived from the facility's activity log
-// (activity + audit trail) filtered by module. Every module in availableModules
-// gets an entry — modules with genuine zero activity report "0" / "—" so the
-// Modules tab never shows an indefinite loading skeleton.
-// Map a raw log entry to the module short-id it belongs to (null = not a
-// module-scoped event, e.g. security/system/config noise).
-// A discrete "action" is a created booking / processed transaction, as opposed
-// to a passive access (view/update). Detected from the action verb.
 const tabs = [
   {
     id: "overview",
@@ -250,9 +243,9 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
 
       case "modules":
         return (
-          <NotYetReal
-            title="Modules"
-            description="Which modules this facility has switched on, and any price overrides."
+          <FacilityModules
+            facilityId={facility.id}
+            facilityName={facility.name}
           />
         );
 

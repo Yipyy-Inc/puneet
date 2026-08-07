@@ -822,6 +822,147 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      /**
+       * The plans Yipyy sells. A NULL limit column means unlimited, not
+       * unknown — the mock's -1 sentinel does not survive into the database.
+       */
+      subscription_tiers: {
+        Row: {
+          id: string;
+          name: string;
+          tier_type: string;
+          rank: number;
+          description: string;
+          price_monthly_cents: number;
+          price_quarterly_cents: number;
+          price_yearly_cents: number;
+          currency: string;
+          transaction_fee_bps: number;
+          max_users: number | null;
+          max_locations: number | null;
+          max_clients: number | null;
+          max_bookings_per_month: number | null;
+          storage_gb: number | null;
+          features: string[];
+          is_active: boolean;
+          is_public: boolean;
+          is_customizable: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          name: string;
+          tier_type: string;
+          rank: number;
+          description?: string;
+          price_monthly_cents?: number;
+          price_quarterly_cents?: number;
+          price_yearly_cents?: number;
+          currency?: string;
+          transaction_fee_bps?: number;
+          max_users?: number | null;
+          max_locations?: number | null;
+          max_clients?: number | null;
+          max_bookings_per_month?: number | null;
+          storage_gb?: number | null;
+          features?: string[];
+          is_active?: boolean;
+          is_public?: boolean;
+          is_customizable?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["subscription_tiers"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      /**
+       * What Yipyy sells to a facility. Not service modules (daycare,
+       * boarding) — those are what a facility sells to a pet owner.
+       */
+      modules: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          description: string;
+          category: string;
+          icon: string;
+          price_monthly_cents: number;
+          price_quarterly_cents: number;
+          price_yearly_cents: number;
+          currency: string;
+          min_tier_rank: number;
+          is_standalone: boolean;
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          slug: string;
+          name: string;
+          description?: string;
+          category: string;
+          icon?: string;
+          price_monthly_cents?: number;
+          price_quarterly_cents?: number;
+          price_yearly_cents?: number;
+          currency?: string;
+          min_tier_rank?: number;
+          is_standalone?: boolean;
+          is_active?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["modules"]["Insert"]>;
+        Relationships: [];
+      };
+      module_dependencies: {
+        Row: { module_id: string; requires_module_id: string };
+        Insert: { module_id: string; requires_module_id: string };
+        Update: Partial<{ module_id: string; requires_module_id: string }>;
+        Relationships: [];
+      };
+      tier_modules: {
+        Row: { tier_id: string; module_id: string };
+        Insert: { tier_id: string; module_id: string };
+        Update: Partial<{ tier_id: string; module_id: string }>;
+        Relationships: [];
+      };
+      /**
+       * Departures from what the plan includes — no row means the plan
+       * decides. Written through set_facility_module/reset_facility_modules
+       * so a refusal is an error rather than an update that matched nothing.
+       */
+      facility_modules: {
+        Row: {
+          facility_id: string;
+          module_id: string;
+          enabled: boolean;
+          price_override_cents: number | null;
+          note: string;
+          granted_by: string | null;
+          expires_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          facility_id: string;
+          module_id: string;
+          enabled: boolean;
+          price_override_cents?: number | null;
+          note?: string;
+          granted_by?: string | null;
+          expires_at?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["facility_modules"]["Insert"]
+        >;
+        Relationships: [];
+      };
       facilities: {
         Row: {
           allow_customer_signup: boolean;
@@ -4188,6 +4329,54 @@ export type Database = {
       my_client_at: {
         Args: { p_facility_slug: string };
         Returns: string | null;
+      };
+      /**
+       * The effective module list for one facility: the plan, with this
+       * facility's overrides applied. Runs as the caller, so RLS decides what
+       * is visible rather than a check inside the function.
+       */
+      facility_module_entitlements: {
+        Args: { p_facility_id: string };
+        Returns: {
+          module_id: string;
+          slug: string;
+          name: string;
+          description: string;
+          category: string;
+          icon: string;
+          enabled: boolean;
+          source: string;
+          price_cents: number;
+          list_price_cents: number;
+          price_override_cents: number | null;
+          included_in_plan: boolean;
+          available_on_plan: boolean;
+          is_standalone: boolean;
+          min_tier_rank: number;
+          expires_at: string | null;
+          note: string;
+          missing_dependencies: string[];
+        }[];
+      };
+      facility_has_module: {
+        Args: { p_facility_id: string; p_module_id: string };
+        Returns: boolean;
+      };
+      set_facility_module: {
+        Args: {
+          p_facility_id: string;
+          p_module_id: string;
+          p_enabled: boolean;
+          p_price_override_cents?: number | null;
+          p_note?: string;
+          p_expires_at?: string | null;
+        };
+        Returns: undefined;
+      };
+      /** Drops every exception for a facility; returns how many were dropped. */
+      reset_facility_modules: {
+        Args: { p_facility_id: string };
+        Returns: number;
       };
       set_subscription_status: {
         Args: {

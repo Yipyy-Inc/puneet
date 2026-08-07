@@ -1600,6 +1600,34 @@ The client-side form (`strategy: "password"`) only works if that first factor is
 
 It also deletes a stale profile for the same address before upserting, which is what makes re-pointing the suite at a different Clerk instance a one-command operation rather than a `23505` on `profiles_email_lower_key`.
 
+## Snapshot (2026-08-07, what Yipyy sells)
+
+### 🔴 "Module" means four different things in four files, and three of them are the same thing
+
+`src/data/facilities.ts` (8 entries, short ids like `booking`), `src/data/feature-toggles.ts` (12, long ids like `module-booking`), and `src/data/modules.ts` (17, long ids, with prices, dependencies and a minimum tier) all describe the same product: what Yipyy sells to a facility. `src/data/service-modules.ts` describes something else entirely — what a facility sells to a pet owner.
+
+**Why it's risky:** the first three disagree on the count AND the price. `facilities.ts` prices Booking at $29.99/mo; `modules.ts` prices it at $0. Both readings are defensible ("what it's worth" vs "what it adds to the bill") and nothing says which one a given screen means. Three separate files carry a `SHORT_TO_LONG` bridge to paper over the id mismatch.
+
+**Do instead:** read entitlements from the database. `public.modules` is the catalogue (17, priced as _what this adds to the bill_, so a plan-included module is 0), `public.tier_modules` is what each plan includes, and `public.facility_modules` holds only the departures from that. `public.facility_module_entitlements(facility_id)` puts them together; `public.facility_has_module(facility_id, module_id)` is the boolean, shaped so a future RLS policy can call it. The mock files still exist and still feed the flags console — don't add a fifth vocabulary, and don't "fix" a mock price to match the database.
+
+### 🟡 Entitlements are recorded; nothing is gated on them
+
+Turning a module off in the Modules tab records a withdrawal. It does not lock anyone out of a screen, and the tab says so in as many words.
+
+**Why it's risky:** the obvious next step — make the sidebar or a route honour `facility_has_module` — would immediately shut working businesses out of what they already use. Every live facility is on Puppy, which includes Booking, Customer Management and Communication. The demo facility runs grooming (14 appointments), boarding, daycare and training on that plan, and _no_ plan includes Daycare/Boarding at all, which is the tier data as written rather than an import error.
+
+**Do instead:** treat enforcement as its own change, and start by fixing the tier lists, not the enforcement point. A gate switched on over today's data is a production outage for every facility on the platform.
+
+### 🟢 The resolver stores exceptions, so a plan change moves everyone who never negotiated
+
+`facility_modules` holds departures, not state: no row means the plan decides. Changing what Pack Leader includes moves every facility on Pack Leader except the ones with a bespoke arrangement, and "reset to plan" is a DELETE — which is exactly what it means. The alternative, copying the plan into rows at provisioning time, makes both of those into migrations.
+
+### 🟢 An audit entry that names the wrong act is worse than no entry
+
+The first cut of the `facility_modules` audit trigger derived its action from `new.enabled`, so agreeing a $0 price logged "Module enabled … enabled -> enabled". Caught by the migration's own verification (E8b) rather than in review. Corrected in `20260807580000` to name which of enabled/price/expiry moved.
+
+**Why it matters beyond wording:** on an append-only table the entry can never be edited or removed, and a plausible-but-wrong entry ends the question that a missing entry would have prompted.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

@@ -11,12 +11,13 @@ import {
 // ============================================================================
 // "This tab cannot show a real facility yet."
 //
-// Four tabs on the facility detail page — Modules, Data, Agreements and
-// Reports — have no table behind them at all. Not "a table keyed differently":
-// nothing stores an entitlement or a signed agreement.
+// Three tabs on the facility detail page — Data, Agreements and Reports —
+// have no table behind them at all. Not "a table keyed differently": nothing
+// stores a signed agreement.
 //
-// It was five until `audit_log` landed (20260807460000) and the Logs tab got a
-// real source. Delete this component's usage one tab at a time, the same way.
+// It was five. `audit_log` (20260807460000) gave the Logs tab a real source,
+// and `modules` + `facility_modules` (20260807540000, 20260807560000) gave one
+// to Modules. Delete this component's usage one tab at a time, the same way.
 //
 // The alternative was to pass the uuid in anyway and let each tab render its
 // own empty state. That reads as "this facility has no agreements", which is a
