@@ -31,7 +31,8 @@
     "db:seed:apply": "bun scripts/apply-operational-seed.ts",
     "db:seed:operational": "bun scripts/generate-operational-seed.ts",
     "check:customer-identity": "bun scripts/check-customer-identity.ts",
-    "check:facility-from-session": "bun scripts/check-facility-from-session.ts"
+    "check:facility-from-session": "bun scripts/check-facility-from-session.ts",
+    "check:success-claims": "bun scripts/check-success-claims.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.91.1",

@@ -35,6 +35,7 @@ There is **no test runner** in this project. "Green" = the CI gates plus a manua
 | `bun run check:rls-writes`            | Fails if an API update/delete cannot tell an RLS refusal from a no-op                             |
 | `bun run check:grooming-menu`         | Fails if a screen reads the grooming menu from the fixture, not Postgres                          |
 | `bun run check:facility-from-session` | Fails if an API route takes the facility from the request rather than the session or a parent row |
+| `bun run check:success-claims`        | Fails if a screen claims an action succeeded with nothing that could perform it                   |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
 

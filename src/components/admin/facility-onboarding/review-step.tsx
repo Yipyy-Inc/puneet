@@ -54,12 +54,15 @@ export function ReviewStep({
   onBack,
   onCancel,
   onCreate,
+  creating = false,
 }: {
   draft: FacilityDraft;
   onEdit: (index: number) => void;
   onBack: () => void;
   onCancel: () => void;
   onCreate: () => void;
+  /** True while the create request is in flight — this writes a real facility. */
+  creating?: boolean;
 }) {
   const businessTypeLabels =
     draft.businessTypes
@@ -176,7 +179,12 @@ export function ReviewStep({
       </div>
 
       <footer className="flex items-center justify-between gap-3 border-t px-4 py-3 sm:px-6">
-        <Button type="button" variant="outline" onClick={onBack}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBack}
+          disabled={creating}
+        >
           <ChevronLeft className="size-4" />
           Back
         </Button>
@@ -187,9 +195,10 @@ export function ReviewStep({
           <Button
             type="button"
             onClick={onCreate}
+            disabled={creating}
             className="bg-emerald-600 text-white hover:bg-emerald-700"
           >
-            Create Facility
+            {creating ? "Creating…" : "Create Facility"}
           </Button>
         </div>
       </footer>
