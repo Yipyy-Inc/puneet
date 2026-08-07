@@ -32,4 +32,12 @@ export interface AdminFacilityRow {
   usersList: { id: string }[];
   clients: { status: string }[];
   limits: { locations: number; staff: number; clients: number; pets: number };
+  /**
+   * Modules this facility has switched on.
+   *
+   * Empty until there is a table for it — the platform-flags screen models this
+   * shape but stores nothing. The detail page's Modules tab reads it, and an
+   * empty list is the honest answer rather than another facility's.
+   */
+  enabledModules: string[];
 }

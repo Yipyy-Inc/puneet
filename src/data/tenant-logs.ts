@@ -34,7 +34,12 @@ export interface TenantActivityLog {
 
 export interface TenantAuditLog {
   id: string;
-  facilityId: number;
+  /**
+   * Numeric for the demo fixtures below; a uuid for a real facility, which is
+   * what the impersonation audit writes. This store is still demo data — the
+   * activity-log tab says so rather than rendering it for a real facility.
+   */
+  facilityId: number | string;
   timestamp: string;
   userId: string;
   userName: string;

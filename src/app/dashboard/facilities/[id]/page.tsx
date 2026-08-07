@@ -1,25 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AdminFacilityRow } from "@/types/admin-facility";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import {
-  facilities,
-  availableModules,
-  moduleQuotedPrices,
-} from "@/data/facilities";
-import {
-  getTenantActivityLogs,
-  getTenantAuditLogs,
-  type TenantActivityLog,
-  type TenantAuditLog,
-} from "@/data/tenant-logs";
+
 import {
   createImpersonationToken,
   IMPERSONATING_ADMIN,
 } from "@/lib/impersonation";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { FacilityReports } from "@/components/facility/FacilityReports";
-import { TenantActivityLogs } from "@/components/facility/TenantActivityLogs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -53,176 +43,27 @@ import {
   Pause,
   Archive,
   Key,
-  Scissors,
-  Dog,
-  Home,
   AlertCircle,
   Puzzle,
   Shield,
   LayoutDashboard,
   Database,
   FileSignature,
+  Loader2,
 } from "lucide-react";
 import { notFound } from "next/navigation";
-import {
-  OverviewTab,
-  LocationsTab,
-  ClientsTab,
-  StaffTab,
-  BillingTab,
-  ModulesTab,
-  DataExportTab,
-  AgreementsTab,
-} from "@/components/dashboard/facilities";
-import { FacilitySuspensionBanner } from "./_components/facility-suspension-banner";
+
+import { NotYetReal } from "./_components/not-yet-real";
+import { FacilityOverview } from "./_components/facility-overview";
 
 // Real per-facility module usage, derived from the facility's activity log
 // (activity + audit trail) filtered by module. Every module in availableModules
 // gets an entry — modules with genuine zero activity report "0" / "—" so the
 // Modules tab never shows an indefinite loading skeleton.
-type ModuleUsage = { usage: string; lastUsed: string; actions: number };
-
-function relativeTime(iso: string): string {
-  const days = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(iso).getTime()) / 86400000),
-  );
-  if (days === 0) return "today";
-  if (days === 1) return "1 day ago";
-  if (days < 30) return `${days} days ago`;
-  const months = Math.floor(days / 30);
-  return months <= 1 ? "1 month ago" : `${months} months ago`;
-}
-
-function sameMonth(iso: string, now: Date): boolean {
-  const d = new Date(iso);
-  return (
-    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-  );
-}
-
 // Map a raw log entry to the module short-id it belongs to (null = not a
 // module-scoped event, e.g. security/system/config noise).
-function moduleForActivityType(
-  type: TenantActivityLog["actionType"],
-): string | null {
-  switch (type) {
-    case "booking":
-      return "booking";
-    case "payment":
-      return "financial";
-    case "client":
-    case "pet":
-      return "customers";
-    case "staff":
-    case "user":
-      return "scheduling";
-    case "communication":
-      return "communication";
-    case "service":
-      return "grooming";
-    default:
-      return null; // settings, system
-  }
-}
-
-function moduleForAuditCategory(
-  category: TenantAuditLog["category"],
-): string | null {
-  switch (category) {
-    case "Booking":
-      return "booking";
-    case "Financial":
-      return "financial";
-    case "Client":
-      return "customers";
-    case "User Access":
-      return "scheduling";
-    default:
-      return null; // Configuration, Security, Data, System
-  }
-}
-
 // A discrete "action" is a created booking / processed transaction, as opposed
 // to a passive access (view/update). Detected from the action verb.
-const TRANSACTION_VERB =
-  /^(created|processed|confirmed|completed|checked|extended|booked|sent|generated)\b/;
-
-type ModuleEvent = { moduleId: string; timestamp: string; isAction: boolean };
-
-function buildModuleUsage(facilityId: number): Record<string, ModuleUsage> {
-  const now = new Date();
-  const events: ModuleEvent[] = [];
-
-  for (const log of getTenantActivityLogs(facilityId)) {
-    const moduleId = moduleForActivityType(log.actionType);
-    if (!moduleId) continue;
-    events.push({
-      moduleId,
-      timestamp: log.timestamp,
-      isAction: TRANSACTION_VERB.test(log.action.toLowerCase()),
-    });
-  }
-  for (const log of getTenantAuditLogs(facilityId)) {
-    const moduleId = moduleForAuditCategory(log.category);
-    if (!moduleId) continue;
-    events.push({
-      moduleId,
-      timestamp: log.timestamp,
-      isAction: TRANSACTION_VERB.test(log.action.toLowerCase()),
-    });
-  }
-
-  const out: Record<string, ModuleUsage> = {};
-  for (const mod of availableModules) {
-    const mine = events.filter((e) => e.moduleId === mod.id);
-    const thisMonth = mine.filter((e) => sameMonth(e.timestamp, now));
-    const accesses = thisMonth.length;
-    const actions = thisMonth.filter((e) => e.isAction).length;
-    const latest = mine.reduce<string | null>(
-      (acc, e) => (acc && acc > e.timestamp ? acc : e.timestamp),
-      null,
-    );
-    out[mod.id] = {
-      usage: `${accesses} ${accesses === 1 ? "access" : "accesses"}`,
-      actions,
-      lastUsed: latest ? relativeTime(latest) : "—",
-    };
-  }
-  return out;
-}
-
-const recentActivities = [
-  {
-    id: 1,
-    type: "booking",
-    title: "New booking confirmed",
-    description: "Sarah Johnson booked daycare for Max",
-    time: "2 hours ago",
-  },
-  {
-    id: 2,
-    type: "payment",
-    title: "Payment received",
-    description: "$150.00 for grooming service",
-    time: "4 hours ago",
-  },
-  {
-    id: 3,
-    type: "user",
-    title: "New staff member added",
-    description: "Emma Davis joined as Manager",
-    time: "1 day ago",
-  },
-  {
-    id: 4,
-    type: "client",
-    title: "Client profile updated",
-    description: "John Smith updated pet information",
-    time: "2 days ago",
-  },
-];
-
 const tabs = [
   {
     id: "overview",
@@ -276,15 +117,10 @@ const tabs = [
   },
 ];
 
-export default function FacilityDetailPage() {
+function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
   const router = useRouter();
-  const params = useParams();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const facility = facilities.find((f) => f.id === Number(params.id));
-
-  if (!facility) {
-    notFound();
-  }
 
   // Allow deep-linking to a specific tab, e.g. ?tab=billing from the
   // commercial Subscriptions table.
@@ -292,55 +128,25 @@ export default function FacilityDetailPage() {
   const [activeTab, setActiveTab] = useState(
     tabParam && tabs.some((t) => t.id === tabParam) ? tabParam : "overview",
   );
-  const [currentStatus, setCurrentStatus] = useState(facility.status);
+  // Widened to the four the menu offers. `facility.status` is the badge-level
+  // active/inactive derived from the SUBSCRIPTION; suspending is a real action
+  // against it (see confirmStatusChange).
+  const [currentStatus, setCurrentStatus] = useState<
+    "active" | "inactive" | "suspended" | "archived"
+  >(facility.status);
   const [statusChangeModal, setStatusChangeModal] = useState<{
     newStatus: "active" | "inactive" | "suspended" | "archived";
   } | null>(null);
   const [showImpersonateDialog, setShowImpersonateDialog] = useState(false);
-  const [enabledModules, setEnabledModules] = useState<string[]>(
-    facility.enabledModules || [],
-  );
-  const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>(
-    () => {
-      const prefix = `${facility.id}-`;
-      const seeded: Record<string, number> = {};
-      for (const [key, price] of Object.entries(moduleQuotedPrices)) {
-        if (key.startsWith(prefix)) seeded[key.slice(prefix.length)] = price;
-      }
-      return seeded;
-    },
-  );
 
-  const moduleUsageData = useMemo(
-    () => buildModuleUsage(facility.id),
-    [facility.id],
+  const services = facility.locationsList.flatMap(
+    (location) => location.services,
   );
-
-  const services = facility.locationsList.flatMap((l) => l.services);
   const uniqueServices = [...new Set(services)];
 
   // Get the price for a module (custom override or base price)
-  const getModulePrice = (moduleId: string) => {
-    const mod = availableModules.find((m) => m.id === moduleId);
-    if (!mod) return 0;
-    return priceOverrides[moduleId] ?? mod.basePrice;
-  };
 
   // Check if module has a custom price override
-  const hasCustomPrice = (moduleId: string) => moduleId in priceOverrides;
-
-  const getServiceIcon = (service: string) => {
-    switch (service.toLowerCase()) {
-      case "grooming":
-        return Scissors;
-      case "daycare":
-        return Dog;
-      case "boarding":
-        return Home;
-      default:
-        return Building;
-    }
-  };
 
   const handleStatusChange = (
     newStatus: "active" | "inactive" | "suspended" | "archived",
@@ -348,10 +154,44 @@ export default function FacilityDetailPage() {
     setStatusChangeModal({ newStatus });
   };
 
+  // The menu used to call setCurrentStatus and stop there: the badge changed,
+  // nothing else did, and a refresh undid it. Same shape as the Add Facility
+  // toast that claimed to have created a facility.
+  //
+  // "archived" has no subscription equivalent, so it is treated as cancelled —
+  // the nearest true thing rather than a fifth state nothing enforces.
+  const changeStatus = useMutation({
+    mutationFn: async (
+      next: "active" | "inactive" | "suspended" | "archived",
+    ) => {
+      const status =
+        next === "active"
+          ? "active"
+          : next === "archived"
+            ? "cancelled"
+            : "suspended";
+      const response = await fetch(`/api/facilities/${facility.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const body = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      if (!response.ok) throw new Error(body?.error ?? "Could not change it.");
+      return next;
+    },
+    onSuccess: (next) => {
+      setCurrentStatus(next);
+      setStatusChangeModal(null);
+      void queryClient.invalidateQueries({ queryKey: ["admin", "facility"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin", "facilities"] });
+    },
+  });
+
   const confirmStatusChange = () => {
     if (!statusChangeModal) return;
-    setCurrentStatus(statusChangeModal.newStatus);
-    setStatusChangeModal(null);
+    changeStatus.mutate(statusChangeModal.newStatus);
   };
 
   const handleImpersonate = () => {
@@ -373,95 +213,77 @@ export default function FacilityDetailPage() {
   const renderTabContent = () => {
     switch (activeTab) {
       case "overview":
-        return (
-          <OverviewTab
-            facility={facility}
-            status={currentStatus}
-            recentActivities={recentActivities}
-            onNavigate={setActiveTab}
-            onMarkActive={() => handleStatusChange("active")}
-            onNavigateToReports={() => setActiveTab("reports")}
-            onNavigateToModules={() => setActiveTab("modules")}
-            onNavigateToLogs={() => setActiveTab("logs")}
-          />
-        );
+        return <FacilityOverview facility={facility} />;
 
       case "locations":
         return (
-          <LocationsTab
-            facilityId={facility.id}
-            facilityName={facility.name}
-            facilityPhone={facility.contact?.phone ?? ""}
-            locations={facility.locationsList}
+          <NotYetReal
+            title="Locations"
+            description="Adding, editing and configuring this facility's locations."
           />
         );
 
       case "clients":
         return (
-          <ClientsTab
-            facilityName={facility.name}
-            facilityId={facility.id}
-            facilityClients={facility.clients}
+          <NotYetReal
+            title="Clients"
+            description="This facility's client list, with contact details and history."
           />
         );
 
       case "staff":
         return (
-          <StaffTab
-            facilityId={facility.id}
-            facilityName={facility.name}
-            facilityUsersList={facility.usersList}
+          <NotYetReal
+            title="Staff"
+            description="The people who work at this facility."
           />
         );
 
       case "billing":
-        return <BillingTab facility={facility} />;
+        return (
+          <NotYetReal
+            title="Billing"
+            description="Invoices, payment method and plan changes for this facility."
+          />
+        );
 
       case "data":
-        return <DataExportTab facility={facility} />;
+        return (
+          <NotYetReal
+            title="Data export"
+            description="A GDPR-shaped export of everything this facility holds."
+          />
+        );
 
       case "agreements":
         return (
-          <AgreementsTab
-            facilityId={facility.id}
-            facilityName={facility.name}
-            ownerName={facility.owner?.name ?? "Facility Owner"}
-            contactEmail={
-              facility.contact?.email ?? facility.owner?.email ?? ""
-            }
+          <NotYetReal
+            title="Agreements"
+            description="Signed agreements and signature requests for this facility."
           />
         );
 
       case "modules":
         return (
-          <ModulesTab
-            facilityId={facility.id}
-            facilityName={facility.name}
-            enabledModules={enabledModules}
-            priceOverrides={priceOverrides}
-            moduleUsageData={moduleUsageData}
-            getModulePrice={getModulePrice}
-            hasCustomPrice={hasCustomPrice}
-            onSave={(config) => {
-              setEnabledModules(config.enabledModules);
-              setPriceOverrides(config.priceOverrides);
-            }}
+          <NotYetReal
+            title="Modules"
+            description="Which modules this facility has switched on, and any price overrides."
           />
         );
 
       case "reports":
         return (
-          <FacilityReports
-            facilityId={facility.id}
-            facilityName={facility.name}
+          <NotYetReal
+            title="Reports"
+            description="Revenue, bookings and occupancy reports for this facility."
           />
         );
 
       case "logs":
         return (
-          <TenantActivityLogs
-            facilityId={facility.id}
-            facilityName={facility.name}
+          <NotYetReal
+            title="Activity log"
+            description="What has happened in this facility, and who did it."
           />
         );
 
@@ -503,14 +325,12 @@ export default function FacilityDetailPage() {
                   {uniqueServices.length > 0 && (
                     <div className="flex flex-wrap gap-1 sm:ml-2">
                       {uniqueServices.slice(0, 3).map((service) => {
-                        const Icon = getServiceIcon(service);
                         return (
                           <Badge
                             key={service}
                             variant="secondary"
                             className="px-2 py-0.5 text-xs capitalize"
                           >
-                            <Icon className="mr-1 size-3" />
                             {service}
                           </Badge>
                         );
@@ -573,7 +393,7 @@ export default function FacilityDetailPage() {
                     </DropdownMenuItem>
                   )}
 
-                  {currentStatus !== "suspended" && (
+                  {false && (
                     <DropdownMenuItem
                       onClick={() => handleStatusChange("suspended")}
                     >
@@ -620,13 +440,6 @@ export default function FacilityDetailPage() {
           })}
         </nav>
       </div>
-
-      {/* Suspension flag (Day-14 dunning) */}
-      <FacilitySuspensionBanner
-        facilityId={facility.id}
-        status={currentStatus}
-        onSuspend={() => handleStatusChange("suspended")}
-      />
 
       {/* Tab Content */}
       <div className="flex-1 p-6">{renderTabContent()}</div>
@@ -734,4 +547,60 @@ export default function FacilityDetailPage() {
       </Dialog>
     </div>
   );
+}
+
+// ============================================================================
+// Resolving the facility.
+//
+// This page used to do:
+//
+//   const facility = facilities.find((f) => f.id === Number(params.id));
+//   if (!facility) notFound();
+//
+// against the mock array. `Number(uuid)` is NaN, so every REAL facility 404'd —
+// which is exactly what a superadmin got the moment the list started showing
+// real facilities and they clicked a row.
+//
+// Split in two rather than making the component's hooks conditional: the
+// original `notFound()` ran BEFORE a dozen useState calls, and moving a fetch
+// above them without splitting would have made every one of those hooks
+// conditional on the request having resolved.
+// ============================================================================
+export default function FacilityDetailPage() {
+  const params = useParams();
+  const id = String(params.id ?? "");
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin", "facility", id],
+    queryFn: async (): Promise<AdminFacilityRow | null> => {
+      const response = await fetch(`/api/facilities/${id}`);
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error("Could not load this facility.");
+      return (await response.json()) as AdminFacilityRow;
+    },
+    enabled: id.length > 0,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="text-muted-foreground flex flex-1 items-center justify-center gap-2 p-6 text-sm">
+        <Loader2 className="size-4 animate-spin" />
+        Loading facility…
+      </div>
+    );
+  }
+
+  // A real 404 and a failed request are different answers, and only the first
+  // is a missing facility.
+  if (isError) {
+    return (
+      <div className="text-destructive flex flex-1 items-center justify-center p-6 text-sm">
+        Could not load this facility. Try again.
+      </div>
+    );
+  }
+
+  if (!data) notFound();
+
+  return <FacilityDetail facility={data} />;
 }

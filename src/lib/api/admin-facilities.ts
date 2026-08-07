@@ -145,6 +145,24 @@ export async function listFacilitiesForAdmin(): Promise<AdminFacilityRow[]> {
       })),
       // No limits table yet; -1 is this codebase's "unlimited".
       limits: { locations: -1, staff: -1, clients: -1, pets: -1 },
+      // No entitlements table yet; empty is honest.
+      enabledModules: [],
     };
   });
+}
+
+/**
+ * One facility, for the detail page.
+ *
+ * Built from the same assembler as the list rather than a second query, so the
+ * two screens can never disagree about a facility's plan or client count. The
+ * list is small — a handful of businesses — and will stay small for a long
+ * time; when it does not, this becomes a filtered query and the shape does not
+ * change.
+ */
+export async function getFacilityForAdmin(
+  facilityId: string,
+): Promise<AdminFacilityRow | null> {
+  const all = await listFacilitiesForAdmin();
+  return all.find((facility) => facility.id === facilityId) ?? null;
 }

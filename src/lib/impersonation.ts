@@ -17,7 +17,8 @@ const TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 export const IMPERSONATING_ADMIN = { name: "Puneet", role: "Super Admin" };
 
 export interface ImpersonationSession {
-  facilityId: number;
+  /** Facility uuid. Was a numeric mock id before facilities were real. */
+  facilityId: string;
   facilityName: string;
   adminName: string;
   primaryAdminEmail: string;
@@ -36,7 +37,7 @@ function b64decode(s: string): string {
 }
 
 export function createImpersonationToken(input: {
-  facilityId: number;
+  facilityId: string;
   facilityName: string;
   primaryAdminEmail: string;
   adminName: string;
@@ -58,7 +59,7 @@ export function decodeImpersonationToken(
     const s = JSON.parse(
       decodeURIComponent(b64decode(token)),
     ) as ImpersonationSession;
-    if (!s || typeof s.facilityId !== "number" || !s.facilityName) return null;
+    if (!s || typeof s.facilityId !== "string" || !s.facilityName) return null;
     if (Date.now() > s.expiresAt) return null; // expired token
     return s;
   } catch {
