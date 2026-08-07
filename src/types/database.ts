@@ -4459,6 +4459,44 @@ export type Database = {
         };
         Returns: string;
       };
+      /**
+       * Records a merchant connection and puts its OAuth tokens in Vault.
+       * EXECUTE is granted to service_role alone — calling this with the
+       * ordinary cookie-bound client fails, by design (20260807700000).
+       */
+      store_payment_credentials: {
+        Args: {
+          p_facility_id: string;
+          p_merchant_id: string;
+          p_environment: string;
+          p_access_token: string;
+          p_refresh_token?: string | null;
+          p_access_expires?: string | null;
+          p_refresh_expires?: string | null;
+          p_public_api_key?: string | null;
+          p_scopes?: string[];
+          p_connected_by?: string | null;
+          p_processor?: string;
+        };
+        Returns: undefined;
+      };
+      /** Live merchant tokens. service_role only. Never call this for status. */
+      payment_access_token: {
+        Args: { p_facility_id: string; p_processor?: string };
+        Returns: {
+          access_token: string;
+          refresh_token: string | null;
+          access_token_expires_at: string | null;
+          refresh_token_expires_at: string | null;
+          merchant_id: string;
+          environment: string;
+          connection_status: string;
+        }[];
+      };
+      record_payment_connection_error: {
+        Args: { p_facility_id: string; p_error: string; p_processor?: string };
+        Returns: undefined;
+      };
       facility_has_module: {
         Args: { p_facility_id: string; p_module_id: string };
         Returns: boolean;
