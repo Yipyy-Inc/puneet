@@ -58,12 +58,27 @@ interface VercelConfig {
  * load-bearing.
  */
 function configure(): VercelConfig | { reason: string } {
-  const token = process.env.VERCEL_API_TOKEN?.trim();
-  const projectId = process.env.VERCEL_PROJECT_ID?.trim();
+  // ── TWO NAMES FOR EACH, DELIBERATELY ────────────────────────────────────
+  //
+  // Vercel injects VERCEL_PROJECT_ID and VERCEL_TEAM_ID itself when system
+  // environment variables are exposed, and it may refuse a CUSTOM variable
+  // whose name starts with `VERCEL_` — the documentation does not say either
+  // way, and guessing wrong means handing somebody a setup step that silently
+  // does not work.
+  //
+  // So each is read under a settable name first and falls back to the one
+  // Vercel provides. On Vercel, usually only DOMAINS_API_TOKEN needs setting;
+  // anywhere else, set all three.
+  const token =
+    process.env.DOMAINS_API_TOKEN?.trim() ||
+    process.env.VERCEL_API_TOKEN?.trim();
+  const projectId =
+    process.env.DOMAINS_PROJECT_ID?.trim() ||
+    process.env.VERCEL_PROJECT_ID?.trim();
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN?.trim();
 
-  if (!token) return { reason: "VERCEL_API_TOKEN is not set." };
-  if (!projectId) return { reason: "VERCEL_PROJECT_ID is not set." };
+  if (!token) return { reason: "DOMAINS_API_TOKEN is not set." };
+  if (!projectId) return { reason: "DOMAINS_PROJECT_ID is not set." };
   if (!appDomain) return { reason: "NEXT_PUBLIC_APP_DOMAIN is not set." };
 
   return {
@@ -71,7 +86,10 @@ function configure(): VercelConfig | { reason: string } {
     projectId,
     // A personal-account project has no team. Vercel rejects an empty teamId
     // rather than ignoring it, so it is omitted from the query when absent.
-    teamId: process.env.VERCEL_TEAM_ID?.trim() || null,
+    teamId:
+      process.env.DOMAINS_TEAM_ID?.trim() ||
+      process.env.VERCEL_TEAM_ID?.trim() ||
+      null,
     appDomain,
   };
 }
