@@ -268,7 +268,75 @@ registration should not get it because we shipped a feature.
 source with `client_facility_ids()` via a query factory. Keep the hook's shape
 so the portal's call sites do not change.
 
-### 5.4 Proof
+Two notes for this file specifically:
+
+- The switcher must list **only** facilities from `client_facility_ids()`. It
+  currently maps every active facility out of `src/data/facilities`, which under
+  subdomains would show a customer a directory of every business on Yipyy.
+- `localStorage` holds a numeric facility id today. Under D1 the selected
+  facility is a _claim about which record to show_, and it is read on a screen
+  the customer controls — so the server must re-derive it, never trust it. Same
+  rule as `check:facility-from-session`, one layer up.
+
+### 5.5 The stranger gate
+
+**The requirement D1 creates.** The Clerk session cookie is shared across
+`.yipyy.com` (D2), so a Pawradise customer opening `happy-paws.yipyy.com` is
+_already signed in there_. Nothing may follow from that.
+
+- `/api/clients/me` returns `{ linked: false }` for that facility — which it
+  already models correctly as a real answer with a 404, not an error.
+- The portal renders an explicit **"continue as `you@email.com`, or use a
+  different account"** state. Not an empty dashboard, and not a spinner: the
+  customer must be able to tell they are a stranger here.
+- **No implicit record creation.** Arriving signed in must never mint a
+  `clients` row. Registration is the deliberate act in 5.2, and it is refused
+  outright when `allow_customer_signup` is false.
+
+### 5.5.1 `link_client_record()` must be made facility-aware
+
+Read before writing this, and the reading changed the plan. The function today is
+**not facility-scoped at all**:
+
+```sql
+update public.clients c
+   set profile_id = v_user_id
+ where lower(c.email) = lower(v_email)
+   and c.profile_id is null
+returning c.id into v_client;
+```
+
+The _intent_ is right and should be kept: it only ever claims a row **a facility
+already created** for that email. A facility entering a customer is that facility
+inviting them; the customer is not admitting themselves. Keep that.
+
+But three defects are latent behind "there is only one facility", and all three
+surface with the second:
+
+1. **It claims across every facility in one statement.** With unclaimed rows at
+   two facilities it updates both. `UPDATE … RETURNING … INTO` with multiple rows
+   does **not** raise in plpgsql — it silently assigns one arbitrarily — so the
+   caller gets one id and no indication the other was touched.
+2. **The early return makes it inconsistent.**
+   `select c.id … where c.profile_id = v_user_id limit 1` returns as soon as
+   _any_ link exists. So once linked at Pawradise, a later Happy Paws record for
+   the same person is **never claimed** — the customer's own record stays
+   invisible to them. Whether it links both or neither depends only on which
+   facility entered them first.
+3. **`.maybeSingle()` at [clients/me/route.ts:67](../../src/app/api/clients/me/route.ts#L67)
+   errors on two rows.** Not degrades — errors. The customer portal breaks for
+   anyone who is a customer at two facilities.
+
+Rewrite it as `link_client_record(p_facility_id uuid)`: claim the unclaimed row
+**at that facility only**, called with the facility the request is for. Then (2)
+disappears because each facility is claimed independently, and (1) becomes a
+single-row update by construction.
+
+> This is the piece that carries the product promise. The credential is shared
+> because Clerk gives no alternative (D1); the _account_ is not, and this is
+> where the application either honours that or quietly contradicts it.
+
+### 5.6 Proof
 
 `supabase/tests/customer-tenancy.sql`
 
@@ -276,6 +344,19 @@ so the portal's call sites do not change.
 - C2 facility A's staff see A's client row and **not** B's, for the same person
 - C3 a customer cannot read the other facility's bookings, pets or payments
 - C4 registration at a facility with `allow_customer_signup = false` is refused
+- C5 **a signed-in customer of A reading at B gets zero rows and no row is
+  created** — the stranger gate asserted at the database, not just the UI
+- C6 `link_client_record(B)` does **not** claim a row at a facility that never
+  created one for that email
+- C7 a person with unclaimed rows at **both** facilities ends up linked at both —
+  the case today's early return silently skips (5.5.1 defect 2)
+- C8 `/api/clients/me` returns the right record for a person with two, rather
+  than erroring (5.5.1 defect 3)
+
+`tests/e2e/customer-stranger.spec.ts` — sign in at facility A, navigate to
+facility B's host, and assert the "continue as / different account" screen
+rather than an empty dashboard. The SQL proves no data crosses; this proves the
+customer is _told_.
 
 ---
 

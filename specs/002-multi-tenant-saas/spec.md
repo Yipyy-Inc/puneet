@@ -66,15 +66,46 @@ which is what fires the claim trigger.
 
 ## Decisions taken
 
-**D1 — One Clerk identity per person; a separate client record per facility.**
-`person@email.com` signing in at Pawradise and at Happy Paws is one account with
-two client records, two sets of pets, two histories. Each facility sees only its
-own record. No migration: this is what `clients.facility_id` + `profile_id` and
-`client_facility_ids()` already do.
+**D1 — The facility owns the account; Clerk owns the credential.**
 
-_Rejected:_ fully separate accounts per facility. It would need Clerk
-Organizations or an instance per facility, reversing ADR 0003, and it punishes
-the real case of a person with pets at two businesses.
+The product requirement is that **each facility has its own customers, not
+shared ones.** That requirement is met at the level that matters: a customer's
+_account_ at a facility is their `clients` row — their pets, bookings, balance,
+history, and their presence in that facility's client list. That is already
+per-facility. Registering at Pawradise creates nothing at Happy Paws, and
+neither facility can see the other's customers.
+
+What is shared is the **credential**: one email address, one password, one Clerk
+identity. That is not a preference — it is a constraint, and it was checked
+before being accepted. From Clerk's satellite-domains documentation:
+
+> a single Clerk instance cannot serve multiple domains with isolated sessions
+> per domain. […] If you need isolated sessions per domain, you would need
+> separate Clerk instances.
+
+Clerk Organizations do not close the gap either: one user account belonging to
+many organizations with per-org roles, not per-org credentials.
+
+_Considered and rejected: one Clerk instance per facility._ It is the only way
+to give the same email two different passwords, and it costs the two things this
+spec exists to deliver. **Clerk has no public API for creating applications**, so
+every new facility would need a manual console setup — keys, domain, webhook —
+plus its own Supabase third-party-auth registration. Facility provisioning would
+stop being automated, which is the headline requirement, and Clerk bills per
+application against a stated plan of _many_ facilities.
+
+**Because the credential is shared, the application must never behave as though
+the account is.** Concretely (phase 5.5):
+
+- Arriving at a facility where you hold no client record makes you a **stranger**,
+  not a customer — no data, no implicit record creation
+- That state is shown explicitly — _continue as `you@email.com`, or use a
+  different account_ — rather than silently treating the session as belonging
+  there
+- The switcher offers only facilities returned by `client_facility_ids()`
+
+The residual, stated plainly so nobody discovers it later: a person who uses two
+facilities will notice one password works at both.
 
 **D2 — Facilities live on subdomains: `pawradise.yipyy.com`.**
 Chosen over the cheaper path form for the white-label feel. This is the largest
@@ -84,10 +115,13 @@ configuration, and a reserved-subdomain list.
 
 _Consequence worth stating plainly:_ the Clerk session cookie will be set on
 `.yipyy.com`, so it is shared across every facility subdomain. Signing in at one
-facility leaves you signed in at the host of another. **This is correct under
-D1** — one identity, and RLS scopes the data regardless of which host asked.
-It would be a defect under the rejected D1 alternative, which is why the two
-decisions have to be read together.
+facility leaves you signed in at the host of another — and per Clerk's own
+documentation quoted in D1, no configuration of a single instance changes that.
+
+**A shared session is not a shared account.** RLS scopes every row from the
+token, so the session carries no data across; and D1's stranger gate means the
+UI does not pretend otherwise. The two decisions have to be read together: D2 is
+what makes the stranger gate load-bearing rather than cosmetic.
 
 _Custom domains_ (`booking.pawradise.com`) are the natural paid-tier follow-on
 and are out of scope here; the `facility_domains` mapping this plan introduces
@@ -129,6 +163,12 @@ with no engineer involved.
       Pawradise**, and appears in Pawradise's client list and nobody else's
 - [ ] The same email signing up at `happy-paws.yipyy.com` gets a _second_ client
       record there, and the two facilities each see only their own
+- [ ] A Pawradise customer who opens `happy-paws.yipyy.com` while signed in is
+      treated as a **stranger**: no data, no record created, and an explicit
+      "continue as `you@…` or use a different account" rather than a silent
+      shared-account experience
+- [ ] The customer facility switcher offers only facilities the caller actually
+      holds a client record at (`client_facility_ids()`), never a full list
 - [ ] Facility A's owner, staff and customers can read and write nothing of
       facility B's — asserted per-role in SQL, not inferred from the UI
 - [ ] A facility whose subscription is `suspended` cannot be used by its staff,
