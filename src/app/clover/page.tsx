@@ -3,10 +3,10 @@ import type { Metadata } from "next";
 import { getViewer } from "@/lib/auth/viewer";
 import { cloverConfig } from "@/lib/clover/config";
 import {
-  connectionStatus,
   recordConnection,
   recordConnectionError,
 } from "@/lib/clover/connection";
+import { connectionStatus } from "@/lib/clover/status";
 import { exchangeCode, readOAuthState } from "@/lib/clover/oauth";
 import { fetchMerchantProfile } from "@/lib/clover/merchant";
 

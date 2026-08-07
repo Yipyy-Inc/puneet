@@ -4501,6 +4501,45 @@ export type Database = {
         Args: { p_facility_id: string; p_error: string; p_processor?: string };
         Returns: undefined;
       };
+      open_payment_intent: {
+        Args: {
+          p_facility_id: string;
+          p_amount_cents: number;
+          p_currency: string;
+          p_kind: string;
+          p_idempotency_key: string;
+          p_booking_id?: string | null;
+          p_client_id?: string | null;
+          p_created_by?: string | null;
+          p_device_id?: string | null;
+        };
+        Returns: string;
+      };
+      close_payment_intent: {
+        Args: {
+          p_intent_id: string;
+          p_status: string;
+          p_failure_code?: string | null;
+          p_failure_message?: string | null;
+        };
+        Returns: undefined;
+      };
+      /** Ledger row + intent link in ONE transaction. Idempotent. */
+      record_clover_payment: {
+        Args: {
+          p_intent_id: string;
+          p_processor_payment_id: string;
+          p_subtotal_cents: number;
+          p_tax_cents?: number;
+          p_tip_cents?: number;
+          p_card_brand?: string | null;
+          p_card_last4?: string | null;
+          p_auth_code?: string | null;
+          p_entry_method?: string;
+          p_author_name?: string;
+        };
+        Returns: string;
+      };
       facility_has_module: {
         Args: { p_facility_id: string; p_module_id: string };
         Returns: boolean;

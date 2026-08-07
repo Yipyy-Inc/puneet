@@ -1,7 +1,6 @@
 import "server-only";
 
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
-import { createServerClient } from "@/lib/supabase/server";
 import { cloverEnvironment } from "./config";
 import { refreshTokens, type CloverTokens } from "./oauth";
 
@@ -16,68 +15,53 @@ import { refreshTokens, type CloverTokens } from "./oauth";
 //                              a merchant's tokens, including a signed-in
 //                              platform admin.
 //
-//   the CALLER'S client reads. `connectionStatus` goes through the ordinary
-//                              cookie-bound client, so RLS decides — a facility
-//                              sees its own row and nothing else, and it never
-//                              touches a function that returns a token.
+//   the CALLER'S client reads. That is ./status.ts — a SEPARATE MODULE rather
+//                              than a separate function, so this one never
+//                              imports next/headers. Which is what lets it run
+//                              outside a request, and is the only reason the
+//                              first end-to-end charge could be proven at all.
 //
-// The second is why "are we connected?" is a separate function from "give me
-// the token". If asking about status went through the privileged path, the
-// answer would eventually get rendered in a component.
+// Splitting them also fixed a real bug. chargeCard read the connection through
+// the caller's client, so a CUSTOMER paying online — who is not a member of the
+// facility, and whom RLS therefore shows nothing — would have been told "this
+// facility has not connected a payment account". Every customer-facing payment
+// would have failed, with a message pointing at entirely the wrong thing.
+//
+// So anything on the money path reads the connection with the admin client
+// below, and only the UI asks under the caller's own permissions.
 // ============================================================================
 
-export interface ConnectionStatus {
-  connected: boolean;
-  status: "pending" | "connected" | "revoked" | "error" | "none";
-  merchantId: string | null;
-  environment: string | null;
-  publicApiKey: string | null;
-  /** From the merchant, never defaulted. NULL means we have not asked. */
+export interface ChargeableConnection {
+  merchantId: string;
+  environment: string;
   currency: string | null;
-  country: string | null;
-  connectedAt: string | null;
-  lastError: string | null;
+  publicApiKey: string | null;
 }
 
-const ABSENT: ConnectionStatus = {
-  connected: false,
-  status: "none",
-  merchantId: null,
-  environment: null,
-  publicApiKey: null,
-  currency: null,
-  country: null,
-  connectedAt: null,
-  lastError: null,
-};
-
-/** Read under the caller's own permissions. Never returns a token. */
-export async function connectionStatus(
+/**
+ * The connection as the MONEY PATH sees it — through the service role, because
+ * the person paying is usually not a member of the facility being paid.
+ */
+export async function chargeableConnection(
   facilityId: string,
-): Promise<ConnectionStatus> {
-  const supabase = await createServerClient();
+): Promise<ChargeableConnection | null> {
+  if (!hasServiceRoleKey()) return null;
+  const admin = createAdminClient();
 
-  const { data } = await supabase
+  const { data } = await admin
     .from("payment_connections")
-    .select(
-      "status, merchant_id, environment, public_api_key, currency, country, connected_at, last_error",
-    )
+    .select("merchant_id, environment, currency, public_api_key, status")
     .eq("facility_id", facilityId)
     .eq("processor", "clover")
     .maybeSingle();
 
-  if (!data) return ABSENT;
+  if (!data || data.status !== "connected") return null;
 
   return {
-    connected: data.status === "connected",
-    status: data.status as ConnectionStatus["status"],
     merchantId: data.merchant_id,
     environment: data.environment,
-    publicApiKey: data.public_api_key,
     currency: data.currency,
-    country: data.country,
-    connectedAt: data.connected_at,
-    lastError: data.last_error,
+    publicApiKey: data.public_api_key,
   };
 }
 
