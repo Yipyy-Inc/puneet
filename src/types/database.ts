@@ -2930,6 +2930,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      platform_memberships: {
+        Row: {
+          created_at: string;
+          granted_by: string | null;
+          profile_id: string;
+          role: Database["public"]["Enums"]["platform_role"];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          granted_by?: string | null;
+          profile_id: string;
+          role?: Database["public"]["Enums"]["platform_role"];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          granted_by?: string | null;
+          profile_id?: string;
+          role?: Database["public"]["Enums"]["platform_role"];
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       facility_branding: {
         Row: {
           accent_color: string | null;
@@ -4063,6 +4087,14 @@ export type Database = {
           tagline: string | null;
         }[];
       };
+      grant_platform_role: {
+        Args: {
+          p_profile_id: string;
+          p_role: Database["public"]["Enums"]["platform_role"];
+        };
+        Returns: Json;
+      };
+      revoke_platform_role: { Args: { p_profile_id: string }; Returns: Json };
       invite_facility_owner: {
         Args: { p_expires_at?: string | null; p_facility_id: string };
         Returns: Json;
@@ -4177,6 +4209,7 @@ export type Database = {
     };
     Enums: {
       access_scope: "anytime" | "operating_hours" | "assigned_shifts" | "none";
+      platform_role: "superadmin" | "support" | "billing" | "readonly";
       booking_status:
         | "pending"
         | "estimate_sent"
