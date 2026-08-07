@@ -119,6 +119,10 @@ export async function POST(
     signUpUrl,
     expiresInDays: EXPIRY_DAYS,
     alreadyRegistered: grant.claimed,
+    // The logo is loaded by the recipient's mail client, so it needs an
+    // absolute URL — and taking it from the request origin means preview
+    // deploys render their own assets rather than pointing at production.
+    origin,
   });
 
   const apiKey = process.env.RESEND_API_KEY;
