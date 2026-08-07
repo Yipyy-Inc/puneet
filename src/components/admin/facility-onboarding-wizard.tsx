@@ -90,6 +90,7 @@ export function FacilityOnboardingWizard({
           contactPhone: draft.phone,
           website: draft.website,
           locations: draft.city ? [{ name: draft.city }] : [],
+          businessTypes: draft.businessTypes,
         }),
       });
 

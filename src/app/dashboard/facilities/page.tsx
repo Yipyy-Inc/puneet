@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { AdminFacilityRow } from "@/types/admin-facility";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { facilities as initialFacilities } from "@/data/facilities";
 import { facilityRequests } from "@/data/facility-requests";
-import { getCurrentSubscription } from "@/data/facility-billing";
-import { users } from "@/data/users";
-import { facilityStaff } from "@/data/facility-staff";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -56,36 +54,10 @@ import {
   DollarSign,
   LogIn,
   Search,
+  Loader2,
 } from "lucide-react";
 
-// Per-facility monthly recurring revenue, from real subscription records.
-// Returns null when the facility has no subscription record at all (vs. 0 for a
-// trial / $0 plan, which is a real value worth showing).
-function getFacilityMrr(facilityId: number): number | null {
-  return getCurrentSubscription(facilityId)?.monthlyEquivalent ?? null;
-}
-
-// Most recent login by any staff member. Staff users (src/data/users.ts) link
-// to a facility by name; facility 11's multi-location staff live in
-// facility-staff.ts (keyed by location, so it only applies to that facility).
-function getFacilityLastLogin(
-  facilityName: string,
-  facilityId: number,
-): string | null {
-  const timestamps: string[] = users
-    .filter((u) => u.facility === facilityName)
-    .map((u) => u.lastLogin);
-  if (facilityId === 11) {
-    timestamps.push(...facilityStaff.map((s) => s.lastActive));
-  }
-  const valid = timestamps.filter(Boolean);
-  if (valid.length === 0) return null;
-  return valid.reduce((latest, t) =>
-    new Date(t).getTime() > new Date(latest).getTime() ? t : latest,
-  );
-}
-
-const exportToCSV = (facilities: typeof initialFacilities) => {
+const exportToCSV = (facilities: AdminFacilityRow[]) => {
   const headers = [
     "ID",
     "Name",
@@ -242,7 +214,23 @@ function FilterGroup({
 
 export default function FacilitiesPage() {
   const router = useRouter();
-  const [facilitiesState] = useState(initialFacilities);
+  // ── The facilities on this platform, from Postgres (spec 002 phase 7) ────
+  //
+  // This was `useState(initialFacilities)` — eleven fictional businesses from
+  // src/data, joined to mock plans, staff and clients by numeric id. A
+  // provisioned facility matched none of it and simply did not appear, which
+  // two superadmins in a row reported as "I created a facility and nothing
+  // happened".
+  const { data: facilitiesState = [], isLoading: facilitiesLoading } = useQuery(
+    {
+      queryKey: ["admin", "facilities"],
+      queryFn: async (): Promise<AdminFacilityRow[]> => {
+        const response = await fetch("/api/facilities");
+        if (!response.ok) throw new Error("Could not load facilities.");
+        return (await response.json()) as AdminFacilityRow[];
+      },
+    },
+  );
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [notifySubject, setNotifySubject] = useState("");
@@ -366,7 +354,7 @@ export default function FacilitiesPage() {
     };
   }, [facilitiesState]);
 
-  const columns: ColumnDef<(typeof initialFacilities)[0]>[] = [
+  const columns: ColumnDef<AdminFacilityRow>[] = [
     {
       key: "name",
       label: "Facility Name",
@@ -445,31 +433,27 @@ export default function FacilitiesPage() {
       label: "MRR",
       icon: DollarSign,
       defaultVisible: true,
-      render: (facility) => {
-        const mrr = getFacilityMrr(facility.id);
-        return mrr === null ? "—" : `$${mrr.toLocaleString()}`;
-      },
-      sortValue: (facility) => getFacilityMrr(facility.id) ?? -1,
+      render: (facility) =>
+        facility.mrr === null ? "—" : `$${facility.mrr.toLocaleString()}`,
+      sortValue: (facility) => facility.mrr ?? -1,
     },
     {
       key: "lastLogin",
       label: "Last Login",
       icon: LogIn,
       defaultVisible: true,
-      render: (facility) => {
-        const ts = getFacilityLastLogin(facility.name, facility.id);
-        return ts
-          ? new Date(ts).toLocaleDateString("en-US", {
+      // Null until something records a sign-in. Clerk knows; we do not ask it
+      // yet, and an invented date on an admin console is worse than a dash.
+      render: (facility) =>
+        facility.lastLogin
+          ? new Date(facility.lastLogin).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
               year: "numeric",
             })
-          : "—";
-      },
-      sortValue: (facility) => {
-        const ts = getFacilityLastLogin(facility.name, facility.id);
-        return ts ? new Date(ts).getTime() : 0;
-      },
+          : "—",
+      sortValue: (facility) =>
+        facility.lastLogin ? new Date(facility.lastLogin).getTime() : 0,
     },
     {
       key: "locations",
@@ -616,27 +600,37 @@ export default function FacilitiesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable
-            data={visibleFacilities}
-            columns={columns}
-            onFilterClick={openFilterPanel}
-            filterCount={activeFilterCount}
-            itemsPerPage={10}
-            onRowClick={(facility) =>
-              router.push(`/dashboard/facilities/${facility.id}`)
-            }
-            emptyState={{
-              icon: Building2,
-              title: "No facilities yet",
-              description:
-                "Onboard your first facility to start managing operations.",
-              action: {
-                label: "Add Facility",
-                onClick: () => setWizardOpen(true),
-                icon: Plus,
-              },
-            }}
-          />
+          {facilitiesLoading ? (
+            // Not the empty state. "No facilities yet — onboard your first" is
+            // a confident, wrong sentence to show while the answer is still in
+            // flight, and it is the exact confusion this whole change fixes.
+            <div className="text-muted-foreground flex items-center justify-center gap-2 py-16 text-sm">
+              <Loader2 className="size-4 animate-spin" />
+              Loading facilities…
+            </div>
+          ) : (
+            <DataTable
+              data={visibleFacilities}
+              columns={columns}
+              onFilterClick={openFilterPanel}
+              filterCount={activeFilterCount}
+              itemsPerPage={10}
+              onRowClick={(facility) =>
+                router.push(`/dashboard/facilities/${facility.id}`)
+              }
+              emptyState={{
+                icon: Building2,
+                title: "No facilities yet",
+                description:
+                  "Onboard your first facility to start managing operations.",
+                action: {
+                  label: "Add Facility",
+                  onClick: () => setWizardOpen(true),
+                  icon: Plus,
+                },
+              }}
+            />
+          )}
         </CardContent>
       </Card>
 

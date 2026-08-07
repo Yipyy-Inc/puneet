@@ -790,6 +790,7 @@ export type Database = {
       };
       facilities: {
         Row: {
+          business_types: string[];
           created_at: string;
           id: string;
           legacy_id: string | null;
@@ -800,6 +801,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          business_types?: string[];
           created_at?: string;
           id?: string;
           legacy_id?: string | null;
@@ -810,6 +812,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          business_types?: string[];
           created_at?: string;
           id?: string;
           legacy_id?: string | null;

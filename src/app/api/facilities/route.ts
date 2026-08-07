@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { writeFailure } from "@/lib/api/write-failure";
+import { listFacilitiesForAdmin } from "@/lib/api/admin-facilities";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 // ============================================================================
@@ -74,6 +75,8 @@ const ProvisionInput = z.object({
   contactPhone: z.string().trim().optional(),
   website: z.string().trim().optional(),
   locations: z.array(z.object({ name: z.string().trim().min(1) })).default([]),
+  /** Boarding, daycare, grooming… The list renders these as badges. */
+  businessTypes: z.array(z.string().trim().min(1)).default([]),
 });
 
 /** "Pawradise Resort" → "pawradise-resort". */
@@ -91,6 +94,34 @@ function slugify(name: string): string {
       .slice(0, 50)
       .replace(/-+$/, "")
   );
+}
+
+/**
+ * Every facility on the platform, for the superadmin's list.
+ *
+ * Platform-admin only, and RLS says so too — a facility owner who finds this
+ * URL gets their own facility back at most, not the directory.
+ */
+export async function GET() {
+  const viewer = await getViewer().catch(() => null);
+  if (!viewer || viewer.source !== "session") {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+  if (!viewer.isPlatformAdmin) {
+    return NextResponse.json(
+      { error: "Only a platform administrator may list facilities." },
+      { status: 403 },
+    );
+  }
+
+  try {
+    return NextResponse.json(await listFacilitiesForAdmin());
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Read failed." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -168,6 +199,7 @@ export async function POST(request: NextRequest) {
     p_contact_phone: input.contactPhone ?? null,
     p_website: input.website ?? null,
     p_locations: input.locations,
+    p_business_types: input.businessTypes,
   });
 
   if (error) {
