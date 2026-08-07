@@ -2930,6 +2930,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      facility_branding: {
+        Row: {
+          accent_color: string | null;
+          created_at: string;
+          facility_id: string;
+          logo_url: string | null;
+          primary_color: string | null;
+          support_email: string | null;
+          support_phone: string | null;
+          tagline: string | null;
+          updated_at: string;
+          wordmark_url: string | null;
+        };
+        Insert: {
+          accent_color?: string | null;
+          created_at?: string;
+          facility_id: string;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          support_email?: string | null;
+          support_phone?: string | null;
+          tagline?: string | null;
+          updated_at?: string;
+          wordmark_url?: string | null;
+        };
+        Update: {
+          accent_color?: string | null;
+          created_at?: string;
+          facility_id?: string;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          support_email?: string | null;
+          support_phone?: string | null;
+          tagline?: string | null;
+          updated_at?: string;
+          wordmark_url?: string | null;
+        };
+        Relationships: [];
+      };
       provisioning_requests: {
         Row: {
           created_at: string;
@@ -3995,6 +4034,19 @@ export type Database = {
       record_membership_grant: {
         Args: { p_expires_at?: string | null; p_staff_legacy_id: string };
         Returns: Json;
+      };
+      facility_branding_by_slug: {
+        Args: { p_slug: string };
+        Returns: {
+          facility_id: string;
+          name: string;
+          slug: string;
+          logo_url: string | null;
+          wordmark_url: string | null;
+          primary_color: string | null;
+          accent_color: string | null;
+          tagline: string | null;
+        }[];
       };
       invite_facility_owner: {
         Args: { p_expires_at?: string | null; p_facility_id: string };

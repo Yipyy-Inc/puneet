@@ -1,4 +1,5 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
+import { facilitySlugFromHost } from "@/lib/facility-host";
 import {
   NextResponse,
   type NextFetchEvent,
@@ -38,6 +39,28 @@ import {
 const withClerk = clerkMiddleware(async (_auth, request) => {
   const headers = new Headers(request.headers);
   headers.set("x-pathname", request.nextUrl.pathname);
+
+  // Which facility this hostname names (spec 002 D2: pawradise.yipyy.com).
+  // `null` for the apex, www, localhost and previews — i.e. "this is Yipyy
+  // itself", which is the ordinary case and not an error.
+  //
+  // `set`, never `append`, and set UNCONDITIONALLY: a client that sends its own
+  // x-facility-slug must not be able to smuggle one past this, and only writing
+  // the header when a facility resolves would leave theirs in place on the
+  // apex. Same reasoning as x-pathname above, higher stakes — this names a
+  // tenant.
+  //
+  // It is a ROUTING HINT. RLS still scopes every row from the token and
+  // getFacilityContext() still resolves from the membership, so a forged value
+  // buys a wrong-looking login page and no data whatsoever.
+  headers.set(
+    "x-facility-slug",
+    facilitySlugFromHost(
+      request.headers.get("host"),
+      process.env.NEXT_PUBLIC_APP_DOMAIN,
+    ) ?? "",
+  );
+
   return NextResponse.next({ request: { headers } });
 });
 
