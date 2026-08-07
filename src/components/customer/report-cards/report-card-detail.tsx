@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { Badge } from "@/components/ui/badge";
 import {
   Calendar,
@@ -25,7 +25,6 @@ import { ReportCardBrandedFooter } from "@/components/shared/ReportCardBrandedFo
 import { businessProfile, reportCardConfig } from "@/data/settings";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { clients } from "@/data/clients";
 import {
   type ReportCardTimelineItem,
   buildDailySummary,
@@ -35,9 +34,6 @@ import {
   formatReportTime,
 } from "./report-card-shared";
 import { ReportCardShare } from "./report-card-share";
-
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
 
 /** Time-of-day bucket for a meal, derived from its "H:MM AM/PM" (or 24h) time. */
 function mealPeriodLabel(time: string): string {
@@ -100,15 +96,14 @@ export function ReportCardDetail({
   favourite?: boolean;
   onToggleFavourite?: () => void;
 }) {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const ts = themeStyles[item.theme || "everyday"] ?? themeStyles.everyday;
   const { DecorativeIcon } = ts;
 
   const { selectedFacility } = useCustomerFacility();
   const { openBookingModal } = useBookingModal();
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
 
   // Pre-filter the booking flow to this report's service + pet (Table 59).
   const handleBookVisit = () => {

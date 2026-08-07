@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, use, useMemo, useEffect } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { getFormsByFacility } from "@/data/forms";
 import { getSubmissionsForPet } from "@/data/form-submissions";
@@ -52,9 +52,6 @@ import { PhotoAlbums } from "@/components/customer/PhotoAlbums";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { careInstructions, type CareInstructions } from "@/data/pet-data";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 interface Pet {
   id: number;
   name: string;
@@ -74,6 +71,9 @@ export default function CustomerPetDetailPage({
 }: {
   params: Promise<{ petId: string }>;
 }) {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { petId } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -87,11 +87,6 @@ export default function CustomerPetDetailPage({
   }, [searchParams]);
   const [isSaving, setIsSaving] = useState(false);
   const [vaccinationModalOpen, setVaccinationModalOpen] = useState(false);
-
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
   const pet = customer?.pets.find((p) => p.id === parseInt(petId));
 
   const [editedPet, setEditedPet] = useState<Pet | null>(pet || null);
@@ -289,7 +284,7 @@ export default function CustomerPetDetailPage({
     if (newVaccinations.length === 0) return;
     notifyFacilityStaffVaccinationUploaded({
       facilityId: facilityId,
-      clientId: MOCK_CUSTOMER_ID,
+      clientId: customerId ?? 0,
       clientName: customer ? customer.name : "Customer",
       petName: pet.name,
       vaccineCount: newVaccinations.length,
@@ -1181,7 +1176,7 @@ export default function CustomerPetDetailPage({
                 <CardContent>
                   <PetComplianceChecklist
                     pet={pet}
-                    clientId={MOCK_CUSTOMER_ID}
+                    clientId={customerId ?? 0}
                     facilityId={selectedFacility.id}
                     compact={false}
                   />
@@ -1215,7 +1210,7 @@ export default function CustomerPetDetailPage({
                       {requiredForms.map((form) => (
                         <li key={form.id}>
                           <Link
-                            href={`/forms/${form.slug}?petId=${pet.id}&customerId=${MOCK_CUSTOMER_ID}`}
+                            href={`/forms/${form.slug}?petId=${pet.id}&customerId=${customerId}`}
                             className="border-destructive/30 hover:bg-destructive/5 flex items-center justify-between rounded-lg border p-3 transition-colors"
                           >
                             <div>
@@ -1341,7 +1336,7 @@ export default function CustomerPetDetailPage({
                               </div>
                             ) : (
                               <Link
-                                href={`/forms/${form.slug}?petId=${pet.id}&customerId=${MOCK_CUSTOMER_ID}`}
+                                href={`/forms/${form.slug}?petId=${pet.id}&customerId=${customerId}`}
                                 className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
                               >
                                 <span className="text-sm">{form.name}</span>

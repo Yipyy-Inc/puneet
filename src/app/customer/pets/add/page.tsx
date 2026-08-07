@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
@@ -40,6 +41,9 @@ interface PetFormData {
 }
 
 export default function AddPetPage() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const router = useRouter();
   const { selectedFacility } = useCustomerFacility();
   const [isSaving, setIsSaving] = useState(false);
@@ -135,7 +139,6 @@ export default function AddPetPage() {
 
   const PetIcon = formData.type === "Cat" ? Cat : Dog;
   const facilityId = selectedFacility?.id ?? 11;
-  const MOCK_CUSTOMER_ID = 15;
 
   if (showWizard && newPetId) {
     return (
@@ -160,7 +163,7 @@ export default function AddPetPage() {
           </div>
           <FormWizard
             petId={newPetId}
-            customerId={MOCK_CUSTOMER_ID}
+            customerId={customerId ?? 0}
             facilityId={facilityId}
             onComplete={() =>
               router.push(`/customer/pets/${newPetId}?tab=forms`)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import {
   Card,
@@ -78,9 +79,6 @@ import { RedeemPointsDialog } from "@/components/customer/RedeemPointsDialog";
 import { LoyaltyTransactionHistory } from "@/components/loyalty/LoyaltyTransactionHistory";
 import { BadgeCelebration } from "@/components/customer/BadgeCelebration";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 // Captured once at module load for deterministic expiry math (gated behind
 // isMounted at render time to avoid SSR hydration mismatch).
 const NOW_MS = Date.now();
@@ -93,6 +91,9 @@ const WALLET_ICONS: Record<WalletIcon, LucideIcon> = {
 };
 
 export default function CustomerRewardsPage() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
   const [isMounted, setIsMounted] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -114,7 +115,7 @@ export default function CustomerRewardsPage() {
   // and tier. Falls back to the legacy display model until it loads.
   const loyaltyFacilityId = selectedFacility?.id ?? 0;
   const { data: loyaltyAccount } = useQuery({
-    ...loyaltyQueries.account(loyaltyFacilityId, MOCK_CUSTOMER_ID),
+    ...loyaltyQueries.account(loyaltyFacilityId, customerId ?? 0),
     enabled: !!selectedFacility,
   });
   const { data: facilityLoyaltyConfig } = useQuery({
@@ -140,7 +141,7 @@ export default function CustomerRewardsPage() {
   // Rewards wallet — the customer's active, unused RewardRedemptions. Keyed under
   // ["loyalty"] so redeeming points (which creates a record) refreshes it.
   const { data: activeRewards = [] } = useQuery({
-    ...loyaltyQueries.customerRewards(loyaltyFacilityId, MOCK_CUSTOMER_ID),
+    ...loyaltyQueries.customerRewards(loyaltyFacilityId, customerId ?? 0),
     enabled: !!selectedFacility,
   });
   const walletRewards = useMemo(
@@ -151,7 +152,7 @@ export default function CustomerRewardsPage() {
   // Full points-transaction history (canonical LoyaltyTransactions) for the
   // "My History" tab — earned / redeemed / adjusted / expired with running balance.
   const { data: pointTransactions = [] } = useQuery({
-    ...loyaltyQueries.transactions(loyaltyFacilityId, MOCK_CUSTOMER_ID),
+    ...loyaltyQueries.transactions(loyaltyFacilityId, customerId ?? 0),
     enabled: !!selectedFacility,
   });
 
@@ -168,7 +169,7 @@ export default function CustomerRewardsPage() {
   // Get loyalty data
   const loyaltyData = useMemo(() => {
     const customerLoyalty = customerLoyaltyData.find(
-      (l) => l.clientId === MOCK_CUSTOMER_ID,
+      (l) => l.clientId === customerId,
     );
     if (!customerLoyalty) return null;
 
@@ -198,23 +199,23 @@ export default function CustomerRewardsPage() {
       pointsToNextTier,
       progressPercentage: Math.min(100, Math.max(0, progressPercentage)),
     };
-  }, [loyaltyAccount]);
+  }, [customerId, loyaltyAccount]);
 
   // Get referral codes for this customer
   const customerReferralCodes = useMemo(() => {
-    return referralCodes.filter((ref) => ref.referrerId === MOCK_CUSTOMER_ID);
-  }, []);
+    return referralCodes.filter((ref) => ref.referrerId === customerId);
+  }, [customerId]);
 
   // Get customer payments to calculate total spent
   const customerPayments = useMemo(() => {
     if (!selectedFacility) return [];
     return payments.filter(
       (p) =>
-        p.clientId === MOCK_CUSTOMER_ID &&
+        p.clientId === customerId &&
         p.facilityId === selectedFacility.id &&
         p.status === "completed",
     );
-  }, [selectedFacility]);
+  }, [customerId, selectedFacility]);
 
   const totalSpent = useMemo(() => {
     return customerPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -224,7 +225,7 @@ export default function CustomerRewardsPage() {
   // canonical loyalty account stats via the same engine criteria the automation
   // uses. Earned = has a record OR currently meets the criteria.
   const { data: customerBadges = [] } = useQuery({
-    ...loyaltyQueries.customerBadges(loyaltyFacilityId, MOCK_CUSTOMER_ID),
+    ...loyaltyQueries.customerBadges(loyaltyFacilityId, customerId),
     enabled: !!selectedFacility,
   });
 
@@ -289,7 +290,7 @@ export default function CustomerRewardsPage() {
     if (!isMounted) return;
     const ids = earnedKey ? earnedKey.split(",") : [];
     if (ids.length === 0) return;
-    const key = `seen-badges-${loyaltyFacilityId}-${MOCK_CUSTOMER_ID}`;
+    const key = `seen-badges-${loyaltyFacilityId}-${customerId}`;
     let seen: string[] = [];
     try {
       const raw = window.localStorage.getItem(key);
@@ -1406,7 +1407,7 @@ export default function CustomerRewardsPage() {
             open={pointsRedeemOpen}
             onOpenChange={setPointsRedeemOpen}
             facilityId={selectedFacility.id}
-            customerId={MOCK_CUSTOMER_ID}
+            customerId={customerId ?? 0}
             redemptionRate={redemptionRate}
           />
         )}

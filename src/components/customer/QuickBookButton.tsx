@@ -1,22 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useBookingModal } from "@/hooks/use-booking-modal";
-import { clients } from "@/data/clients";
-
-const MOCK_CUSTOMER_ID = 15;
 
 export function QuickBookButton() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
   const { openBookingModal } = useBookingModal();
-
-  const customer = useMemo(
-    () => clients.find((client) => client.id === MOCK_CUSTOMER_ID),
-    [],
-  );
 
   const handleOpenBookingWizard = () => {
     if (!selectedFacility || !customer) return;

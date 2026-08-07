@@ -1,12 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useStylists } from "@/lib/api/stylists";
 import { groomingQueries } from "@/lib/api/grooming";
 import { useGroomingValidation } from "@/hooks/use-grooming-validation";
-import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { vaccinationRecords } from "@/data/pet-data";
 import { groomingAppointments } from "@/data/grooming";
@@ -66,9 +66,6 @@ import { toast } from "sonner";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import type { ServiceArea } from "@/types/grooming";
-
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
 
 export type PetSizeLabel = "S" | "M" | "L" | "XL";
 
@@ -340,6 +337,9 @@ export function GroomingBookingFlow({
   open,
   onOpenChange,
 }: GroomingBookingFlowProps) {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const router = useRouter();
   const {
     validation: _validation,
@@ -458,10 +458,6 @@ export function GroomingBookingFlow({
   }, []);
 
   // Get customer and their pets
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
 
   // Check if this is a new client (no previous bookings)
   const isNewClient = useMemo(() => {
@@ -1017,7 +1013,7 @@ export function GroomingBookingFlow({
         creditsTotal: p.passesTotal,
         validUntil: p.expiresAt ? new Date(p.expiresAt) : null,
       }));
-  }, [rawCustomerPackages, customer]);
+  }, [customerId, rawCustomerPackages, customer]);
 
   const availablePackages = useMemo(() => {
     // Mock: Available packages for upsell
@@ -1419,7 +1415,7 @@ export function GroomingBookingFlow({
     };
 
     localStorage.setItem(
-      `grooming_booking_progress_${MOCK_CUSTOMER_ID}`,
+      `grooming_booking_progress_${customerId}`,
       JSON.stringify(progress),
     );
   };
@@ -1431,9 +1427,7 @@ export function GroomingBookingFlow({
       // Load booking progress from localStorage (only on client)
       const stored =
         typeof window !== "undefined"
-          ? localStorage.getItem(
-              `grooming_booking_progress_${MOCK_CUSTOMER_ID}`,
-            )
+          ? localStorage.getItem(`grooming_booking_progress_${customerId}`)
           : null;
 
       interface BookingProgress {

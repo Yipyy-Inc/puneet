@@ -1,9 +1,9 @@
 "use client";
 
 import { use, useMemo } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { bookings } from "@/data/bookings";
-import { clients } from "@/data/clients";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,8 +33,6 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatBookingRef } from "@/lib/booking-id";
 import type { Booking } from "@/types/booking";
-
-const MOCK_CUSTOMER_ID = 15;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -95,20 +93,16 @@ export default function BookingDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { id } = use(params);
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
 
   const booking = useMemo(
     () =>
-      bookings.find(
-        (b) => String(b.id) === id && b.clientId === MOCK_CUSTOMER_ID,
-      ),
-    [id],
-  );
-
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
+      bookings.find((b) => String(b.id) === id && b.clientId === customerId),
+    [customerId, id],
   );
 
   const pet = useMemo(() => {
@@ -571,7 +565,7 @@ export default function BookingDetailPage({
                 <p className="mb-2 font-semibold">Ready to check in?</p>
                 <GroomingCheckInButton
                   bookingId={String(booking.id)}
-                  clientId={MOCK_CUSTOMER_ID}
+                  clientId={customerId ?? 0}
                 />
               </CardContent>
             </Card>

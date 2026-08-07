@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { clients } from "@/data/clients";
 import {
   Card,
   CardContent,
@@ -48,8 +48,6 @@ import {
 import { toast } from "sonner";
 import { facilityConfig } from "@/data/facility-config";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-const MOCK_CUSTOMER_ID = 15;
 
 const mockEnrollments: TrainingEnrollment[] = [
   {
@@ -157,6 +155,9 @@ interface MissedSessionInfo {
 }
 
 export function MakeupSessionsTab() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
   const isMounted = useHydrated();
   const [enrollments] = useState<TrainingEnrollment[]>(mockEnrollments);
@@ -171,16 +172,11 @@ export function MakeupSessionsTab() {
   );
   const [isSkipConfirmModalOpen, setIsSkipConfirmModalOpen] = useState(false);
 
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
-
   const missedSessions = useMemo(() => {
     const missed: MissedSessionInfo[] = [];
 
     enrollments.forEach((enrollment) => {
-      if (enrollment.ownerId !== MOCK_CUSTOMER_ID) return;
+      if (enrollment.ownerId !== customerId) return;
 
       const seriesItem = series.find((s) => s.id === enrollment.seriesId);
       if (!seriesItem) return;
@@ -212,7 +208,7 @@ export function MakeupSessionsTab() {
     });
 
     return missed;
-  }, [enrollments, series, attendances, makeupSessions]);
+  }, [customerId, enrollments, series, attendances, makeupSessions]);
 
   const handleScheduleMakeup = (missed: MissedSessionInfo) => {
     setSelectedMissedSession(missed);

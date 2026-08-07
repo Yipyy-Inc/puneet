@@ -7,10 +7,10 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import Image from "next/image";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
-import { clients } from "@/data/clients";
 import {
   SERVICE_CATEGORIES,
   CUSTOMER_BOARDING_ROOM_TYPES,
@@ -91,9 +91,6 @@ import {
   type CustomerFeedingEntry,
   type CustomerMedicationEntry,
 } from "@/components/customer/CareInstructionsStep";
-
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
 
 interface CustomerBookingModalProps {
   open?: boolean;
@@ -185,6 +182,9 @@ export function CustomerBookingModal({
   existingBooking,
   onBookingCreated,
 }: CustomerBookingModalProps) {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
   const {
     daycare,
@@ -209,10 +209,6 @@ export function CustomerBookingModal({
   );
 
   // Get customer and their pets
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
   const customerPets = useMemo(() => customer?.pets || [], [customer]);
 
   // Helper to format date without timezone issues
@@ -739,7 +735,7 @@ export function CustomerBookingModal({
 
     const clientDocs = clientDocuments.filter(
       (d) =>
-        d.clientId === MOCK_CUSTOMER_ID &&
+        d.clientId === customerId &&
         d.facilityId === facilityId &&
         (d.type === "agreement" || d.type === "waiver") &&
         d.signedAt,
@@ -800,7 +796,7 @@ export function CustomerBookingModal({
             petId: pet.id,
             petName: pet.name,
             link: form?.slug
-              ? `/forms/${form.slug}?petId=${pet.id}&customerId=${MOCK_CUSTOMER_ID}`
+              ? `/forms/${form.slug}?petId=${pet.id}&customerId=${customerId}`
               : `/customer/pets/${pet.id}`,
           });
         });
@@ -823,7 +819,13 @@ export function CustomerBookingModal({
       totalCount,
       allComplete: missing.length === 0,
     };
-  }, [selectedService, selectedPets, facilityId, getPetVaccinationStatus]);
+  }, [
+    customerId,
+    selectedService,
+    selectedPets,
+    facilityId,
+    getPetVaccinationStatus,
+  ]);
 
   const allowBookingWithoutForms =
     facilityConfig.bookingRules.allowBookingWithoutForms ?? false;

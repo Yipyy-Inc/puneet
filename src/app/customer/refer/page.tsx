@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -47,9 +48,6 @@ import {
 } from "@/lib/loyalty/referral-program";
 // QR Code will be generated using an external service or canvas
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 type ReferralPillStatus = "pending" | "booked" | "reward_issued";
 
 interface ReferralTracking {
@@ -63,6 +61,9 @@ interface ReferralTracking {
 }
 
 export default function CustomerReferPage() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
   const isMounted = useHydrated();
   const [copiedLink, setCopiedLink] = useState(false);
@@ -90,10 +91,10 @@ export default function CustomerReferPage() {
   const referralCode = useMemo(() => {
     if (!selectedFacility) return "";
     return (
-      getLoyaltyAccount(selectedFacility.id, MOCK_CUSTOMER_ID)?.referralCode ??
+      getLoyaltyAccount(selectedFacility.id, customerId ?? 0)?.referralCode ??
       ""
     );
-  }, [selectedFacility]);
+  }, [customerId, selectedFacility]);
 
   // Generate referral URL
   const referralUrl = useMemo(() => {
@@ -104,9 +105,10 @@ export default function CustomerReferPage() {
 
   // The customer's first name, for the {referrerName} share-message token.
   const referrerName = useMemo(() => {
-    const full = getClientById(MOCK_CUSTOMER_ID)?.name ?? "";
+    const full =
+      customerId == null ? "" : (getClientById(customerId)?.name ?? "");
     return full.split(/\s+/)[0] || "A friend";
-  }, []);
+  }, [customerId]);
 
   // Pre-composed share message from the program's shareMessageTemplate, with
   // tokens substituted ({code}, {referrerName}, {refereeReward}, {referrerReward}).
@@ -202,13 +204,13 @@ export default function CustomerReferPage() {
 
   // Get referral relationships
   const referralRelationships = useMemo(() => {
-    return getReferralRelationshipsByReferrer(MOCK_CUSTOMER_ID);
-  }, []);
+    return getReferralRelationshipsByReferrer(customerId ?? 0);
+  }, [customerId]);
 
   // Get referral stats
   const referralStatsData = useMemo(() => {
-    return getReferralStats(MOCK_CUSTOMER_ID);
-  }, []);
+    return getReferralStats(customerId ?? 0);
+  }, [customerId]);
 
   // Get referral tracking data from relationships
   const referralTracking = useMemo((): ReferralTracking[] => {

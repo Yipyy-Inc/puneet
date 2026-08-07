@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -35,15 +36,11 @@ import {
   type DigitalWaiver,
   type WaiverServiceTag,
 } from "@/data/additional-features";
-import { clients } from "@/data/clients";
 import { clientDocuments } from "@/data/documents";
 import { getFormsByFacility } from "@/data/forms";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { PendingWaiversCard } from "./_components/PendingWaiversCard";
 import { SignedAgreementsCard } from "./_components/SignedAgreementsCard";
-
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
 
 // Services this facility offers — drives pending-waiver category grouping.
 // TODO: read from facility settings when wired to a real API.
@@ -55,6 +52,9 @@ const FACILITY_SERVICES: WaiverServiceTag[] = [
 ];
 
 export default function CustomerDocumentsPage() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<
@@ -67,15 +67,8 @@ export default function CustomerDocumentsPage() {
     () => new Set(waiverSignatures.map((s) => s.waiverId)),
   );
 
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
-
   const customerDocs = useMemo(() => {
-    let filtered = clientDocuments.filter(
-      (d) => d.clientId === MOCK_CUSTOMER_ID,
-    );
+    let filtered = clientDocuments.filter((d) => d.clientId === customerId);
     if (selectedFacility) {
       filtered = filtered.filter((d) => d.facilityId === selectedFacility.id);
     }
@@ -89,7 +82,7 @@ export default function CustomerDocumentsPage() {
       );
     }
     return filtered;
-  }, [selectedFacility, searchQuery]);
+  }, [customerId, selectedFacility, searchQuery]);
 
   const agreementDocs = useMemo(
     () =>
@@ -124,10 +117,10 @@ export default function CustomerDocumentsPage() {
     () =>
       waiverSignatures.filter(
         (s) =>
-          s.clientId === String(MOCK_CUSTOMER_ID) ||
-          s.clientId === `client-${MOCK_CUSTOMER_ID}`,
+          s.clientId === String(customerId) ||
+          s.clientId === `client-${customerId}`,
       ),
-    [],
+    [customerId],
   );
 
   const handleDownload = (url?: string, name?: string) => {

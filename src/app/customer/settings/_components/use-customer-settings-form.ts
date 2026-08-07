@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { toast } from "sonner";
-import { clients } from "@/data/clients";
 import {
   memberships as allMemberships,
   membershipPlans,
@@ -21,18 +21,13 @@ import {
   type ProfileData,
 } from "./types";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 export function useCustomerSettingsForm() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { languageSettings } = useSettings();
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
 
   const initialProfileData: ProfileData = useMemo(
     () => ({
@@ -96,7 +91,7 @@ export function useCustomerSettingsForm() {
   const instabookSummary = useMemo(() => {
     const cs = customer?.customerSettings;
     const activeMembership = allMemberships.find(
-      (m) => m.customerId === String(MOCK_CUSTOMER_ID) && m.status === "active",
+      (m) => m.customerId === String(customerId) && m.status === "active",
     );
     const activePlan = activeMembership
       ? membershipPlans.find((p) => p.id === activeMembership.planId)
@@ -125,7 +120,7 @@ export function useCustomerSettingsForm() {
         },
       ],
     };
-  }, [customer]);
+  }, [customerId, customer]);
 
   const hasAnyInstabook = instabookSummary.services.some(
     (s) => s.fromSetting || s.fromMembership,

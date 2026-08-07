@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useMemo } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import Link from "next/link";
 import { ArrowLeft, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,20 +17,19 @@ import { clients } from "@/data/clients";
 import { getYipyyGoForm } from "@/data/yipyygo-forms";
 import { CheckInQRCode } from "@/components/yipyygo/CheckInQRCode";
 
-const MOCK_CUSTOMER_ID = 15;
-
 export default function CheckInQRPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { id } = use(params);
   const booking = useMemo(
     () =>
-      bookings.find(
-        (b) => String(b.id) === id && b.clientId === MOCK_CUSTOMER_ID,
-      ),
-    [id],
+      bookings.find((b) => String(b.id) === id && b.clientId === customerId),
+    [customerId, id],
   );
   const form = useMemo(
     () => (booking ? getYipyyGoForm(booking.id) : null),

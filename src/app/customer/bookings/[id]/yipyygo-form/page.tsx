@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState, useMemo, useEffect } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { bookings } from "@/data/bookings";
@@ -60,9 +61,6 @@ import { Separator } from "@/components/ui/separator";
 import type { TipSelection } from "@/types/yipyygo";
 import { CheckCircle2, PartyPopper } from "lucide-react";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 type AuthState = "checking" | "authenticated" | "login" | "verification";
 
 export default function YipyyGoFormPage({
@@ -70,6 +68,9 @@ export default function YipyyGoFormPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { id } = use(params);
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>("checking");
@@ -85,7 +86,11 @@ export default function YipyyGoFormPage({
     return bookings.find((b) => String(b.id) === id);
   }, [id]);
 
-  const customer = useMemo(() => {
+  // The BOOKING's client, which is who the form is about. Distinct from the
+  // signed-in caller above: RLS only shows a customer their own bookings, so in
+  // practice they are the same person, and naming them apart keeps the form
+  // correct if a staff member ever opens it.
+  const bookingClient = useMemo(() => {
     if (!booking) return null;
     return clients.find((c) => c.id === booking.clientId);
   }, [booking]);
@@ -242,7 +247,7 @@ export default function YipyyGoFormPage({
         ...formData,
         tip: tip ?? formData.tip,
         submittedAt: new Date().toISOString(),
-        submittedBy: MOCK_CUSTOMER_ID,
+        submittedBy: customerId,
       });
 
       // Generate QR check-in token (booking_id + pet_id + token, no PII)
@@ -263,8 +268,8 @@ export default function YipyyGoFormPage({
         facilityId: booking.facilityId,
         bookingId: Number(booking.id),
         petId: Array.isArray(booking.petId) ? booking.petId[0] : booking.petId,
-        userId: MOCK_CUSTOMER_ID,
-        userName: customer?.name,
+        userId: customerId ?? 0,
+        userName: bookingClient?.name,
         metadata: { submittedAt: saved.submittedAt },
       });
 

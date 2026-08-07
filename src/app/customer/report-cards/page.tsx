@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useSearchParams } from "next/navigation";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clients } from "@/data/clients";
@@ -31,9 +32,6 @@ import { ReportCardSummary } from "@/components/customer/report-cards/report-car
 import { ReportCardDetail } from "@/components/customer/report-cards/report-card-detail";
 import type { ReportCardTimelineItem } from "@/components/customer/report-cards/report-card-shared";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 // Service-type filter chips — value matches ReportCard.serviceType.
 const SERVICE_FILTERS = [
   { value: "all", label: "All" },
@@ -46,6 +44,9 @@ const SERVICE_FILTERS = [
 type Client = (typeof clients)[number];
 
 export default function CustomerReportCardsPage() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,11 +58,6 @@ export default function CustomerReportCardsPage() {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [favIds, setFavIds] = useState<Set<string>>(
     () => new Set(reportCards.filter((c) => c.favourite).map((c) => c.id)),
-  );
-
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
   );
 
   const customerPetIds = useMemo(

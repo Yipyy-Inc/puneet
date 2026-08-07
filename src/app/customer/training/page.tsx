@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { clients } from "@/data/clients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,8 +62,6 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
 /** Facility-wide drop-in toggle. Eventually owned by Settings → Training;
  *  hardcoded for now so the demo can showcase the single-session flow. */
 const FACILITY_ALLOWS_DROPINS = true;
@@ -111,6 +109,9 @@ const VALID_CUSTOMER_TRAINING_TABS = new Set([
 ]);
 
 export default function CustomerTrainingPage() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -168,11 +169,6 @@ export default function CustomerTrainingPage() {
   >([
     // Example: { seriesId: "series-001", petId: 1, petName: "Buddy" }
   ]);
-
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
 
   useEffect(() => {
     setIsMounted(true);
@@ -495,7 +491,7 @@ export default function CustomerTrainingPage() {
         </TabsList>
 
         <TabsContent value="pets" className="space-y-4 pt-2">
-          <CustomerMyPetsTab customerId={MOCK_CUSTOMER_ID} />
+          <CustomerMyPetsTab customerId={customerId ?? 0} />
         </TabsContent>
 
         <TabsContent value="classes" className="space-y-6 pt-2">
@@ -1102,15 +1098,15 @@ export default function CustomerTrainingPage() {
         </TabsContent>
 
         <TabsContent value="homework" className="space-y-4 pt-2">
-          <CustomerHomeworkTab customerId={MOCK_CUSTOMER_ID} />
+          <CustomerHomeworkTab customerId={customerId ?? 0} />
         </TabsContent>
 
         <TabsContent value="report-cards" className="space-y-4 pt-2">
-          <CustomerReportCardsTab customerId={MOCK_CUSTOMER_ID} />
+          <CustomerReportCardsTab customerId={customerId ?? 0} />
         </TabsContent>
 
         <TabsContent value="packages" className="space-y-4 pt-2">
-          <CustomerTrainingPackagesTab customerId={MOCK_CUSTOMER_ID} />
+          <CustomerTrainingPackagesTab customerId={customerId ?? 0} />
         </TabsContent>
 
         <TabsContent value="makeup" className="pt-2">

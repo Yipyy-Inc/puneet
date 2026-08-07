@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { groomingQueries } from "@/lib/api/grooming";
 import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
@@ -44,8 +45,6 @@ import type {
   CameraRuleSet,
   CameraServiceType,
 } from "@/types/camera-integration";
-
-const MOCK_CUSTOMER_ID = 15;
 
 type AccessReason =
   | { type: "active_stay"; service: CameraServiceType }
@@ -181,6 +180,9 @@ function AccessReasonBadge({ reason }: { reason: AccessReason }) {
 }
 
 export default function CustomerCamerasPage() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const { selectedFacility } = useCustomerFacility();
   const [selectedCamera, setSelectedCamera] = useState<{
     cam: PetCam;
@@ -201,7 +203,7 @@ export default function CustomerCamerasPage() {
     return bookings
       .filter(
         (b) =>
-          b.clientId === MOCK_CUSTOMER_ID &&
+          b.clientId === customerId &&
           b.facilityId === selectedFacility.id &&
           b.status === "confirmed" &&
           b.startDate <= today &&
@@ -209,21 +211,20 @@ export default function CustomerCamerasPage() {
       )
       .map((b) => serviceMap[b.service])
       .filter((s): s is CameraServiceType => Boolean(s));
-  }, [selectedFacility, today]);
+  }, [customerId, selectedFacility, today]);
 
   const membershipPlanIds = useMemo(() => {
     return memberships
       .filter(
-        (m) =>
-          m.customerId === String(MOCK_CUSTOMER_ID) && m.status === "active",
+        (m) => m.customerId === String(customerId) && m.status === "active",
       )
       .map((m) => m.planId);
-  }, []);
+  }, [customerId]);
 
   // See CustomerSidebar: `status` is derived, so "still valid" is the
   // database's answer rather than a second date comparison in the browser.
   const { data: ownedPackages = [] } = useQuery(
-    groomingQueries.customerPackagesForClient(MOCK_CUSTOMER_ID),
+    groomingQueries.customerPackagesForClient(customerId),
   );
   const purchasedPackageIds = useMemo(
     () =>
@@ -246,7 +247,7 @@ export default function CustomerCamerasPage() {
         bookings
           .filter(
             (b) =>
-              b.clientId === MOCK_CUSTOMER_ID &&
+              b.clientId === customerId &&
               b.facilityId === selectedFacility.id &&
               b.status === "confirmed",
           )
@@ -254,7 +255,7 @@ export default function CustomerCamerasPage() {
           .filter((s): s is CameraServiceType => Boolean(s)),
       ),
     ];
-  }, [selectedFacility]);
+  }, [customerId, selectedFacility]);
 
   const isWithinOperatingHours = useMemo(() => {
     const now = new Date();

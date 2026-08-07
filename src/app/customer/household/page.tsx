@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -24,7 +25,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
-import { clients } from "@/data/clients";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import {
   ADDITIONAL_CONTACT_TAG_LABELS,
@@ -32,16 +32,11 @@ import {
   type AdditionalContact,
 } from "@/types/client";
 
-// Mock customer ID - TODO: Get from auth context
-const MOCK_CUSTOMER_ID = 15;
-
 export default function CustomerHouseholdPage() {
-  const { selectedFacility: _selectedFacility } = useCustomerFacility();
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
 
-  const customer = useMemo(
-    () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    [],
-  );
+  const { selectedFacility: _selectedFacility } = useCustomerFacility();
 
   const initialContacts = useMemo<AdditionalContact[]>(
     () => customer?.additionalContacts ?? [],

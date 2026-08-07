@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,16 +35,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { giftCardSettings } from "@/data/gift-cards";
-import { clients } from "@/data/clients";
-
-// Portal's current customer (mirrors the customer dashboard).
-const MOCK_CUSTOMER_ID = 15;
-
-// Purchaser's first name, pre-filled into "From (Your Name)". Derived once so the
-// initial state and resetFlow share a single source and can't drift (Task 14: the
-// field must not load blank after "Send another gift card").
-const CUSTOMER_FIRST_NAME =
-  clients.find((c) => c.id === MOCK_CUSTOMER_ID)?.name?.split(" ")[0] ?? "";
 
 const SAVED_CARDS = [
   { id: "visa-4242", brand: "VISA", last4: "4242", label: "Default card" },
@@ -150,6 +141,15 @@ export function BuyGiftCardFlow({
   onComplete,
   onViewSent,
 }: BuyGiftCardFlowProps) {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
+  // Purchaser's first name, pre-filled into "From (Your Name)". It was a module
+  // constant read out of the mock clients array by hardcoded id, so every buyer
+  // was pre-filled as Alice; it is derived from the session now, and stays a
+  // single source so the initial state and resetFlow cannot drift.
+  const customerFirstName = customer?.name?.split(" ")[0] ?? "";
+
   const settings = giftCardSettings.find((s) => s.facilityId === facilityId);
   const presets = settings?.presetAmounts ?? [25, 50, 75, 100, 150, 200];
 
@@ -160,7 +160,7 @@ export function BuyGiftCardFlow({
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   // Pre-fill "From" with the customer's first name (editable).
-  const [senderName, setSenderName] = useState(CUSTOMER_FIRST_NAME);
+  const [senderName, setSenderName] = useState(customerFirstName);
   const [emailError, setEmailError] = useState("");
   const [attemptedStep3, setAttemptedStep3] = useState(false);
   const [message, setMessage] = useState("");
@@ -184,8 +184,7 @@ export function BuyGiftCardFlow({
 
   const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-  const purchaserEmail =
-    clients.find((c) => c.id === MOCK_CUSTOMER_ID)?.email ?? "your email";
+  const purchaserEmail = customer?.email ?? "your email";
   const activeCard =
     SAVED_CARDS.find((c) => c.id === paymentCardId) ?? SAVED_CARDS[0];
   const hasPaymentMethod = SAVED_CARDS.length > 0 && !!activeCard;
@@ -282,7 +281,7 @@ export function BuyGiftCardFlow({
     setSelectedDesign(CARD_DESIGNS[0]);
     setRecipientName("");
     setRecipientEmail("");
-    setSenderName(CUSTOMER_FIRST_NAME);
+    setSenderName(customerFirstName);
     setMessage("");
     setScheduleDelivery(false);
     setDeliveryDate("");

@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { ChevronLeft } from "lucide-react";
-import { clients } from "@/data/clients";
 import { unfinishedBookings } from "@/data/unfinished-bookings";
 import { buildResumePreselection } from "@/lib/resume-booking";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
@@ -24,20 +24,16 @@ import type {
   NewBooking,
 } from "@/types/booking";
 
-const MOCK_CUSTOMER_ID = 15;
-
 export default function NewBookingPage() {
+  const { client: customer } = useCurrentCustomer();
+  const customerId = customer?.id;
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const { selectedFacility } = useCustomerFacility();
 
   const { bookingFlow } = useSettings();
   const { setRequests } = useBookingRequestsStore();
-
-  const customer = useMemo(
-    () => clients.find((client) => client.id === MOCK_CUSTOMER_ID),
-    [],
-  );
 
   const preSelectedService = searchParams?.get("service") ?? undefined;
   const preSelectedProgramId = searchParams?.get("program") ?? undefined;
@@ -52,9 +48,9 @@ export default function NewBookingPage() {
     if (!ub) return null;
     // Only allow resume when the saved session belongs to this customer so
     // shared/forwarded links can't pull someone else's draft.
-    if (ub.clientId && ub.clientId !== MOCK_CUSTOMER_ID) return null;
+    if (ub.clientId && ub.clientId !== customerId) return null;
     return buildResumePreselection(ub);
-  }, [resumeBookingId]);
+  }, [customerId, resumeBookingId]);
 
   if (!selectedFacility || !customer) {
     return (
