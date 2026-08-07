@@ -31,6 +31,15 @@ export interface CurrentCustomer {
   resolved: boolean;
   /** True when the caller is signed in but no client record is linked to them. */
   unlinked: boolean;
+  /**
+   * The facility this request was FOR, when the hostname named one.
+   *
+   * `null` on the apex, and the difference matters to what an unlinked person
+   * is offered: at `pawradise.yipyy.com` there is a facility to register at,
+   * and at `yipyy.com` there is not — so offering a register button on the apex
+   * would be a button that can only fail (spec 002 phase 5).
+   */
+  facilitySlug: string | null;
   isLoading: boolean;
 }
 
@@ -41,13 +50,26 @@ export const currentCustomerKeys = {
 export function useCurrentCustomer(): CurrentCustomer {
   const { data, isLoading, isSuccess, isError } = useQuery({
     queryKey: currentCustomerKeys.me,
-    queryFn: async (): Promise<Client | null> => {
+    queryFn: async (): Promise<
+      Client | { stranger: true; facilitySlug: string | null } | null
+    > => {
       const response = await fetch("/api/clients/me");
 
       // 404 is "signed in, no record yet" — an ordinary state, not a failure,
-      // so it resolves to null rather than throwing. Anything else is a real
-      // error and must not be flattened into "you have no bookings".
-      if (response.status === 404) return null;
+      // so it resolves to a STRANGER answer rather than throwing. Anything else
+      // is a real error and must not be flattened into "you have no bookings".
+      //
+      // The body carries which facility was asked about, so the portal can tell
+      // "you are not registered HERE" from "you have no record anywhere".
+      if (response.status === 404) {
+        const body = (await response.json().catch(() => null)) as {
+          facilitySlug?: string | null;
+        } | null;
+        return {
+          stranger: true as const,
+          facilitySlug: body?.facilitySlug ?? null,
+        };
+      }
 
       if (!response.ok) {
         const parsed = (await response.json().catch(() => null)) as {
@@ -63,10 +85,16 @@ export function useCurrentCustomer(): CurrentCustomer {
     retry: false,
   });
 
+  const stranger =
+    data !== null && typeof data === "object" && "stranger" in (data as object);
+
   return {
-    client: data ?? undefined,
+    client: stranger ? undefined : ((data ?? undefined) as Client | undefined),
     resolved: isSuccess || isError,
-    unlinked: isSuccess && data === null,
+    unlinked: isSuccess && stranger,
+    facilitySlug: stranger
+      ? ((data as { facilitySlug: string | null }).facilitySlug ?? null)
+      : null,
     isLoading,
   };
 }

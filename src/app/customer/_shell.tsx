@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { StrangerGate } from "@/components/customer/StrangerGate";
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 
@@ -36,8 +37,12 @@ export function CustomerShell({ children }: { children: React.ReactNode }) {
                 <CustomerSidebar />
                 <SidebarInset className="flex min-h-screen min-w-0 flex-col overflow-x-clip">
                   <CustomerHeader />
+                  {/* Spec 002 D1. The session is shared across every facility
+                      subdomain; the ACCOUNT is not. Wrapping here rather than
+                      in 30 screens means a facility a person is not registered
+                      at can never render as an empty dashboard. */}
                   <main className="min-w-0 flex-1 overflow-x-hidden">
-                    {children}
+                    <StrangerGate>{children}</StrangerGate>
                   </main>
 
                   {/* Floating chat bubble */}

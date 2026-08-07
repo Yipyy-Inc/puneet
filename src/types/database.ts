@@ -4026,7 +4026,22 @@ export type Database = {
         };
         Returns: { booking_id: string; booking_ref: number }[];
       };
-      link_client_record: { Args: never; Returns: string };
+      link_client_record: {
+        Args: { p_facility_slug: string };
+        Returns: string;
+      };
+      register_client: {
+        Args: {
+          p_facility_slug: string;
+          p_name: string;
+          p_phone?: string | null;
+        };
+        Returns: string;
+      };
+      set_customer_signup: {
+        Args: { p_enabled: boolean; p_facility_id: string };
+        Returns: boolean;
+      };
       link_staff_invite: {
         Args: { p_profile_id: string; p_staff_legacy_id: string };
         Returns: Json;
