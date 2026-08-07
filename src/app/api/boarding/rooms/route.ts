@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { DEMO_FACILITY_LEGACY_ID } from "@/lib/api/facility-context";
+import { getFacilityContext } from "@/lib/api/facility-context";
 import {
   ROOM_CATEGORY_SELECT,
   FACILITY_ROOM_SELECT,
@@ -50,9 +50,13 @@ export async function GET(request: NextRequest) {
   const supabase = await createServerClient();
   // `RoomCategory.facilityId` and `FacilityRoom.facilityId` are the app's
   // NUMERIC ref, which these rows do not carry — they key on the uuid. Every
-  // row RLS returns belongs to the caller's facility, so the ref is a constant
-  // here for the same reason the rest of the app still passes `facilityId: 11`.
-  const facilityRef = Number(DEMO_FACILITY_LEGACY_ID);
+  // row RLS returns belongs to the caller's facility, so this is a LABEL on the
+  // way out, never a filter.
+  //
+  // It was the demo constant, which stamped 11 onto a second facility's rooms.
+  // 0 when the facility has no legacy ref — one created since the mock era has
+  // none — because 0 matches no fixture.
+  const facilityRef = (await getFacilityContext())?.legacyRef ?? 0;
   const url = new URL(request.url);
 
   // Default window is "right now": the board's usual question is which rooms

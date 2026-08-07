@@ -115,6 +115,34 @@ select pg_temp.t(5, 'M5 they read back exactly their own row',
   (select count(*) from public.room_categories) = 1,
   (select string_agg(name, ', ') from public.room_categories));
 
+-- ── The DISPLAY LABELS, which outlived the scoping fix ──────────────────────
+--
+-- getFacilityContext was fixed first, but three client routes and two rooms
+-- routes were not going through it: they each looked the demo facility up
+-- themselves, `.eq("legacy_id", "11")`.
+--
+-- facilities_read admits your own facilities and nothing else, so for this
+-- owner that lookup is REFUSED. It used maybeSingle(), which returns null
+-- rather than raising — so the refusal was invisible and the routes fell
+-- through to a hardcoded "Example Pet Care Facility". Every client in a second
+-- facility's list carried a name belonging to nobody, and the rooms carried
+-- facilityId 11.
+--
+-- M6 is that refusal, asserted so nobody "fixes" it by widening the policy.
+-- M7 is the replacement, which is just their membership again.
+
+select pg_temp.t(6, 'M6 the OLD demo-name lookup returns NOTHING to them',
+  (select count(*) from public.facilities where legacy_id = '11') = 0);
+
+select pg_temp.t(7, 'M7 the NEW lookup gives their own name and ref',
+  (select f.name || '/' || f.legacy_id
+     from public.facilities f
+     join public.facility_memberships m on m.facility_id = f.id)
+    = 'Second Facility/12',
+  (select f.name || '/' || f.legacy_id
+     from public.facilities f
+     join public.facility_memberships m on m.facility_id = f.id));
+
 reset role;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

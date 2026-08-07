@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { DEMO_FACILITY_LEGACY_ID } from "@/lib/api/facility-context";
+import { getFacilityContext } from "@/lib/api/facility-context";
 import {
   ROOM_CATEGORY_SELECT,
   FACILITY_ROOM_SELECT,
@@ -33,7 +33,16 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
-  const facilityRef = Number(DEMO_FACILITY_LEGACY_ID);
+
+  // A LABEL, not a scope. `RoomCategory.facilityId` and `FacilityRoom.facilityId`
+  // are the app's numeric ref, which these rows do not carry — they key on the
+  // uuid, and RLS has already limited them to the caller's facility. This was
+  // the demo constant, so a second facility's rooms came back stamped 11.
+  //
+  // 0 when the facility has no legacy ref — a facility created since the mock
+  // era has none. It is a sentinel that matches no fixture, so a screen still
+  // reading one finds nothing rather than another facility's rooms.
+  const facilityRef = (await getFacilityContext())?.legacyRef ?? 0;
 
   const { data: categoryRows, error: categoryError } = await supabase
     .from("room_categories")

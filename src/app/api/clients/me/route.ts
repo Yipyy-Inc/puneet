@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { CLIENT_SELECT, rowToClient } from "@/lib/api/mappers/client";
+import { getFacilityContext } from "@/lib/api/facility-context";
 
 // ============================================================================
 // Which client record the signed-in person IS.
@@ -92,14 +93,15 @@ export async function GET() {
       );
     }
 
-    const facility = await supabase
-      .from("facilities")
-      .select("name")
-      .eq("legacy_id", "11")
-      .maybeSingle();
+    // From the caller's own context, not `legacy_id = "11"`. A customer has no
+    // membership, so this still resolves to the demo facility for them — but it
+    // resolves to the RIGHT one for staff reading their own record at a second
+    // facility, where the old direct lookup was refused by facilities_read and
+    // fell through to the hardcoded name below.
+    const context = await getFacilityContext();
 
     return NextResponse.json(
-      rowToClient(row, facility.data?.name ?? "Example Pet Care Facility"),
+      rowToClient(row, context?.name ?? "Example Pet Care Facility"),
     );
   } catch (error) {
     return NextResponse.json(

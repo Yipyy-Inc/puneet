@@ -55,6 +55,29 @@ export type FacilityContext = {
   facilityId: string;
   locationId: string | null;
   timeZone: string;
+  /**
+   * The facility's display name.
+   *
+   * Here because three routes were each looking it up themselves with
+   * `.eq("legacy_id", "11")`, and `facilities_read` refuses that row to anyone
+   * who is not a member of it. `maybeSingle()` returns null rather than
+   * raising, so the lookup fell through to a hardcoded
+   * "Example Pet Care Facility" and every client in a second facility's list
+   * was labelled with a name belonging to nobody. Silently.
+   */
+  name: string;
+  /**
+   * The facility's legacy NUMERIC ref.
+   *
+   * The mock-era types (`RoomCategory.facilityId`, `FacilityRoom.facilityId`,
+   * `Client.facility`) identify a facility by number or name, and the rows do
+   * not carry either — they key on the uuid. So the mappers need this to build
+   * a response the existing screens can read.
+   *
+   * It is a LABEL, never a scope: nothing filters on it. It goes when those
+   * types take the uuid.
+   */
+  legacyRef: number | null;
 };
 
 export async function getFacilityContext(
@@ -80,12 +103,16 @@ export async function getFacilityContext(
       ? preferFacilityId
       : (viewer?.memberships[0]?.facilityId ?? null);
 
-  const query = supabase.from("facilities").select("id, timezone");
+  const query = supabase
+    .from("facilities")
+    .select("id, timezone, name, legacy_id");
   const { data: facility } = chosen
     ? await query.eq("id", chosen).maybeSingle()
     : await query.eq("legacy_id", DEMO_FACILITY_LEGACY_ID).maybeSingle();
 
   if (!facility) return null;
+
+  const legacyRef = Number(facility.legacy_id);
 
   const { data: location } = await supabase
     .from("locations")
@@ -98,5 +125,7 @@ export async function getFacilityContext(
     facilityId: facility.id,
     locationId: location?.id ?? null,
     timeZone: facility.timezone ?? DEFAULT_TIMEZONE,
+    name: facility.name,
+    legacyRef: Number.isFinite(legacyRef) ? legacyRef : null,
   };
 }

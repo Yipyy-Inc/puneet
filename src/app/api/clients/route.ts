@@ -30,16 +30,18 @@ import type { Client } from "@/types/client";
 
 export const dynamic = "force-dynamic";
 
-/** The mock Client identifies its facility by NAME, so resolve it once. */
-async function facilityName(
-  supabase: Awaited<ReturnType<typeof createServerClient>>,
-): Promise<string> {
-  const { data } = await supabase
-    .from("facilities")
-    .select("name")
-    .eq("legacy_id", "11")
-    .maybeSingle();
-  return data?.name ?? "Example Pet Care Facility";
+/**
+ * The mock Client identifies its facility by NAME, so resolve it once.
+ *
+ * Via getFacilityContext, which takes the facility from the caller's
+ * membership. This used to ask for `legacy_id = "11"` directly — and
+ * `facilities_read` refuses that row to anyone who is not a member of the demo
+ * facility, so for a second facility's staff `maybeSingle()` returned null and
+ * every client in their list came back labelled "Example Pet Care Facility".
+ */
+async function facilityName(): Promise<string> {
+  const context = await getFacilityContext();
+  return context?.name ?? "Example Pet Care Facility";
 }
 
 export async function GET() {
@@ -52,7 +54,7 @@ export async function GET() {
 
   const [{ data, error }, name] = await Promise.all([
     supabase.from("clients").select(CLIENT_SELECT).order("ref"),
-    facilityName(supabase),
+    facilityName(),
   ]);
 
   if (error) {
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  return NextResponse.json(rowToClient(created, await facilityName(supabase)), {
+  return NextResponse.json(rowToClient(created, await facilityName()), {
     status: 201,
   });
 }

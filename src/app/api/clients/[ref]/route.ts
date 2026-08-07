@@ -6,7 +6,7 @@ import {
   clientToRow,
   rowToClient,
 } from "@/lib/api/mappers/client";
-import { DEMO_FACILITY_LEGACY_ID } from "@/lib/api/facility-context";
+import { getFacilityContext } from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import type { Client } from "@/types/client";
 
@@ -97,17 +97,13 @@ export async function PATCH(
     });
   }
 
-  const { data: facility } = await supabase
-    .from("facilities")
-    .select("name")
-    .eq("legacy_id", DEMO_FACILITY_LEGACY_ID)
-    .maybeSingle();
+  const context = await getFacilityContext();
 
   // Echoed back from the STORED row, not the request. The trigger may have
   // reverted a balance the caller tried to clear, and a response that repeated
   // the request would show them a zero the database refused.
   return NextResponse.json(
-    rowToClient(updated, facility?.name ?? "Example Pet Care Facility"),
+    rowToClient(updated, context?.name ?? "Example Pet Care Facility"),
   );
 }
 
