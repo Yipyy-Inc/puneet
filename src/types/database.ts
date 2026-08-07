@@ -2930,6 +2930,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      facility_subscriptions: {
+        Row: {
+          amount_cents: number;
+          billing_cycle: string;
+          cancelled_at: string | null;
+          created_at: string;
+          currency: string;
+          facility_id: string;
+          period_end: string | null;
+          period_start: string;
+          seats: number | null;
+          status: Database["public"]["Enums"]["subscription_status"];
+          tier_id: string;
+          tier_name: string;
+          trial_ends_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents?: number;
+          billing_cycle?: string;
+          cancelled_at?: string | null;
+          created_at?: string;
+          currency?: string;
+          facility_id: string;
+          period_end?: string | null;
+          period_start?: string;
+          seats?: number | null;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          tier_id?: string;
+          tier_name?: string;
+          trial_ends_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          billing_cycle?: string;
+          cancelled_at?: string | null;
+          created_at?: string;
+          currency?: string;
+          facility_id?: string;
+          period_end?: string | null;
+          period_start?: string;
+          seats?: number | null;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          tier_id?: string;
+          tier_name?: string;
+          trial_ends_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       platform_memberships: {
         Row: {
           created_at: string;
@@ -4087,6 +4138,13 @@ export type Database = {
           tagline: string | null;
         }[];
       };
+      set_subscription_status: {
+        Args: {
+          p_facility_id: string;
+          p_status: Database["public"]["Enums"]["subscription_status"];
+        };
+        Returns: Json;
+      };
       grant_platform_role: {
         Args: {
           p_profile_id: string;
@@ -4116,6 +4174,7 @@ export type Database = {
           p_slug: string;
           p_timezone: string;
           p_website?: string | null;
+          p_business_types?: string[] | null;
         };
         Returns: Json;
       };
@@ -4210,6 +4269,12 @@ export type Database = {
     Enums: {
       access_scope: "anytime" | "operating_hours" | "assigned_shifts" | "none";
       platform_role: "superadmin" | "support" | "billing" | "readonly";
+      subscription_status:
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "suspended"
+        | "cancelled";
       booking_status:
         | "pending"
         | "estimate_sent"
