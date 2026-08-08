@@ -42,7 +42,8 @@ import { getIncidentCareCharges } from "@/lib/incidents/incident-billing";
 import { getIncidentsForBooking, lockInStayCare } from "@/data/incidents";
 import { useQuery } from "@tanstack/react-query";
 import { estimates } from "@/data/estimates";
-import { clients } from "@/data/clients";
+import { clientQueries } from "@/lib/api/client";
+import { Skeleton } from "@/components/ui/skeleton";
 import { facilities } from "@/data/facilities";
 import { boardingGuests, type BoardingGuest } from "@/data/boarding";
 import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-card-print";
@@ -181,8 +182,19 @@ export default function ClientBookingDetailPage({
   // The client's bookings, live. `byClient` rather than `detail` because the
   // invoice panel below needs the client's OTHER unpaid bookings too, and two
   // queries for one client's bookings would be two answers to one question.
-  const { data: clientBookings = [] } = useQuery(
+  const { data: clientBookings = [], isPending: bookingsPending } = useQuery(
     bookingQueries.byClient(clientId),
+  );
+  // The clients, from the same place the booking came from. This read used to
+  // be the `@/data/clients` fixture, so a client created in Postgres — which is
+  // every client created since the migration — had a booking page that said the
+  // booking did not exist.
+  //
+  // The whole list rather than `detail`, because the edit wizard below takes a
+  // list and lets staff move the booking to a different customer. One request
+  // answers both; `detail` would fetch the same endpoint under another key.
+  const { data: allClients = [], isPending: clientPending } = useQuery(
+    clientQueries.all(),
   );
   const takePayment = useTakeBookingPayment();
   const cancelBooking = useCancelBooking();
@@ -218,8 +230,8 @@ export default function ClientBookingDetailPage({
     null,
   );
   const client = useMemo(
-    () => clients.find((c) => c.id === clientId),
-    [clientId],
+    () => allClients.find((c) => c.id === clientId),
+    [allClients, clientId],
   );
   const pets = useMemo(() => {
     if (!client || !booking) return [];
@@ -480,6 +492,18 @@ export default function ClientBookingDetailPage({
   useEffect(() => {
     setTasks(getTasksForBooking(bookingId));
   }, [bookingId]);
+
+  // "Not found" is a conclusion, and it needs both answers back before it can
+  // be drawn. Rendering it while either request is open told staff a booking
+  // they were looking at did not exist.
+  if (bookingsPending || clientPending) {
+    return (
+      <div className="p-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="mt-4 h-40 w-full" />
+      </div>
+    );
+  }
 
   if (!booking || !client) {
     return (
@@ -1548,7 +1572,7 @@ export default function ClientBookingDetailPage({
         <BookingModal
           open={editOpen}
           onOpenChange={setEditOpen}
-          clients={clients}
+          clients={allClients}
           facilityId={booking.facilityId}
           facilityName={facility?.name ?? ""}
           editMode
