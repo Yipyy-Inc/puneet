@@ -51,6 +51,24 @@ export interface CloverConfig {
   ecommerceOrigin: string;
   /** The SDK the browser loads to tokenise a card. */
   checkoutSdkUrl: string;
+  /**
+   * The Remote Application ID — "{developerId}.{appId}", and NOT the App ID.
+   *
+   * Card-present is gated on it. Without one configured, every /connect/v1/*
+   * call answers:
+   *
+   *   401 "Authentication successful, but no Remote Application ID has been
+   *        configured for Application <appId>"
+   *
+   * Measured once it existed: the gate is server-side against the app, so this
+   * is never sent as a header — the same request with and without it returns
+   * identically. It is held here because Clover's payment REQUESTS carry it,
+   * and because a value that lives only in their dashboard is a value nobody
+   * can find when this breaks.
+   *
+   * Null when unset: terminal payments then refuse rather than half-attempt.
+   */
+  remoteApplicationId: string | null;
 }
 
 const HOSTS: Record<
@@ -92,6 +110,8 @@ export function cloverConfig(): CloverConfig | null {
     apiOrigin: HOSTS[environment].api,
     ecommerceOrigin: HOSTS[environment].ecommerce,
     checkoutSdkUrl: HOSTS[environment].sdk,
+    remoteApplicationId:
+      process.env.CLOVER_REMOTE_APPLICATION_ID?.trim() || null,
   };
 }
 
