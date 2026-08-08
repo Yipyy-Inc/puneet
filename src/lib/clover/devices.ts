@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { cloverConfig } from "./config";
 import { chargeableConnection, validAccessToken } from "./connection";
 import { cloverGet } from "./request";
@@ -26,6 +27,19 @@ import { cloverGet } from "./request";
 // needs a pay-display app that connects over the local network, which a hosted
 // application is not on. That is a purchasing decision, so it is surfaced
 // against the device rather than discovered when a payment fails.
+//
+// ── CLOVER OWNS THE LIST; facility_terminals ONLY NAMES IT ────────────────
+//
+// A facility can have several, and Clover gives nothing to tell them apart —
+// the real Flex 4 arrives as name: null, productName: "Flex 4", serial
+// "C046UG51931348". Three of those are indistinguishable, and picking wrong
+// sends a customer's card request to a device in another room.
+//
+// So labels live in our own table, joined on the serial. The list itself stays
+// Clover's: a device bought, activated or returned changes there and nowhere
+// else. A serial with no row is still a usable terminal that simply has not
+// been named — which is what stops a facility's second Flex being unusable
+// until somebody remembers to add a row.
 // ============================================================================
 
 /** Models Cloud Pay Display supports — the only ones a hosted app can drive. */
@@ -40,6 +54,12 @@ export interface Terminal {
   /** Clover's own model string, shown verbatim — it is what support will ask for. */
   model: string | null;
   support: TerminalSupport;
+  /** What the facility calls it. Null until somebody names it. */
+  label: string | null;
+  /** The one a counter reaches for without choosing. */
+  isDefault: boolean;
+  /** Retired by the facility — kept out of pickers, keeps its payments. */
+  isActive: boolean;
 }
 
 export type TerminalReadiness =
@@ -121,16 +141,46 @@ export async function facilityTerminals(
   const elements = read.data.elements ?? [];
   if (elements.length === 0) return { kind: "no_terminals" };
 
+  // Labels, keyed by serial. Read with the ADMIN client because this is called
+  // from server components and from the money path, and a customer paying their
+  // own booking is not a facility member — the same reason chargeableConnection
+  // does not go through RLS. Nothing sensitive is being read: it is a name.
+  const labels = new Map<
+    string,
+    { label: string; isDefault: boolean; isActive: boolean }
+  >();
+  if (hasServiceRoleKey()) {
+    const { data: named } = await createAdminClient()
+      .from("facility_terminals")
+      .select("serial, label, is_default, is_active")
+      .eq("facility_id", facilityId);
+    for (const row of named ?? []) {
+      labels.set(row.serial as string, {
+        label: row.label as string,
+        isDefault: row.is_default === true,
+        isActive: row.is_active !== false,
+      });
+    }
+  }
+
   return {
     kind: "terminals",
-    terminals: elements.map((device) => ({
-      id: device.id ?? "",
-      // productName first: "Flex 4" is what a person calls it, "Clover_C406"
-      // is what support will ask for, and both are shown.
-      name: device.productName ?? device.name ?? null,
-      serial: device.serial ?? null,
-      model: device.model ?? device.deviceTypeName ?? null,
-      support: classify(device),
-    })),
+    terminals: elements.map((device) => {
+      const named = device.serial ? labels.get(device.serial) : undefined;
+      return {
+        id: device.id ?? "",
+        // productName first: "Flex 4" is what a person calls it, "Clover_C406"
+        // is what support will ask for, and both are shown.
+        name: device.productName ?? device.name ?? null,
+        serial: device.serial ?? null,
+        model: device.model ?? device.deviceTypeName ?? null,
+        support: classify(device),
+        label: named?.label ?? null,
+        isDefault: named?.isDefault ?? false,
+        // Unnamed devices are ACTIVE. A facility that has not opened the
+        // settings screen still has working terminals.
+        isActive: named?.isActive ?? true,
+      };
+    }),
   };
 }

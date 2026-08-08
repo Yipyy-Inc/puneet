@@ -73,14 +73,42 @@ export function FacilityTerminals({
                     <CircleAlert className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                   )}
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {terminal.name ?? terminal.model ?? "Clover device"}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* The facility's own name wins. A counter with three
+                          identical "Flex 4"s needs "Front desk", and the model
+                          is what support asks for — so both are shown. */}
+                      <p className="text-sm font-medium">
+                        {terminal.label ??
+                          terminal.name ??
+                          terminal.model ??
+                          "Clover device"}
+                      </p>
+                      {terminal.isDefault && (
+                        <span className="rounded-full border border-emerald-500/30 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                          default
+                        </span>
+                      )}
+                      {!terminal.isActive && (
+                        <span className="text-muted-foreground rounded-full border px-2 py-0.5 text-[10px]">
+                          retired
+                        </span>
+                      )}
+                    </div>
                     <p className="text-muted-foreground text-xs">
-                      {[terminal.model, terminal.serial]
+                      {[
+                        terminal.label ? terminal.name : null,
+                        terminal.model,
+                        terminal.serial,
+                      ]
                         .filter(Boolean)
                         .join(" · ") || terminal.id}
                     </p>
+                    {!terminal.label && (
+                      <p className="text-muted-foreground mt-1 text-xs/relaxed">
+                        Unnamed. With more than one terminal, give each a name
+                        so staff can tell them apart.
+                      </p>
+                    )}
                     {terminal.support === "unsupported" && (
                       <p className="mt-1 text-xs/relaxed text-amber-700 dark:text-amber-500">
                         This model connects over a local network, which Yipyy
