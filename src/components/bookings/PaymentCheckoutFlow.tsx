@@ -29,6 +29,8 @@ import {
 } from "@/lib/invoice-lifecycle";
 import { facilities } from "@/data/facilities";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
+import { useResolvedTerminal } from "@/lib/api/terminals";
+import { TerminalPicker } from "./TerminalPicker";
 
 // Default facility for receipt header
 const defaultFacility = facilities.find((f) => f.id === 11);
@@ -50,6 +52,11 @@ interface PaymentCheckoutFlowProps {
   /** Auto-applied loyalty discount voucher — shown as a line and netted off the
    *  amount due. The caller marks it used in its onConfirm handler. */
   loyaltyDiscount?: { label: string; amount: number };
+  /**
+   * May return a promise. When it does, the dialog waits — a terminal payment
+   * is held open while the customer finds their card, and a receipt printed
+   * before that resolves is a claim about money that has not moved.
+   */
   onConfirm: (payment: {
     method: PaymentMethod;
     amount: number;
@@ -57,7 +64,9 @@ interface PaymentCheckoutFlowProps {
     changeAsCredit: boolean;
     changeAmount: number;
     includedInvoices?: string[];
-  }) => void;
+    /** Which terminal to charge on, when the tender is `terminal`. */
+    deviceSerial?: string;
+  }) => void | Promise<void>;
 }
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -128,24 +137,56 @@ export function PaymentCheckoutFlow({
 
   const [confirming, setConfirming] = useState(false);
   const [step, setStep] = useState<"pay" | "receipt">("pay");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
-  const handleConfirm = () => {
+  // The terminal this till reaches for. Resolved here rather than inside the
+  // picker so the confirm handler can send it.
+  const {
+    terminals,
+    chosen: terminal,
+    choose: chooseTerminal,
+    isPending: terminalsPending,
+  } = useResolvedTerminal();
+  const isTerminal = method === "terminal";
+
+  const handleConfirm = async () => {
     if (!confirming) {
       setConfirming(true);
       return;
     }
-    onConfirm({
-      method,
-      amount: remaining,
-      tip: tipAmount,
-      changeAsCredit: isCash && changeAsCredit,
-      changeAmount: isCash ? change : 0,
-      includedInvoices:
-        includedInvoices.size > 0 ? [...includedInvoices] : undefined,
-    });
+
+    setBusy(true);
+    setProblem(null);
+    try {
+      // AWAITED. This used to fire onConfirm, immediately declare success and
+      // move to the receipt — all synchronously, before anything reached a
+      // processor. On a terminal that is a printed claim about a card the
+      // customer has not tapped yet.
+      await onConfirm({
+        method,
+        amount: remaining,
+        tip: tipAmount,
+        changeAsCredit: isCash && changeAsCredit,
+        changeAmount: isCash ? change : 0,
+        includedInvoices:
+          includedInvoices.size > 0 ? [...includedInvoices] : undefined,
+        ...(isTerminal && terminal ? { deviceSerial: terminal.serial } : {}),
+      });
+    } catch (error) {
+      setProblem(
+        error instanceof Error
+          ? error.message
+          : "That payment did not go through.",
+      );
+      return;
+    } finally {
+      setBusy(false);
+    }
+
     setConfirming(false);
     setStep("receipt");
-    toast.success(`Payment of $${remaining.toFixed(2)} processed`);
+    toast.success(`Payment of $${remaining.toFixed(2)} taken`);
   };
 
   return (
@@ -264,6 +305,17 @@ export function PaymentCheckoutFlow({
               })}
             </div>
           </div>
+
+          {/* Which terminal — only when that is the tender. */}
+          {isTerminal && (
+            <TerminalPicker
+              terminals={terminals}
+              chosen={terminal}
+              onChoose={chooseTerminal}
+              isPending={terminalsPending}
+              problem={problem}
+            />
+          )}
 
           {/* Split payment toggle + entries */}
           {!splitMode ? (
@@ -665,10 +717,13 @@ ${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</spa
                 {confirming ? "Go Back" : "Back to Invoice"}
               </Button>
               <Button
-                onClick={handleConfirm}
+                onClick={() => void handleConfirm()}
                 disabled={
+                  busy ||
                   (isCash && !splitMode && cashNum < remaining) ||
-                  (splitMode && Math.abs(splitLeftToPay) > 0.01)
+                  (splitMode && Math.abs(splitLeftToPay) > 0.01) ||
+                  // A terminal payment with no terminal is not a payment.
+                  (isTerminal && !terminal)
                 }
                 className={cn(
                   "gap-1.5",
@@ -676,9 +731,13 @@ ${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</spa
                 )}
               >
                 <Check className="size-4" />
-                {confirming
-                  ? `Confirm & Charge $${remaining.toFixed(2)}`
-                  : `Checkout & Charge $${remaining.toFixed(2)}`}
+                {busy
+                  ? isTerminal
+                    ? "Waiting for the card…"
+                    : "Taking payment…"
+                  : confirming
+                    ? `Confirm & Charge $${remaining.toFixed(2)}`
+                    : `Checkout & Charge $${remaining.toFixed(2)}`}
               </Button>
             </>
           )}

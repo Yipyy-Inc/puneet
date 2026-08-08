@@ -115,9 +115,15 @@ export async function deviceState(
       ),
       {
         headers: payHeaders(active.accessToken, active.merchantId, serial),
-        // Clover's own device timeout is 15s; allow a little more than that so
-        // their answer arrives rather than ours.
-        signal: AbortSignal.timeout(25_000),
+        // MEASURED, not guessed. A healthy device answers in about 8 seconds —
+        // this is a round trip to physical hardware, not an API call. A sleeping
+        // one costs Clover's own 15-second device timeout before the 504.
+        //
+        // The first value here was 25s, which reported a perfectly awake
+        // terminal as `unreachable` the first time the network was slow. Forty
+        // leaves room for that variance while still failing before anybody
+        // decides the app has hung.
+        signal: AbortSignal.timeout(40_000),
       },
     );
     const body = (await response.json().catch(() => null)) as {

@@ -97,6 +97,7 @@ import {
   type Tender,
 } from "@/lib/api/booking-money";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
+import { useChargeOnTerminal } from "@/lib/api/terminals";
 import { useBookingTips, useSetTipSplit } from "@/lib/api/booking-tips";
 import { staffQueries } from "@/lib/api/staff";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
@@ -189,6 +190,7 @@ export default function ClientBookingDetailPage({
   const refundToCard = useRefundBookingToCard();
   const chargeBooking = useChargeBooking();
   const addLineItems = useAddLineItems();
+  const chargeOnTerminal = useChargeOnTerminal();
   const initialBooking = useMemo(
     () => clientBookings.find((b) => b.id === bookingId),
     [clientBookings, bookingId],
@@ -1704,9 +1706,36 @@ export default function ClientBookingDetailPage({
               amount: b.invoice?.remainingDue ?? b.totalCost,
             }))}
           loyaltyDiscount={loyaltyDiscount ?? undefined}
-          onConfirm={(payment) => {
+          onConfirm={async (payment) => {
             if (loyaltyDiscount) consumeLoyaltyDiscount();
             const lateFee = pendingLateFee;
+
+            // ── THE TERMINAL TENDER ACTUALLY CHARGES A CARD NOW ───────────
+            //
+            // It used to record a `terminal` row and stop — a statement that
+            // somebody had taken a card on a device, made without touching one.
+            // Awaited, and thrown from on failure, so the dialog stays open and
+            // prints no receipt: on a terminal the customer has not tapped yet
+            // when this begins.
+            if (payment.method === "terminal" && payment.deviceSerial) {
+              const result = await chargeOnTerminal.mutateAsync({
+                bookingRef: booking.id,
+                deviceSerial: payment.deviceSerial,
+                ...(payment.tip > 0
+                  ? { tipCents: Math.round(payment.tip * 100) }
+                  : {}),
+              });
+              toast.success(
+                `$${(result.amountCents / 100).toFixed(2)} taken on the terminal`,
+                {
+                  description: result.cardLast4
+                    ? `${result.cardBrand ?? "Card"} ···${result.cardLast4}`
+                    : undefined,
+                },
+              );
+              setPendingLateFee(null);
+              return;
+            }
 
             // ── Checkout ────────────────────────────────────────────────────
             //
