@@ -7,6 +7,9 @@ import {
   recordConnectionError,
 } from "@/lib/clover/connection";
 import { connectionStatus } from "@/lib/clover/status";
+import { facilityTerminals } from "@/lib/clover/devices";
+
+import { FacilityTerminals } from "./_components/facility-terminals";
 import { exchangeCode, readOAuthState } from "@/lib/clover/oauth";
 import { fetchMerchantProfile } from "@/lib/clover/merchant";
 
@@ -190,17 +193,27 @@ export default async function CloverPage({
   }
 
   const status = await connectionStatus(membership.facilityId);
+
+  // Only asked once we know there IS a connection — reading devices needs the
+  // merchant's token, and a facility that has not connected has none.
+  const terminals = status.connected
+    ? await facilityTerminals(membership.facilityId)
+    : ({ kind: "not_connected" } as const);
+
   return (
-    <CloverResult
-      outcome={
-        status.connected
-          ? {
-              kind: "connected",
-              merchantId: status.merchantId ?? "—",
-              environment: status.environment ?? "sandbox",
-            }
-          : { kind: "not-connected", lastError: status.lastError }
-      }
-    />
+    <>
+      <CloverResult
+        outcome={
+          status.connected
+            ? {
+                kind: "connected",
+                merchantId: status.merchantId ?? "—",
+                environment: status.environment ?? "sandbox",
+              }
+            : { kind: "not-connected", lastError: status.lastError }
+        }
+      />
+      <FacilityTerminals readiness={terminals} />
+    </>
   );
 }
