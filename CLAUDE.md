@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pet services platform (Yipyy) built with Next.js 16, React 19, and TypeScript. Currently entirely mock-driven with no backend API — all data lives in `src/data/`. See `@SPECIFICATION.md` for full product context.
+Pet services platform (Yipyy) built with Next.js 16, React 19, and TypeScript.
+
+**This is no longer a mock-only codebase.** There is a real backend — Supabase Postgres with RLS, Clerk for identity, and live Clover card payments — reached through ~98 route handlers in `src/app/api/`. Hand-authored fixtures in `src/data/` still back the screens that have not been converted, so both exist side by side.
+
+**Before editing any screen, establish which one it reads.** A page that looks finished may be reading a fixture; a page that looks unfinished may be writing to Postgres. Assuming either way is the most expensive mistake available here.
 
 ## Commands
 

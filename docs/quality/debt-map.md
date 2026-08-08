@@ -1644,6 +1644,82 @@ It guards four pages: Yipyy Agreements, Subscription, Payment Method and Export 
 
 The standing note that the ~97 client-side `facilityId: 11` occurrences are mock-only and should not be converted still holds for the rest of them. This one was different because a real signed-in owner could reach it and be handed a wrong answer. The distinction to apply: is the screen reachable by a real user, and does it make a claim about _their_ data?
 
+## 2026-08-08 — Clover card payments
+
+### 🔴 Nine defects, and every one was found by running the code
+
+Worth recording as a pattern rather than nine items, because the pattern is the
+lesson. Across one day of Clover work: the card fields never mounted (`mount()`
+takes a selector, not a node); a declined card returned 500 (Clover sends no
+`error.type` on a decline, only HTTP 402); three separate **429s** from Clover
+that were swallowed as nulls; a refund that omitted its amount asked for the
+whole original charge; a network throw with no `catch` left the outcome unknown;
+and a token refresh relabelled a connection's environment.
+
+**Five of the nine were in code already committed and described as working.**
+
+**Why it matters:** reading this integration does not tell you whether it works.
+Clover's documented behaviour and its actual behaviour differ in ways that are
+individually small and collectively expensive, and the failures are quiet —
+a null, a wrong status code, a missing row.
+
+**Do instead:** exercise the path against the live sandbox before claiming it
+works. Every money path here has been. If you change one and cannot test it, say
+so in the commit rather than letting green typecheck stand in for evidence.
+
+### 🔴 Card-present (terminal) payments are NOT built
+
+`src/lib/clover/devices.ts` discovers a facility's terminals and reports
+readiness. Nothing takes a payment on one. The `/connect/v1/*` API is reachable
+and authenticated — the RAID is configured — but no code drives a device.
+
+**Why it's risky:** the readiness screen looks like a finished feature. It
+deliberately says the last step is unconfirmed, and that wording is load-bearing;
+do not "tidy" it into a green tick.
+
+**Also:** Cloud Pay Display only supports Flex, Mini and Compact. A Station or
+Duo needs a LAN connection a hosted app cannot make. The classifier in
+`devices.ts` reports an unrecognised model as `unknown`, never `unsupported` —
+telling a facility their hardware will not work is a claim worth being sure of.
+
+### 🟡 A webhook delivery is evidence, not a fact
+
+Clover does not sign deliveries. `X-Clover-Auth` is a static shared secret
+repeated on every message: no per-message integrity, no replay protection.
+
+**Why it matters:** anyone who learns it can forge deliveries until it is
+rotated. The handler therefore never acts on what a message SAYS — it records
+the delivery, then re-reads the named object from Clover's API with the
+merchant's own token. **Do not add a shortcut that trusts the payload**, however
+obvious the amount in it looks.
+
+### 🟡 The webhook route answers 200 even when processing fails
+
+Deliberate: Clover retries anything else, and an event that can never be
+processed would be redelivered forever. The cost is that a `failed` event is
+**not retried by anybody** — it sits in `payment_webhook_events` for a human.
+`payment_webhook_events_unsettled` is the index that finds them. There is no job
+that drains it yet.
+
+### 🟡 The Clover App Secret is in localStorage
+
+`clover-config-store.ts` keeps it client-side, in plaintext, on every admin's
+machine. It predates the server-side integration, which reads its credentials
+from the environment and never from this store.
+
+**Do instead:** never read a credential from that store in new code. It should be
+deleted along with whatever UI still writes it.
+
+### 🟢 Both Clover estates run at once, on purpose
+
+`payment_connections.environment` decides which Clover a connection talks to —
+not a global flag. Sandbox merchants keep working after production ones exist,
+which is what keeps a place to test without real cards.
+
+**Do instead:** always pass the connection's environment to `cloverConfig()`.
+Calling it bare means "where a NEW connection would go" and is correct for
+exactly two things: the authorise redirect and the code exchange.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

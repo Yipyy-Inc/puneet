@@ -6,7 +6,13 @@ The entry point for every AI session in this repo. Read this first, then the spe
 
 **Yipyy** — a pet-services platform (booking, daycare, boarding, grooming, training, retail, loyalty, calling, reputation, gift cards, multi-location HQ) built on **Next.js 16.1**, **React 19.2**, **TypeScript 5.9** (strict), Tailwind CSS 4, shadcn/ui (New York), next-intl (en/fr).
 
-It is a **mock-driven prototype, not a legacy or production system.** There is no backend: all data lives as typed mock objects in [src/data/](src/data/) (~135 files), increasingly wrapped by a TanStack Query factory layer in [src/lib/api/](src/lib/api/). The codebase is new and large (266 routes). The operating model here is **discipline while building fast**, not "evolve a legacy system" — but the principle is the same: new code follows the target conventions; existing code is left alone unless the task is about it.
+It **was** a mock-driven prototype. It is now **half-converted, and that is the single most important fact about it.**
+
+There is a real backend: **Supabase Postgres** with row-level security as the authorisation boundary, **Clerk** for identity ([ADR 0003](docs/architecture/decisions/0003-clerk-owns-identity-supabase-owns-data.md)), and **live Clover card payments** — real money, a real merchant account. Alongside it, ~135 files of typed fixtures in [src/data/](src/data/) still back every screen nobody has converted yet.
+
+**So establish which half you are in before you edit anything.** A screen that looks finished may be reading a fixture and writing nowhere; a screen that looks rough may be moving real money. Grep for what it imports. The mistakes that have cost the most time in this repo are all the same mistake: assuming.
+
+The codebase is new and large (266 routes). The operating model is **discipline while building fast**: new code follows the target conventions; existing code is left alone unless the task is about it.
 
 ## The loop
 

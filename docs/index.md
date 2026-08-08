@@ -6,6 +6,8 @@ Documentation for the Yipyy platform. Start with [AGENTS.md](../AGENTS.md) (the 
 
 - [architecture/overview.md](architecture/overview.md) — the system as it actually is: rendering model, directory layout, external services, known deviations from the target architecture.
 - [architecture/decisions/0001-adopt-ai-operating-model.md](architecture/decisions/0001-adopt-ai-operating-model.md) — ADR: adopting the AI operating model additively, without migrating existing code.
+- [architecture/decisions/0002-playwright-e2e-smoke.md](architecture/decisions/0002-playwright-e2e-smoke.md) — ADR: Playwright as the e2e harness.
+- [architecture/decisions/0003-clerk-owns-identity-supabase-owns-data.md](architecture/decisions/0003-clerk-owns-identity-supabase-owns-data.md) — ADR: Clerk owns identity, Supabase owns data, RLS is the authorisation boundary.
 
 ## Conventions
 
