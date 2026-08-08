@@ -98,6 +98,25 @@ export function CloverResult({ outcome }: { outcome: CloverOutcome }) {
         <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
           <Link href="/facility/dashboard">Back to your dashboard</Link>
         </Button>
+
+        {/* ── A CONNECTED FACILITY COULD NOT CHANGE ITS MERCHANT ────────────
+            The connect link only existed in the not-connected branch, so the
+            first account a facility chose was the only one it could ever have.
+            That is not an edge case: picking the wrong merchant from Clover's
+            list, moving to a new merchant account, or replacing a revoked one
+            are all ordinary, and every one of them ended here with no way
+            forward and nothing explaining why. */}
+        <div className="space-y-2 border-t pt-4">
+          <Button asChild variant="outline" className="w-full">
+            <Link href="/api/payments/clover/connect">
+              Connect a different merchant account
+            </Link>
+          </Button>
+          <p className="text-muted-foreground text-xs/relaxed">
+            This replaces the account above, so new payments go to the new one.
+            Payments already taken stay where they were taken and are not moved.
+          </p>
+        </div>
       </Shell>
     );
   }
