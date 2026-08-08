@@ -300,6 +300,64 @@ export function useRefundBooking() {
   });
 }
 
+export interface CardRefundResult {
+  refundedCents: number;
+  shortfallCents: number;
+  results: {
+    processorPaymentId: string;
+    amountCents: number;
+    ok: boolean;
+    detail: string;
+  }[];
+}
+
+/**
+ * Give money back TO THE CARD, at the processor.
+ *
+ * Distinct from `useRefundBooking`, and the distinction is the whole point.
+ * That one writes a negative ledger row and stops — correct for cash, where
+ * somebody opened a drawer, and a lie on a card, where it recorded a refund
+ * that never reached anybody.
+ *
+ * This calls Clover. The ledger row is written server-side FROM WHAT CLOVER
+ * SAYS HAPPENED, not from the amount requested, because a full refund on a
+ * same-day charge becomes a void and reports itself completely differently from
+ * a partial one.
+ *
+ * Nothing is sent but the booking and an amount. Which payments to draw from,
+ * how much is still refundable, and whether the caller may refund at all are
+ * all decided on the server.
+ */
+export function useRefundBookingToCard() {
+  const invalidate = useSettleInvalidation();
+  return useMutation({
+    mutationFn: async (input: {
+      bookingRef: number;
+      /** Omit for everything still refundable. */
+      amountCents?: number;
+      reason?: string;
+    }): Promise<CardRefundResult> => {
+      const response = await fetch("/api/payments/clover/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const parsed = (await response.json().catch(() => null)) as
+        | (Partial<CardRefundResult> & { error?: string })
+        | null;
+      if (!response.ok) {
+        throw new Error(parsed?.error ?? "Could not refund that card.");
+      }
+      return {
+        refundedCents: parsed?.refundedCents ?? 0,
+        shortfallCents: parsed?.shortfallCents ?? 0,
+        results: parsed?.results ?? [],
+      };
+    },
+    onSuccess: invalidate,
+  });
+}
+
 /**
  * Take a NAMED amount against a booking — a deposit, a prepayment, a final
  * settlement of part of the bill.

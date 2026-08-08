@@ -4,6 +4,7 @@ import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { cloverConfig } from "./config";
 import { validAccessToken } from "./connection";
 import { fetchMerchantProfile } from "./merchant";
+import { cloverGet } from "./request";
 
 // ============================================================================
 // Acting on what a webhook named — after asking Clover what actually happened.
@@ -107,31 +108,23 @@ export async function reconcilePayment(
     };
   }
 
-  let payment: CloverV3Payment | null;
-  let status: number;
-  try {
-    const response = await fetch(
-      new URL(
-        `/v3/merchants/${active.merchantId}/payments/${cloverPaymentId}?expand=refunds`,
-        config.apiOrigin,
-      ),
-      {
-        headers: { Authorization: `Bearer ${active.accessToken}` },
-        signal: AbortSignal.timeout(20_000),
-      },
-    );
-    status = response.status;
-    payment = (await response
-      .json()
-      .catch(() => null)) as CloverV3Payment | null;
-  } catch {
-    return { kind: "unreadable", detail: "Could not reach Clover." };
-  }
+  // Through the retrying reader. A 429 here used to close the delivery as
+  // 'failed' and stop — and because the route answers 200 even on failure (so
+  // Clover does not redeliver forever), a dropped read stayed dropped.
+  const read = await cloverGet<CloverV3Payment>(
+    config.apiOrigin,
+    `/v3/merchants/${active.merchantId}/payments/${cloverPaymentId}?expand=refunds`,
+    active.accessToken,
+    active.merchantId,
+  );
+  const payment = read.data;
 
-  if (status >= 400 || !payment?.id) {
+  if (!payment?.id) {
     return {
       kind: "unreadable",
-      detail: `Clover answered ${status} for this payment.`,
+      detail: read.status
+        ? `Clover answered ${read.status} for this payment.`
+        : "Could not reach Clover.",
     };
   }
 
@@ -395,18 +388,15 @@ export async function verifyConnection(
   // one. validAccessToken has already recorded the error on the connection.
   if (!active) return "unreachable";
 
-  try {
-    const response = await fetch(
-      new URL(`/v3/merchants/${active.merchantId}`, config.apiOrigin),
-      {
-        headers: { Authorization: `Bearer ${active.accessToken}` },
-        signal: AbortSignal.timeout(20_000),
-      },
-    );
-    if (response.ok) return "live";
-    if (response.status === 401 || response.status === 403) return "revoked";
-    return "unreachable";
-  } catch {
-    return "unreachable";
-  }
+  const read = await cloverGet(
+    config.apiOrigin,
+    `/v3/merchants/${active.merchantId}`,
+    active.accessToken,
+    active.merchantId,
+  );
+  // `refused` is 401/403 only — the grant being gone. A 429 has already been
+  // retried and, if it never cleared, reports as unreachable rather than
+  // revoking a merchant for being busy.
+  if (read.refused) return "revoked";
+  return read.data ? "live" : "unreachable";
 }

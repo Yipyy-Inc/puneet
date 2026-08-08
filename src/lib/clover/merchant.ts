@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cloverConfig } from "./config";
+import { cloverGet } from "./request";
 
 // ============================================================================
 // The three facts about a merchant that OAuth does not hand back.
@@ -38,57 +39,15 @@ export interface MerchantProfile {
   publicApiKey: string | null;
 }
 
-const TIMEOUT_MS = 10_000;
-
-/** 429 is not a failure, it is a request to wait. These are the waits. */
-const BACKOFF_MS = [400, 1_200, 3_000];
-
+/** The retry lives in ./request.ts — see there for why it is shared. */
 async function get<T>(
   origin: string,
   path: string,
   accessToken: string,
   merchantId: string,
 ): Promise<T | null> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      const response = await fetch(new URL(path, origin), {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          // Required by the ecommerce host, harmless on the platform API.
-          "X-Clover-Merchant-Id": merchantId,
-          Accept: "application/json",
-        },
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
-
-      // Retried, because a rate limit says "later", not "no". Everything else
-      // — a 404, a 401 — means asking again will give the same answer.
-      const retryable = response.status === 429 || response.status >= 500;
-      if (retryable && attempt < BACKOFF_MS.length) {
-        const after = Number(response.headers.get("retry-after"));
-        await new Promise((resolve) =>
-          setTimeout(
-            resolve,
-            Number.isFinite(after) && after > 0
-              ? Math.min(after * 1000, 5_000)
-              : BACKOFF_MS[attempt]!,
-          ),
-        );
-        continue;
-      }
-
-      if (!response.ok) return null;
-      return (await response.json()) as T;
-    } catch {
-      if (attempt < BACKOFF_MS.length) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, BACKOFF_MS[attempt]!),
-        );
-        continue;
-      }
-      return null;
-    }
-  }
+  const read = await cloverGet<T>(origin, path, accessToken, merchantId);
+  return read.data;
 }
 
 /**

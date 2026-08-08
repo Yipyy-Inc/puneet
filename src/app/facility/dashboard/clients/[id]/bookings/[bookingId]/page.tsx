@@ -92,6 +92,7 @@ import {
   useCancelBooking,
   useChargeBooking,
   useRefundBooking,
+  useRefundBookingToCard,
   useTakeBookingPayment,
   type Tender,
 } from "@/lib/api/booking-money";
@@ -185,6 +186,7 @@ export default function ClientBookingDetailPage({
   const takePayment = useTakeBookingPayment();
   const cancelBooking = useCancelBooking();
   const refundBooking = useRefundBooking();
+  const refundToCard = useRefundBookingToCard();
   const chargeBooking = useChargeBooking();
   const addLineItems = useAddLineItems();
   const initialBooking = useMemo(
@@ -1907,22 +1909,40 @@ export default function ClientBookingDetailPage({
             name: i.name,
             price: i.price,
           }))}
-          onConfirm={(refund) => {
-            setRefundOpen(false);
-            refundBooking.mutate(
-              {
-                bookingId: booking.id,
-                amount: refund.amount,
-                method: refundTender(refund.method),
+          // AWAITED. The modal keeps itself open and prints no receipt until
+          // this resolves — on a card the money has to actually move first.
+          onConfirm={async (refund) => {
+            // "Original method" against a card is the only branch that reaches
+            // a processor. Store credit and cash are bookkeeping for something
+            // that happened in the room, and stay on the ledger-only path.
+            if (refund.method === "original") {
+              const result = await refundToCard.mutateAsync({
+                bookingRef: booking.id,
+                amountCents: Math.round(refund.amount * 100),
                 reason: refund.reason,
-              },
-              {
-                onSuccess: () =>
-                  toast.success(
-                    `$${refund.amount.toFixed(2)} refunded via ${refund.method.replace("_", " ")}`,
-                  ),
-                onError: (error) => toast.error(error.message),
-              },
+              });
+              toast.success(
+                `$${(result.refundedCents / 100).toFixed(2)} refunded to the card`,
+                { description: result.results.map((r) => r.detail).join(" ") },
+              );
+              if (result.shortfallCents > 0) {
+                // Not swallowed into the success toast: a partial refund is
+                // something somebody has to finish by hand.
+                toast.warning(
+                  `$${(result.shortfallCents / 100).toFixed(2)} of that refund did not go through.`,
+                );
+              }
+              return;
+            }
+
+            await refundBooking.mutateAsync({
+              bookingId: booking.id,
+              amount: refund.amount,
+              method: refundTender(refund.method),
+              reason: refund.reason,
+            });
+            toast.success(
+              `$${refund.amount.toFixed(2)} refunded via ${refund.method.replace("_", " ")}`,
             );
           }}
         />

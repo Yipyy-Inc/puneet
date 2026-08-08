@@ -18,6 +18,7 @@ import {
   Wallet,
   Check,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { facilities } from "@/data/facilities";
@@ -31,12 +32,16 @@ interface RefundModalProps {
   invoiceTotal: number;
   amountPaid: number;
   items: { name: string; price: number }[];
+  /**
+   * May return a promise. If it does, the receipt is not printed and the dialog
+   * is not closed until it RESOLVES — see handleConfirm.
+   */
   onConfirm: (refund: {
     amount: number;
     method: string;
     reason: string;
     type: "full" | "partial" | "by_item";
-  }) => void;
+  }) => void | Promise<void>;
 }
 
 type RefundType = "full" | "partial" | "by_item";
@@ -55,6 +60,8 @@ export function RefundModal({
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [method, setMethod] = useState<RefundMethod>("original");
   const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
   const refundAmount =
     refundType === "full"
@@ -74,19 +81,43 @@ export function RefundModal({
     });
   };
 
-  const handleConfirm = () => {
+  // ── THE RECEIPT WAITS FOR THE REFUND ─────────────────────────────────────
+  //
+  // This used to call onConfirm, immediately open a window headed REFUND
+  // PROCESSED, and close itself — all synchronously, before anything had
+  // reached a processor. On a card that receipt was a printed claim about money
+  // that had not moved, and if the refund then failed the customer was holding
+  // the evidence.
+  //
+  // Now the promise is awaited. Failure keeps the dialog open, says why, and
+  // prints nothing.
+  const handleConfirm = async () => {
     if (step === "select") {
       setStep("confirm");
       return;
     }
-    onConfirm({
-      amount: refundAmount,
-      method,
-      reason,
-      type: refundType,
-    });
 
-    // Auto-generate refund receipt in new window
+    setBusy(true);
+    setProblem(null);
+    try {
+      await onConfirm({
+        amount: refundAmount,
+        method,
+        reason,
+        type: refundType,
+      });
+    } catch (error) {
+      setProblem(
+        error instanceof Error
+          ? error.message
+          : "The refund did not go through.",
+      );
+      return;
+    } finally {
+      setBusy(false);
+    }
+
+    // Receipt, now that there is something to give a receipt for.
     const w = window.open("", "_blank", "width=500,height=600");
     if (w) {
       const methodLabel =
@@ -137,6 +168,7 @@ ${
     setPartialAmount("");
     setSelectedItems(new Set());
     setReason("");
+    setProblem(null);
   };
 
   const handleBack = () => {
@@ -175,6 +207,7 @@ ${
         if (!v) {
           setStep("select");
           setRefundType("full");
+          setProblem(null);
         }
         onOpenChange(v);
       }}
@@ -433,25 +466,37 @@ ${
                 </div>
               </div>
             </div>
+
+            {problem && (
+              <p className="text-destructive text-sm" role="alert">
+                {problem}
+              </p>
+            )}
           </div>
         )}
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleBack}>
+          <Button variant="outline" onClick={handleBack} disabled={busy}>
             {step === "confirm" ? "Go Back" : "Cancel"}
           </Button>
           <Button
-            onClick={handleConfirm}
-            disabled={refundAmount <= 0 || refundAmount > amountPaid}
+            onClick={() => void handleConfirm()}
+            disabled={busy || refundAmount <= 0 || refundAmount > amountPaid}
             className={cn(
               "gap-1.5",
               step === "confirm" && "bg-red-600 text-white hover:bg-red-700",
             )}
           >
-            <RotateCcw className="size-4" />
-            {step === "confirm"
-              ? `Confirm Refund $${refundAmount.toFixed(2)}`
-              : `Continue — $${refundAmount.toFixed(2)}`}
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RotateCcw className="size-4" />
+            )}
+            {busy
+              ? "Refunding…"
+              : step === "confirm"
+                ? `Confirm Refund $${refundAmount.toFixed(2)}`
+                : `Continue — $${refundAmount.toFixed(2)}`}
           </Button>
         </DialogFooter>
       </DialogContent>
