@@ -40,32 +40,84 @@ export interface MerchantProfile {
 
 const TIMEOUT_MS = 10_000;
 
+/** 429 is not a failure, it is a request to wait. These are the waits. */
+const BACKOFF_MS = [400, 1_200, 3_000];
+
 async function get<T>(
   origin: string,
   path: string,
   accessToken: string,
   merchantId: string,
 ): Promise<T | null> {
-  try {
-    const response = await fetch(new URL(path, origin), {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        // Required by the ecommerce host, harmless on the platform API.
-        "X-Clover-Merchant-Id": merchantId,
-        Accept: "application/json",
-      },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!response.ok) return null;
-    return (await response.json()) as T;
-  } catch {
-    return null;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await fetch(new URL(path, origin), {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          // Required by the ecommerce host, harmless on the platform API.
+          "X-Clover-Merchant-Id": merchantId,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+
+      // Retried, because a rate limit says "later", not "no". Everything else
+      // — a 404, a 401 — means asking again will give the same answer.
+      const retryable = response.status === 429 || response.status >= 500;
+      if (retryable && attempt < BACKOFF_MS.length) {
+        const after = Number(response.headers.get("retry-after"));
+        await new Promise((resolve) =>
+          setTimeout(
+            resolve,
+            Number.isFinite(after) && after > 0
+              ? Math.min(after * 1000, 5_000)
+              : BACKOFF_MS[attempt]!,
+          ),
+        );
+        continue;
+      }
+
+      if (!response.ok) return null;
+      return (await response.json()) as T;
+    } catch {
+      if (attempt < BACKOFF_MS.length) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, BACKOFF_MS[attempt]!),
+        );
+        continue;
+      }
+      return null;
+    }
   }
 }
 
 /**
  * Everything worth knowing about a merchant that the token exchange omitted.
- * Three independent requests, run together; any of them may come back null.
+ *
+ * ── ONE AT A TIME, AND THAT IS THE FIX ────────────────────────────────────
+ *
+ * These three ran in a Promise.all, which looked obviously right — they are
+ * independent, so why wait. Measured against the sandbox, roughly one in three
+ * bursts came back with a 429 on one of them, a DIFFERENT one each time:
+ *
+ *     PARALLEL    properties 200   merchant 429   apikey 200
+ *     SEQUENTIAL  properties 200   merchant 200   apikey 200   (3/3 rounds)
+ *
+ * The 429 was swallowed as a null and stored as one. So a facility connecting
+ * Clover had about a one-in-three chance of ending up with a NULL currency —
+ * and a null currency makes chargeCard refuse EVERY card payment, with a
+ * message about not knowing the merchant's currency that points nowhere near
+ * a rate limit. Three requests saved a few hundred milliseconds and cost the
+ * facility its card payments.
+ *
+ * Sequential, with the retry above. This runs when a merchant connects and
+ * when their properties change — a second of latency there is free.
+ *
+ * ── EACH ONE STILL FAILS SEPARATELY ───────────────────────────────────────
+ *
+ * A merchant whose currency lookup fails after retries is still connected; the
+ * connection is simply missing a fact, and the charge path refuses rather than
+ * guessing USD.
  */
 export async function fetchMerchantProfile(
   accessToken: string,
@@ -74,30 +126,28 @@ export async function fetchMerchantProfile(
   const config = cloverConfig();
   if (!config) return { currency: null, country: null, publicApiKey: null };
 
-  const [properties, merchant, key] = await Promise.all([
-    get<{ defaultCurrency?: string }>(
-      config.apiOrigin,
-      `/v3/merchants/${merchantId}/properties`,
-      accessToken,
-      merchantId,
-    ),
-    // ?expand=address is load-bearing. Without it Clover returns `address` as
-    // a href stub rather than the object, so country silently reads undefined
-    // and the connection records nothing — which is how the first backfill
-    // stored a NULL country against a merchant that plainly has one.
-    get<{ address?: { country?: string } }>(
-      config.apiOrigin,
-      `/v3/merchants/${merchantId}?expand=address`,
-      accessToken,
-      merchantId,
-    ),
-    get<{ apiAccessKey?: string; active?: boolean }>(
-      config.ecommerceOrigin,
-      "/pakms/apikey",
-      accessToken,
-      merchantId,
-    ),
-  ]);
+  const properties = await get<{ defaultCurrency?: string }>(
+    config.apiOrigin,
+    `/v3/merchants/${merchantId}/properties`,
+    accessToken,
+    merchantId,
+  );
+  // ?expand=address is load-bearing. Without it Clover returns `address` as a
+  // href stub rather than the object, so country silently reads undefined and
+  // the connection records nothing — which is how the first backfill stored a
+  // NULL country against a merchant that plainly has one.
+  const merchant = await get<{ address?: { country?: string } }>(
+    config.apiOrigin,
+    `/v3/merchants/${merchantId}?expand=address`,
+    accessToken,
+    merchantId,
+  );
+  const key = await get<{ apiAccessKey?: string; active?: boolean }>(
+    config.ecommerceOrigin,
+    "/pakms/apikey",
+    accessToken,
+    merchantId,
+  );
 
   // Shape-checked rather than trusted: these values go into columns with
   // regex constraints, and a surprise from the API should become a null here

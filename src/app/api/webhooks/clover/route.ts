@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { cloverConfig, cloverEnvironment } from "@/lib/clover/config";
-import { reconcilePayment, verifyConnection } from "@/lib/clover/reconcile";
+import {
+  reconcilePayment,
+  refreshMerchantProfile,
+  verifyConnection,
+} from "@/lib/clover/reconcile";
 import {
   authenticDelivery,
   parseDeliveries,
@@ -245,6 +249,23 @@ async function act(
         status: "failed",
         detail: "Could not reach Clover to check whether access still holds.",
       };
+    }
+
+    // ── The merchant's own properties changed ────────────────────────────
+    case "M": {
+      const result = await refreshMerchantProfile(facilityId);
+      switch (result.kind) {
+        case "updated":
+        case "unchanged":
+          return { status: "processed", detail: result.detail };
+        case "unreadable":
+          // Failed rather than ignored: the merchant told us something moved
+          // and we could not find out what. Leaving a stale currency in place
+          // silently is precisely the outcome this subscription exists to
+          // prevent, so it stays on the list of work outstanding.
+          return { status: "failed", detail: result.detail };
+      }
+      break;
     }
 
     default:
