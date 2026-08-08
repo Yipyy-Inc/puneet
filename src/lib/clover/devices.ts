@@ -13,19 +13,12 @@ import { cloverGet } from "./request";
 // "set up your terminal" is not a setup flow at all — it is a LIST, and the
 // only question is which of their devices this facility takes payments on.
 //
-// ── WHAT CANNOT BE ANSWERED FROM HERE, AND IS NOT PRETENDED ───────────────
+// ── WHETHER IT WILL ANSWER IS A SEPARATE QUESTION ─────────────────────────
 //
-// Whether Cloud Pay Display is installed and RUNNING on a given device is a
-// different question, and it needs the REST Pay Display API — which is gated on
-// a Remote Application ID configured against the Clover app itself. Until that
-// exists, `/connect/v1/*` answers:
-//
-//   401 "Authentication successful, but no Remote Application ID has been
-//        configured for Application <appId>"
-//
-// So readiness here reports what it genuinely knows — connected, device
-// present, model supported — and says the last step is unverified rather than
-// showing a green tick nobody checked.
+// This lists what the merchant OWNS. Whether Cloud Pay Display is running on a
+// given device is `deviceState()` in ./terminal.ts, which costs a round trip to
+// the hardware and up to fifteen seconds when the app is closed — too slow to
+// put in a page load, and asked on demand instead.
 //
 // ── ONLY THREE MODELS CAN DO THIS ─────────────────────────────────────────
 //
@@ -65,15 +58,28 @@ interface CloverDevice {
 }
 
 /**
- * Classified from Clover's own naming, which is not a documented enum — so a
- * string nobody recognises is "unknown", not "unsupported". Telling a facility
- * their terminal will not work is a claim worth being sure of.
+ * Classified from EVERY name Clover gives a device, because no single one is
+ * reliable. A real Flex 4 comes back as:
+ *
+ *   model: "Clover_C406"   deviceTypeName: "FIGTREE"   productName: "Flex 4"
+ *
+ * Reading `model` alone — which this did — recognises none of that and reported
+ * a perfectly supported terminal as "unknown". `productName` is the humane one,
+ * but it is not guaranteed present, so all three are searched.
+ *
+ * A string nobody recognises stays "unknown", never "unsupported". Telling a
+ * facility their hardware will not work is a claim worth being sure of.
  */
-function classify(model: string | null): TerminalSupport {
-  if (!model) return "unknown";
-  const lower = model.toLowerCase();
-  if (CLOUD_CAPABLE.some((name) => lower.includes(name))) return "supported";
-  if (lower.includes("station") || lower.includes("duo")) return "unsupported";
+function classify(device: CloverDevice): TerminalSupport {
+  const haystack = [device.productName, device.model, device.deviceTypeName]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  if (!haystack) return "unknown";
+  if (CLOUD_CAPABLE.some((name) => haystack.includes(name))) return "supported";
+  if (haystack.includes("station") || haystack.includes("duo")) {
+    return "unsupported";
+  }
   return "unknown";
 }
 
@@ -117,16 +123,14 @@ export async function facilityTerminals(
 
   return {
     kind: "terminals",
-    terminals: elements.map((device) => {
-      const model =
-        device.model ?? device.deviceTypeName ?? device.productName ?? null;
-      return {
-        id: device.id ?? "",
-        name: device.name ?? null,
-        serial: device.serial ?? null,
-        model,
-        support: classify(model),
-      };
-    }),
+    terminals: elements.map((device) => ({
+      id: device.id ?? "",
+      // productName first: "Flex 4" is what a person calls it, "Clover_C406"
+      // is what support will ask for, and both are shown.
+      name: device.productName ?? device.name ?? null,
+      serial: device.serial ?? null,
+      model: device.model ?? device.deviceTypeName ?? null,
+      support: classify(device),
+    })),
   };
 }
