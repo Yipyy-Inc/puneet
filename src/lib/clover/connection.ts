@@ -201,6 +201,40 @@ export async function validAccessToken(
       environment,
     };
   } catch (error) {
+    // ── A LOST RACE IS NOT A BROKEN CONNECTION ───────────────────────────
+    //
+    // CLOVER ROTATES REFRESH TOKENS: a successful refresh invalidates the one
+    // that bought it. So two requests refreshing at the same moment — two
+    // customers paying at once while the access token is inside its margin —
+    // produce one winner and one 401 "Invalid refresh token".
+    //
+    // Observed here, half a second apart:
+    //
+    //   20:30:21.254  credentials rotated, new access token valid for 30 min
+    //   20:30:21.733  the loser's 401 marked the connection `error`
+    //
+    // And `chargeableConnection` refuses anything not `connected`, so the
+    // facility's card payments all began failing with "this facility has not
+    // connected a payment account" — while holding a perfectly good token.
+    //
+    // So before believing the failure, look again. If somebody else has just
+    // stored a usable token, this request lost a race and should use it.
+    const again = await admin.rpc("payment_access_token", {
+      p_facility_id: facilityId,
+    });
+    const fresh = (again.data as unknown as CredentialRow[] | null)?.[0];
+    const freshExpiry = fresh?.access_token_expires_at
+      ? Date.parse(fresh.access_token_expires_at)
+      : 0;
+
+    if (fresh?.access_token && freshExpiry - Date.now() > REFRESH_MARGIN_MS) {
+      return {
+        accessToken: fresh.access_token,
+        merchantId: fresh.merchant_id,
+        environment: asCloverEnvironment(fresh.environment),
+      };
+    }
+
     await recordConnectionError(
       facilityId,
       error instanceof Error ? error.message : "Token refresh failed.",
