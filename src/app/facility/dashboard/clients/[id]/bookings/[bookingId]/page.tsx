@@ -1427,7 +1427,23 @@ export default function ClientBookingDetailPage({
 
           {/* Right — 2 cols — Invoice */}
           <div className="min-w-0 lg:col-span-2">
-            <div className="sticky top-4">
+            <div className="sticky top-4 space-y-3">
+              {/* Take the card THROUGH Clover, rather than recording a charge
+                  that was taken on some other terminal — which is all the
+                  `card` tender in the checkout dialog has ever meant.
+                  Deliberately only a link: the amount, the currency and whether
+                  this facility can take a card at all are decided server-side
+                  at /pay/[ref], so nothing here can disagree with them. */}
+              {canSeeBookingAmounts &&
+                !isCancelled &&
+                balanceOf(booking) > 0 && (
+                  <Button variant="outline" className="w-full gap-1.5" asChild>
+                    <Link href={`/pay/${booking.id}`}>
+                      <CreditCard className="size-4" />
+                      Pay by card — ${balanceOf(booking).toFixed(2)}
+                    </Link>
+                  </Button>
+                )}
               {/* Invoice / payment panel — omitted without view_booking_financials (3C) */}
               {canSeeBookingAmounts &&
                 (invoice ? (

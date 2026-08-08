@@ -66,7 +66,16 @@ interface CloverCharge {
   captured?: boolean;
   auth_code?: string;
   source?: { brand?: string; last4?: string };
-  error?: { code?: string; message?: string; type?: string };
+  error?: {
+    code?: string;
+    message?: string;
+    type?: string;
+    /** Why the issuer said no — "issuer_declined", "insufficient_funds"… */
+    declineCode?: string;
+    /** Clover's id for the DECLINED attempt. It exists, and it is what their
+     *  dashboard is searched by, so it belongs in the intent. */
+    charge?: string;
+  };
   message?: string;
 }
 
@@ -177,15 +186,26 @@ export async function chargeCard(
   }
   const intentId = opened.data as unknown as string;
 
+  /**
+   * `message` is what the payer is told; `detail` is what the intent keeps.
+   *
+   * They are different on purpose. Clover's own decline text for this merchant
+   * comes back as "REFUSÉE : aucune raison fournie." — the merchant's locale,
+   * not the reader's, and it says nothing a customer can act on. The intent
+   * still gets it verbatim, along with the decline code and Clover's id for the
+   * declined attempt, because that is what somebody reconciling in Clover's
+   * dashboard will search by.
+   */
   const fail = async (
     code: string,
     message: string,
+    detail?: string,
   ): Promise<ChargeOutcome> => {
     await admin.rpc("close_payment_intent", {
       p_intent_id: intentId,
       p_status: code === "declined" ? "declined" : "failed",
       p_failure_code: code,
-      p_failure_message: message,
+      p_failure_message: detail ?? message,
     });
     return { ok: false, intentId, code, message };
   };
@@ -247,14 +267,42 @@ export async function chargeCard(
   }
 
   if (httpStatus >= 400 || !charge?.id) {
-    const code = charge?.error?.code ?? `http_${httpStatus}`;
-    const message =
-      charge?.error?.message ?? charge?.message ?? "Clover refused the charge.";
-    // A card decline is not a system failure, and the two need different words
-    // in front of a customer.
+    const failure = charge?.error;
+    const code = failure?.code ?? `http_${httpStatus}`;
+
+    // ── A DECLINE IS A 402, AND CLOVER SENDS NO `type` ON ONE ──────────────
+    //
+    // This used to read `error.type === "card_error"`. Measured against the
+    // sandbox, a declined card comes back as:
+    //
+    //   HTTP 402  { error: { code: "card_declined",
+    //                        declineCode: "issuer_declined",
+    //                        charge: "GQ5GHQPDTPCSP", message: "REFUSÉE …" } }
+    //
+    // — no `type` field at all. So that test never matched, every declined card
+    // fell through to the generic branch, and the route turned it into a 500:
+    // the customer was told the system had broken when their bank had simply
+    // said no. Classified on the status Clover actually sends, which is the one
+    // HTTP has a word for.
+    const declined = httpStatus === 402 || code === "card_declined";
+
+    if (declined) {
+      return fail(
+        "declined",
+        "That card was declined. Try another card, or check with your bank.",
+        [
+          `Clover declined the charge (${failure?.declineCode ?? code}).`,
+          failure?.message,
+          failure?.charge ? `Clover attempt ${failure.charge}.` : null,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+    }
+
     return fail(
-      charge?.error?.type === "card_error" ? "declined" : code,
-      message,
+      code,
+      failure?.message ?? charge?.message ?? "Clover refused the charge.",
     );
   }
 

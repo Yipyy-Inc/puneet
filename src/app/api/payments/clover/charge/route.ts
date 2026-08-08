@@ -134,6 +134,10 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     paid: true,
     paymentId: outcome.paymentId,
+    // Clover's id for the charge, not ours. It is what their dashboard is
+    // searched by, so it is the only reference worth putting in front of
+    // somebody who may have to ask about this payment later.
+    reference: outcome.processorPaymentId,
     amountCents: outcome.amountCents,
     currency: outcome.currency,
     cardBrand: outcome.cardBrand,

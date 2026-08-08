@@ -27,7 +27,8 @@ import { Button } from "@/components/ui/button";
 // ============================================================================
 
 interface CloverElement {
-  mount: (selector: string | HTMLElement) => void;
+  /** A CSS SELECTOR, not a node — see the mount effect below. */
+  mount: (selector: string) => void;
   addEventListener?: (
     event: string,
     handler: (payload: unknown) => void,
@@ -73,6 +74,8 @@ export interface CloverCheckoutProps {
   tipCents?: number;
   onPaid: (result: {
     paymentId: string;
+    /** Clover's id for the charge — what their dashboard is searched by. */
+    reference: string | null;
     amountCents: number;
     cardBrand: string | null;
     cardLast4: string | null;
@@ -112,12 +115,20 @@ export function CloverCheckout({
         const instance = new window.Clover(publicApiKey, { merchantId });
         const elements = instance.elements();
         for (const field of FIELDS) {
-          const node = document.getElementById(field.id);
-          if (node) elements.create(field.kind).mount(node);
+          // A CSS SELECTOR, not the node. Clover's SDK resolves the target
+          // itself and throws on anything else — passing the HTMLElement (which
+          // reads more naturally, and is what this did first) fails the whole
+          // mount, so all four fields are missing and the only evidence is the
+          // generic message below.
+          elements.create(field.kind).mount(`#${field.id}`);
         }
         clover.current = instance;
         setReady(true);
-      } catch {
+      } catch (error) {
+        // The customer gets a sentence they can act on; whoever is looking at
+        // the console gets the reason. Without this the two are the same string
+        // and the actual fault is unknowable from outside.
+        console.error("Clover's card fields could not be mounted.", error);
         setProblem(
           "The payment form could not be loaded. Refresh and try again.",
         );
@@ -170,6 +181,7 @@ export function CloverCheckout({
       const payload = (await response.json().catch(() => null)) as {
         paid?: boolean;
         paymentId?: string;
+        reference?: string | null;
         amountCents?: number;
         cardBrand?: string | null;
         cardLast4?: string | null;
@@ -183,6 +195,7 @@ export function CloverCheckout({
 
       onPaid({
         paymentId: payload.paymentId!,
+        reference: payload.reference ?? null,
         amountCents: payload.amountCents ?? amountCents,
         cardBrand: payload.cardBrand ?? null,
         cardLast4: payload.cardLast4 ?? null,
