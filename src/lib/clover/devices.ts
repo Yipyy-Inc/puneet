@@ -81,11 +81,12 @@ function classify(model: string | null): TerminalSupport {
 export async function facilityTerminals(
   facilityId: string,
 ): Promise<TerminalReadiness> {
-  const config = cloverConfig();
-  if (!config) return { kind: "not_connected" };
-
   const connection = await chargeableConnection(facilityId);
   if (!connection) return { kind: "not_connected" };
+
+  // The estate this merchant actually lives on.
+  const config = cloverConfig(connection.environment);
+  if (!config) return { kind: "not_connected" };
 
   const active = await validAccessToken(facilityId);
   if (!active) {

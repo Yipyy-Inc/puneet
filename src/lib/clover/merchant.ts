@@ -1,6 +1,6 @@
 import "server-only";
 
-import { cloverConfig } from "./config";
+import { cloverConfig, type CloverEnvironment } from "./config";
 import { cloverGet } from "./request";
 
 // ============================================================================
@@ -81,8 +81,9 @@ async function get<T>(
 export async function fetchMerchantProfile(
   accessToken: string,
   merchantId: string,
+  environment: CloverEnvironment,
 ): Promise<MerchantProfile> {
-  const config = cloverConfig();
+  const config = cloverConfig(environment);
   if (!config) return { currency: null, country: null, publicApiKey: null };
 
   const properties = await get<{ defaultCurrency?: string }>(

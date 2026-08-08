@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
-import { cloverEnvironment } from "./config";
+import { asCloverEnvironment, type CloverEnvironment } from "./config";
 import { refreshTokens, type CloverTokens } from "./oauth";
 
 // ============================================================================
@@ -33,7 +33,8 @@ import { refreshTokens, type CloverTokens } from "./oauth";
 
 export interface ChargeableConnection {
   merchantId: string;
-  environment: string;
+  /** Narrowed on the way out, so callers can hand it straight to cloverConfig. */
+  environment: CloverEnvironment;
   currency: string | null;
   publicApiKey: string | null;
 }
@@ -59,7 +60,7 @@ export async function chargeableConnection(
 
   return {
     merchantId: data.merchant_id,
-    environment: data.environment,
+    environment: asCloverEnvironment(data.environment),
     currency: data.currency,
     publicApiKey: data.public_api_key,
   };
@@ -78,6 +79,15 @@ export async function recordConnection(params: {
   merchantId: string;
   tokens: CloverTokens;
   connectedBy: string | null;
+  /**
+   * The estate these tokens belong to. REQUIRED, and the reason is a bug this
+   * used to have waiting: it wrote `defaultCloverEnvironment()`, so refreshing
+   * a sandbox connection on a deployment whose default had moved to production
+   * would rewrite that row's environment to production — and every later call
+   * for that merchant would then be aimed at the wrong estate. A refresh must
+   * preserve what the connection is, not restate where new ones go.
+   */
+  environment: CloverEnvironment;
   publicApiKey?: string | null;
   currency?: string | null;
   country?: string | null;
@@ -94,7 +104,7 @@ export async function recordConnection(params: {
   const { error } = await admin.rpc("store_payment_credentials", {
     p_facility_id: params.facilityId,
     p_merchant_id: params.merchantId,
-    p_environment: cloverEnvironment(),
+    p_environment: params.environment,
     p_access_token: params.tokens.accessToken,
     p_refresh_token: params.tokens.refreshToken,
     p_access_expires: params.tokens.accessExpiresAt,
@@ -135,7 +145,8 @@ const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 export interface ActiveToken {
   accessToken: string;
   merchantId: string;
-  environment: string;
+  /** Which estate this token is good against. Never assume the default. */
+  environment: CloverEnvironment;
 }
 
 export async function validAccessToken(
@@ -161,7 +172,7 @@ export async function validAccessToken(
     return {
       accessToken: row.access_token,
       merchantId: row.merchant_id,
-      environment: row.environment,
+      environment: asCloverEnvironment(row.environment),
     };
   }
 
@@ -173,18 +184,21 @@ export async function validAccessToken(
     return null;
   }
 
+  const environment = asCloverEnvironment(row.environment);
   try {
-    const refreshed = await refreshTokens(row.refresh_token);
+    // The connection's OWN estate, both to refresh against and to write back.
+    const refreshed = await refreshTokens(row.refresh_token, environment);
     await recordConnection({
       facilityId,
       merchantId: row.merchant_id,
       tokens: refreshed,
       connectedBy: null,
+      environment,
     });
     return {
       accessToken: refreshed.accessToken,
       merchantId: row.merchant_id,
-      environment: row.environment,
+      environment,
     };
   } catch (error) {
     await recordConnectionError(

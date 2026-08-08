@@ -89,19 +89,65 @@ const HOSTS: Record<
   },
 };
 
-export function cloverEnvironment(): CloverEnvironment {
+/**
+ * Which estate a NEW connection goes to.
+ *
+ * Not "the environment this deployment is in" — there is no such thing any
+ * more. An existing connection is served by the estate it was made against,
+ * which is stored on the row; this only decides where a facility connecting
+ * TODAY is sent.
+ *
+ * That distinction is the whole point of the split. Going live used to mean
+ * flipping one variable and silently breaking every sandbox connection, because
+ * their tokens would be presented to api.clover.com, which has never heard of
+ * them — taking with it the only place anything could be tested without real
+ * cards.
+ */
+export function defaultCloverEnvironment(): CloverEnvironment {
   return process.env.CLOVER_ENVIRONMENT?.trim() === "production"
     ? "production"
     : "sandbox";
 }
 
-/** The configuration, or null when the app has no Clover credentials. */
-export function cloverConfig(): CloverConfig | null {
-  const appId = process.env.CLOVER_APP_ID?.trim();
-  const appSecret = process.env.CLOVER_APP_SECRET?.trim();
+/**
+ * A credential for one estate.
+ *
+ * `CLOVER_PRODUCTION_APP_ID` wins; `CLOVER_APP_ID` is honoured as a fallback
+ * ONLY for the environment CLOVER_ENVIRONMENT names. That asymmetry is
+ * deliberate — it keeps a deployment that predates this split working
+ * untouched, while making it impossible for production to quietly inherit
+ * sandbox credentials (or the reverse) because somebody set one variable and
+ * not the other. A missing production secret becomes "not configured", which
+ * refuses, rather than a sandbox secret sent to api.clover.com.
+ */
+function credential(
+  name: "APP_ID" | "APP_SECRET" | "REMOTE_APPLICATION_ID",
+  environment: CloverEnvironment,
+): string | null {
+  const scoped =
+    process.env[`CLOVER_${environment.toUpperCase()}_${name}`]?.trim();
+  if (scoped) return scoped;
+
+  return environment === defaultCloverEnvironment()
+    ? process.env[`CLOVER_${name}`]?.trim() || null
+    : null;
+}
+
+/**
+ * The configuration for one estate, or null when it has no credentials.
+ *
+ * ALWAYS pass the environment when acting on a stored connection —
+ * `chargeableConnection` and `validAccessToken` both return it. Calling this
+ * bare means "wherever a new connection would go", which is right for the
+ * authorise redirect and the code exchange, and wrong for everything else.
+ */
+export function cloverConfig(
+  environment: CloverEnvironment = defaultCloverEnvironment(),
+): CloverConfig | null {
+  const appId = credential("APP_ID", environment);
+  const appSecret = credential("APP_SECRET", environment);
   if (!appId || !appSecret) return null;
 
-  const environment = cloverEnvironment();
   return {
     appId,
     appSecret,
@@ -110,9 +156,16 @@ export function cloverConfig(): CloverConfig | null {
     apiOrigin: HOSTS[environment].api,
     ecommerceOrigin: HOSTS[environment].ecommerce,
     checkoutSdkUrl: HOSTS[environment].sdk,
-    remoteApplicationId:
-      process.env.CLOVER_REMOTE_APPLICATION_ID?.trim() || null,
+    remoteApplicationId: credential("REMOTE_APPLICATION_ID", environment),
   };
+}
+
+/**
+ * A stored environment string, narrowed. Anything unrecognised reads as
+ * sandbox — the estate where a mistake costs nobody money.
+ */
+export function asCloverEnvironment(value: string | null): CloverEnvironment {
+  return value === "production" ? "production" : "sandbox";
 }
 
 /**

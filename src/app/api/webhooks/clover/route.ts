@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
-import { cloverConfig, cloverEnvironment } from "@/lib/clover/config";
+import {
+  asCloverEnvironment,
+  cloverConfig,
+  defaultCloverEnvironment,
+} from "@/lib/clover/config";
 import {
   reconcilePayment,
   refreshMerchantProfile,
@@ -92,7 +96,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not JSON." }, { status: 400 });
   }
 
-  const environment = cloverEnvironment();
   const admin = createAdminClient();
 
   // ── The handshake ────────────────────────────────────────────────────────
@@ -105,7 +108,7 @@ export async function POST(request: NextRequest) {
     }
     const handshake = await admin.rpc("record_payment_webhook", {
       p_processor: "clover",
-      p_environment: environment,
+      p_environment: defaultCloverEnvironment(),
       p_app_id: null,
       p_merchant_id: null,
       p_object_kind: "VERIFICATION",
@@ -146,9 +149,22 @@ export async function POST(request: NextRequest) {
 
   let handled = 0;
   for (const delivery of deliveries) {
+    // Which estate this came from is a property of the MERCHANT, not of the
+    // deployment. With sandbox and production live side by side, recording the
+    // default would mislabel half the deliveries — and the environment is the
+    // first thing anyone reads when reconciling one.
+    const { data: known } = await admin
+      .from("payment_connections")
+      .select("environment")
+      .eq("processor", "clover")
+      .eq("merchant_id", delivery.merchantId)
+      .maybeSingle();
+
     const recorded = await admin.rpc("record_payment_webhook", {
       p_processor: "clover",
-      p_environment: environment,
+      p_environment: known
+        ? asCloverEnvironment(known.environment)
+        : defaultCloverEnvironment(),
       p_app_id: appId,
       p_merchant_id: delivery.merchantId,
       p_object_kind: delivery.objectKind,

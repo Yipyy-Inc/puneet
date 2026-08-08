@@ -78,14 +78,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const config = cloverConfig();
-  if (!config) {
-    return NextResponse.json(
-      { error: "Clover is not configured on this deployment." },
-      { status: 503 },
-    );
-  }
-
   const supabase = await createServerClient();
 
   // The caller's own client: `bookings_read` decides whether this booking is
@@ -179,6 +171,17 @@ export async function POST(request: NextRequest) {
       {
         error:
           "The connection to Clover could not be used. Reconnect the payment account.",
+      },
+      { status: 503 },
+    );
+  }
+
+  // The merchant's estate, resolved from the token we are about to use.
+  const config = cloverConfig(active.environment);
+  if (!config) {
+    return NextResponse.json(
+      {
+        error: `Clover is not configured for ${active.environment}.`,
       },
       { status: 503 },
     );

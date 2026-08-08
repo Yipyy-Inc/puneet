@@ -114,17 +114,6 @@ export default async function PayBookingPage({
   // Everything below is about whether a card CAN be taken. Each branch says
   // which part is missing rather than one blanket "unavailable", because the
   // person who can fix it is different in each case.
-  const config = cloverConfig();
-  if (!config) {
-    return (
-      <PayNotice
-        tone="problem"
-        title="Card payments are not set up"
-        body="This deployment has no payment provider configured, so nothing can be charged here."
-      />
-    );
-  }
-
   const connection = await chargeableConnection(booking.facility_id);
   if (!connection) {
     return (
@@ -132,6 +121,20 @@ export default async function PayBookingPage({
         tone="problem"
         title="This facility cannot take card payments yet"
         body={`${facilityName} has not connected a merchant account, so there is nowhere for this money to go. They can settle it with you directly.`}
+      />
+    );
+  }
+
+  // The merchant's OWN estate. This decides which Clover the BROWSER loads its
+  // SDK from, so a sandbox merchant served production's sdk.js would tokenise
+  // against an account that does not exist there.
+  const config = cloverConfig(connection.environment);
+  if (!config) {
+    return (
+      <PayNotice
+        tone="problem"
+        title="Card payments are not set up"
+        body="This deployment cannot reach the Clover environment this facility is connected to."
       />
     );
   }

@@ -2,7 +2,12 @@ import "server-only";
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
-import { cloverConfig, cloverReturnUrl } from "./config";
+import {
+  cloverConfig,
+  cloverReturnUrl,
+  defaultCloverEnvironment,
+  type CloverEnvironment,
+} from "./config";
 
 // ============================================================================
 // The OAuth v2 exchange, and the state that makes it safe.
@@ -187,9 +192,12 @@ interface TokenResponse {
 async function postToken(
   path: string,
   body: Record<string, string>,
+  environment: CloverEnvironment,
 ): Promise<CloverTokens> {
-  const config = cloverConfig();
-  if (!config) throw new Error("Clover is not configured.");
+  const config = cloverConfig(environment);
+  if (!config) {
+    throw new Error(`Clover is not configured for ${environment}.`);
+  }
 
   const response = await fetch(new URL(path, config.apiOrigin), {
     method: "POST",
@@ -230,27 +238,53 @@ async function postToken(
   };
 }
 
-/** Trade the one-time code from the redirect for a token pair. */
+/**
+ * Trade the one-time code from the redirect for a token pair.
+ *
+ * The DEFAULT environment, because this only ever runs for a connection being
+ * made right now, and the authorise redirect that produced the code was built
+ * against the same estate.
+ */
 export async function exchangeCode(code: string): Promise<CloverTokens> {
-  const config = cloverConfig();
+  const environment = defaultCloverEnvironment();
+  const config = cloverConfig(environment);
   if (!config) throw new Error("Clover is not configured.");
 
-  return postToken("/oauth/v2/token", {
-    client_id: config.appId,
-    client_secret: config.appSecret,
-    code,
-  });
+  return postToken(
+    "/oauth/v2/token",
+    {
+      client_id: config.appId,
+      client_secret: config.appSecret,
+      code,
+    },
+    environment,
+  );
 }
 
-/** Swap a refresh token for a fresh pair. Repairs a connection in error. */
+/**
+ * Swap a refresh token for a fresh pair. Repairs a connection in error.
+ *
+ * Takes the connection's OWN environment, and that is not a nicety. A sandbox
+ * merchant's refresh token presented to api.clover.com is refused, and the
+ * refusal arrives as a dead connection at the moment a customer is waiting —
+ * which is exactly what would have happened to every existing merchant the day
+ * CLOVER_ENVIRONMENT was flipped to production.
+ */
 export async function refreshTokens(
   refreshToken: string,
+  environment: CloverEnvironment,
 ): Promise<CloverTokens> {
-  const config = cloverConfig();
-  if (!config) throw new Error("Clover is not configured.");
+  const config = cloverConfig(environment);
+  if (!config) {
+    throw new Error(`Clover is not configured for ${environment}.`);
+  }
 
-  return postToken("/oauth/v2/refresh", {
-    client_id: config.appId,
-    refresh_token: refreshToken,
-  });
+  return postToken(
+    "/oauth/v2/refresh",
+    {
+      client_id: config.appId,
+      refresh_token: refreshToken,
+    },
+    environment,
+  );
 }

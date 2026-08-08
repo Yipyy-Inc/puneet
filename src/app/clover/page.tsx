@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { getViewer } from "@/lib/auth/viewer";
-import { cloverConfig } from "@/lib/clover/config";
+import { cloverConfig, defaultCloverEnvironment } from "@/lib/clover/config";
 import {
   recordConnection,
   recordConnectionError,
@@ -113,6 +113,11 @@ async function completeConnection(
     };
   }
 
+  // A connection being MADE goes to whichever estate new connections go to.
+  // Every later call for this merchant reads the environment off the row
+  // instead, which is what lets sandbox and production run side by side.
+  const environment = defaultCloverEnvironment();
+
   try {
     const tokens = await exchangeCode(params.code);
     // Asked for now, while we hold a fresh token and know the merchant: the
@@ -123,12 +128,14 @@ async function completeConnection(
     const profile = await fetchMerchantProfile(
       tokens.accessToken,
       params.merchant_id,
+      environment,
     );
     await recordConnection({
       facilityId: state.facilityId,
       merchantId: params.merchant_id,
       tokens,
       connectedBy: viewer.userId,
+      environment,
       publicApiKey: profile.publicApiKey,
       currency: profile.currency,
       country: profile.country,
@@ -136,7 +143,7 @@ async function completeConnection(
     return {
       kind: "connected",
       merchantId: params.merchant_id,
-      environment: cloverConfig()?.environment ?? "sandbox",
+      environment,
     };
   } catch (error) {
     // A reload re-sends a spent code. If we are already connected, that is

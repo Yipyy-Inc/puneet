@@ -96,15 +96,8 @@ export interface ChargeRequest {
 export async function chargeCard(
   request: ChargeRequest,
 ): Promise<ChargeOutcome> {
-  const config = cloverConfig();
-  if (!config) {
-    return {
-      ok: false,
-      intentId: null,
-      code: "not_configured",
-      message: "Clover is not configured on this deployment.",
-    };
-  }
+  // Resolved AFTER the connection below, because which Clover estate to charge
+  // against is a property of the merchant, not of the deployment.
   if (!hasServiceRoleKey()) {
     return {
       ok: false,
@@ -148,6 +141,15 @@ export async function chargeCard(
       intentId: null,
       code: "not_connected",
       message: "This facility has not connected a payment account.",
+    };
+  }
+  const config = cloverConfig(connection.environment);
+  if (!config) {
+    return {
+      ok: false,
+      intentId: null,
+      code: "not_configured",
+      message: `Clover is not configured for ${connection.environment}.`,
     };
   }
   if (!connection.currency) {

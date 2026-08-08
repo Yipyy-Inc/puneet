@@ -69,8 +69,7 @@ export async function reconcilePayment(
   facilityId: string,
   cloverPaymentId: string,
 ): Promise<PaymentReconciliation> {
-  const config = cloverConfig();
-  if (!config || !hasServiceRoleKey()) {
+  if (!hasServiceRoleKey()) {
     return { kind: "unreadable", detail: "Clover is not configured here." };
   }
 
@@ -105,6 +104,16 @@ export async function reconcilePayment(
     return {
       kind: "unreadable",
       detail: "No usable access token for this merchant.",
+    };
+  }
+
+  // The CONNECTION's estate, not the deployment's — a sandbox merchant read
+  // against api.clover.com is a 401 that looks like a revoked grant.
+  const config = cloverConfig(active.environment);
+  if (!config) {
+    return {
+      kind: "unreadable",
+      detail: `Clover is not configured for ${active.environment}.`,
     };
   }
 
@@ -284,6 +293,7 @@ export async function refreshMerchantProfile(
   const profile = await fetchMerchantProfile(
     active.accessToken,
     active.merchantId,
+    active.environment,
   );
 
   const changes: Record<string, string> = {};
@@ -379,14 +389,14 @@ export type ConnectionCheck = "live" | "revoked" | "unreachable";
 export async function verifyConnection(
   facilityId: string,
 ): Promise<ConnectionCheck> {
-  const config = cloverConfig();
-  if (!config) return "unreachable";
-
   const active = await validAccessToken(facilityId);
   // No token at all, after a refresh attempt, is the strongest signal short of
   // a 401 — but it is still not a refusal from Clover, so it is not treated as
   // one. validAccessToken has already recorded the error on the connection.
   if (!active) return "unreachable";
+
+  const config = cloverConfig(active.environment);
+  if (!config) return "unreachable";
 
   const read = await cloverGet(
     config.apiOrigin,
