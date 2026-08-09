@@ -174,11 +174,68 @@ async function ensureProfile(
       id: clerkUserId,
       email,
       full_name: fullName,
-      is_platform_admin: isAdmin,
     } as never,
     { onConflict: "id" },
   );
   if (error) throw new Error(`profile ${email}: ${error.message}`);
+
+  if (isAdmin) await ensurePlatformAdmin(clerkUserId, email);
+}
+
+/**
+ * Platform admin, granted the way the database recognises it.
+ *
+ * ── WRITING `is_platform_admin` DOES NOTHING ──────────────────────────────
+ *
+ * That column is DERIVED. `private.enforce_platform_admin_flag()` runs BEFORE
+ * every insert and update on `profiles` and overwrites it with
+ * `exists (select 1 from platform_memberships where profile_id = new.id)`.
+ *
+ * So the previous version of this function passed `is_platform_admin: true`,
+ * the trigger replaced it with false, the upsert reported no error, and the
+ * script printed "platform admin" beside an account that was not one. The only
+ * symptom was a 403 much later, on a screen, with nothing pointing back here —
+ * exactly the shape this repo has a guard for
+ * (docs/quality/debt-map.md, "a screen that claims an action succeeded").
+ *
+ * The grant is the MEMBERSHIP. `platform_memberships_mirror` then syncs the
+ * flag back onto the profile, so the column stays correct without anyone
+ * writing it.
+ *
+ * `superadmin` because that is what the two real platform admins hold, and an
+ * e2e admin that cannot do what the live ones do would silently under-test
+ * every screen it visits.
+ */
+async function ensurePlatformAdmin(
+  clerkUserId: string,
+  email: string,
+): Promise<void> {
+  const { error } = await db.from("platform_memberships").upsert(
+    {
+      profile_id: clerkUserId,
+      role: "superadmin",
+      granted_by: clerkUserId,
+    } as never,
+    { onConflict: "profile_id" },
+  );
+  if (error) throw new Error(`platform membership ${email}: ${error.message}`);
+
+  // Read it back. The whole reason this function exists is that a silent write
+  // read as a success for weeks — so the grant is CONFIRMED rather than assumed,
+  // against the derived column the app actually reads.
+  const { data } = await db
+    .from("profiles")
+    .select("is_platform_admin")
+    .eq("id", clerkUserId)
+    .single();
+
+  if (data?.is_platform_admin !== true) {
+    throw new Error(
+      `platform membership ${email}: written, but profiles.is_platform_admin is ` +
+        `${String(data?.is_platform_admin)}. The mirror trigger did not fire — ` +
+        `granting admin has silently failed.`,
+    );
+  }
 }
 
 /** The membership, and the staff row that hangs off it. */
