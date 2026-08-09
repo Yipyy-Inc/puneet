@@ -2,39 +2,42 @@
 
 import { useSyncExternalStore } from "react";
 
-// Platform-level Clover Fiserv payment-processing config (how Yipyy charges
-// facilities). Credentials are treated as encrypted at rest in production; this
-// mock persists to localStorage and the UI masks secrets after entry.
-
-export type CloverEnvironment = "sandbox" | "production";
+// ============================================================================
+// Platform-level billing preferences, in this browser.
+//
+// ── WHAT IS NO LONGER HERE ─────────────────────────────────────────────────
+//
+// `appSecret`, `merchantId`, `appId` and `webhookSecret`. A form wrote all four
+// to window.localStorage in plaintext and the UI reported them "saved
+// (encrypted)". Nothing server-side ever read them — the real credentials are
+// environment variables — so their entire effect was to leave the credential
+// that lets somebody charge cards sitting in every platform admin's browser,
+// readable by any script on the page and surviving sign-out.
+//
+// Masking it for display was never protection: masking happens after the value
+// has already been stored and sent. Removing the field is.
+//
+// Whether those credentials RESOLVE is a question the server answers, without
+// disclosing them — /api/payments/clover/platform, which returns booleans.
+//
+// ── WHAT IS STILL HERE, AND WHY IT IS LABELLED ─────────────────────────────
+//
+// Two subscription-billing toggles, which nothing reads either. They stay
+// because they record intended behaviour that has not been built, and the
+// screen says so on its face rather than presenting them as live settings.
+// They are preferences, not credentials; the harm was never persistence.
+// ============================================================================
 
 export interface CloverConfig {
-  merchantId: string;
-  /** Private App Secret — encrypted server-side in production. */
-  appSecret: string;
-  appId: string;
-  environment: CloverEnvironment;
-  currency: string;
-  /** Auto-generate an invoice at the start of each billing cycle. */
+  /** Auto-generate an invoice at the start of each billing cycle. Unwired. */
   autoInvoice: boolean;
-  /** Auto-charge the card on file on the invoice due date. */
+  /** Auto-charge the card on file on the invoice due date. Unwired. */
   autoCharge: boolean;
-  /** Clover webhook signing secret (shown once on generation). */
-  webhookSecret: string;
-  /** True once credentials have been saved at least once. */
-  configured: boolean;
 }
 
 const DEFAULT_CONFIG: CloverConfig = {
-  merchantId: "",
-  appSecret: "",
-  appId: "",
-  environment: "sandbox",
-  currency: "USD",
   autoInvoice: true,
   autoCharge: true,
-  webhookSecret: "",
-  configured: false,
 };
 
 const STORAGE_KEY = "yipyy.clover-config";
@@ -47,7 +50,21 @@ function hydrate() {
   hydrated = true;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) state = { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+    if (!raw) return;
+
+    // Read ONLY the two fields that still exist. A browser that used the old
+    // shape has an App Secret in this key right now, and spreading the parsed
+    // object would carry it straight back into memory — so the discarded fields
+    // are dropped here and overwritten on the next write below.
+    const parsed = JSON.parse(raw) as Partial<CloverConfig>;
+    state = {
+      autoInvoice: parsed.autoInvoice ?? DEFAULT_CONFIG.autoInvoice,
+      autoCharge: parsed.autoCharge ?? DEFAULT_CONFIG.autoCharge,
+    };
+    // Overwrite immediately rather than waiting for a write that may never
+    // come: the secret is gone from memory above, but it is still ON DISK until
+    // this key is replaced, and a browser nobody touches again would keep it.
+    persist();
   } catch {
     // Ignore malformed storage.
   }
@@ -84,10 +101,4 @@ export function useCloverConfig(): CloverConfig {
     },
     () => DEFAULT_CONFIG,
   );
-}
-
-/** Mask a secret for display after entry (keeps the last 4 chars). */
-export function maskSecret(value: string): string {
-  if (!value) return "";
-  return value.length <= 4 ? "••••" : `••••••••${value.slice(-4)}`;
 }

@@ -1,63 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   AlertTriangle,
   CheckCircle2,
   Copy,
   CreditCard,
+  ExternalLink,
   KeyRound,
-  Loader2,
   Repeat,
   ShieldCheck,
-  TestTube,
+  Smartphone,
   Webhook,
   XCircle,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
-  maskSecret,
-  updateCloverConfig,
-  useCloverConfig,
-  type CloverEnvironment,
-} from "@/lib/clover-config-store";
-import {
-  sendCloverTestCharge,
-  testCloverConnection,
-  type CloverConnectionTest,
-  type CloverTestChargeResult,
-} from "@/lib/fiserv-payment-service";
+  cloverPlatformQueries,
+  type CloverEstateStatus,
+} from "@/lib/api/clover-platform";
+import { updateCloverConfig, useCloverConfig } from "@/lib/clover-config-store";
 
-const WEBHOOK_URL = "https://app.yipyy.com/api/clover/webhook";
-const WEBHOOK_EVENTS = [
-  "payment.succeeded",
-  "payment.failed",
-  "refund.created",
-  "dispute.created",
-];
-const CURRENCIES = ["USD", "CAD", "GBP", "EUR", "AUD"];
-// Matches the dunning sequence (src/lib/api/dunning.ts).
-const RETRY_DAYS = [1, 7, 14];
+// ============================================================================
+// Clover, as this deployment is actually configured.
+//
+// ── WHAT THIS SCREEN USED TO BE ────────────────────────────────────────────
+//
+// A form. It took a Merchant ID, a Private App Secret and an App ID, wrote all
+// three to window.localStorage in plaintext, and toasted "Clover credentials
+// saved (encrypted)." Nothing server-side ever read them. Beside it sat a "Test
+// Connection" button that slept 500ms and reported success if the three fields
+// were non-empty, and a "Send Test Charge of $0.01" button that slept, invented
+// `txn_test_<timestamp>` and `refund_test_<timestamp>`, and announced that a
+// charge had succeeded and been refunded.
+//
+// No card was ever charged. That is the most dangerous shape an admin screen
+// can take: it is precisely the check somebody runs to convince themselves
+// payments work before going live, and it always passes.
+//
+// The webhook section was wrong in a way that would have failed silently in
+// production — it displayed `https://app.yipyy.com/api/clover/webhook`, and the
+// route is `/api/webhooks/clover`. An admin who followed it configured Clover
+// to POST at a 404. It also offered to "Generate webhook secret", producing a
+// `whsec_…` value nothing reads, in a format Clover does not use: Clover does
+// not sign deliveries at all, it repeats a static header.
+//
+// ── WHAT IT IS NOW ─────────────────────────────────────────────────────────
+//
+// A report. Credentials belong to the deployment, so they are environment
+// variables and this screen tells you which ones resolve — never what they are.
+// A secret that is not sent to a browser cannot leak from one, which is a
+// stronger guarantee than masking it after arrival.
+// ============================================================================
 
-function copy(value: string, label: string) {
-  navigator.clipboard?.writeText(value);
-  toast.success(`${label} copied`);
-}
+const CURRENCY_NOTE =
+  "Currency comes from the merchant's own Clover account, per connection — a facility in Canada charges CAD because Clover says so.";
 
 function SectionCard({
   icon: Icon,
@@ -84,260 +89,276 @@ function SectionCard({
   );
 }
 
+function copy(value: string, label: string) {
+  navigator.clipboard?.writeText(value);
+  toast.success(`${label} copied`);
+}
+
+/** Set / not set, said plainly. Never a value. */
+function StatusLine({
+  ok,
+  label,
+  detail,
+}: {
+  ok: boolean;
+  label: string;
+  detail: string;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      {ok ? (
+        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+      ) : (
+        <XCircle className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+      )}
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-muted-foreground text-xs">{detail}</p>
+      </div>
+    </div>
+  );
+}
+
+function EstateCard({
+  estate,
+  isDefault,
+}: {
+  estate: CloverEstateStatus;
+  isDefault: boolean;
+}) {
+  const live = estate.environment === "production";
+
+  return (
+    <div className="space-y-3 rounded-lg border p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-semibold capitalize">{estate.environment}</p>
+        {isDefault && (
+          <Badge variant="secondary" className="text-[10px]">
+            New connections go here
+          </Badge>
+        )}
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-[10px]",
+            live
+              ? "border-rose-200 bg-rose-50 text-rose-700"
+              : "border-amber-200 bg-amber-50 text-amber-700",
+          )}
+        >
+          {live ? "Real cards" : "Test cards only"}
+        </Badge>
+      </div>
+
+      <div className="space-y-2.5">
+        <StatusLine
+          ok={estate.configured}
+          label={
+            estate.configured ? "App credentials resolve" : "No app credentials"
+          }
+          detail={
+            estate.configured
+              ? `CLOVER_${estate.environment.toUpperCase()}_APP_ID and _APP_SECRET are both set.`
+              : `Set CLOVER_${estate.environment.toUpperCase()}_APP_ID and _APP_SECRET. Until then this estate refuses every payment.`
+          }
+        />
+        <StatusLine
+          ok={estate.terminalsEnabled}
+          label={
+            estate.terminalsEnabled
+              ? "Card-present enabled"
+              : "Card-present disabled"
+          }
+          detail={
+            estate.terminalsEnabled
+              ? "A Remote Application ID is set, so physical terminals can be charged."
+              : `Set CLOVER_${estate.environment.toUpperCase()}_REMOTE_APPLICATION_ID. Online payments still work; every terminal call answers 401 without it.`
+          }
+        />
+      </div>
+
+      <div className="flex items-center gap-4 border-t pt-3">
+        <div>
+          <p className="text-lg font-semibold tabular-nums">
+            {estate.connectedFacilities}
+          </p>
+          <p className="text-muted-foreground text-xs">
+            {estate.connectedFacilities === 1 ? "facility" : "facilities"}{" "}
+            connected
+          </p>
+        </div>
+        {estate.facilitiesInError > 0 && (
+          <div>
+            <p className="text-lg font-semibold text-rose-600 tabular-nums">
+              {estate.facilitiesInError}
+            </p>
+            <p className="text-xs text-rose-600">cannot take a card</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PaymentProcessingConfig() {
   const cfg = useCloverConfig();
-
-  const [editing, setEditing] = useState(false);
-  const [merchantId, setMerchantId] = useState(cfg.merchantId);
-  const [appSecret, setAppSecret] = useState(cfg.appSecret);
-  const [appId, setAppId] = useState(cfg.appId);
-
-  const [testing, setTesting] = useState(false);
-  const [connResult, setConnResult] = useState<CloverConnectionTest | null>(
-    null,
-  );
-  const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
-  const [charging, setCharging] = useState(false);
-  const [chargeResult, setChargeResult] =
-    useState<CloverTestChargeResult | null>(null);
-
-  const showForm = editing || !cfg.configured;
-
-  const startEdit = () => {
-    setMerchantId(cfg.merchantId);
-    setAppSecret(cfg.appSecret);
-    setAppId(cfg.appId);
-    setEditing(true);
-  };
-
-  const saveCredentials = () => {
-    if (!merchantId.trim() || !appSecret.trim() || !appId.trim()) {
-      toast.error("Enter Merchant ID, Private App Secret and App ID.");
-      return;
-    }
-    updateCloverConfig({
-      merchantId: merchantId.trim(),
-      appSecret: appSecret.trim(),
-      appId: appId.trim(),
-      configured: true,
-    });
-    setEditing(false);
-    toast.success("Clover credentials saved (encrypted).");
-  };
-
-  const testConnection = async () => {
-    setTesting(true);
-    setConnResult(null);
-    try {
-      const result = await testCloverConnection({
-        merchantId: showForm ? merchantId : cfg.merchantId,
-        appSecret: showForm ? appSecret : cfg.appSecret,
-        appId: showForm ? appId : cfg.appId,
-        environment: cfg.environment,
-      });
-      setConnResult(result);
-      if (result.ok) toast.success(result.message);
-      else toast.error(result.message);
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  const setEnvironment = (env: CloverEnvironment) => {
-    if (env === cfg.environment) return;
-    updateCloverConfig({ environment: env });
-    if (env === "production") {
-      toast.warning("Production mode — live charges are now enabled.");
-    } else {
-      toast.success("Switched to Sandbox — no real charges.");
-    }
-  };
-
-  const generateWebhookSecret = () => {
-    const secret = `whsec_${crypto.randomUUID().replace(/-/g, "")}`;
-    updateCloverConfig({ webhookSecret: secret });
-    setRevealedSecret(secret);
-  };
-
-  const runTestCharge = async () => {
-    setCharging(true);
-    setChargeResult(null);
-    try {
-      const result = await sendCloverTestCharge();
-      setChargeResult(result);
-      if (result.ok) toast.success(result.message);
-      else toast.error(result.message);
-    } finally {
-      setCharging(false);
-    }
-  };
+  const { data, isPending, error } = useQuery(cloverPlatformQueries.status());
 
   return (
     <div className="space-y-6">
-      {/* 1. API Credentials */}
+      {/* 1. Credentials — reported, not edited. */}
       <SectionCard
         icon={KeyRound}
-        title="Clover Fiserv API Credentials"
-        description="Stored encrypted; masked after entry. Yipyy uses these to charge facilities."
+        title="Clover app credentials"
+        description="Set where this app is deployed, never in a browser. This screen reports whether they resolve — it is not shown their values."
       >
-        {showForm ? (
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="clover-merchant">Merchant ID</Label>
-              <Input
-                id="clover-merchant"
-                value={merchantId}
-                onChange={(e) => setMerchantId(e.target.value)}
-                placeholder="merchant_xxxxx"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="clover-secret">Private App Secret</Label>
-              <Input
-                id="clover-secret"
-                type="password"
-                value={appSecret}
-                onChange={(e) => setAppSecret(e.target.value)}
-                placeholder="••••••••"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="clover-appid">App ID</Label>
-              <Input
-                id="clover-appid"
-                value={appId}
-                onChange={(e) => setAppId(e.target.value)}
-                placeholder="APP-xxxxx"
-              />
-            </div>
+        {isPending ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Skeleton className="h-44 w-full" />
+            <Skeleton className="h-44 w-full" />
           </div>
+        ) : error ? (
+          <p className="text-sm text-rose-600">
+            {error instanceof Error
+              ? error.message
+              : "Could not read the configuration."}
+          </p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-3">
-            <MaskedField
-              label="Merchant ID"
-              value={maskSecret(cfg.merchantId)}
-            />
-            <MaskedField
-              label="Private App Secret"
-              value={maskSecret(cfg.appSecret)}
-            />
-            <MaskedField label="App ID" value={maskSecret(cfg.appId)} />
-          </div>
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {data?.estates.map((estate) => (
+                <EstateCard
+                  key={estate.environment}
+                  estate={estate}
+                  isDefault={estate.environment === data.defaultEnvironment}
+                />
+              ))}
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Both estates serve traffic at once. A connection is served by the
+              estate it was made against, stored on its own row — so sandbox
+              merchants keep working after real ones start connecting, and there
+              is always somewhere to test without touching a real card.
+            </p>
+          </>
         )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          {showForm ? (
-            <>
-              <Button onClick={saveCredentials}>Save credentials</Button>
-              {cfg.configured && (
-                <Button variant="outline" onClick={() => setEditing(false)}>
-                  Cancel
-                </Button>
-              )}
-            </>
-          ) : (
-            <Button variant="outline" onClick={startEdit}>
-              Edit credentials
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            className="gap-1.5"
-            onClick={testConnection}
-            disabled={testing}
-          >
-            {testing ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <TestTube className="size-4" />
-            )}
-            Test Connection
-          </Button>
-          {connResult && (
-            <span
-              className={cn(
-                "flex items-center gap-1 text-xs font-medium",
-                connResult.ok ? "text-emerald-600" : "text-rose-600",
-              )}
-            >
-              {connResult.ok ? (
-                <CheckCircle2 className="size-3.5" />
-              ) : (
-                <XCircle className="size-3.5" />
-              )}
-              {connResult.message}
-            </span>
-          )}
-        </div>
       </SectionCard>
 
-      {/* 2. Environment */}
+      {/* 2. How a facility connects. */}
       <SectionCard
         icon={ShieldCheck}
-        title="Environment"
-        description="Sandbox uses Clover's test environment (no real charges). Production goes live."
+        title="How a facility connects"
+        description="Each facility authorises Yipyy against their OWN Clover merchant account. Yipyy never holds their card credentials."
       >
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1 rounded-lg border p-1">
-            {(["sandbox", "production"] as CloverEnvironment[]).map((env) => (
-              <button
-                key={env}
-                type="button"
-                onClick={() => setEnvironment(env)}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors",
-                  cfg.environment === env
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
-              >
-                {env}
-              </button>
-            ))}
-          </div>
-          <Badge
-            variant="outline"
-            className={cn(
-              cfg.environment === "production"
-                ? "border-rose-200 bg-rose-50 text-rose-700"
-                : "border-amber-200 bg-amber-50 text-amber-700",
-            )}
-          >
-            {cfg.environment === "production"
-              ? "Live — real charges"
-              : "Sandbox — test only"}
-          </Badge>
+        <div className="text-muted-foreground space-y-2 text-sm">
+          <p>
+            A facility owner opens their payment settings and authorises through
+            Clover. Their access and refresh tokens are stored per facility in
+            Supabase Vault and never leave the server.
+          </p>
+          <p>{CURRENCY_NOTE}</p>
         </div>
+        <Button variant="outline" size="sm" asChild className="gap-1.5">
+          <a
+            href="https://sandbox.dev.clover.com/developers"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Clover developer dashboard
+            <ExternalLink className="size-3.5" />
+          </a>
+        </Button>
       </SectionCard>
 
-      {/* 3. Subscription Billing Config */}
+      {/* 3. Webhook — the real URL, derived. */}
       <SectionCard
-        icon={Repeat}
-        title="Subscription Billing"
-        description="How Yipyy invoices and collects subscription payments from facilities."
+        icon={Webhook}
+        title="Webhook"
+        description="Paste this into your Clover app's Webhooks settings. It is how the ledger self-corrects when money moves at Clover rather than here."
       >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>Default billing currency</Label>
-            <Select
-              value={cfg.currency}
-              onValueChange={(v) => updateCloverConfig({ currency: v })}
+        <div className="space-y-1.5">
+          <Label>Delivery URL</Label>
+          <div className="flex items-center gap-2">
+            <code className="bg-muted flex-1 truncate rounded-md px-3 py-2 font-mono text-xs">
+              {data?.webhookUrl ?? "—"}
+            </code>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!data?.webhookUrl}
+              onClick={() => copy(data!.webhookUrl, "Webhook URL")}
             >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Copy className="size-3.5" />
+            </Button>
           </div>
+          <p className="text-muted-foreground text-xs">
+            Derived from this deployment&rsquo;s public address, so it cannot
+            drift from the route that actually answers.
+          </p>
         </div>
 
-        <div className="divide-y rounded-lg border">
+        {!isPending && !error && (
+          <div className="space-y-1.5">
+            <Label>Authentication</Label>
+            {data?.webhookAuthConfigured ? (
+              <StatusLine
+                ok
+                label="Auth header configured"
+                detail="Deliveries that do not carry the expected X-Clover-Auth value are rejected. Clover does not sign its deliveries — this is a static shared secret repeated on every message."
+              />
+            ) : (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-950/30">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-400" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                    CLOVER_WEBHOOK_SIGNING_SECRET is not set
+                  </p>
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    The verification handshake is open so the URL can be
+                    verified, and it closes the moment this is set. Set it
+                    straight after Clover verifies the endpoint — the code
+                    Clover sends is written to payment_webhook_events.outcome,
+                    so you can read it out of the database rather than the logs.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </SectionCard>
+
+      {/* 4. Terminals. */}
+      <SectionCard
+        icon={Smartphone}
+        title="Terminals"
+        description="A facility's own Clover devices, discovered from their merchant account — nothing to register here."
+      >
+        <p className="text-muted-foreground text-sm">
+          Terminals appear automatically once a facility connects and their
+          device runs Cloud Pay Display. Staff name them and pick a default in
+          the facility&rsquo;s own settings. Card-present needs the Remote
+          Application ID above; without it every terminal call answers 401 while
+          online payments carry on working.
+        </p>
+      </SectionCard>
+
+      {/* 5. Subscription billing — honestly labelled as unwired. */}
+      <SectionCard
+        icon={Repeat}
+        title="Subscription billing"
+        description="How Yipyy would invoice facilities for their own subscription. Separate from the payments above, which are a facility charging its customers."
+      >
+        <div className="flex items-start gap-2 rounded-lg border border-dashed p-3">
+          <AlertTriangle className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+          <p className="text-muted-foreground text-xs">
+            Not wired. These preferences persist in this browser and nothing
+            reads them — no invoice is generated and no card is charged on a due
+            date. They are kept as a record of the intended behaviour rather
+            than removed, and are labelled so nobody mistakes them for a live
+            setting.
+          </p>
+        </div>
+        <div className="divide-y rounded-lg border opacity-70">
           <ToggleRow
             label="Invoice generation"
             hint="Auto-generate an invoice at the start of each billing cycle"
@@ -350,150 +371,8 @@ export function PaymentProcessingConfig() {
             checked={cfg.autoCharge}
             onChange={(v) => updateCloverConfig({ autoCharge: v })}
           />
-          <div className="flex items-center justify-between gap-4 p-3">
-            <div>
-              <p className="text-sm font-medium">Retry logic</p>
-              <p className="text-muted-foreground text-xs">
-                Retry failed payments on Day 1, Day 7 and Day 14 (matches the
-                dunning sequence)
-              </p>
-            </div>
-            <div className="flex gap-1.5">
-              {RETRY_DAYS.map((d) => (
-                <Badge key={d} variant="secondary" className="text-[10px]">
-                  Day {d}
-                </Badge>
-              ))}
-            </div>
-          </div>
         </div>
       </SectionCard>
-
-      {/* 4. Webhook Configuration */}
-      <SectionCard
-        icon={Webhook}
-        title="Webhook Configuration"
-        description="Clover posts payment events to this endpoint."
-      >
-        <div className="space-y-1.5">
-          <Label>Webhook URL</Label>
-          <div className="flex items-center gap-2">
-            <code className="bg-muted flex-1 truncate rounded-md px-3 py-2 font-mono text-xs">
-              {WEBHOOK_URL}
-            </code>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => copy(WEBHOOK_URL, "Webhook URL")}
-            >
-              <Copy className="size-3.5" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Events listened for</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {WEBHOOK_EVENTS.map((e) => (
-              <Badge
-                key={e}
-                variant="outline"
-                className="font-mono text-[11px]"
-              >
-                {e}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Webhook signing secret</Label>
-          {revealedSecret ? (
-            <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-950/30">
-              <p className="flex items-center gap-1.5 text-xs font-medium text-amber-800 dark:text-amber-300">
-                <AlertTriangle className="size-3.5" />
-                Shown once — copy it to your Clover dashboard now.
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded-md bg-white/70 px-3 py-2 font-mono text-xs dark:bg-black/30">
-                  {revealedSecret}
-                </code>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copy(revealedSecret, "Webhook secret")}
-                >
-                  <Copy className="size-3.5" />
-                </Button>
-                <Button size="sm" onClick={() => setRevealedSecret(null)}>
-                  Done
-                </Button>
-              </div>
-            </div>
-          ) : cfg.webhookSecret ? (
-            <div className="flex items-center gap-2">
-              <code className="bg-muted flex-1 rounded-md px-3 py-2 font-mono text-xs">
-                {maskSecret(cfg.webhookSecret)}
-              </code>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={generateWebhookSecret}
-              >
-                Regenerate
-              </Button>
-            </div>
-          ) : (
-            <Button variant="outline" onClick={generateWebhookSecret}>
-              Generate webhook secret
-            </Button>
-          )}
-        </div>
-      </SectionCard>
-
-      {/* 5. Test Charge */}
-      <SectionCard
-        icon={TestTube}
-        title="Test Charge"
-        description="Verify the full charge → refund flow end-to-end."
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            onClick={runTestCharge}
-            disabled={charging || !cfg.configured}
-            className="gap-1.5"
-          >
-            {charging ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <CreditCard className="size-4" />
-            )}
-            Send Test Charge of $0.01
-          </Button>
-          {!cfg.configured && (
-            <span className="text-muted-foreground text-xs">
-              Save credentials first.
-            </span>
-          )}
-          {chargeResult?.ok && (
-            <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
-              <CheckCircle2 className="size-3.5" />
-              Charged {chargeResult.chargeId} · refunded {chargeResult.refundId}
-            </span>
-          )}
-        </div>
-      </SectionCard>
-    </div>
-  );
-}
-
-function MaskedField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
-      <code className="bg-muted block truncate rounded-md px-3 py-2 font-mono text-xs">
-        {value || "—"}
-      </code>
     </div>
   );
 }

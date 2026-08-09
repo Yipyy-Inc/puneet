@@ -330,56 +330,25 @@ export interface TokenizedCard {
 }
 
 // ---- Platform-level Clover Fiserv setup (System Config) -----------------
-
-export interface CloverConnectionTest {
-  ok: boolean;
-  message: string;
-}
-
-/** Verify the platform's Clover Fiserv API credentials. */
-export async function testCloverConnection(input: {
-  merchantId: string;
-  appSecret: string;
-  appId: string;
-  environment: "sandbox" | "production";
-}): Promise<CloverConnectionTest> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  if (!input.merchantId || !input.appSecret || !input.appId) {
-    return {
-      ok: false,
-      message:
-        "Missing credentials — Merchant ID, Private App Secret and App ID are all required.",
-    };
-  }
-  return {
-    ok: true,
-    message: `Connected to Clover Fiserv (${input.environment}).`,
-  };
-}
-
-export interface CloverTestChargeResult {
-  ok: boolean;
-  chargeId?: string;
-  refundId?: string;
-  message: string;
-}
-
-/**
- * Send a $0.01 test charge to the designated test card and immediately refund it,
- * confirming the full charge → refund flow through Clover Fiserv end-to-end.
- */
-export async function sendCloverTestCharge(): Promise<CloverTestChargeResult> {
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  const chargeId = `txn_test_${Date.now()}`;
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const refundId = `refund_test_${Date.now()}`;
-  return {
-    ok: true,
-    chargeId,
-    refundId,
-    message: "Test charge of $0.01 succeeded and was immediately refunded.",
-  };
-}
+//
+// `testCloverConnection` and `sendCloverTestCharge` used to live here. Neither
+// contacted Clover.
+//
+// The first slept 500ms and reported "Connected to Clover Fiserv (sandbox)" if
+// three form fields were non-empty — so typing nonsense into all three passed.
+// The second slept, invented `txn_test_<timestamp>` and `refund_test_<timestamp>`
+// and announced that $0.01 had been charged and immediately refunded. No card
+// was ever charged, and the button could not fail.
+//
+// That is the check somebody runs to satisfy themselves that payments work
+// before going live, so a version that always passes is worse than no version:
+// it converts an unknown into a false confidence. Deleted rather than fixed —
+// the real charge and refund paths exist (src/lib/clover/) and are exercised
+// against live Clover, and a second, simulated pretender beside them is only a
+// way to be misled.
+//
+// What the system-config screen shows instead is what the DEPLOYMENT actually
+// has: /api/payments/clover/platform, booleans only.
 
 /** Tokenize a card through Clover Fiserv. Returns display-safe fields only. */
 export async function tokenizeCard(

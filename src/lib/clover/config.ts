@@ -175,11 +175,31 @@ export function asCloverEnvironment(value: string | null): CloverEnvironment {
  * than written down twice.
  */
 export function cloverReturnUrl(): string {
+  return `${publicOrigin()}/clover`;
+}
+
+/**
+ * Where Clover posts deliveries — the value a platform admin pastes into the
+ * app's Webhooks settings.
+ *
+ * DERIVED, never typed. The system-config screen used to display a hardcoded
+ * `https://app.yipyy.com/api/clover/webhook`, which is not this route: it is
+ * `/api/webhooks/clover`, matching the Clerk webhook beside it. An admin who
+ * followed that screen configured Clover to POST at a 404 and would have seen
+ * no error anywhere — Clover would report failing deliveries, and this app
+ * would simply never hear about a refund taken on a merchant's own dashboard.
+ */
+export function cloverWebhookUrl(): string {
+  return `${publicOrigin()}/api/webhooks/clover`;
+}
+
+/** This deployment's public address, however it has been configured. */
+function publicOrigin(): string {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configured) return `${configured.replace(/\/+$/, "")}/clover`;
+  if (configured) return configured.replace(/\/+$/, "");
 
   const domain = process.env.NEXT_PUBLIC_APP_DOMAIN?.trim();
-  if (domain) return `https://${domain}/clover`;
+  if (domain) return `https://${domain}`;
 
-  return "http://localhost:3000/clover";
+  return "http://localhost:3000";
 }
