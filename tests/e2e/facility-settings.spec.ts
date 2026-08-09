@@ -141,6 +141,54 @@ test.describe("a facility's settings", () => {
     );
   });
 
+  test("tip tiers are the facility's own, and reach a second browser", async ({
+    page,
+    browser,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const base = (await (await page.request.get(SETTINGS)).json()) as {
+      tip_config: { value: Record<string, unknown> };
+    };
+
+    // The whole domain, with one tier changed. Tips decide what a customer is
+    // ASKED TO PAY, so a facility running one set of tiers while the payment
+    // screen offers another is not a display bug.
+    const saved = await page.request.patch(SETTINGS, {
+      data: {
+        domain: "tip_config",
+        value: {
+          ...base.tip_config.value,
+          general: {
+            options: [
+              { type: "percentage", value: 12, label: "Thanks" },
+              { type: "percentage", value: 16, label: "Great" },
+              { type: "percentage", value: 22, label: "Amazing" },
+            ],
+            preferredIndex: 2,
+          },
+        },
+      },
+    });
+    expect(saved.status()).toBe(200);
+
+    const other = await browser.newContext();
+    const otherPage = await other.newPage();
+    await signIn(otherPage, ACCOUNTS.manager);
+
+    const body = (await (await otherPage.request.get(SETTINGS)).json()) as {
+      tip_config: {
+        value: { general: { preferredIndex: number; options: unknown[] } };
+        configured: boolean;
+      };
+    };
+    expect(body.tip_config.configured).toBe(true);
+    expect(body.tip_config.value.general.preferredIndex).toBe(2);
+    expect(body.tip_config.value.general.options).toHaveLength(3);
+
+    await other.close();
+  });
+
   test("a caretaker reads them but cannot change them", async ({ page }) => {
     await signIn(page, ACCOUNTS.caretaker);
 

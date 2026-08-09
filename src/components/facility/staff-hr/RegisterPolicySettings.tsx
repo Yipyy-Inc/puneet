@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSettings } from "@/hooks/use-settings";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -31,6 +32,7 @@ const CLOSE_REMINDER_LABELS: Record<RegisterCloseReminderMode, string> = {
  *  Persisted to StaffHrConfig. */
 export function RegisterPolicySettings() {
   const config = useStaffHrConfig();
+  const { hours } = useSettings();
   // The displayed value comes from the REFETCH this mutation triggers, not
   // from the input — see the note in src/lib/api/staff.ts.
   const { mutate: saveStaffHrConfig } = useSaveStaffHrConfig();
@@ -49,7 +51,7 @@ export function RegisterPolicySettings() {
     toast.success("Close-reminder setting updated");
   };
 
-  const closeTime = todayCloseTime();
+  const closeTime = todayCloseTime(hours);
 
   return (
     <Card>

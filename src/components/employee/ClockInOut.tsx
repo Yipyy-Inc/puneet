@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSettings } from "@/hooks/use-settings";
 import {
   ClockConfirm,
   formatClockTime,
@@ -28,6 +29,10 @@ export function ClockInOut({ staffId }: { staffId: string }) {
   // The register context is resolved from the acting viewer, not a bare id —
   // see src/lib/employee/register-context.ts.
   const { viewer, viewerResolved } = useFacilityViewer();
+  // The facility's own closing time, from facility_settings. Imported from the
+  // fixture until 20260809140000, so a business open until 21:45 had its drawer
+  // demanding to be counted at 19:00.
+  const { hours } = useSettings();
   const { clockedIn, clockedInAt } = useClock(staffId);
   const {
     requireClockInConfirm,
@@ -74,7 +79,12 @@ export function ClockInOut({ staffId }: { staffId: string }) {
       const session = getTodaySession(ctx.facilityId, ctx.locationId);
       if (
         session &&
-        shouldPromptCloseOnExit(session, ctx.staffName, registerCloseReminder)
+        shouldPromptCloseOnExit(
+          session,
+          ctx.staffName,
+          registerCloseReminder,
+          hours,
+        )
       ) {
         requestRegisterClose(session.id);
       }
