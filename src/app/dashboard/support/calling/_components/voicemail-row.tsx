@@ -20,7 +20,7 @@ import {
   markVoicemailPlayed,
   setVoicemailStatus,
 } from "@/lib/support-voicemail-store";
-import { useTwilioConfig } from "@/hooks/use-twilio-config";
+import { usePlatformTelephony } from "@/lib/api/platform-communication";
 import { placeOutboundCall } from "@/lib/twilio-dialer";
 import type { SupportVoicemail } from "@/types/support-call";
 import { FacilityAvatar } from "../../chat/_components/facility-avatar";
@@ -38,7 +38,7 @@ function formatReceived(iso: string): string {
 }
 
 export function VoicemailRow({ voicemail }: { voicemail: SupportVoicemail }) {
-  const twilio = useTwilioConfig();
+  const twilio = usePlatformTelephony();
   const facility = lookupFacilityByPhone(voicemail.callerNumber);
   const resolved = voicemail.status === "resolved";
 
@@ -49,7 +49,7 @@ export function VoicemailRow({ voicemail }: { voicemail: SupportVoicemail }) {
     }
     const result = await placeOutboundCall({
       to: voicemail.callerNumber,
-      from: twilio.phoneNumbers[0] ?? "",
+      from: twilio.sendingNumber ?? "",
     });
     if (!result.ok) {
       toast.error(result.error ?? "The call could not be placed.");

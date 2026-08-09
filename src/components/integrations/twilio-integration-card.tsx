@@ -1,51 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   Check,
   Copy,
-  Eye,
-  EyeOff,
+  Loader2,
   Phone,
-  Plus,
   RefreshCw,
-  Save,
   ShieldCheck,
-  X,
 } from "lucide-react";
 
 import {
-  addTwilioNumber,
-  disconnectTwilio,
-  maskSecret,
-  removeTwilioNumber,
-  testTwilioConnection,
-  twilioWebhooks,
-  updateTwilioConfig,
-  useTwilioConfig,
-} from "@/hooks/use-twilio-config";
+  platformCommunicationQueries,
+  useVerifyTwilio,
+  type TwilioVerification,
+} from "@/lib/api/platform-communication";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-// Shared "Support Calling" Twilio configuration card. Powers the Section 5
-// calling module (Task 19): every calling surface reads the same
-// `useTwilioConfig()` store. Featured on both the standalone Integrations page
-// and the System Configuration → Integrations tab.
-export function TwilioIntegrationCard() {
-  const cfg = useTwilioConfig();
-  const hooks = twilioWebhooks(cfg.webhookBaseUrl);
-  const [newNumber, setNewNumber] = useState("");
+// ============================================================================
+// Yipyy's own Twilio account, as it actually is.
+//
+// This card used to be a form. It took an Account SID and an Auth Token, wrote
+// them to a store in the browser, said "Stored securely" underneath, and had a
+// Save button that toasted success and saved nothing. Its "Test Connection"
+// returned true whenever both fields were non-empty — so it passed against a
+// token revoked months ago, and against the placeholder credentials the store
+// shipped with.
+//
+// Credentials are environment variables now, so there is nothing here to edit
+// and the fields are gone rather than disabled. What remains is the two things
+// a platform admin actually needs: what this deployment is pointed at, and
+// whether Twilio agrees.
+// ============================================================================
 
-  function test() {
-    const ok = testTwilioConnection(new Date());
-    if (ok) toast.success("Twilio connection verified");
-    else toast.error("Add an Account SID and Auth Token first");
-  }
+export function TwilioIntegrationCard() {
+  const { data, isPending } = useQuery(platformCommunicationQueries.status());
+  const verify = useVerifyTwilio();
+
+  const configured = data?.configured ?? false;
+  const result: TwilioVerification | undefined = verify.data;
 
   return (
     <Card className="border-violet-500/20">
@@ -57,147 +57,216 @@ export function TwilioIntegrationCard() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold tracking-tight">Twilio</h2>
-              <Badge variant="secondary">Support Calling</Badge>
+              <Badge variant="secondary">Calling &amp; Messaging</Badge>
             </div>
             <p className="text-muted-foreground text-sm">
-              Powers the inbound queue, IVR routing and the outbound dialer.
+              The platform account: the support line, and the authority to give
+              each facility a number of its own.
             </p>
           </div>
-          <Badge
-            variant="outline"
-            className={cn(
-              "ml-auto gap-1",
-              cfg.connected
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
-                : "border-muted bg-muted text-muted-foreground",
-            )}
-          >
-            <span
+          {isPending ? (
+            <Skeleton className="ml-auto h-6 w-28 rounded-full" />
+          ) : (
+            <Badge
+              variant="outline"
               className={cn(
-                "size-1.5 rounded-full",
-                cfg.connected ? "bg-emerald-500" : "bg-muted-foreground",
+                "ml-auto gap-1",
+                configured
+                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+                  : "border-muted bg-muted text-muted-foreground",
               )}
-            />
-            {cfg.connected ? "Connected" : "Not connected"}
-          </Badge>
+            >
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  configured ? "bg-emerald-500" : "bg-muted-foreground",
+                )}
+              />
+              {configured ? "Configured" : "Not configured"}
+            </Badge>
+          )}
         </div>
       </CardHeader>
 
       <CardContent className="space-y-5 pt-5">
-        {/* Credentials */}
+        {!isPending && !configured && (
+          <div
+            role="alert"
+            className="flex gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm"
+          >
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+            <div className="space-y-1">
+              <p className="font-medium">
+                This deployment has no Twilio credentials.
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Set <code className="font-mono">TWILIO_ACCOUNT_SID</code> and{" "}
+                <code className="font-mono">TWILIO_AUTH_TOKEN</code> in the
+                environment and redeploy. They are not editable here — they
+                belong to the deployment, not to whoever is signed in.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <CredentialField
-            id="twilio-sid"
+          <ReadOnlyField
             label="Account SID"
-            value={cfg.accountSid}
-            onChange={(v) => updateTwilioConfig({ accountSid: v })}
+            value={data?.accountSid ?? null}
+            pending={isPending}
+            hint="An identifier, not a credential — it appears in every Twilio API path."
           />
-          <CredentialField
-            id="twilio-token"
-            label="Auth Token"
-            value={cfg.authToken}
-            onChange={(v) => updateTwilioConfig({ authToken: v })}
+          <ReadOnlyField
+            label="Platform sending number"
+            value={data?.sendingNumber ?? null}
+            pending={isPending}
+            hint="Used when no facility is involved, such as status-page alerts."
           />
         </div>
 
-        {/* Phone numbers */}
+        <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          <ShieldCheck className="size-3.5 shrink-0" />
+          The auth token is held on the server and is never sent to this page,
+          in any form.
+        </p>
+
+        {/* Facility lines */}
         <div className="space-y-2">
-          <Label>Support Phone Number(s)</Label>
-          <div className="space-y-1.5">
-            {cfg.phoneNumbers.map((n) => (
-              <div
-                key={n}
-                className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-              >
-                <Phone className="text-muted-foreground size-4 shrink-0" />
-                <span className="flex-1 font-mono">{n}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground/60 hover:text-destructive size-7"
-                  onClick={() => removeTwilioNumber(n)}
-                  aria-label="Remove number"
-                >
-                  <X className="size-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Input
-              value={newNumber}
-              onChange={(e) => setNewNumber(e.target.value)}
-              placeholder="+1 (___) ___-____"
-              className="font-mono"
-            />
-            <Button
-              variant="outline"
-              onClick={() => {
-                addTwilioNumber(newNumber);
-                setNewNumber("");
-              }}
-              disabled={!newNumber.trim()}
-            >
-              <Plus className="mr-1.5 size-4" />
-              Add
-            </Button>
-          </div>
+          <Label>Facility lines</Label>
+          {isPending ? (
+            <Skeleton className="h-16 w-full rounded-lg" />
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <LineCount
+                label="Connected"
+                value={data?.facilityLines.connected ?? 0}
+                tone="emerald"
+              />
+              <LineCount
+                label="In error"
+                value={data?.facilityLines.inError ?? 0}
+                tone="rose"
+              />
+              <LineCount
+                label="Suspended"
+                value={data?.facilityLines.suspended ?? 0}
+                tone="muted"
+              />
+              <LineCount
+                label="Pending"
+                value={data?.facilityLines.pending ?? 0}
+                tone="muted"
+              />
+            </div>
+          )}
         </div>
 
         {/* Webhook URLs */}
         <div className="space-y-2">
-          <Label>Twilio Webhook URLs</Label>
+          <Label>Twilio webhook URLs</Label>
           <p className="text-muted-foreground text-xs">
-            Paste these into your Twilio number&apos;s voice configuration.
+            Paste these into the number&apos;s configuration in the Twilio
+            console.
           </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <WebhookRow
-              label="Inbound Voice"
-              url={hooks.inboundVoice}
-              hint="→ Live tab queue & IVR routing"
-            />
-            <WebhookRow
-              label="Outbound / Dialer"
-              url={hooks.outboundDial}
-              hint="→ Outbound dialer"
-            />
-            <WebhookRow
-              label="Status Callback"
-              url={hooks.statusCallback}
-              hint="Call progress events"
-            />
-            <WebhookRow
-              label="Recording"
-              url={hooks.recording}
-              hint="Recording-ready callback"
-            />
-          </div>
+          {!isPending && data && !data.webhooksReachable && (
+            <div
+              role="alert"
+              className="flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs"
+            >
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
+              <span>
+                These are not HTTPS, so Twilio cannot reach them. Outbound calls
+                and messages still work; nothing inbound will ever arrive.
+              </span>
+            </div>
+          )}
+          {isPending ? (
+            <Skeleton className="h-28 w-full rounded-lg" />
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <WebhookRow
+                label="Inbound Voice"
+                url={data?.webhooks.inboundVoice ?? ""}
+                hint="→ IVR menu & support queue"
+              />
+              <WebhookRow
+                label="Outbound / Dialer"
+                url={data?.webhooks.outboundDial ?? ""}
+                hint="→ Bridges an outbound call"
+              />
+              <WebhookRow
+                label="Status Callback"
+                url={data?.webhooks.statusCallback ?? ""}
+                hint="Call progress events"
+              />
+              <WebhookRow
+                label="Recording"
+                url={data?.webhooks.recording ?? ""}
+                hint="Recording & transcription ready"
+              />
+            </div>
+          )}
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-          <Button variant="outline" onClick={test}>
-            <RefreshCw className="mr-2 size-4" />
-            Test Connection
-          </Button>
+        {/* Verification */}
+        <div className="space-y-2 border-t pt-4">
           <Button
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-            onClick={() => toast.success("Twilio configuration saved")}
+            variant="outline"
+            onClick={() => {
+              verify.mutate(undefined, {
+                onSuccess: (r) => {
+                  if (r.ok) toast.success("Twilio accepted the credentials");
+                  else toast.error(r.error ?? "Twilio refused the credentials");
+                },
+                onError: (e) =>
+                  toast.error(
+                    e instanceof Error ? e.message : "Verification failed",
+                  ),
+              });
+            }}
+            disabled={verify.isPending}
           >
-            <Save className="mr-2 size-4" />
-            Save
+            {verify.isPending ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 size-4" />
+            )}
+            {verify.isPending ? "Asking Twilio…" : "Test connection"}
           </Button>
-          {cfg.connected && (
-            <Button
-              variant="ghost"
-              className="text-destructive ml-auto"
-              onClick={() => {
-                disconnectTwilio();
-                toast.success("Twilio disconnected");
-              }}
+
+          {result && (
+            <div
+              role="status"
+              className={cn(
+                "rounded-lg border p-3 text-sm",
+                result.ok
+                  ? "border-emerald-500/30 bg-emerald-500/10"
+                  : "border-rose-500/30 bg-rose-500/10",
+              )}
             >
-              Disconnect
-            </Button>
+              {result.ok ? (
+                <div className="space-y-0.5">
+                  <p className="font-medium">
+                    Twilio answered as{" "}
+                    <span className="font-mono">
+                      {result.friendlyName ?? "this account"}
+                    </span>
+                    .
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Account status: {result.accountStatus ?? "unknown"}
+                    {result.accountType ? ` · ${result.accountType}` : ""}
+                    {/* A trial account authenticates perfectly and will only
+                        message numbers verified by hand, so it is worth naming
+                        rather than reporting as a clean pass. */}
+                    {result.accountType?.toLowerCase() === "trial" &&
+                      " — a trial account only messages numbers you have verified in the console."}
+                  </p>
+                </div>
+              ) : (
+                <p>{result.error ?? "Twilio refused the credentials."}</p>
+              )}
+            </div>
           )}
         </div>
       </CardContent>
@@ -205,42 +274,56 @@ export function TwilioIntegrationCard() {
   );
 }
 
-function CredentialField({
-  id,
+function ReadOnlyField({
   label,
   value,
-  onChange,
+  pending,
+  hint,
 }: {
-  id: string;
   label: string;
-  value: string;
-  onChange: (v: string) => void;
+  value: string | null;
+  pending: boolean;
+  hint: string;
 }) {
-  const [show, setShow] = useState(false);
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="relative">
-        <Input
-          id={id}
-          type={show ? "text" : "password"}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="pr-10 font-mono text-sm"
-        />
-        <button
-          type="button"
-          onClick={() => setShow((s) => !s)}
-          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
-          aria-label={show ? "Hide" : "Reveal"}
-        >
-          {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-        </button>
-      </div>
-      <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
-        <ShieldCheck className="size-3" />
-        Stored securely · {maskSecret(value)}
+      <Label>{label}</Label>
+      {pending ? (
+        <Skeleton className="h-9 w-full rounded-md" />
+      ) : (
+        <div className="bg-muted/40 rounded-md border px-3 py-2 font-mono text-sm">
+          {value ?? (
+            <span className="text-muted-foreground font-sans">Not set</span>
+          )}
+        </div>
+      )}
+      <p className="text-muted-foreground text-[11px]">{hint}</p>
+    </div>
+  );
+}
+
+function LineCount({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "emerald" | "rose" | "muted";
+}) {
+  return (
+    <div className="rounded-lg border p-2.5">
+      <p
+        className={cn(
+          "text-xl font-semibold tabular-nums",
+          tone === "emerald" && "text-emerald-600 dark:text-emerald-400",
+          // Zero is the good number here, so it should not shout in red.
+          tone === "rose" && value > 0 && "text-rose-600 dark:text-rose-400",
+        )}
+      >
+        {value}
       </p>
+      <p className="text-muted-foreground text-xs">{label}</p>
     </div>
   );
 }
@@ -266,7 +349,7 @@ function WebhookRow({
             navigator.clipboard?.writeText(url);
             toast.success("Webhook URL copied");
           }}
-          aria-label="Copy URL"
+          aria-label={`Copy ${label} URL`}
         >
           <Copy className="size-3.5" />
         </Button>

@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { lookupFacilityByPhone } from "@/data/support-calls";
 import { recordOutboundCall } from "@/lib/dialer-store";
-import { useTwilioConfig } from "@/hooks/use-twilio-config";
+import { usePlatformTelephony } from "@/lib/api/platform-communication";
 import {
   dialDigits,
   placeOutboundCall,
@@ -54,8 +54,8 @@ const KEY_SUBLABELS: Record<string, string> = {
 };
 
 export function DialerTab() {
-  const twilio = useTwilioConfig();
-  const supportNumber = twilio.phoneNumbers[0] ?? "";
+  const twilio = usePlatformTelephony();
+  const supportNumber = twilio.sendingNumber ?? "";
   const prefix = supportDialPrefix(supportNumber);
 
   const [value, setValue] = useState(() => prefix);
@@ -207,9 +207,9 @@ export function DialerTab() {
               </Button>
             </div>
 
-            {!twilio.connected && (
+            {!twilio.pending && !twilio.connected && (
               <p className="text-muted-foreground text-center text-xs">
-                Connect Twilio in Integrations to place calls.
+                Set Twilio credentials on this deployment to place calls.
               </p>
             )}
           </div>

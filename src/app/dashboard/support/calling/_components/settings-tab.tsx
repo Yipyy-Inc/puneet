@@ -31,7 +31,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useTwilioConfig } from "@/hooks/use-twilio-config";
+import { usePlatformTelephony } from "@/lib/api/platform-communication";
 import {
   updateSupportSettings,
   useSupportCallingSettings,
@@ -70,7 +70,7 @@ function ToggleRow({
 
 export function SettingsTab() {
   const s = useSupportCallingSettings();
-  const twilio = useTwilioConfig();
+  const twilio = usePlatformTelephony();
 
   return (
     <div className="space-y-4">
@@ -103,7 +103,7 @@ export function SettingsTab() {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-lg font-semibold tabular-nums">
-                {twilio.phoneNumbers[0] ?? "Not configured"}
+                {twilio.sendingNumber ?? "Not configured"}
               </span>
               <Badge
                 variant="outline"

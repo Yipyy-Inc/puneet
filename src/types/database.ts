@@ -856,6 +856,54 @@ export type Database = {
         Relationships: [];
       };
       /**
+       * A facility's Twilio SUBACCOUNT. The parent account is Yipyy's and lives
+       * in the environment, never here — a parent token acts on every
+       * subaccount at once (20260809200000).
+       */
+      communication_connections: {
+        Row: {
+          facility_id: string;
+          provider: string;
+          subaccount_sid: string;
+          friendly_name: string | null;
+          status: string;
+          connected_by: string | null;
+          connected_at: string | null;
+          suspended_at: string | null;
+          last_error: string | null;
+          last_verified_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /**
+       * Phone numbers a facility sends and receives on. A released number keeps
+       * its row: years of message history refer to it.
+       */
+      communication_numbers: {
+        Row: {
+          id: string;
+          facility_id: string;
+          provider: string;
+          phone_number: string;
+          number_sid: string | null;
+          country: string;
+          sms_enabled: boolean;
+          mms_enabled: boolean;
+          voice_enabled: boolean;
+          purpose: string;
+          released_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /**
        * Written BEFORE the processor is called. Amounts are in CENTS here,
        * unlike the dollars in `payments`: this is the number sent to Clover and
        * it exists to be compared with what Clover reports.
@@ -4562,6 +4610,38 @@ export type Database = {
       };
       record_payment_connection_error: {
         Args: { p_facility_id: string; p_error: string; p_processor?: string };
+        Returns: undefined;
+      };
+      /**
+       * Records a facility's Twilio subaccount and puts its auth token in
+       * Vault. EXECUTE is granted to service_role alone (20260809200000).
+       */
+      store_communication_credentials: {
+        Args: {
+          p_facility_id: string;
+          p_subaccount_sid: string;
+          p_auth_token: string;
+          p_friendly_name?: string | null;
+          p_connected_by?: string | null;
+          p_provider?: string;
+        };
+        Returns: undefined;
+      };
+      /**
+       * The live auth token, for a server about to call Twilio or validate an
+       * X-Twilio-Signature. service_role only. Never call this for status —
+       * that is what communication_connections is for.
+       */
+      communication_auth_token: {
+        Args: { p_facility_id: string; p_provider?: string };
+        Returns: {
+          auth_token: string;
+          subaccount_sid: string;
+          status: string;
+        }[];
+      };
+      record_communication_connection_error: {
+        Args: { p_facility_id: string; p_error: string; p_provider?: string };
         Returns: undefined;
       };
       open_payment_intent: {

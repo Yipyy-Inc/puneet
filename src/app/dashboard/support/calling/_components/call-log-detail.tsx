@@ -32,7 +32,7 @@ import {
 } from "@/lib/calling/follow-up-status";
 import { lookupFacilityByPhone } from "@/data/support-calls";
 import { supportAgents } from "@/hooks/use-support-inbox";
-import { useTwilioConfig } from "@/hooks/use-twilio-config";
+import { usePlatformTelephony } from "@/lib/api/platform-communication";
 import { recordOutboundCall } from "@/lib/dialer-store";
 import {
   setCallAssigned,
@@ -86,7 +86,7 @@ export function CallLogDetail({
   entry: SupportCallLogEntry;
   onClose: () => void;
 }) {
-  const twilio = useTwilioConfig();
+  const twilio = usePlatformTelephony();
   const facility = lookupFacilityByPhone(entry.callerNumber);
   const dir = DIRECTION_META[entry.direction];
   const DirIcon = dir.icon;
@@ -105,7 +105,7 @@ export function CallLogDetail({
     }
     const result = await placeOutboundCall({
       to: entry.callerNumber,
-      from: twilio.phoneNumbers[0] ?? "",
+      from: twilio.sendingNumber ?? "",
     });
     if (!result.ok) {
       toast.error(result.error ?? "The call could not be placed.");
