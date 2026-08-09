@@ -11,10 +11,10 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SERVICE_CATEGORIES, SERVICE_ACCENTS } from "../constants";
-import { evaluationConfig } from "@/data/settings";
 import { trainingQueries } from "@/lib/api/training";
 import type { TrainingCourseType } from "@/lib/training-config";
 import { defaultServiceAddOns } from "@/data/service-addons";
@@ -62,6 +62,11 @@ export function ServiceStep({
   onBookService,
   onPickTrainingCourse,
 }: ServiceStepProps) {
+  // The FACILITY's evaluation settings — name, description, duration and
+  // PRICE. Read from the fixture until now, so every facility offered the
+  // same evaluation, described the same way, at the same price, regardless
+  // of what they had configured.
+  const { evaluation: evaluationConfig } = useSettings();
   // Which card is currently expanded into its inline detail pane. Defaults to
   // whatever `selectedService` is so an already-picked service stays open.
   // Independent from `selectedService` to allow "preview without selecting"

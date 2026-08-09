@@ -44,6 +44,7 @@ import { useQuery } from "@tanstack/react-query";
 import { estimates } from "@/data/estimates";
 import { clientQueries } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSettings } from "@/hooks/use-settings";
 import { facilities } from "@/data/facilities";
 import { boardingGuests, type BoardingGuest } from "@/data/boarding";
 import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-card-print";
@@ -113,15 +114,8 @@ import { BelongingsSection } from "@/components/bookings/BelongingsSection";
 import { ReservationJournalPanel } from "@/components/guest-journal/ReservationJournalPanel";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { formatBookingRef } from "@/lib/booking-id";
-import { facilityBookingFlowConfig } from "@/data/settings";
 import type { ExtraService } from "@/types/booking";
-import {
-  daycareConfig,
-  boardingConfig,
-  groomingConfig,
-  trainingConfig,
-  reportCardConfig,
-} from "@/data/settings";
+import { reportCardConfig } from "@/data/settings";
 import type { GeneratedTask } from "@/types/task";
 import {
   getTasksForBooking,
@@ -182,6 +176,16 @@ export default function ClientBookingDetailPage({
   // The client's bookings, live. `byClient` rather than `detail` because the
   // invoice panel below needs the client's OTHER unpaid bookings too, and two
   // queries for one client's bookings would be two answers to one question.
+  // The facility's own module configs and booking-flow rules. Both were read
+  // from `src/data/settings.ts`, so the evaluation gate and the per-service
+  // care-instruction visibility were the same for every facility.
+  const {
+    daycare,
+    boarding,
+    grooming,
+    training,
+    bookingFlow: facilityBookingFlowConfig,
+  } = useSettings();
   const { data: clientBookings = [], isPending: bookingsPending } = useQuery(
     bookingQueries.byClient(clientId),
   );
@@ -1192,12 +1196,16 @@ export default function ClientBookingDetailPage({
 
             {/* Care-instruction visibility is per-service config; default "optional" is backwards-compatible */}
             {(() => {
-              const serviceConfigMap: Record<string, typeof daycareConfig> = {
-                daycare: daycareConfig,
-                boarding: boardingConfig,
-                grooming: groomingConfig,
-                training: trainingConfig,
-              };
+              // The FACILITY's module configs, not the fixture's. Care-instruction
+              // visibility per service is a setting a facility sets; reading it
+              // from the shared fixture meant every facility got the same
+              // answer whatever they had chosen.
+              const serviceConfigMap = {
+                daycare,
+                boarding,
+                grooming,
+                training,
+              } as Record<string, typeof daycare | undefined>;
               const svcConfig = serviceConfigMap[booking.service];
               const care = svcConfig?.settings?.careInstructions;
               const feedingMode = care?.feeding ?? "optional";

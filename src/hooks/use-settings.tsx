@@ -2,15 +2,8 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import {
-  daycareConfig,
-  boardingConfig,
-  groomingConfig,
-  trainingConfig,
-  evaluationConfig,
   evaluationFormTemplate as defaultEvalFormTemplate,
-  evaluationReportCardConfig,
   weatherWarningRules as defaultWeatherRules,
-  facilityBookingFlowConfig,
   reportCardConfig,
   serviceDateBlocks as defaultServiceDateBlocks,
   scheduleTimeOverrides as defaultScheduleTimeOverrides,
@@ -87,17 +80,19 @@ interface SettingsContextValue {
   serviceColorOverrides: CalendarColorOverrides;
   holidays: Array<{ month: number; day: number; name: string }>;
   languageSettings: AppLanguageSettings;
-  updateDaycare: (config: ModuleConfig) => void;
-  updateBoarding: (config: ModuleConfig) => void;
-  updateGrooming: (config: ModuleConfig) => void;
-  updateTraining: (config: ModuleConfig) => void;
-  updateEvaluation: (config: EvaluationConfig) => void;
+  updateDaycare: (config: ModuleConfig) => Promise<unknown>;
+  updateBoarding: (config: ModuleConfig) => Promise<unknown>;
+  updateGrooming: (config: ModuleConfig) => Promise<unknown>;
+  updateTraining: (config: ModuleConfig) => Promise<unknown>;
+  updateEvaluation: (config: EvaluationConfig) => Promise<unknown>;
   updateEvaluationFormTemplate: (config: EvaluationFormTemplate) => void;
-  updateEvaluationReportCard: (config: EvaluationReportCardConfig) => void;
+  updateEvaluationReportCard: (
+    config: EvaluationReportCardConfig,
+  ) => Promise<unknown>;
   updateHours: (hours: BusinessHours) => Promise<unknown>;
   updateProfile: (profile: BusinessProfile) => Promise<unknown>;
   updateRules: (rules: BookingRules) => Promise<unknown>;
-  updateBookingFlow: (config: FacilityBookingFlowConfig) => void;
+  updateBookingFlow: (config: FacilityBookingFlowConfig) => Promise<unknown>;
   updateReportCards: (config: ReportCardConfig) => void;
   updateServiceDateBlocks: (blocks: ServiceDateBlock[]) => void;
   updateScheduleTimeOverrides: (overrides: ScheduleTimeOverride[]) => void;
@@ -147,31 +142,9 @@ function normalizeEvaluation(
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [daycare, setDaycare] = useState<ModuleConfig>(() =>
-    loadStored("settings-daycare", daycareConfig),
-  );
-  const [boarding, setBoarding] = useState<ModuleConfig>(() =>
-    loadStored("settings-boarding", boardingConfig),
-  );
-  const [grooming, setGrooming] = useState<ModuleConfig>(() =>
-    loadStored("settings-grooming", groomingConfig),
-  );
-  const [training, setTraining] = useState<ModuleConfig>(() =>
-    loadStored("settings-training", trainingConfig),
-  );
-  const [evaluation, setEvaluation] = useState<EvaluationConfig>(() =>
-    normalizeEvaluation(
-      loadStored("settings-evaluation", evaluationConfig),
-      evaluationConfig,
-    ),
-  );
   const [evalFormTemplateData, setEvalFormTemplateData] =
     useState<EvaluationFormTemplate>(() =>
       loadStored("settings-eval-form-template", defaultEvalFormTemplate),
-    );
-  const [evaluationReportCardData, setEvaluationReportCardData] =
-    useState<EvaluationReportCardConfig>(() =>
-      loadStored("settings-evaluation-report-card", evaluationReportCardConfig),
     );
   // ── business_hours AND booking_rules COME FROM POSTGRES ─────────────────
   //
@@ -189,6 +162,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const saveSetting = useSaveFacilitySetting();
   const hours = facilitySettings.settings.business_hours.value;
   const rules = facilitySettings.settings.booking_rules.value;
+  // ── WHAT A CUSTOMER MAY BOOK ────────────────────────────────────────────
+  //
+  // The four module configs, the booking flow and the evaluation rules. These
+  // decide whether a service is offered at all, whether an evaluation gates it,
+  // and what it is called and costs — so a facility that hid a service was
+  // having that ignored by the page that takes the booking.
+  const daycare = facilitySettings.settings.daycare_config.value;
+  const boarding = facilitySettings.settings.boarding_config.value;
+  const grooming = facilitySettings.settings.grooming_config.value;
+  const training = facilitySettings.settings.training_config.value;
+  const evaluation = facilitySettings.settings.evaluation_config.value;
+  const bookingFlow = facilitySettings.settings.booking_flow.value;
+  const evaluationReportCardData =
+    facilitySettings.settings.evaluation_report_card.value;
 
   // The facility's own profile, from `facilities` (20260809120000). Converted
   // HERE and not only on the settings card, because ReportCardsModule,
@@ -206,9 +193,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           DEFAULT_APP_LANGUAGE_SETTINGS,
         ),
       ),
-  );
-  const [bookingFlow, setBookingFlow] = useState<FacilityBookingFlowConfig>(
-    () => loadStored("settings-booking-flow", facilityBookingFlowConfig),
   );
   const [reportCards, setReportCards] = useState<ReportCardConfig>(() =>
     loadStored("settings-report-cards", reportCardConfig),
@@ -253,37 +237,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       loadStored("settings-service-color-overrides", EMPTY_COLOR_OVERRIDES),
     );
 
-  const updateDaycare = (config: ModuleConfig) => {
-    setDaycare(config);
-    localStorage.setItem("settings-daycare", JSON.stringify(config));
-  };
-  const updateBoarding = (config: ModuleConfig) => {
-    setBoarding(config);
-    localStorage.setItem("settings-boarding", JSON.stringify(config));
-  };
-  const updateGrooming = (config: ModuleConfig) => {
-    setGrooming(config);
-    localStorage.setItem("settings-grooming", JSON.stringify(config));
-  };
-  const updateTraining = (config: ModuleConfig) => {
-    setTraining(config);
-    localStorage.setItem("settings-training", JSON.stringify(config));
-  };
-  const updateEvaluation = (config: EvaluationConfig) => {
-    setEvaluation(config);
-    localStorage.setItem("settings-evaluation", JSON.stringify(config));
-  };
+  const updateDaycare = (config: ModuleConfig) =>
+    saveSetting.mutateAsync({ domain: "daycare_config", value: config });
+  const updateBoarding = (config: ModuleConfig) =>
+    saveSetting.mutateAsync({ domain: "boarding_config", value: config });
+  const updateGrooming = (config: ModuleConfig) =>
+    saveSetting.mutateAsync({ domain: "grooming_config", value: config });
+  const updateTraining = (config: ModuleConfig) =>
+    saveSetting.mutateAsync({ domain: "training_config", value: config });
+  const updateEvaluation = (config: EvaluationConfig) =>
+    saveSetting.mutateAsync({ domain: "evaluation_config", value: config });
   const updateEvaluationFormTemplate = (config: EvaluationFormTemplate) => {
     setEvalFormTemplateData(config);
     localStorage.setItem("settings-eval-form-template", JSON.stringify(config));
   };
-  const updateEvaluationReportCard = (config: EvaluationReportCardConfig) => {
-    setEvaluationReportCardData(config);
-    localStorage.setItem(
-      "settings-evaluation-report-card",
-      JSON.stringify(config),
-    );
-  };
+  const updateEvaluationReportCard = (config: EvaluationReportCardConfig) =>
+    saveSetting.mutateAsync({
+      domain: "evaluation_report_card",
+      value: config,
+    });
+
   // Returns the promise so a caller can await the write and report a refusal.
   // SettingsBlock does; the older callers that ignore it behave as before.
   const updateHours = (hours: BusinessHours) =>
@@ -312,10 +285,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
   const updateRules = (rules: BookingRules) =>
     saveSetting.mutateAsync({ domain: "booking_rules", value: rules });
-  const updateBookingFlow = (config: FacilityBookingFlowConfig) => {
-    setBookingFlow(config);
-    localStorage.setItem("settings-booking-flow", JSON.stringify(config));
-  };
+  const updateBookingFlow = (config: FacilityBookingFlowConfig) =>
+    saveSetting.mutateAsync({ domain: "booking_flow", value: config });
   const updateReportCards = (config: ReportCardConfig) => {
     setReportCards(config);
     localStorage.setItem("settings-report-cards", JSON.stringify(config));
@@ -380,19 +351,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
 
   const resetModules = () => {
-    setDaycare(daycareConfig);
-    setBoarding(boardingConfig);
-    setGrooming(groomingConfig);
-    setTraining(trainingConfig);
-    setEvaluation(evaluationConfig);
     setEvalFormTemplateData(defaultEvalFormTemplate);
-    setEvaluationReportCardData(evaluationReportCardConfig);
     // hours and rules are NOT reset here. "Reset modules" clears this browser's
     // local overrides; those two now live in the facility's own row, and
     // silently rewriting a business's opening hours and cancellation policy
     // because somebody clicked a reset button on a different screen would be a
     // destructive act nobody asked for. Resetting them is a deliberate save.
-    setBookingFlow(facilityBookingFlowConfig);
     setReportCards(reportCardConfig);
     setServiceDateBlocksState(defaultServiceDateBlocks);
     setScheduleTimeOverridesState(defaultScheduleTimeOverrides);
@@ -408,14 +372,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const oneYearSeconds = 60 * 60 * 24 * 365;
     document.cookie = `NEXT_LOCALE=${DEFAULT_APP_LANGUAGE_SETTINGS.primaryLocale}; path=/; max-age=${oneYearSeconds}`;
     dispatchAppLanguageChanged();
-    localStorage.removeItem("settings-daycare");
-    localStorage.removeItem("settings-boarding");
-    localStorage.removeItem("settings-grooming");
-    localStorage.removeItem("settings-training");
-    localStorage.removeItem("settings-evaluation");
     localStorage.removeItem("settings-eval-form-template");
-    localStorage.removeItem("settings-evaluation-report-card");
-    localStorage.removeItem("settings-booking-flow");
     localStorage.removeItem("settings-report-cards");
     localStorage.removeItem("settings-service-date-blocks");
     localStorage.removeItem("settings-schedule-time-overrides");

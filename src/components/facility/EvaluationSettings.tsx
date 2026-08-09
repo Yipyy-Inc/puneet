@@ -38,11 +38,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useFacilityRole } from "@/hooks/use-facility-role";
-import {
-  evaluationConfig,
-  facilityBookingFlowConfig,
-  evaluationReportCardConfig,
-} from "@/data/settings";
+import { useSettings } from "@/hooks/use-settings";
 
 const SERVICES = [
   { id: "daycare", label: "Daycare" },
@@ -53,6 +49,22 @@ const SERVICES = [
 
 export function EvaluationSettings() {
   const { role } = useFacilityRole();
+  // ── THIS SCREEN USED TO MUTATE ITS IMPORTS ──────────────────────────────
+  //
+  // `handleSave` did `Object.assign(evaluationConfig, {...})` on the module
+  // object imported from `src/data/settings.ts`. Not a store, not localStorage
+  // — it edited the shared singleton in place. So a facility's evaluation
+  // price and its "which services need an evaluation" rules changed for
+  // everything else rendered in that browser session, and vanished on reload.
+  // Nothing was ever persisted, and the toast said "saved".
+  const {
+    evaluation: evaluationConfig,
+    bookingFlow: facilityBookingFlowConfig,
+    evaluationReportCard: evaluationReportCardConfig,
+    updateEvaluation,
+    updateBookingFlow,
+    updateEvaluationReportCard,
+  } = useSettings();
 
   // Evaluation service config
   const [internalName, setInternalName] = useState(
@@ -152,39 +164,56 @@ export function EvaluationSettings() {
     );
   };
 
-  const handleSave = () => {
-    // Update in-memory configs
-    Object.assign(evaluationConfig, {
-      internalName,
-      customerName,
-      description,
-      price,
-      customHours: duration,
-      colorCode,
-      validityMode,
-      expirationDays,
-      staffAssignment,
-      minLeadTimeHours: minLeadTime,
-      maxAdvanceDays,
-    });
-    Object.assign(facilityBookingFlowConfig, {
-      evaluationRequired: evalRequired,
-      hideServicesUntilEvaluationCompleted: hideServices,
-      servicesRequiringEvaluation: servicesRequiring,
-      evaluationLockedMessage: lockedMessage,
-    });
-    Object.assign(evaluationReportCardConfig, {
-      enabled: reportEnabled,
-      passMessage,
-      failMessage,
-      showEvaluatorName: showEvaluator,
-      showTemperament,
-      showPlayStyle,
-      showApprovedServices,
-      notifyViaEmail: notifyEmail,
-      notifyViaSMS: notifySMS,
-    });
-    toast.success("Evaluation settings saved");
+  const handleSave = async () => {
+    // Three domains, three rows, saved together because this one button owns
+    // all three. Awaited and sequential so a refusal on the first stops the
+    // rest — a partial save here would leave the evaluation priced one way and
+    // gated another.
+    try {
+      await updateEvaluation({
+        ...evaluationConfig,
+        internalName,
+        customerName,
+        description,
+        price,
+        customHours: duration,
+        colorCode,
+        validityMode,
+        expirationDays,
+        staffAssignment,
+        minLeadTimeHours: minLeadTime,
+        maxAdvanceDays,
+      });
+      await updateBookingFlow({
+        ...facilityBookingFlowConfig,
+        evaluationRequired: evalRequired,
+        hideServicesUntilEvaluationCompleted: hideServices,
+        servicesRequiringEvaluation: servicesRequiring,
+        evaluationLockedMessage: lockedMessage,
+      });
+      await updateEvaluationReportCard({
+        ...evaluationReportCardConfig,
+        enabled: reportEnabled,
+        passMessage,
+        failMessage,
+        showEvaluatorName: showEvaluator,
+        showTemperament,
+        showPlayStyle,
+        showApprovedServices,
+        notifyViaEmail: notifyEmail,
+        notifyViaSMS: notifySMS,
+      });
+      toast.success("Evaluation settings saved");
+    } catch (error) {
+      // Previously unreachable: assigning to an object cannot fail. Now that
+      // these are three writes RLS can refuse, silence would leave the toast
+      // claiming a save that did not happen.
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not save evaluation settings.",
+      );
+    }
   };
 
   if (role !== "owner" && role !== "manager") {

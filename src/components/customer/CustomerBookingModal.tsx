@@ -82,7 +82,7 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { bookings as historicalBookings } from "@/data/bookings";
 import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 import { clientDocuments } from "@/data/documents";
-import { vaccinationRules, evaluationConfig } from "@/data/settings";
+import { vaccinationRules } from "@/data/settings";
 import { getFormById } from "@/data/forms";
 import { getSubmissionsForPet } from "@/data/form-submissions";
 import { Syringe } from "lucide-react";
@@ -197,6 +197,7 @@ export function CustomerBookingModal({
     scheduleTimeOverrides,
     dropOffPickUpOverrides,
     serviceDateBlocks,
+    evaluation: evaluationConfig,
   } = useSettings();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),
