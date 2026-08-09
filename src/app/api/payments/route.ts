@@ -37,6 +37,96 @@ import { getFacilityContext } from "@/lib/api/facility-context";
 
 export const dynamic = "force-dynamic";
 
+// ============================================================================
+// Reading a client's payments.
+//
+// The billing tab on a client file listed `@/data/payments` filtered by
+// clientId, so a REAL client's payment history was whatever the fixture
+// happened to hold for that number — usually nothing, and on a colliding id
+// somebody else's money.
+//
+// `payments_read` scopes the rows; the `ref` filter below is a CONVENIENCE, not
+// a boundary. A caller naming another facility's client gets an empty list
+// because RLS refuses the rows, not because of the eq() here.
+// ============================================================================
+
+export async function GET(request: NextRequest) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const clientRef = request.nextUrl.searchParams.get("clientRef");
+  const supabase = await createServerClient();
+
+  // The client's uuid, resolved separately rather than through a PostgREST
+  // embed. `clients!inner(ref)` filters correctly but collapses the row type to
+  // an error union, and losing every column's type to save one round trip is a
+  // bad trade on a money screen.
+  let clientId: string | null = null;
+  if (clientRef) {
+    const ref = Number(clientRef);
+    if (!Number.isInteger(ref)) {
+      return NextResponse.json(
+        { error: "clientRef must be a number." },
+        { status: 422 },
+      );
+    }
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("ref", ref)
+      .maybeSingle();
+
+    // RLS refused the client, or there is none. Either way this caller has no
+    // payments to see for them — an empty list, not an error, because "no
+    // payments" is what the screen would show anyway and a 404 would leak
+    // whether the record exists.
+    if (!client) return NextResponse.json([]);
+    clientId = client.id;
+  }
+
+  let query = supabase
+    .from("payments")
+    // ONE STRING LITERAL, not a concatenation. supabase-js infers the row type
+    // from the select at the type level; `"a, b" + "c"` is just `string` to the
+    // compiler, and every column silently becomes an error type.
+    .select(
+      "id, booking_id, client_id, method, grand_total, tip, amount_charged, card_brand, card_last4, entry_method, processor, author_name, created_at, refund_of_payment_id",
+    )
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (clientId) query = query.eq("client_id", clientId);
+
+  const { data, error } = await query;
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(
+    (data ?? []).map((row) => ({
+      id: row.id,
+      bookingId: row.booking_id,
+      method: row.method,
+      // NOT sign-flipped. A refund is stored as its own payment row pointing at
+      // the one it reverses, and `grand_total` is ALREADY NEGATIVE on it
+      // (checked against the rows, not assumed). Multiplying by -1 here made a
+      // refund positive again, so "Total Paid" would have ADDED money the
+      // facility gave back. Caught by the spec that asserts the sign.
+      amount: Number(row.grand_total),
+      tip: Number(row.tip ?? 0),
+      cardBrand: row.card_brand,
+      cardLast4: row.card_last4,
+      entryMethod: row.entry_method,
+      processor: row.processor,
+      authorName: row.author_name,
+      createdAt: row.created_at,
+      isRefund: row.refund_of_payment_id !== null,
+    })),
+  );
+}
+
 interface PaymentInput {
   /**
    * The booking this money is against, by reference number. ANY service — the
