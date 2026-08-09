@@ -27,6 +27,7 @@ import {
   Send,
 } from "lucide-react";
 import { facilityStaff } from "@/data/facility-staff";
+import { useSettings } from "@/hooks/use-settings";
 import type { ServiceModule } from "@/types/facility-staff";
 import { useQuery } from "@tanstack/react-query";
 
@@ -34,7 +35,6 @@ import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { evaluationConfig } from "@/data/settings";
 import { defaultServiceAddOns } from "@/data/service-addons";
 import {
   facilityConfig,
@@ -278,6 +278,11 @@ export function ConfirmStep({
   tipAmount,
   onEditStep,
 }: ConfirmStepProps) {
+  // The FACILITY's evaluation settings — name, description, duration and
+  // PRICE. Read from the fixture until now, so every facility offered the
+  // same evaluation, described the same way, at the same price, regardless
+  // of what they had configured.
+  const { evaluation: evaluationConfig } = useSettings();
   // Names the chosen groom on the confirmation. Read from the facility's menu
   // rather than a fixture so the summary cannot name a service the booking is
   // not actually for.

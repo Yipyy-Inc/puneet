@@ -79,7 +79,6 @@ import {
   autoAssignDaycareSection,
   autoAssignBoardingUnit,
 } from "@/lib/capacity-engine";
-import { evaluationConfig } from "@/data/settings";
 import { bookings as historicalBookings } from "@/data/bookings";
 import { toast } from "sonner";
 import { getNextEstimateId } from "@/data/estimates";
@@ -280,6 +279,7 @@ export function BookingModal({
     bookingFlow,
     serviceNotifDefaults,
     tipConfig,
+    evaluation: evaluationConfig,
   } = useSettings();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),

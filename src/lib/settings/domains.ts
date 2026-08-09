@@ -1,8 +1,34 @@
 import { z } from "zod";
 
-import { bookingRulesSchema, tipConfigSchema } from "@/types/facility";
-import { bookingRules, businessHours, tipConfig } from "@/data/settings";
-import type { BookingRules, BusinessHours, TipConfig } from "@/types/facility";
+import {
+  bookingRulesSchema,
+  evaluationConfigSchema,
+  evaluationReportCardConfigSchema,
+  facilityBookingFlowConfigSchema,
+  moduleConfigSchema,
+  tipConfigSchema,
+} from "@/types/facility";
+import {
+  boardingConfig,
+  bookingRules,
+  businessHours,
+  daycareConfig,
+  evaluationConfig,
+  evaluationReportCardConfig,
+  facilityBookingFlowConfig,
+  groomingConfig,
+  tipConfig,
+  trainingConfig,
+} from "@/data/settings";
+import type {
+  BookingRules,
+  BusinessHours,
+  EvaluationConfig,
+  EvaluationReportCardConfig,
+  FacilityBookingFlowConfig,
+  ModuleConfig,
+  TipConfig,
+} from "@/types/facility";
 
 // ============================================================================
 // The settings a facility owns, and what each one must look like.
@@ -75,6 +101,49 @@ export const SETTING_DOMAINS = {
   // set of tip tiers while the payment screen offers another is not a display
   // bug.
   tip_config: { schema: tipConfigSchema, fallback: DEFAULT_TIPS },
+
+  // ── WHAT A CUSTOMER MAY BOOK ───────────────────────────────────────────
+  //
+  // These four gate the booking flow itself: whether an evaluation is required
+  // before a service unlocks, which services are hidden, and the client-facing
+  // name and base price of each module. A facility that hides a service, or
+  // requires an evaluation, was having that decision ignored by the page that
+  // takes the booking.
+  //
+  // The four module domains are named `<service>_config` rather than sharing
+  // one row, because they are edited independently and a single row would make
+  // two staff saving different services overwrite each other.
+  booking_flow: {
+    schema: facilityBookingFlowConfigSchema,
+    fallback: facilityBookingFlowConfig as FacilityBookingFlowConfig,
+  },
+  daycare_config: {
+    schema: moduleConfigSchema,
+    fallback: daycareConfig as ModuleConfig,
+  },
+  boarding_config: {
+    schema: moduleConfigSchema,
+    fallback: boardingConfig as ModuleConfig,
+  },
+  grooming_config: {
+    schema: moduleConfigSchema,
+    fallback: groomingConfig as ModuleConfig,
+  },
+  training_config: {
+    schema: moduleConfigSchema,
+    fallback: trainingConfig as ModuleConfig,
+  },
+  evaluation_config: {
+    schema: evaluationConfigSchema,
+    fallback: evaluationConfig as EvaluationConfig,
+  },
+  // Saved by the same handler as the two above, so it is converted with them —
+  // leaving one of three still mutating a module-level object would make that
+  // screen half-real in a way nobody could see.
+  evaluation_report_card: {
+    schema: evaluationReportCardConfigSchema,
+    fallback: evaluationReportCardConfig as EvaluationReportCardConfig,
+  },
 } as const;
 
 export type SettingDomain = keyof typeof SETTING_DOMAINS;

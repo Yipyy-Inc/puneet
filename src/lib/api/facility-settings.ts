@@ -3,7 +3,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { SETTING_DOMAINS, type SettingDomain } from "@/lib/settings/domains";
-import type { BookingRules, BusinessHours, TipConfig } from "@/types/facility";
+import type {
+  BookingRules,
+  BusinessHours,
+  EvaluationConfig,
+  EvaluationReportCardConfig,
+  FacilityBookingFlowConfig,
+  ModuleConfig,
+  TipConfig,
+} from "@/types/facility";
 
 // ============================================================================
 // A facility's own settings, per domain.
@@ -30,23 +38,30 @@ export interface FacilitySettings {
   business_hours: SettingState<BusinessHours>;
   booking_rules: SettingState<BookingRules>;
   tip_config: SettingState<TipConfig>;
+  booking_flow: SettingState<FacilityBookingFlowConfig>;
+  daycare_config: SettingState<ModuleConfig>;
+  boarding_config: SettingState<ModuleConfig>;
+  grooming_config: SettingState<ModuleConfig>;
+  training_config: SettingState<ModuleConfig>;
+  evaluation_config: SettingState<EvaluationConfig>;
+  evaluation_report_card: SettingState<EvaluationReportCardConfig>;
 }
 
+/**
+ * Every domain's documented default.
+ *
+ * Built from SETTING_DOMAINS rather than listed by hand: the list grows every
+ * time a domain is converted, and a hand-written copy is one that silently
+ * omits the newest one — which would hand a screen `undefined` where it expects
+ * a config object.
+ */
 function fallbackSettings(): FacilitySettings {
-  return {
-    business_hours: {
-      value: structuredClone(SETTING_DOMAINS.business_hours.fallback),
-      configured: false,
-    },
-    booking_rules: {
-      value: structuredClone(SETTING_DOMAINS.booking_rules.fallback),
-      configured: false,
-    },
-    tip_config: {
-      value: structuredClone(SETTING_DOMAINS.tip_config.fallback),
-      configured: false,
-    },
-  };
+  return Object.fromEntries(
+    Object.entries(SETTING_DOMAINS).map(([domain, spec]) => [
+      domain,
+      { value: structuredClone(spec.fallback), configured: false },
+    ]),
+  ) as unknown as FacilitySettings;
 }
 
 export const facilitySettingsQueries = {

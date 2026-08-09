@@ -14,6 +14,7 @@
  *   businessHours    ->  open 07:00-19:00, for everyone
  *   bookingRules     ->  24h notice, 48h cancellation, 25% deposit
  *   tipConfig        ->  15/18/20%
+ *   evaluationConfig ->  one evaluation price, for everybody
  *
  * Not as placeholders. There was no code path that would have shown anything
  * else, so a real business saw another business's details on its own settings
@@ -37,6 +38,8 @@
  *   businessHours    ->  useSettings().hours
  *   bookingRules     ->  useSettings().rules
  *   tipConfig        ->  useSettings().tipConfig
+ *   daycareConfig    ->  useSettings().daycare  (and boarding/grooming/training)
+ *   evaluationConfig ->  useSettings().evaluation
  *
  * Server-side, `getFacilityContext()` gives the facility and
  * `/api/facility/profile` and `/api/facility/settings` give the values.
@@ -68,6 +71,15 @@ const CONVERTED = [
   "businessHours",
   "bookingRules",
   "tipConfig",
+  // What a customer may book, and what it costs. `evaluationConfig.price` was
+  // setting `basePrice` on real bookings from a fixture.
+  "facilityBookingFlowConfig",
+  "daycareConfig",
+  "boardingConfig",
+  "groomingConfig",
+  "trainingConfig",
+  "evaluationConfig",
+  "evaluationReportCardConfig",
 ];
 
 /**
