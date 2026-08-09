@@ -1,8 +1,9 @@
 "use client";
 
 import { use } from "react";
-import { bookings } from "@/data/bookings";
+import { useQuery } from "@tanstack/react-query";
 import { useClientRecord } from "@/lib/api/client";
+import { bookingQueries } from "@/lib/api/booking";
 import { BookingCard } from "@/components/clients/BookingCard";
 
 export default function ClientBookingsPage({
@@ -16,12 +17,18 @@ export default function ClientBookingsPage({
   // `src/data/clients.ts`, so every client created since the migration was
   // told they did not exist on their own file.
   const { client } = useClientRecord(clientId);
-  const clientBookings = bookings
-    .filter((b) => b.clientId === clientId)
-    .sort(
-      (a, b) =>
-        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
-    );
+  // This client's bookings, from Postgres. It used to filter the
+  // `@/data/bookings` fixture by clientId, so a real client's booking history
+  // was whatever the fixture happened to contain for that number — usually
+  // nothing, sometimes somebody else's stay.
+  //
+  // `byClient` rather than filtering `all()`: the query is scoped server-side
+  // and RLS decides which rows come back, so no comparison in a browser can
+  // improve on it.
+  const { data: unsorted = [] } = useQuery(bookingQueries.byClient(clientId));
+  const clientBookings = [...unsorted].sort(
+    (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+  );
 
   if (!client) return null;
 

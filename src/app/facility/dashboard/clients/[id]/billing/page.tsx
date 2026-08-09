@@ -2,14 +2,11 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { bookings } from "@/data/bookings";
+import { useQuery } from "@tanstack/react-query";
 import { useClientRecord } from "@/lib/api/client";
-import {
-  payments,
-  invoices,
-  customerCredits,
-  giftCards,
-} from "@/data/payments";
+import { bookingQueries } from "@/lib/api/booking";
+import { paymentQueries } from "@/lib/api/payments";
+import { useStoreCredit } from "@/lib/api/store-credit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Receipt, Gift, Award } from "lucide-react";
@@ -26,15 +23,29 @@ export default function ClientBillingPage({
   // `src/data/clients.ts`, so every client created since the migration was
   // told they did not exist on their own file.
   const { client } = useClientRecord(clientId);
+  // ── EVERY FIGURE ON THIS SCREEN IS MONEY ────────────────────────────────
+  //
+  // All three of these filtered a FIXTURE by clientId, so a real client's
+  // billing tab showed whatever the fixture held for that number: usually
+  // nothing, and on a colliding id somebody else's payments.
+  const { data: clientPayments = [] } = useQuery(
+    paymentQueries.byClient(clientId),
+  );
+  const { data: clientBookings = [] } = useQuery(
+    bookingQueries.byClient(clientId),
+  );
+  const { data: storeCredit } = useStoreCredit();
+
   if (!client) return null;
 
-  const clientPayments = payments.filter((p) => p.clientId === clientId);
-  const clientInvoices = invoices.filter((i) => i.clientId === clientId);
-  const clientCredits = customerCredits.filter((c) => c.clientId === clientId);
-  const clientGiftCards = giftCards.slice(0, 0); // gift cards not client-scoped yet
-  const clientBookings = bookings.filter((b) => b.clientId === clientId);
+  const clientCredits = (storeCredit?.entries ?? []).filter(
+    (e) => e.clientRef === clientId,
+  );
   const bookingInvoices = clientBookings.filter((b) => b.invoice);
 
+  // A refund is a payment with a negative amount (the API signs it), so this
+  // sums to what the customer is actually out of pocket rather than to the
+  // gross of every transaction ever recorded.
   const totalPaid = clientPayments.reduce((s, p) => s + p.amount, 0);
 
   const formatDate = (d: string) =>
@@ -61,9 +72,7 @@ export default function ClientBillingPage({
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground text-xs">Invoices</p>
-            <p className="mt-1 text-xl font-bold">
-              {clientInvoices.length + bookingInvoices.length}
-            </p>
+            <p className="mt-1 text-xl font-bold">{bookingInvoices.length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -72,12 +81,10 @@ export default function ClientBillingPage({
             <p className="mt-1 text-xl font-bold">{clientCredits.length}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground text-xs">Gift Cards</p>
-            <p className="mt-1 text-xl font-bold">{clientGiftCards.length}</p>
-          </CardContent>
-        </Card>
+        {/* No Gift Cards tile. It rendered `giftCards.slice(0, 0)` — a hard
+            zero dressed as a count, on a screen where every other number is
+            real money. Gift cards are not client-scoped anywhere yet; the tile
+            returns when there is something to count. */}
       </div>
 
       {/* Membership */}
