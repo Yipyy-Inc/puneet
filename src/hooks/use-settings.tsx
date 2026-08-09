@@ -10,7 +10,6 @@ import {
   evaluationFormTemplate as defaultEvalFormTemplate,
   evaluationReportCardConfig,
   weatherWarningRules as defaultWeatherRules,
-  businessProfile,
   facilityBookingFlowConfig,
   reportCardConfig,
   serviceDateBlocks as defaultServiceDateBlocks,
@@ -36,6 +35,10 @@ import {
   useFacilitySettings,
   useSaveFacilitySetting,
 } from "@/lib/api/facility-settings";
+import {
+  useFacilityProfile,
+  useUpdateFacilityProfile,
+} from "@/lib/api/facility-profile";
 import type {
   ModuleConfig,
   EvaluationConfig,
@@ -92,7 +95,7 @@ interface SettingsContextValue {
   updateEvaluationFormTemplate: (config: EvaluationFormTemplate) => void;
   updateEvaluationReportCard: (config: EvaluationReportCardConfig) => void;
   updateHours: (hours: BusinessHours) => Promise<unknown>;
-  updateProfile: (profile: BusinessProfile) => void;
+  updateProfile: (profile: BusinessProfile) => Promise<unknown>;
   updateRules: (rules: BookingRules) => Promise<unknown>;
   updateBookingFlow: (config: FacilityBookingFlowConfig) => void;
   updateReportCards: (config: ReportCardConfig) => void;
@@ -143,28 +146,6 @@ function normalizeEvaluation(
   };
 }
 
-function normalizeBusinessProfile(
-  next: BusinessProfile,
-  fallback: BusinessProfile,
-): BusinessProfile {
-  return {
-    ...fallback,
-    ...next,
-    address: {
-      ...fallback.address,
-      ...(next.address ?? {}),
-    },
-    socialMedia: {
-      ...fallback.socialMedia,
-      ...(next.socialMedia ?? {}),
-    },
-    preferences: {
-      ...fallback.preferences,
-      ...(next.preferences ?? {}),
-    },
-  };
-}
-
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [daycare, setDaycare] = useState<ModuleConfig>(() =>
     loadStored("settings-daycare", daycareConfig),
@@ -209,12 +190,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const hours = facilitySettings.settings.business_hours.value;
   const rules = facilitySettings.settings.booking_rules.value;
 
-  const [profile, setProfile] = useState<BusinessProfile>(() =>
-    normalizeBusinessProfile(
-      loadStored("settings-profile", businessProfile),
-      businessProfile,
-    ),
-  );
+  // The facility's own profile, from `facilities` (20260809120000). Converted
+  // HERE and not only on the settings card, because ReportCardsModule,
+  // WeatherWidget and WeatherWarningSettings read it through this context —
+  // so fixing the editor alone left a report card branded "PawCare Facility"
+  // and a weather widget reading the fixture's temperature unit.
+  const facilityProfile = useFacilityProfile();
+  const saveProfile = useUpdateFacilityProfile();
+  const profile = facilityProfile.profile;
   const [languageSettings, setLanguageSettings] = useState<AppLanguageSettings>(
     () =>
       normalizeLanguageSettings(
@@ -305,14 +288,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   // SettingsBlock does; the older callers that ignore it behave as before.
   const updateHours = (hours: BusinessHours) =>
     saveSetting.mutateAsync({ domain: "business_hours", value: hours });
-  const updateProfile = (profile: BusinessProfile) => {
-    const normalizedProfile = normalizeBusinessProfile(
-      profile,
-      businessProfile,
-    );
-    setProfile(normalizedProfile);
-    localStorage.setItem("settings-profile", JSON.stringify(normalizedProfile));
-  };
+  const updateProfile = (next: BusinessProfile) =>
+    saveProfile.mutateAsync(next);
   const updateLanguageSettings = (settings: AppLanguageSettings) => {
     const normalizedSettings = normalizeLanguageSettings(settings);
 
@@ -410,7 +387,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setEvaluation(evaluationConfig);
     setEvalFormTemplateData(defaultEvalFormTemplate);
     setEvaluationReportCardData(evaluationReportCardConfig);
-    setProfile(businessProfile);
     // hours and rules are NOT reset here. "Reset modules" clears this browser's
     // local overrides; those two now live in the facility's own row, and
     // silently rewriting a business's opening hours and cancellation policy
@@ -439,7 +415,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-evaluation");
     localStorage.removeItem("settings-eval-form-template");
     localStorage.removeItem("settings-evaluation-report-card");
-    localStorage.removeItem("settings-profile");
     localStorage.removeItem("settings-booking-flow");
     localStorage.removeItem("settings-report-cards");
     localStorage.removeItem("settings-service-date-blocks");
