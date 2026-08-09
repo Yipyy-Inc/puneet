@@ -1846,6 +1846,52 @@ as long as the request took, then replaced it with the booking. A conclusion
 needs its answers back first — gate the empty state on `isPending`, not on
 emptiness.
 
+### 🟢 Facility settings are the facility's own (was the largest mock surface)
+
+`src/data/settings.ts` served ONE set of values to every facility: "PawCare
+Facility", 07:00-19:00, a 25% deposit, 15/18/20% tips, one evaluation price.
+Twenty domains moved to Postgres on 2026-08-09 — profile columns on `facilities`,
+everything else in `facility_settings (facility_id, domain, value jsonb)`.
+
+**Adding a domain is an entry in `src/lib/settings/domains.ts`, not a
+migration.** Zod validates on write and on read; `configured: false` travels with
+every default so a screen can tell "what we assume" from "what they chose".
+
+**Do NOT convert `integrations`** — it holds Twilio `accountSid`/`authToken`,
+and `facility_settings` is readable by every facility member. Vault or env, like
+Clover.
+
+### 🔴 Converting a provider is not converting a feature
+
+Hit in ALL FOUR conversion batches. `useSettings` was converted; modules that
+never went through it kept importing the fixture:
+
+- `register-hours.ts` — a facility open to 21:45 had its cash drawer demanding
+  to be counted at 19:00, nightly, with no setting that could change it.
+- `OperationsCalendarViews.tsx` — `const HEATMAP_DAILY_CAPACITY = bookingRules...`
+  at MODULE SCOPE, evaluated once at import.
+- `BookingModal.tsx` — `basePrice = evaluationConfig.price`. A real booking
+  priced from a fixture.
+- `booking-card.tsx` — a facility with auto-send OFF still told staff a report
+  card was scheduled.
+
+Every one typechecked. Every one was invisible to the tests.
+
+**Do instead:** after converting a domain, grep for direct fixture imports of
+it. `bun run check:settings-fixture` enforces this now — baselined by file, and
+a baselined file that stops importing also fails so the list cannot go stale.
+
+### 🔴 A settings screen that mutated its imports
+
+`EvaluationSettings.handleSave` did `Object.assign(evaluationConfig, {...})` on
+the module object imported from `src/data/settings.ts`. Not a store, not
+localStorage — it edited the shared singleton in place, so a facility's
+evaluation price changed for everything else in that browser session and
+vanished on reload. The toast said "saved".
+
+**Do instead:** if a save handler does not call something that can fail, ask
+what it is actually writing to.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
