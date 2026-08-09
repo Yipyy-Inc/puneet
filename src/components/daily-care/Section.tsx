@@ -272,7 +272,7 @@ export function Section({
           >
             <Icon className={`size-5 ${meta.color}`} />
           </div>
-          <div className="min-w-[12rem] flex-1">
+          <div className="min-w-48 flex-1">
             <CardTitle className="flex flex-wrap items-center gap-2 text-base">
               {step.name}
               {isOverdue && (

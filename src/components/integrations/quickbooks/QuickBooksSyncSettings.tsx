@@ -220,7 +220,7 @@ export function QuickBooksSyncSettings({
                 >
                   Rehearse against a QuickBooks Sandbox
                   {testMode && (
-                    <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                    <span className="ml-2 rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                       ON — {connection.companyName ?? SANDBOX_COMPANY_NAME}
                     </span>
                   )}

@@ -1027,7 +1027,7 @@ export default function ClientBookingDetailPage({
         </div>
 
         {/* ── Content Grid ── */}
-        <div className="grid gap-5 lg:grid-cols-5 [&>*]:min-w-0">
+        <div className="grid gap-5 *:min-w-0 lg:grid-cols-5">
           {/* Left — 3 cols */}
           <div className="min-w-0 space-y-5 lg:col-span-3">
             {/* Booking Details + Pets */}

@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, FileText, Lock, ShieldCheck } from "lucide-react";
-import type { StaffProfile } from "@/types/facility-staff";
 import type { EmployeeOnboardingTask } from "@/data/staff-onboarding";
 
 type Data = Record<string, unknown>;
@@ -110,7 +109,8 @@ export function AccountFields({
   value,
   onChange,
 }: {
-  staff: StaffProfile;
+  /** Only the address is read here; the hire has no StaffProfile row. */
+  staff: { email: string };
   value: Data;
   onChange: (v: Data) => void;
 }) {
@@ -159,7 +159,8 @@ export function SectionFields({
   onChange,
 }: {
   task: EmployeeOnboardingTask;
-  staff: StaffProfile;
+  /** Only the address is read here; the hire has no StaffProfile row. */
+  staff: { email: string };
   value: Data;
   onChange: (v: Data) => void;
 }) {

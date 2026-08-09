@@ -475,7 +475,7 @@ export function OperationsCalendarEventDrawer({
         </Avatar>
 
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-xl leading-tight font-bold text-slate-900">
+          <h2 className="truncate text-xl/tight font-bold text-slate-900">
             {petName}
           </h2>
           <p className="truncate text-sm text-slate-500">{event.service}</p>

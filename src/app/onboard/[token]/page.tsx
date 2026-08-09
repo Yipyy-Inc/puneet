@@ -8,26 +8,17 @@ import {
   Circle,
   ChevronDown,
   ChevronRight,
-  Clock,
   XCircle,
   PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { businessProfile } from "@/data/settings";
-import { facilityStaff } from "@/data/facility-staff";
-import { upsertStaffAvailabilityForStaff } from "@/data/staff-availability";
+import { useOnboardToken, useOnboardWrite } from "@/lib/api/onboard-token";
 import {
   notifyStaffLifecycle,
   managerRecipient,
 } from "@/lib/staff-notifications";
 import {
-  getOnboardingInstanceByToken,
-  useOnboardingInstance,
-  getOnboardingTemplates,
-  saveOnboardingSectionByTask,
-  setOnboardingAccountComplete,
-  submitOnboarding,
   EMPLOYEE_TASK_LABEL,
   type EmployeeOnboardingTask,
 } from "@/data/staff-onboarding";
@@ -36,7 +27,6 @@ import {
   AccountFields,
   isSectionValid,
   isAccountValid,
-  availabilityFromData,
 } from "./section-forms";
 
 type Data = Record<string, unknown>;
@@ -47,88 +37,64 @@ export default function OnboardTokenPage() {
   const [nowMs, setNowMs] = useState<number | null>(null);
   useEffect(() => setNowMs(Date.now()), []);
 
-  const byToken = getOnboardingInstanceByToken(token);
-  const instance = useOnboardingInstance(byToken?.staffId);
+  const { data: instance, isPending } = useOnboardToken(token);
+  const write = useOnboardWrite(token);
+  const [submitted, setSubmitted] = useState(false);
 
-  // Local drafts (silent save-and-resume persists to the store on change).
+  // Local drafts (silent save-and-resume persists on change).
   const [draft, setDraft] = useState<Record<string, Data>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  if (nowMs === null) {
+  const facilityName = instance?.facilityName ?? null;
+  const facilityLogo = instance?.facilityLogo ?? null;
+
+  if (nowMs === null || isPending) {
     return (
-      <Shell>
+      <Shell facilityName={facilityName} facilityLogo={facilityLogo}>
         <p className="text-muted-foreground text-sm">Loading…</p>
       </Shell>
     );
   }
 
-  if (!instance) {
+  if (submitted) {
     return (
-      <Shell>
-        <Notice
-          icon={XCircle}
-          tone="text-rose-600"
-          title="This onboarding link is invalid"
-          body="The link may have been mistyped or reissued. Ask your manager to resend your invite."
-        />
-      </Shell>
-    );
-  }
-
-  if (new Date(instance.tokenExpiresAt).getTime() < nowMs) {
-    const mgr = facilityStaff.find(
-      (s) => s.primaryRole === "manager" || s.primaryRole === "owner",
-    );
-    return (
-      <Shell>
-        <Notice
-          icon={Clock}
-          tone="text-amber-600"
-          title="This onboarding link has expired"
-          body={
-            mgr
-              ? `Contact ${mgr.firstName} ${mgr.lastName} (${mgr.email}) to have a fresh invite sent.`
-              : "Contact your manager to have a fresh invite sent."
-          }
-        />
-      </Shell>
-    );
-  }
-
-  const staff = facilityStaff.find((s) => s.id === instance.staffId);
-  const template = getOnboardingTemplates().find(
-    (t) => t.id === instance.templateId,
-  );
-  const tasks = template?.employeeTasks ?? [];
-
-  if (instance.submittedAt) {
-    return (
-      <Shell>
+      <Shell facilityName={facilityName} facilityLogo={facilityLogo}>
         <Notice
           icon={PartyPopper}
           tone="text-emerald-600"
-          title={`All done${staff ? `, ${staff.firstName}` : ""}!`}
+          title="All done!"
           body="Your onboarding is submitted. Your manager will review it and finish setting up your account — see you on your first shift!"
         />
       </Shell>
     );
   }
 
-  if (!staff) {
+  // ONE MESSAGE FOR EVERY REFUSAL. The route answers 404 identically for
+  // expired, spent, already-submitted and never-existed, so that somebody
+  // guessing tokens learns nothing from the difference. The page cannot tell
+  // them apart either, and must not invent a reason it does not have.
+  if (!instance) {
     return (
-      <Shell>
-        <p className="text-muted-foreground text-sm">
-          We couldn’t find your record. Contact your manager.
-        </p>
+      <Shell facilityName={facilityName} facilityLogo={facilityLogo}>
+        <Notice
+          icon={XCircle}
+          tone="text-rose-600"
+          title="This onboarding link is not valid"
+          body="It may have expired, already been used, or been reissued. Ask your manager to send a fresh invite."
+        />
       </Shell>
     );
   }
+
+  const firstName = instance.staffFirstName ?? "";
+  const lastName = instance.staffLastName ?? "";
+  const tasks = instance.tasks;
 
   const sectionFor = (taskId: string) =>
     instance.sections.find((s) => s.taskId === taskId);
   const dataFor = (id: string): Data =>
     draft[id] ?? (id === "account" ? {} : (sectionFor(id)?.data ?? {}));
-  const accountDone = Boolean(instance.account);
+  const accountDone = Boolean(instance.accountPasswordSetAt);
   const taskDone = (taskId: string) =>
     sectionFor(taskId)?.status === "complete";
 
@@ -171,13 +137,13 @@ export default function OnboardTokenPage() {
     setDraft((d) => ({ ...d, [step.id]: next }));
     if (step.task) {
       // Silent in-progress persistence for resume (account password stays local).
-      saveOnboardingSectionByTask(
-        staff.id,
-        step.task.id,
-        step.task.type,
-        next,
-        "in_progress",
-      );
+      void write.mutateAsync({
+        action: "save-section",
+        taskId: step.task.id,
+        sectionType: step.task.type,
+        data: next,
+        status: "in_progress",
+      });
     }
   };
 
@@ -187,28 +153,25 @@ export default function OnboardTokenPage() {
     setExpanded(nextIncomplete?.id ?? null);
   };
 
-  const saveStep = (step: Step) => {
+  const saveStep = async (step: Step) => {
     const data = dataFor(step.id);
     if (step.id === "account") {
       if (!isAccountValid(data)) return;
-      setOnboardingAccountComplete(staff.id);
+      await write.mutateAsync({ action: "account-complete" });
     } else if (step.task) {
       if (step.required && !isSectionValid(step.task, data)) return;
-      saveOnboardingSectionByTask(
-        staff.id,
-        step.task.id,
-        step.task.type,
+      // Availability used to ALSO be written into a separate client store
+      // (`upsertStaffAvailabilityForStaff`), stamped with the fixture's
+      // facility name. The section itself carries the availability now and the
+      // RPC stores it against the instance, so there is one record rather than
+      // two that could disagree.
+      await write.mutateAsync({
+        action: "save-section",
+        taskId: step.task.id,
+        sectionType: step.task.type,
         data,
-        "complete",
-      );
-      if (step.task.type === "availability") {
-        upsertStaffAvailabilityForStaff(
-          staff.id,
-          `${staff.firstName} ${staff.lastName}`.trim(),
-          businessProfile.businessName,
-          availabilityFromData(data),
-        );
-      }
+        status: "complete",
+      });
     }
     advanceFrom(step.id);
   };
@@ -221,20 +184,21 @@ export default function OnboardTokenPage() {
 
   // On submit: mark submitted + notify the manager (facility feed + mock email).
   // Per-section saves above stay silent — only submit fires a notification.
-  const submit = () => {
-    submitOnboarding(staff.id);
-    const name = `${staff.firstName} ${staff.lastName}`.trim();
+  const submit = async () => {
+    await write.mutateAsync({ action: "submit" });
+    setSubmitted(true);
+    const name = `${firstName} ${lastName}`.trim();
     const message = `${name} has finished their onboarding. Review and activate their account.`;
     notifyStaffLifecycle("onboarding_submitted", {
       inApp: {
         type: "staff_announcement",
         title: "New staff onboarding completed",
         message,
-        link: `/facility/dashboard/staff/${staff.id}`,
+        link: `/facility/dashboard/staff/${instance.staffId ?? ""}`,
       },
       email: {
         kind: "review",
-        staffId: staff.id,
+        staffId: instance.staffId ?? "",
         staffName: name,
         to: managerRecipient().email,
         subject: "New staff onboarding completed",
@@ -249,10 +213,10 @@ export default function OnboardTokenPage() {
         {/* Welcome */}
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Welcome, {staff.firstName}!
+            Welcome{firstName ? `, ${firstName}` : ""}!
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {template?.welcomeMessage ||
+            {instance.welcomeMessage ||
               "Let’s get you set up before your first shift. It only takes a few minutes."}
           </p>
         </div>
@@ -338,7 +302,7 @@ export default function OnboardTokenPage() {
                     )}
                     {step.id === "account" ? (
                       <AccountFields
-                        staff={staff}
+                        staff={{ email: instance.staffEmail ?? "" }}
                         value={dataFor("account")}
                         onChange={(v) =>
                           setDraft((d) => ({ ...d, account: v }))
@@ -347,7 +311,7 @@ export default function OnboardTokenPage() {
                     ) : step.task ? (
                       <SectionFields
                         task={step.task}
-                        staff={staff}
+                        staff={{ email: instance.staffEmail ?? "" }}
                         value={dataFor(step.id)}
                         onChange={(v) => change(step, v)}
                       />
@@ -400,25 +364,48 @@ export default function OnboardTokenPage() {
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+/**
+ * The page chrome, branded with the facility the hire is actually joining.
+ *
+ * Both props are nullable and that is load-bearing. This used to render
+ * `businessProfile` from the fixture, so every hire at every facility was
+ * welcomed by "PawCare Facility". A facility that has not filled its details in
+ * gets a NEUTRAL header rather than a placeholder — an empty space says nothing
+ * false, and a stand-in name says something false about their new employer.
+ */
+function Shell({
+  children,
+  facilityName,
+  facilityLogo,
+}: {
+  children: React.ReactNode;
+  facilityName?: string | null;
+  facilityLogo?: string | null;
+}) {
+  const initial = facilityName?.trim().charAt(0).toUpperCase() ?? "";
   return (
     <div className="bg-muted/30 flex min-h-screen justify-center px-4 py-10">
       <div className="w-full max-w-lg">
         <div className="mb-5 flex items-center gap-2">
           <div className="flex size-9 items-center justify-center overflow-hidden rounded-lg bg-emerald-600 text-sm font-bold text-white">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={businessProfile.logo}
-              alt={businessProfile.businessName}
-              className="size-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-                e.currentTarget.parentElement!.textContent =
-                  businessProfile.businessName.charAt(0).toUpperCase();
-              }}
-            />
+            {facilityLogo ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={facilityLogo}
+                alt={facilityName ?? ""}
+                className="size-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  e.currentTarget.parentElement!.textContent = initial;
+                }}
+              />
+            ) : (
+              initial
+            )}
           </div>
-          <span className="font-semibold">{businessProfile.businessName}</span>
+          {facilityName && (
+            <span className="font-semibold">{facilityName}</span>
+          )}
         </div>
         <div className="bg-card rounded-2xl border p-6 shadow-sm">
           {children}
