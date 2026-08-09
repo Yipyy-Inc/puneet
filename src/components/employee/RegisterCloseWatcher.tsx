@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Vault, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSettings } from "@/hooks/use-settings";
 import { usePermission, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import {
@@ -25,6 +26,7 @@ export function RegisterCloseWatcher({ staffId }: { staffId: string }) {
   const canOpenRegister = usePermission("open_close_register");
   const { registerCloseReminder } = useStaffHrConfig();
   const { viewer, viewerResolved } = useFacilityViewer();
+  const { hours } = useSettings();
   const ctx = resolveRegisterContext(viewerResolved ? viewer : null);
   const sessions = useRegisterSessions();
   const [dismissed, setDismissed] = useState(false);
@@ -46,15 +48,16 @@ export function RegisterCloseWatcher({ staffId }: { staffId: string }) {
       s.businessDate === todayBusinessDate() &&
       s.status === "open",
   );
-  if (!session || dismissed || !isPastCloseTime()) return null;
+  if (!session || dismissed || !isPastCloseTime(hours)) return null;
 
   return (
     <div className="flex items-center gap-3 border-b border-amber-300 bg-amber-100 px-4 py-2 text-sm text-amber-900">
       <Vault className="size-4 shrink-0" />
       <span className="flex-1">
         It&apos;s past closing time
-        {todayCloseTime() ? ` (${todayCloseTime()})` : ""} and the register is
-        still open. Count &amp; close the drawer to reconcile the day.
+        {todayCloseTime(hours) ? ` (${todayCloseTime(hours)})` : ""} and the
+        register is still open. Count &amp; close the drawer to reconcile the
+        day.
       </span>
       <Button
         size="sm"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
+import { useSettings } from "@/hooks/use-settings";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -109,6 +110,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
   // genuine staff account the id had no match here and the header rendered a
   // nameless "?" avatar. The portal knew who you were and could not say it.
   const { viewer, viewerResolved } = useFacilityViewer();
+  const { hours } = useSettings();
   const staff = viewerResolved ? viewer : undefined;
   const isWide = useMediaQuery("(min-width: 1280px)", true);
 
@@ -144,7 +146,12 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
       const session = getTodaySession(ctx.facilityId, ctx.locationId);
       if (
         session &&
-        shouldPromptCloseOnExit(session, ctx.staffName, registerCloseReminder)
+        shouldPromptCloseOnExit(
+          session,
+          ctx.staffName,
+          registerCloseReminder,
+          hours,
+        )
       ) {
         requestRegisterClose(session.id);
         toast.warning("Count & close the register before logging out.");

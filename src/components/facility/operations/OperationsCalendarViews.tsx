@@ -43,7 +43,6 @@ import {
   useCalendarDrag,
 } from "@/lib/calendar-drag";
 import { defaultServiceAddOns } from "@/data/service-addons";
-import { bookingRules } from "@/data/settings";
 import {
   type CalendarColorOverrides,
   type CalendarExternalProvider,
@@ -63,6 +62,7 @@ import {
   isSameDay,
   resolveEventColor,
 } from "@/lib/operations-calendar";
+import { useSettings } from "@/hooks/use-settings";
 
 export interface EventRenderSettings {
   visualConfig: CalendarVisualConfig;
@@ -176,7 +176,6 @@ const EXTERNAL_SOURCE_GLYPH: Record<
 // total = the module's per-hour ceiling (capacityCeilingPerHour) when present,
 // else the facility default. Tasks / non-capacity events are excluded.
 const HEATMAP_HOURLY_CAPACITY = 10;
-const HEATMAP_DAILY_CAPACITY = bookingRules.dailyCapacityLimit ?? 50;
 
 function capacityEvents(
   events: OperationsCalendarEvent[],
@@ -937,6 +936,10 @@ export function DayColumns({
   const today = new Date();
   const { hoverKey } = useCalendarDrag();
   const waitlistEntries = useWaitlistEntries();
+  // The facility's own daily capacity. This was a module-scope constant read
+  // from the fixture at import time, so the capacity heatmap showed the same
+  // ceiling of 50 for every facility and no setting could change it.
+  const { rules } = useSettings();
 
   return (
     <div className="w-full overflow-x-auto">
@@ -955,7 +958,10 @@ export function DayColumns({
           const inCurrentMonth =
             !showMonthMask || !anchorDate || isCurrentMonthDay(day, anchorDate);
           const heatUsed = capacityUsed(dayEvents);
-          const heatTotal = HEATMAP_DAILY_CAPACITY;
+          // The FACILITY's daily capacity, not a module-scope constant read
+          // from the fixture at import time — which was the same number for
+          // every facility on the platform and could never change.
+          const heatTotal = rules.dailyCapacityLimit || 50;
           const dayWaitlist = waitlistForDay(waitlistEntries, day);
 
           return (

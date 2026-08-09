@@ -18,7 +18,6 @@ import {
   dropOffPickUpOverrides as defaultDropOffPickUpOverrides,
   notificationToggles,
   serviceNotificationDefaults,
-  tipConfig as defaultTipConfig,
   integrations,
   moduleAddons,
   facilityHolidays,
@@ -102,7 +101,7 @@ interface SettingsContextValue {
   updateDropOffPickUpOverrides: (overrides: DropOffPickUpOverride[]) => void;
   updateNotifications: (notifications: NotificationToggle[]) => void;
   updateServiceNotifDefaults: (defaults: ServiceNotificationDefault[]) => void;
-  updateTipConfig: (config: TipConfig) => void;
+  updateTipConfig: (config: TipConfig) => Promise<unknown>;
   updateIntegrations: (integrations: Integration[]) => void;
   updateAddons: (addons: ModuleAddon[]) => void;
   updateWeatherRules: (rules: WeatherWarningRule[]) => void;
@@ -257,9 +256,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   >(() =>
     loadStored("settings-service-notif-defaults", serviceNotificationDefaults),
   );
-  const [tipConfigData, setTipConfigData] = useState<TipConfig>(() =>
-    loadStored("settings-tip-config", defaultTipConfig),
-  );
   const [integrationsData, setIntegrationsData] = useState<Integration[]>(() =>
     loadStored("settings-integrations", integrations),
   );
@@ -384,10 +380,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       JSON.stringify(defaults),
     );
   };
-  const updateTipConfig = (config: TipConfig) => {
-    setTipConfigData(config);
-    localStorage.setItem("settings-tip-config", JSON.stringify(config));
-  };
+  const updateTipConfig = (config: TipConfig) =>
+    saveSetting.mutateAsync({ domain: "tip_config", value: config });
   const updateIntegrations = (integrations: Integration[]) => {
     setIntegrationsData(integrations);
     localStorage.setItem("settings-integrations", JSON.stringify(integrations));
@@ -429,7 +423,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setDropOffPickUpOverridesState(defaultDropOffPickUpOverrides);
     setNotifications(notificationToggles);
     setServiceNotifDefaultsData(serviceNotificationDefaults);
-    setTipConfigData(defaultTipConfig);
     setIntegrationsData(integrations);
     setAddons(moduleAddons);
     setWeatherRulesData(defaultWeatherRules);
@@ -454,7 +447,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-drop-off-pick-up-overrides");
     localStorage.removeItem("settings-notifications");
     localStorage.removeItem("settings-service-notif-defaults");
-    localStorage.removeItem("settings-tip-config");
     localStorage.removeItem("settings-integrations");
     localStorage.removeItem("settings-addons");
     localStorage.removeItem("settings-weather-rules");
@@ -482,7 +474,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         dropOffPickUpOverrides: dropOffPickUpOverridesState,
         notifications,
         serviceNotifDefaults: serviceNotifDefaultsData,
-        tipConfig: tipConfigData,
+        tipConfig: facilitySettings.settings.tip_config.value,
         integrations: integrationsData,
         addons,
         weatherRules: weatherRulesData,

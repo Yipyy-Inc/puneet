@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { SETTING_DOMAINS, type SettingDomain } from "@/lib/settings/domains";
-import type { BookingRules, BusinessHours } from "@/types/facility";
+import type { BookingRules, BusinessHours, TipConfig } from "@/types/facility";
 
 // ============================================================================
 // A facility's own settings, per domain.
@@ -29,6 +29,7 @@ export interface SettingState<T> {
 export interface FacilitySettings {
   business_hours: SettingState<BusinessHours>;
   booking_rules: SettingState<BookingRules>;
+  tip_config: SettingState<TipConfig>;
 }
 
 function fallbackSettings(): FacilitySettings {
@@ -39,6 +40,10 @@ function fallbackSettings(): FacilitySettings {
     },
     booking_rules: {
       value: structuredClone(SETTING_DOMAINS.booking_rules.fallback),
+      configured: false,
+    },
+    tip_config: {
+      value: structuredClone(SETTING_DOMAINS.tip_config.fallback),
       configured: false,
     },
   };
