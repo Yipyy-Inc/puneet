@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { signIn } from "./_auth";
+import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
 // The platform Clover status endpoint: who may read it, and what it discloses.
@@ -11,24 +11,72 @@ import { signIn } from "./_auth";
 // matters most is the NEGATIVE one: whatever this returns, it is not a
 // credential.
 //
-// The signed-in-as-platform-admin case is NOT covered here and cannot be: the
-// platform admins live in the production Clerk instance, and the e2e accounts
-// are in the development one. What is asserted below is everything reachable
-// without that — the two refusals, and the fact that no response shape can
-// carry a secret.
+// The platform-admin case WAS uncoverable, and is not any more:
+// `admin@yipyy.dev` is a platform admin in the development Clerk instance now
+// that scripts/provision-e2e-identities.ts has been run against it. Before
+// that, the only platform admins lived in the production instance and no local
+// session could reach this route at all.
 // ============================================================================
 
 const STATUS = "/api/payments/clover/platform";
 
-// A real facility staff account. NOT the @yipyy.dev fixtures in _auth.ts —
-// those exist in no Clerk instance this deployment talks to, so a spec built on
-// them fails at sign-in and proves nothing about the thing it names.
+// A facility staff account with a REAL Clover connection, which the @yipyy.dev
+// fixtures do not have — the refusal assertions want a member of a facility
+// that could plausibly be asking.
 const STAFF = process.env.CLOVER_E2E_STAFF_EMAIL?.trim() ?? "";
 
 test.describe("the platform Clover status endpoint", () => {
   test("refuses anyone who is not signed in", async ({ page }) => {
     const response = await page.request.get(STATUS);
     expect(response.status()).toBe(401);
+  });
+
+  test("tells a platform admin what is configured, and nothing more", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.admin);
+    const response = await page.request.get(STATUS);
+    expect(response.status()).toBe(200);
+
+    const body = (await response.json()) as {
+      defaultEnvironment: string;
+      webhookUrl: string;
+      webhookAuthConfigured: boolean;
+      estates: {
+        environment: string;
+        configured: boolean;
+        terminalsEnabled: boolean;
+        connectedFacilities: number;
+        facilitiesInError: number;
+      }[];
+    };
+
+    // Both estates are always reported. A screen that hid the unconfigured one
+    // would answer "everything is fine" by omission on the day production is
+    // the thing that is missing.
+    expect(body.estates.map((e) => e.environment).sort()).toEqual([
+      "production",
+      "sandbox",
+    ]);
+
+    // Every credential is a boolean and every count is a number. This is the
+    // assertion the whole endpoint exists for: iterate the ACTUAL response
+    // rather than a list of field names, so a value added later is caught too.
+    for (const estate of body.estates) {
+      expect(typeof estate.configured).toBe("boolean");
+      expect(typeof estate.terminalsEnabled).toBe("boolean");
+      expect(typeof estate.connectedFacilities).toBe("number");
+    }
+    expect(typeof body.webhookAuthConfigured).toBe("boolean");
+
+    // Nothing that could BE a credential. Clover app ids and secrets are long
+    // opaque strings; the only long string here is the webhook URL, which is
+    // public by construction — Clover has to be able to POST to it.
+    const serialised = JSON.stringify({ ...body, webhookUrl: undefined });
+    expect(serialised).not.toMatch(/[A-Z0-9]{12,}/);
+
+    // And it is the route that answers, not the one the old screen displayed.
+    expect(body.webhookUrl).toContain("/api/webhooks/clover");
   });
 
   test("refuses a facility staff member", async ({ page }) => {

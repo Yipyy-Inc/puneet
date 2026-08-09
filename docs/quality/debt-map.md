@@ -1785,22 +1785,37 @@ exactly two things: the authorise redirect and the code exchange.
 
 ## 2026-08-09 — half-converted screens, and a test suite that cannot sign in
 
-### 🔴 The e2e accounts in `tests/e2e/_auth.ts` do not exist
+### 🟢 The e2e accounts did not exist, and the admin grant was a no-op (fixed)
 
-`ACCOUNTS` names seven `@yipyy.dev` logins. Signing in as one fails with
-**"No user found with email: owner@yipyy.dev"** — they exist in no Clerk
-instance this deployment talks to. They survived the Supabase→Clerk cutover as
-strings while the identities behind them did not.
+`ACCOUNTS` names seven `@yipyy.dev` logins, and signing in as one failed with
+**"No user found with email: owner@yipyy.dev"** — they survived the
+Supabase→Clerk cutover as strings while the identities behind them did not.
 
-**Why it matters:** any spec built on them fails at sign-in, which reads as an
-application bug rather than a missing fixture. That is potentially a large part
-of the 36-spec suite, and it means **a green run of a subset proves less than it
-looks like it does**.
+**Repair:** `bun --env-file=.env.local scripts/provision-e2e-identities.ts`.
+Idempotent, and it refuses a Clerk production instance. Run it after any Clerk
+instance change; nothing else recreates them.
 
-**Do instead:** new specs use a real account (`CLOVER_E2E_STAFF_EMAIL` and
-friends) and `test.skip()` without it. Before trusting a suite-wide green,
-confirm the accounts resolve — `scripts/provision-e2e-identities.ts` is what
-creates them.
+**And running it exposed a second defect.** The script printed "platform admin"
+beside `admin@yipyy.dev` and the account was not one, so every `/dashboard/*`
+route answered 403 with nothing pointing back at the cause.
+
+`profiles.is_platform_admin` is **DERIVED**:
+`private.enforce_platform_admin_flag()` runs BEFORE every insert and update on
+`profiles` and overwrites the column from `platform_memberships`. Writing it
+raises no error and does nothing. The grant is a row in
+`public.platform_memberships`; `platform_memberships_mirror` syncs the flag
+back.
+
+**Do instead — the general rule:** when a column is maintained by a trigger,
+a write to it is not a grant. The script now inserts the membership and **reads
+the derived column back**, throwing if it did not take. Same shape as the
+simulated-verifier entry below: a write that cannot fail is not evidence that it
+happened.
+
+**This lifted a real constraint.** Platform-admin screens and APIs used to be
+unverifiable locally (the only platform admins were production Clerk subjects).
+They are testable now via `ACCOUNTS.admin` — `tests/e2e/clover-platform.spec.ts`
+asserts the 200 path that had been documented as uncoverable.
 
 ### 🟡 A page can read its record from Postgres and its neighbour from a fixture
 
