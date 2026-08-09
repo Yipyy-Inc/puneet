@@ -17,6 +17,7 @@ import {
   Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSettings } from "@/hooks/use-settings";
 import { TagList } from "@/components/shared/TagList";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,6 @@ import {
   type EarlyCheckoutAdjustment,
 } from "@/components/facility/dashboard/check-out-dialog";
 import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
-import { reportCardConfig } from "@/data/settings";
 import {
   computeLatePickupFee,
   type LateFeeResult,
@@ -110,6 +110,10 @@ export function BookingCard({
   primaryAction = "none",
 }: BookingCardProps) {
   const router = useRouter();
+  // The facility's report-card settings — auto-send mode and send time. Read
+  // from the fixture until now, so a facility that had turned auto-send off
+  // still had it announced as scheduled.
+  const { reportCards: reportCardConfig } = useSettings();
   const { updateStatus } = useUnifiedBookings();
   const takePayment = useTakeBookingPayment();
   const addLineItems = useAddLineItems();

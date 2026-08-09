@@ -1,19 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
-import {
-  evaluationFormTemplate as defaultEvalFormTemplate,
-  weatherWarningRules as defaultWeatherRules,
-  reportCardConfig,
-  serviceDateBlocks as defaultServiceDateBlocks,
-  scheduleTimeOverrides as defaultScheduleTimeOverrides,
-  dropOffPickUpOverrides as defaultDropOffPickUpOverrides,
-  notificationToggles,
-  serviceNotificationDefaults,
-  integrations,
-  moduleAddons,
-  facilityHolidays,
-} from "@/data/settings";
+import { integrations, facilityHolidays } from "@/data/settings";
 import {
   APP_LANGUAGE_SETTINGS_STORAGE_KEY,
   DEFAULT_APP_LANGUAGE_SETTINGS,
@@ -53,7 +41,6 @@ import type {
   ModuleAddon,
 } from "@/types/facility";
 import type { CalendarColorOverrides } from "@/lib/operations-calendar";
-import { EMPTY_COLOR_OVERRIDES } from "@/lib/operations-calendar";
 
 interface SettingsContextValue {
   daycare: ModuleConfig;
@@ -85,7 +72,9 @@ interface SettingsContextValue {
   updateGrooming: (config: ModuleConfig) => Promise<unknown>;
   updateTraining: (config: ModuleConfig) => Promise<unknown>;
   updateEvaluation: (config: EvaluationConfig) => Promise<unknown>;
-  updateEvaluationFormTemplate: (config: EvaluationFormTemplate) => void;
+  updateEvaluationFormTemplate: (
+    config: EvaluationFormTemplate,
+  ) => Promise<unknown>;
   updateEvaluationReportCard: (
     config: EvaluationReportCardConfig,
   ) => Promise<unknown>;
@@ -93,17 +82,27 @@ interface SettingsContextValue {
   updateProfile: (profile: BusinessProfile) => Promise<unknown>;
   updateRules: (rules: BookingRules) => Promise<unknown>;
   updateBookingFlow: (config: FacilityBookingFlowConfig) => Promise<unknown>;
-  updateReportCards: (config: ReportCardConfig) => void;
-  updateServiceDateBlocks: (blocks: ServiceDateBlock[]) => void;
-  updateScheduleTimeOverrides: (overrides: ScheduleTimeOverride[]) => void;
-  updateDropOffPickUpOverrides: (overrides: DropOffPickUpOverride[]) => void;
-  updateNotifications: (notifications: NotificationToggle[]) => void;
-  updateServiceNotifDefaults: (defaults: ServiceNotificationDefault[]) => void;
+  updateReportCards: (config: ReportCardConfig) => Promise<unknown>;
+  updateServiceDateBlocks: (blocks: ServiceDateBlock[]) => Promise<unknown>;
+  updateScheduleTimeOverrides: (
+    overrides: ScheduleTimeOverride[],
+  ) => Promise<unknown>;
+  updateDropOffPickUpOverrides: (
+    overrides: DropOffPickUpOverride[],
+  ) => Promise<unknown>;
+  updateNotifications: (
+    notifications: NotificationToggle[],
+  ) => Promise<unknown>;
+  updateServiceNotifDefaults: (
+    defaults: ServiceNotificationDefault[],
+  ) => Promise<unknown>;
   updateTipConfig: (config: TipConfig) => Promise<unknown>;
   updateIntegrations: (integrations: Integration[]) => void;
-  updateAddons: (addons: ModuleAddon[]) => void;
-  updateWeatherRules: (rules: WeatherWarningRule[]) => void;
-  updateServiceColorOverrides: (overrides: CalendarColorOverrides) => void;
+  updateAddons: (addons: ModuleAddon[]) => Promise<unknown>;
+  updateWeatherRules: (rules: WeatherWarningRule[]) => Promise<unknown>;
+  updateServiceColorOverrides: (
+    overrides: CalendarColorOverrides,
+  ) => Promise<unknown>;
   updateLanguageSettings: (settings: AppLanguageSettings) => void;
   resetModules: () => void;
 }
@@ -142,10 +141,6 @@ function normalizeEvaluation(
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [evalFormTemplateData, setEvalFormTemplateData] =
-    useState<EvaluationFormTemplate>(() =>
-      loadStored("settings-eval-form-template", defaultEvalFormTemplate),
-    );
   // ── business_hours AND booking_rules COME FROM POSTGRES ─────────────────
   //
   // Converted here, in the provider, rather than at each screen. `hours` and
@@ -176,6 +171,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const bookingFlow = facilitySettings.settings.booking_flow.value;
   const evaluationReportCardData =
     facilitySettings.settings.evaluation_report_card.value;
+  // ── WORKFLOW AND DISPLAY ────────────────────────────────────────────────
+  //
+  // What staff see and how a day is shaped. Lower stakes than the block above,
+  // converted for the same reason: every facility was handed one answer to a
+  // question each of them gets to decide.
+  const evalFormTemplateData =
+    facilitySettings.settings.evaluation_form_template.value;
+  const reportCards = facilitySettings.settings.report_cards.value;
+  const serviceDateBlocksState =
+    facilitySettings.settings.service_date_blocks.value;
+  const scheduleTimeOverridesState =
+    facilitySettings.settings.schedule_time_overrides.value;
+  const dropOffPickUpOverridesState =
+    facilitySettings.settings.drop_off_pick_up_overrides.value;
+  const notifications = facilitySettings.settings.notification_toggles.value;
+  const serviceNotifDefaultsData =
+    facilitySettings.settings.service_notification_defaults.value;
+  const addons = facilitySettings.settings.module_addons.value;
+  const weatherRulesData = facilitySettings.settings.weather_rules.value;
+  const serviceColorOverridesData =
+    facilitySettings.settings.service_color_overrides.value;
 
   // The facility's own profile, from `facilities` (20260809120000). Converted
   // HERE and not only on the settings card, because ReportCardsModule,
@@ -194,48 +210,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         ),
       ),
   );
-  const [reportCards, setReportCards] = useState<ReportCardConfig>(() =>
-    loadStored("settings-report-cards", reportCardConfig),
-  );
-  const [serviceDateBlocksState, setServiceDateBlocksState] = useState<
-    ServiceDateBlock[]
-  >(() => loadStored("settings-service-date-blocks", defaultServiceDateBlocks));
-  const [scheduleTimeOverridesState, setScheduleTimeOverridesState] = useState<
-    ScheduleTimeOverride[]
-  >(() =>
-    loadStored(
-      "settings-schedule-time-overrides",
-      defaultScheduleTimeOverrides,
-    ),
-  );
-  const [dropOffPickUpOverridesState, setDropOffPickUpOverridesState] =
-    useState<DropOffPickUpOverride[]>(() =>
-      loadStored(
-        "settings-drop-off-pick-up-overrides",
-        defaultDropOffPickUpOverrides,
-      ),
-    );
-  const [notifications, setNotifications] = useState<NotificationToggle[]>(() =>
-    loadStored("settings-notifications", notificationToggles),
-  );
-  const [serviceNotifDefaultsData, setServiceNotifDefaultsData] = useState<
-    ServiceNotificationDefault[]
-  >(() =>
-    loadStored("settings-service-notif-defaults", serviceNotificationDefaults),
-  );
   const [integrationsData, setIntegrationsData] = useState<Integration[]>(() =>
     loadStored("settings-integrations", integrations),
   );
-  const [addons, setAddons] = useState<ModuleAddon[]>(() =>
-    loadStored("settings-addons", moduleAddons),
-  );
-  const [weatherRulesData, setWeatherRulesData] = useState<
-    WeatherWarningRule[]
-  >(() => loadStored("settings-weather-rules", defaultWeatherRules));
-  const [serviceColorOverridesData, setServiceColorOverridesData] =
-    useState<CalendarColorOverrides>(() =>
-      loadStored("settings-service-color-overrides", EMPTY_COLOR_OVERRIDES),
-    );
 
   const updateDaycare = (config: ModuleConfig) =>
     saveSetting.mutateAsync({ domain: "daycare_config", value: config });
@@ -247,10 +224,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveSetting.mutateAsync({ domain: "training_config", value: config });
   const updateEvaluation = (config: EvaluationConfig) =>
     saveSetting.mutateAsync({ domain: "evaluation_config", value: config });
-  const updateEvaluationFormTemplate = (config: EvaluationFormTemplate) => {
-    setEvalFormTemplateData(config);
-    localStorage.setItem("settings-eval-form-template", JSON.stringify(config));
-  };
+  const updateEvaluationFormTemplate = (config: EvaluationFormTemplate) =>
+    saveSetting.mutateAsync({
+      domain: "evaluation_form_template",
+      value: config,
+    });
   const updateEvaluationReportCard = (config: EvaluationReportCardConfig) =>
     saveSetting.mutateAsync({
       domain: "evaluation_report_card",
@@ -287,102 +265,59 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveSetting.mutateAsync({ domain: "booking_rules", value: rules });
   const updateBookingFlow = (config: FacilityBookingFlowConfig) =>
     saveSetting.mutateAsync({ domain: "booking_flow", value: config });
-  const updateReportCards = (config: ReportCardConfig) => {
-    setReportCards(config);
-    localStorage.setItem("settings-report-cards", JSON.stringify(config));
-  };
-  const updateServiceDateBlocks = (blocks: ServiceDateBlock[]) => {
-    setServiceDateBlocksState(blocks);
-    localStorage.setItem(
-      "settings-service-date-blocks",
-      JSON.stringify(blocks),
-    );
-  };
-  const updateScheduleTimeOverrides = (overrides: ScheduleTimeOverride[]) => {
-    setScheduleTimeOverridesState(overrides);
-    localStorage.setItem(
-      "settings-schedule-time-overrides",
-      JSON.stringify(overrides),
-    );
-  };
-  const updateDropOffPickUpOverrides = (overrides: DropOffPickUpOverride[]) => {
-    setDropOffPickUpOverridesState(overrides);
-    localStorage.setItem(
-      "settings-drop-off-pick-up-overrides",
-      JSON.stringify(overrides),
-    );
-  };
-  const updateNotifications = (notifications: NotificationToggle[]) => {
-    setNotifications(notifications);
-    localStorage.setItem(
-      "settings-notifications",
-      JSON.stringify(notifications),
-    );
-  };
-  const updateServiceNotifDefaults = (
-    defaults: ServiceNotificationDefault[],
-  ) => {
-    setServiceNotifDefaultsData(defaults);
-    localStorage.setItem(
-      "settings-service-notif-defaults",
-      JSON.stringify(defaults),
-    );
-  };
+  const updateReportCards = (config: ReportCardConfig) =>
+    saveSetting.mutateAsync({ domain: "report_cards", value: config });
+  const updateServiceDateBlocks = (blocks: ServiceDateBlock[]) =>
+    saveSetting.mutateAsync({ domain: "service_date_blocks", value: blocks });
+  const updateScheduleTimeOverrides = (overrides: ScheduleTimeOverride[]) =>
+    saveSetting.mutateAsync({
+      domain: "schedule_time_overrides",
+      value: overrides,
+    });
+  const updateDropOffPickUpOverrides = (overrides: DropOffPickUpOverride[]) =>
+    saveSetting.mutateAsync({
+      domain: "drop_off_pick_up_overrides",
+      value: overrides,
+    });
+  const updateNotifications = (notifications: NotificationToggle[]) =>
+    saveSetting.mutateAsync({
+      domain: "notification_toggles",
+      value: notifications,
+    });
+  const updateServiceNotifDefaults = (defaults: ServiceNotificationDefault[]) =>
+    saveSetting.mutateAsync({
+      domain: "service_notification_defaults",
+      value: defaults,
+    });
   const updateTipConfig = (config: TipConfig) =>
     saveSetting.mutateAsync({ domain: "tip_config", value: config });
   const updateIntegrations = (integrations: Integration[]) => {
     setIntegrationsData(integrations);
     localStorage.setItem("settings-integrations", JSON.stringify(integrations));
   };
-  const updateAddons = (addons: ModuleAddon[]) => {
-    setAddons(addons);
-    localStorage.setItem("settings-addons", JSON.stringify(addons));
-  };
-  const updateWeatherRules = (rules: WeatherWarningRule[]) => {
-    setWeatherRulesData(rules);
-    localStorage.setItem("settings-weather-rules", JSON.stringify(rules));
-  };
-  const updateServiceColorOverrides = (overrides: CalendarColorOverrides) => {
-    setServiceColorOverridesData(overrides);
-    localStorage.setItem(
-      "settings-service-color-overrides",
-      JSON.stringify(overrides),
-    );
-  };
+  const updateAddons = (addons: ModuleAddon[]) =>
+    saveSetting.mutateAsync({ domain: "module_addons", value: addons });
+  const updateWeatherRules = (rules: WeatherWarningRule[]) =>
+    saveSetting.mutateAsync({ domain: "weather_rules", value: rules });
+  const updateServiceColorOverrides = (overrides: CalendarColorOverrides) =>
+    saveSetting.mutateAsync({
+      domain: "service_color_overrides",
+      value: overrides,
+    });
 
   const resetModules = () => {
-    setEvalFormTemplateData(defaultEvalFormTemplate);
     // hours and rules are NOT reset here. "Reset modules" clears this browser's
     // local overrides; those two now live in the facility's own row, and
     // silently rewriting a business's opening hours and cancellation policy
     // because somebody clicked a reset button on a different screen would be a
     // destructive act nobody asked for. Resetting them is a deliberate save.
-    setReportCards(reportCardConfig);
-    setServiceDateBlocksState(defaultServiceDateBlocks);
-    setScheduleTimeOverridesState(defaultScheduleTimeOverrides);
-    setDropOffPickUpOverridesState(defaultDropOffPickUpOverrides);
-    setNotifications(notificationToggles);
-    setServiceNotifDefaultsData(serviceNotificationDefaults);
     setIntegrationsData(integrations);
-    setAddons(moduleAddons);
-    setWeatherRulesData(defaultWeatherRules);
-    setServiceColorOverridesData(EMPTY_COLOR_OVERRIDES);
     setLanguageSettings(DEFAULT_APP_LANGUAGE_SETTINGS);
     persistLanguageSettingsCookies(DEFAULT_APP_LANGUAGE_SETTINGS);
     const oneYearSeconds = 60 * 60 * 24 * 365;
     document.cookie = `NEXT_LOCALE=${DEFAULT_APP_LANGUAGE_SETTINGS.primaryLocale}; path=/; max-age=${oneYearSeconds}`;
     dispatchAppLanguageChanged();
-    localStorage.removeItem("settings-eval-form-template");
-    localStorage.removeItem("settings-report-cards");
-    localStorage.removeItem("settings-service-date-blocks");
-    localStorage.removeItem("settings-schedule-time-overrides");
-    localStorage.removeItem("settings-drop-off-pick-up-overrides");
-    localStorage.removeItem("settings-notifications");
-    localStorage.removeItem("settings-service-notif-defaults");
     localStorage.removeItem("settings-integrations");
-    localStorage.removeItem("settings-addons");
-    localStorage.removeItem("settings-weather-rules");
-    localStorage.removeItem("settings-service-color-overrides");
     localStorage.removeItem(APP_LANGUAGE_SETTINGS_STORAGE_KEY);
   };
 

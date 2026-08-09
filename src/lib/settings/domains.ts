@@ -2,6 +2,15 @@ import { z } from "zod";
 
 import {
   bookingRulesSchema,
+  dropOffPickUpOverrideSchema,
+  evaluationFormTemplateSchema,
+  moduleAddonSchema,
+  notificationToggleSchema,
+  reportCardConfigSchema,
+  scheduleTimeOverrideSchema,
+  serviceDateBlockSchema,
+  serviceNotificationDefaultSchema,
+  weatherWarningRuleSchema,
   evaluationConfigSchema,
   evaluationReportCardConfigSchema,
   facilityBookingFlowConfigSchema,
@@ -16,12 +25,30 @@ import {
   evaluationConfig,
   evaluationReportCardConfig,
   facilityBookingFlowConfig,
+  dropOffPickUpOverrides,
+  evaluationFormTemplate,
   groomingConfig,
+  moduleAddons,
+  notificationToggles,
+  reportCardConfig,
+  scheduleTimeOverrides,
+  serviceDateBlocks,
+  serviceNotificationDefaults,
   tipConfig,
   trainingConfig,
+  weatherWarningRules,
 } from "@/data/settings";
 import type {
   BookingRules,
+  DropOffPickUpOverride,
+  EvaluationFormTemplate,
+  ModuleAddon,
+  NotificationToggle,
+  ReportCardConfig,
+  ScheduleTimeOverride,
+  ServiceDateBlock,
+  ServiceNotificationDefault,
+  WeatherWarningRule,
   BusinessHours,
   EvaluationConfig,
   EvaluationReportCardConfig,
@@ -144,7 +171,75 @@ export const SETTING_DOMAINS = {
     schema: evaluationReportCardConfigSchema,
     fallback: evaluationReportCardConfig as EvaluationReportCardConfig,
   },
+
+  // ── WORKFLOW AND DISPLAY ───────────────────────────────────────────────
+  //
+  // Lower stakes than the block above — these change what STAFF see and how a
+  // day is shaped, not what a customer is charged. They are converted for the
+  // same reason: they are decisions a facility makes, and every facility was
+  // being handed one answer.
+  //
+  // The array domains store the WHOLE list. Each is edited as a list in its
+  // screen (add a rule, delete a block), and per-item rows would need an
+  // identity these types do not carry.
+  evaluation_form_template: {
+    schema: evaluationFormTemplateSchema,
+    fallback: evaluationFormTemplate as EvaluationFormTemplate,
+  },
+  report_cards: {
+    schema: reportCardConfigSchema,
+    fallback: reportCardConfig as ReportCardConfig,
+  },
+  service_date_blocks: {
+    schema: z.array(serviceDateBlockSchema),
+    fallback: serviceDateBlocks as ServiceDateBlock[],
+  },
+  schedule_time_overrides: {
+    schema: z.array(scheduleTimeOverrideSchema),
+    fallback: scheduleTimeOverrides as ScheduleTimeOverride[],
+  },
+  drop_off_pick_up_overrides: {
+    schema: z.array(dropOffPickUpOverrideSchema),
+    fallback: dropOffPickUpOverrides as DropOffPickUpOverride[],
+  },
+  notification_toggles: {
+    schema: z.array(notificationToggleSchema),
+    fallback: notificationToggles as NotificationToggle[],
+  },
+  service_notification_defaults: {
+    schema: z.array(serviceNotificationDefaultSchema),
+    fallback: serviceNotificationDefaults as ServiceNotificationDefault[],
+  },
+  module_addons: {
+    schema: z.array(moduleAddonSchema),
+    fallback: moduleAddons as ModuleAddon[],
+  },
+  weather_rules: {
+    schema: z.array(weatherWarningRuleSchema),
+    fallback: weatherWarningRules as WeatherWarningRule[],
+  },
+  // No exported schema for this one — it is a plain map of id -> hex, defined
+  // in lib/operations-calendar rather than types/facility.
+  service_color_overrides: {
+    schema: z.object({
+      services: z.record(z.string(), z.string()),
+      statuses: z.record(z.string(), z.string()),
+    }),
+    fallback: { services: {}, statuses: {} },
+  },
 } as const;
+
+// ── DELIBERATELY NOT HERE ────────────────────────────────────────────────
+//
+// `integrations` holds `accountSid` and `authToken` for Twilio, and
+// `facility_settings` is readable by every member of the facility with a
+// session. A credential belongs in Vault or the deployment environment — the
+// pattern the Clover connection follows — never in a jsonb column with a broad
+// read policy. Do not convert it by pattern-matching the entries above.
+//
+// `facilityHolidays` is read-only: the context exposes it and nothing writes
+// it, so converting it would add a domain with no writer and change nothing
+// until an editor exists. It becomes a domain on the day something can edit it.
 
 export type SettingDomain = keyof typeof SETTING_DOMAINS;
 

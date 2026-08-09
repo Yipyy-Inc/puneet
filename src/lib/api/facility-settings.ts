@@ -5,6 +5,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SETTING_DOMAINS, type SettingDomain } from "@/lib/settings/domains";
 import type {
   BookingRules,
+  DropOffPickUpOverride,
+  EvaluationFormTemplate,
+  ModuleAddon,
+  NotificationToggle,
+  ReportCardConfig,
+  ScheduleTimeOverride,
+  ServiceDateBlock,
+  ServiceNotificationDefault,
+  WeatherWarningRule,
   BusinessHours,
   EvaluationConfig,
   EvaluationReportCardConfig,
@@ -45,6 +54,19 @@ export interface FacilitySettings {
   training_config: SettingState<ModuleConfig>;
   evaluation_config: SettingState<EvaluationConfig>;
   evaluation_report_card: SettingState<EvaluationReportCardConfig>;
+  evaluation_form_template: SettingState<EvaluationFormTemplate>;
+  report_cards: SettingState<ReportCardConfig>;
+  service_date_blocks: SettingState<ServiceDateBlock[]>;
+  schedule_time_overrides: SettingState<ScheduleTimeOverride[]>;
+  drop_off_pick_up_overrides: SettingState<DropOffPickUpOverride[]>;
+  notification_toggles: SettingState<NotificationToggle[]>;
+  service_notification_defaults: SettingState<ServiceNotificationDefault[]>;
+  module_addons: SettingState<ModuleAddon[]>;
+  weather_rules: SettingState<WeatherWarningRule[]>;
+  service_color_overrides: SettingState<{
+    services: Record<string, string>;
+    statuses: Record<string, string>;
+  }>;
 }
 
 /**
