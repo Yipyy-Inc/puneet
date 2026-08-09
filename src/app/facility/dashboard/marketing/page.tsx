@@ -146,7 +146,7 @@ export default function MarketingPage() {
                 variant="secondary"
                 className="gap-0.5 px-1.5 py-0 text-xs"
               >
-                <Braces className="h-2.5 w-2.5" />
+                <Braces className="size-2.5" />
                 {row.original.variables.length}
               </Badge>
             )}
@@ -569,7 +569,7 @@ export default function MarketingPage() {
             </div>
             <h1 className="text-2xl font-bold tracking-tight">Marketing</h1>
             <Badge className="gap-1 border-0 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-              <Zap className="h-3 w-3" />
+              <Zap className="size-3" />
               Active
             </Badge>
           </div>

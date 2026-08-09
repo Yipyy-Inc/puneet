@@ -78,7 +78,7 @@ export function CancelSubscriptionDialog({
                 <Label
                   key={r}
                   htmlFor={`reason-${r}`}
-                  className="hover:bg-muted/40 has-[:checked]:border-foreground/40 has-[:checked]:bg-muted/50 flex items-center gap-2 rounded-lg border p-3 text-sm"
+                  className="hover:bg-muted/40 has-checked:border-foreground/40 has-checked:bg-muted/50 flex items-center gap-2 rounded-lg border p-3 text-sm"
                 >
                   <RadioGroupItem id={`reason-${r}`} value={r} />
                   {r}

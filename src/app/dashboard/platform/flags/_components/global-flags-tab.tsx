@@ -72,7 +72,7 @@ export function GlobalFlagsTab() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-sm font-semibold">{flag.name}</h3>
-                  <code className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px]">
+                  <code className="bg-muted text-muted-foreground rounded-sm px-1.5 py-0.5 text-[11px]">
                     {flag.key}
                   </code>
                   {!e.enabled && (

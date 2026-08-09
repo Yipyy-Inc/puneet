@@ -1781,7 +1781,7 @@ export default function StylistsPage() {
                 <Label className="text-muted-foreground text-xs tracking-wide uppercase">
                   SMS
                 </Label>
-                <pre className="bg-muted mt-1 rounded-md border p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                <pre className="bg-muted mt-1 rounded-md border p-3 font-mono text-xs/relaxed whitespace-pre-wrap">
                   {summary.sms}
                 </pre>
               </div>

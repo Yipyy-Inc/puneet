@@ -154,7 +154,7 @@ export function BusinessInformationStep({
                     >
                       <span
                         className={cn(
-                          "flex size-4 shrink-0 items-center justify-center rounded border",
+                          "flex size-4 shrink-0 items-center justify-center rounded-sm border",
                           on
                             ? "border-violet-500 bg-violet-500 text-white"
                             : "border-input",

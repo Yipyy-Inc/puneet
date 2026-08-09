@@ -121,7 +121,7 @@ function Bubble({
       >
         <div className="text-muted-foreground flex items-center gap-2 text-[11px]">
           <span className="text-foreground font-medium">{message.sender}</span>
-          <span className="bg-muted rounded px-1.5 py-0.5">
+          <span className="bg-muted rounded-sm px-1.5 py-0.5">
             {isFacility ? facilityName : "Yipyy Support"}
           </span>
           <span>{formatTimestamp(message.timestamp)}</span>

@@ -325,7 +325,7 @@ export default function CustomerCamerasPage() {
         <div className="mx-auto max-w-4xl">
           <Card>
             <CardContent className="py-12 text-center">
-              <Camera className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-30" />
+              <Camera className="text-muted-foreground mx-auto mb-4 size-16 opacity-30" />
               <h2 className="mb-2 text-2xl font-bold">
                 Live Cameras Not Available
               </h2>
@@ -353,7 +353,7 @@ export default function CustomerCamerasPage() {
           </div>
           <Card>
             <CardContent className="py-12 text-center">
-              <Clock className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-30" />
+              <Clock className="text-muted-foreground mx-auto mb-4 size-16 opacity-30" />
               <h2 className="mb-2 text-2xl font-bold">No Cameras Available</h2>
               <p className="text-muted-foreground mx-auto max-w-sm">
                 Camera access requires an active stay, qualifying membership, or

@@ -87,7 +87,7 @@ export function CohortRetentionTable({
 function LegendDot({ className, label }: { className: string; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className={cn("size-3 rounded", className)} />
+      <span className={cn("size-3 rounded-sm", className)} />
       {label}
     </span>
   );

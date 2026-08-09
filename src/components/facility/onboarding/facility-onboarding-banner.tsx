@@ -37,8 +37,8 @@ export function FacilityOnboardingBanner() {
           subtitle/progress/buttons and ate ~150px of vertical space on phones.
           Now it's one ~56px strip — title with an inline step/% caption and a
           thin progress bar; the CTA collapses to an arrow on phones. */}
-      <div className="via-background to-background relative flex items-center gap-3 overflow-hidden rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 p-2.5 sm:p-3 dark:border-violet-900/50 dark:from-violet-950/30">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-sm">
+      <div className="via-background to-background relative flex items-center gap-3 overflow-hidden rounded-xl border border-violet-200 bg-linear-to-r from-violet-50 p-2.5 sm:p-3 dark:border-violet-900/50 dark:from-violet-950/30">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-violet-500 to-indigo-600 text-white shadow-sm">
           <Rocket className="size-[18px]" />
         </span>
         <div className="min-w-0 flex-1">

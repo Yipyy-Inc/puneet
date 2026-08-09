@@ -83,7 +83,7 @@ export function IvrPreviewDialog({
                   key={o.id}
                   className="flex items-center gap-2 rounded-md border p-2"
                 >
-                  <span className="bg-muted flex size-6 items-center justify-center rounded text-xs font-bold">
+                  <span className="bg-muted flex size-6 items-center justify-center rounded-sm text-xs font-bold">
                     {o.key}
                   </span>
                   <span className="flex-1">{o.label}</span>

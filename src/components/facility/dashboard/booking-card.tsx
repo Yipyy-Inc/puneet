@@ -514,7 +514,7 @@ export function BookingCard({
       </div>
 
       {/* Action region — sibling to the clickable area, no propagation possible */}
-      <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto [&>*]:flex-1 sm:[&>*]:flex-none">
+      <div className="flex w-full shrink-0 items-center gap-2 *:flex-1 sm:w-auto sm:*:flex-none">
         {primaryAction === "check-in" && (
           <>
             <Button
