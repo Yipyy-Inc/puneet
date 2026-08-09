@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
-import { useTwilioConfig } from "@/hooks/use-twilio-config";
+import { usePlatformTelephony } from "@/lib/api/platform-communication";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -100,7 +100,7 @@ export function SupportCallingClient() {
     return () => clearInterval(id);
   }, []);
 
-  const twilio = useTwilioConfig();
+  const twilio = usePlatformTelephony();
   const missedCount = missed.length;
 
   function onAnswer(c: SupportQueuedCall) {
@@ -126,24 +126,28 @@ export function SupportCallingClient() {
         </h1>
         <p className="text-muted-foreground">
           Phone support for facilities
-          {twilio.connected && twilio.phoneNumbers[0] && (
+          {twilio.connected && twilio.sendingNumber && (
             <span className="ml-1 text-emerald-600 dark:text-emerald-400">
-              · Connected via Twilio · {twilio.phoneNumbers[0]}
+              · Connected via Twilio · {twilio.sendingNumber}
             </span>
           )}
         </p>
       </div>
 
-      {!twilio.connected && (
+      {/* Pending is not "not configured". The store this replaced answered
+          instantly from module state and never had to tell them apart; against
+          the server, shouting that Twilio is missing while the request that
+          would say otherwise is still open is a claim nobody has established. */}
+      {!twilio.pending && !twilio.connected && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm">
           <AlertTriangle className="size-4 shrink-0 text-rose-600 dark:text-rose-400" />
           <span className="text-rose-700 dark:text-rose-300">
-            Twilio isn&apos;t configured — calling features are disabled until
-            the integration is connected.
+            Twilio isn&apos;t configured on this deployment — calling is
+            disabled until credentials are set in the environment.
           </span>
           <Button asChild size="sm" variant="outline" className="ml-auto">
             <Link href="/dashboard/system-admin/integrations">
-              Configure in Integrations
+              View in Integrations
             </Link>
           </Button>
         </div>
