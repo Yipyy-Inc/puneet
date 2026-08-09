@@ -87,7 +87,6 @@ import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 import { facilityStaff } from "@/data/facility-staff";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
-import { notificationToggles } from "@/data/settings";
 import { digitalWaivers, waiverSignatures } from "@/data/additional-features";
 import {
   loadDepositRules,
@@ -280,6 +279,7 @@ export function BookingModal({
     serviceNotifDefaults,
     tipConfig,
     evaluation: evaluationConfig,
+    notifications: notificationToggles,
   } = useSettings();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),

@@ -80,6 +80,16 @@ const CONVERTED = [
   "trainingConfig",
   "evaluationConfig",
   "evaluationReportCardConfig",
+  // Workflow and display: what staff see and how a day is shaped.
+  "evaluationFormTemplate",
+  "reportCardConfig",
+  "serviceDateBlocks",
+  "scheduleTimeOverrides",
+  "dropOffPickUpOverrides",
+  "notificationToggles",
+  "serviceNotificationDefaults",
+  "moduleAddons",
+  "weatherWarningRules",
 ];
 
 /**

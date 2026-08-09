@@ -115,7 +115,6 @@ import { ReservationJournalPanel } from "@/components/guest-journal/ReservationJ
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { formatBookingRef } from "@/lib/booking-id";
 import type { ExtraService } from "@/types/booking";
-import { reportCardConfig } from "@/data/settings";
 import type { GeneratedTask } from "@/types/task";
 import {
   getTasksForBooking,
@@ -185,6 +184,7 @@ export default function ClientBookingDetailPage({
     grooming,
     training,
     bookingFlow: facilityBookingFlowConfig,
+    reportCards: reportCardConfig,
   } = useSettings();
   const { data: clientBookings = [], isPending: bookingsPending } = useQuery(
     bookingQueries.byClient(clientId),

@@ -248,6 +248,49 @@ test.describe("a facility's settings", () => {
     await other.close();
   });
 
+  test("a list domain round-trips as a list, not an object", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    // Ten of the domains store an ARRAY. jsonb will accept either, and a
+    // screen handed `{}` where it expects `[]` breaks on `.map` rather than
+    // rendering empty — so the shape is worth asserting once, explicitly.
+    const saved = await page.request.patch(SETTINGS, {
+      data: {
+        domain: "service_date_blocks",
+        value: [
+          {
+            id: "blk-e2e",
+            date: "2026-12-25",
+            services: ["daycare"],
+            closed: true,
+            closureMessage: "Closed for the holiday",
+          },
+        ],
+      },
+    });
+    expect(saved.status()).toBe(200);
+
+    const body = (await (await page.request.get(SETTINGS)).json()) as {
+      service_date_blocks: { value: unknown; configured: boolean };
+    };
+    expect(Array.isArray(body.service_date_blocks.value)).toBe(true);
+    expect(body.service_date_blocks.value).toHaveLength(1);
+    expect(body.service_date_blocks.configured).toBe(true);
+
+    // An empty list is a real answer — "this facility blocks no dates" — and
+    // must be storable, not indistinguishable from unconfigured.
+    await page.request.patch(SETTINGS, {
+      data: { domain: "service_date_blocks", value: [] },
+    });
+    const cleared = (await (await page.request.get(SETTINGS)).json()) as {
+      service_date_blocks: { value: unknown[]; configured: boolean };
+    };
+    expect(cleared.service_date_blocks.value).toHaveLength(0);
+    expect(cleared.service_date_blocks.configured).toBe(true);
+  });
+
   test("a caretaker reads them but cannot change them", async ({ page }) => {
     await signIn(page, ACCOUNTS.caretaker);
 
