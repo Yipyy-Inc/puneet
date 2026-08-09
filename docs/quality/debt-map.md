@@ -1646,17 +1646,29 @@ The standing note that the ~97 client-side `facilityId: 11` occurrences are mock
 
 ## 2026-08-08 — Clover card payments
 
-### 🔴 Nine defects, and every one was found by running the code
+### 🔴 Fifteen defects, and all but one were found by running the code
 
-Worth recording as a pattern rather than nine items, because the pattern is the
-lesson. Across one day of Clover work: the card fields never mounted (`mount()`
-takes a selector, not a node); a declined card returned 500 (Clover sends no
-`error.type` on a decline, only HTTP 402); three separate **429s** from Clover
-that were swallowed as nulls; a refund that omitted its amount asked for the
-whole original charge; a network throw with no `catch` left the outcome unknown;
-and a token refresh relabelled a connection's environment.
+Worth recording as a pattern rather than fifteen items, because the pattern is
+the lesson. Across two days of Clover work: the card fields never mounted
+(`mount()` takes a selector, not a node); a declined card returned 500 (Clover
+sends no `error.type` on a decline, only HTTP 402); three separate **429s** from
+Clover that were swallowed as nulls; a refund that omitted its amount asked for
+the whole original charge; a network throw with no `catch` left the outcome
+unknown; a token refresh relabelled a connection's environment; two concurrent
+refreshes took a facility offline because Clover **rotates refresh tokens**; an
+RLS policy asked for a permission key that does not exist, so `has_permission()`
+failed closed and locked out the owner it was written to admit; a `deviceState`
+timeout guessed at 25s reported an awake terminal as unreachable (measured: a
+healthy device answers in 8s); and `externalPaymentId` silently caps at 32 chars
+while a uuid is 36.
 
-**Five of the nine were in code already committed and described as working.**
+**Six were in code already committed and described as working.** One — a
+connected facility having no way to change its merchant — was found by the user,
+not by a test.
+
+**The RLS one is the sharpest.** A policy that fails closed is indistinguishable
+from a policy correctly refusing. It was caught only by asserting that the RIGHT
+person is ALLOWED. A deny-assertion alone would have passed forever.
 
 **Why it matters:** reading this integration does not tell you whether it works.
 Clover's documented behaviour and its actual behaviour differ in ways that are
@@ -1667,20 +1679,31 @@ a null, a wrong status code, a missing row.
 works. Every money path here has been. If you change one and cannot test it, say
 so in the commit rather than letting green typecheck stand in for evidence.
 
-### 🔴 Card-present (terminal) payments are NOT built
+### 🟡 Card-present is built; nobody has pressed the button
 
-`src/lib/clover/devices.ts` discovers a facility's terminals and reports
-readiness. Nothing takes a payment on one. The `/connect/v1/*` API is reachable
-and authenticated — the RAID is configured — but no code drives a device.
+`src/lib/clover/terminal.ts` charges a device and the Terminal tender in the
+checkout dialog drives it. Proven with a real card through the library (1¢, VISA
+contactless, Flex 4) and the route proven against real hardware. **The React
+wiring between them has only ever been typechecked** — clicking it through ends
+with a human tapping a card and cannot be automated.
 
-**Why it's risky:** the readiness screen looks like a finished feature. It
-deliberately says the last step is unconfirmed, and that wording is load-bearing;
-do not "tidy" it into a green tick.
+**Refunding a terminal payment is untested.** The refund path calls the
+ecommerce `/v1/refunds`, and whether that reverses a card-PRESENT payment is an
+open question — Clover may require the same device. Do not describe terminal
+refunds as working until somebody has done one.
+
+**The contract is unobvious and every part of it was learned from an error:**
+`X-Clover-Device-Id` takes the SERIAL, not the device id; `Idempotency-Key` is a
+HEADER; `externalPaymentId` caps at 32 chars so a uuid needs its dashes
+stripped; and `final` defaults to `false`, which is a pre-authorisation that
+**Canada refuses** — surfacing sideways as a complaint about `tipAmount`.
 
 **Also:** Cloud Pay Display only supports Flex, Mini and Compact. A Station or
 Duo needs a LAN connection a hosted app cannot make. The classifier in
 `devices.ts` reports an unrecognised model as `unknown`, never `unsupported` —
 telling a facility their hardware will not work is a claim worth being sure of.
+It searches `productName`, `model` AND `deviceTypeName`, because reading `model`
+alone reported a supported Flex 4 (`Clover_C406`) as unknown on a live screen.
 
 ### 🟡 A webhook delivery is evidence, not a fact
 
@@ -1701,14 +1724,54 @@ processed would be redelivered forever. The cost is that a `failed` event is
 `payment_webhook_events_unsettled` is the index that finds them. There is no job
 that drains it yet.
 
-### 🟡 The Clover App Secret is in localStorage
+### 🟢 The Clover App Secret is out of the browser (was 🟡)
 
-`clover-config-store.ts` keeps it client-side, in plaintext, on every admin's
-machine. It predates the server-side integration, which reads its credentials
-from the environment and never from this store.
+`clover-config-store.ts` used to keep it client-side in plaintext on every
+admin's machine, while the UI toasted "saved (encrypted)". Removed 2026-08-09.
+The store now holds two unwired billing toggles and nothing else; hydration
+drops the discarded fields and rewrites the key immediately, because the secret
+stays **on disk** in an upgraded browser until something overwrites it.
 
-**Do instead:** never read a credential from that store in new code. It should be
-deleted along with whatever UI still writes it.
+Whether the real credentials resolve is answered by
+`/api/payments/clover/platform` — booleans, platform-admin only, no PATCH.
+
+**Do instead:** never put a credential in a client store to be masked on
+display. Masking happens after the value has already been sent.
+
+### 🔴 An admin screen that simulates success is worse than no screen
+
+The same system-config tab carried a "Send Test Charge of $0.01" button that
+slept, invented `txn_test_<timestamp>` and `refund_test_<timestamp>`, and
+reported a charge succeeded and was refunded. Nothing contacted Clover. It
+passed against a deployment with no credentials at all. Beside it, "Test
+Connection" returned success whenever three form fields were non-empty.
+
+**Why it matters:** that is exactly the check somebody runs to satisfy
+themselves payments work **before going live**. A check that cannot fail
+converts an unknown into a confident wrong answer.
+
+**`bun run check:success-claims` does not catch this shape.** The gate asks
+whether a file contains something that performs an action; these files did — the
+fabrication was one level down, in `fiserv-payment-service.ts`. Treat the gate
+as a floor, not a proof.
+
+**Do instead:** delete a simulated verifier rather than repairing it. The real
+paths exist and are exercised against live Clover; a pretender beside them is
+only a way to be misled.
+
+### 🔴 The webhook URL on screen pointed at a route that does not exist
+
+The same tab displayed `https://app.yipyy.com/api/clover/webhook`. The route is
+`/api/webhooks/clover`. An admin who pasted it into Clover would see **no error
+anywhere**: Clover reports failing deliveries on its own dashboard, and this app
+simply never hears that a refund was taken on a merchant's own terminal — the
+ledger drifts in the direction of claiming money it does not have.
+
+Now derived by `cloverWebhookUrl()` from the same public-address variables
+everything else uses, so it cannot disagree with the route that answers.
+
+**Do instead:** never hardcode a URL this app also serves. Derive it, and assert
+in a spec that the derived path is not a 404.
 
 ### 🟢 Both Clover estates run at once, on purpose
 
@@ -1719,6 +1782,54 @@ which is what keeps a place to test without real cards.
 **Do instead:** always pass the connection's environment to `cloverConfig()`.
 Calling it bare means "where a NEW connection would go" and is correct for
 exactly two things: the authorise redirect and the code exchange.
+
+## 2026-08-09 — half-converted screens, and a test suite that cannot sign in
+
+### 🔴 The e2e accounts in `tests/e2e/_auth.ts` do not exist
+
+`ACCOUNTS` names seven `@yipyy.dev` logins. Signing in as one fails with
+**"No user found with email: owner@yipyy.dev"** — they exist in no Clerk
+instance this deployment talks to. They survived the Supabase→Clerk cutover as
+strings while the identities behind them did not.
+
+**Why it matters:** any spec built on them fails at sign-in, which reads as an
+application bug rather than a missing fixture. That is potentially a large part
+of the 36-spec suite, and it means **a green run of a subset proves less than it
+looks like it does**.
+
+**Do instead:** new specs use a real account (`CLOVER_E2E_STAFF_EMAIL` and
+friends) and `test.skip()` without it. Before trusting a suite-wide green,
+confirm the accounts resolve — `scripts/provision-e2e-identities.ts` is what
+creates them.
+
+### 🟡 A page can read its record from Postgres and its neighbour from a fixture
+
+The facility booking detail page read the BOOKING from the database and the
+CLIENT from `src/data/clients.ts`, then required both. The fixtures hold 20
+clients, the database holds 16, and they are not the same 16 — so every client
+created since the migration opened a real booking and was told **"Booking not
+found."**
+
+Typecheck cannot see this: both halves are valid TypeScript. Neither can a
+fixture-based test, because the fixture always satisfies the lookup.
+
+**Do instead:** when a screen reads two things, check they come from the same
+place. Aim any regression test at a record the FIXTURES DO NOT HAVE — pointed at
+a fixture id it passes against the bug it exists to catch
+(`tests/e2e/booking-detail.spec.ts`).
+
+**Still outstanding:** the twelve sibling pages under
+`/facility/dashboard/clients/[id]/` and the client-file sidebar all still read
+the fixture, as does the clients LIST. They must move together: converting the
+sidebar alone would leave every demo client in that list clicking through to
+"Client not found."
+
+### 🟡 "Not found" rendered before the data arrived
+
+Same page: both queries start empty, so it stated the booking did not exist for
+as long as the request took, then replaced it with the booking. A conclusion
+needs its answers back first — gate the empty state on `isPending`, not on
+emptiness.
 
 ## How to add to this map
 
