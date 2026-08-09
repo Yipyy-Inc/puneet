@@ -1,20 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { CreditCard, Settings2 } from "lucide-react";
 
-import { useCloverConfig } from "@/lib/clover-config-store";
+import { cloverPlatformQueries } from "@/lib/api/clover-platform";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 // Featured "Payments" integration — the same treatment Twilio has for calling.
-// Clover Fiserv is the PRIMARY (and, for Phase 1, only) payment processor. Full
-// configuration lives in System Configuration → Payment Processing; this card
-// surfaces status and links there so there's a single source of truth.
+// Full configuration lives in System Configuration → Payment Processing; this
+// card surfaces status and links there so there is a single source of truth.
+//
+// "Connected" used to mean somebody had typed three values into a form that
+// wrote them to localStorage. It now means the deployment's app credentials
+// actually resolve, which the server answers without disclosing them.
 export function CloverIntegrationCard() {
-  const cfg = useCloverConfig();
+  const { data, isPending } = useQuery(cloverPlatformQueries.status());
+
+  const active = data?.estates.find(
+    (e) => e.environment === data.defaultEnvironment,
+  );
+  const configured = active?.configured ?? false;
+  const connected = data?.estates.reduce(
+    (total, e) => total + e.connectedFacilities,
+    0,
+  );
 
   return (
     <Card className="border-emerald-500/20">
@@ -31,47 +45,57 @@ export function CloverIntegrationCard() {
               <Badge variant="secondary">Payments · Primary</Badge>
             </div>
             <p className="text-muted-foreground text-sm">
-              Processes every subscription and customer card payment across
-              Yipyy.
+              Each facility connects their own Clover merchant account and
+              charges their customers through it.
             </p>
           </div>
-          <Badge
-            variant="outline"
-            className={cn(
-              "ml-auto gap-1",
-              cfg.configured
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
-                : "border-muted bg-muted text-muted-foreground",
-            )}
-          >
-            <span
+          {isPending ? (
+            <Skeleton className="ml-auto h-6 w-28" />
+          ) : (
+            <Badge
+              variant="outline"
               className={cn(
-                "size-1.5 rounded-full",
-                cfg.configured ? "bg-emerald-500" : "bg-muted-foreground",
+                "ml-auto gap-1",
+                configured
+                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+                  : "border-muted bg-muted text-muted-foreground",
               )}
-            />
-            {cfg.configured ? "Connected" : "Not configured"}
-          </Badge>
+            >
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  configured ? "bg-emerald-500" : "bg-muted-foreground",
+                )}
+              />
+              {configured ? "Credentials set" : "Not configured"}
+            </Badge>
+          )}
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4 pt-5">
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300">
-          <p className="font-medium">
-            Phase 1: online credit card payments only.
-          </p>
-          <p>
-            Applies to facilities paying Yipyy and customers paying facilities.
-            Cash and bank-transfer workflows arrive in a later phase.
-          </p>
-        </div>
-
         <div className="grid gap-3 sm:grid-cols-3">
-          <SummaryCell label="Environment">
-            <span className="capitalize">{cfg.environment}</span>
+          <SummaryCell label="New connections go to">
+            {isPending ? (
+              <Skeleton className="h-5 w-20" />
+            ) : (
+              <span className="capitalize">
+                {data?.defaultEnvironment ?? "—"}
+              </span>
+            )}
           </SummaryCell>
-          <SummaryCell label="Billing currency">{cfg.currency}</SummaryCell>
-          <SummaryCell label="Payment methods">Card only</SummaryCell>
+          <SummaryCell label="Facilities connected">
+            {isPending ? <Skeleton className="h-5 w-10" /> : (connected ?? "—")}
+          </SummaryCell>
+          <SummaryCell label="Payment methods">
+            {isPending ? (
+              <Skeleton className="h-5 w-32" />
+            ) : active?.terminalsEnabled ? (
+              "Card online + terminal"
+            ) : (
+              "Card online"
+            )}
+          </SummaryCell>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-t pt-4">
@@ -99,7 +123,7 @@ function SummaryCell({
       <p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
         {label}
       </p>
-      <p className="mt-0.5 text-sm font-semibold">{children}</p>
+      <div className="mt-0.5 text-sm font-semibold">{children}</div>
     </div>
   );
 }
