@@ -1030,40 +1030,64 @@ export type Database = {
       };
       facilities: {
         Row: {
+          address: Json | null;
           allow_customer_signup: boolean;
           business_types: string[];
           created_at: string;
+          description: string | null;
+          email: string | null;
           id: string;
           legacy_id: string | null;
+          logo_url: string | null;
           name: string;
           org_id: string;
+          phone: string | null;
+          preferences: Json;
           slug: string;
+          social_media: Json;
           timezone: string;
           updated_at: string;
+          website: string | null;
         };
         Insert: {
+          address?: Json | null;
           allow_customer_signup?: boolean;
           business_types?: string[];
           created_at?: string;
+          description?: string | null;
+          email?: string | null;
           id?: string;
           legacy_id?: string | null;
+          logo_url?: string | null;
           name: string;
           org_id: string;
+          phone?: string | null;
+          preferences?: Json;
           slug: string;
+          social_media?: Json;
           timezone?: string;
           updated_at?: string;
+          website?: string | null;
         };
         Update: {
+          address?: Json | null;
           allow_customer_signup?: boolean;
           business_types?: string[];
           created_at?: string;
+          description?: string | null;
+          email?: string | null;
           id?: string;
           legacy_id?: string | null;
+          logo_url?: string | null;
           name?: string;
           org_id?: string;
+          phone?: string | null;
+          preferences?: Json;
           slug?: string;
+          social_media?: Json;
           timezone?: string;
           updated_at?: string;
+          website?: string | null;
         };
         Relationships: [
           {

@@ -23,13 +23,17 @@ import {
   buildReportCardNotificationData,
   sendReportCardNotifications,
 } from "@/lib/report-cards/report-notifications";
-import { businessProfile } from "@/data/settings";
 import {
   getApprovalConfig,
   saveApprovalConfig,
   type ServiceApprovalConfig,
 } from "@/data/facility-config";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useFacilityProfile,
+  useUpdateFacilityProfile,
+} from "@/lib/api/facility-profile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileAppSettings } from "@/components/additional-features/MobileAppSettings";
 import { YipyyGoSettings } from "@/components/yipyygo/YipyyGoSettings";
@@ -192,10 +196,24 @@ import type {
   CustomFeedbackType,
 } from "@/types/facility";
 
-// Business Profile Component
+// ============================================================================
+// Business Profile — the facility's own name, contact details and address.
+//
+// This is the one settings section that reads POSTGRES rather than
+// `src/data/settings.ts`. Every facility used to render the fixture — "PawCare
+// Facility", contact@pawcare.com, 123 Pet Street, San Francisco — with no code
+// path that could have shown anything else, however new and however real the
+// business was.
+//
+// `weatherRules` still comes from the settings context, because it has not been
+// converted yet and the temperature-unit change below has to convert its
+// thresholds. Reading two sources here is the honest half-way state, and the
+// alternative is holding this fix back until twenty other domains land.
+// ============================================================================
 function BusinessProfileCard() {
-  const { profile, updateProfile, weatherRules, updateWeatherRules } =
-    useSettings();
+  const { weatherRules, updateWeatherRules } = useSettings();
+  const { profile, isPending } = useFacilityProfile();
+  const saveProfile = useUpdateFacilityProfile();
 
   const convertTemperatureValue = (
     value: number,
@@ -208,9 +226,15 @@ function BusinessProfileCard() {
     return Math.round(converted * 10) / 10;
   };
 
-  const handleSaveProfile = (nextProfile: typeof profile) => {
+  const handleSaveProfile = async (nextProfile: typeof profile) => {
     const previousUnit = profile.preferences.temperatureUnit;
     const nextUnit = nextProfile.preferences.temperatureUnit;
+
+    // The profile write goes FIRST, and the rest only runs if it succeeded.
+    // Converting the weather thresholds for a unit change that was then
+    // refused would leave the rules measuring in a unit the facility is not
+    // using — a silent corruption behind a visible failure.
+    await saveProfile.mutateAsync(nextProfile);
 
     if (previousUnit !== nextUnit) {
       const convertedRules = weatherRules.map((rule) => {
@@ -234,9 +258,24 @@ function BusinessProfileCard() {
 
       updateWeatherRules(convertedRules);
     }
-
-    updateProfile(nextProfile);
   };
+
+  // Blank fields before the row arrives would read as "this facility has no
+  // address", which is a claim. A skeleton says only that we do not know yet.
+  if (isPending) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Business Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-14 w-14 rounded-lg" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <SettingsBlock
@@ -2108,6 +2147,10 @@ function BookingApprovalSettingsCard() {
 function ReportCardSettingsCard() {
   const { reportCards, updateReportCards } = useSettings();
   const { activeModules: customServices } = useCustomServices();
+  // The facility's OWN details. A preview of the report card a customer will
+  // receive is worthless if it is branded as somebody else's business, and this
+  // screen used to render the `businessProfile` fixture in all three previews.
+  const { profile: facilityProfile } = useFacilityProfile();
   const [sectionServiceId, setSectionServiceId] = useState("daycare");
   const [newQuestionText, setNewQuestionText] = useState("");
   const [newQuestionType, setNewQuestionType] =
@@ -2126,7 +2169,7 @@ function ReportCardSettingsCard() {
       reportId: "preview",
       petName: "Buddy",
       ownerName: "you",
-      facilityName: businessProfile.businessName,
+      facilityName: facilityProfile.businessName,
       serviceType: sectionServiceId,
       mood: "happy",
       photos: [],
@@ -2628,7 +2671,7 @@ function ReportCardSettingsCard() {
                     <div className="overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white">
                       <ReportCardBrandedHeader
                         brandConfig={brand}
-                        profile={businessProfile}
+                        profile={facilityProfile}
                         title={`${brand.reportTitle || "Daily Report"} — Buddy`}
                         subtitle="Daycare · Mon, April 5, 2026"
                       />
@@ -2663,7 +2706,7 @@ function ReportCardSettingsCard() {
                       <div className="border-t">
                         <ReportCardBrandedFooter
                           brandConfig={brand}
-                          profile={businessProfile}
+                          profile={facilityProfile}
                         />
                       </div>
                     </div>
