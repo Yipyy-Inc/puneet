@@ -2,12 +2,12 @@
 
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
-import { clients } from "@/data/clients";
 import {
   memberships as allMemberships,
   membershipPlans,
 } from "@/data/services-pricing";
 import { defaultCustomerSettings, type CustomerSettings } from "@/types/client";
+import { useClientRecord } from "@/lib/api/client";
 import {
   Card,
   CardContent,
@@ -118,7 +118,10 @@ export default function FacilityClientSettingsPage({
 }) {
   const { id } = use(params);
   const clientId = parseInt(id, 10);
-  const client = clients.find((c) => c.id === clientId);
+  // The client, from Postgres. This was `clients.find(...)` over
+  // `src/data/clients.ts`, so every client created since the migration was
+  // told they did not exist on their own file.
+  const { client, pending: clientPending } = useClientRecord(clientId);
 
   const initialSettings: CustomerSettings = useMemo(
     () => ({
@@ -155,6 +158,12 @@ export default function FacilityClientSettingsPage({
     [activeMembership],
   );
   const planInstabookServices = activePlan?.instabookServices ?? [];
+
+  // Pending is not absent. These pages answered instantly from a fixture
+  // and never had to tell the two apart; against the database, saying the
+  // client does not exist while the request is open is a claim nobody has
+  // established.
+  if (clientPending) return null;
 
   if (!client) {
     return (

@@ -1,8 +1,8 @@
 "use client";
 
 import { use } from "react";
-import { clients } from "@/data/clients";
 import { clientDocuments } from "@/data/documents";
+import { useClientRecord } from "@/lib/api/client";
 import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 
@@ -13,7 +13,10 @@ export default function ClientDocumentsPage({
 }) {
   const { id } = use(params);
   const clientId = parseInt(id, 10);
-  const client = clients.find((c) => c.id === clientId);
+  // The client, from Postgres. This was `clients.find(...)` over
+  // `src/data/clients.ts`, so every client created since the migration was
+  // told they did not exist on their own file.
+  const { client } = useClientRecord(clientId);
   if (!client) return null;
 
   const docs = clientDocuments.filter((d) => d.clientId === clientId);

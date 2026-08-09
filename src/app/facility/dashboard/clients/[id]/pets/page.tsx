@@ -2,9 +2,9 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { clients } from "@/data/clients";
 import { PawPrint } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useClientRecord } from "@/lib/api/client";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
 
 export default function ClientPetsPage({
@@ -13,7 +13,10 @@ export default function ClientPetsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const client = clients.find((c) => c.id === parseInt(id, 10));
+  // The client, from Postgres. This was `clients.find(...)` over
+  // `src/data/clients.ts`, so every client created since the migration was
+  // told they did not exist on their own file.
+  const { client } = useClientRecord(id);
   if (!client) return null;
 
   return (

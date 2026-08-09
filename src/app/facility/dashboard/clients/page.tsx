@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { clients } from "@/data/clients";
 import { clientQueries, useCreateClient } from "@/lib/api/client";
 import { facilities } from "@/data/facilities";
 import { useLocationContext } from "@/hooks/use-location-context";
@@ -25,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
+import type { Client } from "@/types/client";
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
 import type { AdditionalContact } from "@/types/client";
 import {
@@ -131,10 +131,7 @@ function buildFilterSummary(filters: ClientFilters): string {
 
 // `canSeeContact` gates email/phone in the export (spec Table 21) — a viewer
 // without view_client_contact_info gets "Hidden" instead of the real values.
-const exportClientsToCSV = (
-  clientsData: typeof clients,
-  canSeeContact: boolean,
-) => {
+const exportClientsToCSV = (clientsData: Client[], canSeeContact: boolean) => {
   const headers = [
     "ID",
     "Name",
@@ -322,7 +319,7 @@ export default function FacilityClientsPage() {
       ? Math.round((totalPets / locationClients.length) * 10) / 10
       : 0;
 
-  const columns: ColumnDef<(typeof clients)[number]>[] = [
+  const columns: ColumnDef<Client>[] = [
     {
       key: "name",
       label: "Name",

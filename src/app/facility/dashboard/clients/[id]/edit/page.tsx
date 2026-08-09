@@ -1,8 +1,8 @@
 "use client";
 
 import { use, useState } from "react";
-import { clients } from "@/data/clients";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useClientRecord } from "@/lib/api/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,10 @@ export default function ClientEditPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const client = clients.find((c) => c.id === parseInt(id, 10));
+  // The client, from Postgres. This was `clients.find(...)` over
+  // `src/data/clients.ts`, so every client created since the migration was
+  // told they did not exist on their own file.
+  const { client } = useClientRecord(id);
 
   const [name, setName] = useState(client?.name ?? "");
   const [email, setEmail] = useState(client?.email ?? "");

@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import { bookings } from "@/data/bookings";
-import { clients } from "@/data/clients";
+import { useClientRecord } from "@/lib/api/client";
 import { BookingCard } from "@/components/clients/BookingCard";
 
 export default function ClientBookingsPage({
@@ -12,7 +12,10 @@ export default function ClientBookingsPage({
 }) {
   const { id } = use(params);
   const clientId = parseInt(id, 10);
-  const client = clients.find((c) => c.id === clientId);
+  // The client, from Postgres. This was `clients.find(...)` over
+  // `src/data/clients.ts`, so every client created since the migration was
+  // told they did not exist on their own file.
+  const { client } = useClientRecord(clientId);
   const clientBookings = bookings
     .filter((b) => b.clientId === clientId)
     .sort(

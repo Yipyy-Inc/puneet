@@ -2,8 +2,8 @@
 
 import { use, useMemo } from "react";
 import Link from "next/link";
-import { clients } from "@/data/clients";
 import { getFormsByFacility } from "@/data/forms";
+import { useClientRecord } from "@/lib/api/client";
 import { getSubmissionsByFacility } from "@/data/form-submissions";
 import type { Form, FormType } from "@/types/forms";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +37,10 @@ export default function ClientFormsPage({
 }) {
   const { id } = use(params);
   const clientId = parseInt(id, 10);
-  const client = clients.find((c) => c.id === clientId);
+  // The client, from Postgres. This was `clients.find(...)` over
+  // `src/data/clients.ts`, so every client created since the migration was
+  // told they did not exist on their own file.
+  const { client } = useClientRecord(clientId);
 
   const forms = useMemo(
     () =>
