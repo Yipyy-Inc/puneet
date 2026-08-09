@@ -2,8 +2,8 @@
 
 import { use, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { clients } from "@/data/clients";
 import { clientCommunications } from "@/data/communications";
+import { useClientRecord } from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,10 @@ export default function ClientMessagesPage({
   const { languageSettings } = useSettings();
   const { id } = use(params);
   const clientId = parseInt(id, 10);
-  const client = clients.find((c) => c.id === clientId);
+  // The client, from Postgres. This was `clients.find(...)` over
+  // `src/data/clients.ts`, so every client created since the migration was
+  // told they did not exist on their own file.
+  const { client } = useClientRecord(clientId);
   const searchParams = useSearchParams();
   // Pre-compose support: e.g. a "Send thank-you" deep link from Loyalty Reports.
   const [quickMsg, setQuickMsg] = useState(

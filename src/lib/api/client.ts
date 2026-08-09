@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
@@ -72,6 +72,47 @@ export const clientQueries = {
     },
   }),
 };
+
+/**
+ * One client, by the numeric ref in the URL.
+ *
+ * ── WHY A HOOK AND NOT `clients.find(...)` AT EACH CALL SITE ──────────────
+ *
+ * Fifteen files in the client file did this:
+ *
+ *   const client = clients.find((c) => c.id === parseInt(id, 10));
+ *   if (!client) return "Client not found.";
+ *
+ * against `src/data/clients.ts`. The fixtures hold twenty clients; the database
+ * holds a different set — so EVERY client created since the migration had a
+ * profile, a pets tab, a billing tab and a vaccination record that all reported
+ * the person did not exist.
+ *
+ * Converted one page at a time, each would have re-invented the same pending
+ * handling, and any that forgot would render "Client not found." for as long as
+ * the request took. `pending` is returned separately from `client` so a caller
+ * cannot accidentally treat "not loaded yet" as "not there" — the distinction
+ * the fixture version never had to make, and the one that breaks these pages
+ * when it is missed.
+ *
+ * `parseInt` lives here too: every call site was doing it, and two of them
+ * forgot the radix.
+ */
+export function useClientRecord(id: string | number | undefined) {
+  const ref = typeof id === "number" ? id : parseInt(String(id ?? ""), 10);
+  const valid = Number.isInteger(ref);
+
+  const { data, isPending } = useQuery({
+    ...clientQueries.detail(ref),
+    enabled: valid,
+  });
+
+  return {
+    client: data ?? undefined,
+    /** True while the answer is unknown. A disabled query is not pending. */
+    pending: valid && isPending,
+  };
+}
 
 // ============================================================================
 // Writes.

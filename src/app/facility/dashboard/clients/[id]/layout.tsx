@@ -2,8 +2,9 @@
 
 import { use } from "react";
 import { usePathname } from "next/navigation";
-import { clients } from "@/data/clients";
-import { bookings } from "@/data/bookings";
+import { useQuery } from "@tanstack/react-query";
+import { useClientRecord } from "@/lib/api/client";
+import { bookingQueries } from "@/lib/api/booking";
 import { ClientFileSidebar } from "@/components/clients/ClientFileSidebar";
 
 export default function ClientFileLayout({
@@ -34,12 +35,36 @@ export default function ClientFileLayout({
     return <>{children}</>;
   }
 
-  // The sidebar branch still reads the fixtures, along with the twelve pages it
-  // wraps (pets, billing, vaccinations, forms …), and it must keep doing so
-  // until they move together: the clients LIST is mock too, so a live lookup
-  // here would leave every demo client in that list clicking through to
-  // "Client not found." Converting the whole client file is its own change.
-  const client = clients.find((c) => c.id === clientId);
+  return <ClientFileShell clientId={clientId}>{children}</ClientFileShell>;
+}
+
+/**
+ * The sidebar branch, split out so the hooks below run only when it renders.
+ *
+ * The two early returns above leave before any query is made, and React
+ * forbids a conditional hook — so the branch that needs data becomes its own
+ * component rather than the parent fetching a client for pages that do not want
+ * one.
+ */
+function ClientFileShell({
+  clientId,
+  children,
+}: {
+  clientId: number;
+  children: React.ReactNode;
+}) {
+  const { client, pending } = useClientRecord(clientId);
+  const { data: clientBookings = [] } = useQuery(
+    bookingQueries.byClient(clientId),
+  );
+
+  // Pending is not absent. This used to read the fixtures, so it could answer
+  // instantly and never had to tell the two apart; against the database,
+  // rendering "Client not found." while the request is open states a fact
+  // nobody has established.
+  if (pending) {
+    return <div className="min-h-0 flex-1" />;
+  }
 
   if (!client) {
     return (
@@ -49,7 +74,7 @@ export default function ClientFileLayout({
     );
   }
 
-  const bookingCount = bookings.filter((b) => b.clientId === clientId).length;
+  const bookingCount = clientBookings.length;
 
   return (
     <div className="flex min-h-0 flex-1">

@@ -3,8 +3,9 @@
 import { useState, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
+import { useQuery } from "@tanstack/react-query";
+import { clientQueries, useClientRecord } from "@/lib/api/client";
 import {
   petPhotos,
   vaccinationRecords,
@@ -63,7 +64,6 @@ import {
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
 import { toast } from "sonner";
-import type { Client } from "@/types/client";
 import type { NewBooking as BookingData } from "@/types/booking";
 import type { Evaluation, Pet } from "@/types/pet";
 import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
@@ -204,7 +204,13 @@ export default function PetDetailPage({
     null,
   );
 
-  const client = clients.find((c) => c.id === parseInt(id));
+  // The client, from Postgres. This was `clients.find(...)` over
+  // `src/data/clients.ts`, so every client created since the migration was
+  // told they did not exist on their own file.
+  const { client } = useClientRecord(id);
+  // The booking wizard takes a LIST and lets staff move a booking to another
+  // customer, so it needs the roster rather than this one record.
+  const { data: allClients = [] } = useQuery(clientQueries.all());
   const pet = client?.pets.find((p) => p.id === parseInt(petId));
 
   const [editedPet, setEditedPet] = useState<Pet | null>(pet || null);
@@ -1493,7 +1499,7 @@ export default function PetDetailPage({
         <BookingModal
           open={bookingModalOpen}
           onOpenChange={setBookingModalOpen}
-          clients={clients as Client[]}
+          clients={allClients}
           facilityId={1} // Assuming facility ID is 1
           facilityName="Sample Facility"
           onCreateBooking={handleCreateBooking}

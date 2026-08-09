@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { facilities } from "@/data/facilities";
 import { unfinishedBookings } from "@/data/unfinished-bookings";
@@ -46,7 +45,7 @@ import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModa
 import { useFieldMask } from "@/lib/staff/mask";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { isClientAssignedTo } from "@/lib/api/client";
+import { isClientAssignedTo, useClientRecord } from "@/lib/api/client";
 import { isPetAssignedTo } from "@/lib/api/booking";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import type { Evaluation } from "@/types/pet";
@@ -195,7 +194,10 @@ export default function ClientDetailPage({
     null,
   );
 
-  const client = clients.find((c) => c.id === parseInt(id));
+  // The client, from Postgres. This was `clients.find(...)` over
+  // `src/data/clients.ts`, so every client created since the migration was
+  // told they did not exist on their own file.
+  const { client, pending: clientPending } = useClientRecord(id);
   const facility = client
     ? facilities.find((f) => f.name === client.facility)
     : null;
@@ -255,6 +257,12 @@ export default function ClientDetailPage({
     },
     additionalContacts: client?.additionalContacts ?? [],
   });
+
+  // Pending is not absent. These pages answered instantly from a fixture
+  // and never had to tell the two apart; against the database, saying the
+  // client does not exist while the request is open is a claim nobody has
+  // established.
+  if (clientPending) return null;
 
   if (!client) {
     return (

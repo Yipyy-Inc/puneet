@@ -1,8 +1,8 @@
 "use client";
 
 import { use } from "react";
-import { clients } from "@/data/clients";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
+import { useClientRecord } from "@/lib/api/client";
 
 export default function ClientAuditPage({
   params,
@@ -10,7 +10,10 @@ export default function ClientAuditPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const client = clients.find((c) => c.id === parseInt(id, 10));
+  // The client, from Postgres. This was `clients.find(...)` over
+  // `src/data/clients.ts`, so every client created since the migration was
+  // told they did not exist on their own file.
+  const { client } = useClientRecord(id);
   if (!client) return null;
 
   return (
