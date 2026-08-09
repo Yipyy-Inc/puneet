@@ -10,9 +10,7 @@ import {
   evaluationFormTemplate as defaultEvalFormTemplate,
   evaluationReportCardConfig,
   weatherWarningRules as defaultWeatherRules,
-  businessHours,
   businessProfile,
-  bookingRules,
   facilityBookingFlowConfig,
   reportCardConfig,
   serviceDateBlocks as defaultServiceDateBlocks,
@@ -35,6 +33,10 @@ import {
   type AppLanguageSettings,
 } from "@/lib/language-settings";
 import { dispatchAppLanguageChanged } from "@/hooks/use-app-locale";
+import {
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
 import type {
   ModuleConfig,
   EvaluationConfig,
@@ -90,9 +92,9 @@ interface SettingsContextValue {
   updateEvaluation: (config: EvaluationConfig) => void;
   updateEvaluationFormTemplate: (config: EvaluationFormTemplate) => void;
   updateEvaluationReportCard: (config: EvaluationReportCardConfig) => void;
-  updateHours: (hours: BusinessHours) => void;
+  updateHours: (hours: BusinessHours) => Promise<unknown>;
   updateProfile: (profile: BusinessProfile) => void;
-  updateRules: (rules: BookingRules) => void;
+  updateRules: (rules: BookingRules) => Promise<unknown>;
   updateBookingFlow: (config: FacilityBookingFlowConfig) => void;
   updateReportCards: (config: ReportCardConfig) => void;
   updateServiceDateBlocks: (blocks: ServiceDateBlock[]) => void;
@@ -191,9 +193,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     useState<EvaluationReportCardConfig>(() =>
       loadStored("settings-evaluation-report-card", evaluationReportCardConfig),
     );
-  const [hours, setHours] = useState<BusinessHours>(() =>
-    loadStored("settings-hours", businessHours),
-  );
+  // ── business_hours AND booking_rules COME FROM POSTGRES ─────────────────
+  //
+  // Converted here, in the provider, rather than at each screen. `hours` and
+  // `rules` are read by the booking modals as well as the settings page, so
+  // converting only the editor would have let a facility save opening hours
+  // that the thing which books customers went on ignoring.
+  //
+  // They used to be `loadStored(...)` — localStorage, keyed per BROWSER. That
+  // is worse than it sounds: an owner set their hours, saw them stick, and
+  // every other member of staff, every other device, and every CUSTOMER
+  // booking on their own phone carried on being offered the fixture's
+  // 07:00-19:00. The bug was invisible precisely to the person who fixed it.
+  const facilitySettings = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
+  const hours = facilitySettings.settings.business_hours.value;
+  const rules = facilitySettings.settings.booking_rules.value;
+
   const [profile, setProfile] = useState<BusinessProfile>(() =>
     normalizeBusinessProfile(
       loadStored("settings-profile", businessProfile),
@@ -208,9 +224,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           DEFAULT_APP_LANGUAGE_SETTINGS,
         ),
       ),
-  );
-  const [rules, setRules] = useState<BookingRules>(() =>
-    loadStored("settings-rules", bookingRules),
   );
   const [bookingFlow, setBookingFlow] = useState<FacilityBookingFlowConfig>(
     () => loadStored("settings-booking-flow", facilityBookingFlowConfig),
@@ -292,10 +305,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       JSON.stringify(config),
     );
   };
-  const updateHours = (hours: BusinessHours) => {
-    setHours(hours);
-    localStorage.setItem("settings-hours", JSON.stringify(hours));
-  };
+  // Returns the promise so a caller can await the write and report a refusal.
+  // SettingsBlock does; the older callers that ignore it behave as before.
+  const updateHours = (hours: BusinessHours) =>
+    saveSetting.mutateAsync({ domain: "business_hours", value: hours });
   const updateProfile = (profile: BusinessProfile) => {
     const normalizedProfile = normalizeBusinessProfile(
       profile,
@@ -324,10 +337,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.cookie = `NEXT_LOCALE=${resolvedLocale}; path=/; max-age=${oneYearSeconds}`;
     dispatchAppLanguageChanged();
   };
-  const updateRules = (rules: BookingRules) => {
-    setRules(rules);
-    localStorage.setItem("settings-rules", JSON.stringify(rules));
-  };
+  const updateRules = (rules: BookingRules) =>
+    saveSetting.mutateAsync({ domain: "booking_rules", value: rules });
   const updateBookingFlow = (config: FacilityBookingFlowConfig) => {
     setBookingFlow(config);
     localStorage.setItem("settings-booking-flow", JSON.stringify(config));
@@ -405,9 +416,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setEvaluation(evaluationConfig);
     setEvalFormTemplateData(defaultEvalFormTemplate);
     setEvaluationReportCardData(evaluationReportCardConfig);
-    setHours(businessHours);
     setProfile(businessProfile);
-    setRules(bookingRules);
+    // hours and rules are NOT reset here. "Reset modules" clears this browser's
+    // local overrides; those two now live in the facility's own row, and
+    // silently rewriting a business's opening hours and cancellation policy
+    // because somebody clicked a reset button on a different screen would be a
+    // destructive act nobody asked for. Resetting them is a deliberate save.
     setBookingFlow(facilityBookingFlowConfig);
     setReportCards(reportCardConfig);
     setServiceDateBlocksState(defaultServiceDateBlocks);
@@ -432,9 +446,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-evaluation");
     localStorage.removeItem("settings-eval-form-template");
     localStorage.removeItem("settings-evaluation-report-card");
-    localStorage.removeItem("settings-hours");
     localStorage.removeItem("settings-profile");
-    localStorage.removeItem("settings-rules");
     localStorage.removeItem("settings-booking-flow");
     localStorage.removeItem("settings-report-cards");
     localStorage.removeItem("settings-service-date-blocks");
