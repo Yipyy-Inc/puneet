@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { defineConfig, devices } from "@playwright/test";
 
-import { applyClerkTestKeys } from "./tests/e2e/_clerk-keys";
+import { applyWorkosTestKeys } from "./tests/e2e/_workos-keys";
 
 /**
  * E2E smoke harness for the staff-portal nav-parity work (see the spec in
@@ -56,17 +56,14 @@ try {
 }
 
 /**
- * Clerk keys, resolved BEFORE anything else so the failure is one sentence at
+ * WorkOS keys, resolved BEFORE anything else so the failure is one sentence at
  * startup rather than 36 identical sign-in timeouts.
  *
- * Set here rather than in global.setup.ts because the WEB SERVER needs them
- * too: Playwright passes process.env down to the `bun run dev` it starts, and
- * an app on a different Clerk instance from the harness would reject every
- * session the harness creates. It also stops the dev server re-entering keyless
- * mode and writing keys into the developer's .env.local as a side effect of
- * running tests.
+ * The WEB SERVER needs them too: Playwright passes process.env down to the
+ * `bun run dev` it starts, and an app on a different WorkOS environment from the
+ * harness would reject every session the harness creates.
  */
-applyClerkTestKeys();
+applyWorkosTestKeys();
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -103,15 +100,18 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
-    // Mints the Clerk Testing Token the specs sign in with. A dependency
-    // rather than `globalSetup` because clerkSetup() wants a Playwright test
-    // context, and because a failure here should read as a failed setup step
-    // rather than as the whole run refusing to start for an unstated reason.
-    { name: "setup", testMatch: /global\.setup\.ts/ },
+    // NO SETUP PROJECT. Clerk needed one to mint a Testing Token that exempted
+    // the run from bot protection. WorkOS's equivalent is Radar, and this
+    // environment has it in `Log` mode — it observes and does not challenge — so
+    // a headless run signs in normally with nothing to pre-arrange.
+    //
+    // If sign-in ever starts failing a challenge, check Radar's mode before
+    // suspecting the selectors: switching it to `Enforce` would break every spec
+    // at once, and it is configuration rather than code, so nothing here changes
+    // when somebody flips it.
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      dependencies: ["setup"],
     },
   ],
   // Nothing to start when pointing at a deployed URL — and starting a local
