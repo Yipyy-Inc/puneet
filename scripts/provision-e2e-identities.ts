@@ -1,42 +1,50 @@
 /**
  * ============================================================================
- * The seven e2e identities, in Clerk and in Postgres.
+ * The seven e2e identities, in WorkOS and in Postgres.
  *
  *   bun scripts/provision-e2e-identities.ts
  *
  * Replaces the account half of supabase/seed/dev-accounts.sql, which created
- * rows in auth.users. Clerk owns identity now (20260805223000), so a GoTrue
- * user authenticates nothing and its uuid matches no session.
+ * rows in auth.users. WorkOS owns identity now (ADR 0004), so a GoTrue user
+ * authenticates nothing and its uuid matches no session.
  *
  * THE ROLE MAPPING IS UNCHANGED — same seven addresses, same roles, same
  * facility, same fs-dev-<role> staff rows. The 36 specs assert against those,
- * and this is a change of identity provider, not of what the fixtures mean.
+ * and this is the SECOND change of identity provider, not of what the fixtures
+ * mean.
  *
  * ── WHY A SCRIPT AND NOT A SEED FILE ──────────────────────────────────────
  *
- * A Clerk user id cannot be written down in advance. dev-accounts.sql could
- * pick its own uuids because it created the accounts; here Clerk mints the
+ * A WorkOS user id cannot be written down in advance. dev-accounts.sql could
+ * pick its own uuids because it created the accounts; here WorkOS mints the
  * subject and the SQL has to be told what it was. So the script creates the
  * identity first and writes the rows second, in that order, for each account.
  *
  * ── IDEMPOTENT, AND SAFE TO RE-RUN ────────────────────────────────────────
  *
  * Every step is find-or-create. Re-running against a fully provisioned project
- * changes nothing. Re-running after somebody deleted a Clerk user re-creates it
+ * changes nothing. Re-running after somebody deleted a WorkOS user re-creates it
  * and re-points the profile at the new subject.
+ *
+ * ── EMAIL IS MARKED VERIFIED ON CREATION ──────────────────────────────────
+ *
+ * The environment requires a verified address, and nobody receives mail at
+ * @yipyy.dev. An unverified fixture would authenticate into the "check your
+ * email" step and never reach a portal, so every spec would fail at sign-in
+ * looking like a wrong password.
  *
  * ── WHY THE SERVICE ROLE ──────────────────────────────────────────────────
  *
  * There is no session here — this runs before anybody can sign in, which is the
  * whole point. An RLS-bound client would be `anon` and every write refused.
- * This is a development seeding tool and refuses to run against a Clerk
- * production instance (see tests/e2e/_clerk-keys.ts).
+ * This is a development seeding tool and refuses to run against the WorkOS
+ * production environment (see tests/e2e/_workos-keys.ts).
  * ============================================================================
  */
-import { createClerkClient } from "@clerk/backend";
+import { WorkOS } from "@workos-inc/node";
 import { createClient } from "@supabase/supabase-js";
 
-import { applyClerkTestKeys } from "../tests/e2e/_clerk-keys";
+import { applyWorkosTestKeys } from "../tests/e2e/_workos-keys";
 
 const FACILITY_ID = "a0000000-0000-4000-8000-0000000000f1"; // legacy_id '11'
 const LOCATION_ID = "a0000000-0000-4000-8000-0000000000c1";
@@ -101,8 +109,8 @@ if (!PASSWORD) {
   process.exit(1);
 }
 
-const keys = applyClerkTestKeys();
-const clerk = createClerkClient({ secretKey: keys.secretKey });
+const keys = applyWorkosTestKeys();
+const workos = new WorkOS(keys.apiKey, { clientId: keys.clientId });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -116,43 +124,44 @@ const db = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false },
 });
 
-console.log(
-  `Clerk keys from ${keys.source} (${keys.publishableKey.slice(0, 16)}…)\n`,
-);
+console.log(`WorkOS staging (${keys.clientId})\n`);
 
-/** Find the Clerk user for an address, or create one. */
-async function ensureClerkUser(
+/** Find the WorkOS user for an address, or create one. */
+async function ensureWorkosUser(
   email: string,
   fullName: string,
 ): Promise<string> {
-  const existing = await clerk.users.getUserList({ emailAddress: [email] });
+  const existing = await workos.userManagement.listUsers({ email });
   if (existing.data.length > 0) return existing.data[0]!.id;
 
   const [firstName, ...rest] = fullName.split(" ");
-  const created = await clerk.users.createUser({
-    emailAddress: [email],
+  const created = await workos.userManagement.createUser({
+    email,
     password: PASSWORD,
     firstName,
     lastName: rest.join(" ") || "Dev",
-    // The shared dev password is by definition a known one, so Clerk's breach
-    // check will reject it. These are development-instance fixtures on
-    // @yipyy.dev, an address nobody receives mail at.
-    skipPasswordChecks: true,
+    // Nobody receives mail at @yipyy.dev, and the environment requires a
+    // verified address before a password sign-in yields a session. Without this
+    // every fixture would stall at the verification step.
+    emailVerified: true,
   });
   return created.id;
 }
 
 /**
- * Point the profile at this Clerk subject.
+ * Point the profile at this WorkOS subject.
  *
  * The delete-first is for `profiles_email_lower_key` (20260806160000): if a
- * PREVIOUS Clerk instance minted an id for this address, upserting on `id`
- * would be an INSERT and raise 23505 on the address. Removing the stale row
+ * PREVIOUS provider or environment minted an id for this address, upserting on
+ * `id` would be an INSERT and raise 23505 on the address. Removing the stale row
  * cascades its memberships, which is correct — they belonged to a subject that
  * can no longer sign in.
+ *
+ * This is exactly the path every Clerk-era fixture takes on the first run after
+ * ADR 0004: same seven addresses, brand-new subjects.
  */
 async function ensureProfile(
-  clerkUserId: string,
+  userId: string,
   email: string,
   fullName: string,
   isAdmin: boolean,
@@ -163,7 +172,7 @@ async function ensureProfile(
     .ilike("email", email);
 
   for (const row of stale ?? []) {
-    if (row.id !== clerkUserId) {
+    if (row.id !== userId) {
       console.log(`  removing stale profile ${row.id} for ${email}`);
       await db.from("profiles").delete().eq("id", row.id);
     }
@@ -171,7 +180,7 @@ async function ensureProfile(
 
   const { error } = await db.from("profiles").upsert(
     {
-      id: clerkUserId,
+      id: userId,
       email,
       full_name: fullName,
     } as never,
@@ -179,7 +188,7 @@ async function ensureProfile(
   );
   if (error) throw new Error(`profile ${email}: ${error.message}`);
 
-  if (isAdmin) await ensurePlatformAdmin(clerkUserId, email);
+  if (isAdmin) await ensurePlatformAdmin(userId, email);
 }
 
 /**
@@ -207,14 +216,14 @@ async function ensureProfile(
  * every screen it visits.
  */
 async function ensurePlatformAdmin(
-  clerkUserId: string,
+  userId: string,
   email: string,
 ): Promise<void> {
   const { error } = await db.from("platform_memberships").upsert(
     {
-      profile_id: clerkUserId,
+      profile_id: userId,
       role: "superadmin",
-      granted_by: clerkUserId,
+      granted_by: userId,
     } as never,
     { onConflict: "profile_id" },
   );
@@ -226,7 +235,7 @@ async function ensurePlatformAdmin(
   const { data } = await db
     .from("profiles")
     .select("is_platform_admin")
-    .eq("id", clerkUserId)
+    .eq("id", userId)
     .single();
 
   if (data?.is_platform_admin !== true) {
@@ -240,7 +249,7 @@ async function ensurePlatformAdmin(
 
 /** The membership, and the staff row that hangs off it. */
 async function ensureMembershipAndStaff(
-  clerkUserId: string,
+  userId: string,
   email: string,
   fullName: string,
   role: string,
@@ -249,7 +258,7 @@ async function ensureMembershipAndStaff(
     .from("facility_memberships")
     .upsert(
       {
-        profile_id: clerkUserId,
+        profile_id: userId,
         facility_id: FACILITY_ID,
         role,
         home_location_id: LOCATION_ID,
@@ -301,10 +310,10 @@ async function ensureMembershipAndStaff(
 }
 
 /** Point the seeded client record at the customer identity. */
-async function ensureCustomerClientLink(clerkUserId: string): Promise<void> {
+async function ensureCustomerClientLink(userId: string): Promise<void> {
   const { error } = await db
     .from("clients")
-    .update({ profile_id: clerkUserId } as never)
+    .update({ profile_id: userId } as never)
     .eq("ref", CUSTOMER_CLIENT_REF);
   if (error) throw new Error(`client link: ${error.message}`);
 }
@@ -312,26 +321,26 @@ async function ensureCustomerClientLink(clerkUserId: string): Promise<void> {
 let failed = 0;
 for (const account of ACCOUNTS) {
   try {
-    const clerkUserId = await ensureClerkUser(account.email, account.fullName);
+    const userId = await ensureWorkosUser(account.email, account.fullName);
     await ensureProfile(
-      clerkUserId,
+      userId,
       account.email,
       account.fullName,
       "isAdmin" in account && account.isAdmin === true,
     );
     if (account.role) {
       await ensureMembershipAndStaff(
-        clerkUserId,
+        userId,
         account.email,
         account.fullName,
         account.role,
       );
     }
     if (account.email === "customer@yipyy.dev") {
-      await ensureCustomerClientLink(clerkUserId);
+      await ensureCustomerClientLink(userId);
     }
     console.log(
-      `  ${account.email.padEnd(22)} ${clerkUserId}  ${account.role ?? ("isAdmin" in account && account.isAdmin ? "platform admin" : "customer — no membership")}`,
+      `  ${account.email.padEnd(22)} ${userId}  ${account.role ?? ("isAdmin" in account && account.isAdmin ? "platform admin" : "customer — no membership")}`,
     );
   } catch (error) {
     failed += 1;

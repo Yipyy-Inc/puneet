@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useClerk } from "@clerk/nextjs";
+import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 import { Store, LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,10 @@ import {
 export function StrangerGate({ children }: { children: React.ReactNode }) {
   const { resolved, unlinked, facilitySlug } = useCurrentCustomer();
   const queryClient = useQueryClient();
-  const clerk = useClerk();
+  // The canonical sign-out, not a raw provider call: it also clears the legacy
+  // localStorage identity that the staff surfaces read, which a bare signOut
+  // leaves behind for the next person to sign in on this machine.
+  const signOutEverywhere = useSignOutEverywhere();
   const [name, setName] = useState("");
 
   const register = useMutation({
@@ -99,7 +102,7 @@ export function StrangerGate({ children }: { children: React.ReactNode }) {
             <Button
               variant="ghost"
               className="w-full"
-              onClick={() => void clerk.signOut({ redirectUrl: "/sign-in" })}
+              onClick={() => void signOutEverywhere()}
             >
               <LogOut className="mr-2 size-4" />
               Sign in as someone else
@@ -155,7 +158,7 @@ export function StrangerGate({ children }: { children: React.ReactNode }) {
           <Button
             variant="ghost"
             className="w-full"
-            onClick={() => void clerk.signOut({ redirectUrl: "/sign-in" })}
+            onClick={() => void signOutEverywhere()}
           >
             <LogOut className="mr-2 size-4" />
             Sign in as someone else

@@ -1,27 +1,10 @@
 "use client";
 
-import { useSignIn, useSignUp } from "@clerk/nextjs";
-import { useState } from "react";
-
-import { Button } from "@/components/ui/button";
+import { OAuthButton } from "@/components/auth/OAuthButton";
 
 // ============================================================================
-// The Google button — ours, not Clerk's.
-//
-// This replaced <SignIn />. The prebuilt widget draws its own card, heading and
-// footer inside whatever you put it in, so the screen showed two nested cards,
-// two sign-up links, and a "Secured by Clerk" line. Restyling it through the
-// appearance prop fought those defaults instead of removing them.
-//
-// Clerk's hooks do the same job without any of the chrome: `signIn.sso()` hands
-// off to Google and Clerk still owns the session, the tokens and the callback.
-// What we own is a button. That is the right split — the credential handling is
-// the part worth outsourcing, the brand is not.
-//
-// SIGN-IN AND SIGN-UP ARE THE SAME ACT HERE. With OAuth-only there is nothing
-// to fill in: Google either recognises the account or creates it. `mode`
-// changes which Clerk resource starts the flow and the button label, nothing
-// else — so a returning user pressing "Create an account" still just signs in.
+// The Google button. The flow, the failure handling and the reason none of this
+// is a Clerk component all live in OAuthButton — this file is the brand.
 // ============================================================================
 
 /** Google requires its own mark on sign-in buttons; this is the official 4-colour G. */
@@ -48,76 +31,12 @@ function GoogleMark() {
   );
 }
 
-export function GoogleSignInButton({
-  mode = "sign-in",
-}: {
-  mode?: "sign-in" | "sign-up";
-}) {
-  const { signIn } = useSignIn();
-  const { signUp } = useSignUp();
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  async function start() {
-    setPending(true);
-    setMessage(null);
-
-    const resource = mode === "sign-up" ? signUp : signIn;
-    if (!resource) {
-      // Clerk has not finished loading. Saying so beats a dead button.
-      setMessage("Still starting up — try again in a moment.");
-      setPending(false);
-      return;
-    }
-
-    const { error } = await resource.sso({
-      strategy: "oauth_google",
-      // Where to land afterwards. `/` redirects to /dashboard, whose gate calls
-      // landingPathFor(viewer) — so the portal is chosen from the token rather
-      // than guessed here. One sign-in serves every kind of account.
-      redirectUrl: "/",
-      redirectCallbackUrl: "/sso-callback",
-    });
-
-    // On success the browser has already left for Google, so only the failure
-    // path runs here. Clearing `pending` on success would flash the button back
-    // to normal mid-navigation.
-    if (error) {
-      setMessage(
-        error.message ?? "Could not reach Google just now. Please try again.",
-      );
-      setPending(false);
-    }
-  }
-
+export function GoogleSignInButton() {
   return (
-    <div className="space-y-3">
-      <Button
-        type="button"
-        variant="outline"
-        size="lg"
-        className="h-11 w-full font-medium"
-        onClick={() => void start()}
-        disabled={pending}
-      >
-        {pending ? (
-          "Redirecting…"
-        ) : (
-          <>
-            <GoogleMark />
-            Continue with Google
-          </>
-        )}
-      </Button>
-
-      {message && (
-        <p
-          role="alert"
-          className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm"
-        >
-          {message}
-        </p>
-      )}
-    </div>
+    <OAuthButton
+      provider="GoogleOAuth"
+      providerName="Google"
+      mark={<GoogleMark />}
+    />
   );
 }

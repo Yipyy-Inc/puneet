@@ -14,8 +14,23 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored agent skills (`npx skills add …`). Third-party templates and
+    // reference docs, not project source — linting them reports on code we do
+    // not own and cannot fix.
+    ".agents/**",
   ]),
   {
+    // SCOPED ON PURPOSE, and it must stay scoped. The `react-hooks` rules below
+    // come from eslint-config-next, which registers that plugin only for
+    // `**/*.{js,jsx,mjs,ts,tsx,mts,cts}`. Leaving this object unscoped applies
+    // the rules to every file — including a `.cjs`, which that pattern does NOT
+    // cover — and ESLint then fails to LOAD with "could not find plugin
+    // react-hooks". The whole lint step dies; it does not degrade.
+    //
+    // That is exactly how this broke: a vendored skill shipped one .cjs file and
+    // took the entire gate down with it. Match the pattern above when adding any
+    // rule from a plugin this object does not itself declare.
+    files: ["**/*.{js,jsx,mjs,ts,tsx,mts,cts}"],
     plugins: { "unused-imports": unusedImports },
     rules: {
       "no-unused-vars": "off",

@@ -1,8 +1,8 @@
 import "server-only";
 
-import { auth } from "@clerk/nextjs/server";
+import { withAuth } from "@workos-inc/authkit-nextjs";
 
-import { createClerkServerClient } from "./clerk-server";
+import { createWorkosServerClient } from "./workos-server";
 
 // ============================================================================
 // Server-side Supabase client — for Server Components, Route Handlers and
@@ -13,9 +13,9 @@ import { createClerkServerClient } from "./clerk-server";
 // service role and those policies stop applying — a query bug then returns
 // another facility's clients instead of an empty set.
 //
-// The identity behind that JWT is now CLERK. The cookie-bound @supabase/ssr
-// client is gone: Clerk owns the session, so there is no Supabase cookie to
-// read and nothing for the proxy to rotate.
+// The identity behind that JWT is now WORKOS (ADR 0004). The cookie-bound
+// @supabase/ssr client is gone: AuthKit owns the session, so there is no
+// Supabase cookie to read and nothing for the proxy to rotate.
 //
 // KEPT AS A SEAM, DELIBERATELY. The name, the async signature and the return
 // type are unchanged, so the ~70 call sites that say
@@ -30,37 +30,32 @@ import { createClerkServerClient } from "./clerk-server";
 export async function createServerClient() {
   // async purely to preserve the existing call shape — every caller already
   // awaits this, and changing that is a 70-file diff for no behavioural gain.
-  return createClerkServerClient();
+  return createWorkosServerClient();
 }
 
 /**
  * The signed-in user, or `null`.
  *
- * `auth()` reads Clerk's verified session — it does not trust a raw cookie, so
- * the guarantee that made the old `getUser()`-not-`getSession()` rule matter
+ * `withAuth()` reads AuthKit's sealed session — it does not trust a raw cookie,
+ * so the guarantee that made the old `getUser()`-not-`getSession()` rule matter
  * still holds: a forged cookie does not produce a subject.
  *
  * The shape is narrowed to what callers actually read (`id`, `email` — checked
  * across the API routes) rather than re-exporting Supabase's User, which
- * described a record that no longer exists for a Clerk identity.
+ * described a record that no longer exists for a third-party identity.
+ *
+ * IT NO LONGER QUERIES THE DATABASE. Under Clerk this read `profiles.email`,
+ * because the address lived on the synced profile rather than the session. The
+ * WorkOS session carries the address itself, so the round trip is gone — and
+ * with it the window where a user whose sync webhook had not yet landed resolved
+ * with a null email. Same signature, one fewer query, a more accurate answer.
  */
 export async function getCurrentUser(): Promise<{
   id: string;
   email: string | null;
 } | null> {
-  const { userId } = await auth();
-  if (!userId) return null;
+  const { user } = await withAuth();
+  if (!user) return null;
 
-  // The address lives on the synced profile now, not on an auth.users row.
-  // A user whose sync webhook has not landed yet still resolves — with a null
-  // email — because callers use this to answer "is anyone signed in", and
-  // answering "no" there would 401 a legitimately authenticated request.
-  const supabase = createClerkServerClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("email")
-    .eq("id", userId)
-    .maybeSingle();
-
-  return { id: userId, email: data?.email ?? null };
+  return { id: user.id, email: user.email ?? null };
 }
