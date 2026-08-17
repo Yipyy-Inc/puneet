@@ -73,8 +73,41 @@ import { WorkOS } from "@workos-inc/node";
 import { applyWorkosTestKeys } from "../tests/e2e/_workos-keys";
 
 const APPLY = process.argv.includes("--apply");
+const PRODUCTION = process.argv.includes("--production");
 
-const keys = applyWorkosTestKeys();
+/**
+ * ── WHY THIS DOES NOT CALL applyWorkosTestKeys() WHEN --production ─────────
+ *
+ * That helper refuses anything but `sk_test_`, which is exactly right for the
+ * e2e suite: it provisions seven accounts and must never touch production.
+ * Pointing profiles at the production environment is a DIFFERENT job that
+ * legitimately needs a production key, so it takes an explicit flag rather than
+ * loosening the guard the suite depends on. Weakening `_workos-keys.ts` would
+ * silently expose all 179 specs to production.
+ *
+ * The assertion is inverted here on purpose: with --production a `sk_test_` key
+ * is the error, because it would mean quietly rewriting every subject to the
+ * environment you were trying to migrate away from.
+ */
+function resolveKeys(): { apiKey: string; clientId: string } {
+  if (!PRODUCTION) return applyWorkosTestKeys();
+
+  const apiKey = process.env.WORKOS_API_KEY?.trim();
+  const clientId = process.env.WORKOS_CLIENT_ID?.trim();
+  if (!apiKey || !clientId) {
+    throw new Error(
+      "--production needs WORKOS_API_KEY and WORKOS_CLIENT_ID for the PRODUCTION environment.",
+    );
+  }
+  if (apiKey.startsWith("sk_test_")) {
+    throw new Error(
+      "--production was passed but WORKOS_API_KEY is a staging key (sk_test_).",
+    );
+  }
+  return { apiKey, clientId };
+}
+
+const keys = resolveKeys();
 const workos = new WorkOS(keys.apiKey, { clientId: keys.clientId });
 
 const db = createClient(
@@ -83,9 +116,34 @@ const db = createClient(
   { auth: { persistSession: false } },
 );
 
-/** A Clerk subject; WorkOS mints `user_01…`, Clerk minted `user_3H…`. */
-const isClerkEra = (id: string) =>
-  id.startsWith("user_") && !id.startsWith("user_01");
+/**
+ * The seven e2e fixtures live at @yipyy.dev and belong to STAGING.
+ *
+ * One Supabase project serves both WorkOS environments, and `profiles.id` holds
+ * exactly one subject — so every person exists in one environment at a time.
+ * The split is: **fixtures in Staging, real people in Production.** Migrating
+ * the fixtures to production would take all 179 specs and local sign-in down
+ * with them, so --production skips them.
+ */
+const isFixture = (email: string) => email.toLowerCase().endsWith("@yipyy.dev");
+
+/**
+ * Does this subject exist in the environment we are pointing at?
+ *
+ * Started as a `user_3H…` prefix test for Clerk, which stopped working the
+ * moment the first migration landed: a staging WorkOS subject and a production
+ * one are both `user_01…` and no string test can separate them. Asking the
+ * environment is the only honest check, and it makes this script work for any
+ * future provider or environment move.
+ */
+async function existsInTarget(id: string): Promise<boolean> {
+  try {
+    await workos.userManagement.getUser(id);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 interface Stale {
   id: string;
@@ -111,15 +169,30 @@ async function main() {
     .select("id, email, full_name, avatar_url");
   if (error) throw error;
 
-  const stale = (profiles as Stale[]).filter((p) => isClerkEra(p.id));
+  // Symmetric on purpose. Without the second half, running this with no flag
+  // after a production migration would drag all eight real people BACK to
+  // Staging -- silently, reporting success, and taking production sign-in and
+  // both platform-admin grants down with them. The invariant is the guard:
+  // fixtures belong to Staging, real people belong to Production, and neither
+  // invocation can touch the other's half.
+  const candidates = (profiles as Stale[]).filter((p) =>
+    PRODUCTION ? !isFixture(p.email) : isFixture(p.email),
+  );
+
+  const stale: Stale[] = [];
+  for (const p of candidates) {
+    if (!(await existsInTarget(p.id))) stale.push(p);
+  }
+
+  const target = PRODUCTION ? "PRODUCTION" : "Staging";
 
   if (stale.length === 0) {
-    console.log("Nothing to migrate — no Clerk-era subjects remain.");
+    console.log(`Nothing to migrate — every profile resolves in ${target}.`);
     return;
   }
 
   console.log(
-    `${stale.length} Clerk-era ${stale.length === 1 ? "identity" : "identities"}` +
+    `${stale.length} ${stale.length === 1 ? "identity" : "identities"} to point at ${target}` +
       `${APPLY ? "" : "  (DRY RUN — nothing will be changed)"}\n`,
   );
 
@@ -164,7 +237,8 @@ async function main() {
 
   if (!APPLY) {
     console.log(
-      "\nRe-run with --apply to perform it. Nothing was created or changed.\n" +
+      `\nRe-run with --apply${PRODUCTION ? " --production" : ""} to perform it. ` +
+        "Nothing was created or changed.\n" +
         "Note: --apply needs the migrate_profile_subject() function to exist.",
     );
   }
