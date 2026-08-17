@@ -55,9 +55,18 @@ pnpm-lock.yaml
 /blob-report/
 /playwright/.cache/
 
-# clerk configuration (can include secrets)
-/.clerk/
+# Vendor agent skills installed from skills-lock.json live in .agents/ (tracked).
+# .claude/skills/<vendor> is a generated SYMLINK to that directory, not a second
+# source — and it holds an ABSOLUTE path, so committing one breaks on every other
+# machine. Ignore the mirrors; the real files under .agents/ are what is tracked.
+#
+# ONE ENTRY PER VENDOR IN skills-lock.json. A wildcard is wrong here: this repo's
+# OWN skills (create-spec, review, verify, …) are real directories in the same
+# folder, and `.claude/skills/*/` would silently stop tracking the next one
+# somebody adds. Clerk's entry was removed 2026-08-17 with the skills themselves
+# (ADR 0004) — and its absence is why the WorkOS mirrors sat untracked AND
+# unignored until then, so add a line here whenever you add a vendor.
+.claude/skills/workos/
+.claude/skills/workos-widgets/
 
-# clerk skills are installed to .agents/ (tracked, see skills-lock.json);
-# these are generated Claude Code mirrors of the same files, not a second source
-.claude/skills/clerk*/
+.vercel
