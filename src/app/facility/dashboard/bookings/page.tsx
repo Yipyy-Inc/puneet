@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { clients } from "@/data/clients";
-import { facilities } from "@/data/facilities";
+import { clientQueries } from "@/lib/api/client";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import type { Client } from "@/types/client";
 import type { Booking } from "@/types/booking";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,7 +73,17 @@ const calculateTaskCount = (booking: Booking): number => {
   return count;
 };
 
-const exportBookingsToCSV = (bookingsData: Booking[]) => {
+// The client lookup is PASSED IN rather than imported.
+//
+// This read `src/data/clients.ts` — twenty fixture rows — to name the customer
+// on each of 202 real bookings. Every client created since the migration came
+// out as "Unknown", and where a real id happened to collide with a fixture id,
+// the export named the WRONG PERSON against a real booking. On a file people
+// send to their accountant.
+const exportBookingsToCSV = (
+  bookingsData: Booking[],
+  clientById: Map<number, Client>,
+) => {
   const headers = [
     "ID",
     "Client",
@@ -92,7 +103,7 @@ const exportBookingsToCSV = (bookingsData: Booking[]) => {
   const csvContent = [
     headers.join(","),
     ...bookingsData.map((booking: Booking) => {
-      const client = clients.find((c) => c.id === booking.clientId);
+      const client = clientById.get(booking.clientId);
       const pet = client?.pets.find((p) => p.id === booking.petId);
       const duration = calculateDuration(booking.startDate, booking.endDate);
       return [
@@ -137,17 +148,21 @@ const calculateDuration = (startDate: string, endDate: string): string => {
     : `${diffDays + 1} day${diffDays > 0 ? "s" : ""}`;
 };
 
-const isToday = (dateString: string): boolean => {
-  const today = new Date("2024-03-10"); // Mock today's date
-  const date = new Date(dateString);
-  return date.toDateString() === today.toDateString();
-};
+// ── "TODAY" WAS 10 MARCH 2024 ────────────────────────────────────────────────
+//
+// Both of these hardcoded `new Date("2024-03-10")` and called it "Mock today's
+// date". Against the 202 bookings actually in the database — which run from
+// June 2024 to April 2027 — that made the UPCOMING tab list all 202 of them,
+// including the 134 that have already happened. A screen a facility opens to
+// see what is coming was showing two years of history as though it were.
+//
+// `now` is passed in rather than read here so the caller decides once per
+// render instead of once per row, and so the boundary is testable.
+const isToday = (dateString: string, now: Date): boolean =>
+  new Date(dateString).toDateString() === now.toDateString();
 
-const isUpcoming = (dateString: string): boolean => {
-  const today = new Date("2024-03-10"); // Mock today's date
-  const date = new Date(dateString);
-  return date > today;
-};
+const isUpcoming = (dateString: string, now: Date): boolean =>
+  new Date(dateString) > now;
 
 export default function FacilityBookingsPage() {
   const router = useRouter();
@@ -157,7 +172,24 @@ export default function FacilityBookingsPage() {
   const pathname = usePathname();
   const inEmployeePortal = pathname?.startsWith("/employee") ?? false;
   const facilityId = 11;
-  const facility = facilities.find((f) => f.id === facilityId);
+  // Name from the SESSION, not the fixture — see the header of
+  // src/components/layout/facility-admin-sidebar.tsx. `facilityId` stays for
+  // the mock-only lookups below it; nothing sends it over the wire.
+  const { profile } = useFacilityProfile();
+
+  // Real clients, RLS-scoped to the caller's facility, keyed for O(1) lookup.
+  // A Map rather than `.find` per row: this runs twice per booking per render
+  // on a table that pages 200 rows.
+  // Once per mount, not once per row. The empty dep list is deliberate: a tab
+  // that silently reclassified its rows because the clock ticked past midnight
+  // mid-session would be harder to trust than one that is stale until reload.
+  const now = useMemo(() => new Date(), []);
+
+  const { data: clientList = [] } = useQuery(clientQueries.all());
+  const clientById = useMemo(
+    () => new Map(clientList.map((c) => [c.id, c])),
+    [clientList],
+  );
   const { setRequests: setBookingRequests } = useBookingRequestsStore();
   const { currentLocationId, isHQView, isMultiLocation } = useLocationContext();
   // Table 21 masking: booking $ hidden from staff without view_booking_financials;
@@ -258,15 +290,20 @@ export default function FacilityBookingsPage() {
     }
   }, [facilityId, isLoading, bookings]);
 
-  if (!facility) {
-    return <div>Facility not found</div>;
-  }
+  // The "Facility not found" screen that used to be here keyed on
+  // `facilities.find((f) => f.id === 11)` — a MOCK row. It turned the whole
+  // bookings page, holding real bookings the caller can read perfectly well,
+  // into an error state whenever a fixture was missing. The bookings come from
+  // the database and are already RLS-scoped; the facility name is decoration on
+  // top of them, not a precondition for showing them.
 
   // Filter bookings by tab
   const allBookings = locationBookings;
-  const todayBookings = locationBookings.filter((b) => isToday(b.startDate));
+  const todayBookings = locationBookings.filter((b) =>
+    isToday(b.startDate, now),
+  );
   const upcomingBookings = locationBookings.filter(
-    (b) => isUpcoming(b.startDate) && b.status !== "cancelled",
+    (b) => isUpcoming(b.startDate, now) && b.status !== "cancelled",
   );
   const pendingBookings = locationBookings.filter(
     (b) => b.status === "pending",
@@ -334,9 +371,9 @@ export default function FacilityBookingsPage() {
       defaultVisible: true,
       sortable: true,
       sortValue: (booking) =>
-        clients.find((c) => c.id === booking.clientId)?.name || "Unknown",
+        clientById.get(booking.clientId)?.name || "Unknown",
       render: (booking) => {
-        const client = clients.find((c) => c.id === booking.clientId);
+        const client = clientById.get(booking.clientId);
         const pet = client?.pets.find((p) => p.id === booking.petId);
         return (
           <div className="flex flex-col">
@@ -680,13 +717,15 @@ export default function FacilityBookingsPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Bookings</h2>
-            <p className="text-muted-foreground text-sm">{facility.name}</p>
+            <p className="text-muted-foreground text-sm">
+              {profile.businessName}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => exportBookingsToCSV(getDataForTab())}
+              onClick={() => exportBookingsToCSV(getDataForTab(), clientById)}
             >
               <Download className="mr-2 size-4" />
               Export
