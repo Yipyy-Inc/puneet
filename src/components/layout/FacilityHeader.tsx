@@ -18,14 +18,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { facilities } from "@/data/facilities";
-import { bookings as initialBookings } from "@/data/bookings";
-import { clients as initialClients } from "@/data/clients";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { clientQueries, useCreateClient } from "@/lib/api/client";
+import { bookingMutations } from "@/lib/api/booking";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { usePermission } from "@/hooks/use-facility-rbac";
 
-import type { AdditionalContact, Client } from "@/types/client";
-import type { NewBooking, Booking } from "@/types/booking";
+import type { AdditionalContact } from "@/types/client";
+import type { NewBooking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
@@ -61,11 +62,21 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
   // Modal states
   const [isCreateClientModalOpen, setIsCreateClientModalOpen] = useState(false);
 
-  // Data states for local mutations
-  const [bookings, setBookings] = useState<Booking[]>(
-    initialBookings as Booking[],
-  );
-  const clients = initialClients as Client[];
+  // ── THE + NEW MENU USED TO CREATE NOTHING ────────────────────────────────
+  //
+  // `handleCreateClient` showed "Client {name} created" and returned. Its own
+  // comment said "In a real app, this would save to the database".
+  // `handleCreateBooking` pushed onto a useState array seeded from the bookings
+  // fixture, toasted "Booking #N created" with an Undo, and lost it on the next
+  // navigation. Both are the most prominent control in the facility portal.
+  //
+  // The client list feeding the booking wizard came from the fixtures too,
+  // filtered by facility NAME — so it offered staff a list of people who do not
+  // exist and omitted every client they actually have.
+  const { profile } = useFacilityProfile();
+  const { data: clients = [] } = useQuery(clientQueries.all());
+  const createClient = useCreateClient();
+  const queryClient = useQueryClient();
 
   // Each quick-action is gated by the permission its underlying flow requires.
   // The facility admin (and the no-provider fallback) resolve every key to
@@ -84,9 +95,15 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
     canNewEstimate ||
     canDaycareCheckin;
 
-  const facility = facilities.find((f) => f.id === facilityId);
-
-  if (!facility || !anyQuickAction) {
+  // Only the permission decides now. This used to also require a matching row
+  // in the facilities FIXTURE (`if (!facility || !anyQuickAction)`).
+  //
+  // That never actually fired — both callers pass `facilityId={11}` and 11 is
+  // in the mock array — so this is not a bug being fixed. It is a loaded gun
+  // being unloaded: the most prominent control in the portal was one prop
+  // change away from disappearing for a real facility, and the failure would
+  // have looked like a permissions problem.
+  if (!anyQuickAction) {
     return null;
   }
 
@@ -108,56 +125,55 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
     additionalContacts: AdditionalContact[];
     pets: Omit<Pet, "id" | "imageUrl">[];
   }) => {
-    // For now, just show a success message
-    // In a real app, this would save to the database
-    toast.success(`Client ${newClient.name} created`, {
-      description: t("New client has been added successfully."),
+    createClient.mutate(newClient, {
+      onSuccess: ({ client, failedPets }) => {
+        setIsCreateClientModalOpen(false);
+        // The saved row's name, not the one that was typed — the two differ if
+        // the database trimmed or normalised anything, and the row is the fact.
+        if (failedPets.length > 0) {
+          // A pet that failed does NOT roll the client back (see useCreateClient),
+          // so saying only "created" would hide animals that are not there.
+          toast.warning(`${client.name} was created without every pet`, {
+            description: `${failedPets.join(", ")} could not be saved. Add them from the client's file.`,
+          });
+        } else {
+          toast.success(`Client ${client.name} created`, {
+            description: t("New client has been added successfully."),
+          });
+        }
+      },
+      // The modal stays OPEN on failure, holding what was typed. Closing it and
+      // reporting an error would throw the form away along with the record.
+      onError: (error) =>
+        toast.error("Could not create that client", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        }),
     });
-    setIsCreateClientModalOpen(false);
   };
 
-  const handleCreateBooking = (bookingData: NewBooking) => {
-    const petId = Array.isArray(bookingData.petId)
-      ? bookingData.petId[0]
-      : bookingData.petId;
-    const maxId = Math.max(...bookings.map((b) => b.id ?? 0), 0);
-    const bookingWithId: Booking = {
-      id: maxId + 1,
-      clientId: bookingData.clientId,
-      petId: petId,
-      facilityId: bookingData.facilityId,
-      service: bookingData.service,
-      startDate: bookingData.startDate,
-      endDate: bookingData.endDate,
-      status: bookingData.status,
-      basePrice: bookingData.basePrice,
-      discount: bookingData.discount,
-      discountReason: bookingData.discountReason,
-      totalCost: bookingData.totalCost,
-      // Not carried from the form — a booking being created has no payments
-      // against it. Through the API the database derives this; here the list is
-      // local state, so it is stated once at the only moment it is knowable.
-      paymentStatus: "pending",
-      specialRequests: bookingData.specialRequests,
-      checkInTime: bookingData.checkInTime,
-      checkOutTime: bookingData.checkOutTime,
-    };
-    setBookings([...bookings, bookingWithId]);
+  const handleCreateBooking = async (bookingData: NewBooking) => {
+    try {
+      // The id comes back from the database. It used to be
+      // `max(existing ids) + 1` over the fixture array, so the number in the
+      // toast belonged to nothing and collided with a real booking the moment
+      // one existed.
+      const created = await bookingMutations.create(bookingData);
+      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
 
-    // Show toast with undo option
-    toast.success(`Booking #${bookingWithId.id} created`, {
-      description: `${bookingData.service} booking has been created successfully.`,
-      action: {
-        label: "Undo",
-        onClick: () => {
-          setBookings((prev) => prev.filter((b) => b.id !== bookingWithId.id));
-          toast.info("Booking undone", {
-            description: `Booking #${bookingWithId.id} ${t("has been removed.")}`,
-          });
-        },
-      },
-      duration: 5000,
-    });
+      // The Undo that used to be here spliced the booking out of local state.
+      // Against the database there is no undo to offer: bookings have no DELETE
+      // policy on purpose — a booking is cancelled, not erased — so the button
+      // is gone rather than made to look like it worked.
+      toast.success(`Booking #${created.id} created`, {
+        description: `${bookingData.service} booking has been created successfully.`,
+      });
+    } catch (error) {
+      toast.error("Could not create that booking", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   const handleQuickDaycareCheckIn = () => {
@@ -200,11 +216,14 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
               <DropdownMenuItem
                 onClick={() =>
                   openBookingModal({
-                    clients: clients.filter(
-                      (c) => c.facility === facility.name,
-                    ),
+                    // Unfiltered: clientQueries.all() is already RLS-scoped to
+                    // the caller's facility. The old `c.facility === name`
+                    // filter compared a fixture STRING, so a real client whose
+                    // stored facility label differed by a character vanished
+                    // from the picker with no way to tell.
+                    clients,
                     facilityId: facilityId,
-                    facilityName: facility.name,
+                    facilityName: profile.businessName || "your facility",
                     onCreateBooking: handleCreateBooking,
                     preSelectedService: sectionService,
                     lockService: !!sectionService,
@@ -230,11 +249,14 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
               <DropdownMenuItem
                 onClick={() => {
                   openBookingModal({
-                    clients: clients.filter(
-                      (c) => c.facility === facility.name,
-                    ),
+                    // Unfiltered: clientQueries.all() is already RLS-scoped to
+                    // the caller's facility. The old `c.facility === name`
+                    // filter compared a fixture STRING, so a real client whose
+                    // stored facility label differed by a character vanished
+                    // from the picker with no way to tell.
+                    clients,
                     facilityId: facilityId,
-                    facilityName: facility.name,
+                    facilityName: profile.businessName || "your facility",
                     onCreateBooking: handleCreateBooking,
                     isEstimateMode: true,
                     preSelectedService: sectionService,
@@ -262,7 +284,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
           open={isCreateClientModalOpen}
           onOpenChange={setIsCreateClientModalOpen}
           onSave={handleCreateClient}
-          facilityName={facility.name}
+          facilityName={profile.businessName || "your facility"}
         />
       )}
     </>

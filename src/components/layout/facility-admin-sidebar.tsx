@@ -8,10 +8,28 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { insightQueries } from "@/lib/api/smart-insights";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
-import { facilities } from "@/data/facilities";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LocationContextSelector } from "@/components/hq/LocationContextSelector";
 import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
 import { NAV_SECTIONS, type NavItem } from "@/lib/nav/facility-nav";
+
+/**
+ * Up to two initials for a facility with no logo.
+ *
+ * Filters empty segments before taking first letters — a name with a double
+ * space or a trailing one yields `undefined` from `w[0]`, and the old inline
+ * version would have put that in the badge.
+ */
+function initials(name: string): string {
+  const letters = name
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("");
+  return letters.toUpperCase() || "F";
+}
 
 export function FacilitySidebar() {
   const signOutEverywhere = useSignOutEverywhere();
@@ -21,12 +39,23 @@ export function FacilitySidebar() {
   // full set, so every section passes; lower roles see only what they hold.
   const permissions = useEffectivePermissions();
 
-  // Static facility ID for now (would come from user token in production).
-  const facilityId = 11;
+  // The facility whose name is on this sidebar comes from the SESSION, via
+  // /api/facility/profile → getFacilityContext() → the viewer's membership.
+  //
+  // It used to be `facilities.find((f) => f.id === 11)` out of the fixtures, so
+  // every facility that ever signed in was greeted, on every page, by a
+  // business called "Example Pet Care Facility" with somebody else's logo.
+  const { profile, isPending: profilePending } = useFacilityProfile();
+
+  // Still the fixture ref, and only for the Smart Insights badge below —
+  // insights are derived from mock data (resolveAll) and are their own
+  // conversion. Kept explicit rather than threaded through the profile so it is
+  // obvious this number scopes nothing real.
+  const insightsFacilityRef = 11;
 
   // Spec § 10.7: nav badge updates every 5 minutes via lightweight polling.
   const { data: highPriorityCount = 0 } = useQuery({
-    ...insightQueries.highPriorityCount(facilityId),
+    ...insightQueries.highPriorityCount(insightsFacilityRef),
     refetchInterval: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
   });
@@ -36,14 +65,17 @@ export function FacilitySidebar() {
   // item shows only when the acting user holds its `permKey`. Sections left with
   // no visible items are dropped.
   const filteredMenuSections = useMemo((): MenuSection[] => {
-    // Runtime badge counts — UI state, not part of the shared nav model, so
-    // they're layered on here by route. Smart Insights is polled live; the rest
-    // are placeholder counts kept from the original inline sidebar.
+    // Runtime badge counts, layered on by route.
+    //
+    // Clients (3), Bookings (8), Tasks (2) and Incidents (2) used to be here as
+    // literals — the same four numbers on every page for every facility,
+    // including one that opened yesterday and has no clients at all. A badge
+    // that never changes is not a count, and it is read as one.
+    //
+    // They are removed rather than derived: four extra queries firing on every
+    // page load, in the sidebar, to decorate a nav item is the wrong trade. They
+    // come back if and when the pages they point at are worth counting live.
     const counts: Record<string, number | undefined> = {
-      "/facility/dashboard/clients": 3,
-      "/facility/dashboard/bookings": 8,
-      "/facility/dashboard/tasks": 2,
-      "/facility/dashboard/incidents": 2,
       "/facility/dashboard/insights":
         highPriorityCount > 0 ? highPriorityCount : undefined,
     };
@@ -66,7 +98,6 @@ export function FacilitySidebar() {
     void signOutEverywhere();
   };
 
-  const facility = facilities.find((f) => f.id === facilityId);
   const dateLabel = isMounted
     ? new Date().toLocaleDateString("en-US", {
         weekday: "short",
@@ -79,28 +110,31 @@ export function FacilitySidebar() {
     <GenericSidebar
       header={
         <div className="flex items-center gap-3">
-          {facility?.logo ? (
+          {profile.logo ? (
             <Image
-              src={facility.logo}
-              alt={facility.name}
+              src={profile.logo}
+              alt={profile.businessName}
               width={40}
               height={40}
               className="size-8 rounded-lg object-contain md:size-10"
             />
           ) : (
             <div className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold md:size-10 md:text-sm">
-              {(facility?.name || "F")
-                .split(" ")
-                .map((w) => w[0])
-                .slice(0, 2)
-                .join("")
-                .toUpperCase()}
+              {initials(profile.businessName)}
             </div>
           )}
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold md:text-base">
-              {facility?.name || "Facility Dashboard"}
-            </h2>
+            {/* A skeleton, not a placeholder name. The profile arrives blank
+                before the query resolves, and any word rendered in its place —
+                "Facility Dashboard", the old fixture name — is a statement
+                about whose business this is, made before we know. */}
+            {profilePending ? (
+              <Skeleton className="h-5 w-32" />
+            ) : (
+              <h2 className="truncate text-sm font-semibold md:text-base">
+                {profile.businessName || "Your facility"}
+              </h2>
+            )}
             <p className="text-muted-foreground text-xs">{dateLabel}</p>
           </div>
         </div>

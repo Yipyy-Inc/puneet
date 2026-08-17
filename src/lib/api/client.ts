@@ -159,7 +159,13 @@ export function useCreateClient() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: Partial<Client> & { pets?: Partial<Pet>[] }) => {
+    // `Omit<…, "pets">` and not a plain intersection. `Partial<Client> & {
+    // pets?: Partial<Pet>[] }` requires `pets` to satisfy BOTH halves, so it
+    // demanded fully-formed `Pet` objects — including the `id` the database has
+    // not issued yet. The one thing a pet being CREATED cannot have.
+    mutationFn: async (
+      input: Omit<Partial<Client>, "pets"> & { pets?: Partial<Pet>[] },
+    ) => {
       const { pets = [], ...clientInput } = input;
       const created = await writeJson<Client>(
         "/api/clients",
