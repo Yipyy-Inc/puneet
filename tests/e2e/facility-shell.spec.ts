@@ -57,18 +57,25 @@ test.describe("the facility shell", () => {
     await expect(page.getByText(FIXTURE_NAME)).toHaveCount(0);
   });
 
-  // A facility the fixtures DO NOT contain. `ACCOUNTS.owner` above belongs to
-  // the demo facility, whose legacy id is 11 — the one id that IS in the mock
-  // array — so on the old code its sidebar was wrong by coincidence of name
-  // rather than by lookup failure. This account proves the general case.
-  const OTHER_OWNER = process.env.CLOVER_E2E_STAFF_EMAIL?.trim() ?? "";
+  // An owner at a facility the fixtures DO NOT contain. `ACCOUNTS.owner` above
+  // belongs to the demo facility, whose legacy id is 11 — the one id that IS in
+  // the mock array — so on the old code its sidebar was wrong by coincidence of
+  // name rather than by lookup failure. This account proves the general case.
+  //
+  // SEPARATE from CLOVER_E2E_STAFF_EMAIL, which it used to reuse. The WorkOS
+  // migration provisioned the seven @yipyy.dev fixtures and nothing else, so
+  // every real-email account — the pawradise owners, the Doggieville Mtl owner
+  // — has no identity to sign in with. Reusing the Clover variable made this
+  // spec fail for a reason that has nothing to do with the facility shell.
+  const OTHER_OWNER = process.env.E2E_NON_FIXTURE_OWNER?.trim() ?? "";
 
   test("names a facility that is not in the fixtures at all", async ({
     page,
   }) => {
     test.skip(
       !OTHER_OWNER,
-      "Set CLOVER_E2E_STAFF_EMAIL to an owner at a non-demo facility.",
+      "Set E2E_NON_FIXTURE_OWNER to an owner at a facility absent from " +
+        "src/data/facilities.ts, whose identity exists in WorkOS. See .env.example.",
     );
     await signIn(page, OTHER_OWNER);
 
