@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
 
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -12,10 +13,9 @@ import { getBrandingBySlug } from "@/lib/api/facility-branding";
 export async function generateMetadata(): Promise<Metadata> {
   const slug = (await headers()).get("x-facility-slug");
   const branding = slug ? await getBrandingBySlug(slug) : null;
+  const t = await getTranslations("auth.meta");
   return {
-    title: branding
-      ? `Create an account — ${branding.name}`
-      : "Create an account — Yipyy",
+    title: branding ? t("signUpBranded", { name: branding.name }) : t("signUp"),
   };
 }
 
@@ -52,26 +52,28 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SignUpPage() {
   const slug = (await headers()).get("x-facility-slug");
   const branding = slug ? await getBrandingBySlug(slug) : null;
+  const t = await getTranslations("auth");
 
   const description = !branding
-    ? "One account for booking, your pets and your visits."
+    ? t("signUp.description")
     : branding.allowCustomerSignup
-      ? `Create your Yipyy account, then join ${branding.name}.`
-      : `Create your Yipyy account. ${branding.name} adds customers themselves — we'll find your record afterwards.`;
+      ? t("signUp.descriptionJoin", { name: branding.name })
+      : t("signUp.descriptionNoSelfSignup", { name: branding.name });
 
   return (
     <AuthCard
-      title="Create your account"
+      signedOut
+      title={t("signUp.title")}
       description={description}
       brand={branding ? <FacilityAuthBrand branding={branding} /> : undefined}
       footer={
         <p className="text-muted-foreground text-center text-sm">
-          Already have an account?{" "}
+          {t("signUp.haveAccount")}{" "}
           <Link
             href="/sign-in"
             className="text-primary font-medium hover:underline"
           >
-            Sign in
+            {t("signUp.signInLink")}
           </Link>
         </p>
       }
@@ -80,7 +82,7 @@ export default async function SignUpPage() {
 
       <div className="flex items-center gap-3">
         <span className="bg-border h-px flex-1" />
-        <span className="text-muted-foreground text-xs">or</span>
+        <span className="text-muted-foreground text-xs">{t("actions.or")}</span>
         <span className="bg-border h-px flex-1" />
       </div>
 

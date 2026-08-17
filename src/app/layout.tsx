@@ -1,5 +1,6 @@
 import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/lib/query-provider";
@@ -26,14 +27,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Was hardcoded "en", which was true until the auth screens could be read in
+  // French. `lang` is not decoration: it picks the voice a screen reader uses
+  // and the dictionary a browser spell-checks and offers to translate with, so
+  // a French page announced as English is read aloud with English phonetics.
+  const locale = await getLocale();
+
   return (
     <html
-      lang="en"
+      lang={locale}
       className={` ${inter.variable} ${plusJakarta.variable} `}
       suppressHydrationWarning
     >

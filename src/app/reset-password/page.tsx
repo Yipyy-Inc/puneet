@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
 
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -7,7 +8,12 @@ import { FacilityAuthBrand } from "@/components/auth/FacilityAuthBrand";
 import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
 import { getBrandingBySlug } from "@/lib/api/facility-branding";
 
-export const metadata: Metadata = { title: "Choose a new password — Yipyy" };
+// `generateMetadata` rather than a static object: the title follows the locale
+// now, and a static export is evaluated before one is resolved.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth.meta");
+  return { title: t("reset") };
+}
 
 // ============================================================================
 // Where the password-reset email lands.
@@ -33,6 +39,7 @@ export default async function ResetPasswordPage({
   const { token } = await searchParams;
   const slug = (await headers()).get("x-facility-slug");
   const branding = slug ? await getBrandingBySlug(slug) : null;
+  const t = await getTranslations("auth.reset");
 
   const brand = branding ? (
     <FacilityAuthBrand branding={branding} />
@@ -43,18 +50,17 @@ export default async function ResetPasswordPage({
   if (!token) {
     return (
       <AuthCard
-        title="That link didn't work"
-        description="Password reset links can only be used once, and they expire."
+        signedOut
+        title={t("badLinkTitle")}
+        description={t("badLinkDescription")}
         brand={brand}
       >
-        <p className="text-muted-foreground text-sm">
-          Request a new one from the sign-in page.
-        </p>
+        <p className="text-muted-foreground text-sm">{t("badLinkBody")}</p>
         <Link
           href="/sign-in"
           className="text-primary text-sm font-medium hover:underline"
         >
-          Back to sign in
+          {t("backToSignIn")}
         </Link>
       </AuthCard>
     );
@@ -62,17 +68,18 @@ export default async function ResetPasswordPage({
 
   return (
     <AuthCard
-      title="Choose a new password"
-      description="Then we'll sign you in."
+      signedOut
+      title={t("title")}
+      description={t("description")}
       brand={brand}
       footer={
         <p className="text-muted-foreground text-center text-sm">
-          Remembered it?{" "}
+          {t("remembered")}{" "}
           <Link
             href="/sign-in"
             className="text-primary font-medium hover:underline"
           >
-            Sign in
+            {t("signInLink")}
           </Link>
         </p>
       }

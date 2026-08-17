@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { resetPassword } from "@/lib/auth/workos-actions";
 // ============================================================================
 
 export function ResetPasswordForm({ token }: { token: string }) {
+  const t = useTranslations("auth");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [pending, startTransition] = useTransition();
@@ -44,7 +46,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="new-password">New password</Label>
+        <Label htmlFor="new-password">{t("fields.newPassword")}</Label>
         <PasswordInput
           id="new-password"
           autoComplete="new-password"
@@ -54,12 +56,12 @@ export function ResetPasswordForm({ token }: { token: string }) {
           onChange={(e) => setPassword(e.target.value)}
         />
         <p className="text-muted-foreground text-xs">
-          At least 8 characters, and not a password known to have been breached.
+          {t("fields.passwordHint")}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirm-password">Confirm new password</Label>
+        <Label htmlFor="confirm-password">{t("reset.confirmLabel")}</Label>
         <PasswordInput
           id="confirm-password"
           autoComplete="new-password"
@@ -68,9 +70,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           onChange={(e) => setConfirm(e.target.value)}
         />
         {mismatch && (
-          <p className="text-destructive text-xs">
-            Those two passwords do not match.
-          </p>
+          <p className="text-destructive text-xs">{t("reset.mismatch")}</p>
         )}
       </div>
 
@@ -79,7 +79,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         className="h-11 w-full"
         disabled={pending || mismatch}
       >
-        {pending ? "Saving…" : "Set new password"}
+        {pending ? t("reset.submitting") : t("reset.submit")}
       </Button>
 
       {message && (

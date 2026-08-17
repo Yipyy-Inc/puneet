@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
 
@@ -39,10 +40,15 @@ export function OAuthButton({
   mark,
 }: {
   provider: SupportedOAuthProvider;
-  /** Shown to the user, and used in the failure message. */
+  /**
+   * Shown to the user, and used in the failure message. NOT translated, and
+   * never should be: "Google" and "Apple" are trademarks with one spelling, and
+   * both companies' sign-in branding rules require their name verbatim.
+   */
   providerName: string;
   mark: ReactNode;
 }) {
+  const t = useTranslations("auth.actions");
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
@@ -66,11 +72,11 @@ export function OAuthButton({
         disabled={pending}
       >
         {pending ? (
-          "Redirecting…"
+          t("redirecting")
         ) : (
           <>
             {mark}
-            Continue with {providerName}
+            {t("continueWith", { provider: providerName })}
           </>
         )}
       </Button>

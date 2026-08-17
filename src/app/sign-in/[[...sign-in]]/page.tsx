@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
 
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -12,7 +13,10 @@ import { getBrandingBySlug } from "@/lib/api/facility-branding";
 export async function generateMetadata(): Promise<Metadata> {
   const slug = (await headers()).get("x-facility-slug");
   const branding = slug ? await getBrandingBySlug(slug) : null;
-  return { title: branding ? `Sign in — ${branding.name}` : "Sign in — Yipyy" };
+  const t = await getTranslations("auth.meta");
+  return {
+    title: branding ? t("signInBranded", { name: branding.name }) : t("signIn"),
+  };
 }
 
 // ============================================================================
@@ -47,24 +51,31 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SignInPage() {
   const slug = (await headers()).get("x-facility-slug");
   const branding = slug ? await getBrandingBySlug(slug) : null;
+  const t = await getTranslations("auth");
 
   return (
     <AuthCard
-      title="Sign in"
+      signedOut
+      title={t("signIn.title")}
       description={
         branding
-          ? (branding.tagline ?? `Sign in to ${branding.name}.`)
-          : "Use your Yipyy account — we'll take you to the right place."
+          ? // A facility's own tagline is THEIR words, stored once, and stays in
+            // the language they wrote it in — translating it is not ours to do.
+            // The generic line beneath it is ours, so that one follows the
+            // locale.
+            (branding.tagline ??
+            t("signIn.brandedDescription", { name: branding.name }))
+          : t("signIn.description")
       }
       brand={branding ? <FacilityAuthBrand branding={branding} /> : undefined}
       footer={
         <p className="text-muted-foreground text-center text-sm">
-          Don&apos;t have an account?{" "}
+          {t("signIn.noAccount")}{" "}
           <Link
             href="/sign-up"
             className="text-primary font-medium hover:underline"
           >
-            Sign up
+            {t("signIn.signUpLink")}
           </Link>
         </p>
       }
@@ -73,7 +84,7 @@ export default async function SignInPage() {
 
       <div className="flex items-center gap-3">
         <span className="bg-border h-px flex-1" />
-        <span className="text-muted-foreground text-xs">or</span>
+        <span className="text-muted-foreground text-xs">{t("actions.or")}</span>
         <span className="bg-border h-px flex-1" />
       </div>
 
