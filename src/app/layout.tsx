@@ -1,4 +1,4 @@
-import { ClerkProvider } from "@clerk/nextjs";
+import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import type { Metadata } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
@@ -112,14 +112,18 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        {/* Clerk's quickstart puts a Sign In / Sign Up / UserButton header here.
-            That is written for a bare scaffold; this root layout wraps all 266
-            routes, so a global header would stamp auth buttons over the customer
-            portal, the facility dashboard and the public booking/review pages,
-            each of which already has its own chrome and its own login screen.
-            The provider is what the SDK actually needs — it is mounted, and the
-            sign-in surface belongs on a dedicated route instead. */}
-        <ClerkProvider>
+        {/* Auth SDK quickstarts put a Sign In / Sign Up / user-button header
+            here. That is written for a bare scaffold; this root layout wraps all
+            266 routes, so a global header would stamp auth buttons over the
+            customer portal, the facility dashboard and the public booking/review
+            pages, each of which already has its own chrome and its own login
+            screen. The provider is what the SDK actually needs — it is mounted,
+            and the sign-in surface belongs on a dedicated route instead.
+
+            AuthKitProvider is NOT optional even though most of this app reads
+            auth on the server: it is what makes useAccessToken() work, and
+            useWorkosSupabaseClient() is built on that. */}
+        <AuthKitProvider>
           <div className="flex min-h-screen flex-col" suppressHydrationWarning>
             <main className="flex-1">
               <QueryProvider>{children}</QueryProvider>
@@ -133,7 +137,7 @@ export default function RootLayout({
             </footer>
           </div>
           <Toaster />
-        </ClerkProvider>
+        </AuthKitProvider>
       </body>
     </html>
   );

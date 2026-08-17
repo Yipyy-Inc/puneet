@@ -1,250 +1,109 @@
 "use client";
 
-import { useSignIn } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
+import {
+  sendPasswordReset,
+  signInWithPassword,
+  verifyEmailCode,
+} from "@/lib/auth/workos-actions";
 
 // ============================================================================
-// Email + password sign-in, and the password reset that has to come with it.
+// Email + password sign-in, and the two things a password system cannot ship
+// without: a way back in when you forget it, and a way through when the address
+// has never been confirmed.
 //
-// Built on Clerk's hooks rather than <SignIn />, for the same reason as the
-// Google button: the prebuilt widget brings its own card, headings and footer,
-// and this screen is Yipyy's.
-//
-// A password system is not one form. Offering passwords means owning the reset
-// path too, or the first person who forgets one is stuck with no way back in
-// and no way to tell you. So this component is a small state machine:
-//
-//   credentials ──forgot──────▶ reset-code ──▶ reset-password ──▶ done
+//   credentials ──unverified──▶ verify ──▶ /
 //        │
-//        ├──new device─────────▶ client-trust ──▶ finalize()
-//        └──known device───────▶ finalize()
+//        ├──forgot────────────▶ reset-sent  (email carries a link, not a code)
+//        └──ok────────────────▶ /
 //
-// THE IDENTIFIER IS A USERNAME **OR** AN EMAIL. Clerk accepts either, so the
-// field is deliberately `type="text"` — `type="email"` would make the browser
-// reject a username as malformed before Clerk ever saw it.
+// THE IDENTIFIER IS AN EMAIL ADDRESS, and only that. It briefly accepted a
+// username under Clerk, which is why this field used to be `type="text"`.
+// Usernames are gone at both ends now, so the browser's own validation is back.
 //
-// An email address is still mandatory on every account, even when someone signs
-// in by username: `profiles.email` is NOT NULL, the sync webhook skips a user
-// without one, and `link_client_record()` matches a customer to their existing
-// client row by email. An account with no address would be created in Clerk,
-// never get a profiles row, and be refused by every portal gate with nothing
-// explaining why. The database decides that, not Clerk.
+// WHAT CHANGED WITH WORKOS, and it is visible to users: Clerk's reset flow
+// emailed a numeric CODE that was typed back into this form. WorkOS emails a
+// LINK carrying a single-use token, so the last two steps of the old state
+// machine moved to /reset-password, which reads that token from the URL. Fewer
+// steps here, one more route — and no way to brute-force a six-digit code.
+//
+// THE DEVICE-TRUST STEP IS GONE. Clerk interposed `needs_client_trust` on a
+// sign-in from an unrecognised device and emailed a confirmation code. That was
+// a Clerk feature with no WorkOS equivalent; ADR 0004 records it as lost rather
+// than quietly reimplemented, because pretending to have it would be worse.
+//
+// Errors come back from the server actions as values, never thrown, so every
+// failure lands in the red box below instead of a Next error overlay.
 // ============================================================================
 
-type Step = "credentials" | "client-trust" | "reset-code" | "reset-password";
+type Step = "credentials" | "verify" | "reset-sent";
+
+/** The callback route bounces here with ?error=… when a social sign-in fails. */
+const CALLBACK_ERRORS: Record<string, string> = {
+  state: "That sign-in could not be verified. Please try again from this page.",
+  missing_code: "The sign-in did not complete. Please try again.",
+  exchange: "We could not finish signing you in. Please try again.",
+  provider: "That sign-in was cancelled.",
+};
 
 export function EmailSignInForm() {
-  const { signIn } = useSignIn();
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackError = CALLBACK_ERRORS[searchParams.get("error") ?? ""];
 
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const [message, setMessage] = useState<string | null>(callbackError ?? null);
   const [notice, setNotice] = useState<string | null>(null);
-  /** Set after a credential attempt; the effect below decides what happens. */
-  const [awaitingOutcome, setAwaitingOutcome] = useState(false);
 
-  // ── Reacting to the status, rather than reading it ────────────────────────
-  //
-  // `useSignIn()` returns a SIGNAL-BACKED object. The `signIn` captured by an
-  // event handler is the snapshot from the render that created it, so reading
-  // `signIn.status` straight after `await signIn.password(...)` always returns
-  // the value from BEFORE the call — measured as `needs_identifier`, the state
-  // that means "nothing has been submitted yet".
-  //
-  // That single mistake produced every symptom: the client-trust branch never
-  // fired, finalize() was called with no session, its throw escaped as an
-  // unhandled page error, and the user got an empty red box.
-  //
-  // The fix is to stop asking and start listening. React re-renders when the
-  // signal changes, so an effect keyed on the status sees the real one.
-  useEffect(() => {
-    if (!awaitingOutcome || !signIn) return;
-    const status = signIn.status;
-
-    if (status === "complete") {
-      setAwaitingOutcome(false);
-      void finish();
-      return;
-    }
-
-    // Client Trust: a correct password from an unrecognised device does not
-    // create a session until an emailed code confirms the device. Nearly every
-    // FIRST sign-in is from a new device, so this is the common path, not the
-    // exotic one.
-    if (status === "needs_client_trust" || status === "needs_second_factor") {
-      setAwaitingOutcome(false);
-      void (async () => {
-        const sent = await run(() => signIn.mfa.sendEmailCode());
-        if (sent) {
-          setNotice(
-            "New device — we've emailed you a code to confirm it's you.",
-          );
-          setStep("client-trust");
-        }
-      })();
-    }
-
-    // Any other status: leave `awaitingOutcome` set and wait. The signal may
-    // still be settling, and finish() reports anything it cannot handle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [awaitingOutcome, signIn?.status]);
-
-  /**
-   * Hand the session over and let `/` route on to the right portal.
-   *
-   * GUARDED, because finalize() throws "Cannot finalize sign-in without a
-   * created session" whenever the status is anything but `complete` — and that
-   * throw escaped as an unhandled page error, leaving the user on the form with
-   * an EMPTY red box. Calling it optimistically and hoping the status is right
-   * is what produced a sign-in button that appeared to do nothing.
-   *
-   * Anything unhandled reports its status rather than failing mutely, so the
-   * next unknown step is a legible bug report instead of a blank screen.
-   */
-  async function finish() {
-    if (!signIn) return;
-
-    if (signIn.status !== "complete") {
-      setMessage(
-        `Sign-in needs a further step this screen does not handle yet ` +
-          `(status: ${String(signIn.status)}). Please tell support.`,
-      );
-      return;
-    }
-
-    await signIn.finalize({
-      navigate: async ({ decorateUrl }) => {
-        const url = decorateUrl("/");
-        // decorateUrl may return an absolute URL to satisfy Safari's ITP.
-        if (url.startsWith("http")) window.location.href = url;
-        else router.push(url);
-      },
-    });
-  }
-
-  async function run(fn: () => Promise<{ error: unknown } | void>) {
-    setPending(true);
+  function submitCredentials(e: React.FormEvent) {
+    e.preventDefault();
     setMessage(null);
-    try {
-      const result = await fn();
-      const err = result && "error" in result ? result.error : null;
-      if (err) {
-        // ClerkError.message is documented as developer-facing and not
-        // stable; longMessage is the one meant to be shown to a user.
-        const e = err as { longMessage?: string; message?: string };
-        setMessage(
-          e.longMessage ?? e.message ?? "That didn't work. Please try again.",
-        );
-        return false;
+    startTransition(async () => {
+      const result = await signInWithPassword(email, password);
+      // A successful sign-in redirects on the server and never returns.
+      if (result?.needsVerification) {
+        setNotice(`We've sent a verification code to ${email.trim()}.`);
+        setStep("verify");
+        return;
       }
-      return true;
-    } finally {
-      setPending(false);
-    }
-  }
-
-  async function submitCredentials(e: React.FormEvent) {
-    e.preventDefault();
-    if (!signIn) {
-      setMessage(
-        "Sign-in is still starting up. Give it a moment and try again.",
-      );
-      return;
-    }
-    const ok = await run(() =>
-      signIn.password({ identifier: email.trim(), password }),
-    );
-    // Deliberately nothing else here. What happens next depends on the status
-    // Clerk sets, and that value is NOT readable from this closure — see the
-    // effect below. Awaiting the resource and asking it what happened is the
-    // mistake this component was written with twice.
-    if (ok) setAwaitingOutcome(true);
-  }
-
-  async function submitClientTrustCode(e: React.FormEvent) {
-    e.preventDefault();
-    if (!signIn) {
-      setMessage(
-        "Sign-in is still starting up. Give it a moment and try again.",
-      );
-      return;
-    }
-    const ok = await run(() =>
-      signIn.mfa.verifyEmailCode({ code: code.trim() }),
-    );
-    // Same reason as submitCredentials: the status is not readable here.
-    if (ok) setAwaitingOutcome(true);
-  }
-
-  async function startReset() {
-    if (!signIn) {
-      setMessage(
-        "Sign-in is still starting up. Give it a moment and try again.",
-      );
-      return;
-    }
-    if (!email.trim()) {
-      setMessage(
-        "Enter your username or email first, then choose Forgot password.",
-      );
-      return;
-    }
-    // The reset code goes to the address on the account, so the sign-in has to
-    // know which account it is before a code can be sent.
-    const ok = await run(async () => {
-      const created = await signIn.create({ identifier: email.trim() });
-      if (created.error) return created;
-      return signIn.resetPasswordEmailCode.sendCode();
+      if (result?.error) setMessage(result.error);
     });
-    if (ok) {
+  }
+
+  function submitCode(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage(null);
+    startTransition(async () => {
+      const result = await verifyEmailCode(code);
+      if (result?.error) setMessage(result.error);
+    });
+  }
+
+  function startReset() {
+    if (!email.trim()) {
+      setMessage("Enter your email first, then choose Forgot password.");
+      return;
+    }
+    setMessage(null);
+    startTransition(async () => {
+      await sendPasswordReset(email);
+      // Always the same answer, whether or not the address exists — see the
+      // action. Telling an anonymous caller which addresses are real turns this
+      // button into an account-enumeration oracle.
       setNotice(
-        "We've sent a reset code to the email address on that account.",
+        "If that address has an account, we've emailed a link to reset the password.",
       );
-      setStep("reset-code");
-    }
-  }
-
-  async function submitResetCode(e: React.FormEvent) {
-    e.preventDefault();
-    if (!signIn) {
-      setMessage(
-        "Sign-in is still starting up. Give it a moment and try again.",
-      );
-      return;
-    }
-    const ok = await run(() =>
-      signIn.resetPasswordEmailCode.verifyCode({ code: code.trim() }),
-    );
-    if (ok) {
-      setNotice("Code accepted. Choose a new password.");
-      setStep("reset-password");
-    }
-  }
-
-  async function submitNewPassword(e: React.FormEvent) {
-    e.preventDefault();
-    if (!signIn) {
-      setMessage(
-        "Sign-in is still starting up. Give it a moment and try again.",
-      );
-      return;
-    }
-    const ok = await run(() =>
-      signIn.resetPasswordEmailCode.submitPassword({ password: newPassword }),
-    );
-    // Same reason as submitCredentials: the status is not readable here.
-    if (ok) setAwaitingOutcome(true);
+      setStep("reset-sent");
+    });
   }
 
   return (
@@ -261,13 +120,11 @@ export function EmailSignInForm() {
       {step === "credentials" && (
         <form onSubmit={submitCredentials} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="identifier">Username or email</Label>
+            <Label htmlFor="identifier">Email</Label>
             <Input
               id="identifier"
-              // `type="text"`, not `email`: the browser would reject a username
-              // as malformed and block the submit before Clerk ever sees it.
-              type="text"
-              autoComplete="username"
+              type="email"
+              autoComplete="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -280,7 +137,7 @@ export function EmailSignInForm() {
               <Label htmlFor="password">Password</Label>
               <button
                 type="button"
-                onClick={() => void startReset()}
+                onClick={startReset}
                 className="text-primary text-sm font-medium hover:underline"
               >
                 Forgot password?
@@ -301,12 +158,12 @@ export function EmailSignInForm() {
         </form>
       )}
 
-      {step === "client-trust" && (
-        <form onSubmit={submitClientTrustCode} className="space-y-4">
+      {step === "verify" && (
+        <form onSubmit={submitCode} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="trust-code">Confirmation code</Label>
+            <Label htmlFor="verify-code">Verification code</Label>
             <Input
-              id="trust-code"
+              id="verify-code"
               inputMode="numeric"
               autoComplete="one-time-code"
               required
@@ -316,48 +173,16 @@ export function EmailSignInForm() {
             />
           </div>
           <Button type="submit" className="h-11 w-full" disabled={pending}>
-            {pending ? "Confirming…" : "Confirm this device"}
+            {pending ? "Verifying…" : "Verify and continue"}
           </Button>
         </form>
       )}
 
-      {step === "reset-code" && (
-        <form onSubmit={submitResetCode} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="code">Reset code</Label>
-            <Input
-              id="code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="6-digit code"
-            />
-          </div>
-          <Button type="submit" className="h-11 w-full" disabled={pending}>
-            {pending ? "Checking…" : "Continue"}
-          </Button>
-        </form>
-      )}
-
-      {step === "reset-password" && (
-        <form onSubmit={submitNewPassword} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="new-password">New password</Label>
-            <PasswordInput
-              id="new-password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-          </div>
-          <Button type="submit" className="h-11 w-full" disabled={pending}>
-            {pending ? "Saving…" : "Set new password and sign in"}
-          </Button>
-        </form>
+      {step === "reset-sent" && (
+        <p className="text-muted-foreground text-sm">
+          Open the link in that email to choose a new password. You can close
+          this page.
+        </p>
       )}
 
       {message && (

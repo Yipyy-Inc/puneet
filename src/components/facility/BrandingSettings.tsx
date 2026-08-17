@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useClerkSupabaseClient } from "@/lib/supabase/clerk-client";
+import { useWorkosSupabaseClient } from "@/lib/supabase/workos-client";
 
 // ============================================================================
 // What a facility's customers see before they have signed in.
@@ -55,7 +55,7 @@ const BRANDING_KEY = ["facility", "branding"] as const;
 
 export function BrandingSettings() {
   const queryClient = useQueryClient();
-  const supabase = useClerkSupabaseClient();
+  const supabase = useWorkosSupabaseClient();
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [draft, setDraft] = useState<Partial<Branding>>({});

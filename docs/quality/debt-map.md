@@ -89,7 +89,7 @@ Two shipped RPCs were exploitable from the **publishable key** — the one in ev
 
 The write-integrity **triggers** legitimately open with `if (select auth.jwt()->>'sub') is null then return new; end if;` — a trigger only fires on a write that already cleared RLS, so a missing JWT subject really does mean service_role, and the early return is how a seed inserts a catalogue without tripping its own rules. That reasoning **does not transfer to a function**. An RPC is a front door: `anon` reaches `/rest/v1/rpc/<name>` directly with no subject at all, so the carve-out written to admit the seed script admits the internet.
 
-> Written as `auth.uid()` until 2026-08-05. Clerk now owns identity (ADR 0003), so the subject is a text id and `auth.uid()`'s cast to `uuid` raises `22P02` rather than returning null — a guard written the old way errors instead of taking the bypass. The **principle** is unchanged; only the expression moved.
+> Written as `auth.uid()` until 2026-08-05. An external provider owns identity (ADR 0003, now WorkOS per ADR 0004), so the subject is a text id and `auth.uid()`'s cast to `uuid` raises `22P02` rather than returning null — a guard written the old way errors instead of taking the bypass. The **principle** is unchanged; only the expression moved. Swapping Clerk for WorkOS did not move it again: both mint `user_…` text subjects, which is why 220 policies survived the migration untouched.
 
 What it cost, both proven against the live project before the fix:
 
@@ -104,7 +104,7 @@ Both migrations already carried `revoke all on function … from public`, which 
 
 **Do instead**, for every new SECURITY DEFINER function in `public`:
 
-1. Treat a null subject — `(select auth.jwt()->>'sub')` — as a **refusal**, not a bypass, and check it _before_ any lookup, so a "no such record" error can't be used as an existence oracle by an unauthenticated caller. **Not `auth.uid()`:** since Clerk owns identity (ADR 0003) that function casts the subject to `uuid` and a Clerk id like `user_3HVlmtt…` makes the cast _raise_ `22P02`, so a guard written with it fails instead of refusing.
+1. Treat a null subject — `(select auth.jwt()->>'sub')` — as a **refusal**, not a bypass, and check it _before_ any lookup, so a "no such record" error can't be used as an existence oracle by an unauthenticated caller. **Not `auth.uid()`:** since an external provider owns identity (ADR 0003/0004) that function casts the subject to `uuid` and an id like `user_01M07…` makes the cast _raise_ `22P02`, so a guard written with it fails instead of refusing.
 2. `revoke execute … from anon` **by name**, _and_ `from public`. Neither is a substitute for the other — see the entry below.
 3. Add it to the `V7` sweep in `supabase/tests/rpc-session-required.sql`, which fails on any anon-callable function in `public` outside the four token RPCs.
 
@@ -1515,9 +1515,11 @@ The proximate cause was a window during the migration: the production webhook se
 
 **Why it's risky:** the shape that allowed it is permanent while one project serves both environments. ADR 0003 explicitly reasoned that "subjects cannot collide — Clerk mints different user ids per instance," which is true and is exactly backwards as reassurance — different ids per instance is how one human ends up with two rows. Grants hang off `profiles.id` (`facility_memberships.profile_id`, `clients.profile_id`, `is_platform_admin`), so a duplicate silently makes authorization depend on which instance issued the token. It fails on a different day than it breaks, and nothing on screen connects the two.
 
+> **Still live under WorkOS (2026-08-17).** Changing provider changed nothing here: Staging and Production are separate WorkOS environments with separate user namespaces, still sharing one Supabase project. Read "instance" as "environment" throughout this entry.
+
 **Do instead:** nothing manual — `profiles_email_lower_key` (migration `20260806160000`) now makes it impossible. Two things to know before touching that area:
 
-- **The index alone would be a trap.** The webhook upserts on `id`, so a new Clerk id carrying a known address is an INSERT, which raises `23505`. Left unhandled that 500s, Svix retries on a fixed schedule forever, and the person owns a Clerk account with no profile — refused by every gate with nothing explaining why. `src/app/api/webhooks/clerk/route.ts` handles `23505` and the pre-flight case explicitly, returning **200** because a retry can never resolve a claimed address. Do not "fix" those 200s into 500s.
+- **The index alone would be a trap.** The webhook upserts on `id`, so a new provider id carrying a known address is an INSERT, which raises `23505`. Left unhandled that 500s, the sender retries on a fixed schedule forever, and the person owns a login with no profile — refused by every gate with nothing explaining why. [`src/app/api/webhooks/workos/route.ts`](../../src/app/api/webhooks/workos/route.ts) handles `23505` and the pre-flight case explicitly, returning **200** because a retry can never resolve a claimed address. Do not "fix" those 200s into 500s.
 - **Both layers earn their place.** The pre-flight lookup can name both ids in the log; the index catches what a lookup cannot — two deliveries racing, and addresses differing only in case.
 
 ### 🟢 A dry-run guard beats `duplicate key value violates unique constraint`
@@ -1565,6 +1567,10 @@ An address is a claim anyone can type into a sign-up form. What makes a grant-by
 **Do instead:** read `role_preset_permissions` for the role before naming a permission in a test, and read the policy before asserting on a row count. This is the fourth occurrence of the screen-name-versus-permission-name trap in this map.
 
 ## Snapshot (2026-08-06, the e2e suite under Clerk)
+
+> **Provider-specific mechanics below are superseded (ADR 0004, 2026-08-17).** Clerk is gone: `_clerk-keys.ts` is now [`_workos-keys.ts`](../../tests/e2e/_workos-keys.ts), and `signIn()` drives our own form instead of a vendor SDK. WorkOS has **no keyless mode** — absent keys fail loudly — so the specific trap in the first entry cannot recur.
+>
+> The entries stay because the **transferable** lesson outlived the vendor and is still the fastest route out of a mystery 401: an identity provider will happily issue a session that Supabase then refuses, so "signed in" and "can read the database" are different bars — **decode the JWT's `iss` first.** `_auth.ts` still distinguishes the two 401s for exactly this reason.
 
 ### 🔴 Clerk's keyless instance signs you in and then Supabase refuses everything
 
@@ -1792,8 +1798,12 @@ exactly two things: the authorise redirect and the code exchange.
 Supabase→Clerk cutover as strings while the identities behind them did not.
 
 **Repair:** `bun --env-file=.env.local scripts/provision-e2e-identities.ts`.
-Idempotent, and it refuses a Clerk production instance. Run it after any Clerk
-instance change; nothing else recreates them.
+Idempotent, and it refuses anything that is not a `sk_test_` staging key — a
+WorkOS production key is `sk_` + base64 with **no** environment marker, so an
+allowlist is the only check that works. Run it after any change
+of identity environment; nothing else recreates them. It survived the second
+cutover — Clerk → WorkOS, 2026-08-17 — as the same script on a different SDK,
+and the same failure would look the same way.
 
 **And running it exposed a second defect.** The script printed "platform admin"
 beside `admin@yipyy.dev` and the account was not one, so every `/dashboard/*`

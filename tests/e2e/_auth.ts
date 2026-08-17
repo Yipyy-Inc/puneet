@@ -1,4 +1,3 @@
-import { clerk, setupClerkTestingToken } from "@clerk/testing/playwright";
 import type { Page } from "@playwright/test";
 
 // ============================================================================
@@ -6,41 +5,54 @@ import type { Page } from "@playwright/test";
 //
 // The dev-account password used to be copy-pasted into seven spec files, which
 // quietly made rotating it a CODE CHANGE across the test suite rather than one
-// line of SQL. That is the wrong shape for a credential: the thing you most
+// line of config. That is the wrong shape for a credential: the thing you most
 // want to be easy is replacing it.
 //
 // It comes from E2E_PASSWORD, read out of .env.local by playwright.config.ts.
 // Rotate the accounts, put the new value there, re-run the provisioning script,
 // and nothing here needs editing.
 //
-// ── THE PROVIDER CHANGED; THE CONTRACT DID NOT ────────────────────────────
+// ── THE PROVIDER CHANGED TWICE; THE CONTRACT DID NOT ──────────────────────
 //
-// This used to POST /login, a Supabase Auth form. Clerk owns identity now
-// (20260805223000, 20260805233000) and that route is gone. `signIn(page, email)`
-// keeps its name, its signature and its guarantee, so NONE of the 36 specs
-// needed touching — the same reason src/lib/supabase/server.ts kept
+// This posted /login under Supabase Auth, then drove Clerk's client SDK, and now
+// drives our own form. `signIn(page, email)` keeps its name, its signature and
+// its guarantee through all three, so NONE of the 36 specs have ever needed
+// touching — the same reason src/lib/supabase/server.ts kept
 // `createServerClient()` while swapping the identity underneath it.
 //
+// ── WHY IT NOW DRIVES THE FORM, HAVING DELIBERATELY NOT DONE SO BEFORE ────
+//
+// Under Clerk this used `clerk.signIn()` — the Backend API — and the reason was
+// explicit: driving <SignIn /> coupled all 36 specs to a VENDOR'S markup, so a
+// Clerk release renaming a field broke the entire suite at once, looking like an
+// application bug.
+//
+// `@clerk/testing` has no WorkOS equivalent, so that option is gone. But the
+// objection went with it: the markup is OURS now (ADR 0004 §4 kept the custom
+// UI), and a WorkOS release cannot rename our fields. If these selectors break
+// it is because we changed our own sign-in screen — which the suite SHOULD
+// notice. The cost is honest: sign-in is now a real form submit and a
+// precondition of every spec.
+//
+// ── WHY NOT INJECT A SESSION COOKIE DIRECTLY ──────────────────────────────
+//
+// Tempting, and rejected. The AuthKit cookie is a SEALED payload whose format is
+// the SDK's private business; hand-rolling it would couple the suite to an
+// internal encoding that can change in a patch release, and it would test a
+// session no user could ever have obtained.
+//
 // These are DEVELOPMENT accounts on a demo facility, provisioned by
-// scripts/provision-e2e-identities.ts into a Clerk DEVELOPMENT instance. They
-// are not in supabase/seed/dev-accounts.sql any more: that file created
-// auth.users rows, and a GoTrue user authenticates nothing now.
+// scripts/provision-e2e-identities.ts into the WorkOS STAGING environment.
 // ============================================================================
 
-/**
- * The shared dev-account password.
- *
- * `signIn` below no longer uses it — it goes through Clerk's Backend API — but
- * scripts/provision-e2e-identities.ts sets the accounts up with it, and a spec
- * that exercises the sign-in SCREEN needs it. Kept exported for both.
- */
+/** The shared dev-account password. Also used by the provisioning script. */
 export const PASSWORD = process.env.E2E_PASSWORD ?? "YipyyDev!2026";
 
 /**
  * The dev accounts, one per role.
  *
- * Unchanged from the Supabase Auth era, deliberately — the specs assert against
- * these roles and this is a change of identity provider, not of what the
+ * Unchanged across both provider migrations, deliberately — the specs assert
+ * against these roles and this is a change of identity provider, not of what the
  * fixtures mean.
  *
  * One login per role is a real constraint on what a test can express — there is
@@ -60,103 +72,34 @@ export const ACCOUNTS = {
 /**
  * Sign in and wait until the session is genuinely usable.
  *
- * ── WHY NOT DRIVE THE FORM ────────────────────────────────────────────────
- *
- * `clerk.signIn` talks to Clerk's client SDK directly instead of typing into
- * <SignIn />. That is not only for speed: driving the component couples all 36
- * specs to Clerk's markup, so a Clerk release that renames a field breaks the
- * entire suite at once, in a way that looks like an application bug. The
- * sign-in SCREEN deserves a test; it should be one spec, not a precondition of
- * every other one.
- *
- * `setupClerkTestingToken` still has to run per page — bot protection applies
- * to the API call as much as to the form.
- *
  * ── WHY /sign-in AND NOT / ────────────────────────────────────────────────
  *
- * `clerk.signIn` needs a loaded Clerk on an UNPROTECTED page. `/` redirects to
- * /dashboard, which is gated, so a signed-out visit bounces — and the helper
- * would be racing a redirect while trying to authenticate inside it.
+ * `/` redirects to /dashboard, which is gated, so a signed-out visit bounces and
+ * the helper would be racing a redirect while trying to authenticate inside it.
  *
  * ── WHY POLL /api/permissions ─────────────────────────────────────────────
  *
- * Unchanged from the Supabase version, and still the right check: a redirect
+ * Unchanged across all three providers, and still the right check: a redirect
  * can land before the session is readable by the SERVER, and the route resolves
  * `my_permissions()` through the database as the caller. So a 200 means the
- * whole chain works — Clerk session, JWT, RLS — rather than that a cookie
- * exists. It answers 200 for a customer too, with an empty map, which is why
- * one helper serves all seven accounts.
+ * whole chain works — WorkOS session, JWT, RLS — rather than that a cookie
+ * exists. It answers 200 for a customer too, with an empty map, which is why one
+ * helper serves all seven accounts.
  *
  * The 60s allowance is for the dev server compiling a route on first hit, not
  * for slow auth.
  */
 export async function signIn(page: Page, email: string): Promise<void> {
-  await setupClerkTestingToken({ page });
+  // Drop anything already there. Several specs switch roles mid-test, and
+  // signing in on top of a live session would leave the previous one's cookie
+  // racing the new one. Cheap when there is nothing to clear.
+  await page.context().clearCookies();
+
   await page.goto("/sign-in");
-  await clerk.loaded({ page });
 
-  // Sign out anything already there. clerk.signIn REFUSES to replace a live
-  // session — "Clerk: Failed to sign in: You're already signed in." — so a spec
-  // that signs in twice in one context (switching roles mid-test, which several
-  // do deliberately) fails on its second call. The old form-driven helper had
-  // no such rule: posting /login simply replaced the cookie.
-  //
-  // Cheap when there is no session, and it keeps signIn() meaning "this page is
-  // now this person", which is what all 36 specs assume.
-  if (
-    await page.evaluate(() =>
-      Boolean((window as { Clerk?: { session?: unknown } }).Clerk?.session),
-    )
-  ) {
-    await clerk.signOut({ page });
-  }
-
-  // RETRIED, because clerk.signIn drives the browser through page.evaluate and
-  // the sign-in screen can still be settling — `?next=` handling and Clerk's
-  // own post-load work both navigate, and a navigation mid-evaluate kills the
-  // execution context:
-  //
-  //   Execution context was destroyed, most likely because of a navigation
-  //
-  // It is a race, not a wrong credential, so retrying once is the fix. Losing
-  // it looks exactly like a broken account, which sent an earlier run looking
-  // at the wrong thing entirely.
-  //
-  // `emailAddress`, not `signInParams`. The latter is a CLIENT-side first-factor
-  // attempt, so it only works if that exact strategy is enabled on the instance
-  // — and when it is not, it RESOLVES WITHOUT THROWING and leaves
-  // window.Clerk.user null. Measured: every spec then failed 60s later at the
-  // permissions poll, pointing at the server rather than at sign-in.
-  //
-  // This form signs in through the Backend API with CLERK_SECRET_KEY and
-  // bypasses first-factor configuration entirely, so the suite does not break
-  // when somebody turns password sign-in off in the dashboard. The password
-  // journey is a thing to TEST, not a thing to depend on 36 times.
-  // Retried on TRANSIENT failures only. Two kinds show up, and neither means
-  // the account is wrong:
-  //
-  //   the navigation race above, and
-  //   "There was an internal error on our servers" — Clerk 5xx. A development
-  //   instance is rate-limited and this suite signs in once per test, so under
-  //   a full run it is hit occasionally.
-  //
-  // A wrong identifier still fails on the first attempt, which is the point:
-  // retrying a real failure just delays it by six seconds.
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await clerk.signIn({ page, emailAddress: email });
-      break;
-    } catch (error) {
-      const transient =
-        /execution context was destroyed|navigation|internal error|rate limit|too many requests|5\d\d/i.test(
-          String(error),
-        );
-      if (!transient || attempt >= 2) throw error;
-      await page.waitForTimeout(2_000 * (attempt + 1));
-      await page.goto("/sign-in");
-      await clerk.loaded({ page });
-    }
-  }
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
   let status = 0;
   const deadline = Date.now() + 60_000;
@@ -166,18 +109,6 @@ export async function signIn(page: Page, email: string): Promise<void> {
     await page.waitForTimeout(1_000);
   }
 
-  // ── The diagnosis, because the 401 is ambiguous and expensive ────────────
-  //
-  // /api/permissions answers `401 Not signed in.` for two unrelated failures:
-  // no Clerk session, and a Clerk session Supabase will not accept. They need
-  // completely different fixes and look identical from here, so the difference
-  // is worked out ONCE rather than in whichever spec happens to run first.
-  //
-  // The second is the one that cost an afternoon. Supabase's third-party auth
-  // is registered against a SPECIFIC Clerk instance; a token from any other one
-  // is refused with `PGRST301 No suitable key or wrong key type`, so
-  // getCurrentUser() throws, the route catches it, and the message says the
-  // caller is not signed in when they demonstrably are.
   throw new Error(
     [
       `Signed in as ${email}, but the server does not accept the session (/api/permissions -> ${status}).`,
@@ -187,47 +118,61 @@ export async function signIn(page: Page, email: string): Promise<void> {
   );
 }
 
-/** Which of the two 401s this is — asked of the browser, which can see both halves. */
+/**
+ * Which failure this is — because the 401 is ambiguous and expensive.
+ *
+ * /api/permissions answers `401 Not signed in.` for two unrelated causes: no
+ * session at all, and a session Supabase will not accept. They need completely
+ * different fixes and look identical from here, so the difference is worked out
+ * ONCE rather than in whichever spec happens to run first.
+ *
+ * The second is the one that costs an afternoon. Supabase's third-party auth is
+ * registered against SPECIFIC WorkOS environments; a token from any other one is
+ * refused with `PGRST301 No suitable key or wrong key type`, so getCurrentUser()
+ * throws, the route catches it, and the message says the caller is not signed in
+ * when they demonstrably are.
+ */
 async function diagnose(page: Page): Promise<string> {
-  const state = await page.evaluate(async () => {
-    const w = window as unknown as {
-      Clerk?: {
-        user?: { id?: string } | null;
-        session?: { getToken(): Promise<string | null> } | null;
-      };
-    };
-    if (!w.Clerk?.session) return { signedIn: false, issuer: null };
-    const token = await w.Clerk.session.getToken().catch(() => null);
-    let issuer: string | null = null;
-    try {
-      issuer =
-        (JSON.parse(atob(token!.split(".")[1]!)) as { iss?: string }).iss ??
-        null;
-    } catch {
-      /* leave null */
-    }
-    return { signedIn: true, userId: w.Clerk.user?.id ?? null, issuer };
-  });
+  const onScreen = await page
+    .locator('[role="alert"]')
+    .first()
+    .textContent()
+    .catch(() => null);
 
-  if (!state.signedIn) {
+  if (onScreen?.trim()) {
     return [
-      "Clerk has no session in the browser either, so sign-in itself failed.",
-      "Check the account exists: bun scripts/provision-e2e-identities.ts",
+      `The sign-in form reported: ${onScreen.trim()}`,
+      "",
+      "So sign-in itself failed. Check the account exists in the WorkOS STAGING",
+      "environment, and that its email is marked verified:",
+      "  bun scripts/provision-e2e-identities.ts",
+    ].join("\n");
+  }
+
+  const hasSession = (await page.context().cookies()).some((c) =>
+    c.name.startsWith("wos-session"),
+  );
+
+  if (!hasSession) {
+    return [
+      "No WorkOS session cookie was set, and the form showed no error.",
+      "The submit probably never completed — check the selectors in this file",
+      "against src/components/auth/EmailSignInForm.tsx.",
     ].join("\n");
   }
 
   return [
-    `Clerk DID sign in (${state.userId}) — the break is between Clerk and Supabase.`,
-    `Token issuer: ${state.issuer}`,
+    "A WorkOS session EXISTS — the break is between WorkOS and Supabase.",
     "",
-    "Supabase accepts tokens from the Clerk instances registered on it as",
-    "third-party auth providers, and refuses every other one with",
+    "Supabase accepts tokens only from the WorkOS environments registered on it",
+    "as third-party auth providers, and refuses every other one with",
     "`PGRST301 No suitable key or wrong key type`.",
     "",
-    "Set CLERK_PUBLISHABLE_KEY / CLERK_SECRET_KEY to a REGISTERED instance —",
-    "or register this issuer in Supabase Dashboard -> Authentication -> Sign In",
-    "/ Providers -> Third Party Auth. Clerk's keyless fallback is a throwaway",
-    "instance and is never registered; see tests/e2e/_clerk-keys.ts.",
+    "Check both, in this order:",
+    "  1. WORKOS_CLIENT_ID matches an issuer registered in Supabase Dashboard ->",
+    "     Authentication -> Third-Party Auth.",
+    '  2. The environment\'s JWT template is `{"role": "authenticated"}`. Without',
+    "     it every token is `anon` and every read returns zero rows.",
   ].join("\n");
 }
 
@@ -236,10 +181,12 @@ async function diagnose(page: Page): Promise<string> {
  *
  * Playwright gives each test a fresh context, so specs do not normally need
  * this — it is for the ones that assert what a SIGNED-OUT visitor sees after
- * having been signed in, which used to be done by clearing cookies. Clerk holds
- * the session in its own storage, so clearing cookies leaves a client that
- * still believes it is authenticated.
+ * having been signed in.
+ *
+ * Clearing cookies is now SUFFICIENT, which it was not under Clerk: Clerk held
+ * the session in its own client storage, so a cookie clear left a browser that
+ * still believed it was authenticated. AuthKit's session is the cookie.
  */
 export async function signOut(page: Page): Promise<void> {
-  await clerk.signOut({ page });
+  await page.context().clearCookies();
 }

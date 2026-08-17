@@ -1,15 +1,19 @@
 import "server-only";
 
-import { auth } from "@clerk/nextjs/server";
+import { withAuth } from "@workos-inc/authkit-nextjs";
 
 import type { FacilityStaffRole } from "@/types/facility-staff";
-import { createClerkServerClient } from "@/lib/supabase/clerk-server";
+import { createWorkosServerClient } from "@/lib/supabase/workos-server";
 
 // ============================================================================
 // Who is asking — the one place a Server Component should ask.
 //
-// The answer is a Clerk session for the subject, and the membership tables for
-// what that subject may do. There is no other answer.
+// The answer is a WorkOS session for the subject (ADR 0004), and the membership
+// tables for what that subject may do. There is no other answer.
+//
+// The provider changed here and NOWHERE ELSE. `Viewer`, `getViewer()` and the
+// gates below kept their names and signatures through two provider migrations,
+// which is why ~70 call sites have never been edited for either of them.
 //
 // It used to read `app_metadata.memberships` off the Supabase JWT, injected by
 // private.custom_access_token_hook. That hook is only called when SUPABASE Auth
@@ -75,15 +79,18 @@ const ANONYMOUS: Viewer = {
 };
 
 async function viewerFromSession(): Promise<Viewer | null> {
-  // Clerk owns the subject. `userId` here is the token's `sub` — the same value
-  // RLS reads as auth.jwt()->>'sub', which is what makes the two queries below
-  // return this person's rows and nobody else's.
-  const { userId } = await auth();
-  if (!userId) return null;
+  // WorkOS owns the subject. `user.id` here is the token's `sub` — the same
+  // value RLS reads as auth.jwt()->>'sub', which is what makes the two queries
+  // below return this person's rows and nobody else's. Verified against the live
+  // environment before the swap: sub === user.id, and the token resolves in
+  // Postgres as `authenticated` rather than `anon`.
+  const { user } = await withAuth();
+  if (!user) return null;
+  const userId = user.id;
 
-  let supabase: ReturnType<typeof createClerkServerClient>;
+  let supabase: ReturnType<typeof createWorkosServerClient>;
   try {
-    supabase = createClerkServerClient();
+    supabase = createWorkosServerClient();
   } catch {
     // Supabase not configured in this environment. There is no legacy path to
     // fall through to, so this resolves to anonymous and every portal refuses —
@@ -107,15 +114,20 @@ async function viewerFromSession(): Promise<Viewer | null> {
       .eq("is_active", true),
   ]);
 
-  // A signed-in Clerk user with no profile row yet is a real state, not an
-  // error: the sync webhook is asynchronous, so the first request after sign-up
-  // can arrive first. They resolve to a session with no memberships, every
-  // portal gate refuses, and the next request — once the webhook has landed —
-  // resolves normally.
+  // A signed-in user with no profile row yet is a real state, not an error: the
+  // sync webhook is asynchronous, so the first request after sign-up can arrive
+  // first. They resolve to a session with no memberships, every portal gate
+  // refuses, and the next request — once the webhook has landed — resolves
+  // normally.
+  //
+  // The session's own address is the fallback, which the Clerk version could not
+  // do: it read the email only from `profiles`, so during that window the viewer
+  // had a session and a null email. Now the profile wins when it exists and the
+  // token answers when it does not.
   return {
     source: "session",
     userId,
-    email: profile.data?.email ?? null,
+    email: profile.data?.email ?? user.email ?? null,
     isPlatformAdmin: profile.data?.is_platform_admin === true,
     memberships: (memberships.data ?? []).map((m) => ({
       membershipId: m.id,
