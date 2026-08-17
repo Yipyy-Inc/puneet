@@ -1938,7 +1938,7 @@ branches are diagnostic — with a digest it says "A server error occurred", and
 **without one it says "Reload to try again"**, meaning a pure client exception.
 Read which branch rendered before looking at the server at all.
 
-**Fixed** by making `/` a Route Handler (`src/app/route.ts`, PR #123). A route
+**Fixed** by making `/` a Route Handler (`src/app/route.ts`, PR #124). A route
 handler has no layout, renders no React and streams nothing, so
 `NextResponse.redirect` is a genuine 307 the browser follows itself. The
 crashing path is not repaired, it is unreachable.
