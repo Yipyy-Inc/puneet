@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { EmailSignInForm } from "@/components/auth/EmailSignInForm";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { FacilityAuthBrand } from "@/components/auth/FacilityAuthBrand";
 import { getBrandingBySlug } from "@/lib/api/facility-branding";
 
@@ -76,7 +77,8 @@ export default async function SignInPage() {
         <span className="bg-border h-px flex-1" />
       </div>
 
-      <GoogleSignInButton mode="sign-in" />
+      <GoogleSignInButton />
+      <AppleSignInButton />
     </AuthCard>
   );
 }

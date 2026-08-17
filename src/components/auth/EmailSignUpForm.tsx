@@ -1,115 +1,80 @@
 "use client";
 
-import { useSignUp } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
+import { signUpWithPassword, verifyEmailCode } from "@/lib/auth/workos-actions";
 
 // ============================================================================
-// Email + password sign-up, with the email verification step Clerk requires
-// before the account becomes usable.
+// Email + password sign-up, with the email verification step that has to come
+// before the account is usable.
 //
-// Two steps, not one:
+//   details ──code sent──▶ verify ──▶ /
 //
-//   details ──code sent──▶ verify ──▶ finalize() ──▶ /
-//
-// THE VERIFY STEP IS NOT OPTIONAL, and it is load-bearing beyond Clerk. The
-// sync webhook writes `profiles.email`, which is NOT NULL — an unverified
-// address would produce an account that exists in Clerk and nowhere else, and
-// its owner would be refused by every portal gate with nothing to explain why.
+// THE VERIFY STEP IS NOT OPTIONAL, and it is load-bearing beyond the identity
+// provider. The sync webhook writes `profiles.email`, which is NOT NULL — an
+// unverified address would produce an account that exists in WorkOS and nowhere
+// else, and its owner would be refused by every portal gate with nothing to
+// explain why.
 //
 // The name fields are collected here rather than left for later because the
 // webhook maps them straight to `profiles.full_name`; without them the facility
-// staff lists show an email address where a person's name should be.
+// staff lists show an email address where a person's name should be. They are
+// `required` here AND required on the WorkOS environment, so a name cannot be
+// skipped by posting around this form.
+//
+// THERE IS NO USERNAME, deliberately and at both ends. The account is identified
+// by its email address — the same address `profiles.email` stores NOT NULL, and
+// the same one `link_client_record()` matches a customer to their existing
+// client row by. One identifier, one place it can be wrong.
+//
+// SIGN-UP DELEGATES TO SIGN-IN. Creating the user and then authenticating is one
+// code path rather than two, so "new account" and "returning but unverified"
+// cannot drift apart — both arrive at the same verify step below.
 // ============================================================================
 
 type Step = "details" | "verify";
 
 export function EmailSignUpForm() {
-  const { signUp } = useSignUp();
-  const router = useRouter();
-
   const [step, setStep] = useState<Step>("details");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
-  const [pending, setPending] = useState(false);
+  const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  async function run(fn: () => Promise<{ error: unknown } | void>) {
-    setPending(true);
+  function submitDetails(e: React.FormEvent) {
+    e.preventDefault();
     setMessage(null);
-    try {
-      const result = await fn();
-      const err = result && "error" in result ? result.error : null;
-      if (err) {
-        // ClerkError.message is documented as developer-facing and not
-        // stable; longMessage is the one meant to be shown to a user.
-        const e = err as { longMessage?: string; message?: string };
-        setMessage(
-          e.longMessage ?? e.message ?? "That didn't work. Please try again.",
-        );
-        return false;
-      }
-      return true;
-    } finally {
-      setPending(false);
-    }
-  }
-
-  async function submitDetails(e: React.FormEvent) {
-    e.preventDefault();
-    if (!signUp) {
-      setMessage(
-        "Sign-in is still starting up. Give it a moment and try again.",
-      );
-      return;
-    }
-    const ok = await run(async () => {
-      const created = await signUp.password({
-        emailAddress: email.trim(),
+    startTransition(async () => {
+      const result = await signUpWithPassword(
+        firstName,
+        lastName,
+        email,
         password,
-        username: username.trim(),
-        firstName: firstName.trim() || undefined,
-        lastName: lastName.trim() || undefined,
-      });
-      if (created.error) return created;
-      return signUp.verifications.sendEmailCode();
+      );
+      if (result?.needsVerification) {
+        setNotice(`We've sent a verification code to ${email.trim()}.`);
+        setStep("verify");
+        return;
+      }
+      if (result?.error) setMessage(result.error);
+      // No else: a verified-on-creation account signs straight in on the server.
     });
-    if (ok) {
-      setNotice(`We've sent a verification code to ${email.trim()}.`);
-      setStep("verify");
-    }
   }
 
-  async function submitCode(e: React.FormEvent) {
+  function submitCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!signUp) {
-      setMessage(
-        "Sign-in is still starting up. Give it a moment and try again.",
-      );
-      return;
-    }
-    const ok = await run(() =>
-      signUp.verifications.verifyEmailCode({ code: code.trim() }),
-    );
-    if (!ok) return;
-
-    await signUp.finalize({
-      navigate: async ({ decorateUrl }) => {
-        const url = decorateUrl("/");
-        // decorateUrl may return an absolute URL to satisfy Safari's ITP.
-        if (url.startsWith("http")) window.location.href = url;
-        else router.push(url);
-      },
+    setMessage(null);
+    startTransition(async () => {
+      const result = await verifyEmailCode(code);
+      if (result?.error) setMessage(result.error);
     });
   }
 
@@ -132,6 +97,7 @@ export function EmailSignUpForm() {
               <Input
                 id="first-name"
                 autoComplete="given-name"
+                required
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
               />
@@ -141,27 +107,11 @@ export function EmailSignUpForm() {
               <Input
                 id="last-name"
                 autoComplete="family-name"
+                required
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="signup-username">Username</Label>
-            <Input
-              id="signup-username"
-              autoComplete="username"
-              required
-              minLength={4}
-              maxLength={64}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="how you'll sign in"
-            />
-            <p className="text-muted-foreground text-xs">
-              4–64 characters. You can sign in with this or your email.
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -188,7 +138,8 @@ export function EmailSignUpForm() {
               onChange={(e) => setPassword(e.target.value)}
             />
             <p className="text-muted-foreground text-xs">
-              At least 8 characters.
+              At least 8 characters, and not a password known to have been
+              breached.
             </p>
           </div>
 

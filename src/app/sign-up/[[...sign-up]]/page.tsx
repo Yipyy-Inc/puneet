@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { EmailSignUpForm } from "@/components/auth/EmailSignUpForm";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { FacilityAuthBrand } from "@/components/auth/FacilityAuthBrand";
 import { getBrandingBySlug } from "@/lib/api/facility-branding";
 
@@ -83,7 +84,8 @@ export default async function SignUpPage() {
         <span className="bg-border h-px flex-1" />
       </div>
 
-      <GoogleSignInButton mode="sign-up" />
+      <GoogleSignInButton />
+      <AppleSignInButton />
     </AuthCard>
   );
 }

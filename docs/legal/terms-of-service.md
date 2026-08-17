@@ -1,7 +1,14 @@
 # Yipyy — Terms of Service
 
 **Status: DRAFT — not published. Must be reviewed by a qualified attorney before use.**
-Version 0.1 · Drafted 2026-08-07 · Placeholders in `[BRACKETS]` are unconfirmed.
+Version 0.2 · Drafted 2026-08-07 · Revised 2026-08-17 · Placeholders in
+`[BRACKETS]` are unconfirmed.
+
+> **0.2 changed a named subprocessor.** The identity provider moved from Clerk
+> to WorkOS ([ADR 0004](../architecture/decisions/0004-workos-replaces-clerk-as-identity-provider.md)).
+> Section 4 and the table in section 10 were corrected. Apple sign-in is
+> deliberately still absent: the button exists in the UI but no Apple credentials
+> are configured, so the Service does not actually offer it yet.
 
 > **How this draft was produced.** Every operative statement below was checked
 > against the codebase. Where the product does not do something, this document
@@ -61,7 +68,7 @@ contract to use the Service.
 
 ## 4. Accounts and authentication
 
-Sign-in is provided through **Clerk**. You may create a credential with an
+Sign-in is provided through **WorkOS**. You may create a credential with an
 email address and password, or sign in with Google. Yipyy never receives or
 stores your password.
 
@@ -212,7 +219,7 @@ to their terms where they apply to you:
 
 | Provider              | Role in the Service                                 |
 | --------------------- | --------------------------------------------------- |
-| **Clerk**             | Identity and sign-in                                |
+| **WorkOS**            | Identity and sign-in                                |
 | **Supabase**          | Database and file storage                           |
 | **Vercel**            | Hosting and delivery                                |
 | **Anthropic**         | AI text generation (section 9)                      |
