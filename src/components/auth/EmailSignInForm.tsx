@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -40,21 +41,46 @@ import {
 //
 // Errors come back from the server actions as values, never thrown, so every
 // failure lands in the red box below instead of a Next error overlay.
+//
+// EVERY STRING BELOW COMES FROM `messages`. The one category that does not is
+// the text `readableError` lifts out of a WorkOS exception in workos-actions.ts
+// — that is the vendor's wording, in the vendor's language, and preferring our
+// own translated fallback over it would trade "your password was found in a
+// breach" for "could not sign in". Known and deliberate; see the debt map.
 // ============================================================================
 
 type Step = "credentials" | "verify" | "reset-sent";
 
-/** The callback route bounces here with ?error=… when a social sign-in fails. */
-const CALLBACK_ERRORS: Record<string, string> = {
-  state: "That sign-in could not be verified. Please try again from this page.",
-  missing_code: "The sign-in did not complete. Please try again.",
-  exchange: "We could not finish signing you in. Please try again.",
-  provider: "That sign-in was cancelled.",
-};
+/**
+ * The callback route bounces here with ?error=… when a social sign-in fails.
+ *
+ * A list of KEYS rather than a map of sentences: the sentences live in
+ * `messages/*.json` now, and an unrecognised value from the query string must
+ * not reach `t()` — next-intl renders a missing key as the key itself, which
+ * would print "callbackErrors.haha" on screen for anyone who edits the URL.
+ */
+const CALLBACK_ERROR_KEYS = [
+  "state",
+  "missing_code",
+  "exchange",
+  "provider",
+] as const;
+
+type CallbackErrorKey = (typeof CALLBACK_ERROR_KEYS)[number];
+
+function asCallbackErrorKey(value: string | null): CallbackErrorKey | null {
+  return CALLBACK_ERROR_KEYS.includes(value as CallbackErrorKey)
+    ? (value as CallbackErrorKey)
+    : null;
+}
 
 export function EmailSignInForm() {
+  const t = useTranslations("auth");
   const searchParams = useSearchParams();
-  const callbackError = CALLBACK_ERRORS[searchParams.get("error") ?? ""];
+  const callbackErrorKey = asCallbackErrorKey(searchParams.get("error"));
+  const callbackError = callbackErrorKey
+    ? t(`callbackErrors.${callbackErrorKey}`)
+    : null;
 
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
@@ -71,7 +97,7 @@ export function EmailSignInForm() {
       const result = await signInWithPassword(email, password);
       // A successful sign-in redirects on the server and never returns.
       if (result?.needsVerification) {
-        setNotice(`We've sent a verification code to ${email.trim()}.`);
+        setNotice(t("notices.codeSent", { email: email.trim() }));
         setStep("verify");
         return;
       }
@@ -90,7 +116,7 @@ export function EmailSignInForm() {
 
   function startReset() {
     if (!email.trim()) {
-      setMessage("Enter your email first, then choose Forgot password.");
+      setMessage(t("notices.enterEmailFirst"));
       return;
     }
     setMessage(null);
@@ -99,9 +125,7 @@ export function EmailSignInForm() {
       // Always the same answer, whether or not the address exists — see the
       // action. Telling an anonymous caller which addresses are real turns this
       // button into an account-enumeration oracle.
-      setNotice(
-        "If that address has an account, we've emailed a link to reset the password.",
-      );
+      setNotice(t("notices.resetSent"));
       setStep("reset-sent");
     });
   }
@@ -120,7 +144,7 @@ export function EmailSignInForm() {
       {step === "credentials" && (
         <form onSubmit={submitCredentials} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="identifier">Email</Label>
+            <Label htmlFor="identifier">{t("fields.email")}</Label>
             <Input
               id="identifier"
               type="email"
@@ -128,19 +152,19 @@ export function EmailSignInForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("fields.emailPlaceholder")}
             />
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("fields.password")}</Label>
               <button
                 type="button"
                 onClick={startReset}
                 className="text-primary text-sm font-medium hover:underline"
               >
-                Forgot password?
+                {t("actions.forgotPassword")}
               </button>
             </div>
             <PasswordInput
@@ -153,7 +177,7 @@ export function EmailSignInForm() {
           </div>
 
           <Button type="submit" className="h-11 w-full" disabled={pending}>
-            {pending ? "Signing in…" : "Sign in"}
+            {pending ? t("actions.signingIn") : t("actions.signIn")}
           </Button>
         </form>
       )}
@@ -161,7 +185,7 @@ export function EmailSignInForm() {
       {step === "verify" && (
         <form onSubmit={submitCode} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="verify-code">Verification code</Label>
+            <Label htmlFor="verify-code">{t("fields.verificationCode")}</Label>
             <Input
               id="verify-code"
               inputMode="numeric"
@@ -169,19 +193,18 @@ export function EmailSignInForm() {
               required
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="6-digit code"
+              placeholder={t("fields.codePlaceholder")}
             />
           </div>
           <Button type="submit" className="h-11 w-full" disabled={pending}>
-            {pending ? "Verifying…" : "Verify and continue"}
+            {pending ? t("actions.verifying") : t("actions.verify")}
           </Button>
         </form>
       )}
 
       {step === "reset-sent" && (
         <p className="text-muted-foreground text-sm">
-          Open the link in that email to choose a new password. You can close
-          this page.
+          {t("notices.resetOpenLink")}
         </p>
       )}
 

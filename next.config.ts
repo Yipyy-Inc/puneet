@@ -1,4 +1,15 @@
+import createNextIntlPlugin from "next-intl/plugin";
 import type { NextConfig } from "next";
+
+// next-intl was installed, given a request config, two message catalogues and a
+// settings layer -- and never connected, so `src/i18n/request.ts` was dead code
+// and `getTranslations()` would have thrown at every call site. There were none.
+// This is the wire that was missing; without it the language switcher on the
+// auth screens is a control that changes nothing.
+//
+// Additive on purpose: a page that calls no translation function is unaffected,
+// which is what makes it safe to turn on across 266 routes to serve four.
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
@@ -55,4 +66,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

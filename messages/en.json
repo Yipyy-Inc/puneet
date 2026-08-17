@@ -1,4 +1,80 @@
 {
+  "auth": {
+    "language": {
+      "label": "Language"
+    },
+    "meta": {
+      "signIn": "Sign in — Yipyy",
+      "signInBranded": "Sign in — {name}",
+      "signUp": "Create an account — Yipyy",
+      "signUpBranded": "Create an account — {name}",
+      "reset": "Choose a new password — Yipyy"
+    },
+    "signIn": {
+      "title": "Sign in",
+      "description": "Use your Yipyy account — we'll take you to the right place.",
+      "brandedDescription": "Sign in to {name}.",
+      "noAccount": "Don't have an account?",
+      "signUpLink": "Sign up"
+    },
+    "signUp": {
+      "title": "Create your account",
+      "description": "One account for booking, your pets and your visits.",
+      "descriptionJoin": "Create your Yipyy account, then join {name}.",
+      "descriptionNoSelfSignup": "Create your Yipyy account. {name} adds customers themselves — we'll find your record afterwards.",
+      "haveAccount": "Already have an account?",
+      "signInLink": "Sign in"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "description": "Then we'll sign you in.",
+      "badLinkTitle": "That link didn't work",
+      "badLinkDescription": "Password reset links can only be used once, and they expire.",
+      "badLinkBody": "Request a new one from the sign-in page.",
+      "backToSignIn": "Back to sign in",
+      "remembered": "Remembered it?",
+      "signInLink": "Sign in",
+      "confirmLabel": "Confirm new password",
+      "mismatch": "Those two passwords do not match.",
+      "submit": "Set new password",
+      "submitting": "Saving…"
+    },
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "password": "Password",
+      "newPassword": "New password",
+      "verificationCode": "Verification code",
+      "codePlaceholder": "6-digit code",
+      "passwordHint": "At least 8 characters, and not a password known to have been breached."
+    },
+    "actions": {
+      "signIn": "Sign in",
+      "signingIn": "Signing in…",
+      "createAccount": "Create account",
+      "creatingAccount": "Creating account…",
+      "verify": "Verify and continue",
+      "verifying": "Verifying…",
+      "forgotPassword": "Forgot password?",
+      "continueWith": "Continue with {provider}",
+      "redirecting": "Redirecting…",
+      "or": "or"
+    },
+    "notices": {
+      "codeSent": "We've sent a verification code to {email}.",
+      "enterEmailFirst": "Enter your email first, then choose Forgot password.",
+      "resetSent": "If that address has an account, we've emailed a link to reset the password.",
+      "resetOpenLink": "Open the link in that email to choose a new password. You can close this page."
+    },
+    "callbackErrors": {
+      "state": "That sign-in could not be verified. Please try again from this page.",
+      "missing_code": "The sign-in did not complete. Please try again.",
+      "exchange": "We could not finish signing you in. Please try again.",
+      "provider": "That sign-in was cancelled."
+    }
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -15,7 +91,6 @@
     "reset": "Reset",
     "apply": "Apply",
     "submit": "Submit",
-
     "next": "Next",
     "previous": "Previous",
     "close": "Close",
@@ -25,7 +100,6 @@
     "actions": "Actions",
     "details": "Details",
     "total": "Total",
-
     "inactive": "Inactive",
     "all": "All",
     "today": "Today",
@@ -132,8 +206,7 @@
     "systemStatus": "System Status",
     "alertsNotifications": "Alerts & Notifications",
     "promotionsDiscounts": "Promotions & Discounts",
-    "promoCodeSystem": "Promo Code System",
-    "performanceMetrics": "Performance Metrics"
+    "promoCodeSystem": "Promo Code System"
   },
   "dashboard": {
     "title": "Dashboard",
