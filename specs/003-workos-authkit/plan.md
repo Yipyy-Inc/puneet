@@ -30,18 +30,53 @@ serving `yipyy.com`, `pawradise.yipyy.com` and `doggieville-mtl.yipyy.com`. An
 earlier note in this plan said nothing was deployed; that was inferred from a
 missing `.vercel/project.json` and was **wrong** — the repo simply was not linked.
 
-| item                            | state                                                                 |
-| ------------------------------- | --------------------------------------------------------------------- |
-| Redirect URIs                   | ✅ `yipyy.com`, `www.yipyy.com`, **`*.yipyy.com`** → `/auth/callback` |
-| JWT template                    | ✅ `{"role": "authenticated"}`                                        |
-| Webhook endpoint                | ✅ `we_01M07TQ4QAPEKX0DBPX679DJNH`, Active, the 3 user events         |
-| Vercel env (6 `WORKOS_*`)       | ✅ set on Production                                                  |
-| Supabase trusts the prod issuer | ✅ **proved** — see below                                             |
-| Google OAuth (Production)       | ✅ `state: Valid`, enabled, redirect URI verified, app published      |
-| Google OAuth (Staging)          | ❌ empty — Google sign-in does not work locally                       |
-| Apple OAuth                     | ❌ empty in both; needs an Apple Developer account                    |
-| Deployed code                   | ❌ still Clerk (`pk_live_`, `clerk.yipyy.com`)                        |
-| The 8 real identities           | ❌ exist in Staging only; Production has 0 users                      |
+| item                             | state                                                                 |
+| -------------------------------- | --------------------------------------------------------------------- |
+| Redirect URIs                    | ✅ `yipyy.com`, `www.yipyy.com`, **`*.yipyy.com`** → `/auth/callback` |
+| JWT template                     | ✅ `{"role": "authenticated"}`                                        |
+| Webhook endpoint                 | ✅ `we_01M07TQ4QAPEKX0DBPX679DJNH`, Active, the 3 user events         |
+| Vercel env (6 `WORKOS_*`)        | ✅ set on Production                                                  |
+| Supabase trusts the prod issuer  | ✅ **proved** — see below                                             |
+| Google OAuth (Production)        | ✅ `state: Valid`, enabled, redirect URI verified, app published      |
+| Google OAuth (Staging)           | ❌ empty — Google sign-in does not work locally                       |
+| Apple OAuth                      | ❌ empty in both; needs an Apple Developer account                    |
+| Deployed code                    | ✅ WorkOS live on `www.yipyy.com` (PR #120, 2026-08-17)               |
+| Webhook writes `profiles` (prod) | ✅ proved by a real user, not just a signature check                  |
+| `CLERK_*` Vercel vars            | ✅ removed                                                            |
+| Password reset URL               | ✅ set — was `null`, see below                                        |
+| The 8 real identities            | ✅ now on Production subjects                                         |
+
+### One person, one environment — the constraint that shapes all of this
+
+`profiles.id` holds exactly one subject, and Staging and Production mint
+different subjects for the same address. One Supabase project serves both, so
+**every person exists in exactly one environment at a time.** The split is now:
+
+- **Fixtures (`@yipyy.dev`) → Staging.** Local dev and all 179 specs.
+- **Real people → Production.** Including both platform-admin grants.
+
+`scripts/migrate-clerk-era-identities.ts` enforces this **symmetrically**: the
+default run only considers fixtures, `--production` only considers real people.
+Without that symmetry, running it with no flag after a production migration
+would drag all eight back to Staging — silently, reporting success, taking
+production sign-in and both platform-admin grants with it. Both invocations now
+report "nothing to migrate", which is what settled looks like.
+
+`--production` deliberately does **not** call `applyWorkosTestKeys()`; it
+asserts the opposite (a `sk_test_` key is the error). Loosening that helper
+would have exposed all 179 specs to production.
+
+### `passwordResetUrl` was null in both environments
+
+WorkOS puts that URL in the reset email. Unset, the link goes to WorkOS's hosted
+AuthKit page — which ADR 0004 §4 explicitly does not use, so
+`src/app/reset-password/page.tsx` would never have been reached. It is the only
+way in for the eight migrated accounts, which have **no password**. Now set to
+`https://www.yipyy.com/reset-password` and the localhost equivalent.
+
+Logout URIs also lacked the `https://*.yipyy.com/sign-in` wildcard that the
+redirect URIs already had, so signing out from a facility host would have been
+refused.
 
 **The trust relationship was proved, not assumed.** A throwaway user was created
 in the Production environment, authenticated, and its token presented to
@@ -64,12 +99,17 @@ assumed in three places and was wrong. It matters because a denylist on
 `sk_live_` would pass every production key; `tests/e2e/_workos-keys.ts`
 allowlists `sk_test_` instead, which is why its guard was correct anyway.
 
-> **PRODUCTION AUTH IS CURRENTLY BROKEN, and deregistering Clerk is what broke
-> it.** The deployed code signs in through Clerk, whose tokens Supabase no longer
-> accepts, so sign-in appears to work and every read then fails. Two ways out:
-> re-register Clerk in Supabase as a stopgap, or deploy the WorkOS code. Which is
-> right depends on whether the site has real users — deploy is the real fix
-> either way.
+> **Production auth WAS broken for several hours on 2026-08-17, and
+> deregistering Clerk is what broke it.** The deployed code still signed in
+> through Clerk, whose tokens Supabase had stopped accepting, so sign-in appeared
+> to work and every read then failed. **Fixed by the deploy** (PR #120).
+>
+> The lesson is the ordering, not the outage: **deregistering an identity
+> provider takes effect instantly and everywhere, while replacing the code that
+> uses it requires a deploy.** Do the deploy first. The mistake behind it was
+> concluding "nothing is deployed" from a missing `.vercel/project.json` — a
+> local file that says nothing about what is serving traffic. Check the hosting
+> provider, not the working tree.
 
 ### 🟢 Eight Clerk-era profiles outlived the cutover — migrated 2026-08-17
 
