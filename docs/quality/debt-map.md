@@ -1953,6 +1953,44 @@ Route Handler, not a page with `redirect()`. Verify with
 `curl -i` that it is a 307 — a 200 with a `text/x-component` body means the
 client router is doing the work and this bug is in range.
 
+## Snapshot (2026-08-17, i18n turned out to be scaffolding)
+
+### 🟡 next-intl was installed, configured, and never connected
+
+`next-intl@4.5.8` was a dependency, `src/i18n/request.ts` existed and returned a
+locale, `messages/en.json` and `messages/fr.json` held ~1,100 strings between
+them, and `src/lib/language-settings.ts` resolved a preference from three
+cookies. There were **zero** calls to `useTranslations` or `getTranslations`, no
+`NextIntlClientProvider`, and no plugin in `next.config.ts` — so `request.ts` was
+dead code and the first `getTranslations()` anyone wrote would have thrown.
+`<html lang>` was the literal string `"en"`.
+
+Both AGENTS.md and the architecture overview listed "next-intl (en/fr)" as a
+fact about the system. It was a fact about `package.json`.
+
+**Fixed for the auth screens only** (PR #125): the plugin is wired, so
+`getTranslations()` now works anywhere, and sign-in, sign-up and reset-password
+render from an `auth` namespace with a language switcher for people who have no
+session and therefore no settings screen to change it on.
+
+**Everything else is still hardcoded English**, including `/join` — which is why
+`AuthCard` takes `signedOut` rather than always drawing the switcher. Putting a
+language control over untranslated copy makes a control that pretends to work.
+
+**Two things that stay English on a French screen**, both deliberate:
+
+- Whatever `readableError` lifts out of a WorkOS exception
+  (`src/lib/auth/workos-actions.ts`). It is the vendor's wording; preferring our
+  translated fallback would trade "that password was found in a data breach" for
+  "could not sign in", which is worse in any language.
+- A facility's own `tagline`. It is one stored string in the words the business
+  chose, and machine-translating someone's brand copy is not ours to do.
+
+**Do instead:** when translating a new screen, add its namespace to BOTH
+catalogues in the same change and check key parity — nothing enforces it, and
+next-intl renders a missing key as the key itself, so a gap ships as
+`auth.fields.email` printed on the page rather than as an error.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

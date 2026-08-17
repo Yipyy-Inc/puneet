@@ -1,4 +1,80 @@
 {
+  "auth": {
+    "language": {
+      "label": "Langue"
+    },
+    "meta": {
+      "signIn": "Connexion — Yipyy",
+      "signInBranded": "Connexion — {name}",
+      "signUp": "Créer un compte — Yipyy",
+      "signUpBranded": "Créer un compte — {name}",
+      "reset": "Choisir un nouveau mot de passe — Yipyy"
+    },
+    "signIn": {
+      "title": "Connexion",
+      "description": "Utilisez votre compte Yipyy — nous vous emmenons au bon endroit.",
+      "brandedDescription": "Connectez-vous à {name}.",
+      "noAccount": "Vous n'avez pas de compte ?",
+      "signUpLink": "Créer un compte"
+    },
+    "signUp": {
+      "title": "Créez votre compte",
+      "description": "Un seul compte pour vos réservations, vos animaux et vos visites.",
+      "descriptionJoin": "Créez votre compte Yipyy, puis rejoignez {name}.",
+      "descriptionNoSelfSignup": "Créez votre compte Yipyy. {name} ajoute ses clients elle-même — nous retrouverons votre dossier ensuite.",
+      "haveAccount": "Vous avez déjà un compte ?",
+      "signInLink": "Se connecter"
+    },
+    "reset": {
+      "title": "Choisissez un nouveau mot de passe",
+      "description": "Nous vous connecterons ensuite.",
+      "badLinkTitle": "Ce lien n'a pas fonctionné",
+      "badLinkDescription": "Les liens de réinitialisation ne servent qu'une fois, et ils expirent.",
+      "badLinkBody": "Demandez-en un nouveau depuis la page de connexion.",
+      "backToSignIn": "Retour à la connexion",
+      "remembered": "Vous vous en souvenez ?",
+      "signInLink": "Se connecter",
+      "confirmLabel": "Confirmez le nouveau mot de passe",
+      "mismatch": "Ces deux mots de passe ne correspondent pas.",
+      "submit": "Définir le mot de passe",
+      "submitting": "Enregistrement…"
+    },
+    "fields": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "E-mail",
+      "emailPlaceholder": "vous@exemple.com",
+      "password": "Mot de passe",
+      "newPassword": "Nouveau mot de passe",
+      "verificationCode": "Code de vérification",
+      "codePlaceholder": "Code à 6 chiffres",
+      "passwordHint": "Au moins 8 caractères, et pas un mot de passe connu pour avoir fuité."
+    },
+    "actions": {
+      "signIn": "Se connecter",
+      "signingIn": "Connexion…",
+      "createAccount": "Créer le compte",
+      "creatingAccount": "Création du compte…",
+      "verify": "Vérifier et continuer",
+      "verifying": "Vérification…",
+      "forgotPassword": "Mot de passe oublié ?",
+      "continueWith": "Continuer avec {provider}",
+      "redirecting": "Redirection…",
+      "or": "ou"
+    },
+    "notices": {
+      "codeSent": "Nous avons envoyé un code de vérification à {email}.",
+      "enterEmailFirst": "Saisissez d'abord votre e-mail, puis choisissez Mot de passe oublié.",
+      "resetSent": "Si un compte existe pour cette adresse, nous y avons envoyé un lien de réinitialisation.",
+      "resetOpenLink": "Ouvrez le lien dans cet e-mail pour choisir un nouveau mot de passe. Vous pouvez fermer cette page."
+    },
+    "callbackErrors": {
+      "state": "Cette connexion n'a pas pu être vérifiée. Réessayez depuis cette page.",
+      "missing_code": "La connexion ne s'est pas terminée. Veuillez réessayer.",
+      "exchange": "Nous n'avons pas pu terminer votre connexion. Veuillez réessayer.",
+      "provider": "Cette connexion a été annulée."
+    }
+  },
   "common": {
     "save": "Enregistrer",
     "cancel": "Annuler",
@@ -130,8 +206,7 @@
     "systemStatus": "État du système",
     "alertsNotifications": "Alertes et notifications",
     "promotionsDiscounts": "Promotions et rabais",
-    "promoCodeSystem": "Système de codes promo",
-    "performanceMetrics": "Métriques de performance"
+    "promoCodeSystem": "Système de codes promo"
   },
   "dashboard": {
     "title": "Tableau de bord",

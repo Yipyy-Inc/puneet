@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import { signUpWithPassword, verifyEmailCode } from "@/lib/auth/workos-actions";
 type Step = "details" | "verify";
 
 export function EmailSignUpForm() {
+  const t = useTranslations("auth");
   const [step, setStep] = useState<Step>("details");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -60,7 +62,7 @@ export function EmailSignUpForm() {
         password,
       );
       if (result?.needsVerification) {
-        setNotice(`We've sent a verification code to ${email.trim()}.`);
+        setNotice(t("notices.codeSent", { email: email.trim() }));
         setStep("verify");
         return;
       }
@@ -93,7 +95,7 @@ export function EmailSignUpForm() {
         <form onSubmit={submitDetails} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="first-name">First name</Label>
+              <Label htmlFor="first-name">{t("fields.firstName")}</Label>
               <Input
                 id="first-name"
                 autoComplete="given-name"
@@ -103,7 +105,7 @@ export function EmailSignUpForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="last-name">Last name</Label>
+              <Label htmlFor="last-name">{t("fields.lastName")}</Label>
               <Input
                 id="last-name"
                 autoComplete="family-name"
@@ -115,7 +117,7 @@ export function EmailSignUpForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="signup-email">Email</Label>
+            <Label htmlFor="signup-email">{t("fields.email")}</Label>
             <Input
               id="signup-email"
               type="email"
@@ -123,12 +125,12 @@ export function EmailSignUpForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("fields.emailPlaceholder")}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="signup-password">Password</Label>
+            <Label htmlFor="signup-password">{t("fields.password")}</Label>
             <PasswordInput
               id="signup-password"
               autoComplete="new-password"
@@ -138,13 +140,14 @@ export function EmailSignUpForm() {
               onChange={(e) => setPassword(e.target.value)}
             />
             <p className="text-muted-foreground text-xs">
-              At least 8 characters, and not a password known to have been
-              breached.
+              {t("fields.passwordHint")}
             </p>
           </div>
 
           <Button type="submit" className="h-11 w-full" disabled={pending}>
-            {pending ? "Creating account…" : "Create account"}
+            {pending
+              ? t("actions.creatingAccount")
+              : t("actions.createAccount")}
           </Button>
         </form>
       )}
@@ -152,7 +155,7 @@ export function EmailSignUpForm() {
       {step === "verify" && (
         <form onSubmit={submitCode} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="signup-code">Verification code</Label>
+            <Label htmlFor="signup-code">{t("fields.verificationCode")}</Label>
             <Input
               id="signup-code"
               inputMode="numeric"
@@ -160,11 +163,11 @@ export function EmailSignUpForm() {
               required
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="6-digit code"
+              placeholder={t("fields.codePlaceholder")}
             />
           </div>
           <Button type="submit" className="h-11 w-full" disabled={pending}>
-            {pending ? "Verifying…" : "Verify and continue"}
+            {pending ? t("actions.verifying") : t("actions.verify")}
           </Button>
         </form>
       )}
