@@ -15,6 +15,16 @@ import {
   Sparkles,
 } from "lucide-react";
 import { clients } from "@/data/clients";
+import {
+  useBoardingRooms,
+  type BoardingRoomsPayload,
+} from "@/lib/api/boarding-rooms";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { clientQueries } from "@/lib/api/client";
+import { bookingMutations } from "@/lib/api/booking";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { KennelCalendarView } from "./kennel-calendar";
 import type { KennelStatus } from "@/types/base";
 import { Switch } from "@/components/ui/switch";
@@ -22,12 +32,10 @@ import { customServiceCheckIns } from "@/data/custom-service-checkins";
 import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 import { COLOR_HEX_MAP } from "@/data/custom-services";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { roomCategories, facilityRooms } from "@/data/rooms";
 import { daycarePlayAreas, daycareSections } from "@/data/daycare-areas";
 import type { RoomCategory } from "@/types/rooms";
 import type { OccupancyKennel } from "./_lib/calendar-types";
 import { useBookingModal } from "@/hooks/use-booking-modal";
-import { bookings as facilityBookings } from "@/data/bookings";
 
 type Kennel = OccupancyKennel;
 
@@ -50,185 +58,67 @@ function findPetById(petId: number) {
 
 // Mock booking overlays keyed by room id — demonstrates each status colour.
 // In real wiring, this would join `bookings.ts` to rooms by kennel/room id.
-const mockBookingOverlays: Record<
-  string,
-  Pick<
-    Kennel,
-    | "status"
-    | "bookingStatus"
-    | "bookingId"
-    | "petId"
-    | "petName"
-    | "clientName"
-    | "clientPhone"
-    | "checkIn"
-    | "checkOut"
-  >
-> = {
-  "room-pcs-01": {
-    status: "occupied",
-    bookingStatus: "checked_in",
-    bookingId: 5,
-    petId: 4,
-    petName: "Daisy",
-    clientName: "Diana Prince",
-    clientPhone: "111-222-3333",
-    checkIn: "2026-04-30",
-    checkOut: "2026-05-04",
-  },
-  "room-ds-01": {
-    status: "occupied",
-    bookingStatus: "checked_in",
-    bookingId: 13,
-    petId: 1,
-    petName: "Bella",
-    clientName: "Alice Johnson",
-    clientPhone: "123-456-7890",
-    checkIn: "2026-05-01",
-    checkOut: "2026-05-06",
-  },
-  "room-ds-02": {
-    status: "reserved",
-    bookingStatus: "confirmed",
-    bookingId: 18,
-    petId: 5,
-    petName: "Rex",
-    clientName: "John Doe",
-    clientPhone: "123-456-7890",
-    checkIn: "2026-05-08",
-    checkOut: "2026-05-12",
-  },
-  "room-ds-04": {
-    status: "reserved",
-    bookingStatus: "pending",
-    bookingId: 21,
-    petId: 7,
-    petName: "Luna",
-    clientName: "Sarah Wilson",
-    clientPhone: "555-111-2222",
-    checkIn: "2026-05-05",
-    checkOut: "2026-05-09",
-  },
-  "room-ds-05": {
-    // Inactive in data — shown as maintenance for demo
-    status: "maintenance",
-  },
-  "room-s-01": {
-    status: "occupied",
-    bookingStatus: "checked_in",
-    bookingId: 2,
-    petId: 3,
-    petName: "Charlie",
-    clientName: "Bob Smith",
-    clientPhone: "098-765-4321",
-    checkIn: "2026-05-02",
-    checkOut: "2026-05-07",
-  },
-  "room-s-03": {
-    status: "occupied",
-    bookingStatus: "completed",
-    bookingId: 8,
-    petId: 6,
-    petName: "Cooper",
-    clientName: "Eve Adams",
-    clientPhone: "555-666-7777",
-    checkIn: "2026-04-28",
-    checkOut: "2026-05-02",
-  },
-  "room-s-05": {
-    status: "reserved",
-    bookingStatus: "confirmed",
-    bookingId: 20,
-    petName: "Max",
-    clientName: "Bob Smith",
-    clientPhone: "098-765-4321",
-    checkIn: "2026-05-10",
-    checkOut: "2026-05-14",
-  },
-  "room-s-07": {
-    status: "maintenance",
-  },
-  "room-c-01": {
-    status: "occupied",
-    bookingStatus: "checked_in",
-    bookingId: 30,
-    petName: "Buddy",
-    clientName: "Tom Harris",
-    clientPhone: "555-222-3333",
-    checkIn: "2026-05-03",
-    checkOut: "2026-05-06",
-  },
-  "room-c-04": {
-    status: "reserved",
-    bookingStatus: "pending",
-    petName: "Milo",
-    clientName: "Lisa Garcia",
-    clientPhone: "555-444-5555",
-    checkIn: "2026-05-07",
-    checkOut: "2026-05-11",
-  },
-  "room-c-08": {
-    status: "occupied",
-    bookingStatus: "checked_in",
-    petName: "Ginger",
-    clientName: "Nancy Taylor",
-    clientPhone: "555-444-6666",
-    checkIn: "2026-05-01",
-    checkOut: "2026-05-05",
-  },
-};
+// ── THE BOARDING HALF READS THE DATABASE ─────────────────────────────────────
+//
+// What used to be here: `mockBookingOverlays`, a hand-written map of twelve
+// kennels to invented guests — pet names, owner names, and PHONE NUMBERS like
+// "Nancy Taylor / 555-444-6666" — merged over the rooms fixture and computed at
+// MODULE SCOPE, so it was built once at import and identical for every facility.
+// An occupancy board is the screen staff use to know which dog is in which
+// kennel, and this one was answering with people who do not exist.
+//
+// Rooms, categories and occupancy now come from /api/boarding/rooms, the same
+// read the (already converted) boarding ops board uses. `occupied` carries who
+// is actually in the kennel — petNames, clientName, petType — because a board
+// that only knows WHICH BOOKING holds a room cannot be walked by an operator.
+function buildKennels({
+  rooms,
+  categories,
+  occupied,
+}: BoardingRoomsPayload): Kennel[] {
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+  const stayByRoom = new Map(occupied.map((o) => [o.roomId, o]));
 
-function buildInitialKennels(): Kennel[] {
-  return facilityRooms
-    .filter(
-      (r) => r.active || mockBookingOverlays[r.id]?.status === "maintenance",
-    )
+  return rooms
+    .filter((room) => room.active)
     .map((room) => {
-      const category = roomCategories.find((c) => c.id === room.categoryId);
-      const overlay = mockBookingOverlays[room.id];
-      const enrichment: Partial<OccupancyKennel> = {};
-      if (overlay?.petId) {
-        const lookup = findPetById(overlay.petId);
-        if (lookup) {
-          enrichment.petPhotoUrl = lookup.pet.imageUrl;
-          enrichment.petBreed = lookup.pet.breed;
-          enrichment.petSize = petSizeFromWeight(lookup.pet.weight);
-          enrichment.petSpecies =
-            lookup.pet.type.toLowerCase() === "cat" ? "cat" : "dog";
-          enrichment.clientPhotoUrl = lookup.client.imageUrl;
-        }
-      }
-      // Find the related booking (if any) to surface care signals to the bar.
-      const related = overlay?.bookingId
-        ? facilityBookings.find((b) => b.id === overlay.bookingId)
-        : undefined;
-      if (related) {
-        enrichment.paymentStatus = related.paymentStatus;
-        enrichment.specialRequests = related.specialRequests;
-        enrichment.checkInTime = related.checkInTime;
-        enrichment.checkOutTime = related.checkOutTime;
-        enrichment.hasFeedingInstructions =
-          (related.feedingInstructions?.length ?? 0) > 0;
-        enrichment.hasMedications = (related.medications?.length ?? 0) > 0;
-      }
+      const category = categoryById.get(room.categoryId);
+      const stay = stayByRoom.get(room.id);
+
+      // `maintenance` is deliberately absent. The old map could mark a kennel
+      // out of service, but nothing in the database records that yet, and
+      // inventing it here is how the fixture got started. A room that is not
+      // active is filtered out above; the rest are vacant or occupied.
+      const status: KennelStatus = stay
+        ? stay.status === "checked_in"
+          ? "occupied"
+          : "reserved"
+        : "vacant";
+
       return {
         id: room.id,
         name: room.name,
         categoryId: room.categoryId,
         dailyRate: category?.defaultBasePrice ?? 0,
-        ...(overlay ?? {}),
-        ...enrichment,
-        status: overlay?.status ?? ("vacant" as KennelStatus),
+        status,
+        ...(stay
+          ? {
+              bookingId: stay.bookingRef,
+              // A kennel holds one guest on this board; a booking may cover
+              // several pets, and the first is the one the square is labelled
+              // with rather than a silent join of names.
+              petName: stay.petNames[0],
+              clientName: stay.clientName,
+              petSpecies: (stay.petType.toLowerCase() === "cat"
+                ? "cat"
+                : "dog") as "cat" | "dog",
+              checkIn: stay.from,
+              checkOut: stay.to,
+            }
+          : {}),
       };
     });
 }
-
-const initialKennels: Kennel[] = buildInitialKennels();
-
-// Boarding categories — only categories tied to boarding rooms.
-const boardingCategories: RoomCategory[] = roomCategories.filter(
-  (c) => c.service === "boarding",
-);
 
 // Daycare uses Play Areas → Sections from the modules data. We adapt them into
 // the same RoomCategory / OccupancyKennel shapes the calendar already understands.
@@ -346,8 +236,56 @@ const initialDaycareKennels: Kennel[] = buildInitialDaycareKennels();
 
 type ServiceType = "boarding" | "daycare" | "both";
 
+/**
+ * The data boundary.
+ *
+ * The board below seeds `useState` from the rooms payload. Seeding state from a
+ * query that has not resolved gives you an empty board that never refills, and
+ * syncing it back with an effect is the `set-state-in-effect` shape the lint
+ * rule objects to — so the branch that needs the data is its own component and
+ * its initialiser runs once, with the data already in hand. Same split as the
+ * client-file layout.
+ */
 export default function KennelViewPage() {
-  const [kennels, setKennels] = useState<Kennel[]>(initialKennels);
+  const { data, isPending, error } = useBoardingRooms();
+
+  if (isPending) {
+    return (
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="h-112 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  // Not an empty board. A board with no kennels drawn on it reads as "nothing
+  // is booked", which is a statement about the facility rather than about a
+  // failed request.
+  if (error || !data) {
+    return (
+      <div className="p-6">
+        <p role="alert" className="text-muted-foreground">
+          Could not load the kennels.{" "}
+          {error instanceof Error ? error.message : "Please try again."}
+        </p>
+      </div>
+    );
+  }
+
+  return <KennelViewBoard rooms={data} />;
+}
+
+function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
+  const { profile } = useFacilityProfile();
+  // The booking wizard opened from a grid cell was offered the CLIENTS FIXTURE
+  // — people who do not exist — while `clients` from @/data is still imported
+  // below for findPetById, which enriches the daycare half (no table yet).
+  const { data: liveClients = [] } = useQuery(clientQueries.all());
+  const queryClient = useQueryClient();
+  const boardingCategories = rooms.categories.filter(
+    (c) => c.service === "boarding",
+  );
+  const [kennels, setKennels] = useState<Kennel[]>(() => buildKennels(rooms));
   const [daycareKennels, setDaycareKennels] = useState<Kennel[]>(
     initialDaycareKennels,
   );
@@ -423,18 +361,36 @@ export default function KennelViewPage() {
       const target = kennels.find((k) => k.id === kennelId);
       if (!target || target.status === "maintenance") return;
       openBookingModal({
-        clients,
+        clients: liveClients,
         facilityId: 11,
-        facilityName: "Pawradise Resort",
+        facilityName: profile.businessName,
         preSelectedService: "boarding",
         preSelectedRoomId: kennelId,
         preSelectedStartDate: date,
-        onCreateBooking: (newBooking) => {
-          console.log("Booking created from occupancy grid", newBooking);
+        onCreateBooking: async (newBooking) => {
+          // This used to be `console.log("Booking created from occupancy
+          // grid", newBooking)`. The wizard closed, the operator believed a
+          // kennel was booked, and nothing had happened.
+          try {
+            const created = await bookingMutations.create(newBooking);
+            // The board itself is derived from the occupancy read, so it has
+            // to be refetched or the new guest does not appear in the kennel
+            // that was just clicked.
+            await queryClient.invalidateQueries({
+              queryKey: ["boarding-rooms"],
+            });
+            await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+            toast.success(`Booking #${created.id} created`);
+          } catch (error) {
+            toast.error("Could not create that booking", {
+              description:
+                error instanceof Error ? error.message : "Please try again.",
+            });
+          }
         },
       });
     },
-    [kennels, openBookingModal],
+    [kennels, openBookingModal, liveClients, profile.businessName, queryClient],
   );
 
   const handleAddDaycareBookingFromCell = useCallback(
@@ -442,21 +398,37 @@ export default function KennelViewPage() {
       const target = daycareKennels.find((k) => k.id === sectionId);
       if (!target || target.status === "maintenance") return;
       openBookingModal({
-        clients,
+        clients: liveClients,
         facilityId: 11,
-        facilityName: "Pawradise Resort",
+        facilityName: profile.businessName,
         preSelectedService: "daycare",
         preSelectedRoomId: sectionId,
         preSelectedStartDate: date,
-        onCreateBooking: (newBooking) => {
-          console.log(
-            "Daycare booking created from occupancy grid",
-            newBooking,
-          );
+        onCreateBooking: async (newBooking) => {
+          // Same as the boarding grid above: this logged to the console and
+          // reported nothing, so a daycare place booked from this screen was
+          // never booked. The SECTIONS on this half are still fixtures — there
+          // is no daycare-areas table — but the BOOKING it creates is real.
+          try {
+            const created = await bookingMutations.create(newBooking);
+            await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+            toast.success(`Booking #${created.id} created`);
+          } catch (error) {
+            toast.error("Could not create that booking", {
+              description:
+                error instanceof Error ? error.message : "Please try again.",
+            });
+          }
         },
       });
     },
-    [daycareKennels, openBookingModal],
+    [
+      daycareKennels,
+      openBookingModal,
+      liveClients,
+      profile.businessName,
+      queryClient,
+    ],
   );
 
   const [showCustomServices, setShowCustomServices] = useState(true);
@@ -626,7 +598,7 @@ export default function KennelViewPage() {
             <KennelCalendarView
               kennels={kennels}
               categories={boardingCategories}
-              facilityName="Pawradise Resort"
+              facilityName={profile.businessName}
               onAddBooking={handleAddBookingFromCell}
               onUpdateBooking={(kennelId, checkIn, checkOut, staffInitials) => {
                 setKennels((prev) =>
@@ -721,7 +693,7 @@ export default function KennelViewPage() {
             <KennelCalendarView
               kennels={daycareKennels}
               categories={daycareCategories}
-              facilityName="Pawradise Resort"
+              facilityName={profile.businessName}
               rateSuffix="/day"
               disableResize
               onAddBooking={handleAddDaycareBookingFromCell}
