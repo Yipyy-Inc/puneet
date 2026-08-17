@@ -1902,6 +1902,57 @@ vanished on reload. The toast said "saved".
 **Do instead:** if a save handler does not call something that can fail, ask
 what it is actually writing to.
 
+## Snapshot (2026-08-17, the front door crashed in production)
+
+### 🔴 A soft `redirect()` can take Next's own router down with React #310
+
+For a day, `www.yipyy.com` showed Next's built-in `global-error` screen —
+"Reload to try again, or go back." — and then loaded correctly three or four
+seconds later. Nothing failed in the network tab, every response was a 200, and
+Vercel's deployment screenshot bot reproduced it, so it was never local.
+
+The cause was `src/app/page.tsx` calling `redirect()`. A page renders inside the
+root layout, the root layout streams, so headers are already sent and Next
+cannot answer 307. It answers **200 with a NEXT_REDIRECT in the RSC payload**
+and hands the navigation to the CLIENT ROUTER instead. That router does this:
+
+```js
+if (pushRef.mpaNavigation) {
+  location.replace(canonicalUrl)
+  throw unresolvedThenable      // abandons the render HERE
+}
+useEffect(...)                  // four more hooks live below this line
+```
+
+The throw abandons the render before the remaining hooks, so that render runs
+FEWER hooks than the previous one and React tears the tree down with
+**#310, "Rendered more hooks than during the previous render"**. The
+`location.replace()` already in flight then completes, which is why the correct
+page appears a moment later. The recovery is what made it look like a network
+problem and cost most of a day chasing DNS, HTTP/2, cookies and extensions.
+
+Two hours of that was spent on the wrong error page: grepping `src/` for the
+error text found nothing, so it was assumed to be Chrome's. It is
+`node_modules/next/dist/client/components/builtin/global-error.js`, and its two
+branches are diagnostic — with a digest it says "A server error occurred", and
+**without one it says "Reload to try again"**, meaning a pure client exception.
+Read which branch rendered before looking at the server at all.
+
+**Fixed** by making `/` a Route Handler (`src/app/route.ts`, PR #124). A route
+handler has no layout, renders no React and streams nothing, so
+`NextResponse.redirect` is a genuine 307 the browser follows itself. The
+crashing path is not repaired, it is unreachable.
+
+**Still live elsewhere.** The portal gates in `src/lib/auth/viewer.ts` redirect
+from layouts and are therefore still soft, so a denied visitor to `/dashboard`
+or `/facility/dashboard` can still hit this. They are not converted because a
+layout gate cannot become a route handler — it guards a subtree.
+
+**Do instead:** when a URL exists only to send someone somewhere else, make it a
+Route Handler, not a page with `redirect()`. Verify with
+`curl -i` that it is a 307 — a 200 with a `text/x-component` body means the
+client router is doing the work and this bug is in range.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
