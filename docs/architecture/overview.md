@@ -13,7 +13,7 @@ The system as it actually is on the date this was written. For the rules you mus
 
 ## Rendering & data-flow model
 
-- The app is **no longer mock-driven, and has not been since 2026-08.** There is a real backend: **Supabase Postgres**, with row-level security as the authorisation boundary and **Clerk** as the identity provider (ADR [0003](decisions/0003-clerk-owns-identity-supabase-owns-data.md)). Domain data increasingly lives in tables reached through `src/app/api/*` route handlers and RLS-scoped queries.
+- The app is **no longer mock-driven, and has not been since 2026-08.** There is a real backend: **Supabase Postgres**, with row-level security as the authorisation boundary and **WorkOS AuthKit** as the identity provider (ADR [0004](decisions/0004-workos-replaces-clerk-as-identity-provider.md), which replaced Clerk on 2026-08-17; ADR [0003](decisions/0003-clerk-owns-identity-supabase-owns-data.md) still describes the seam, which did not move). Domain data increasingly lives in tables reached through `src/app/api/*` route handlers and RLS-scoped queries.
 - Hand-authored TypeScript in [src/data/](../../src/data/) (~135 files) still backs the screens that have not been converted, so BOTH are true at once — which is the single most important thing to establish before touching a surface. Check whether the screen you are editing reads a table or a fixture; do not assume either.
 - A **TanStack Query factory layer** in [src/lib/api/](../../src/lib/api/) (25 files: `booking.ts`, `client.ts`, `loyalty.ts`, `reputation.ts`, `training.ts`, …) wraps mock data behind `queryFn`s so a future real API only changes the factory. This layer is **partially adopted** — many components still import directly from `src/data/` (see Deviations).
 - There are now **~98 route handlers** under [src/app/api/](../../src/app/api/), the majority of them real reads and writes against Postgres. The AI routes are no longer special: they were simply the first.
@@ -38,15 +38,15 @@ scripts/        Standalone bun scripts (e.g. pricing-consistency check).
 
 ### Route groups (audiences) under `src/app/`
 
-| Segment                        | Audience                        | What lives here                                                                                                                                                                                                       |
-| ------------------------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `customer/` (33 pages)         | Pet owners                      | Booking, pets/household, training enrollment, billing/wallet, rewards/referrals, report cards, messages, cameras, gift cards                                                                                          |
-| `facility/` (171 pages)        | Business admin & staff managers | `dashboard/` operations hub; `dashboard/services/{daycare,boarding,grooming,training,retail,vet}/`; `dashboard/{loyalty,calling,billing,staff,clients/[id],forms,calendar,gift-cards}/`; `hq/` multi-location rollups |
-| `dashboard/` (37 pages)        | Platform super-admin            | Analytics/BI, facilities onboarding, subscriptions/modules, user-management, system-admin (feature toggles, AI settings, audit logs), system-health, security-compliance                                              |
-| `employee/(shell)/` (12 pages) | Front-line staff                | Role-scoped ops views (daycare, boarding, grooming, training, kennel, retail, tasks, schedule, clients) under one shared layout                                                                                       |
-| `groomer/`, `staff/`           | Groomers / staff                | Profile, dashboard                                                                                                                                                                                                    |
-| `sign-in/`, `sign-up/`         | Anyone signing in               | Clerk-hosted flows (Google / Apple). One sign-in for every portal — see ADR 0003; the per-portal login pages were removed 2026-08-05                                                                                  |
-| public token routes            | Anyone with a link              | `book/[slug]`, `review/[token]`, `forms/`, `customer/estimates/[token]` — server components doing `notFound()` on bad tokens                                                                                          |
+| Segment                        | Audience                        | What lives here                                                                                                                                                                                                                     |
+| ------------------------------ | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `customer/` (33 pages)         | Pet owners                      | Booking, pets/household, training enrollment, billing/wallet, rewards/referrals, report cards, messages, cameras, gift cards                                                                                                        |
+| `facility/` (171 pages)        | Business admin & staff managers | `dashboard/` operations hub; `dashboard/services/{daycare,boarding,grooming,training,retail,vet}/`; `dashboard/{loyalty,calling,billing,staff,clients/[id],forms,calendar,gift-cards}/`; `hq/` multi-location rollups               |
+| `dashboard/` (37 pages)        | Platform super-admin            | Analytics/BI, facilities onboarding, subscriptions/modules, user-management, system-admin (feature toggles, AI settings, audit logs), system-health, security-compliance                                                            |
+| `employee/(shell)/` (12 pages) | Front-line staff                | Role-scoped ops views (daycare, boarding, grooming, training, kennel, retail, tasks, schedule, clients) under one shared layout                                                                                                     |
+| `groomer/`, `staff/`           | Groomers / staff                | Profile, dashboard                                                                                                                                                                                                                  |
+| `sign-in/`, `sign-up/`         | Anyone signing in               | **Our own forms**, not a hosted widget (ADR 0004 §4) — email/password via server actions, plus Google / Apple through WorkOS OAuth. One sign-in for every portal — see ADR 0003; the per-portal login pages were removed 2026-08-05 |
+| public token routes            | Anyone with a link              | `book/[slug]`, `review/[token]`, `forms/`, `customer/estimates/[token]` — server components doing `notFound()` on bad tokens                                                                                                        |
 
 The `services/{service}/` pages repeat a consistent sub-route shape (overview, check-in, rates, rooms, report-cards, tasks, settings). The 7 service layouts are candidates for the shared `ServiceModuleLayout` described in CLAUDE.md.
 
@@ -61,7 +61,7 @@ The `services/{service}/` pages repeat a consistent sub-route shape (overview, c
 
 - **Anthropic API** (`@anthropic-ai/sdk`) — confined to `src/app/api/ai/*`. Used for report-card summaries, evaluation summaries, and ~14 text-generation templates (chat replies, marketing copy, incident notes, etc.). Endpoints track token usage and fall back gracefully on failure. Key/config via `.env.local`.
 - **Unsplash** — remote image host allow-listed in `next.config.ts` (`images.remotePatterns`).
-- **Clerk** — identity. **Supabase** — Postgres, RLS, Vault, Storage.
+- **WorkOS AuthKit** — identity (ADR 0004; replaced Clerk 2026-08-17). **Supabase** — Postgres, RLS, Vault, Storage.
 - **Clover** — card payments, live against a real merchant account. Not simulated.
 - SMS, cameras and telephony remain **simulated in mock data**, not integrated. (Twilio has config surfaces but the call paths are still fixtures.)
 

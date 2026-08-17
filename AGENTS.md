@@ -8,7 +8,7 @@ The entry point for every AI session in this repo. Read this first, then the spe
 
 It **was** a mock-driven prototype. It is now **half-converted, and that is the single most important fact about it.**
 
-There is a real backend: **Supabase Postgres** with row-level security as the authorisation boundary, **Clerk** for identity ([ADR 0003](docs/architecture/decisions/0003-clerk-owns-identity-supabase-owns-data.md)), and **live Clover card payments** — real money, a real merchant account. Alongside it, ~135 files of typed fixtures in [src/data/](src/data/) still back every screen nobody has converted yet.
+There is a real backend: **Supabase Postgres** with row-level security as the authorisation boundary, **WorkOS AuthKit** for identity ([ADR 0004](docs/architecture/decisions/0004-workos-replaces-clerk-as-identity-provider.md), which replaced Clerk on 2026-08-17 — [ADR 0003](docs/architecture/decisions/0003-clerk-owns-identity-supabase-owns-data.md) still describes the seam it kept), and **live Clover card payments** — real money, a real merchant account. Alongside it, ~135 files of typed fixtures in [src/data/](src/data/) still back every screen nobody has converted yet.
 
 **So establish which half you are in before you edit anything.** A screen that looks finished may be reading a fixture and writing nowhere; a screen that looks rough may be moving real money. Grep for what it imports. The mistakes that have cost the most time in this repo are all the same mistake: assuming.
 
