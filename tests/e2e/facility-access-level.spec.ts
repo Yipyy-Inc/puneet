@@ -130,6 +130,69 @@ test.describe("inviting somebody onto the platform team", () => {
     expect(response.status()).toBe(403);
   });
 
+  test("the roster is the database's answer, not a fixture's", async ({
+    page,
+  }) => {
+    // /dashboard/user-management read src/data/admin-users.ts plus a
+    // localStorage overlay, so a real invitation appeared to do nothing there
+    // and five invented people appeared to be colleagues. It reads
+    // platform_memberships + platform_invitations now.
+    await signIn(page, ACCOUNTS.admin);
+
+    const response = await page.request.get("/api/admin/team");
+    expect(response.status()).toBe(200);
+
+    const { team } = (await response.json()) as {
+      team: { kind: string; email: string; role: string; status: string }[];
+    };
+
+    // The caller is on the team they are reading, which is the cheapest proof
+    // that these are real rows: a fixture could not know who asked.
+    const self = team.find((row) => row.email === ACCOUNTS.admin);
+    expect(
+      self,
+      "the signed-in admin appears in their own roster",
+    ).toBeTruthy();
+    expect(self?.status).toBe("active");
+    expect(self?.kind).toBe("member");
+
+    // Every role is one public.platform_role actually has. The console's five
+    // job-flavoured labels are mapped server-side and must never reach here.
+    for (const row of team) {
+      expect(["superadmin", "support", "billing", "readonly"]).toContain(
+        row.role,
+      );
+    }
+  });
+
+  test("and the screen shows those rows, not five invented people", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.admin);
+    await page.goto("/dashboard/user-management");
+
+    await expect(
+      page.getByRole("heading", { name: "Platform team" }),
+    ).toBeVisible();
+
+    // The signed-in admin's own address, rendered by the table.
+    await expect(page.getByText(ACCOUNTS.admin).first()).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // And nobody from src/data/admin-users.ts. These names were the roster.
+    for (const invented of ["Sarah", "Michael", "Emily"]) {
+      await expect(page.getByText(invented, { exact: false })).toHaveCount(0);
+    }
+  });
+
+  test("the roster is refused to everyone else", async ({ page, request }) => {
+    expect((await request.get("/api/admin/team")).status()).toBe(403);
+
+    await signIn(page, ACCOUNTS.owner);
+    expect((await page.request.get("/api/admin/team")).status()).toBe(403);
+  });
+
   test("a forged invitation token opens nothing", async ({ page }) => {
     // Exactly the shape the OLD token had: base64url JSON, no signature, with a
     // `role` field the holder could edit. The page decoded it and believed it.
