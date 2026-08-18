@@ -2070,24 +2070,34 @@ Signing the old blob would have fixed the tampering and nothing else; opacity
 also gives expiry, revocation and single-use as rows, and turns a database dump
 into hashes rather than live links.
 
-### 🟡 The platform-team roster is still a fixture (`admin-team-store`)
+### 🟢 The platform-team ROSTER is real (was 🟡) — its three siblings are not
 
-`/setup/[token]` now creates a real WorkOS identity, a real `profiles` row and a
-real `platform_memberships` row. The four screens under
-`/dashboard/user-management` still read `src/data/admin-users.ts` plus a
-localStorage overlay, so the roster they show is **not** the platform team the
-database has.
+~~The four screens under `/dashboard/user-management` read
+`src/data/admin-users.ts` plus a localStorage overlay, so a real invitation
+appeared to do nothing and a fixture row appeared to be a colleague.~~ The
+roster reads `platform_memberships` + `platform_invitations` through
+`src/lib/api/platform-team.ts` now, and a pending invitation can be revoked from
+the row (`public.revoke_platform_invitation`, superadmin-only).
 
-**Why it matters:** the invite flow writes to Postgres and the table that
-displays the result reads a fixture, so a real invitation appears to do nothing
-and a fixture row appears to be a colleague. This is the half-converted trap
-AGENTS.md warns about, now with a documented seam.
+**Four columns went with it, and their absence is the point.** Department,
+Access Level, Last Login and Phone had fixture values and have no source in the
+database. Keeping them would have meant inventing figures or shipping four
+permanently empty columns. The "Suspended" tile went for the same reason —
+`platform_memberships` has no such state, so the number could only ever have
+been zero dressed as a measurement.
 
-**Do instead:** read `platform_memberships` joined to `profiles`, plus
-`platform_invitations` for the pending rows. `AdminRole`'s five job labels have
-no Postgres counterpart — `toPlatformRole` in
-`src/lib/auth/platform-invitation.ts` is the mapping, and it defaults to
-`readonly` so an unfamiliar label cannot become an accidental superadmin.
+**Still fixture-backed, and this is the live seam:** `user-management/roles`,
+`user-management/activity` and `user-management/create`. Role definitions and the
+activity log still describe five invented people, next to a roster listing the
+real three.
+
+**Do instead:** before keeping a column on a screen you are converting, check
+what the database records. A column with no source is worse than a missing one,
+because it is indistinguishable from a measured zero. `AdminRole`'s five job
+labels have no Postgres counterpart — `toPlatformRole` in
+`src/lib/auth/platform-invitation.ts` maps them onto the four real platform
+roles and defaults to `readonly`, so an unfamiliar label cannot become an
+accidental superadmin.
 
 ### 🔴 Every member could read their employer's plan and Clover merchant (fixed)
 
