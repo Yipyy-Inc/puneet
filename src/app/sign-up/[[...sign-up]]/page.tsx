@@ -16,6 +16,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("auth.meta");
   return {
     title: branding ? t("signUpBranded", { name: branding.name }) : t("signUp"),
+    // The browser tab is part of the branding too. A facility whose page says
+    // their name under Yipyy's paw icon is still half somebody else's site.
+    // Only when they HAVE a mark -- the root layout's icon stays the fallback,
+    // because a missing favicon is worse than a generic one.
+    ...(branding?.logoUrl ? { icons: { icon: branding.logoUrl } } : {}),
   };
 }
 
@@ -78,7 +83,7 @@ export default async function SignUpPage() {
         </p>
       }
     >
-      <EmailSignUpForm />
+      <EmailSignUpForm facilityName={branding?.name} />
 
       <div className="flex items-center gap-3">
         <span className="bg-border h-px flex-1" />
