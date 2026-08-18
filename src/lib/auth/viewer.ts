@@ -256,6 +256,39 @@ export function canAccessStaffPortal(viewer: Viewer): boolean {
 }
 
 /**
+ * May this person act on the facility's OWN account — its subscription, its
+ * payment method, its data export, its Yipyy agreements?
+ *
+ * ── WHY THIS EXISTS, AND WHAT IT REPLACED ─────────────────────────────────
+ *
+ * `requireFacilityOwner()` used to answer this by reading the `facility_role`
+ * COOKIE, through a helper whose rule was `role == null || role === "owner"`.
+ * An ABSENT cookie meant yes. The cookie is written by `document.cookie` from
+ * a client hook, so deleting it in devtools — or never having it — opened the
+ * subscription, the payment method and a full data export to any member of any
+ * facility. The layout above it states it "returns a 403 for any non-owner
+ * role", which was not true, and a false assurance is worse than none because
+ * the next feature is written on top of it.
+ *
+ * This reads the session instead: the same membership rows RLS decides with,
+ * which no browser can edit.
+ *
+ * ── WHY A ROLE SET AND NOT A PERMISSION KEY ───────────────────────────────
+ *
+ * Cancelling the subscription is not a permission a facility should be able to
+ * hand out through its own role editor — that would let a facility grant itself
+ * authority over its own billing relationship. It is an access level, which is
+ * exactly the distinction ADR 0005 draws. When `access_level` lands this body
+ * becomes `m.accessLevel === "admin"` and the role set goes away.
+ */
+export function canManageFacilityAccount(viewer: Viewer): boolean {
+  if (viewer.source !== "session") return false;
+  // A platform admin has to be able to see a facility's billing to support it.
+  if (viewer.isPlatformAdmin) return true;
+  return viewer.memberships.some((m) => FACILITY_ADMIN_ROLES.has(m.role));
+}
+
+/**
  * Coarse "can this person create records for the facility" check, used for
  * a couple of header affordances.
  *

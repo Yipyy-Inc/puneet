@@ -137,6 +137,16 @@ _Rejected:_ a superadmin-chosen temporary password. It puts a working credential
 for someone else's business in Yipyy's hands and, in practice, into an email
 thread.
 
+> **Superseded in one detail, 2026-08-18.** "Clerk emails an invitation" is no
+> longer true — [ADR 0004](../../docs/architecture/decisions/0004-workos-replaces-clerk-as-identity-provider.md)
+> replaced Clerk with WorkOS, and the invitation is sent by Yipyy through Resend,
+> not by the identity provider. **The decision itself stands and is what shipped:**
+> a grant recorded against an address, a link to the facility's OWN host with no
+> token in it, and the grant claimed by a trigger when the profile appears. The
+> current description is
+> [docs/product/onboarding-and-roles.md](../../docs/product/onboarding-and-roles.md).
+> This spec is left as the historical record.
+
 **D4 — Tenancy stays in Postgres, not in Clerk.** Reaffirms ADR 0003. Clerk is
 identity only; `facility_memberships` remains the authority on who belongs where
 and in what role, because the whole permission cascade
