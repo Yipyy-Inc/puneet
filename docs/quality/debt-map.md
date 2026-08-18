@@ -2042,6 +2042,53 @@ than the guard. Fixed in `20260818120000_the_hire_guard_reads_the_right_column`.
 And branch on `tg_table_name` with `IF`, one statement per arm, never with a
 CASE over fields that do not exist on both records.
 
+### 🔴 `/api/admin/invite` was an unauthenticated relay (fixed)
+
+No guard of any kind. Any caller who knew the path could POST a name and an
+address, and Yipyy would send that person a branded "you have been invited to
+the admin console" email — from the same domain that carries password resets.
+Phishing with the real sender, at no cost to the attacker.
+
+The link it produced was worse than useless: the invitation was plain base64url
+JSON, so the recipient could decode it, change `role` to
+`system_administrator`, re-encode, and open `/setup/<their own token>`. The
+page believed the payload because the payload was the only thing there was to
+believe.
+
+Closed by `20260818160000_a_platform_invitation_is_a_real_token`. The route now
+refuses a non-platform-admin (403), and the real check is
+`public.invite_platform_admin`, which requires **superadmin** and runs on the
+database from the caller's own JWT — so the route calls it with the CALLER's
+client, not the service-role one. Using the service key there would bypass the
+check that makes the invitation safe and quietly promote the route guard to
+being the only thing standing.
+
+**Do instead:** when a route exists to send mail on the platform's behalf,
+assume it is a phishing primitive until it has a guard. And when a token needs
+to carry authority, make it opaque and store its hash — do not sign a payload.
+Signing the old blob would have fixed the tampering and nothing else; opacity
+also gives expiry, revocation and single-use as rows, and turns a database dump
+into hashes rather than live links.
+
+### 🟡 The platform-team roster is still a fixture (`admin-team-store`)
+
+`/setup/[token]` now creates a real WorkOS identity, a real `profiles` row and a
+real `platform_memberships` row. The four screens under
+`/dashboard/user-management` still read `src/data/admin-users.ts` plus a
+localStorage overlay, so the roster they show is **not** the platform team the
+database has.
+
+**Why it matters:** the invite flow writes to Postgres and the table that
+displays the result reads a fixture, so a real invitation appears to do nothing
+and a fixture row appears to be a colleague. This is the half-converted trap
+AGENTS.md warns about, now with a documented seam.
+
+**Do instead:** read `platform_memberships` joined to `profiles`, plus
+`platform_invitations` for the pending rows. `AdminRole`'s five job labels have
+no Postgres counterpart — `toPlatformRole` in
+`src/lib/auth/platform-invitation.ts` is the mapping, and it defaults to
+`readonly` so an unfamiliar label cannot become an accidental superadmin.
+
 ### 🔴 Every member could read their employer's plan and Clover merchant (fixed)
 
 `facility_subscriptions_read` and `payment_connections_read` were both "any

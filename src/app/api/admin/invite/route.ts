@@ -2,24 +2,59 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { roleDisplayNames, type AdminRole } from "@/data/admin-users";
 import { buildInviteEmail } from "@/lib/admin-invite-email";
-import { createInviteToken, INVITE_TOKEN_TTL_MS } from "@/lib/invitation-token";
+import { getViewer } from "@/lib/auth/viewer";
+import {
+  PLATFORM_INVITE_TTL_MS,
+  mintPlatformInviteToken,
+  toByteaLiteral,
+  toPlatformRole,
+} from "@/lib/auth/platform-invitation";
 import { platformOrigin } from "@/lib/public-origin";
+import { createServerClient } from "@/lib/supabase/server";
 
-// Sends a real admin-team invitation email with a 48-hour setup link.
-// Env-gated like the AI routes: when RESEND_API_KEY is absent we don't fake a
-// send — we return sent:false + the setup link so the inviter can share it.
+// ============================================================================
+// Invite somebody onto the Yipyy platform team.
+//
+// ── WHAT THIS ROUTE USED TO BE ────────────────────────────────────────────
+//
+// An UNAUTHENTICATED RELAY. There was no guard of any kind: any caller who knew
+// the path could POST a name and an address and Yipyy would send that person a
+// branded "you have been invited to the admin console" email, from the same
+// domain that carries password resets. Phishing with the real sender.
+//
+// It also minted an invitation whose role field was editable by the recipient
+// (see lib/auth/platform-invitation.ts), and the link it produced led to a page
+// that created nothing.
+//
+// ── TWO GUARDS, ON PURPOSE ────────────────────────────────────────────────
+//
+// The check below refuses anyone who is not on the platform team, and it is the
+// cheap one — it exists so the route stops being a relay before any work is
+// done. The REAL check is in public.invite_platform_admin, which requires
+// SUPERADMIN and runs on the database from the caller's own JWT.
+//
+// So this uses the caller's client, not the service-role one. Doing it with the
+// service key would bypass the very check that makes the invitation safe, and
+// the route guard would silently become the only thing standing there.
+// ============================================================================
 
 interface InviteBody {
-  id: number;
   name: string;
   email: string;
   role: string;
-  department: string;
+  department?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
+  const viewer = await getViewer();
+  if (viewer.source !== "session" || !viewer.isPlatformAdmin) {
+    // Deliberately the same answer for "not signed in" and "signed in, not on
+    // the team": whether this route exists is not a stranger's business.
+    return NextResponse.json({ error: "Not permitted." }, { status: 403 });
+  }
+
   let body: InviteBody;
   try {
     body = (await req.json()) as InviteBody;
@@ -30,28 +65,46 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { id, name, email, role, department } = body;
-  if (!id || !name?.trim() || !email?.trim() || !EMAIL_RE.test(email)) {
+  const { name, email, role, department } = body;
+  if (!name?.trim() || !email?.trim() || !EMAIL_RE.test(email)) {
     return NextResponse.json(
-      { error: "Name, a valid email, and id are required." },
+      { error: "A name and a valid email are required." },
       { status: 400 },
     );
   }
 
-  const token = createInviteToken({ id, name, email, role, department });
+  const platformRole = toPlatformRole(role);
+  const { token, hash } = mintPlatformInviteToken();
+  const expiresAt = Date.now() + PLATFORM_INVITE_TTL_MS;
+
+  const supabase = await createServerClient();
+  const { error } = await supabase.rpc("invite_platform_admin", {
+    p_email: email.trim(),
+    p_full_name: name.trim(),
+    p_role: platformRole,
+    p_token_hash: toByteaLiteral(hash),
+    p_expires_at: new Date(expiresAt).toISOString(),
+  });
+
+  if (error) {
+    // 23505 is "already on the platform team" — a legitimate thing to tell a
+    // superadmin, who can see the roster anyway.
+    const status = error.code === "42501" ? 403 : 400;
+    return NextResponse.json({ error: error.message }, { status });
+  }
+
   // Yipyy's OWN address. This invites somebody onto the PLATFORM team, so
   // sending them to a customer's branded host to set up their account would be
   // the facility-invite bug pointing the other way — see lib/public-origin.ts.
   const origin = platformOrigin(req);
   const setupUrl = `${origin}/setup/${token}`;
-  const expiresAt = Date.now() + INVITE_TOKEN_TTL_MS;
   const roleLabel = roleDisplayNames[role as AdminRole] ?? role;
 
   const email_ = buildInviteEmail({
     origin,
     name,
     roleLabel,
-    department,
+    department: department ?? "",
     setupUrl,
     expiryHours: 48,
   });
@@ -59,7 +112,9 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.RESEND_API_KEY;
 
   // ENV-GATE (mirrors the AI routes): no key → honest "not configured", and we
-  // hand back the setup link so the invite still works.
+  // hand back the setup link so the invite still works. The invitation ROW
+  // exists either way, which is the part that changed — the link is now a
+  // pointer to something real rather than the thing itself.
   if (!apiKey) {
     return NextResponse.json({
       sent: false,
@@ -68,6 +123,7 @@ export async function POST(req: NextRequest) {
         "Email service not configured (set RESEND_API_KEY). Share the setup link below instead.",
       setupUrl,
       expiresAt,
+      platformRole,
     });
   }
 
@@ -97,6 +153,7 @@ export async function POST(req: NextRequest) {
           "The email service rejected the request. Share the setup link instead.",
         setupUrl,
         expiresAt,
+        platformRole,
       });
     }
 
@@ -106,6 +163,7 @@ export async function POST(req: NextRequest) {
       providerId: data.id ?? null,
       setupUrl,
       expiresAt,
+      platformRole,
     });
   } catch (error) {
     console.error("Admin invite email error:", error);
@@ -116,6 +174,7 @@ export async function POST(req: NextRequest) {
         "Could not reach the email service. Share the setup link instead.",
       setupUrl,
       expiresAt,
+      platformRole,
     });
   }
 }
