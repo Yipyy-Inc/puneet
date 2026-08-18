@@ -15,11 +15,31 @@ import "server-only";
 // DNS-01 challenge — Let's Encrypt requires an `_acme-challenge` TXT record
 // that Vercel has to write and rotate itself.
 //
-// Moving the nameservers to Vercel would mean recreating twelve records, four
-// of them load-bearing: the MX pair (all company email), `clerk` and
-// `accounts` (every sign-in on the platform), and the DKIM pair (Clerk's mail
-// stops authenticating). A typo in any of them is an outage in something
-// unrelated to facilities.
+// Confirmed again on 2026-08-18 by adding `*.yipyy.com` to the project: it
+// reports "Invalid Configuration -- update your domain's nameservers", and
+// offers no DNS-01 record to add. Nameserver delegation is the ONLY route, so
+// there is nothing to retry here.
+//
+// Moving the nameservers would mean recreating ELEVEN records, and most of them
+// have nothing to do with facilities. Enumerated from the live zone rather than
+// remembered (the earlier version of this note counted twelve and named Clerk's
+// `clerk`/`accounts` hosts, which ADR 0004 removed):
+//
+//   A      yipyy.com                   -> Vercel          the site
+//   CNAME  www                         -> yipyy.com       the site
+//   CNAME  *                           -> Vercel          EVERY facility host
+//   MX     yipyy.com                   -> mx1/mx2.hostinger.com   ALL COMPANY EMAIL
+//   TXT    yipyy.com                   -> v=spf1 ...hostinger...  company email SPF
+//   TXT    yipyy.com                   -> google-site-verification=...
+//   CNAME  autodiscover                -> ...hostinger.com        mail auto-setup
+//   TXT    _dmarc                      -> v=DMARC1; p=none
+//   MX     send                        -> feedback-smtp...amazonses.com   Resend bounces
+//   TXT    send                        -> v=spf1 include:amazonses.com    Resend SPF
+//   TXT    resend._domainkey           -> p=MIGfMA0G...                   Resend DKIM
+//
+// The last three carry every password-reset and verification email WorkOS
+// sends. A typo there does not break facilities -- it locks people out of the
+// platform, silently, because the mail still sends and just lands in spam.
 //
 // So DNS keeps a single wildcard CNAME at the registrar — every subdomain
 // RESOLVES to Vercel — and each facility host is added to the project on its
