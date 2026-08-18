@@ -9,21 +9,22 @@ import { createServerClient } from "@/lib/supabase/server";
 //
 // This exists because making the invite REAL opened a hole that did not exist
 // while it was a mock. /api/staff/[id]/invite creates a facility_memberships
-// row so the new account has a facility at all — and canAccessFacilityPortal
-// admits ANY active membership:
+// row so the new account has a facility at all — and a membership then means
+// "someone we emailed yesterday who has set a password and nothing else", not
+// "someone who works here and has finished joining". That person could open
+// /facility/dashboard.
 //
-//     viewer.source === "session" && (isPlatformAdmin || memberships.length > 0)
+// STILL TRUE AFTER ADR 0005, and worth being precise about. canAccessFacilityPortal
+// now requires ADMIN access rather than any membership, which narrows this to
+// invited admins — but that is exactly the case that reached production: the
+// owner of a newly provisioned facility, invited and not yet finished. An
+// invited groomer is now sent to /employee instead, and lands here for the same
+// reason.
 //
-// which was correct when a membership meant "someone who works here and has
-// finished joining". After this change a membership also means "someone we
-// emailed yesterday who has set a password and nothing else", and that person
-// could open /facility/dashboard.
-//
-// Not a hole in canAccessFacilityPortal — the rule there is right for what it
-// answers, and widening or narrowing it would change the answer for every
-// existing member. The missing question is a different one: has this person
-// finished joining? That is what `staff.status = 'invited'` records, and this
-// is where it gets asked.
+// Not a hole in canAccessFacilityPortal — the rule there answers "may you run
+// this business", and it answers it correctly. The missing question is a
+// different one: has this person finished joining? That is what
+// `staff.status = 'invited'` records, and this is where it gets asked.
 //
 // RLS still decides what they could actually READ if they got in — an invited
 // groomer sees a groomer's rows. This is routing, not the boundary. But routing

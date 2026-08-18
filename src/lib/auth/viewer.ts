@@ -2,7 +2,10 @@ import "server-only";
 
 import { withAuth } from "@workos-inc/authkit-nextjs";
 
-import type { FacilityStaffRole } from "@/types/facility-staff";
+import type {
+  FacilityAccessLevel,
+  FacilityStaffRole,
+} from "@/types/facility-staff";
 import { createWorkosServerClient } from "@/lib/supabase/workos-server";
 
 // ============================================================================
@@ -51,7 +54,13 @@ import { createWorkosServerClient } from "@/lib/supabase/workos-server";
 export type ViewerMembership = {
   membershipId: string;
   facilityId: string;
+  /**
+   * The JOB TITLE. Selects the permission template private.resolve_permission
+   * reads — it does NOT decide which portal you get. See ADR 0005.
+   */
   role: FacilityStaffRole;
+  /** Which portal you get. The only thing the gates below read. */
+  accessLevel: FacilityAccessLevel;
 };
 
 export type Viewer = {
@@ -109,7 +118,7 @@ async function viewerFromSession(): Promise<Viewer | null> {
       .maybeSingle(),
     supabase
       .from("facility_memberships")
-      .select("id, facility_id, role")
+      .select("id, facility_id, role, access_level")
       .eq("profile_id", userId)
       .eq("is_active", true),
   ]);
@@ -133,6 +142,9 @@ async function viewerFromSession(): Promise<Viewer | null> {
       membershipId: m.id,
       facilityId: m.facility_id,
       role: m.role as FacilityStaffRole,
+      // Absent only if this build is ahead of the migration. Defaulting to
+      // "staff" is the fail-closed answer — the same default the column has.
+      accessLevel: (m.access_level ?? "staff") as FacilityAccessLevel,
     })),
   };
 }
@@ -154,13 +166,22 @@ export function belongsToFacility(viewer: Viewer, facilityId: string): boolean {
 // portal a person lands in. That decision is here rather than in the sign-in
 // action so the gates and the action cannot disagree about it.
 
-/** Roles that run the business and get the full facility admin portal. */
-const FACILITY_ADMIN_ROLES = new Set<string>([
-  "owner",
-  "admin",
-  "manager",
-  "supervisor",
-]);
+/**
+ * Does this person run the business at any facility?
+ *
+ * Reads `accessLevel`, never the job title. The hardcoded role set that used to
+ * live here — owner/admin/manager/supervisor — is now the BACKFILL of
+ * `facility_memberships.access_level`, so this answers identically for every
+ * membership that exists today while letting a facility promote, say, its
+ * receptionist without also handing them an owner's 168 permissions.
+ *
+ * The database enforces the same split from the other side:
+ * private.is_facility_admin reads the same column, and a trigger stops anyone
+ * but an existing admin from raising it.
+ */
+function isFacilityAdmin(memberships: ViewerMembership[]): boolean {
+  return memberships.some((m) => m.accessLevel === "admin");
+}
 
 export function landingPathForClaims(
   isPlatformAdmin: boolean,
@@ -172,7 +193,7 @@ export function landingPathForClaims(
   const primary = memberships[0];
   if (!primary) return "/customer/dashboard";
 
-  if (memberships.some((m) => FACILITY_ADMIN_ROLES.has(m.role))) {
+  if (isFacilityAdmin(memberships)) {
     return "/facility/dashboard";
   }
 
@@ -210,15 +231,23 @@ export function landingPathFor(viewer: Viewer): string {
 // of defence; it is the first.
 
 /**
- * Facility portal. Any active membership admits you; platform admins are let
- * through so they can review facility and HQ features without swapping
- * identity — which is what the old cookie rule allowed too.
+ * Facility portal — the admin surface. ADR 0005 made this an ADMIN gate.
+ *
+ * It used to be byte-identical to canAccessStaffPortal: any active membership
+ * admitted you, so a groomer who typed /facility got the whole business. Only
+ * the LANDING PATH differed, which meant the admin/staff distinction was a
+ * suggestion the app made and nothing enforced.
+ *
+ * Platform admins still pass — a super admin has to be able to see a facility
+ * to support it (ADR 0005 §5).
+ *
+ * Still routing, not the boundary: RLS is what returns zero rows to a staff
+ * member who ignores the redirect. The step that makes THIS gate load-bearing
+ * is moving the admin-only tables onto private.is_facility_admin.
  */
 export function canAccessFacilityPortal(viewer: Viewer): boolean {
-  return (
-    viewer.source === "session" &&
-    (viewer.isPlatformAdmin || viewer.memberships.length > 0)
-  );
+  if (viewer.source !== "session") return false;
+  return viewer.isPlatformAdmin || isFacilityAdmin(viewer.memberships);
 }
 
 /**
@@ -283,14 +312,18 @@ export function canAccessStaffPortal(viewer: Viewer): boolean {
  * Cancelling the subscription is not a permission a facility should be able to
  * hand out through its own role editor — that would let a facility grant itself
  * authority over its own billing relationship. It is an access level, which is
- * exactly the distinction ADR 0005 draws. When `access_level` lands this body
- * becomes `m.accessLevel === "admin"` and the role set goes away.
+ * exactly the distinction ADR 0005 draws.
+ *
+ * That access level has now landed, so this reads the column rather than the
+ * role set it was written against. Same answer for every membership alive
+ * today; a different, correct one the moment a facility promotes somebody whose
+ * job title is not an admin-tier one.
  */
 export function canManageFacilityAccount(viewer: Viewer): boolean {
   if (viewer.source !== "session") return false;
   // A platform admin has to be able to see a facility's billing to support it.
   if (viewer.isPlatformAdmin) return true;
-  return viewer.memberships.some((m) => FACILITY_ADMIN_ROLES.has(m.role));
+  return isFacilityAdmin(viewer.memberships);
 }
 
 /**
