@@ -8,11 +8,14 @@ Yipyy is a SaaS platform for pet-care businesses — daycare, boarding, grooming
 
 ## Who it's for (user types)
 
-1. **Pet owner / customer** — books services, manages pets & household, enrolls in training, pays, earns rewards, watches cameras, reads report cards. (Observed: [src/app/customer/](../../src/app/customer/).)
-2. **Facility owner / admin** — runs a location's bookings, services, clients, billing, staff, loyalty, reputation, and (multi-site) HQ rollups. (Observed: [src/app/facility/](../../src/app/facility/).)
-3. **Facility staff / employee** — role-scoped daily operations (groomer, trainer, daycare/boarding attendant, reception, sanitation). (Observed: [src/app/employee/(shell)/](../../src/app/employee/); role list [inferred] from route names.)
-4. **Groomer (independent/mobile)** — own queue, schedule, and route planning. (Observed: [src/app/groomer/](../../src/app/groomer/).)
-5. **Platform super-admin** — manages facilities, subscriptions/modules, users/roles, system config, AI settings, health, and compliance across the tenant base. (Observed: [src/app/dashboard/](../../src/app/dashboard/).)
+Four roles, and which one you are decides which portal you land in. The workflow that creates
+them — who invites whom — is [onboarding-and-roles.md](onboarding-and-roles.md); the reasoning
+is [ADR 0005](../architecture/decisions/0005-three-facility-roles-one-staff-portal.md).
+
+1. **Pet owner / customer** — books services, manages pets & household, enrolls in training, pays, earns rewards, watches cameras, reads report cards. Not a membership: a `clients` row at one facility, so the same login can be a customer at several. (Observed: [src/app/customer/](../../src/app/customer/).)
+2. **Facility admin** — runs the business: bookings, services, clients, billing, staff, loyalty, reputation, and (multi-site) HQ rollups. Merges what used to be owner/admin/manager/supervisor. (Observed: [src/app/facility/](../../src/app/facility/).)
+3. **Facility staff** — the daily work surface, scoped by permissions. Everyone who is not an admin: groomers, trainers, daycare and boarding attendants, reception, sanitation. Those are **job titles** selecting a permission template, not separate access levels — a groomer and a receptionist are both Staff and do not see the same screens. (Observed: [src/app/employee/](../../src/app/employee/).)
+4. **Platform super-admin** — Yipyy's own team. Creates every facility, manages subscriptions/modules, system config, AI settings, health and compliance across the tenant base. Signs in at the apex, not at a facility's address. (Observed: [src/app/dashboard/](../../src/app/dashboard/).)
 
 ## What it does — shipped capabilities (each in a paragraph)
 
