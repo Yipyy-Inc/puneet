@@ -13,6 +13,31 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+
+  // ── RETIRED PORTALS ───────────────────────────────────────────────────────
+  //
+  // The first redirects() block in this project. `/groomer` was a one-page
+  // portal reading the src/data/grooming fixture; ADR 0005 retires it in favour
+  // of the canonical /employee shell, which is permission-driven and serves
+  // every job title rather than one.
+  //
+  // A config redirect rather than a `redirect()` page, because the bookmark
+  // people actually hold is `/groomer/dashboard`, not `/groomer` — a page can
+  // only answer for the path it occupies, and deleting the tree would 404 the
+  // deeper one. This answers for both, at the edge, with no React render.
+  //
+  // TEMPORARY (307), not permanent. A 308 is cached by the browser until it is
+  // cleared, so if /groomer is ever revived — or this redirect is wrong — the
+  // people who hit it first would be the last to find out.
+  async redirects() {
+    return [
+      {
+        source: "/groomer/:path*",
+        destination: "/employee/schedule",
+        permanent: false,
+      },
+    ];
+  },
   typescript: {
     // Type checking is NOT skipped — it is moved, not removed. `bun run
     // typecheck` runs in the husky pre-commit and pre-push hooks and, crucially,
