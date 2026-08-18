@@ -45,8 +45,7 @@ import {
   Globe,
   Check,
 } from "lucide-react";
-import { getUserRole, setUserRole, type UserRole } from "@/lib/role-utils";
-import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
+import { getUserRole } from "@/lib/role-utils";
 import { useUiText } from "@/hooks/use-ui-text";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { openSupportDrawer } from "@/lib/support-drawer-store";
@@ -162,10 +161,38 @@ const getInitialNotifications = (isSuperAdmin: boolean): Notification[] => {
   }
 };
 
+/**
+ * Who is signed in, resolved on the server and handed down.
+ *
+ * Passed as a prop rather than read here because this is a client component and
+ * the answer lives in the session. Every layout that renders this already has a
+ * `Viewer` — see src/lib/auth/viewer.ts — so nothing new is fetched.
+ */
+export interface ProfileViewer {
+  name: string | null;
+  email: string | null;
+  /** True only for a real platform membership, never for an absent cookie. */
+  isPlatformAdmin: boolean;
+}
+
+function initialsFor(viewer: ProfileViewer): string {
+  const source = viewer.name?.trim() || viewer.email?.trim() || "";
+  if (!source) return "?";
+  const words = source.split(/[\s@._-]+/).filter(Boolean);
+  return (
+    words
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  );
+}
+
 export function UserProfileSheet({
   showNotifications = true,
+  viewer,
 }: {
   showNotifications?: boolean;
+  viewer: ProfileViewer;
 }) {
   const signOutEverywhere = useSignOutEverywhere();
   const { t } = useUiText();
@@ -179,7 +206,18 @@ export function UserProfileSheet({
   // color — so we defer to the cookie value only after hydration.
   const hydrated = useHydrated();
   const currentRole = hydrated ? getUserRole() : null;
-  const isSuperAdmin = !currentRole || currentRole === "super_admin";
+
+  // ── THIS USED TO BE `!currentRole || currentRole === "super_admin"` ──────
+  //
+  // An ABSENT cookie meant super admin — the same "absent means allow" shape as
+  // the facility_role gate that opened the subscription and the data export to
+  // every member. Cosmetic here, since the portal gates stopped reading cookies
+  // entirely: it decided which notifications and which switcher items were
+  // drawn, so a customer whose cookie had never been set was shown the
+  // platform-admin menu.
+  //
+  // It comes from the session now, which is also the only thing RLS believes.
+  const isSuperAdmin = viewer.isPlatformAdmin;
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   // Safe hook — returns FALLBACK (isMultiLocation=false) when there is no
@@ -192,19 +230,15 @@ export function UserProfileSheet({
     setHQView,
     setLocation,
   } = useLocationContext();
-  const avatarBg = roleAvatarColor(currentRole);
+  const avatarBg = roleAvatarColor(
+    viewer.isPlatformAdmin ? "super_admin" : currentRole,
+  );
+  const initials = initialsFor(viewer);
 
   // Update notifications when role changes
   useEffect(() => {
     setNotifications(getInitialNotifications(isSuperAdmin));
   }, [isSuperAdmin]);
-
-  const switchRole = (role: UserRole) => {
-    startTransition(() => {
-      setUserRole(role);
-      window.location.reload();
-    });
-  };
 
   const handleNotificationClick = (notification: Notification) => {
     // Mark as read
@@ -259,13 +293,22 @@ export function UserProfileSheet({
       {/* Avatar Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-9 rounded-full">
+          {/* An icon-only trigger with no accessible name: a screen reader
+              announced it as "button". Named for the same reason the initials
+              inside it are now the person's own — this is the control that says
+              who you are signed in as. */}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Account menu"
+            className="size-9 rounded-full"
+          >
             <Avatar className="size-8">
               <AvatarImage src="" alt="User" />
               <AvatarFallback
                 className={cn("text-sm font-medium text-white", avatarBg)}
               >
-                SA
+                {initials}
               </AvatarFallback>
             </Avatar>
           </Button>
@@ -277,14 +320,18 @@ export function UserProfileSheet({
               <AvatarFallback
                 className={cn("text-sm font-medium text-white", avatarBg)}
               >
-                SA
+                {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
-              <span className="font-medium">{t("Super Admin")}</span>
-              <span className="text-muted-foreground text-xs">
-                admin@yipyy.com
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate font-medium">
+                {viewer.name ?? viewer.email ?? t("Signed in")}
               </span>
+              {viewer.email && (
+                <span className="text-muted-foreground truncate text-xs">
+                  {viewer.email}
+                </span>
+              )}
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -407,62 +454,55 @@ export function UserProfileSheet({
               <DropdownMenuSeparator />
             </>
           )}
-          <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
-            {t("Context Switcher")}
-          </DropdownMenuLabel>
+          {/* ── VIEW AS, AND ONLY FOR SOMEBODY WHO REALLY MAY ──────────────
+              This was a "Context Switcher" that wrote the `user_role` cookie
+              and reloaded. The cookie decides no access any more — the gates
+              read the session — so switching "to Facility Admin" only worked
+              because a platform admin is admitted to /facility anyway, and the
+              facility-admin arm offered "Switch to Super Admin", a button that
+              set a cookie claiming a role its owner did not have and landed
+              them on a portal that then refused them.
+
+              These are plain links now, shown only to a platform admin, and
+              each one goes somewhere their own session already opens.
+
+              The EMPLOYEE PORTALS list that sat below is gone. It read
+              `src/data/facility-staff` — a fixture — and let anyone seat
+              themselves as any of eight staff members by writing
+              `employee_staff_id`. The employee shell takes its identity from
+              the session now and only falls back to a picker for somebody with
+              no staff record at all, which is what /employee/select is for. */}
           {isSuperAdmin && (
             <>
-              <DropdownMenuItem
-                onClick={() => switchRole("facility_admin")}
-                disabled={isPending}
-                className="flex items-center gap-2"
-              >
-                <Building2 className="size-4" />
-                {t("Switch to Facility Admin")}
+              <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
+                {t("View as")}
+              </DropdownMenuLabel>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/facility/dashboard"
+                  className="flex items-center gap-2"
+                >
+                  <Building2 className="size-4" />
+                  {t("Facility portal")}
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  startTransition(() => {
-                    window.location.href = "/customer/dashboard";
-                  });
-                }}
-                disabled={isPending}
-                className="flex items-center gap-2"
-              >
-                <User className="size-4" />
-                {t("Switch to Customer")}
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/customer/dashboard"
+                  className="flex items-center gap-2"
+                >
+                  <User className="size-4" />
+                  {t("Customer portal")}
+                </Link>
               </DropdownMenuItem>
-            </>
-          )}
-          {currentRole === "facility_admin" && (
-            <>
-              <DropdownMenuItem
-                onClick={() => switchRole("super_admin")}
-                disabled={isPending}
-                className="flex items-center gap-2"
-              >
-                <Shield className="size-4" />
-                {t("Switch to Super Admin")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  startTransition(() => {
-                    window.location.href = "/customer/dashboard";
-                  });
-                }}
-                disabled={isPending}
-                className="flex items-center gap-2"
-              >
-                <User className="size-4" />
-                {t("Switch to Customer")}
+              <DropdownMenuItem asChild>
+                <Link href="/employee" className="flex items-center gap-2">
+                  <Shield className="size-4" />
+                  {t("Staff portal")}
+                </Link>
               </DropdownMenuItem>
             </>
           )}
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
-            {t("Employee Portals")}
-          </DropdownMenuLabel>
-          <EmployeePortalSwitcher standalone={false} />
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleLogout}

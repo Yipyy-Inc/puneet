@@ -20,9 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Building2,
   User,
-  Shield,
   Settings,
   LogOut,
   ChevronDown,
@@ -36,7 +34,7 @@ import {
   Phone,
 } from "lucide-react";
 import { toast } from "sonner";
-import { setUserRole, clearEmployeeStaffId } from "@/lib/role-utils";
+import { clearEmployeeStaffId } from "@/lib/role-utils";
 import { usePermission, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import {
   getTodaySession,
@@ -46,7 +44,6 @@ import { resolveRegisterContext } from "@/lib/employee/register-context";
 import { shouldPromptCloseOnExit } from "@/lib/register-hours";
 import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 import { ClockInOut } from "@/components/employee/ClockInOut";
 import { OnTheClockPill } from "@/components/employee/OnTheClockPill";
 import { HeaderNavIconButton } from "@/components/layout/HeaderNavIconButton";
@@ -122,20 +119,6 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
   const canBookingRequests = usePermission("manage_booking_calendar");
   const canOpenRegister = usePermission("open_close_register");
   const { registerCloseReminder } = useStaffHrConfig();
-
-  const switchToFacility = () => {
-    setUserRole("facility_admin");
-    window.location.href = "/facility/dashboard";
-  };
-
-  const switchToCustomer = () => {
-    window.location.href = "/customer/dashboard";
-  };
-
-  const switchToAdmin = () => {
-    setUserRole("super_admin");
-    window.location.href = "/dashboard";
-  };
 
   const logout = () => {
     // Don't let the closing cashier leave with the drawer open — pop the
@@ -320,38 +303,22 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
               </Link>
             </DropdownMenuItem>
 
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-normal">
-              Switch Portal
-            </DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={switchToFacility}
-              className="cursor-pointer gap-2"
-            >
-              <Building2 className="size-4" />
-              Facility Admin View
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={switchToCustomer}
-              className="cursor-pointer gap-2"
-            >
-              <User className="size-4" />
-              Customer Portal
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={switchToAdmin}
-              className="cursor-pointer gap-2"
-            >
-              <Shield className="size-4" />
-              Super Admin
-            </DropdownMenuItem>
+            {/* ── THE PORTAL SWITCHER IS GONE (ADR 0005) ────────────────────
+                It offered "Facility Admin View", "Customer Portal", "Super
+                Admin" and a list of eight staff members read from
+                `src/data/facility-staff`. Every one of them wrote the
+                `user_role` or `employee_staff_id` cookie and navigated.
 
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-normal">
-              Switch Employee
-            </DropdownMenuLabel>
-            <EmployeePortalSwitcher standalone={false} />
+                Those cookies decide no access any more — the gates read the
+                session — so for anybody who was not already entitled these were
+                buttons that set a claim and landed on a portal that then
+                refused it. And the staff list let you seat yourself as a
+                colleague, which is the identity picker facility-identity.spec.ts
+                exists to keep out.
 
+                The one person who legitimately moves between portals is a
+                platform admin, and they have "View as" in /dashboard, which is
+                the portal they live in. */}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={logout}

@@ -27,7 +27,7 @@ export default async function DashboardLayout({
   // cutover finished, this also honoured the old cookie rule — facility admins
   // to their own portal, everyone else let through — which meant an anonymous
   // visitor was admitted here.
-  await guardPortal({
+  const viewer = await guardPortal({
     allow: canAccessAdminPortal,
   });
 
@@ -47,7 +47,14 @@ export default async function DashboardLayout({
             <TopBarIconsNext messagesHref="/dashboard/communication/live-support" />
             <SupportNotificationBell />
             <HeaderDropdown />
-            <UserProfileSheet showNotifications={false} />
+            <UserProfileSheet
+              showNotifications={false}
+              viewer={{
+                name: viewer.fullName,
+                email: viewer.email,
+                isPlatformAdmin: viewer.isPlatformAdmin,
+              }}
+            />
           </div>
         </header>
         <main className="flex-1">
