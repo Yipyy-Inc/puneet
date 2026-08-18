@@ -44,6 +44,7 @@ interface Branding {
   facilityId: string;
   facilityName: string;
   logoUrl: string | null;
+  wordmarkUrl: string | null;
   primaryColor: string | null;
   accentColor: string | null;
   tagline: string | null;
@@ -57,6 +58,7 @@ export function BrandingSettings() {
   const queryClient = useQueryClient();
   const supabase = useWorkosSupabaseClient();
   const fileInput = useRef<HTMLInputElement>(null);
+  const wordmarkInput = useRef<HTMLInputElement>(null);
 
   const [draft, setDraft] = useState<Partial<Branding>>({});
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -82,7 +84,11 @@ export function BrandingSettings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           logoUrl: value("logoUrl") ?? "",
-          wordmarkUrl: "",
+          // Was the literal "". The API, the column and
+          // facility_branding_by_slug had all supported a wordmark since
+          // 20260807240000, and this one line meant no facility could ever set
+          // one -- and that every unrelated save silently cleared it.
+          wordmarkUrl: value("wordmarkUrl") ?? "",
           primaryColor: value("primaryColor") ?? "",
           accentColor: value("accentColor") ?? "",
           tagline: value("tagline") ?? "",
@@ -102,7 +108,13 @@ export function BrandingSettings() {
     },
   });
 
-  async function onPickLogo(file: File) {
+  /**
+   * One uploader for both marks.
+   *
+   * `kind` is the FIELD, and it also names the stored object, so a logo and a
+   * wordmark cannot overwrite one another in the bucket.
+   */
+  async function onPickImage(kind: "logoUrl" | "wordmarkUrl", file: File) {
     setUploadError(null);
     if (!data?.facilityId) return;
 
@@ -110,7 +122,7 @@ export function BrandingSettings() {
     // side, which is the enforcement — this is only so the person is not told
     // "row-level security" when they picked a 5 MB TIFF.
     if (file.size > 2 * 1024 * 1024) {
-      setUploadError("That file is over 2 MB. Try a smaller logo.");
+      setUploadError("That file is over 2 MB. Try a smaller image.");
       return;
     }
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
@@ -121,7 +133,7 @@ export function BrandingSettings() {
     // {facility_id}/... — the first segment IS the tenancy boundary the storage
     // policies key on, so this is not merely tidy.
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "png";
-    const path = `${data.facilityId}/logo-${Date.now()}.${extension}`;
+    const path = `${data.facilityId}/${kind === "wordmarkUrl" ? "wordmark" : "logo"}-${Date.now()}.${extension}`;
 
     const { error } = await supabase.storage
       .from("facility-logos")
@@ -136,7 +148,7 @@ export function BrandingSettings() {
       .from("facility-logos")
       .getPublicUrl(path);
 
-    setDraft((previous) => ({ ...previous, logoUrl: published.publicUrl }));
+    setDraft((previous) => ({ ...previous, [kind]: published.publicUrl }));
   }
 
   const dirty = Object.keys(draft).length > 0;
@@ -194,7 +206,7 @@ export function BrandingSettings() {
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) void onPickLogo(file);
+                      if (file) void onPickImage("logoUrl", file);
                       e.target.value = "";
                     }}
                   />
@@ -207,6 +219,54 @@ export function BrandingSettings() {
                       {uploadError}
                     </p>
                   )}
+                </div>
+
+                {/* ── Wordmark ─────────────────────────────────────────────
+                    A SECOND mark, not a duplicate of the logo. The login card
+                    header is wide and short, which is the shape a wordmark is
+                    drawn for; a square logo either shrinks to nothing or eats
+                    the card. Facilities that only have one mark upload it as
+                    the logo and never come here. */}
+                <div className="space-y-2">
+                  <Label>Wordmark</Label>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => wordmarkInput.current?.click()}
+                    >
+                      <Upload className="mr-2 size-4" />
+                      {value("wordmarkUrl")
+                        ? "Replace wordmark"
+                        : "Upload wordmark"}
+                    </Button>
+                    {value("wordmarkUrl") && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() =>
+                          setDraft((p) => ({ ...p, wordmarkUrl: null }))
+                        }
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                  <input
+                    ref={wordmarkInput}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void onPickImage("wordmarkUrl", file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Optional. Your name drawn as an image, for the top of your
+                    sign-in page. Used there in preference to the logo.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -297,16 +357,23 @@ export function BrandingSettings() {
                 <div className="bg-muted/40 flex items-center justify-center rounded-xl border p-6">
                   <div className="bg-card w-full max-w-xs rounded-2xl border p-6 shadow-sm">
                     <div className="mb-4 flex justify-center">
-                      {value("logoUrl") ? (
+                      {/* Wordmark before logo, the SAME precedence
+                          FacilityAuthBrand uses. This preview exists so what
+                          is approved here is what customers get -- showing the
+                          logo while the real page shows the wordmark would make
+                          it a picture of a different screen. */}
+                      {(value("wordmarkUrl") ?? value("logoUrl")) ? (
                         // A user-supplied Storage URL. next/image would need
                         // that host in remotePatterns at BUILD time, so a
                         // facility on a different bucket or CDN would break the
                         // preview with a 500 from the optimiser.
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={value("logoUrl") as string}
+                          src={
+                            (value("wordmarkUrl") ?? value("logoUrl")) as string
+                          }
                           alt=""
-                          className="h-12 w-auto object-contain"
+                          className="h-12 w-auto max-w-full object-contain"
                         />
                       ) : (
                         <span

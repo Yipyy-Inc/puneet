@@ -14,6 +14,23 @@ import type { FacilityBranding } from "@/lib/api/facility-branding";
 // 500 from the image optimiser, not a missing picture. The optimiser buys
 // little on a single small logo above the fold.
 //
+// ── WORDMARK FIRST, THEN LOGO, THEN THE NAME ──────────────────────────────
+//
+// Three states, in the order a facility grows into them.
+//
+// The wordmark wins where there is one because this slot is WIDE AND SHORT --
+// it is the header of a 28rem card. A square logo constrained to h-12 either
+// shrinks to a thumbnail or crowds the title, while a wordmark is drawn for
+// exactly this shape. Facilities with a single mark upload it as the logo and
+// never think about this.
+//
+// `wordmark_url` was reachable by NOBODY until 2026-08-18: the column, the API
+// and facility_branding_by_slug had supported it since 20260807240000, but the
+// settings screen posted a hardcoded "" for it on every save -- so it could not
+// be set, and any unrelated save would have cleared it. Nothing rendered it
+// either. Both ends fixed together; a field that can be stored and not shown is
+// the same bug as one that can be shown and not stored.
+//
 // ── THE NAME IS THE FALLBACK, NOT A BROKEN IMAGE ──────────────────────────
 //
 // A facility that has not uploaded a logo yet is the normal state on the day it
@@ -26,13 +43,20 @@ export function FacilityAuthBrand({
 }: {
   branding: FacilityBranding;
 }) {
-  if (branding.logoUrl) {
+  const mark = branding.wordmarkUrl ?? branding.logoUrl;
+
+  if (mark) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- see the note above
       <img
-        src={branding.logoUrl}
+        src={mark}
+        // The facility's NAME, not "logo" or "wordmark". A screen reader should
+        // announce whose sign-in page this is; which asset happened to be
+        // uploaded is not information anyone needs.
         alt={branding.name}
-        className="h-12 w-auto object-contain"
+        // max-w-full so a wide wordmark scales down inside the card instead of
+        // overflowing it -- the height cap alone does not constrain width.
+        className="h-12 w-auto max-w-full object-contain"
       />
     );
   }
