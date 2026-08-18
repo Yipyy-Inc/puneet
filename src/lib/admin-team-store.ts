@@ -125,16 +125,11 @@ export function inviteAdminMember(input: {
   return member;
 }
 
-/** Mark an invited member's setup complete → flips them to "active". */
-export function completeAdminInvite(id: number) {
-  ensureReady();
-  if (overlay.completed[id]) return;
-  overlay = {
-    ...overlay,
-    completed: { ...overlay.completed, [id]: new Date().toISOString() },
-  };
-  commit(true);
-}
+// `completeAdminInvite` lived here: /setup/<token> called it to flip an invited
+// row to "active" in localStorage, which was the whole of what "setup complete"
+// used to mean. Setting up an account now creates a WorkOS identity, a profile
+// and a platform_memberships row, so there is nothing left for a browser-local
+// flag to record.
 
 function subscribe(listener: () => void) {
   ensureReady();
@@ -156,8 +151,7 @@ export function useAdminTeam(): AdminUser[] {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
-/** Non-hook snapshot accessor (e.g. for a useState initializer). */
-export function getAdminTeam(): AdminUser[] {
-  ensureReady();
-  return snapshot;
-}
+// `getAdminTeam` lived here too, read by the roster page's row-click handler.
+// That page reads platform_memberships now (src/lib/api/platform-team.ts), so
+// the only remaining readers of this store are the sibling activity and roles
+// screens, which are still fixture-backed. See the debt map.
