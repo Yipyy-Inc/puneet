@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { signIn } from "./_auth";
+import { deployedFixture, deployedFixtureRef } from "./_fixtures";
 
 // ============================================================================
 // The terminal route: who may use it, and whether it can reach the hardware.
@@ -14,10 +15,10 @@ import { signIn } from "./_auth";
 // which is a Dev Kit somebody physically associated.
 // ============================================================================
 
-const BOOKING_REF = Number(process.env.CLOVER_E2E_TERMINAL_BOOKING_REF ?? "");
-const SERIAL = process.env.CLOVER_E2E_TERMINAL_SERIAL?.trim() ?? "";
-const STAFF = process.env.CLOVER_E2E_STAFF_EMAIL?.trim() ?? "";
-const CUSTOMER = process.env.CLOVER_E2E_CUSTOMER_EMAIL?.trim() ?? "";
+const BOOKING_REF = deployedFixtureRef("CLOVER_E2E_TERMINAL_BOOKING_REF");
+const SERIAL = deployedFixture("CLOVER_E2E_TERMINAL_SERIAL");
+const STAFF = deployedFixture("CLOVER_E2E_STAFF_EMAIL");
+const CUSTOMER = deployedFixture("CLOVER_E2E_CUSTOMER_EMAIL");
 
 const check = (page: Page, body: unknown) =>
   page.request.post("/api/payments/clover/terminal", { data: body });

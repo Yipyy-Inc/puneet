@@ -42,28 +42,37 @@ test.describe("facility portal identity", () => {
     expect(await identityLine(page)).toContain("Dana Okafor");
 
     await page.context().clearCookies();
-    await signIn(page, "groomer@yipyy.dev");
-    const groomer = await identityLine(page);
-    expect(groomer).toContain("Jessica Alvarez");
-    expect(groomer).toContain("Groomer");
-
-    await page.context().clearCookies();
     await signIn(page, "manager@yipyy.dev");
-    expect(await identityLine(page)).toContain("Priya Raman");
+    const manager = await identityLine(page);
+    expect(manager).toContain("Priya Raman");
+    expect(manager).toContain("Manager");
   });
 
+  // THE GROOMER ARM IS GONE, AND ITS ABSENCE IS THE POINT (ADR 0005). This
+  // portal is the facility ADMIN's now, so a groomer cannot reach
+  // /facility/dashboard/staff at all — the identity line they used to be
+  // checked against is a page they are redirected away from. That a staff
+  // member is themselves is not untested: employee-identity.spec.ts asserts it
+  // on the portal they actually work in, and facility-access-level.spec.ts
+  // asserts the redirect itself.
+  //
+  // The manager took their place here because the guarantee is about the
+  // BRIDGE, not the role: an admin-tier account that is not the owner is what
+  // proves the page reads the signed-in staff member rather than defaulting to
+  // whoever owns the facility.
+
   test("the switcher is gone for a real staff member", async ({ page }) => {
-    await signIn(page, "groomer@yipyy.dev");
+    await signIn(page, "manager@yipyy.dev");
     expect(await identityLine(page)).toContain("Signed in as");
 
     // Not merely hidden — there is no combobox to click.
     await expect(
-      page.locator("button[role='combobox']").filter({ hasText: /Alvarez/ }),
+      page.locator("button[role='combobox']").filter({ hasText: /Raman/ }),
     ).toHaveCount(0);
   });
 
   test("localStorage cannot change who you are", async ({ page }) => {
-    await signIn(page, "groomer@yipyy.dev");
+    await signIn(page, "manager@yipyy.dev");
 
     // The exact attack the old provider allowed: name yourself the owner.
     await page.evaluate(
@@ -81,7 +90,7 @@ test.describe("facility portal identity", () => {
     );
 
     const after = await identityLine(page);
-    expect(after).toContain("Jessica Alvarez");
+    expect(after).toContain("Priya Raman");
     expect(after).not.toContain("Dana Okafor");
 
     // And the permissions agree — manage_roles is owner/admin only.
