@@ -19,11 +19,14 @@
     },
     "signUp": {
       "title": "Create your account",
-      "description": "One account for booking, your pets and your visits.",
       "descriptionJoin": "Create your account, then join {name}.",
       "descriptionNoSelfSignup": "Create your account. {name} adds customers themselves — we'll find your record afterwards.",
       "haveAccount": "Already have an account?",
-      "signInLink": "Sign in"
+      "signInLink": "Sign in",
+      "noFacilityTitle": "Sign up at your facility",
+      "noFacilityDescription": "Each business on Yipyy has its own web address.",
+      "noFacilityBody": "Open the address your groomer, daycare or boarding kennel gave you — it looks like theirname.yipyy.com — and create your account there. It works at every Yipyy business afterwards.",
+      "noFacilitySignIn": "Already have an account? Sign in"
     },
     "reset": {
       "title": "Choose a new password",

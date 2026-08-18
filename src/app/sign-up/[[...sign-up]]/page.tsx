@@ -59,18 +59,67 @@ export default async function SignUpPage() {
   const branding = slug ? await getBrandingBySlug(slug) : null;
   const t = await getTranslations("auth");
 
-  const description = !branding
-    ? t("signUp.description")
-    : branding.allowCustomerSignup
-      ? t("signUp.descriptionJoin", { name: branding.name })
-      : t("signUp.descriptionNoSelfSignup", { name: branding.name });
+  // ── NO FACILITY IN THE HOSTNAME: THERE IS NOTHING TO SIGN UP FOR ─────────
+  //
+  // A Yipyy login only means something at a business. Somebody who registers
+  // on the apex gets a credential that opens nothing: every portal gate wants a
+  // membership, RLS returns no rows without one, and they are routed
+  // / -> /customer/dashboard -> /join -> "no facility here". Two people did
+  // exactly that and both hold accounts that can see nothing.
+  //
+  // Nobody legitimate arrives here either. Checked, not assumed: the facility
+  // OWNER and STAFF invitations build their link from the facility's own host
+  // (lib/public-origin.ts, which exists specifically to stop those emails
+  // pointing at the wrong door), and a PLATFORM admin is invited to
+  // /setup/<token>, not here. So this form had no user with a reason to use it.
+  //
+  // It says where to go rather than 404ing: somebody reading this is a pet
+  // owner who guessed the address, and "not found" answers a question they did
+  // not ask.
+  //
+  // WHAT THIS DOES NOT CLOSE, said plainly: OAuth does not distinguish signing
+  // in from signing up (see OAuthButton), so "Continue with Google" on the apex
+  // SIGN-IN screen still mints an account for a new address. That screen has to
+  // keep it -- it is how the platform admins actually sign in. This removes the
+  // dead end and the obvious path, not every path, and it does not need to be a
+  // hard gate: a credential on its own grants nothing.
+  if (!branding) {
+    return (
+      <AuthCard
+        signedOut
+        title={t("signUp.noFacilityTitle")}
+        description={t("signUp.noFacilityDescription")}
+        footer={
+          <p className="text-muted-foreground text-center text-sm">
+            <Link
+              href="/sign-in"
+              className="text-primary font-medium hover:underline"
+            >
+              {t("signUp.noFacilitySignIn")}
+            </Link>
+          </p>
+        }
+      >
+        <p className="text-muted-foreground text-sm">
+          {t("signUp.noFacilityBody")}
+        </p>
+      </AuthCard>
+    );
+  }
+
+  // Past the guard above, so there IS a facility. The old third arm for "no
+  // branding" is gone rather than left unreachable -- a dead branch reads as a
+  // case somebody still has to think about.
+  const description = branding.allowCustomerSignup
+    ? t("signUp.descriptionJoin", { name: branding.name })
+    : t("signUp.descriptionNoSelfSignup", { name: branding.name });
 
   return (
     <AuthCard
       signedOut
       title={t("signUp.title")}
       description={description}
-      brand={branding ? <FacilityAuthBrand branding={branding} /> : undefined}
+      brand={<FacilityAuthBrand branding={branding} />}
       footer={
         <p className="text-muted-foreground text-center text-sm">
           {t("signUp.haveAccount")}{" "}
@@ -83,7 +132,7 @@ export default async function SignUpPage() {
         </p>
       }
     >
-      <EmailSignUpForm facilityName={branding?.name} />
+      <EmailSignUpForm facilityName={branding.name} />
 
       <div className="flex items-center gap-3">
         <span className="bg-border h-px flex-1" />
