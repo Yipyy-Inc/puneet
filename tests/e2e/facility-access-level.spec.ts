@@ -186,6 +186,39 @@ test.describe("inviting somebody onto the platform team", () => {
     }
   });
 
+  test("the header greets the person signed in, not a literal", async ({
+    page,
+  }) => {
+    // Reported from the running app: the dropdown read "Super Admin /
+    // admin@yipyy.com" above a session belonging to somebody else entirely.
+    // Both were string literals in UserProfileSheet, and the avatar said "SA"
+    // whoever you were.
+    await signIn(page, ACCOUNTS.admin);
+    await page.goto("/dashboard");
+
+    await page.getByRole("button", { name: "Account menu" }).click();
+
+    await expect(page.getByText(ACCOUNTS.admin)).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText("admin@yipyy.com")).toHaveCount(0);
+
+    // ── AND THE OLD ROLE SWITCHER IS GONE ───────────────────────────────
+    //
+    // Eight job titles read from src/data/facility-staff, each seating you as
+    // that person by writing a cookie. /groomer is a retired portal and the
+    // employee shell takes its identity from the session now, so every one of
+    // these was a door that no longer opens.
+    for (const stale of [
+      "Daycare Attendant",
+      "Boarding / Back of House",
+      "Sanitation",
+      "Reception / Front Desk",
+    ]) {
+      await expect(page.getByText(stale, { exact: false })).toHaveCount(0);
+    }
+  });
+
   test("the roster is refused to everyone else", async ({ page, request }) => {
     expect((await request.get("/api/admin/team")).status()).toBe(403);
 

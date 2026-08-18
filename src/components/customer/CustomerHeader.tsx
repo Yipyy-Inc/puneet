@@ -17,14 +17,10 @@ import {
   Dog,
   FileText,
   CreditCard,
-  Building2,
-  Shield,
   Package,
   Calendar,
 } from "lucide-react";
 import { useTransition } from "react";
-import { setUserRole } from "@/lib/role-utils";
-import { EmployeePortalSwitcher } from "@/components/layout/EmployeePortalSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,20 +83,6 @@ export function CustomerHeader() {
       .filter((p) => p.status === "active")
       .reduce((sum, p) => sum + Math.max(0, p.passesTotal - p.passesUsed), 0) +
     availableMembershipCredits;
-
-  const switchToFacility = () => {
-    startTransition(() => {
-      setUserRole("facility_admin");
-      window.location.href = "/facility/dashboard";
-    });
-  };
-
-  const switchToAdmin = () => {
-    startTransition(() => {
-      setUserRole("super_admin");
-      window.location.href = "/dashboard";
-    });
-  };
 
   // Apply facility colors via CSS variables
   useEffect(() => {
@@ -267,37 +249,22 @@ export function CustomerHeader() {
                 {t("Settings")}
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={switchToFacility}
-              disabled={isPending}
-              className="cursor-pointer"
-            >
-              <Building2 className="mr-2 size-4" />
-              {t("Switch to Facility")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                startTransition(() => {
-                  window.location.href = "/customer/dashboard";
-                });
-              }}
-              disabled={isPending}
-              className="cursor-pointer"
-            >
-              <User className="mr-2 size-4" />
-              {t("Switch to Customer")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={switchToAdmin}
-              disabled={isPending}
-              className="cursor-pointer"
-            >
-              <Shield className="mr-2 size-4" />
-              {t("Switch to Admin")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <EmployeePortalSwitcher standalone={false} />
+            {/* ── THE PORTAL SWITCHER IS GONE (ADR 0005) ────────────────────
+                It offered "Facility Admin View", "Customer Portal", "Super
+                Admin" and a list of eight staff members read from
+                `src/data/facility-staff`. Every one of them wrote the
+                `user_role` or `employee_staff_id` cookie and navigated.
+
+                Those cookies decide no access any more — the gates read the
+                session — so for anybody who was not already entitled these were
+                buttons that set a claim and landed on a portal that then
+                refused it. And the staff list let you seat yourself as a
+                colleague, which is the identity picker facility-identity.spec.ts
+                exists to keep out.
+
+                The one person who legitimately moves between portals is a
+                platform admin, and they have "View as" in /dashboard, which is
+                the portal they live in. */}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {

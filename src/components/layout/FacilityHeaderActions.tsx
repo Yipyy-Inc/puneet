@@ -14,7 +14,10 @@ import { getUnreadMessagesCount } from "@/lib/messaging-unread";
 import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNotificationsDropdown";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { FacilityHeader } from "@/components/layout/FacilityHeader";
-import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
+import {
+  UserProfileSheet,
+  type ProfileViewer,
+} from "@/components/layout/UserProfileSheet";
 import { CallingButton } from "@/components/layout/CallingButton";
 
 /**
@@ -38,7 +41,14 @@ async function facilityTopBarCounts() {
   return { unreadMessages: getUnreadMessagesCount() };
 }
 
-export function FacilityHeaderActions({ facilityId }: { facilityId: number }) {
+export function FacilityHeaderActions({
+  facilityId,
+  viewer,
+}: {
+  facilityId: number;
+  /** Resolved by the facility layout from the session — never from a cookie. */
+  viewer: ProfileViewer;
+}) {
   const isWide = useMediaQuery("(min-width: 1280px)", true);
 
   // Rendered inline on desktop, or inside the overflow popover on tablet —
@@ -83,7 +93,7 @@ export function FacilityHeaderActions({ facilityId }: { facilityId: number }) {
       )}
 
       <FacilityNotificationsDropdown facilityId={facilityId} />
-      <UserProfileSheet showNotifications={false} />
+      <UserProfileSheet showNotifications={false} viewer={viewer} />
     </div>
   );
 }
