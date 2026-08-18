@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { deployedFixture } from "./_fixtures";
 
 // ============================================================================
 // The facility shell — the sidebar and header on EVERY page of the portal.
@@ -67,7 +68,11 @@ test.describe("the facility shell", () => {
   // every real-email account — the pawradise owners, the Doggieville Mtl owner
   // — has no identity to sign in with. Reusing the Clover variable made this
   // spec fail for a reason that has nothing to do with the facility shell.
-  const OTHER_OWNER = process.env.E2E_NON_FIXTURE_OWNER?.trim() ?? "";
+  // Through deployedFixture for the reason the paragraph above describes: a
+  // real-email owner is a PRODUCTION identity, and a local run authenticates
+  // against staging. Set but unreachable is the failure mode; empty is the
+  // honest one.
+  const OTHER_OWNER = deployedFixture("E2E_NON_FIXTURE_OWNER");
 
   test("names a facility that is not in the fixtures at all", async ({
     page,

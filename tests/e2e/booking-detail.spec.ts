@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { signIn } from "./_auth";
+import { deployedFixture, deployedFixtureRef } from "./_fixtures";
 
 // ============================================================================
 // The facility booking detail page renders a client that lives in Postgres.
@@ -18,10 +19,10 @@ import { signIn } from "./_auth";
 // may see it.
 // ============================================================================
 
-const CLIENT_REF = Number(process.env.E2E_POSTGRES_CLIENT_REF ?? "");
-const BOOKING_REF = Number(process.env.E2E_POSTGRES_BOOKING_REF ?? "");
-const CLIENT_NAME = process.env.E2E_POSTGRES_CLIENT_NAME?.trim() ?? "";
-const STAFF = process.env.CLOVER_E2E_STAFF_EMAIL?.trim() ?? "";
+const CLIENT_REF = deployedFixtureRef("E2E_POSTGRES_CLIENT_REF");
+const BOOKING_REF = deployedFixtureRef("E2E_POSTGRES_BOOKING_REF");
+const CLIENT_NAME = deployedFixture("E2E_POSTGRES_CLIENT_NAME");
+const STAFF = deployedFixture("CLOVER_E2E_STAFF_EMAIL");
 
 test.describe("a booking belonging to a Postgres client", () => {
   test.skip(

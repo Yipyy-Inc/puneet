@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { signIn } from "./_auth";
+import { deployedFixture, deployedFixtureRef } from "./_fixtures";
 
 // ============================================================================
 // The client file, for a client who lives in Postgres.
@@ -19,9 +20,9 @@ import { signIn } from "./_auth";
 // because pointed at a fixture id it would pass against the bug.
 // ============================================================================
 
-const CLIENT_REF = Number(process.env.E2E_POSTGRES_CLIENT_REF ?? "");
-const CLIENT_NAME = process.env.E2E_POSTGRES_CLIENT_NAME?.trim() ?? "";
-const STAFF = process.env.CLOVER_E2E_STAFF_EMAIL?.trim() ?? "";
+const CLIENT_REF = deployedFixtureRef("E2E_POSTGRES_CLIENT_REF");
+const CLIENT_NAME = deployedFixture("E2E_POSTGRES_CLIENT_NAME");
+const STAFF = deployedFixture("CLOVER_E2E_STAFF_EMAIL");
 
 // Every tab in the client file that renders the client itself.
 const TABS = [
