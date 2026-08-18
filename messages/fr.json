@@ -19,11 +19,14 @@
     },
     "signUp": {
       "title": "Créez votre compte",
-      "description": "Un seul compte pour vos réservations, vos animaux et vos visites.",
       "descriptionJoin": "Créez votre compte, puis rejoignez {name}.",
       "descriptionNoSelfSignup": "Créez votre compte. {name} ajoute ses clients elle-même — nous retrouverons votre dossier ensuite.",
       "haveAccount": "Vous avez déjà un compte ?",
-      "signInLink": "Se connecter"
+      "signInLink": "Se connecter",
+      "noFacilityTitle": "Créez votre compte chez votre établissement",
+      "noFacilityDescription": "Chaque établissement sur Yipyy a sa propre adresse web.",
+      "noFacilityBody": "Ouvrez l'adresse que votre toiletteur, garderie ou pension vous a donnée — elle ressemble à leurnom.yipyy.com — et créez-y votre compte. Il fonctionnera ensuite chez tous les établissements Yipyy.",
+      "noFacilitySignIn": "Vous avez déjà un compte ? Connectez-vous"
     },
     "reset": {
       "title": "Choisissez un nouveau mot de passe",
