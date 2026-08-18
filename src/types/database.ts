@@ -1266,6 +1266,60 @@ export type Database = {
           },
         ];
       };
+      platform_invitations: {
+        Row: {
+          accepted_at: string | null;
+          accepted_profile_id: string | null;
+          created_at: string;
+          email: string;
+          expires_at: string;
+          full_name: string | null;
+          id: string;
+          invited_by: string | null;
+          role: Database["public"]["Enums"]["platform_role"];
+          token_hash: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          accepted_profile_id?: string | null;
+          created_at?: string;
+          email: string;
+          expires_at: string;
+          full_name?: string | null;
+          id?: string;
+          invited_by?: string | null;
+          role?: Database["public"]["Enums"]["platform_role"];
+          token_hash: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          accepted_profile_id?: string | null;
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          full_name?: string | null;
+          id?: string;
+          invited_by?: string | null;
+          role?: Database["public"]["Enums"]["platform_role"];
+          token_hash?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_invitations_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_invitations_accepted_profile_id_fkey";
+            columns: ["accepted_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       facility_membership_grants: {
         Row: {
           claimed_at: string | null;
@@ -4727,6 +4781,24 @@ export type Database = {
         Returns: Json;
       };
       revoke_platform_role: { Args: { p_profile_id: string }; Returns: Json };
+      invite_platform_admin: {
+        Args: {
+          p_email: string;
+          p_expires_at: string;
+          p_full_name: string | null;
+          p_role: Database["public"]["Enums"]["platform_role"];
+          p_token_hash: string;
+        };
+        Returns: Json;
+      };
+      revoke_platform_invitation: {
+        Args: { p_invitation_id: string };
+        Returns: Json;
+      };
+      accept_platform_invitation: {
+        Args: { p_profile_id: string; p_token_hash: string };
+        Returns: Json;
+      };
       invite_facility_owner: {
         Args: { p_expires_at?: string | null; p_facility_id: string };
         Returns: Json;

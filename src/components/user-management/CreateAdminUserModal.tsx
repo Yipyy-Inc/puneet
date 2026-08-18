@@ -237,8 +237,11 @@ export function CreateAdminUserModal({
       const res = await fetch("/api/admin/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // `id` is gone: it was the mock store's counter, and the invitation
+        // is now a real row keyed by the ADDRESS. The role travels as the
+        // console's own label and is mapped to a platform_role server-side
+        // (lib/auth/platform-invitation.ts) rather than trusted from here.
         body: JSON.stringify({
-          id: member.id,
           name: member.name,
           email: member.email,
           role: member.role,
