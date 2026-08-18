@@ -66,6 +66,17 @@ export interface FacilityDraft {
   bookingCutoff: string;
   depositEnabled: boolean;
   depositPercent: string;
+  /**
+   * Whether customers may register themselves at this facility's own web
+   * address, i.e. `allow_customer_signup`.
+   *
+   * Asked HERE rather than left to the settings screen because the database
+   * default is false and nothing surfaced it: every facility was provisioned
+   * with a working subdomain whose sign-up page turned its customers away, and
+   * the business only found out when one of them complained. A default nobody
+   * is shown is not a decision.
+   */
+  allowCustomerSignup: boolean;
 
   // Step 5 — Primary Admin Account
   adminFirstName: string;
