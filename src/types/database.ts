@@ -1276,6 +1276,7 @@ export type Database = {
           facility_id: string;
           granted_by: string | null;
           id: string;
+          access_level: Database["public"]["Enums"]["facility_access_level"];
           role: Database["public"]["Enums"]["facility_staff_role"];
           staff_id: string;
         };
@@ -1288,6 +1289,7 @@ export type Database = {
           facility_id: string;
           granted_by?: string | null;
           id?: string;
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           role: Database["public"]["Enums"]["facility_staff_role"];
           staff_id: string;
         };
@@ -1300,6 +1302,7 @@ export type Database = {
           facility_id?: string;
           granted_by?: string | null;
           id?: string;
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           role?: Database["public"]["Enums"]["facility_staff_role"];
           staff_id?: string;
         };
@@ -1330,6 +1333,7 @@ export type Database = {
           is_active: boolean;
           legacy_id: string | null;
           profile_id: string;
+          access_level: Database["public"]["Enums"]["facility_access_level"];
           role: Database["public"]["Enums"]["facility_staff_role"];
           updated_at: string;
         };
@@ -1342,6 +1346,7 @@ export type Database = {
           is_active?: boolean;
           legacy_id?: string | null;
           profile_id: string;
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           role: Database["public"]["Enums"]["facility_staff_role"];
           updated_at?: string;
         };
@@ -1354,6 +1359,7 @@ export type Database = {
           is_active?: boolean;
           legacy_id?: string | null;
           profile_id?: string;
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           role?: Database["public"]["Enums"]["facility_staff_role"];
           updated_at?: string;
         };
@@ -3900,6 +3906,7 @@ export type Database = {
           legacy_id: string | null;
           membership_id: string | null;
           phone: string | null;
+          access_level: Database["public"]["Enums"]["facility_access_level"];
           primary_role: Database["public"]["Enums"]["facility_staff_role"];
           service_assignments: Database["public"]["Enums"]["service_module"][];
           show_on_calendar: boolean;
@@ -3925,6 +3932,7 @@ export type Database = {
           legacy_id?: string | null;
           membership_id?: string | null;
           phone?: string | null;
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           primary_role: Database["public"]["Enums"]["facility_staff_role"];
           service_assignments?: Database["public"]["Enums"]["service_module"][];
           show_on_calendar?: boolean;
@@ -3950,6 +3958,7 @@ export type Database = {
           legacy_id?: string | null;
           membership_id?: string | null;
           phone?: string | null;
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           primary_role?: Database["public"]["Enums"]["facility_staff_role"];
           service_assignments?: Database["public"]["Enums"]["service_module"][];
           show_on_calendar?: boolean;
@@ -4853,6 +4862,7 @@ export type Database = {
         | "no_show"
         | "cancelled"
         | "declined";
+      facility_access_level: "admin" | "staff";
       facility_staff_role:
         | "owner"
         | "admin"
@@ -5021,6 +5031,7 @@ export const Constants = {
         "cancelled",
         "declined",
       ],
+      facility_access_level: ["admin", "staff"],
       facility_staff_role: [
         "owner",
         "admin",
