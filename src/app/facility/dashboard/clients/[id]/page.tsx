@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useRef, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { bookings } from "@/data/bookings";
-import { facilities } from "@/data/facilities";
 import { unfinishedBookings } from "@/data/unfinished-bookings";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { buildResumePreselection } from "@/lib/resume-booking";
@@ -29,16 +27,10 @@ import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { BookingCard } from "@/components/clients/BookingCard";
 import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
 import { ClientServicePreferences } from "@/components/clients/ClientServicePreferences";
-import { generateInvoiceForBooking } from "@/lib/invoice-generator";
 import { NewAppointmentDialog } from "@/components/facility/grooming/new-appointment-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-  payments,
-  invoices,
-  giftCards,
-  customerCredits,
-} from "@/data/payments";
+import { invoices, giftCards, customerCredits } from "@/data/payments";
 import { getClientRetailPurchases } from "@/data/retail";
 import { getIncidentsForClient, getIncidentsForPet } from "@/data/incidents";
 import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModal";
@@ -46,6 +38,11 @@ import { useFieldMask } from "@/lib/staff/mask";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { isClientAssignedTo, useClientRecord } from "@/lib/api/client";
+import { bookingMutations, bookingQueries } from "@/lib/api/booking";
+import { paymentQueries } from "@/lib/api/payments";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Booking, NewBooking } from "@/types/booking";
 import { isPetAssignedTo } from "@/lib/api/booking";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import type { Evaluation } from "@/types/pet";
@@ -198,9 +195,60 @@ export default function ClientDetailPage({
   // `src/data/clients.ts`, so every client created since the migration was
   // told they did not exist on their own file.
   const { client, pending: clientPending } = useClientRecord(id);
-  const facility = client
-    ? facilities.find((f) => f.name === client.facility)
-    : null;
+  // ── THE TWO "NEW BOOKING" BUTTONS ON THIS PAGE DID NOTHING ───────────────
+  //
+  // This was `facilities.find((f) => f.name === client.facility)` — the
+  // client's facility STRING matched against the facilities FIXTURE. The API
+  // labels a client with the real facility name ("Yipyy Demo Facility"), which
+  // appears nowhere in `src/data/facilities.ts`, so `facility` was undefined
+  // for every real client. Both booking buttons are wrapped in
+  // `if (client && facility)`, so they did not crash — they silently did
+  // nothing, with no error and no toast. The resume-unfinished-booking effect
+  // gave up on the same check.
+  //
+  // The name comes from the session now. The numeric id stays a mock-era LABEL
+  // (see project_facility_id_11_client_side): nothing sends it over the wire —
+  // /api/bookings takes the facility from the caller's membership.
+  const { profile } = useFacilityProfile();
+  const facilityRef = 11;
+
+  // Real bookings and payments for this client, replacing `bookings.filter()`
+  // and `payments.filter()` over the fixtures. Declared HERE, above the early
+  // returns further down, because a hook cannot be called conditionally;
+  // `enabled` holds them until the client resolves.
+  const { data: clientBookings = [] } = useQuery({
+    ...bookingQueries.byClient(client?.id ?? 0),
+    enabled: Boolean(client),
+  });
+  const { data: clientPayments = [] } = useQuery({
+    ...paymentQueries.byClient(client?.id ?? 0),
+    enabled: Boolean(client),
+  });
+
+  const queryClient = useQueryClient();
+
+  /**
+   * Actually create the booking.
+   *
+   * All three wizard callbacks on this page used to call
+   * `generateInvoiceForBooking(booking)` and toast "Booking created — Invoice
+   * INV-xxx: $yy". Nothing was written: that helper is a pure calculator, and
+   * it resolves the customer with `clients.find()` over the FIXTURE, so for a
+   * real client it costed the booking against nobody. The invoice id it printed
+   * referred to no document — there is no invoices table.
+   */
+  const persistBooking = async (booking: NewBooking) => {
+    try {
+      const created = await bookingMutations.create(booking);
+      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      toast.success(`Booking #${created.id} created`);
+    } catch (error) {
+      toast.error("Could not create that booking", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
+  };
 
   // Resume-from-unfinished-booking: when staff clicks Schedule on an
   // unfinished booking, the URL gets `?resumeBooking=<ub-id>`. We look it up,
@@ -208,7 +256,7 @@ export default function ClientDetailPage({
   // re-open it.
   useEffect(() => {
     const resumeId = searchParams?.get("resumeBooking");
-    if (!resumeId || !client || !facility) return;
+    if (!resumeId || !client) return;
     if (resumedBookingRef.current === resumeId) return;
 
     const ub = unfinishedBookings.find((r) => r.id === resumeId);
@@ -225,11 +273,11 @@ export default function ClientDetailPage({
 
     openBookingModal({
       clients: [client],
-      facilityId: facility.id,
-      facilityName: facility.name,
+      facilityId: facilityRef,
+      facilityName: profile.businessName,
       ...preselection,
-      onCreateBooking: () => {
-        toast.success(`Booking completed for ${ub.clientName}`);
+      onCreateBooking: (booking) => {
+        void persistBooking(booking);
       },
     });
 
@@ -241,7 +289,7 @@ export default function ClientDetailPage({
       `/facility/dashboard/clients/${client.id}${qs ? `?${qs}` : ""}`,
       { scroll: false },
     );
-  }, [searchParams, client, facility, openBookingModal, router]);
+  }, [searchParams, client, profile.businessName, openBookingModal, router]);
 
   const [editedClient, setEditedClient] = useState({
     name: client?.name || "",
@@ -290,7 +338,6 @@ export default function ClientDetailPage({
   }
 
   // Get client-specific data
-  const clientBookings = bookings.filter((b) => b.clientId === client.id);
   // Incidents for this customer: linked by clientId (0.1) unioned with any
   // incident involving one of their pets, deduped and newest-first.
   const clientIncidents = Array.from(
@@ -314,7 +361,6 @@ export default function ClientDetailPage({
   );
 
   // Client billing data
-  const clientPayments = payments.filter((p) => p.clientId === client.id);
   const clientInvoices = invoices.filter((inv) => inv.clientId === client.id);
   const clientGiftCards = giftCards.filter(
     (gc) => gc.purchasedByClientId === client.id,
@@ -329,9 +375,12 @@ export default function ClientDetailPage({
   );
 
   // Calculate billing stats
-  const totalRevenue = clientPayments
-    .filter((p) => p.status === "completed")
-    .reduce((sum, p) => sum + p.totalAmount, 0);
+  // Every row in `payments` is money that MOVED — there is no pending state to
+  // filter out, and a refund is a separate row with a NEGATIVE amount. So this
+  // is a plain sum, and it goes DOWN when money is given back, which is what
+  // "total revenue from this client" has to mean. Filtering on a status that
+  // does not exist would have silently summed to zero.
+  const totalRevenue = clientPayments.reduce((sum, p) => sum + p.amount, 0);
   const outstandingInvoices = clientInvoices.filter(
     (inv) => inv.status === "sent" || inv.status === "overdue",
   );
@@ -400,7 +449,7 @@ export default function ClientDetailPage({
   const getPetData = (pet: Pet) => {
     const photos = petPhotos.filter((p) => p.petId === pet.id);
     const vaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
-    const petBookingsList = bookings.filter((b) => b.petId === pet.id);
+    const petBookingsList = clientBookings.filter((b) => b.petId === pet.id);
     const reports = reportCards.filter((r) => r.petId === pet.id);
     const totalStays = petBookingsList.filter(
       (b) => b.status === "completed",
@@ -609,19 +658,14 @@ export default function ClientDetailPage({
               <Button
                 size="sm"
                 onClick={() => {
-                  if (client && facility) {
+                  if (client) {
                     openBookingModal({
                       clients: [client],
-                      facilityId: facility.id,
-                      facilityName: facility.name,
+                      facilityId: facilityRef,
+                      facilityName: profile.businessName,
                       preSelectedClientId: client.id,
                       onCreateBooking: (booking) => {
-                        const invoice = generateInvoiceForBooking(
-                          booking as never,
-                        );
-                        toast.success(
-                          `Booking created — Invoice ${invoice.id}: $${invoice.total.toFixed(2)}`,
-                        );
+                        void persistBooking(booking);
                       },
                     });
                   }
@@ -1131,19 +1175,14 @@ export default function ClientDetailPage({
                   variant="outline"
                   className="h-7 gap-1.5 text-xs"
                   onClick={() => {
-                    if (client && facility) {
+                    if (client) {
                       openBookingModal({
                         clients: [client],
-                        facilityId: facility.id,
-                        facilityName: facility.name,
+                        facilityId: facilityRef,
+                        facilityName: profile.businessName,
                         preSelectedClientId: client.id,
                         onCreateBooking: (booking) => {
-                          const invoice = generateInvoiceForBooking(
-                            booking as never,
-                          );
-                          toast.success(
-                            `Booking created — Invoice ${invoice.id}: $${invoice.total.toFixed(2)}`,
-                          );
+                          void persistBooking(booking);
                         },
                       });
                     }
@@ -1801,58 +1840,67 @@ export default function ClientDetailPage({
                             <div className="flex items-start gap-3">
                               <div
                                 className={`rounded-lg p-2 ${
-                                  payment.status === "completed"
-                                    ? "bg-green-100"
-                                    : payment.status === "refunded"
-                                      ? "bg-red-100"
-                                      : "bg-amber-100"
+                                  payment.isRefund
+                                    ? "bg-red-100"
+                                    : "bg-green-100"
                                 } `}
                               >
-                                {payment.paymentMethod === "card" && (
+                                {payment.method === "card" && (
                                   <CreditCard className="size-4" />
                                 )}
-                                {payment.paymentMethod === "cash" && (
+                                {payment.method === "cash" && (
                                   <Wallet className="size-4" />
                                 )}
-                                {payment.paymentMethod === "gift_card" && (
+                                {payment.method === "gift_card" && (
                                   <Gift className="size-4" />
                                 )}
                                 {!["card", "cash", "gift_card"].includes(
-                                  payment.paymentMethod,
+                                  payment.method,
                                 ) && <DollarSign className="size-4" />}
                               </div>
                               <div>
+                                {/* A payment row carries no free-text
+                                    description to print. What it does carry is
+                                    the booking it belongs to and who took it,
+                                    which is what somebody reading a payment
+                                    actually wants to know. */}
                                 <h4 className="text-sm font-semibold">
-                                  {payment.description}
+                                  {payment.isRefund ? "Refund" : "Payment"}
+                                  {payment.bookingId
+                                    ? ` · Booking #${payment.bookingId}`
+                                    : ""}
                                 </h4>
                                 <p className="text-muted-foreground mt-1 text-xs">
                                   {formatDate(payment.createdAt)} •{" "}
-                                  {payment.paymentMethod.replace("_", " ")}
+                                  {payment.method.replace("_", " ")}
+                                  {payment.cardLast4
+                                    ? ` •••• ${payment.cardLast4}`
+                                    : ""}
                                 </p>
                               </div>
                             </div>
                             <div className="text-right">
                               <div
                                 className={`text-sm font-semibold ${
-                                  payment.status === "refunded"
+                                  payment.isRefund
                                     ? "text-red-600"
                                     : "text-green-600"
                                 } `}
                               >
-                                {payment.status === "refunded" ? "-" : ""}$
-                                {payment.totalAmount.toFixed(2)}
+                                {/* NO manufactured minus sign. A refund is
+                                    STORED as a negative amount, so prefixing
+                                    one — as the fixture version did — would
+                                    render "-$-52.50". */}
+                                {payment.amount < 0 ? "-" : ""}$
+                                {Math.abs(payment.amount).toFixed(2)}
                               </div>
                               <Badge
                                 variant={
-                                  payment.status === "completed"
-                                    ? "outline"
-                                    : payment.status === "refunded"
-                                      ? "destructive"
-                                      : "secondary"
+                                  payment.isRefund ? "destructive" : "outline"
                                 }
                                 className="mt-1 text-xs"
                               >
-                                {payment.status}
+                                {payment.isRefund ? "refunded" : "completed"}
                               </Badge>
                             </div>
                           </div>
@@ -2927,7 +2975,7 @@ function PetDetailContent({
   getPetData: (pet: Pet) => {
     photos: typeof petPhotos;
     vaccinations: typeof vaccinationRecords;
-    petBookings: typeof bookings;
+    petBookings: Booking[];
     reports: typeof reportCards;
     totalStays: number;
     expiredVaccinations: typeof vaccinationRecords;
