@@ -94,7 +94,14 @@ export default async function FacilityLayout({
                                 canCreateCustomer={canCreateCustomer}
                               />
                             </div>
-                            <FacilityHeaderActions facilityId={11} />
+                            <FacilityHeaderActions
+                              facilityId={11}
+                              viewer={{
+                                name: viewer.fullName,
+                                email: viewer.email,
+                                isPlatformAdmin: viewer.isPlatformAdmin,
+                              }}
+                            />
                           </header>
                           <main className="min-w-0 flex-1 overflow-x-clip">
                             <ImpersonationBanner />
