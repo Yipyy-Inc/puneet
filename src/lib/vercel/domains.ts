@@ -262,3 +262,114 @@ export async function facilityDomainStatus(
     };
   }
 }
+
+/**
+ * Every host attached to the project, in ONE call.
+ *
+ * `facilityDomainStatus` answers for a single facility and is right for the
+ * detail screen. The facilities LIST needs the same answer for every row, and
+ * asking per row would be one Vercel round trip per facility — forty-odd calls
+ * to render a table, against a documented rate limit of 500/minute. This asks
+ * once and lets the caller compare.
+ *
+ * ── WHY THE LIST NEEDS THIS AT ALL ────────────────────────────────────────
+ *
+ * A failed attach was already loud in the two places it happens — the wizard's
+ * success screen and the facility's Overview tab. Both are per-facility, so
+ * finding a broken one meant opening every facility in turn. That is fine at
+ * three and useless at forty, and forty is exactly when it matters: the Vercel
+ * plan caps domains per project (50 on Hobby), so the failures do not arrive
+ * one at a time — every facility created after the ceiling fails, and the first
+ * anyone hears of it is the business asking why their address is dead.
+ *
+ * Paginated deliberately. The cap is 50 on Hobby but unlimited on Pro, so a
+ * single page is an assumption with a expiry date on it.
+ */
+export type AttachedHosts =
+  | { configured: true; hosts: string[] }
+  | { configured: false; reason: string };
+
+export async function attachedProjectHosts(): Promise<AttachedHosts> {
+  const config = configure();
+  if ("reason" in config) return { configured: false, reason: config.reason };
+
+  // A Set, because a cursor that repeats a page would otherwise inflate the
+  // list with duplicates and hide that anything went wrong.
+  const hosts = new Set<string>();
+  let since: string | undefined;
+  let complete = false;
+
+  try {
+    // Bounded rather than `while (true)`: a malformed pagination cursor that
+    // never advances would otherwise spin against Vercel until the request
+    // times out. 20 pages of 100 is 2,000 hosts — far past the Pro soft limit
+    // anyone here will reach, and it fails visibly rather than hanging.
+    for (let page = 0; page < 20; page += 1) {
+      const query = `&limit=100${since ? `&until=${encodeURIComponent(since)}` : ""}`;
+      const response = await fetch(
+        url(
+          config,
+          `/v9/projects/${encodeURIComponent(config.projectId)}/domains?production=true`,
+        ) + query,
+        { headers: { Authorization: `Bearer ${config.token}` } },
+      );
+
+      const body = (await response.json().catch(() => null)) as {
+        domains?: { name?: string }[];
+        pagination?: { next?: number | null };
+        error?: { message?: string };
+      } | null;
+
+      if (!response.ok) {
+        return {
+          configured: false,
+          reason:
+            body?.error?.message ?? `Vercel answered HTTP ${response.status}.`,
+        };
+      }
+
+      // An OK response whose shape we do not recognise must NOT be read as
+      // "no domains are attached". That answer is indistinguishable from a
+      // real empty project, and the caller badges every facility it cannot
+      // find as broken -- so a change at Vercel's end would send a superadmin
+      // chasing forty problems that do not exist. Unknown shape is unknown.
+      if (!Array.isArray(body?.domains)) {
+        return {
+          configured: false,
+          reason: "Vercel returned an unrecognised response.",
+        };
+      }
+
+      for (const domain of body.domains) {
+        if (domain.name) hosts.add(domain.name.toLowerCase());
+      }
+
+      const next = body?.pagination?.next;
+      if (next === null || next === undefined) {
+        complete = true;
+        break;
+      }
+      since = String(next);
+    }
+
+    // Falling out of the loop instead of breaking means the cursor never
+    // reached the end -- too many domains, or a cursor that does not advance.
+    // Either way the list is PARTIAL, and a partial list is the one thing the
+    // caller must never treat as complete: every host missing from it gets
+    // badged as having no web address.
+    if (!complete) {
+      return {
+        configured: false,
+        reason: "Too many domains to list in one pass.",
+      };
+    }
+
+    return { configured: true, hosts: [...hosts] };
+  } catch (error) {
+    return {
+      configured: false,
+      reason:
+        error instanceof Error ? error.message : "Could not reach Vercel.",
+    };
+  }
+}
