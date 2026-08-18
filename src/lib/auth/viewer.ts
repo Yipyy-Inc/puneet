@@ -175,10 +175,12 @@ export function landingPathForClaims(
   if (memberships.some((m) => FACILITY_ADMIN_ROLES.has(m.role))) {
     return "/facility/dashboard";
   }
-  if (primary.role === "groomer") return "/groomer/dashboard";
 
-  // Everyone else on staff — caretakers, reception, trainers, retail — works
-  // out of the employee schedule.
+  // Everyone else on staff — groomers, caretakers, reception, trainers, retail
+  // — works out of the employee schedule. Groomers used to be singled out here
+  // and sent to `/groomer/dashboard`; ADR 0005 retired that portal, and this is
+  // what makes the branch dead before it is deleted. `primary` is still read
+  // above to tell staff from pet owners.
   return "/employee/schedule";
 }
 
@@ -244,9 +246,12 @@ export function canAccessCustomerPortal(viewer: Viewer): boolean {
 }
 
 /**
- * Staff-facing portals: groomer, staff and employee. Any active membership,
- * whatever the role — these are the day-to-day work surfaces, and which one
- * you land on is decided by landingPathForClaims, not by who may enter.
+ * The staff work surface: `/employee`. Any active membership, whatever the
+ * role — it is one portal now (ADR 0005), permission-driven rather than
+ * role-per-portal, so this gate no longer decides WHICH one you get.
+ *
+ * Stays permissive under the coming admin/staff split: a facility admin clocks
+ * in and has a schedule like anybody else. admin ⊃ staff, one-directionally.
  */
 export function canAccessStaffPortal(viewer: Viewer): boolean {
   return (

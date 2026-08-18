@@ -57,8 +57,15 @@ tier would reintroduce the distinction this ADR exists to remove. Revisit if a f
 several admins who are not the account holder.
 
 **4. One staff portal.** `/employee` is it — 45 pages, and already described in
-`src/app/staff/page.tsx` as "the canonical shell". `/groomer` is retired the same way `/staff`
-already was. Its single page reads a fixture; the live grooming features are under `facility/`.
+`src/app/staff/page.tsx` as "the canonical shell". `/groomer` is retired: its single page read
+the `src/data/grooming` fixture, and the live grooming features are under `facility/`.
+
+Retired by **deleting the tree and adding a `redirects()` entry in `next.config.ts`**, not by
+the in-app `redirect()` page `/staff` uses. The bookmark people hold is `/groomer/dashboard`,
+and a page can only answer for the path it occupies — the `/staff` pattern would have left the
+deeper path 404ing. Temporary (307) rather than permanent, so a wrong redirect is not cached in
+somebody's browser until they clear it. `/staff` keeps its stub and its now-divergent pattern;
+converting it is a one-line follow-up, not part of this change.
 
 **5. The gates start enforcing it.** `canAccessFacilityPortal` requires admin access. Platform
 admins still pass, because a super admin has to be able to see a facility to support it.
