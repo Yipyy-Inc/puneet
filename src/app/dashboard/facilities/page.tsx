@@ -36,6 +36,7 @@ import {
   Plus,
   Download,
   Mail,
+  AlertTriangle,
   Building,
   Building2,
   CreditCard,
@@ -56,6 +57,21 @@ import {
   Search,
   Loader2,
 } from "lucide-react";
+
+/**
+ * What /api/facilities/domains answers.
+ *
+ * Declared here rather than imported: `src/lib/vercel/domains.ts` is
+ * `server-only`, and this screen is a client component -- the same reason
+ * AdminFacilityRow lives in its own file. FacilityWebAddress does likewise.
+ *
+ * `configured: false` is a normal answer, not an error: a deployment with no
+ * Vercel token cannot check, and must say so instead of accusing every
+ * facility of being broken.
+ */
+type AttachedHostState =
+  | { configured: true; hosts: string[] }
+  | { configured: false; reason: string };
 
 const exportToCSV = (facilities: AdminFacilityRow[]) => {
   const headers = [
@@ -231,6 +247,38 @@ export default function FacilitiesPage() {
       },
     },
   );
+  // ── Which of these actually has a working web address ───────────────────
+  //
+  // A failed domain attach was already reported in the wizard's success screen
+  // and on each facility's Overview tab. Both are per-facility, so spotting a
+  // broken one meant opening every facility in turn -- fine at three, useless
+  // at forty. And forty is when it matters: Vercel caps domains per project, so
+  // once that ceiling is hit EVERY new facility fails, not one of them.
+  //
+  // A SECOND query rather than a field on /api/facilities, so a slow or
+  // unreachable Vercel delays a badge instead of the table. One call for the
+  // whole list, not one per row.
+  const { data: hostState } = useQuery({
+    queryKey: ["admin", "facilities", "hosts"],
+    queryFn: async (): Promise<AttachedHostState> => {
+      const response = await fetch("/api/facilities/domains");
+      if (!response.ok) throw new Error("Could not check web addresses.");
+      return (await response.json()) as AttachedHostState;
+    },
+    retry: false,
+  });
+
+  // Absent until the answer arrives, and absent for good if Vercel could not be
+  // reached. Both mean "do not claim anything" -- an unchecked facility must
+  // not be badged as broken, which would send somebody to fix what is not wrong.
+  const unattachedHost = useMemo(() => {
+    const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN;
+    if (!hostState?.configured || !appDomain) return null;
+    const attached = new Set(hostState.hosts.map((h) => h.toLowerCase()));
+    return (slug: string) =>
+      !attached.has(`${slug}.${appDomain}`.toLowerCase());
+  }, [hostState]);
+
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [notifySubject, setNotifySubject] = useState("");
@@ -362,7 +410,18 @@ export default function FacilitiesPage() {
       defaultVisible: true,
       render: (facility) => (
         <div className="flex flex-col">
-          <span className="font-medium">{facility.name}</span>
+          <span className="flex items-center gap-1.5 font-medium">
+            {facility.name}
+            {unattachedHost?.(facility.slug) && (
+              <span
+                className="flex items-center gap-1 text-xs font-normal text-amber-600"
+                title={`${facility.slug}.${process.env.NEXT_PUBLIC_APP_DOMAIN} is not attached, so this facility's own login page does not open. Fix it from their Overview tab.`}
+              >
+                <AlertTriangle className="size-3.5 shrink-0" />
+                no web address
+              </span>
+            )}
+          </span>
           <span className="text-muted-foreground text-xs">
             {facility.locationsList[0]?.address || "No address"}
           </span>
