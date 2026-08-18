@@ -75,6 +75,15 @@ export type Viewer = {
   source: "session" | "anonymous";
   userId: string | null;
   email: string | null;
+  /**
+   * The person's own name, for anything that greets them.
+   *
+   * Null until the sync webhook has landed, exactly like `email` — a header
+   * that falls back to the address is right, one that falls back to a literal
+   * is how "Super Admin / admin@yipyy.com" ended up rendered above somebody
+   * else's session.
+   */
+  fullName: string | null;
   isPlatformAdmin: boolean;
   memberships: ViewerMembership[];
 };
@@ -83,6 +92,7 @@ const ANONYMOUS: Viewer = {
   source: "anonymous",
   userId: null,
   email: null,
+  fullName: null,
   isPlatformAdmin: false,
   memberships: [],
 };
@@ -113,7 +123,7 @@ async function viewerFromSession(): Promise<Viewer | null> {
   const [profile, memberships] = await Promise.all([
     supabase
       .from("profiles")
-      .select("email, is_platform_admin")
+      .select("email, full_name, is_platform_admin")
       .eq("id", userId)
       .maybeSingle(),
     supabase
@@ -137,6 +147,13 @@ async function viewerFromSession(): Promise<Viewer | null> {
     source: "session",
     userId,
     email: profile.data?.email ?? user.email ?? null,
+    // `||` and not `??` on the join: it returns "" when the token carries
+    // neither name, and an empty string is a value — it would satisfy `??` and
+    // render a blank where a name goes.
+    fullName:
+      profile.data?.full_name ||
+      [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+      null,
     isPlatformAdmin: profile.data?.is_platform_admin === true,
     memberships: (memberships.data ?? []).map((m) => ({
       membershipId: m.id,
