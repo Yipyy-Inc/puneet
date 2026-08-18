@@ -1991,6 +1991,80 @@ catalogues in the same change and check key parity — nothing enforces it, and
 next-intl renders a missing key as the key itself, so a gap ships as
 `auth.fields.email` printed on the page rather than as an error.
 
+## Snapshot (2026-08-18, a job title was doing an access tier's job)
+
+### 🔴 `manage_staff` was enough to mint an owner
+
+`facility_memberships` had one `role` column doing two unrelated jobs: choosing a
+permission template (13 answers) and deciding which portal you get (2 answers).
+The insert/update policies on it are gated on the **permission** `manage_staff` —
+and a facility can grant a permission to any job title through its own role
+editor (`facility_role_permissions`), or to one person
+(`staff_permissions`, `membership_permissions`).
+
+So a receptionist given `manage_staff` — a plausible thing for a front desk that
+books and hires — could set their own `primary_role` to `owner` and resolve all
+168 permission keys. Proved against production inside an aborted transaction
+before the fix, and refused after it:
+
+```
+reception raising itself to admin   => REFUSED: Only a facility admin may grant
+                                       admin access. manage_staff is not enough.
+reception making itself an owner    => REFUSED: (same)
+reception hiring a manager          => REFUSED: Only a facility admin may hire an
+                                       admin. manage_staff is not enough.
+reception hiring a groomer          => ALLOWED, level=staff
+```
+
+**Why it mattered:** the escalation is available to anyone the facility trusts
+with hiring, and it is invisible — the promoted row looks like an ordinary
+membership.
+
+**Do instead:** `private.is_facility_admin(facility_id)` is deliberately **not**
+routed through `private.has_permission`. If admin-ness were a permission key, a
+facility could grant itself admin from its own settings screen. Gate admin-only
+things on that function, never on a permission.
+
+### 🟡 A trigger that refuses for the wrong reason still looks like it works
+
+`private.enforce_hire_access_level` fires on two tables whose job-title column is
+named differently (`staff.primary_role`, `facility_membership_grants.role`). The
+first cut chose between them with a CASE **in the DECLARE initialiser**. plpgsql
+compiles that into one SQL expression, so both field references resolve
+regardless of the branch — and every insert and update of either table raised
+`record "new" has no field "role"`.
+
+The escalation probe's "reception cannot hire a manager" assertion **passed**
+anyway, because the write did fail. It just failed with a schema error rather
+than the guard. Fixed in `20260818120000_the_hire_guard_reads_the_right_column`.
+
+**Do instead:** assert on the refusal MESSAGE, not merely that something raised.
+And branch on `tg_table_name` with `IF`, one statement per arm, never with a
+CASE over fields that do not exist on both records.
+
+### 🟡 A facility cannot be deleted at all
+
+Found while testing the cascade carve-out in
+`private.protect_last_facility_admin`. `audit_log.facility_id` is
+`ON DELETE SET NULL`, and that SET NULL is an UPDATE — which the append-only
+trigger on `audit_log` refuses:
+
+```
+delete from public.facilities where id = ...
+  => audit_log is append-only: UPDATE is not permitted on an audit entry
+```
+
+Pre-dates the access-level work and is unrelated to it, but it means
+`facilities_delete` (superadmin-only, ADR-backed) cannot succeed, and the
+"the whole facility is going away" branch of the last-admin guard is currently
+unreachable.
+
+**Do instead:** don't assume facility deletion works. Fixing it is a choice
+between `ON DELETE CASCADE` on the audit rows (destroys the record of what
+happened) and letting the trigger allow the facility_id null-out specifically —
+the second is almost certainly right, but it is a change to an immutability
+guarantee and deserves its own ADR.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

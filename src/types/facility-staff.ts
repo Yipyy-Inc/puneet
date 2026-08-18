@@ -17,6 +17,26 @@ export type FacilityStaffRole =
   | "accountant"
   | "sanitation";
 
+/**
+ * Which portal a membership gets — the ACCESS model (ADR 0005).
+ *
+ * Deliberately two values while `FacilityStaffRole` has thirteen: those thirteen
+ * are JOB TITLES that select a permission template, not access tiers. A groomer
+ * and a receptionist are both `staff` and still do not see the same screens.
+ *
+ * Mirrors the `public.facility_access_level` Postgres enum. `admin` is never
+ * the default anywhere — every path that omits it must fail closed.
+ */
+export type FacilityAccessLevel = "admin" | "staff";
+
+/** The job titles that carry admin access no matter what the column says. */
+export const ADMIN_TIER_ROLES: readonly FacilityStaffRole[] = [
+  "owner",
+  "admin",
+  "manager",
+  "supervisor",
+];
+
 export type ServiceModule =
   | "grooming"
   | "training"
