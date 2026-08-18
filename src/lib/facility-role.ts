@@ -14,15 +14,6 @@ import type { FacilityStaffRole } from "@/types/facility-staff";
 
 export const FACILITY_ROLE_COOKIE = "facility_role";
 
-/**
- * Only the primary Facility Owner may access Yipyy agreement documents. An unset
- * cookie defaults to owner (matches the default viewer); any set role must be
- * exactly "owner".
- */
-export function isFacilityOwnerRole(role: string | undefined | null): boolean {
-  return role == null || role === "owner";
-}
-
 /** Client-only: mirror the active viewer's role into the server-readable cookie. */
 export function setFacilityRoleCookie(role: FacilityStaffRole): void {
   if (typeof document === "undefined") return;

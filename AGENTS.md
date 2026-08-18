@@ -54,6 +54,7 @@ There is **no test runner** in this project. "Green" = the CI gates plus a manua
 | [docs/architecture/overview.md](docs/architecture/overview.md)                   | How the system fits together; where routes/components/logic/state/data live; known deviations              |
 | [docs/conventions/code-style.md](docs/conventions/code-style.md)                 | Detected conventions vs. target conventions for new code                                                   |
 | [docs/quality/debt-map.md](docs/quality/debt-map.md)                             | Known landmines, fragile areas, risk zones — read before touching them                                     |
+| [docs/product/onboarding-and-roles.md](docs/product/onboarding-and-roles.md)     | **Who creates whom** — the two addresses, the four roles, invitations, one login across facilities         |
 | [docs/product/overview.md](docs/product/overview.md)                             | What the product does and for whom                                                                         |
 | [docs/product/prd.md](docs/product/prd.md)                                       | Reverse-engineered product intent, scope, open questions                                                   |
 | [docs/product/critical-user-journeys.md](docs/product/critical-user-journeys.md) | Flows that must not break; verify the touched one before claiming done                                     |
