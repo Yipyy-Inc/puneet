@@ -1,6 +1,7 @@
 import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import type { Metadata } from "next";
 import { getLocale } from "next-intl/server";
+import { headers } from "next/headers";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/lib/query-provider";
@@ -37,6 +38,21 @@ export default async function RootLayout({
   // and the dictionary a browser spell-checks and offers to translate with, so
   // a French page announced as English is read aloud with English phonetics.
   const locale = await getLocale();
+
+  // ── WHOSE SITE THIS IS ──────────────────────────────────────────────────
+  //
+  // `x-facility-slug` is stamped by proxy.ts from the Host header, so on
+  // pawradise.yipyy.com this footer is standing at the bottom of a business's
+  // OWN page. Claiming "© Yipyy. All rights reserved." there reads as the wrong
+  // company's site; "Powered by Yipyy" is what the page actually is.
+  //
+  // The SLUG only, never a database read. This layout wraps all 266 routes, and
+  // a query here would put one on every request to serve a line of footer text.
+  // The facility's real name is already the largest thing on the auth card.
+  //
+  // Free, as it happens: reading cookies for the locale above already opted
+  // every route out of static rendering, so this header read costs nothing.
+  const onFacilityHost = Boolean((await headers()).get("x-facility-slug"));
 
   return (
     <html
@@ -140,7 +156,9 @@ export default async function RootLayout({
                 page. Extra bottom padding on phones clears the facility mobile
                 bottom-nav (fixed, md:hidden); removed at md where no nav exists. */}
             <footer className="bg-background text-muted-foreground flex items-center justify-center border-t px-4 py-4 pb-20 text-xs md:pb-4">
-              © 2026 Yipyy. All rights reserved.
+              {onFacilityHost
+                ? "Powered by Yipyy"
+                : "© 2026 Yipyy. All rights reserved."}
             </footer>
           </div>
           <Toaster />

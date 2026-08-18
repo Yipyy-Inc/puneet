@@ -20,8 +20,8 @@
     "signUp": {
       "title": "Créez votre compte",
       "description": "Un seul compte pour vos réservations, vos animaux et vos visites.",
-      "descriptionJoin": "Créez votre compte Yipyy, puis rejoignez {name}.",
-      "descriptionNoSelfSignup": "Créez votre compte Yipyy. {name} ajoute ses clients elle-même — nous retrouverons votre dossier ensuite.",
+      "descriptionJoin": "Créez votre compte, puis rejoignez {name}.",
+      "descriptionNoSelfSignup": "Créez votre compte. {name} ajoute ses clients elle-même — nous retrouverons votre dossier ensuite.",
       "haveAccount": "Vous avez déjà un compte ?",
       "signInLink": "Se connecter"
     },
@@ -60,13 +60,17 @@
       "forgotPassword": "Mot de passe oublié ?",
       "continueWith": "Continuer avec {provider}",
       "redirecting": "Redirection…",
-      "or": "ou"
+      "or": "ou",
+      "goToSignIn": "Se connecter"
     },
     "notices": {
       "codeSent": "Nous avons envoyé un code de vérification à {email}.",
       "enterEmailFirst": "Saisissez d'abord votre e-mail, puis choisissez Mot de passe oublié.",
       "resetSent": "Si un compte existe pour cette adresse, nous y avons envoyé un lien de réinitialisation.",
-      "resetOpenLink": "Ouvrez le lien dans cet e-mail pour choisir un nouveau mot de passe. Vous pouvez fermer cette page."
+      "resetOpenLink": "Ouvrez le lien dans cet e-mail pour choisir un nouveau mot de passe. Vous pouvez fermer cette page.",
+      "alreadyHaveAccount": "Vous avez déjà un compte",
+      "alreadyHaveAccountAt": "Cette adresse a déjà un compte, et le même mot de passe fonctionne ici. Connectez-vous et vous pourrez rejoindre {name}.",
+      "alreadyHaveAccountPlain": "Cette adresse a déjà un compte. Connectez-vous et vous y êtes."
     },
     "callbackErrors": {
       "state": "Cette connexion n'a pas pu être vérifiée. Réessayez depuis cette page.",

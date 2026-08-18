@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -37,9 +38,18 @@ import { signUpWithPassword, verifyEmailCode } from "@/lib/auth/workos-actions";
 // cannot drift apart — both arrive at the same verify step below.
 // ============================================================================
 
-type Step = "details" | "verify";
+type Step = "details" | "verify" | "already-exists";
 
-export function EmailSignUpForm() {
+export function EmailSignUpForm({
+  facilityName,
+}: {
+  /**
+   * The facility whose door this is, when there is one. It only changes the
+   * WORDING of the "you already have an account" answer -- the account itself
+   * is the same one everywhere, which is the whole point being explained.
+   */
+  facilityName?: string;
+}) {
   const t = useTranslations("auth");
   const [step, setStep] = useState<Step>("details");
   const [firstName, setFirstName] = useState("");
@@ -61,6 +71,12 @@ export function EmailSignUpForm() {
         email,
         password,
       );
+      if (result?.alreadyExists) {
+        // Not an error box. This is good news badly timed -- their password
+        // already works here -- and a red alert would read as a rejection.
+        setStep("already-exists");
+        return;
+      }
       if (result?.needsVerification) {
         setNotice(t("notices.codeSent", { email: email.trim() }));
         setStep("verify");
@@ -170,6 +186,26 @@ export function EmailSignUpForm() {
             {pending ? t("actions.verifying") : t("actions.verify")}
           </Button>
         </form>
+      )}
+
+      {step === "already-exists" && (
+        <div
+          role="status"
+          className="space-y-3 rounded-md border border-sky-600/40 bg-sky-600/10 px-3 py-3 text-sm"
+        >
+          <p className="font-medium">{t("notices.alreadyHaveAccount")}</p>
+          <p className="text-muted-foreground">
+            {facilityName
+              ? t("notices.alreadyHaveAccountAt", { name: facilityName })
+              : t("notices.alreadyHaveAccountPlain")}
+          </p>
+          <Link
+            href={`/sign-in?email=${encodeURIComponent(email.trim())}`}
+            className="text-primary inline-block font-medium hover:underline"
+          >
+            {t("actions.goToSignIn")}
+          </Link>
+        </div>
       )}
 
       {message && (

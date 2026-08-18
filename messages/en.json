@@ -20,8 +20,8 @@
     "signUp": {
       "title": "Create your account",
       "description": "One account for booking, your pets and your visits.",
-      "descriptionJoin": "Create your Yipyy account, then join {name}.",
-      "descriptionNoSelfSignup": "Create your Yipyy account. {name} adds customers themselves — we'll find your record afterwards.",
+      "descriptionJoin": "Create your account, then join {name}.",
+      "descriptionNoSelfSignup": "Create your account. {name} adds customers themselves — we'll find your record afterwards.",
       "haveAccount": "Already have an account?",
       "signInLink": "Sign in"
     },
@@ -60,13 +60,17 @@
       "forgotPassword": "Forgot password?",
       "continueWith": "Continue with {provider}",
       "redirecting": "Redirecting…",
-      "or": "or"
+      "or": "or",
+      "goToSignIn": "Sign in instead"
     },
     "notices": {
       "codeSent": "We've sent a verification code to {email}.",
       "enterEmailFirst": "Enter your email first, then choose Forgot password.",
       "resetSent": "If that address has an account, we've emailed a link to reset the password.",
-      "resetOpenLink": "Open the link in that email to choose a new password. You can close this page."
+      "resetOpenLink": "Open the link in that email to choose a new password. You can close this page.",
+      "alreadyHaveAccount": "You already have an account",
+      "alreadyHaveAccountAt": "That email already has an account, and the same password works here. Sign in and you can join {name}.",
+      "alreadyHaveAccountPlain": "That email already has an account. Sign in with it and you're straight in."
     },
     "callbackErrors": {
       "state": "That sign-in could not be verified. Please try again from this page.",
