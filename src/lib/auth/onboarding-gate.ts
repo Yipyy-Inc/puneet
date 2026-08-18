@@ -1,5 +1,6 @@
 import "server-only";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { createServerClient } from "@/lib/supabase/server";
@@ -55,10 +56,26 @@ import { createServerClient } from "@/lib/supabase/server";
  * check stays anyway: routing a proprietor into a new hire's checklist is
  * wrong however the status got that way, and the cost is one column.
  */
+const CHECKLIST = "/employee/onboarding";
+
 export async function redirectIfStillOnboarding(
   email: string | null,
 ): Promise<void> {
   if (!email) return;
+
+  // ── THE CHECKLIST IS INSIDE THE PORTAL THIS NOW GUARDS ──────────────────
+  //
+  // This used to run only in the facility layout, where the destination was
+  // somewhere else entirely and could never be the current page. It runs in the
+  // employee layout too now, and /employee/onboarding is under /employee — so
+  // without this line the checklist would redirect to itself forever.
+  //
+  // `x-pathname` is stamped by src/proxy.ts, the same header guardPortal reads.
+  // Absent means the proxy did not run, which for a rendered layout does not
+  // happen; an empty string matches no prefix, so the gate still fires rather
+  // than failing open into a loop.
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  if (pathname.startsWith(CHECKLIST)) return;
 
   const supabase = await createServerClient();
   const { data } = await supabase
@@ -68,6 +85,6 @@ export async function redirectIfStillOnboarding(
     .maybeSingle();
 
   if (data?.status === "invited" && data.primary_role !== "owner") {
-    redirect("/employee/onboarding");
+    redirect(CHECKLIST);
   }
 }

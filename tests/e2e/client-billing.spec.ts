@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { signIn } from "./_auth";
+import { deployedFixture, deployedFixtureRef } from "./_fixtures";
 
 // ============================================================================
 // A client's payments.
@@ -16,13 +17,13 @@ import { signIn } from "./_auth";
 // ============================================================================
 
 const PAYMENTS = "/api/payments";
-const CLIENT_REF = Number(process.env.E2E_POSTGRES_CLIENT_REF ?? "");
-const STAFF = process.env.CLOVER_E2E_STAFF_EMAIL?.trim() ?? "";
-const CUSTOMER = process.env.CLOVER_E2E_CUSTOMER_EMAIL?.trim() ?? "";
+const CLIENT_REF = deployedFixtureRef("E2E_POSTGRES_CLIENT_REF");
+const STAFF = deployedFixture("CLOVER_E2E_STAFF_EMAIL");
+const CUSTOMER = deployedFixture("CLOVER_E2E_CUSTOMER_EMAIL");
 // A real client at a DIFFERENT FACILITY, with hundreds of payments of their
 // own. An empty result for a client who has nothing would prove nothing about
 // scoping; this one has plenty to refuse.
-const OTHER_REF = Number(process.env.E2E_OTHER_CLIENT_REF ?? "");
+const OTHER_REF = deployedFixtureRef("E2E_OTHER_CLIENT_REF");
 
 test.describe("a client's payments", () => {
   test.skip(
