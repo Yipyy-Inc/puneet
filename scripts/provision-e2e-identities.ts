@@ -69,7 +69,7 @@ const CUSTOMER_CLIENT_REF = 15;
  * One per portal the app exposes, so every gate can be exercised:
  *   platform admin -> /dashboard
  *   owner/manager  -> /facility/dashboard
- *   groomer        -> /groomer/dashboard
+ *   groomer        -> /employee/schedule  (was /groomer/dashboard; ADR 0005)
  *   caretaker      -> /employee/schedule
  *   customer       -> /customer/dashboard  (no membership, by design)
  *
