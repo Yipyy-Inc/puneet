@@ -83,7 +83,10 @@ export function EmailSignInForm() {
     : null;
 
   const [step, setStep] = useState<Step>("credentials");
-  const [email, setEmail] = useState("");
+  // Prefilled when the sign-up form sent them here for already having an
+  // account. Retyping the address they just typed would make "sign in instead"
+  // feel like starting over rather than continuing.
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [pending, startTransition] = useTransition();

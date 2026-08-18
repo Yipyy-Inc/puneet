@@ -106,7 +106,11 @@ export async function signUpWithPassword(
   lastName: string,
   email: string,
   password: string,
-): Promise<{ error?: string; needsVerification?: boolean }> {
+): Promise<{
+  error?: string;
+  needsVerification?: boolean;
+  alreadyExists?: boolean;
+}> {
   try {
     await getWorkOS().userManagement.createUser({
       email: email.trim(),
@@ -115,6 +119,40 @@ export async function signUpWithPassword(
       lastName: lastName.trim(),
     });
   } catch (error) {
+    // ── ALREADY HAS AN ACCOUNT IS NOT A FAILURE ──────────────────────────
+    //
+    // One credential serves every facility (see the note on the sign-up
+    // screen), so the SECOND facility a person deals with is a normal, expected
+    // arrival at this form -- and the only signal they got was WorkOS's own
+    // "user already exists", with nothing to explain that their existing
+    // password already works here.
+    //
+    // That is the failure mode a facility-branded page creates: the page looks
+    // like a business they have never used, so "email already in use" reads as
+    // a mistake rather than as good news.
+    //
+    // Asked of WorkOS rather than pattern-matched on the message text, which is
+    // the vendor's wording and can change without notice.
+    //
+    // ── ON ENUMERATION, SAID PLAINLY ─────────────────────────────────────
+    //
+    // This does tell an anonymous caller whether an address has an account. It
+    // is NOT a new leak: createUser already refused a duplicate and its message
+    // was shown verbatim on this screen, so the same fact was already
+    // obtainable -- only uselessly, to the person it was actually about. Every
+    // sign-up form has this property; you cannot both create an account and
+    // hide whether one exists.
+    //
+    // sendPasswordReset is the one that must NOT do this and does not: it
+    // answers identically either way, because there the caller supplies only an
+    // address and gains nothing legitimate from the difference.
+    const existing = await getWorkOS()
+      .userManagement.listUsers({ email: email.trim() })
+      .then((page) => page.data[0])
+      .catch(() => undefined);
+
+    if (existing) return { alreadyExists: true };
+
     return { error: readableError(error, "Could not create that account.") };
   }
   // Sign in immediately, which is what triggers the verification email and
