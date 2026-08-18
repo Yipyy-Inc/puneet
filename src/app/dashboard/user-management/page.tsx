@@ -1,153 +1,141 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  roleDisplayNames,
-  rolePermissions,
-  AdminUser,
-} from "@/data/admin-users";
-import { getAdminTeam, useAdminTeam } from "@/lib/admin-team-store";
+  Clock,
+  Download,
+  Mail as MailIcon,
+  Plus,
+  Shield,
+  User,
+  UserCheck,
+  UserCog,
+  Users,
+} from "lucide-react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Badge } from "@/components/ui/badge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Download,
-  User,
-  Users,
-  Mail as MailIcon,
-  Shield,
-  Building,
-  Clock,
-  UserCog,
-  UserCheck,
-  UserX,
-  Key,
-  Plus,
-} from "lucide-react";
-import { AdminUserModal } from "@/components/user-management/AdminUserModal";
+  PLATFORM_ROLE_LABEL,
+  platformTeamQueries,
+  type PlatformTeamRow,
+} from "@/lib/api/platform-team";
 import { CreateAdminUserModal } from "@/components/user-management/CreateAdminUserModal";
+import { PlatformMemberSheet } from "@/components/user-management/PlatformMemberSheet";
 
-const exportUsersToCSV = (usersData: AdminUser[]) => {
+// ============================================================================
+// The Yipyy platform team — from Postgres.
+//
+// ── WHAT THIS PAGE USED TO SHOW ───────────────────────────────────────────
+//
+// `src/data/admin-users.ts`: five invented people, overlaid with a localStorage
+// store that appended anybody invited in this browser. Harmless while the
+// invitation was a mock too. It stopped being harmless the moment
+// /api/admin/invite began writing a real `platform_invitations` row and
+// /setup/<token> began creating a real identity — from then on a real
+// invitation appeared to do nothing here, and a fixture row appeared to be a
+// colleague.
+//
+// ── COLUMNS THAT WENT, AND WHY ────────────────────────────────────────────
+//
+// Department, Access Level, Last Login and Phone are gone. Not because they are
+// uninteresting — because nothing records them. The fixture had values for all
+// four and the database has none, so keeping the columns would mean either
+// inventing figures or shipping four permanently empty ones. Same for the
+// "Suspended" tile: `platform_memberships` has no such state, so the number
+// could only ever have been zero dressed as a measurement.
+//
+// What is left is what is actually known: who, at what role, since when, and
+// who let them in.
+// ============================================================================
+
+function exportTeamToCSV(rows: PlatformTeamRow[]) {
   const headers = [
-    "ID",
     "Name",
     "Email",
     "Role",
-    "Department",
     "Status",
-    "Access Level",
-    "Last Login",
-    "Phone",
-    "Created At",
-    "Responsibility Areas",
+    "Since",
+    "Invited by",
+    "Invitation expires",
   ];
 
-  const csvContent = [
+  const csv = [
     headers.join(","),
-    ...usersData.map((user) =>
+    ...rows.map((row) =>
       [
-        user.id,
-        `"${user.name.replace(/"/g, '""')}"`,
-        user.email,
-        roleDisplayNames[user.role],
-        `"${user.department.replace(/"/g, '""')}"`,
-        user.status,
-        user.accessLevel,
-        user.lastLogin,
-        user.phone || "",
-        user.createdAt,
-        `"${user.responsibilityAreas.join("; ")}"`,
+        `"${(row.name ?? "").replace(/"/g, '""')}"`,
+        row.email,
+        PLATFORM_ROLE_LABEL[row.role] ?? row.role,
+        row.status,
+        row.since,
+        row.invitedByEmail ?? "",
+        row.expiresAt ?? "",
       ].join(","),
     ),
   ].join("\n");
 
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute(
-    "download",
-    `admin_users_export_${new Date().toISOString().split("T")[0]}.csv`,
+  const url = URL.createObjectURL(
+    new Blob([csv], { type: "text/csv;charset=utf-8;" }),
   );
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `platform-team-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
-  document.body.removeChild(link);
-};
+  URL.revokeObjectURL(url);
+}
 
 export default function UserManagementPage() {
-  // Deep-link: global search navigates here with ?user=<id> to open the modal.
-  const searchParams = useSearchParams();
-  const team = useAdminTeam();
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(() => {
-    const id = searchParams.get("user");
-    const found = id
-      ? getAdminTeam().find((u) => String(u.id) === id)
-      : undefined;
-    return found ? (found as unknown as AdminUser) : null;
-  });
+  const queryClient = useQueryClient();
+  const { data: team, isPending, error } = useQuery(platformTeamQueries.all());
+  const [selected, setSelected] = useState<PlatformTeamRow | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const columns: ColumnDef<AdminUser>[] = [
-    {
-      key: "name",
-      label: "Name",
-      icon: User,
-      defaultVisible: true,
-    },
-    {
-      key: "email",
-      label: "Email",
-      icon: MailIcon,
-      defaultVisible: true,
-    },
+  const rows = team ?? [];
+  const active = rows.filter((r) => r.status === "active").length;
+  const invited = rows.filter((r) => r.status === "invited").length;
+
+  const columns: ColumnDef<PlatformTeamRow>[] = [
+    { key: "name", label: "Name", icon: User, defaultVisible: true },
+    { key: "email", label: "Email", icon: MailIcon, defaultVisible: true },
     {
       key: "role",
-      label: "Assign Role",
+      label: "Role",
       icon: Shield,
       defaultVisible: true,
-      render: (user) => <StatusBadge type="adminRole" value={user.role} />,
-    },
-    {
-      key: "department",
-      label: "Department",
-      icon: Building,
-      defaultVisible: true,
+      render: (row) => (
+        <Badge variant="secondary" className="font-normal">
+          {PLATFORM_ROLE_LABEL[row.role] ?? row.role}
+        </Badge>
+      ),
     },
     {
       key: "status",
       label: "Status",
       icon: Shield,
       defaultVisible: true,
-      render: (user) => <StatusBadge type="status" value={user.status} />,
+      render: (row) =>
+        row.status === "active" ? (
+          <Badge className="border-emerald-600/40 bg-emerald-600/10 font-normal text-emerald-700 dark:text-emerald-400">
+            On the team
+          </Badge>
+        ) : (
+          <Badge className="border-amber-600/40 bg-amber-600/10 font-normal text-amber-700 dark:text-amber-400">
+            Invited
+          </Badge>
+        ),
     },
     {
-      key: "accessLevel",
-      label: "Access Level",
-      icon: Key,
-      defaultVisible: true,
-      render: (user) => (
-        <StatusBadge type="accessLevel" value={user.accessLevel} />
-      ),
-    },
-    {
-      key: "lastLogin",
-      label: "Last Login",
+      key: "since",
+      label: "Since",
       icon: Clock,
       defaultVisible: true,
-      render: (user) =>
-        user.lastLogin
-          ? new Date(user.lastLogin).toLocaleDateString()
-          : "Never",
+      render: (row) => new Date(row.since).toLocaleDateString(),
     },
   ];
 
@@ -156,164 +144,150 @@ export default function UserManagementPage() {
       key: "status",
       label: "Status",
       options: [
-        { value: "all", label: "All Status" },
-        { value: "active", label: "Active" },
+        { value: "all", label: "All" },
+        { value: "active", label: "On the team" },
         { value: "invited", label: "Invited" },
-        { value: "inactive", label: "Inactive" },
-        { value: "suspended", label: "Suspended" },
       ],
     },
     {
       key: "role",
-      label: "Assign Role",
+      label: "Role",
+      // The four values of public.platform_role, and only those. The five
+      // job-flavoured labels the invite form still offers are mapped onto these
+      // server-side (lib/auth/platform-invitation.ts) — filtering by a label
+      // the database has never heard of would return nothing, every time.
       options: [
-        { value: "all", label: "All Roles" },
-        { value: "sales_team", label: "Sales Team" },
-        { value: "technical_support", label: "Technical Support" },
-        { value: "account_manager", label: "Account Manager" },
-        { value: "financial_auditor", label: "Financial Auditor" },
-        { value: "system_administrator", label: "System Administrator" },
-      ],
-    },
-    {
-      key: "accessLevel",
-      label: "Access Level",
-      options: [
-        { value: "all", label: "All Access Levels" },
-        { value: "full", label: "Full Access" },
-        { value: "read_write", label: "Read/Write Access" },
-        { value: "read_only", label: "Read Only Access" },
-        { value: "restricted", label: "Restricted Access" },
+        { value: "all", label: "All roles" },
+        { value: "superadmin", label: "Superadmin" },
+        { value: "support", label: "Support" },
+        { value: "billing", label: "Billing" },
+        { value: "readonly", label: "Read only" },
       ],
     },
   ];
 
-  const activeUsers = team.filter((u) => u.status === "active").length;
-  const suspendedUsers = team.filter((u) => u.status === "suspended").length;
-  const inactiveUsers = team.filter((u) => u.status === "inactive").length;
-  const invitedUsers = team.filter((u) => u.status === "invited").length;
-
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">{"Admin Users"}</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Platform team</h2>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => exportUsersToCSV(team)}>
+          <Button
+            variant="outline"
+            onClick={() => exportTeamToCSV(rows)}
+            disabled={rows.length === 0}
+          >
             <Download className="mr-2 size-4" />
-            {"Export"}
+            Export
           </Button>
           <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 size-4" />
-            {"Invite Admin"}
+            Invite admin
           </Button>
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {error && (
+        <p
+          role="alert"
+          className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm"
+        >
+          {(error as Error).message}
+        </p>
+      )}
+
+      {/* Three tiles, not four. Each one counts a row that exists. */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {"Total Admin Users"}
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Team size</CardTitle>
             <UserCog className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{team.length}</div>
+            {isPending ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <div className="text-2xl font-bold">{rows.length}</div>
+            )}
             <p className="text-muted-foreground text-xs">
-              {invitedUsers > 0
-                ? `${invitedUsers} pending invite${invitedUsers === 1 ? "" : "s"}`
-                : "Across all roles"}
+              Members and pending invitations
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {"Active Admin Users"}
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">On the team</CardTitle>
             <UserCheck className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {activeUsers}
-            </div>
+            {isPending ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <div className="text-2xl font-bold text-emerald-600">
+                {active}
+              </div>
+            )}
             <p className="text-muted-foreground text-xs">
-              {Math.round((activeUsers / team.length) * 100)}% of total
+              Rows in platform_memberships
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {"Suspended Users"}
+              Awaiting setup
             </CardTitle>
-            <UserX className="text-muted-foreground size-4" />
+            <Clock className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {suspendedUsers}
-            </div>
+            {isPending ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <div className="text-2xl font-bold text-amber-600">{invited}</div>
+            )}
             <p className="text-muted-foreground text-xs">
-              {inactiveUsers} inactive · {invitedUsers} invited
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {"Roles Configured"}
-            </CardTitle>
-            <Key className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Object.keys(rolePermissions).length}
-            </div>
-            <p className="text-muted-foreground text-xs">
-              With custom permissions
+              Invitations not yet accepted
             </p>
           </CardContent>
         </Card>
       </div>
 
       <DataTable
-        data={team as unknown as Record<string, unknown>[]}
+        data={rows as unknown as Record<string, unknown>[]}
         columns={columns as unknown as ColumnDef<Record<string, unknown>>[]}
         filters={filters}
-        searchKey="name"
-        searchPlaceholder={"Search admin users..."}
+        searchKey="email"
+        searchPlaceholder="Search by email…"
         itemsPerPage={10}
-        onRowClick={(user) => setSelectedUser(user as unknown as AdminUser)}
+        onRowClick={(row) => setSelected(row as unknown as PlatformTeamRow)}
         emptyState={{
           icon: Users,
-          title: "No admin users yet",
+          title: "Nobody on the platform team yet",
           description:
-            "Invite teammates to manage the platform across roles and access levels.",
+            "Invite a colleague to run Yipyy. They set their own password at the link they are sent.",
           action: {
-            label: "Invite Admin",
+            label: "Invite admin",
             onClick: () => setIsCreateModalOpen(true),
             icon: Plus,
           },
         }}
       />
-      <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-        <DialogContent className="flex max-h-[90vh] flex-col p-0 sm:max-w-5xl">
-          <div className="flex-1 overflow-y-auto p-6">
-            <DialogHeader className="mb-0">
-              <DialogTitle className="sr-only">
-                {selectedUser?.name} - {"User Details"}
-              </DialogTitle>
-            </DialogHeader>
-            {selectedUser && <AdminUserModal user={selectedUser} />}
-          </div>
-        </DialogContent>
-      </Dialog>
+
+      <PlatformMemberSheet
+        row={selected}
+        onOpenChange={(open) => !open && setSelected(null)}
+        onRevoked={() => {
+          setSelected(null);
+          void queryClient.invalidateQueries({ queryKey: ["platform-team"] });
+        }}
+      />
 
       <CreateAdminUserModal
         open={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
         onInvited={(member, result) => {
+          // The invitation ROW exists either way — the email is the part that
+          // may not have been sent — so the table is refreshed regardless.
+          void queryClient.invalidateQueries({ queryKey: ["platform-team"] });
           if (result.sent) {
             toast.success(`Invitation email sent to ${member.email}`);
           } else {
