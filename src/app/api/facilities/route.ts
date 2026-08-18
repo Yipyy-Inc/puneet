@@ -78,6 +78,14 @@ const ProvisionInput = z.object({
   locations: z.array(z.object({ name: z.string().trim().min(1) })).default([]),
   /** Boarding, daycare, grooming… The list renders these as badges. */
   businessTypes: z.array(z.string().trim().min(1)).default([]),
+  /**
+   * Whether customers may register themselves at this facility's own address.
+   *
+   * Defaults FALSE, matching the column, so an older client that does not send
+   * it provisions exactly as before. `provision_facility` does not take it —
+   * see where it is applied below for why that is deliberate.
+   */
+  allowCustomerSignup: z.boolean().default(false),
 });
 
 /** "Pawradise Resort" → "pawradise-resort". */
@@ -256,6 +264,42 @@ export async function POST(request: NextRequest) {
     console.error(`Subdomain for "${slug}" not attached: ${domain.reason}`);
   }
 
+  // ── Whether customers may register themselves, also after the commit ──────
+  //
+  // NOT a parameter on provision_facility, deliberately. That function is one
+  // transaction over org + facility + location + staff + membership, and this
+  // is a policy switch the facility can flip any day afterwards from their own
+  // settings screen. Widening the provisioning signature for it would put a
+  // reversible preference inside the irreversible part.
+  //
+  // `set_customer_signup` is the same gated function that screen calls, so
+  // there is one writer and one permission check rather than two. A platform
+  // admin — which this route has already established — satisfies it.
+  //
+  // Only when TRUE: the column already defaults to false, so asking for the
+  // default would be a write that changes nothing and one more way to fail.
+  //
+  // Non-fatal, like the domain and the invitation above. The facility exists by
+  // now; refusing it because a switch did not flip would be the wrong trade,
+  // and the setting is one click away on their settings screen.
+  let customerSignup: { enabled: boolean; reason?: string } = {
+    enabled: false,
+  };
+  if (result?.facilityId && input.allowCustomerSignup) {
+    const { error: signupError } = await supabase.rpc("set_customer_signup", {
+      p_facility_id: result.facilityId,
+      p_enabled: true,
+    });
+    if (signupError) {
+      console.error(
+        `Customer sign-up for "${slug}" not enabled: ${signupError.message}`,
+      );
+      customerSignup = { enabled: false, reason: signupError.message };
+    } else {
+      customerSignup = { enabled: true };
+    }
+  }
+
   let invite: unknown = null;
   if (result?.facilityId && !result.replayed) {
     // link-origin-ok: this is not a link anyone sees — it is this server
@@ -290,7 +334,7 @@ export async function POST(request: NextRequest) {
   // honestly reported as "this already existed" instead of claiming to have
   // made a second facility.
   return NextResponse.json(
-    { ...result, invite, domain },
+    { ...result, invite, domain, customerSignup },
     { status: result?.replayed ? 200 : 201 },
   );
 }

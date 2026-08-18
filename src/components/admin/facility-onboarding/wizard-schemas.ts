@@ -115,6 +115,7 @@ export const operatingSchema = z
     checkOutTime: z.string().min(1, "Required"),
     bookingCutoff: z.string().min(1, "Required"),
     depositEnabled: z.boolean(),
+    allowCustomerSignup: z.boolean(),
     depositPercent: z.string(),
   })
   .superRefine((val, ctx) => {

@@ -23,6 +23,7 @@ import { PrimaryAdminStep } from "./facility-onboarding/primary-admin-step";
 import { ReviewStep } from "./facility-onboarding/review-step";
 import {
   SuccessScreen,
+  type CustomerSignupOutcome,
   type DomainOutcome,
   type OwnerInviteOutcome,
 } from "./facility-onboarding/success-screen";
@@ -32,6 +33,7 @@ type Created = {
   slug?: string;
   invite?: OwnerInviteOutcome | null;
   domain?: DomainOutcome | null;
+  customerSignup?: CustomerSignupOutcome | null;
 };
 
 export function FacilityOnboardingWizard({
@@ -93,6 +95,7 @@ export function FacilityOnboardingWizard({
           website: draft.website,
           locations: draft.city ? [{ name: draft.city }] : [],
           businessTypes: draft.businessTypes,
+          allowCustomerSignup: draft.allowCustomerSignup,
         }),
       });
 
@@ -185,6 +188,7 @@ export function FacilityOnboardingWizard({
             ownerEmail={draft.adminEmail}
             invite={create.data?.invite ?? null}
             domain={create.data?.domain ?? null}
+            customerSignup={create.data?.customerSignup ?? null}
             onViewProfile={handleViewProfile}
             onClose={onClose}
           />

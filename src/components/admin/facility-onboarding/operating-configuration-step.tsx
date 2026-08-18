@@ -39,6 +39,7 @@ export function OperatingConfigurationStep({
       bookingCutoff: draft.bookingCutoff,
       depositEnabled: draft.depositEnabled,
       depositPercent: draft.depositPercent,
+      allowCustomerSignup: draft.allowCustomerSignup,
     },
     validators: { onSubmit: operatingSchema },
     onSubmit: ({ value }) => onNext(value),
@@ -134,6 +135,36 @@ export function OperatingConfigurationStep({
               <Label>Booking cut-off</Label>
               <TimeField field={f} />
               <FormFieldError field={f} />
+            </div>
+          )}
+        </form.Field>
+      </div>
+
+      {/* ── Customers registering themselves ───────────────────────────────
+          This is the facility's OWN front door: <slug>.yipyy.com serves their
+          branded sign-in, and this switch decides whether a customer arriving
+          there can join, or is told the business adds customers itself.
+
+          Off by default, matching the column. It is asked here because the
+          default was previously invisible -- every facility got a working
+          address whose sign-up page turned customers away, and nobody was told.
+          Either answer is fine; not being asked is not. */}
+      <div className="rounded-xl border p-4">
+        <form.Field name="allowCustomerSignup">
+          {(field: AnyFieldApi) => (
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label>Customers can register themselves</Label>
+                <p className="text-muted-foreground text-xs">
+                  On their own web address. Leave this off if this business
+                  enters its customers itself &mdash; people it has already
+                  added can still claim their record.
+                </p>
+              </div>
+              <Switch
+                checked={!!field.state.value}
+                onCheckedChange={(c) => field.handleChange(c)}
+              />
             </div>
           )}
         </form.Field>

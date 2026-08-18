@@ -172,6 +172,9 @@ export function createDefaultDraft(): FacilityDraft {
     checkOutTime: "18:00",
     bookingCutoff: "18:00",
     depositEnabled: false,
+    // Matches the column default. The wizard now ASKS, so this is the starting
+    // position of a visible switch rather than a silent policy.
+    allowCustomerSignup: false,
     depositPercent: "",
 
     adminFirstName: "",

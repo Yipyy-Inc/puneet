@@ -160,6 +160,14 @@ export function ReviewStep({
                   : "Not required"
               }
             />
+            {/* On the review screen because it is the one setting here that
+                decides what STRANGERS see: it is the difference between the
+                facility's own address inviting customers in and telling them to
+                go away. Worth a last look before it is provisioned. */}
+            <Row
+              label="Customer self-registration"
+              value={draft.allowCustomerSignup ? "Open" : "Closed"}
+            />
           </Section>
 
           <Section title="Primary Admin Account" stepIndex={4} onEdit={onEdit}>

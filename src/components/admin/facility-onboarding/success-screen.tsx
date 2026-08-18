@@ -32,6 +32,13 @@ export interface OwnerInviteOutcome {
 }
 
 /** What happened to `<slug>.yipyy.com` — see lib/vercel/domains.ts. */
+/** What the route reports about the self-registration switch. */
+export interface CustomerSignupOutcome {
+  enabled: boolean;
+  /** Present only when it was asked for and could not be set. */
+  reason?: string;
+}
+
 export interface DomainOutcome {
   attached?: boolean;
   host?: string | null;
@@ -44,6 +51,7 @@ export function SuccessScreen({
   ownerEmail,
   invite,
   domain,
+  customerSignup,
   onViewProfile,
   onClose,
 }: {
@@ -51,6 +59,7 @@ export function SuccessScreen({
   ownerEmail?: string;
   invite?: OwnerInviteOutcome | null;
   domain?: DomainOutcome | null;
+  customerSignup?: CustomerSignupOutcome | null;
   onViewProfile: () => void;
   onClose: () => void;
 }) {
@@ -111,6 +120,20 @@ export function SuccessScreen({
           {domain.verified
             ? "."
             : " — the certificate takes a few minutes to issue."}
+        </p>
+      )}
+
+      {/* Only when it was ASKED FOR and failed. A facility that was never meant
+          to take public registrations is not in a bad state, and saying so here
+          would train a superadmin to ignore this block. */}
+      {customerSignup?.reason && (
+        <p className="mx-auto flex max-w-md items-start gap-2 text-left text-sm text-amber-700 dark:text-amber-500">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <span>
+            <strong>Customers cannot register themselves yet.</strong>{" "}
+            {customerSignup.reason} Turn it on from the facility&apos;s
+            settings.
+          </span>
         </p>
       )}
 
