@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { signIn } from "./_auth";
+import { deployedFixture, deployedFixtureRef } from "./_fixtures";
 
 // ============================================================================
 // Paying a booking by card, through Clover's real sandbox.
@@ -32,8 +33,8 @@ import { signIn } from "./_auth";
 // `error.type` that Clover does not send.
 // ============================================================================
 
-const BOOKING_REF = Number(process.env.CLOVER_E2E_BOOKING_REF ?? "");
-const CUSTOMER = process.env.CLOVER_E2E_CUSTOMER_EMAIL?.trim() ?? "";
+const BOOKING_REF = deployedFixtureRef("CLOVER_E2E_BOOKING_REF");
+const CUSTOMER = deployedFixture("CLOVER_E2E_CUSTOMER_EMAIL");
 
 /** Clover's documented decline Visa. Approved cards are NOT used here. */
 const DECLINE_CARD = "4264281511117771";

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { signIn } from "./_auth";
+import { deployedFixture, deployedFixtureRef } from "./_fixtures";
 
 // ============================================================================
 // Refunding a card payment, through Clover's real sandbox.
@@ -23,9 +24,9 @@ import { signIn } from "./_auth";
 // was written for. Serial, and the sequence is deliberate.
 // ============================================================================
 
-const BOOKING_REF = Number(process.env.CLOVER_E2E_REFUND_BOOKING_REF ?? "");
-const CUSTOMER = process.env.CLOVER_E2E_CUSTOMER_EMAIL?.trim() ?? "";
-const STAFF = process.env.CLOVER_E2E_STAFF_EMAIL?.trim() ?? "";
+const BOOKING_REF = deployedFixtureRef("CLOVER_E2E_REFUND_BOOKING_REF");
+const CUSTOMER = deployedFixture("CLOVER_E2E_CUSTOMER_EMAIL");
+const STAFF = deployedFixture("CLOVER_E2E_STAFF_EMAIL");
 
 const refund = (page: Page, body: unknown) =>
   page.request.post("/api/payments/clover/refund", { data: body });

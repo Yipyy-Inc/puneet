@@ -98,18 +98,27 @@ test.describe("an invited account is not an admitted one", () => {
     }
 
     await signIn(page, ACCOUNTS.caretaker);
-    const body = await (await page.request.get("/facility/dashboard")).text();
 
-    // A soft redirect: HTTP 200 with NEXT_REDIRECT in the RSC payload, because
-    // the layout streams. The status is not the answer — the body is.
-    expect(body, "not left in the admin portal").toContain("NEXT_REDIRECT");
-    expect(body, "and sent somewhere useful, not to /sign-in").toContain(
-      "/employee/onboarding",
-    );
-    expect(
-      body,
-      "none of the admin portal's own content came back",
-    ).not.toContain("Add new staff");
+    // ── ASSERTED ON THE DESTINATION, NOT ON ONE HOP (ADR 0005) ───────────
+    //
+    // This used to fetch /facility/dashboard and read `/employee/onboarding`
+    // straight out of the RSC payload, because the facility layout ran the
+    // onboarding gate itself. That was the accidental path: it only ever fired
+    // for an invited hire who went looking for the ADMIN dashboard, and signing
+    // in has always landed staff on /employee/schedule instead — which had no
+    // gate at all. So the checklist existed and nothing routed anyone to it.
+    //
+    // The gate now runs in the employee layout too, which is the portal they
+    // actually reach. There are two hops from here (facility -> employee ->
+    // onboarding), so the payload of the first no longer names the destination.
+    // Following them and asserting where the browser STOPS is the guarantee
+    // anybody cares about, and it survives the routing changing again.
+    await page.goto("/facility/dashboard");
+    await page.waitForURL(/\/employee\/onboarding/, { timeout: 30_000 });
+
+    // Not left in the admin portal, and none of its content came with them.
+    expect(page.url()).not.toContain("/facility");
+    await expect(page.getByText("Add new staff")).toHaveCount(0);
   });
 
   test("…and once activated, the same person gets in", async ({

@@ -2141,6 +2141,74 @@ happened) and letting the trigger allow the facility_id null-out specifically �
 the second is almost certainly right, but it is a change to an immutability
 guarantee and deserves its own ADR.
 
+## Snapshot (2026-08-18, walking the journey found the harness first)
+
+### 🔴 An invited hire was never routed to their checklist (fixed)
+
+`redirectIfStillOnboarding` lived ONLY in the facility layout, and it runs AFTER
+`guardPortal`. That worked by accident while any member could reach `/facility`:
+an invited hire who went looking for the dashboard was intercepted.
+
+They never took that path. Signing in has always landed staff on
+`/employee/schedule`, and the employee layout had no onboarding gate at all — so
+the checklist existed and nothing routed anybody to it. ADR 0005 then denied
+staff `/facility` outright, which removed the accidental interception as well.
+
+Caught by `tests/e2e/staff-invite-gate.spec.ts`, whose assertion was written
+against the accidental path. Fixed by running the gate in the employee layout
+too, with a `x-pathname` guard — the checklist is itself under `/employee`, so
+without one it redirects to itself forever.
+
+**Do instead:** when a gate's destination lives inside the portal it guards, the
+loop check is not optional. And an assertion that reads a redirect out of one
+hop's RSC payload breaks the moment the routing gains a hop — assert where the
+browser STOPS.
+
+### 🟡 No single e2e run can execute the whole suite
+
+The 50 spec files need identities from two different WorkOS environments:
+
+| run                                           | identities that work                    | identities that do not                               |
+| --------------------------------------------- | --------------------------------------- | ---------------------------------------------------- |
+| local (`bun run test:e2e`)                    | the seven `@yipyy.dev` staging accounts | `CLOVER_E2E_*`, `E2E_NON_FIXTURE_OWNER` — production |
+| remote (`E2E_BASE_URL=https://www.yipyy.com`) | the production accounts                 | the seven `@yipyy.dev` — staging only                |
+
+`playwright.config.ts` calls `applyWorkosTestKeys()` unconditionally and it
+**refuses anything but `sk_test_`**, on purpose. `scripts/provision-e2e-identities.ts`
+provisions the seven `@yipyy.dev` accounts and nothing else.
+
+Eight spec files were failing locally because their guards check that the
+fixture variables are SET, not that the account is reachable — so with values in
+`.env.local` they ran and every test failed at sign-in with `Invalid
+credentials`, which reads like a broken app. `client-file` alone is 15 tests,
+each burning a 30s timeout twice with retries.
+
+`tests/e2e/_fixtures.ts` now resolves those values only on a deployed run, so
+they skip honestly instead. **Do instead:** guard a fixture on whether it can be
+USED, not on whether somebody filled the variable in.
+
+### 🟡 e2e is not in CI, and a long local run is not a clean signal
+
+The four required checks are Analyze, build, format, lint and typecheck. Nothing
+runs Playwright, so the suite's red/green state is unmonitored.
+
+A full local run on 2026-08-18 did not complete cleanly. Every failure inspected
+was infrastructure: `ERR_CONNECTION_REFUSED`, or `/api/permissions -> 404` right
+after a restart — 30 of one and 4 of the other in a single subset run. The
+dev-server log also carried `Uncaught Error: Rendered more hooks than during the
+previous render` (React #310, the same error as the front-door crash above)
+followed by `script "dev" exited with code 255`; the two are adjacent in the log
+and the causal link is NOT established.
+
+`rm -rf .next` fixed it. Three consecutive subset runs afterwards were stable
+(13, 22 and 11 tests), which points at a corrupted `.next` cache —
+`turbopackFileSystemCacheForDev` is on — rather than at the app.
+
+**Do instead:** clear `.next` before trusting a red local run, and verify a
+change with the subset that covers it rather than the whole suite. The config's
+own note already says a rotating cast of failures means the environment is
+loaded, not that there are that many defects.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

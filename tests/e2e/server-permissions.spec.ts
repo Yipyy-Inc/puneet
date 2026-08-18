@@ -34,16 +34,35 @@ async function serverHtml(page: Page, path: string): Promise<string> {
 test.describe.configure({ mode: "serial" });
 
 test.describe("server-rendered permissions", () => {
-  test("a groomer's first paint carries no manage_staff controls", async ({
+  test("a groomer never reaches the staff page to be withheld anything", async ({
     page,
   }) => {
+    // ── WHAT THIS TEST USED TO ASSERT, AND WHY IT CHANGED (ADR 0005) ──────
+    //
+    // It signed in as a groomer, fetched /facility/dashboard/staff, and checked
+    // that the owner-only control was absent from the FIRST PAINT — with
+    // "Manage departments" as a sanity anchor proving a real page came back
+    // rather than a redirect shell.
+    //
+    // The facility portal is the admin's now, so the groomer no longer gets a
+    // page to have anything withheld from: the layout gate sends them to
+    // /employee. The anchor is what caught it, exactly as designed — it exists
+    // to stop "the control is absent" being satisfied by "nothing rendered",
+    // and here nothing rendered.
+    //
+    // So the assertion moves up a layer. This is now the stronger claim: not
+    // "we withheld the button" but "we did not serve the page". The withholding
+    // itself is still proved below, by an owner who DOES get the control.
     await signIn(page, "groomer@yipyy.dev");
 
     const html = await serverHtml(page, STAFF_PAGE);
-    // Sanity: we fetched the staff page and not a redirect or a shell, so the
-    // absence below means "withheld" rather than "nothing rendered".
-    expect(html).toContain("Manage departments");
-    expect(html).not.toContain(OWNER_ONLY);
+    expect(html, "a soft redirect, not the staff page").toContain(
+      "NEXT_REDIRECT",
+    );
+    expect(html, "and none of its content came with it").not.toContain(
+      OWNER_ONLY,
+    );
+    expect(html).not.toContain("Manage departments");
   });
 
   test("an owner's first paint carries them", async ({ page }) => {

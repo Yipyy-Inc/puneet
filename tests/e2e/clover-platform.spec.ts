@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { deployedFixture } from "./_fixtures";
 
 // ============================================================================
 // The platform Clover status endpoint: who may read it, and what it discloses.
@@ -23,7 +24,7 @@ const STATUS = "/api/payments/clover/platform";
 // A facility staff account with a REAL Clover connection, which the @yipyy.dev
 // fixtures do not have — the refusal assertions want a member of a facility
 // that could plausibly be asking.
-const STAFF = process.env.CLOVER_E2E_STAFF_EMAIL?.trim() ?? "";
+const STAFF = deployedFixture("CLOVER_E2E_STAFF_EMAIL");
 
 test.describe("the platform Clover status endpoint", () => {
   test("refuses anyone who is not signed in", async ({ page }) => {
