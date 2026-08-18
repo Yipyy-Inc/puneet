@@ -2042,6 +2042,35 @@ than the guard. Fixed in `20260818120000_the_hire_guard_reads_the_right_column`.
 And branch on `tg_table_name` with `IF`, one statement per arm, never with a
 CASE over fields that do not exist on both records.
 
+### 🔴 Every member could read their employer's plan and Clover merchant (fixed)
+
+`facility_subscriptions_read` and `payment_connections_read` were both "any
+active member". Measured as a groomer, against production, before the fix:
+
+```
+groomer reads employer's facility_subscriptions rows = 1
+```
+
+That row is the facility's commercial relationship with Yipyy — plan, price,
+status, dunning state — reachable through PostgREST from a browser with a
+session and the publishable key. `payment_connections` names the facility's
+Clover merchant.
+
+Closed by `20260818140000_the_facilitys_own_account_is_the_admins`: both now go
+through `private.is_facility_admin`. No facility-facing screen read either; the
+only consumers are platform-admin surfaces, and a platform admin passes.
+
+**Do instead:** when adding a facility-scoped table, decide which of two things
+it is. What the business RUNS ON (settings, modules, hours) is readable by
+staff. What the business IS COMMERCIALLY (subscription, merchant, invoices) is
+`is_facility_admin` only. The default of "any active member" is the wrong answer
+for the second kind and it is easy to reach for.
+
+**And a trap in proving it:** an RLS-refused UPDATE affects zero rows and does
+NOT raise. Asserting "the row still exists afterwards" proves nothing — the
+first draft of `supabase/tests/facility-account-rls.sql` did exactly that and
+passed while measuring nothing. Use `GET DIAGNOSTICS ... row_count`.
+
 ### 🟡 A facility cannot be deleted at all
 
 Found while testing the cascade carve-out in
