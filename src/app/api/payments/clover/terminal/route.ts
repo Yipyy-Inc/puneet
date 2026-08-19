@@ -6,10 +6,12 @@ import { holds, myPermissions } from "@/lib/auth/permissions";
 import { createServerClient } from "@/lib/supabase/server";
 import { chargeOnTerminal, deviceState } from "@/lib/clover/terminal";
 import {
+  deliverStandardReceipt,
   devicePrinters,
   endTransactionScreen,
   printTextOnDevice,
   readTipOnDevice,
+  receiptOptionsOnDevice,
 } from "@/lib/clover/print";
 import { buildReceiptLines } from "@/lib/clover/receipt";
 
@@ -216,12 +218,61 @@ export async function POST(request: NextRequest) {
   // A sale that succeeded and a receipt that did not print is a nuisance. A
   // sale reported as failed because a printer jammed is a double charge, so
   // this cannot throw and its failure is a log line and a flag on the response.
-  const printed = await printReceipt(
-    booking as unknown as BookingForReceipt,
-    supabase,
-    outcome,
+  // ── THE CUSTOMER CHOOSES ────────────────────────────────────────────────
+  //
+  // Clover's own Sale app ends with Print / Email / Text, and a semi-integrated
+  // sale that simply stops looks broken beside it. So ask, then deliver.
+  //
+  // A null answer means they were never asked — an unreachable device, a
+  // timeout — which is NOT the same as declining, so it falls back to printing.
+  // The one thing this must never do is leave a paying customer with nothing
+  // because a dialog failed to open.
+  const choice = await receiptOptionsOnDevice(
+    booking.facility_id,
     parsed.data.deviceSerial,
   );
+  const wantsPrint = !choice || choice.method === "PRINT";
+
+  let printed: { printed: boolean; detail?: string } = {
+    printed: false,
+    detail: choice ? `customer chose ${choice.method}` : undefined,
+  };
+  let delivered: { delivered: boolean; detail?: string } = {
+    delivered: false,
+  };
+
+  if (wantsPrint) {
+    printed = await printReceipt(
+      booking as unknown as BookingForReceipt,
+      supabase,
+      outcome,
+      parsed.data.deviceSerial,
+    );
+    // AND Clover's own, which is the card-brand-compliant one. The docs put
+    // that squarely on us for custom receipts — "You are responsible to ensure
+    // the receipts printed by your app comply with all card brand" rules — and
+    // ours is a breakdown, not a compliant payment record. Two prints off one
+    // roll is a cheap way to owe nobody an argument.
+    if (outcome.processorPaymentId) {
+      delivered = await deliverStandardReceipt(
+        booking.facility_id,
+        parsed.data.deviceSerial,
+        outcome.processorPaymentId,
+        "PRINT",
+      );
+    }
+  } else if (
+    (choice.method === "EMAIL" || choice.method === "SMS") &&
+    outcome.processorPaymentId
+  ) {
+    delivered = await deliverStandardReceipt(
+      booking.facility_id,
+      parsed.data.deviceSerial,
+      outcome.processorPaymentId,
+      choice.method,
+      choice.additionalData,
+    );
+  }
 
   // ── HAND THE DEVICE BACK ────────────────────────────────────────────────
   //
@@ -254,6 +305,9 @@ export async function POST(request: NextRequest) {
     cardLast4: outcome.cardLast4,
     receiptPrinted: printed.printed,
     receiptDetail: printed.detail,
+    receiptMethod: choice?.method ?? "PRINT",
+    receiptDelivered: delivered.delivered,
+    receiptDeliveryDetail: delivered.detail,
     tipCents,
     tipPrompted,
     screenCleared: screen.shown,

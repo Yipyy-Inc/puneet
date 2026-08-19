@@ -1822,10 +1822,23 @@ export default function ClientBookingDetailPage({
                     // Said out loud either way. A charge that went through with
                     // no paper is something the person at the counter has to
                     // know BEFORE the customer walks off, and silence would let
-                    // them assume a receipt printed.
-                    result.receiptPrinted
-                      ? "Itemised receipt printed."
-                      : "No receipt printed — hand over the copy from Print.",
+                    // them assume a receipt printed. Now that the CUSTOMER
+                    // picks, the message has to name what they picked too —
+                    // "no receipt printed" reads as a fault when in fact they
+                    // asked for it by email.
+                    result.receiptMethod === "NO_RECEIPT"
+                      ? "Customer declined a receipt."
+                      : result.receiptMethod === "EMAIL"
+                        ? result.receiptDelivered
+                          ? "Receipt emailed."
+                          : "Email receipt FAILED — offer a printed one."
+                        : result.receiptMethod === "SMS"
+                          ? result.receiptDelivered
+                            ? "Receipt texted."
+                            : "Text receipt FAILED — offer a printed one."
+                          : result.receiptPrinted
+                            ? "Itemised receipt printed."
+                            : "No receipt printed — hand over the copy from Print.",
                   ]
                     .filter(Boolean)
                     .join(" · "),

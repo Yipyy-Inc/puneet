@@ -154,6 +154,10 @@ export interface TerminalChargeResult {
    * counter needs to know whether to reach for the roll or hand over paper.
    */
   receiptPrinted: boolean;
+  /** How the customer asked to receive it: PRINT, EMAIL, SMS or NO_RECEIPT. */
+  receiptMethod: "NO_RECEIPT" | "PRINT" | "EMAIL" | "SMS";
+  /** Whether Clover's own (card-brand-compliant) receipt went out. */
+  receiptDelivered: boolean;
   /** The tip actually taken, in cents — the customer's answer, not the ask. */
   tipCents: number;
   /**
@@ -212,6 +216,8 @@ export function useChargeOnTerminal() {
         cardLast4: parsed?.cardLast4 ?? null,
         receiptPrinted: parsed?.receiptPrinted === true,
         receiptDetail: parsed?.receiptDetail,
+        receiptMethod: parsed?.receiptMethod ?? "PRINT",
+        receiptDelivered: parsed?.receiptDelivered === true,
         tipCents: parsed?.tipCents ?? 0,
         tipPrompted: parsed?.tipPrompted === true,
       };
