@@ -1,12 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import {
   BOOKING_SELECT,
   bookingToRow,
   rowToBooking,
 } from "@/lib/api/mappers/booking";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  facilityContextForClient,
+  getFacilityContext,
+} from "@/lib/api/facility-context";
 import type { NewBooking } from "@/types/booking";
 
 // ============================================================================
@@ -103,14 +107,13 @@ export async function POST(request: NextRequest) {
   const input = (await request.json()) as NewBooking;
   const supabase = await createServerClient();
 
-  const facility = await getFacilityContext();
-  if (!facility) {
-    return NextResponse.json({ error: "Facility not found." }, { status: 500 });
-  }
-
   // The client arrives as the app's numeric ref; the row needs the uuid.
   // Resolved through RLS, so a caller who cannot see a client cannot book for
   // them — the lookup simply returns nothing.
+  //
+  // Resolved BEFORE the facility, which is the other way round from how this
+  // read: a customer has no membership, so their client row is what says which
+  // facility the booking is at.
   const { data: client } = await supabase
     .from("clients")
     .select("id")
@@ -122,6 +125,31 @@ export async function POST(request: NextRequest) {
       { error: `No client ${input.clientId} you can book for.` },
       { status: 422 },
     );
+  }
+
+  // ── WHICH FACILITY, AND WHY IT DEPENDS ON WHO IS ASKING ─────────────────
+  //
+  // Staff: their membership, as everywhere else.
+  //
+  // A CUSTOMER: the facility of the client row above. Not a fallback and not a
+  // convenience — getFacilityContext() answers the DEMO facility for a caller
+  // with no membership (its own comment says so), so a pet owner booking
+  // through this route would have had their booking stamped against a business
+  // they have never heard of. Walking CUJ-20 on 2026-08-19 is what surfaced
+  // that; a silent wrong-facility write is worse than a refusal.
+  //
+  // The facility comes from a PARENT ROW already scoped by RLS, which is the
+  // second of the two sources check:facility-from-session allows. Nothing here
+  // reads a facility from the request — `input.facilityId` exists on the type
+  // and is ignored, as it always has been.
+  const viewer = await getViewer().catch(() => null);
+  const facility =
+    viewer && viewer.memberships.length > 0
+      ? await getFacilityContext()
+      : await facilityContextForClient(client.id);
+
+  if (!facility) {
+    return NextResponse.json({ error: "Facility not found." }, { status: 500 });
   }
 
   // Pets are resolved and checked BEFORE the booking is written.

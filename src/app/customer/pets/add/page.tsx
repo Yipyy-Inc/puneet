@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -26,6 +27,7 @@ import {
 import { ArrowLeft, Save, Loader2, Dog, Cat, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { FormWizard } from "@/components/forms/FormWizard";
+import type { Pet } from "@/types/pet";
 
 interface PetFormData {
   name: string;
@@ -45,6 +47,7 @@ export default function AddPetPage() {
   const customerId = customer?.id;
 
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { selectedFacility } = useCustomerFacility();
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -99,25 +102,27 @@ export default function AddPetPage() {
       return;
     }
 
+    if (customerId === undefined) {
+      // No client record means there is nothing to own the pet. This is
+      // reachable — a signed-in stranger — and saying so beats a write that
+      // cannot succeed.
+      toast.error("Join this facility before adding a pet.");
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      // TODO: Replace with actual API call
-      const petData = {
+      const createdPet = await createPet({
         ...formData,
         age: Number(formData.age),
         weight: Number(formData.weight),
-      };
-
-      const createdPet = await createPet(petData);
-      if (createdPet?.id) {
-        setNewPetId(createdPet.id);
-        toast.success("Pet added! Let's complete any required forms.");
-        setShowWizard(true);
-      } else {
-        toast.success("Pet added successfully!");
-        router.push("/customer/pets");
-      }
+      });
+      setNewPetId(createdPet.id);
+      toast.success(`${createdPet.name} added. Now any required forms.`);
+      setShowWizard(true);
+      // The list is stale the moment this succeeds.
+      void queryClient.invalidateQueries({ queryKey: ["pets"] });
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Failed to add pet");
     } finally {
@@ -125,16 +130,57 @@ export default function AddPetPage() {
     }
   };
 
-  // Placeholder function - replace with actual API call. Return { id } to redirect to pet Forms tab.
+  // ── THIS USED TO WRITE NOTHING ──────────────────────────────────────────
+  //
+  // It was a placeholder that slept a second and returned
+  // `{ id: Date.now() % 100000 }` — an invented number — after which the screen
+  // said "Pet added!" and pushed the owner into a required-forms wizard for a
+  // pet that did not exist. The parameter was named `_petData`; the underscore
+  // was the file admitting the form's contents went nowhere. Found by walking
+  // CUJ-20 on 2026-08-19: a customer could join a facility and then never own
+  // an animal.
+  //
+  // `POST /api/pets` existed the whole time. It is the right route for an owner
+  // and not only for staff: it resolves the owner through an RLS read the
+  // CALLER has to be able to make, so a customer can name their own client
+  // record and nobody else's, and `pets_set_facility` derives the facility from
+  // that owner — which is why no facility is sent from here and none would be
+  // honoured if it were.
+  //
+  // The returned id is `pets.ref`, the app's numeric handle, which is what the
+  // forms wizard and /customer/pets/[petId] both address a pet by.
   const createPet = async (
-    _petData: Omit<PetFormData, "age" | "weight"> & {
+    petData: Omit<PetFormData, "age" | "weight"> & {
       age: number;
       weight: number;
     },
-  ): Promise<{ id: number } | void> => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    // When API returns new pet: return { id: newPet.id };
-    return { id: Date.now() % 100000 }; // temporary: simulate new pet id for Forms redirect
+  ): Promise<Pet> => {
+    const response = await fetch("/api/pets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientId: customerId,
+        name: petData.name.trim(),
+        type: petData.type,
+        breed: petData.breed.trim(),
+        age: petData.age,
+        weight: petData.weight,
+        color: petData.color.trim(),
+        microchip: petData.microchip.trim() || undefined,
+        allergies: petData.allergies.trim() || undefined,
+        specialNeeds: petData.specialNeeds.trim() || undefined,
+        imageUrl: petData.imageUrl || undefined,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      throw new Error(body.error ?? "Could not add that pet.");
+    }
+
+    return (await response.json()) as Pet;
   };
 
   const PetIcon = formData.type === "Cat" ? Cat : Dog;
