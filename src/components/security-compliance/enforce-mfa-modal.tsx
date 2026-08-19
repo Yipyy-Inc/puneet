@@ -2,7 +2,6 @@
 
 import { ShieldCheck } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +12,28 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { roleDisplayNames, type AdminRole } from "@/data/admin-users";
-import { useCustomRoles } from "@/lib/custom-roles-store";
+import {
+  PLATFORM_ROLE_LABEL,
+  type PlatformRole,
+} from "@/lib/auth/platform-role";
 import { setMfaRequiredForRole, useSecurity } from "@/lib/security-store";
+
+// The four roles of public.platform_role. This listed five job-flavoured labels
+// from src/data/admin-users.ts plus any "custom role" created in this browser's
+// localStorage — none of which exist as a role anybody can hold, so the
+// switches were keyed to identifiers no member could ever match.
+//
+// NOTE what is still not true here: `mfaRequiredByRole` is a localStorage
+// store. Turning a switch on records a preference and enforces nothing —
+// enrolment is WorkOS's to require. Naming the right roles at least means the
+// preference is about something real when a server-side rule arrives to read
+// it. Recorded in docs/quality/debt-map.md.
+const ROLE_ORDER: PlatformRole[] = [
+  "superadmin",
+  "support",
+  "billing",
+  "readonly",
+];
 
 export function EnforceMfaModal({
   open,
@@ -25,16 +43,11 @@ export function EnforceMfaModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const { mfaRequiredByRole } = useSecurity();
-  const customRoles = useCustomRoles();
 
-  const roles: { id: string; name: string; builtIn: boolean }[] = [
-    ...(Object.keys(roleDisplayNames) as AdminRole[]).map((id) => ({
-      id,
-      name: roleDisplayNames[id],
-      builtIn: true,
-    })),
-    ...customRoles.map((r) => ({ id: r.id, name: r.name, builtIn: false })),
-  ];
+  const roles = ROLE_ORDER.map((id) => ({
+    id,
+    name: PLATFORM_ROLE_LABEL[id],
+  }));
 
   const requiredCount = roles.filter((r) => mfaRequiredByRole[r.id]).length;
 
@@ -57,14 +70,7 @@ export function EnforceMfaModal({
               key={role.id}
               className="flex items-center justify-between gap-3 rounded-lg border p-3"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{role.name}</span>
-                {!role.builtIn && (
-                  <Badge variant="outline" className="text-xs">
-                    Custom
-                  </Badge>
-                )}
-              </div>
+              <span className="text-sm font-medium">{role.name}</span>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-xs">
                   {mfaRequiredByRole[role.id] ? "Required" : "Optional"}

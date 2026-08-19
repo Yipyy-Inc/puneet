@@ -2,15 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  rolePermissions,
-  roleDisplayNames,
-  AdminRole,
-  AccessLevel,
-  AdminUser,
-  accessLevelDescriptions,
-} from "@/data/admin-users";
-import { inviteAdminMember } from "@/lib/admin-team-store";
+import { CheckCircle, Copy, Loader2, Mail, UserPlus } from "lucide-react";
+
 import {
   Dialog,
   DialogContent,
@@ -22,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -30,60 +22,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
-  UserPlus,
-  Mail,
-  Phone,
-  Building,
-  Shield,
-  Key,
-  MapPin,
-  ChevronRight,
-  ChevronLeft,
-  CheckCircle,
-  User,
-  Copy,
-} from "lucide-react";
+  PLATFORM_ROLE_BLURB,
+  PLATFORM_ROLE_LABEL,
+  type PlatformRole,
+} from "@/lib/auth/platform-role";
 
-const departments = [
-  "IT Administration",
-  "Sales",
-  "Technical Support",
-  "Account Management",
-  "Finance",
-  "Marketing",
-  "Operations",
+// ============================================================================
+// Invite somebody onto the Yipyy platform team.
+//
+// ── WHY THIS SHRANK FROM A THREE-STEP WIZARD TO ONE FORM ──────────────────
+//
+// It used to collect a name, an email, a phone number, a department, one of
+// five job-flavoured roles, one of four "access levels", and up to 26
+// responsibility areas across three steps with a progress indicator.
+//
+// Of those, the invitation records THREE: name, email and role. Everything else
+// was discarded the moment Send was pressed — phone, access level and the
+// responsibility areas were never sent anywhere at all, and department reached
+// the server only to be interpolated into the email body.
+//
+// Worse than discarded, in the case of role. The five options were mapped onto
+// the four real values of `public.platform_role` server-side, and three of them
+// collapsed: "Sales Team" produced `readonly`, "Account Manager" produced
+// `support`. So a superadmin could deliberately choose a role, be shown its
+// permissions, and grant something else. That is not a cosmetic problem on a
+// screen whose whole job is deciding who may run the platform.
+//
+// The four options below ARE `public.platform_role`. What you pick is what the
+// membership records. `toPlatformRole()` still validates server-side — it
+// accepts a real role name directly — so this form is the honest path through
+// a guard that stays in place regardless of what the client sends.
+//
+// Access level has no counterpart here on purpose: the platform side has no
+// such concept. The facility side does (admin | staff, ADR 0005), and borrowing
+// its vocabulary for a screen that cannot honour it is how the two got confused
+// in the first place.
+// ============================================================================
+
+const ROLE_ORDER: PlatformRole[] = [
+  "superadmin",
+  "support",
+  "billing",
+  "readonly",
 ];
 
-const responsibilityOptions = [
-  "System Configuration",
-  "User Management",
-  "Security",
-  "Lead Generation",
-  "Client Acquisition",
-  "Enterprise Sales",
-  "SMB Sales",
-  "Product Demos",
-  "Onboarding",
-  "Tier 1 Support",
-  "Tier 2 Support",
-  "Bug Reports",
-  "User Training",
-  "Enterprise Accounts",
-  "Key Accounts",
-  "Client Retention",
-  "Contract Renewals",
-  "Customer Success",
-  "Upselling",
-  "Financial Compliance",
-  "Revenue Audits",
-  "Expense Reviews",
-  "Internal Audits",
-  "Database Management",
-  "API Security",
-  "Infrastructure",
-];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface InviteResult {
   sent: boolean;
@@ -93,10 +77,16 @@ export interface InviteResult {
   expiresAt: number;
 }
 
+export interface InvitedMember {
+  name: string;
+  email: string;
+  role: PlatformRole;
+}
+
 interface CreateAdminUserModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInvited?: (member: AdminUser, result: InviteResult) => void;
+  onInvited?: (member: InvitedMember, result: InviteResult) => void;
 }
 
 export function CreateAdminUserModal({
@@ -104,217 +94,115 @@ export function CreateAdminUserModal({
   onOpenChange,
   onInvited,
 }: CreateAdminUserModalProps) {
-  const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [invited, setInvited] = useState<InvitedMember | null>(null);
   const [inviteResult, setInviteResult] = useState<InviteResult | null>(null);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    department: "",
-    role: "" as AdminRole | "",
-    accessLevel: "" as AccessLevel | "",
-    responsibilityAreas: [] as string[],
-  });
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<PlatformRole | "">("");
+  const [errors, setErrors] = useState({ name: "", email: "", role: "" });
+  const [failure, setFailure] = useState<string | null>(null);
 
-  const [errors, setErrors] = useState({
-    name: "",
-    email: "",
-    department: "",
-    role: "",
-    accessLevel: "",
-  });
-
-  const validateStep1 = () => {
-    const newErrors = {
-      name: "",
-      email: "",
-      department: "",
-      role: "",
-      accessLevel: "",
+  function validate() {
+    const next = {
+      name: name.trim() ? "" : "A name is required.",
+      email: !email.trim()
+        ? "An email address is required."
+        : EMAIL_RE.test(email.trim())
+          ? ""
+          : "That does not look like an email address.",
+      role: role ? "" : "Pick the role this person will hold.",
     };
+    setErrors(next);
+    return !next.name && !next.email && !next.role;
+  }
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-    }
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!validate()) return;
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Invalid email format";
-    }
-
-    if (!formData.department) {
-      newErrors.department = "Department is required";
-    }
-
-    setErrors(newErrors);
-    return !newErrors.name && !newErrors.email && !newErrors.department;
-  };
-
-  const validateStep2 = () => {
-    const newErrors = {
-      name: "",
-      email: "",
-      department: "",
-      role: "",
-      accessLevel: "",
-    };
-
-    if (!formData.role) {
-      newErrors.role = "Role is required";
-    }
-
-    if (!formData.accessLevel) {
-      newErrors.accessLevel = "Access level is required";
-    }
-
-    setErrors(newErrors);
-    return !newErrors.role && !newErrors.accessLevel;
-  };
-
-  const handleRoleChange = (role: AdminRole) => {
-    setFormData({
-      ...formData,
-      role,
-      // Auto-suggest access level based on role
-      accessLevel:
-        role === "system_administrator"
-          ? "full"
-          : role === "financial_auditor"
-            ? "read_only"
-            : "read_write",
-    });
-    if (errors.role) setErrors({ ...errors, role: "" });
-  };
-
-  const handleResponsibilityToggle = (area: string) => {
-    setFormData({
-      ...formData,
-      responsibilityAreas: formData.responsibilityAreas.includes(area)
-        ? formData.responsibilityAreas.filter((a) => a !== area)
-        : [...formData.responsibilityAreas, area],
-    });
-  };
-
-  const handleNext = () => {
-    if (step === 1 && validateStep1()) {
-      setStep(2);
-    } else if (step === 2 && validateStep2()) {
-      setStep(3);
-    }
-  };
-
-  const handleBack = () => {
-    setStep((prev) => Math.max(prev - 1, 1));
-  };
-
-  const handleSubmit = async () => {
+    setFailure(null);
     setIsSubmitting(true);
 
-    // Add the member to the team roster (shows as "Invited" right away).
-    const member = inviteAdminMember({
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      department: formData.department,
-      role: formData.role as AdminRole,
-      accessLevel: formData.accessLevel as AccessLevel,
-      responsibilityAreas: formData.responsibilityAreas,
-    });
-
-    // Send the real invitation email (server route + 48h setup link).
-    let result: InviteResult = {
-      sent: false,
-      reason: "error",
-      message: "Could not reach the email service.",
-      setupUrl: "",
-      expiresAt: Date.now(),
+    const member: InvitedMember = {
+      name: name.trim(),
+      email: email.trim(),
+      role: role as PlatformRole,
     };
+
     try {
       const res = await fetch("/api/admin/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // `id` is gone: it was the mock store's counter, and the invitation
-        // is now a real row keyed by the ADDRESS. The role travels as the
-        // console's own label and is mapped to a platform_role server-side
-        // (lib/auth/platform-invitation.ts) rather than trusted from here.
-        body: JSON.stringify({
-          name: member.name,
-          email: member.email,
-          role: member.role,
-          department: member.department,
-        }),
+        body: JSON.stringify(member),
       });
-      result = (await res.json()) as InviteResult;
+      const body = (await res.json()) as InviteResult & { error?: string };
+
+      // The invitation ROW is what matters, and a non-2xx means there isn't
+      // one — the superadmin guard refused, or the address is already on the
+      // team. Saying "invitation created" here would be the exact claim this
+      // screen was rewritten to stop making.
+      if (!res.ok) {
+        setFailure(body.error ?? "Could not create that invitation.");
+        return;
+      }
+
+      setInvited(member);
+      setInviteResult(body);
+      onInvited?.(member, body);
     } catch {
-      // keep the error default
+      setFailure("Could not reach the server. Nothing was sent.");
+    } finally {
+      setIsSubmitting(false);
     }
+  }
 
-    setInviteResult(result);
-    setIsSubmitting(false);
-    setShowSuccess(true);
-    onInvited?.(member, result);
-  };
-
-  const resetAndClose = () => {
-    setStep(1);
-    setShowSuccess(false);
+  function resetAndClose() {
+    setName("");
+    setEmail("");
+    setRole("");
+    setErrors({ name: "", email: "", role: "" });
+    setFailure(null);
+    setInvited(null);
     setInviteResult(null);
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      department: "",
-      role: "",
-      accessLevel: "",
-      responsibilityAreas: [],
-    });
-    setErrors({
-      name: "",
-      email: "",
-      department: "",
-      role: "",
-      accessLevel: "",
-    });
     onOpenChange(false);
-  };
+  }
+
+  const firstName = invited?.name.split(" ")[0] ?? "";
 
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
-        {showSuccess ? (
-          <div className="py-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15">
-              {inviteResult?.sent ? (
+      <DialogContent className="sm:max-w-lg">
+        {invited && inviteResult ? (
+          <div className="py-6 text-center">
+            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15">
+              {inviteResult.sent ? (
                 <Mail className="size-8 text-emerald-600" />
               ) : (
                 <CheckCircle className="size-8 text-emerald-600" />
               )}
             </div>
             <h3 className="mb-2 text-xl font-semibold">
-              {inviteResult?.sent ? "Invitation sent" : "Invitation created"}
+              {inviteResult.sent ? "Invitation sent" : "Invitation created"}
             </h3>
             <p className="text-muted-foreground mx-auto max-w-md text-sm">
-              {inviteResult?.sent ? (
+              {inviteResult.sent ? (
                 <>
-                  We emailed a setup link to <strong>{formData.email}</strong>.
-                  It expires in 48 hours — {formData.name.split(" ")[0]} will
-                  show as <strong>Invited</strong> until they finish setting up.
+                  We emailed a setup link to <strong>{invited.email}</strong>.
+                  It expires in 48 hours — {firstName} will show as{" "}
+                  <strong>Invited</strong> until they finish setting up.
                 </>
               ) : (
                 <>
-                  {inviteResult?.message ??
+                  {inviteResult.message ??
                     "We couldn't send the email automatically."}{" "}
-                  Share this 48-hour setup link with{" "}
-                  {formData.name.split(" ")[0]}:
+                  Share this 48-hour setup link with {firstName}:
                 </>
               )}
             </p>
 
-            {inviteResult && !inviteResult.sent && inviteResult.setupUrl && (
+            {!inviteResult.sent && inviteResult.setupUrl && (
               <div className="bg-muted/40 mx-auto mt-4 flex max-w-md items-center gap-2 rounded-lg border p-2">
                 <code className="text-muted-foreground flex-1 truncate text-left text-xs">
                   {inviteResult.setupUrl}
@@ -340,355 +228,118 @@ export function CreateAdminUserModal({
             </Button>
           </div>
         ) : (
-          <>
+          <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <UserPlus className="size-5" />
-                {"Invite Admin"} — Step {step} of 3
+                Invite a platform admin
               </DialogTitle>
               <DialogDescription>
-                {step === 1 && "Enter the new admin's basic information"}
-                {step === 2 && "Assign role and access level"}
-                {step === 3 && "Define responsibility areas (optional)"}
+                They set their own password at a 48-hour link sent to this
+                address. The role is attached to the address, so it cannot be
+                claimed by anybody else.
               </DialogDescription>
             </DialogHeader>
 
-            {/* Step Indicator */}
-            <div className="flex items-center justify-center gap-2 py-2">
-              <div
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${
-                  step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"
-                } `}
-              >
-                <User className="size-4" />
-                <span className="text-sm font-medium">Basic Info</span>
+            <div className="space-y-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="invite-name">
+                  Full name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="invite-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Jordan Blake"
+                  aria-invalid={Boolean(errors.name)}
+                />
+                {errors.name && (
+                  <p className="text-destructive text-sm">{errors.name}</p>
+                )}
               </div>
-              <ChevronRight className="text-muted-foreground size-4" />
-              <div
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${
-                  step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"
-                } `}
-              >
-                <Shield className="size-4" />
-                <span className="text-sm font-medium">Role & Access</span>
+
+              <div className="grid gap-2">
+                <Label htmlFor="invite-email">
+                  Email address <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jordan@yipyy.com"
+                  aria-invalid={Boolean(errors.email)}
+                />
+                {errors.email && (
+                  <p className="text-destructive text-sm">{errors.email}</p>
+                )}
               </div>
-              <ChevronRight className="text-muted-foreground size-4" />
-              <div
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${
-                  step === 3 ? "bg-primary text-primary-foreground" : "bg-muted"
-                } `}
-              >
-                <MapPin className="size-4" />
-                <span className="text-sm font-medium">Areas</span>
+
+              <div className="grid gap-2">
+                <Label htmlFor="invite-role">
+                  Platform role <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={role}
+                  onValueChange={(value) => {
+                    setRole(value as PlatformRole);
+                    if (errors.role) setErrors({ ...errors, role: "" });
+                  }}
+                >
+                  <SelectTrigger
+                    id="invite-role"
+                    aria-invalid={Boolean(errors.role)}
+                  >
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_ORDER.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {PLATFORM_ROLE_LABEL[option]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.role && (
+                  <p className="text-destructive text-sm">{errors.role}</p>
+                )}
+                {role && (
+                  <p className="text-muted-foreground text-xs">
+                    {PLATFORM_ROLE_BLURB[role]}
+                  </p>
+                )}
               </div>
+
+              {/* Said once, on the screen where it matters most. */}
+              <p className="text-muted-foreground bg-muted/40 rounded-lg border p-3 text-xs">
+                Only <span className="font-medium">superadmin</span> is enforced
+                narrowly today. Support, billing and read-only all reach the
+                same customer data — see{" "}
+                <span className="font-medium">Platform roles</span>.
+              </p>
+
+              {failure && (
+                <p
+                  role="alert"
+                  className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm"
+                >
+                  {failure}
+                </p>
+              )}
             </div>
 
-            {/* Step 1: Basic Information */}
-            {step === 1 && (
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">
-                    Full Name <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => {
-                      setFormData({ ...formData, name: e.target.value });
-                      if (errors.name) setErrors({ ...errors, name: "" });
-                    }}
-                    placeholder="Enter full name"
-                    aria-invalid={!!errors.name}
-                  />
-                  {errors.name && (
-                    <p className="text-destructive text-sm">{errors.name}</p>
-                  )}
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="email">
-                    Email Address <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Mail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                    <Input
-                      id="email"
-                      type="email"
-                      className="pl-10"
-                      value={formData.email}
-                      onChange={(e) => {
-                        setFormData({ ...formData, email: e.target.value });
-                        if (errors.email) setErrors({ ...errors, email: "" });
-                      }}
-                      placeholder="email@example.com"
-                      aria-invalid={!!errors.email}
-                    />
-                  </div>
-                  {errors.email && (
-                    <p className="text-destructive text-sm">{errors.email}</p>
-                  )}
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="relative">
-                    <Phone className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      className="pl-10"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                      placeholder="+1-555-0000"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="department">
-                    Department <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Building className="text-muted-foreground absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2" />
-                    <Select
-                      value={formData.department}
-                      onValueChange={(value) => {
-                        setFormData({ ...formData, department: value });
-                        if (errors.department)
-                          setErrors({ ...errors, department: "" });
-                      }}
-                    >
-                      <SelectTrigger className="pl-10">
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {departments.map((dept) => (
-                          <SelectItem key={dept} value={dept}>
-                            {dept}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {errors.department && (
-                    <p className="text-destructive text-sm">
-                      {errors.department}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Role & Access */}
-            {step === 2 && (
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="role">
-                    User Role <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value) =>
-                      handleRoleChange(value as AdminRole)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(Object.keys(rolePermissions) as AdminRole[]).map(
-                        (role) => (
-                          <SelectItem key={role} value={role}>
-                            {roleDisplayNames[role]}
-                          </SelectItem>
-                        ),
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {errors.role && (
-                    <p className="text-destructive text-sm">{errors.role}</p>
-                  )}
-                </div>
-
-                {formData.role && (
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="mb-2 text-sm font-medium">
-                      Role Permissions:
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {rolePermissions[formData.role as AdminRole]
-                        .slice(0, 5)
-                        .map((perm) => (
-                          <Badge
-                            key={perm}
-                            variant="outline"
-                            className="text-xs capitalize"
-                          >
-                            {perm.replace(/_/g, " ")}
-                          </Badge>
-                        ))}
-                      {rolePermissions[formData.role as AdminRole].length >
-                        5 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +
-                          {rolePermissions[formData.role as AdminRole].length -
-                            5}{" "}
-                          more
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid gap-2">
-                  <Label htmlFor="accessLevel">
-                    Access Level <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Key className="text-muted-foreground absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2" />
-                    <Select
-                      value={formData.accessLevel}
-                      onValueChange={(value) => {
-                        setFormData({
-                          ...formData,
-                          accessLevel: value as AccessLevel,
-                        });
-                        if (errors.accessLevel)
-                          setErrors({ ...errors, accessLevel: "" });
-                      }}
-                    >
-                      <SelectTrigger className="pl-10">
-                        <SelectValue placeholder="Select access level" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="full">{"Full Access"}</SelectItem>
-                        <SelectItem value="read_write">
-                          {"Read/Write Access"}
-                        </SelectItem>
-                        <SelectItem value="read_only">
-                          {"Read Only Access"}
-                        </SelectItem>
-                        <SelectItem value="restricted">
-                          {"Restricted Access"}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {errors.accessLevel && (
-                    <p className="text-destructive text-sm">
-                      {errors.accessLevel}
-                    </p>
-                  )}
-                  {formData.accessLevel && (
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {
-                        accessLevelDescriptions[
-                          formData.accessLevel as AccessLevel
-                        ]
-                      }
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Responsibility Areas */}
-            {step === 3 && (
-              <div className="py-4">
-                <p className="text-muted-foreground mb-4 text-sm">
-                  Select the areas this user will be responsible for (optional)
-                </p>
-                <div className="grid max-h-[300px] grid-cols-2 gap-2 overflow-y-auto">
-                  {responsibilityOptions.map((area) => (
-                    <div
-                      key={area}
-                      className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 transition-colors ${
-                        formData.responsibilityAreas.includes(area)
-                          ? "border-primary bg-primary/10"
-                          : "hover:bg-muted/50"
-                      } `}
-                      onClick={() => handleResponsibilityToggle(area)}
-                    >
-                      <Checkbox
-                        checked={formData.responsibilityAreas.includes(area)}
-                        onCheckedChange={() => handleResponsibilityToggle(area)}
-                      />
-                      <span className="text-sm">{area}</span>
-                    </div>
-                  ))}
-                </div>
-                {formData.responsibilityAreas.length > 0 && (
-                  <div className="bg-muted/30 mt-4 rounded-lg p-3">
-                    <p className="mb-2 text-sm font-medium">
-                      Selected Areas ({formData.responsibilityAreas.length}):
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.responsibilityAreas.map((area) => (
-                        <Badge key={area} variant="secondary">
-                          {area}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             <DialogFooter>
-              {step === 1 ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={resetAndClose}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="button" onClick={handleNext}>
-                    Next
-                    <ChevronRight className="ml-2 size-4" />
-                  </Button>
-                </>
-              ) : step === 2 ? (
-                <>
-                  <Button type="button" variant="outline" onClick={handleBack}>
-                    <ChevronLeft className="mr-2 size-4" />
-                    Back
-                  </Button>
-                  <Button type="button" onClick={handleNext}>
-                    Next
-                    <ChevronRight className="ml-2 size-4" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button type="button" variant="outline" onClick={handleBack}>
-                    <ChevronLeft className="mr-2 size-4" />
-                    Back
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <span className="mr-2 animate-spin">⏳</span>
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="mr-2 size-4" />
-                        {"Send Invitation"}
-                      </>
-                    )}
-                  </Button>
-                </>
-              )}
+              <Button type="button" variant="outline" onClick={resetAndClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                )}
+                Send invitation
+              </Button>
             </DialogFooter>
-          </>
+          </form>
         )}
       </DialogContent>
     </Dialog>

@@ -1,5 +1,4 @@
 import type { PlatformTeamRow } from "@/app/api/admin/team/route";
-import type { PlatformRole } from "@/lib/auth/platform-invitation";
 
 // ============================================================================
 // The platform team, from Postgres.
@@ -13,25 +12,9 @@ import type { PlatformRole } from "@/lib/auth/platform-invitation";
 
 export type { PlatformTeamRow };
 
-export const PLATFORM_ROLE_LABEL: Record<PlatformRole, string> = {
-  superadmin: "Superadmin",
-  support: "Support",
-  billing: "Billing",
-  readonly: "Read only",
-};
-
-/**
- * What each role may do, in the words the database means them in.
- *
- * Deliberately short. `public.platform_role`'s own comments are the source, and
- * a longer description here would be a second definition to keep in step.
- */
-export const PLATFORM_ROLE_BLURB: Record<PlatformRole, string> = {
-  superadmin: "Everything, including destructive and irreversible actions",
-  support: "Help customers — read broadly, no destruction",
-  billing: "The commercial surfaces",
-  readonly: "Look, do not touch",
-};
+// The role labels are NOT re-exported from here. They live with the type in
+// lib/auth/platform-role.ts, and a screen that needs both should take both from
+// the one module — a re-export just hides which file is the definition.
 
 async function readTeam(): Promise<PlatformTeamRow[]> {
   const response = await fetch("/api/admin/team");

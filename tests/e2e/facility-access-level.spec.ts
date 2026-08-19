@@ -186,6 +186,82 @@ test.describe("inviting somebody onto the platform team", () => {
     }
   });
 
+  test("the roles screen shows the four roles Postgres has", async ({
+    page,
+  }) => {
+    // It showed five that it does not: Sales Team, Technical Support, Account
+    // Manager, Financial Auditor, System Administrator — each with an editable
+    // permission matrix over localStorage, a Create Role button and a Duplicate
+    // button. There is no platform permission table for any of that to write
+    // to; what a platform role may do is written into RLS policies.
+    await signIn(page, ACCOUNTS.admin);
+    await page.goto("/dashboard/user-management/roles");
+
+    await expect(
+      page.getByRole("heading", { name: "Platform roles" }),
+    ).toBeVisible();
+
+    for (const real of ["Superadmin", "Support", "Billing", "Read only"]) {
+      await expect(page.getByText(real, { exact: true }).first()).toBeVisible({
+        timeout: 30_000,
+      });
+    }
+
+    for (const invented of [
+      "Sales Team",
+      "Account Manager",
+      "Financial Auditor",
+      "System Administrator",
+    ]) {
+      await expect(page.getByText(invented, { exact: false })).toHaveCount(0);
+    }
+
+    // The editor is the part that mattered: a checkbox that clears and changes
+    // nothing is the exact bug role-editor-writes.spec.ts exists to prevent on
+    // the facility side.
+    await expect(
+      page.getByRole("button", { name: /create role/i }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /duplicate/i })).toHaveCount(
+      0,
+    );
+  });
+
+  test("the activity screen offers no invented login history", async ({
+    page,
+  }) => {
+    // Two of its three tabs were built from the same five invented people:
+    // per-person activity logs, and a login history with made-up IP addresses,
+    // devices and cities. Nothing in this system records a sign-in — WorkOS
+    // holds those events and nothing ingests them — so a security console was
+    // answering "who signed in from where" with fiction.
+    await signIn(page, ACCOUNTS.admin);
+    await page.goto("/dashboard/user-management/activity");
+
+    await expect(
+      page.getByRole("heading", { name: "Audit trail" }),
+    ).toBeVisible();
+
+    for (const gone of ["Login History", "Unique Locations", "IP Address"]) {
+      await expect(page.getByText(gone, { exact: false })).toHaveCount(0);
+    }
+  });
+
+  test("the user-creation form that created nobody is gone", async ({
+    page,
+  }) => {
+    // /dashboard/user-management/create collected a name, phone, department,
+    // access level and up to 26 responsibility areas, waited 1500ms, and said
+    // "User Created Successfully". It wrote nothing, anywhere, and nothing in
+    // the app ever linked to it. check:success-claims missed it only because
+    // the words happened to be in the wrong order for the regex.
+    await signIn(page, ACCOUNTS.admin);
+    const response = await page.request.get(
+      "/dashboard/user-management/create",
+    );
+    expect(response.status()).toBe(404);
+  });
+
   test("the header greets the person signed in, not a literal", async ({
     page,
   }) => {
