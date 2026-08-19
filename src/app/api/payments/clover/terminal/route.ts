@@ -9,12 +9,14 @@ import {
   deliverStandardReceipt,
   devicePrinters,
   endTransactionScreen,
-  printLogoOnDevice,
+  logoAsPrintablePng,
+  printImageOnDevice,
   printTextOnDevice,
   readTipOnDevice,
   receiptOptionsOnDevice,
 } from "@/lib/clover/print";
 import { buildReceiptLines, type ReceiptInput } from "@/lib/clover/receipt";
+import { renderReceiptPng } from "@/lib/clover/receipt-image";
 import {
   computeTax,
   NO_TAX,
@@ -294,22 +296,27 @@ export async function POST(request: NextRequest) {
 
   if (wantsPrint) {
     if (receipt) {
-      // The logo BEFORE the text, so the two come off the roll in that order.
-      // Its own endpoint and its own conversion — `/print/text` has no field
-      // for an image. A failure here is not reported to the counter: a receipt
-      // without a logo is still a receipt.
-      if (receipt.facility.logoUrl) {
-        await printLogoOnDevice(
-          booking.facility_id,
-          parsed.data.deviceSerial,
-          receipt.facility.logoUrl,
-        );
-      }
-      printed = await printTextOnDevice(
+      // ── PRINTED AS AN IMAGE, LOGO INCLUDED ────────────────────────────
+      //
+      // `/print/text` renders in a proportional font, so padding to a column
+      // width put every amount at a different place down the right-hand side
+      // (lib/clover/receipt-image.ts). One image gives a straight column, and
+      // carries the logo in the same job rather than a second call that can
+      // half-fail — which is what left 48mm of blank roll above the last one.
+      printed = await printReceiptAsImage(
         booking.facility_id,
         parsed.data.deviceSerial,
-        buildReceiptLines(receipt),
+        receipt,
       );
+      // FALLBACK. SVG text needs a font in the runtime; without one the render
+      // is valid and entirely blank. Ragged columns beat blank paper.
+      if (!printed.printed) {
+        printed = await printTextOnDevice(
+          booking.facility_id,
+          parsed.data.deviceSerial,
+          buildReceiptLines(receipt),
+        );
+      }
       itemised = printed.printed;
     }
     // AND Clover's own, which is the card-brand-compliant one. The docs put
@@ -711,4 +718,46 @@ function formatWindow(
 function parseTaxConfig(value: unknown): TaxConfig {
   const parsed = taxConfigSchema.safeParse(value);
   return parsed.success ? parsed.data : NO_TAX;
+}
+
+/**
+ * Print the receipt as one image — logo, lines and a straight column of
+ * amounts.
+ *
+ * Returns `printed: false` when the render came back blank, so the caller can
+ * fall back to text rather than hand somebody an empty receipt.
+ */
+async function printReceiptAsImage(
+  facilityId: string,
+  deviceSerial: string,
+  receipt: ReceiptInput,
+): Promise<{ printed: boolean; detail?: string }> {
+  const logo = receipt.facility.logoUrl
+    ? await logoAsPrintablePng(receipt.facility.logoUrl)
+    : null;
+
+  const rendered = await renderReceiptPng(
+    receipt,
+    logo
+      ? {
+          dataUri: `data:image/png;base64,${logo.image}`,
+          width: logo.width,
+          height: logo.height,
+        }
+      : undefined,
+  );
+  if (!rendered)
+    return { printed: false, detail: "receipt could not be rendered" };
+
+  // A receipt this size is comfortably over 1% ink. Anything under it means the
+  // glyphs did not render — a runtime with no font produces a blank page rather
+  // than an error.
+  if (rendered.ink < 0.01) {
+    return {
+      printed: false,
+      detail: "rendered blank — no font in the runtime",
+    };
+  }
+
+  return printImageOnDevice(facilityId, deviceSerial, rendered.image);
 }
