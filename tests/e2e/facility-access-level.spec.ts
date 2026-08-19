@@ -346,8 +346,17 @@ test.describe("inviting somebody onto the platform team", () => {
     ).toString("base64url");
 
     await page.goto(`/setup/${forged}`);
+    // The HEADING, not any text node matching the phrase. `getByText` resolved
+    // to two elements under a built server and failed on strict mode — the
+    // served HTML carries the <h1> once and the phrase a second time inside the
+    // RSC flight payload, so the loose locator was asserting on how Next.js
+    // streams rather than on what the page says.
     await expect(
-      page.getByText(/invitation link is invalid or has expired/i),
+      page
+        .getByRole("heading", {
+          name: /invitation link is invalid or has expired/i,
+        })
+        .first(),
     ).toBeVisible();
     // The address from the payload is nowhere on the page.
     await expect(page.getByText("attacker@yipyy.invalid")).toHaveCount(0);
