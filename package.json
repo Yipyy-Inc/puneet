@@ -27,6 +27,7 @@
     "check:nav-parity": "bun scripts/check-nav-parity.ts",
     "db:seed:generate": "bun scripts/generate-supabase-seed.ts",
     "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test admin-portal-enforced facility-access-level facility-identity employee-identity staff-invite-gate server-permissions staff-field-exposure role-editor-writes facility-shell staff-portal-nav",
     "test:e2e:ui": "playwright test --ui",
     "prepare": "husky",
     "db:seed:apply": "bun scripts/apply-operational-seed.ts",
