@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -30,24 +30,22 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-export default function SchedulingSettings() {
-  // Check if user is admin
-  const [isAdmin, setIsAdmin] = useState(false);
+import { usePermission } from "@/hooks/use-facility-rbac";
 
-  useEffect(() => {
-    const checkAdmin = () => {
-      if (typeof document === "undefined") return;
-      const cookies = document.cookie.split("; ");
-      const roleCookie = cookies.find((cookie) =>
-        cookie.startsWith("user_role="),
-      );
-      if (roleCookie) {
-        const role = roleCookie.split("=")[1];
-        setIsAdmin(role === "super_admin" || role === "facility_admin");
-      }
-    };
-    checkAdmin();
-  }, []);
+export default function SchedulingSettings() {
+  // ── WHO MAY SEE THE ADMIN PANEL ─────────────────────────────────────────
+  //
+  // This sniffed `document.cookie` for `user_role` and unlocked the "System
+  // Configuration" heading and the "Roles & Departments (Admin Only)" card when
+  // it said super_admin or facility_admin. A cookie any browser can write,
+  // deciding which admin controls to draw.
+  //
+  // It answers from the permission cascade now — the same resolution RLS uses,
+  // seeded from the session. `manage_roles` because that is literally what the
+  // gated card configures; a facility that grants it to somebody has decided
+  // they may configure roles, and this screen should agree with that decision
+  // rather than take its own view from a cookie.
+  const isAdmin = usePermission("manage_roles");
 
   const [settings, setSettings] = useState({
     // General Settings
