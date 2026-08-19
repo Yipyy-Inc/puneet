@@ -1805,12 +1805,24 @@ export default function ClientBookingDetailPage({
                   ? { tipCents: Math.round(payment.tip * 100) }
                   : {}),
               });
+              const card = result.cardLast4
+                ? `${result.cardBrand ?? "Card"} ···${result.cardLast4}`
+                : null;
               toast.success(
                 `$${(result.amountCents / 100).toFixed(2)} taken on the terminal`,
                 {
-                  description: result.cardLast4
-                    ? `${result.cardBrand ?? "Card"} ···${result.cardLast4}`
-                    : undefined,
+                  description: [
+                    card,
+                    // Said out loud either way. A charge that went through with
+                    // no paper is something the person at the counter has to
+                    // know BEFORE the customer walks off, and silence would let
+                    // them assume a receipt printed.
+                    result.receiptPrinted
+                      ? "Itemised receipt printed."
+                      : "No receipt printed — hand over the copy from Print.",
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
                 },
               );
               setPendingLateFee(null);

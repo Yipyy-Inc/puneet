@@ -145,6 +145,16 @@ export interface TerminalChargeResult {
   amountCents: number;
   cardBrand: string | null;
   cardLast4: string | null;
+  /**
+   * Whether the itemised receipt reached the device's printer.
+   *
+   * Separate from the payment on purpose: printing happens after an approved
+   * sale, in its own request, and a failed print leaves a completed payment
+   * completed. The caller should SAY so rather than hide it — the person at the
+   * counter needs to know whether to reach for the roll or hand over paper.
+   */
+  receiptPrinted: boolean;
+  receiptDetail?: string;
 }
 
 /**
@@ -186,6 +196,8 @@ export function useChargeOnTerminal() {
         amountCents: parsed?.amountCents ?? 0,
         cardBrand: parsed?.cardBrand ?? null,
         cardLast4: parsed?.cardLast4 ?? null,
+        receiptPrinted: parsed?.receiptPrinted === true,
+        receiptDetail: parsed?.receiptDetail,
       };
     },
     onSuccess: () => {

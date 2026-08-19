@@ -2241,7 +2241,39 @@ cannot disagree. Verified against both shapes:
 `facility_settings` has six domains and none is tax, so a rate would be one
 chosen on the facility's behalf and printed on something they hand a customer.
 
-### 🔴 The terminal receipt cannot itemise, because no Clover order is created
+### 🟡 The terminal receipt itemises — printed as text, awaiting one tap to confirm
+
+**The order route is closed, and that is a property of the API, not a gap here.**
+Clover documents the REST Pay Display API — `/connect/v1/payments`, which is
+what drives a semi-integrated terminal — as _payment-only_, and says it "does
+not support passing an order ID or item ID directly". Orders belong to the v3
+REST API and the Developer Pay endpoint (`/v2/merchant/{mId}/pay`, which
+_requires_ an orderId), neither of which drives this hardware.
+
+**What the same API does offer is the printer.** `POST /connect/v1/device/print`
+takes `{ printDeviceId, text: [...] }` and prints those lines on the device's
+own roll; `POST /connect/v1/device/printers` answers with the printer ids. So
+the breakdown is composed as text (`lib/clover/receipt.ts`, 32 columns — the
+width of an 80mm roll) and printed as a second act.
+
+**THE PAYMENT CALL IS BYTE-IDENTICAL.** Printing happens after an approved sale,
+in its own request, and its failure is reported but never changes the payment's
+outcome. That was the whole design constraint: a sale that succeeded with no
+paper is a nuisance; a sale reported as failed because a printer jammed is a
+double charge. `lib/clover/print.ts` cannot throw, has short timeouts and no
+retries, and the toast says which happened either way.
+
+The no-charge readiness check (`checkOnly`) now also reports `canPrint`, so a
+terminal with no printer is discoverable before somebody takes money on it.
+
+**Not yet confirmed on hardware.** The Clover connection belongs to `pawradise`,
+whose only members are PRODUCTION identities (`clover-staff@yipyy.com`,
+`develop@yipyy.com`), and a local run holds staging keys — the same reason
+`clover-terminal.spec.ts` skips locally. It needs one tap on the deployed app.
+Until that happens this stays 🟡: written against the documented API, verified as
+far as a keyboard allows, and unproven on paper.
+
+### 🔴 (superseded) The terminal receipt cannot itemise, because no Clover order is created
 
 The same report asked for the printed receipt to carry the breakdown. It cannot
 today, and not for a UI reason: **nothing in this codebase creates a Clover
