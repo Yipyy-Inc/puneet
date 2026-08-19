@@ -25,7 +25,6 @@ import {
 import { FileText, Download, Search, Calendar, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { InvoiceLoyaltySection } from "@/components/loyalty/InvoiceLoyaltySection";
-import { facilities } from "@/data/facilities";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { useReceiptFacility } from "@/hooks/use-receipt-facility";
 

@@ -536,6 +536,29 @@ export default function ClientBookingDetailPage({
   }, [isBoarding, booking, pet, client, nights]);
 
   const bookingRef = formatBookingRef(booking?.id ?? bookingId);
+  // ── WHAT GOES ON A PRINTED RECEIPT ──────────────────────────────────────
+  //
+  // The same rows the Payment Summary panel shows, so the paper a customer
+  // takes away and the screen the counter is reading cannot disagree. Same
+  // query key as BookingPaymentBreakdown, so this is the cache, not a second
+  // request.
+  //
+  // ABOVE the early returns below, and keyed on `bookingId` rather than
+  // `booking.id`: a hook after a conditional return is called in a different
+  // order on the render where the booking is still loading.
+  const { data: bookingLineItemsData } = useQuery({
+    queryKey: ["bookings", booking?.id ?? bookingId, "line-items"],
+    queryFn: async (): Promise<BookingLineItem[]> => {
+      const response = await fetch(
+        `/api/bookings/${booking?.id ?? bookingId}/line-items`,
+      );
+      if (!response.ok) throw new Error("Could not read the bill.");
+      return (await response.json()) as BookingLineItem[];
+    },
+    enabled: Boolean(booking?.id ?? bookingId),
+    staleTime: 30_000,
+  });
+  const bookingLineItems = bookingLineItemsData ?? [];
 
   const [tasks, setTasks] = useState<GeneratedTask[]>([]);
   useEffect(() => {
@@ -571,23 +594,6 @@ export default function ClientBookingDetailPage({
 
   const invoice = booking.invoice;
   const addedSubtotal = booking.extrasTotal ?? 0;
-
-  // ── WHAT GOES ON A PRINTED RECEIPT ──────────────────────────────────────
-  //
-  // The same rows the Payment Summary panel shows, so the paper a customer
-  // takes away and the screen the counter is reading cannot disagree. Same
-  // query key as BookingPaymentBreakdown, so this is the cache, not a second
-  // request.
-  const { data: bookingLineItemsData } = useQuery({
-    queryKey: ["bookings", booking.id, "line-items"],
-    queryFn: async (): Promise<BookingLineItem[]> => {
-      const response = await fetch(`/api/bookings/${booking.id}/line-items`);
-      if (!response.ok) throw new Error("Could not read the bill.");
-      return (await response.json()) as BookingLineItem[];
-    },
-    staleTime: 30_000,
-  });
-  const bookingLineItems = bookingLineItemsData ?? [];
 
   // "Aug 19, 2026, 8:00 AM - 6:00 PM". A receipt for a day of daycare that does
   // not say which day is not a record of anything.
