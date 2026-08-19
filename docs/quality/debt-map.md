@@ -2203,6 +2203,68 @@ toast; a reload lost all of it. That was invisible while the panels were empty
 and became reachable the moment they started rendering real instructions, so
 `canLog={false}` hid Add Meal, Add Medication, Log meal and Give.
 
+### 🟢 The booking's Payment Summary is a breakdown (was 🟡)
+
+Reported from the running app: _"in here we are supposed to have all the
+breakdown"_, over a panel reading Base Price $100 / Total $100.
+
+**The panel was less bare than it looked** — it already had Base Price,
+Discount, Added Items and Total. It showed two rows because that booking had
+none of the rest. What it genuinely lacked: the individual **lines** (every
+`booking_line_items` row collapsed into one "Added Items" figure), the **tip**,
+and **paid / balance** — so a screen whose header said "Pay by card — $100.00"
+never said what was owed.
+
+The rich `InvoicePanel` renders only when `booking.invoice` exists, and that
+blob is on exactly the **26 migrated fixture bookings**. Every booking made
+since the migration got the stub.
+
+`BookingPaymentBreakdown` builds it from rows instead. Every line names a
+source, and `GET /api/bookings/<ref>/line-items` was added for the lines — a
+separate read rather than a join on `BOOKING_SELECT`, which feeds the bookings
+LIST too and would pay for lines on a screen that shows none.
+
+**THE TRAP, and it nearly shipped: `bookings.amount_due` is what a booking
+COSTS, not what is owed.** Booking 569 carries `amount_paid 200` AND
+`amount_due 200`. Reading it as the balance would have printed "Balance due
+$200.00" on a booking settled in full, on the screen somebody uses to decide
+whether to ask a customer for money. The balance comes from `balanceOf()` — the
+same helper the "Pay by card" button uses, so the two figures on the screen
+cannot disagree. Verified against both shapes:
+
+```
+569  Boarding $180 · Late pickup (73 min) $20 · Total $200 · Paid −$200 · Settled $0
+426  Daycare  $60  · Bag of food 2 × $12  $24 · Total $84  · Balance due $84
+```
+
+**No tax line, deliberately.** The fixture invoice showed GST 5% and QST 9.975%.
+`facility_settings` has six domains and none is tax, so a rate would be one
+chosen on the facility's behalf and printed on something they hand a customer.
+
+### 🔴 The terminal receipt cannot itemise, because no Clover order is created
+
+The same report asked for the printed receipt to carry the breakdown. It cannot
+today, and not for a UI reason: **nothing in this codebase creates a Clover
+order.** Both money paths send a bare amount —
+
+```
+lib/clover/terminal.ts   { amount, externalPaymentId, final, tipAmount? }
+lib/clover/charge.ts     { amount, currency, source, ecomind, capture }
+```
+
+Clover prints what is on the ORDER. With no order and no line items, the device
+has one number to print, so the receipt is a total by construction.
+
+**What it takes:** create an order on the merchant, add a line item per charged
+line (the same lines the panel above now renders), then take the payment against
+that order id rather than a naked amount.
+
+**Why it is not done here:** it changes the live money path, on the one leg of
+the Clover integration that has never been exercised in production — the
+terminal tender has never been clicked (see the Clover notes). It needs the
+sandbox device in hand to verify, and shipping an unverified change to how money
+is taken is worse than a receipt that under-reports.
+
 ### 🟢 Logging a feeding and giving a dose are real (was 🔴 — the follow-on)
 
 `public.care_log_entries` (20260819140000). A row is one execution of one
