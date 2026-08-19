@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
+import { useReceiptFacility } from "@/hooks/use-receipt-facility";
 import { VariantSelector } from "@/components/retail/VariantSelector";
 import { useHardwareBarcodeScanner } from "@/hooks/use-hardware-barcode-scanner";
 
@@ -161,6 +162,8 @@ interface CartItemWithId extends CartItem {
 }
 
 export default function POSPage() {
+  // The facility's OWN header, not the fixture's — see use-receipt-facility.
+  const receiptFacility = useReceiptFacility();
   const searchParams = useSearchParams();
   const { role: facilityRole } = useFacilityRole();
   const currentUserId = getCurrentUserId();
@@ -2891,9 +2894,11 @@ export default function POSPage() {
                       className="w-full gap-2"
                       disabled={cart.length === 0}
                       onClick={() => {
-                        const facility = facilities.find(
-                          (f: { id: number }) => f.id === 11,
-                        );
+                        // The facility's OWN header. This was the fixture,
+                        // so a retail receipt handed across the counter named
+                        // "Example Pet Care Facility" and carried somebody
+                        // else's tax registration numbers.
+                        const facility = receiptFacility;
                         const w = window.open(
                           "",
                           "_blank",

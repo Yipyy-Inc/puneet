@@ -64,6 +64,7 @@ import {
 } from "@/lib/bookings/care-instructions";
 import { careLogKeys, careLogQueries, logCare } from "@/lib/api/care-log";
 import { BookingNotes } from "@/components/bookings/BookingNotes";
+import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
@@ -570,6 +571,39 @@ export default function ClientBookingDetailPage({
 
   const invoice = booking.invoice;
   const addedSubtotal = booking.extrasTotal ?? 0;
+
+  // ── WHAT GOES ON A PRINTED RECEIPT ──────────────────────────────────────
+  //
+  // The same rows the Payment Summary panel shows, so the paper a customer
+  // takes away and the screen the counter is reading cannot disagree. Same
+  // query key as BookingPaymentBreakdown, so this is the cache, not a second
+  // request.
+  const { data: bookingLineItemsData } = useQuery({
+    queryKey: ["bookings", booking.id, "line-items"],
+    queryFn: async (): Promise<BookingLineItem[]> => {
+      const response = await fetch(`/api/bookings/${booking.id}/line-items`);
+      if (!response.ok) throw new Error("Could not read the bill.");
+      return (await response.json()) as BookingLineItem[];
+    },
+    staleTime: 30_000,
+  });
+  const bookingLineItems = bookingLineItemsData ?? [];
+
+  // "Aug 19, 2026, 8:00 AM - 6:00 PM". A receipt for a day of daycare that does
+  // not say which day is not a record of anything.
+  const serviceWindowLabel = (() => {
+    if (!booking.startDate) return null;
+    const day = (value: string) =>
+      new Date(`${value}T00:00:00`).toLocaleDateString("en-CA", {
+        dateStyle: "medium",
+      });
+    const times = [booking.checkInTime, booking.checkOutTime]
+      .filter(Boolean)
+      .join(" - ");
+    return booking.endDate && booking.endDate !== booking.startDate
+      ? `${day(booking.startDate)} - ${day(booking.endDate)}`
+      : `${day(booking.startDate)}${times ? `, ${times}` : ""}`;
+  })();
   // Incident-medication charges (2B.3) — gated by the med's chargeFee + the
   // facility toggle (2G.1); per_admin lines recompute as care logs accrue.
   const incidentCareItems = getIncidentCareCharges(booking.id);
@@ -1760,6 +1794,29 @@ export default function ClientBookingDetailPage({
         <PaymentCheckoutFlow
           open={checkoutOpen}
           onOpenChange={setCheckoutOpen}
+          // What the customer is being charged FOR. The printed receipt used to
+          // show a single "Amount" line — a total with no evidence behind it.
+          receiptReference={bookingRef}
+          receiptServiceWindow={serviceWindowLabel}
+          receiptLines={[
+            {
+              label: booking.serviceType || booking.service,
+              amount: booking.basePrice,
+            },
+            ...bookingLineItems.map((item) => ({
+              label:
+                item.quantity > 1
+                  ? `${item.name} x${item.quantity}`
+                  : item.name,
+              amount: item.price,
+            })),
+            ...(incidentCareTotal > 0
+              ? [{ label: "Incident care", amount: incidentCareTotal }]
+              : []),
+            ...(pendingLateFee
+              ? [{ label: "Late pickup fee", amount: pendingLateFee.amount }]
+              : []),
+          ]}
           amountDue={
             (invoice?.remainingDue ?? booking.totalCost) +
             addedSubtotal +

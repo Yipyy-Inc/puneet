@@ -15,6 +15,12 @@ import {
 } from "@/lib/clover/print";
 import { buildReceiptLines, type ReceiptInput } from "@/lib/clover/receipt";
 import {
+  computeTax,
+  NO_TAX,
+  taxConfigSchema,
+  type TaxConfig,
+} from "@/lib/settings/tax";
+import {
   emailItemisedReceipt,
   smsItemisedReceipt,
 } from "@/lib/clover/receipt-delivery";
@@ -89,7 +95,11 @@ export async function POST(request: NextRequest) {
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, ref, facility_id, client_id, amount_due, amount_paid, status, service, service_type, base_price, discount, tip_amount, facilities ( name, timezone ), clients ( name ), booking_pets ( pets ( name ) )",
+      // The facility's OWN identity travels with the booking: a receipt naming
+      // the business, its address and how to reach it is the difference between
+      // a record and a note. These columns exist on `facilities`
+      // (20260809120000) and were simply never read here.
+      "id, ref, facility_id, client_id, amount_due, amount_paid, status, service, service_type, base_price, discount, tip_amount, start_at, end_at, facilities ( name, timezone, phone, email, website, address ), clients ( name ), booking_pets ( pets ( name ) )",
     )
     .eq("ref", parsed.data.bookingRef)
     .maybeSingle();
@@ -373,7 +383,22 @@ interface BookingForReceipt {
   base_price: number | string;
   discount: number | string | null;
   tip_amount: number | string | null;
-  facilities: { name: string; timezone: string | null } | null;
+  start_at: string | null;
+  end_at: string | null;
+  facilities: {
+    name: string;
+    timezone: string | null;
+    phone: string | null;
+    email: string | null;
+    website: string | null;
+    address: {
+      street?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      country?: string;
+    } | null;
+  } | null;
   clients: { name: string } | null;
   booking_pets: { pets: { name: string } | null }[] | null;
 }
@@ -404,18 +429,29 @@ async function receiptInputFor(
   outcome: Extract<Awaited<ReturnType<typeof chargeOnTerminal>>, { ok: true }>,
 ): Promise<ReceiptInput | null> {
   try {
-    const { data: rows } = await supabase
-      .from("booking_line_items")
-      .select("name, price, unit_price, quantity")
-      .eq("booking_id", booking.id)
-      .order("created_at", { ascending: true });
+    const [{ data: rows }, { data: settingRow }] = await Promise.all([
+      supabase
+        .from("booking_line_items")
+        .select("name, price, unit_price, quantity")
+        .eq("booking_id", booking.id)
+        .order("created_at", { ascending: true }),
+      // The FACILITY's tax, not a fixture's. Nothing is added when they have
+      // not configured any — see the banner in lib/settings/tax.ts.
+      supabase
+        .from("facility_settings")
+        .select("value")
+        .eq("facility_id", booking.facility_id)
+        .eq("domain", "tax_config")
+        .maybeSingle(),
+    ]);
 
     const cents = (v: number | string | null | undefined) =>
       Math.round(Number(v ?? 0) * 100);
 
     const lines = [
       {
-        label: booking.service_type || booking.service,
+        label:
+          humaniseService(booking.service_type || booking.service) ?? "Service",
         amountCents: cents(booking.base_price),
       },
       ...(
@@ -437,27 +473,65 @@ async function receiptInputFor(
     const discountCents = cents(booking.discount);
     const subtotalCents =
       lines.reduce((sum, l) => sum + l.amountCents, 0) - discountCents;
-    const tipCents = Math.max(0, outcome.amountCents - subtotalCents);
+
+    // ── TAX IS DERIVED, THE TIP IS WHAT IS LEFT ─────────────────────────────
+    //
+    // The terminal reports one number: what the customer actually paid. The
+    // subtotal and the tax are both computable from the booking, so the tip is
+    // the remainder — and it must be worked out AFTER tax, or a taxed sale
+    // reports its tax as gratuity.
+    const taxConfig = parseTaxConfig(settingRow?.value);
+    const tax = computeTax(subtotalCents, taxConfig);
+    const tipCents = Math.max(
+      0,
+      outcome.amountCents - subtotalCents - tax.totalCents,
+    );
+
+    const zone = booking.facilities?.timezone ?? "UTC";
+    const registrations = taxConfig.showRegistrationOnInvoice
+      ? taxConfig.taxes
+          .filter((t) => t.enabled && t.registrationNumber)
+          .map((t) => `${t.name}: ${t.registrationNumber}`)
+          .join(" · ")
+      : "";
 
     return {
-      facilityName: booking.facilities?.name ?? "Yipyy",
+      facility: {
+        name: booking.facilities?.name ?? "Yipyy",
+        address: formatAddress(booking.facilities?.address ?? null),
+        phone: booking.facilities?.phone ?? null,
+        email: booking.facilities?.email ?? null,
+        website: booking.facilities?.website ?? null,
+        taxRegistrations: registrations || null,
+      },
+      bookingRef: booking.ref,
       reference: `Booking #${booking.ref}`,
       clientName: booking.clients?.name ?? null,
       petNames: (booking.booking_pets ?? [])
         .map((bp) => bp.pets?.name)
         .filter((n): n is string => Boolean(n)),
+      serviceWindow: formatWindow(booking.start_at, booking.end_at, zone),
       lines,
       discountCents,
       subtotalCents,
+      taxLines: tax.lines.map((t) => ({
+        name: t.name,
+        rate: t.rate,
+        amountCents: t.amountCents,
+      })),
+      taxTotalCents: tax.totalCents,
       tipCents,
       totalCents: outcome.amountCents,
+      paymentMethod: "Paid by card",
       cardBrand: outcome.cardBrand,
       cardLast4: outcome.cardLast4,
+      entryMethod: humaniseService(outcome.entryMethod ?? ""),
+      authCode: outcome.authCode ?? null,
       processorPaymentId: outcome.processorPaymentId,
       // The FACILITY's clock, not the server's. A receipt handed over a counter
       // in Montreal saying 09:00 UTC is wrong on paper nobody can correct.
       printedAt: new Date().toLocaleString("en-CA", {
-        timeZone: booking.facilities?.timezone ?? "UTC",
+        timeZone: zone,
         dateStyle: "medium",
         timeStyle: "short",
       }),
@@ -466,4 +540,76 @@ async function receiptInputFor(
     console.warn("[terminal] receipt could not be composed:", error);
     return null;
   }
+}
+
+/** "full_groom" -> "Full groom". The column stores a key; paper wants a word. */
+function humaniseService(raw: string): string | null {
+  if (!raw) return null;
+  const words = raw.replace(/[_-]+/g, " ").trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : null;
+}
+
+/** The address jsonb as one line, or null when the facility has not set one. */
+function formatAddress(
+  address: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  } | null,
+): string | null {
+  if (!address) return null;
+  const line = [
+    address.street,
+    address.city,
+    [address.state, address.zipCode].filter(Boolean).join(" "),
+  ]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+  return line || null;
+}
+
+/**
+ * "19 Aug 2026, 8:00 a.m. - 6:00 p.m." for a same-day service, or the two dates
+ * in full for a stay.
+ *
+ * A receipt for a day of daycare that does not say WHICH day is not a record of
+ * anything, and a boarding receipt that shows only the drop-off hides half of
+ * what was bought.
+ */
+function formatWindow(
+  startAt: string | null,
+  endAt: string | null,
+  zone: string,
+): string | null {
+  if (!startAt) return null;
+  const start = new Date(startAt);
+  if (Number.isNaN(start.getTime())) return null;
+  const date = (d: Date) =>
+    d.toLocaleDateString("en-CA", { timeZone: zone, dateStyle: "medium" });
+  const time = (d: Date) =>
+    d.toLocaleTimeString("en-CA", { timeZone: zone, timeStyle: "short" });
+
+  if (!endAt) return `${date(start)} ${time(start)}`;
+  const end = new Date(endAt);
+  if (Number.isNaN(end.getTime())) return `${date(start)} ${time(start)}`;
+
+  return date(start) === date(end)
+    ? `${date(start)}, ${time(start)} - ${time(end)}`
+    : `${date(start)} ${time(start)} - ${date(end)} ${time(end)}`;
+}
+
+/**
+ * The stored tax setting, or none.
+ *
+ * Parsed rather than cast: `facility_settings.value` is jsonb and a row written
+ * by an older shape would otherwise reach the arithmetic. A receipt is the
+ * wrong place to discover that a config is malformed, so a bad row means no tax
+ * line rather than a thrown request.
+ */
+function parseTaxConfig(value: unknown): TaxConfig {
+  const parsed = taxConfigSchema.safeParse(value);
+  return parsed.success ? parsed.data : NO_TAX;
 }

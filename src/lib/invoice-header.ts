@@ -3,7 +3,7 @@
  * Shows the facility logo (if available), name, address, and contact.
  */
 
-interface FacilityInfo {
+export interface FacilityInfo {
   name: string;
   logo?: string;
   contact?: { email?: string; phone?: string };
@@ -68,3 +68,61 @@ td{padding:4px 0}
 .total td{font-weight:700;font-size:16px;padding-top:8px}
 @media print{body{margin:0;padding:20px}}
 `;
+
+// ============================================================================
+// The REAL facility, in the shape this header wants.
+//
+// Every caller of `invoiceHeaderHtml` passed the same thing:
+//
+//     const defaultFacility = facilities.find((f) => f.id === 11);
+//
+// — the FIXTURE. So every printed receipt, invoice, estimate and refund slip
+// this product produces was headed "Example Pet Care Facility, 123 Example St,
+// Example City", with the fixture's GST and QST registration numbers on it.
+// A customer of Pawradise holding one was reading another business's tax
+// numbers, which is worse than a cosmetic bug.
+//
+// `useFacilityProfile()` has returned the facility's own row since
+// 20260809120000. This is the adapter nobody wrote.
+// ============================================================================
+
+/** Turn the facility's own profile and tax setting into a printable header. */
+export function facilityInfoFromProfile(
+  profile: {
+    businessName: string;
+    email?: string;
+    phone?: string;
+    logo?: string;
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      country?: string;
+    };
+  },
+  tax?: {
+    showRegistrationOnInvoice?: boolean;
+    taxes?: { name: string; registrationNumber?: string; enabled: boolean }[];
+  },
+): FacilityInfo {
+  const a = profile.address;
+  const address = [
+    a?.street,
+    a?.city,
+    [a?.state, a?.zipCode].filter(Boolean).join(" "),
+  ]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+
+  return {
+    name: profile.businessName,
+    logo: profile.logo || undefined,
+    contact: { email: profile.email, phone: profile.phone },
+    // `locationsList` is how the header reads an address; one entry, the
+    // facility's own, rather than the fixture's list of branches.
+    locationsList: address ? [{ address }] : [],
+    taxConfig: tax,
+  };
+}

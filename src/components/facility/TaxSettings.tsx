@@ -18,8 +18,28 @@ import { Receipt, Plus, Trash2, Shield, Globe, Percent } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { TAX_PRESETS, getPreset } from "@/data/tax-presets";
-import { facilities } from "@/data/facilities";
 import { useFacilityRole } from "@/hooks/use-facility-role";
+import {
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import type { TaxConfig } from "@/lib/settings/tax";
+
+// ============================================================================
+// ── THIS SCREEN USED TO SAVE NOTHING ──────────────────────────────────────
+//
+// Its Save button mutated the shared FIXTURE and announced success:
+//
+//     (defaultFacility as Record<string, unknown>).taxConfig = { ... };
+//     toast.success("Tax settings saved");
+//
+// One object, shared by every facility on the platform, discarded on reload,
+// never sent anywhere. A facility could enter its GST and QST registration
+// numbers, be told they were saved, and find them on no document ever.
+//
+// It now reads and writes the `tax_config` setting domain, which is what makes
+// a tax line appear on a receipt at all.
+// ============================================================================
 
 interface TaxEntry {
   id: string;
@@ -32,13 +52,13 @@ interface TaxEntry {
   enabled: boolean;
 }
 
-const defaultFacility = facilities.find((f) => f.id === 11);
-const defaultConfig = defaultFacility?.taxConfig;
-
 let _taxId = 500;
 
 export function TaxSettings() {
   const { role } = useFacilityRole();
+  const settings = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
+  const defaultConfig = settings.settings.tax_config.value as TaxConfig;
 
   const [country, setCountry] = useState(defaultConfig?.country ?? "CA");
   const [province, setProvince] = useState(defaultConfig?.province ?? "QC");
@@ -133,23 +153,36 @@ export function TaxSettings() {
     );
   };
 
-  const handleSave = () => {
-    if (defaultFacility) {
-      (defaultFacility as Record<string, unknown>).taxConfig = {
-        country,
-        province,
-        taxes,
-        pricesIncludeTax,
-        showTaxesSeparately: showSeparately,
-        showRegistrationOnInvoice: showRegistration,
-        exemptions: {
-          tips: true,
-          giftCards: exemptGiftCards,
-          storeCredit: exemptStoreCredit,
-        },
-      };
+  const handleSave = async () => {
+    // Awaited, and the failure reported. RLS refuses this write for anyone
+    // without `manage_settings`, and an unawaited mutation would show the same
+    // "saved" toast for a refusal as for a success — which is the bug this
+    // screen shipped with, in a subtler form.
+    try {
+      await saveSetting.mutateAsync({
+        domain: "tax_config",
+        value: {
+          country,
+          province,
+          taxes,
+          pricesIncludeTax,
+          showTaxesSeparately: showSeparately,
+          showRegistrationOnInvoice: showRegistration,
+          exemptions: {
+            // Never configurable here: a gratuity is not a supply, and no
+            // jurisdiction this ships in taxes one.
+            tips: true,
+            giftCards: exemptGiftCards,
+            storeCredit: exemptStoreCredit,
+          },
+        } satisfies TaxConfig,
+      });
+      toast.success("Tax settings saved");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Tax settings were not saved.",
+      );
     }
-    toast.success("Tax settings saved");
   };
 
   if (role !== "owner" && role !== "manager") {
