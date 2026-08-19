@@ -5,6 +5,8 @@ import { getViewer } from "@/lib/auth/viewer";
 import { holds, myPermissions } from "@/lib/auth/permissions";
 import { createServerClient } from "@/lib/supabase/server";
 import { chargeOnTerminal, deviceState } from "@/lib/clover/terminal";
+import { devicePrinters, printTextOnDevice } from "@/lib/clover/print";
+import { buildReceiptLines } from "@/lib/clover/receipt";
 
 // ============================================================================
 // Charging a card on the counter's own terminal.
@@ -68,7 +70,9 @@ export async function POST(request: NextRequest) {
   const supabase = await createServerClient();
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, facility_id, client_id, amount_due, amount_paid, status")
+    .select(
+      "id, ref, facility_id, client_id, amount_due, amount_paid, status, service, service_type, base_price, discount, tip_amount, facilities ( name, timezone ), clients ( name ), booking_pets ( pets ( name ) )",
+    )
     .eq("ref", parsed.data.bookingRef)
     .maybeSingle();
 
@@ -89,10 +93,23 @@ export async function POST(request: NextRequest) {
       booking.facility_id,
       parsed.data.deviceSerial,
     );
+    // And whether it can PRINT. A terminal that takes the payment but has no
+    // printer produces a charge with no receipt, and the person finds out after
+    // the customer has paid. Asking here costs one read and charges nothing.
+    //
+    // Only when the device is awake: a sleeping terminal answers this the same
+    // way it answers everything else, and a second 15-second timeout on the
+    // readiness check is what this branch was written to avoid.
+    const printers =
+      state.kind === "ready"
+        ? await devicePrinters(booking.facility_id, parsed.data.deviceSerial)
+        : [];
     return NextResponse.json({
       ready: state.kind === "ready",
       state: state.kind,
       detail: state.kind === "ready" ? "The terminal is ready." : state.detail,
+      canPrint: printers.length > 0,
+      printers: printers.map((p) => ({ id: p.id, name: p.name })),
     });
   }
 
@@ -144,6 +161,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── THE ITEMISED RECEIPT ────────────────────────────────────────────────
+  //
+  // AFTER the sale, in its own request, and its result is reported but never
+  // allowed to change the payment's. The facility asked for the printed receipt
+  // to carry the same breakdown as the portal; Clover's REST Pay Display API is
+  // payment-only and takes no order or item id, so the breakdown is composed as
+  // text and sent to the device's own printer (lib/clover/receipt.ts).
+  //
+  // A sale that succeeded and a receipt that did not print is a nuisance. A
+  // sale reported as failed because a printer jammed is a double charge, so
+  // this cannot throw and its failure is a log line and a flag on the response.
+  const printed = await printReceipt(
+    booking as unknown as BookingForReceipt,
+    supabase,
+    outcome,
+    parsed.data.deviceSerial,
+  );
+
   return NextResponse.json({
     paid: true,
     paymentId: outcome.paymentId,
@@ -152,5 +187,106 @@ export async function POST(request: NextRequest) {
     currency: outcome.currency,
     cardBrand: outcome.cardBrand,
     cardLast4: outcome.cardLast4,
+    receiptPrinted: printed.printed,
+    receiptDetail: printed.detail,
   });
+}
+
+interface BookingForReceipt {
+  id: string;
+  ref: number;
+  facility_id: string;
+  service: string;
+  service_type: string | null;
+  base_price: number | string;
+  discount: number | string | null;
+  tip_amount: number | string | null;
+  facilities: { name: string; timezone: string | null } | null;
+  clients: { name: string } | null;
+  booking_pets: { pets: { name: string } | null }[] | null;
+}
+
+/**
+ * Compose and print the itemised receipt. Never throws.
+ *
+ * The lines are read HERE rather than passed from the client: a receipt is a
+ * record of what was charged, and a caller that could name its own line items
+ * could print a receipt that disagrees with the payment.
+ */
+async function printReceipt(
+  booking: BookingForReceipt,
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  outcome: Extract<Awaited<ReturnType<typeof chargeOnTerminal>>, { ok: true }>,
+  deviceSerial: string,
+): Promise<{ printed: boolean; detail?: string }> {
+  try {
+    const { data: rows } = await supabase
+      .from("booking_line_items")
+      .select("name, price, unit_price, quantity")
+      .eq("booking_id", booking.id)
+      .order("created_at", { ascending: true });
+
+    const cents = (v: number | string | null | undefined) =>
+      Math.round(Number(v ?? 0) * 100);
+
+    const lines = [
+      {
+        label: booking.service_type || booking.service,
+        amountCents: cents(booking.base_price),
+      },
+      ...(
+        (rows ?? []) as {
+          name: string;
+          price: number | string | null;
+          unit_price: number | string;
+          quantity: number;
+        }[]
+      ).map((r) => ({
+        label: r.quantity > 1 ? `${r.name} x${r.quantity}` : r.name,
+        amountCents:
+          r.price === null
+            ? cents(Number(r.unit_price) * r.quantity)
+            : cents(r.price),
+      })),
+    ];
+
+    const discountCents = cents(booking.discount);
+    const subtotalCents =
+      lines.reduce((sum, l) => sum + l.amountCents, 0) - discountCents;
+    const tipCents = Math.max(0, outcome.amountCents - subtotalCents);
+
+    const text = buildReceiptLines({
+      facilityName: booking.facilities?.name ?? "Yipyy",
+      reference: `Booking #${booking.ref}`,
+      clientName: booking.clients?.name ?? null,
+      petNames: (booking.booking_pets ?? [])
+        .map((bp) => bp.pets?.name)
+        .filter((n): n is string => Boolean(n)),
+      lines,
+      discountCents,
+      subtotalCents,
+      tipCents,
+      totalCents: outcome.amountCents,
+      cardBrand: outcome.cardBrand,
+      cardLast4: outcome.cardLast4,
+      processorPaymentId: outcome.processorPaymentId,
+      // The FACILITY's clock, not the server's. A receipt handed over a counter
+      // in Montreal saying 09:00 UTC is wrong on paper nobody can correct.
+      printedAt: new Date().toLocaleString("en-CA", {
+        timeZone: booking.facilities?.timezone ?? "UTC",
+        dateStyle: "medium",
+        timeStyle: "short",
+      }),
+    });
+
+    // The same device that took the payment, so the receipt comes out of the
+    // terminal the customer is standing at.
+    return await printTextOnDevice(booking.facility_id, deviceSerial, text);
+  } catch (error) {
+    console.warn("[terminal] receipt not printed:", error);
+    return {
+      printed: false,
+      detail: error instanceof Error ? error.message : "unknown",
+    };
+  }
 }
