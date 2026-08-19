@@ -3,11 +3,13 @@ import Link from "next/link";
 import { Clock, ShieldAlert } from "lucide-react";
 
 import {
-  PLATFORM_ROLE_LABELS,
   hashPlatformInviteToken,
   toByteaLiteral,
-  type PlatformRole,
 } from "@/lib/auth/platform-invitation";
+import {
+  PLATFORM_ROLE_LABELS,
+  type PlatformRole,
+} from "@/lib/auth/platform-role";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 
 import { SetupForm } from "./_components/setup-form";
@@ -101,8 +103,8 @@ export default async function AdminSetupPage({
               Setup links are valid for 48 hours and may be used once.
             </p>
             <p className="text-muted-foreground mt-3 text-sm">
-              Ask a superadmin to send you a new invitation from the Admin Users
-              page.
+              Ask a superadmin to send you a new invitation from the Platform
+              team page.
             </p>
             <Link
               href="/sign-in"

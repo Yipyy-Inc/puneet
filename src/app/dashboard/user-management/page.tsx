@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import {
   Clock,
   Download,
@@ -21,10 +20,10 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  PLATFORM_ROLE_LABEL,
   platformTeamQueries,
   type PlatformTeamRow,
 } from "@/lib/api/platform-team";
+import { PLATFORM_ROLE_LABEL } from "@/lib/auth/platform-role";
 import { CreateAdminUserModal } from "@/components/user-management/CreateAdminUserModal";
 import { PlatformMemberSheet } from "@/components/user-management/PlatformMemberSheet";
 
@@ -152,10 +151,10 @@ export default function UserManagementPage() {
     {
       key: "role",
       label: "Role",
-      // The four values of public.platform_role, and only those. The five
-      // job-flavoured labels the invite form still offers are mapped onto these
-      // server-side (lib/auth/platform-invitation.ts) — filtering by a label
-      // the database has never heard of would return nothing, every time.
+      // The four values of public.platform_role, and only those. The invite
+      // form offers exactly these now, so a filter here and a choice there name
+      // the same thing — they did not while the form offered five job titles
+      // that collapsed onto four roles server-side.
       options: [
         { value: "all", label: "All roles" },
         { value: "superadmin", label: "Superadmin" },
@@ -284,18 +283,16 @@ export default function UserManagementPage() {
       <CreateAdminUserModal
         open={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
-        onInvited={(member, result) => {
-          // The invitation ROW exists either way — the email is the part that
-          // may not have been sent — so the table is refreshed regardless.
+        // The invitation ROW exists whether or not the email went out — the
+        // dialog says which, and says it where the setup link is — so the only
+        // thing left to do here is show the new row.
+        //
+        // There used to be a toast on top of that, and it was the reason this
+        // file sat in the check:success-claims baseline: "Invitation email sent
+        // to …" fired from a component that cannot send an email and could not
+        // see whether one had been. The dialog knows; it reports.
+        onInvited={() => {
           void queryClient.invalidateQueries({ queryKey: ["platform-team"] });
-          if (result.sent) {
-            toast.success(`Invitation email sent to ${member.email}`);
-          } else {
-            toast.message(`${member.name} invited`, {
-              description:
-                "Email service isn't configured — share the setup link from the dialog.",
-            });
-          }
         }}
       />
     </div>
