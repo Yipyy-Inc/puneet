@@ -11,6 +11,21 @@ import type { NextConfig } from "next";
 // which is what makes it safe to turn on across 266 routes to serve four.
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+/**
+ * The hostname of this deployment's Supabase project, for next/image.
+ *
+ * Read here rather than written literally: it contains the project ref, and a
+ * hardcoded one silently breaks every uploaded image on any other environment.
+ */
+const supabaseHost = (() => {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return url ? new URL(url).hostname : null;
+  } catch {
+    return null;
+  }
+})();
+
 const nextConfig: NextConfig = {
   // ── THE RECEIPT RENDERER NEEDS ITS FONT IN THE BUNDLE ──────────────────
   //
@@ -60,11 +75,29 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
+    // ── THE FACILITY'S OWN LOGO LIVES IN SUPABASE STORAGE ─────────────────
+    //
+    // next/image refuses any host not listed here and answers 400, which the
+    // browser renders as a broken-image icon. A facility uploaded its logo on
+    // 2026-08-19, the row was written correctly, and every screen showing it —
+    // the sidebar, the sign-in card, report cards, gift-card emails — drew a
+    // broken image instead. The upload was blamed; the upload was fine.
+    //
+    // Derived from the environment rather than hardcoded: the hostname carries
+    // the project ref, so a literal would break on any other deployment.
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-      },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      ...(supabaseHost
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: supabaseHost,
+              // Only the public bucket. A signed or private path has no
+              // business being optimised and cached by the image proxy.
+              pathname: "/storage/v1/object/public/**",
+            },
+          ]
+        : []),
     ],
   },
   experimental: {
