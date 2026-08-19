@@ -83,6 +83,14 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
 - **TypeScript:** no new `any`, no new `@ts-ignore` (use `@ts-expect-error` with a reason) — even though older code has them.
 - Follow the CLAUDE.md build-performance rules for all new code: Server Components by default for pages, types separated from mock data, components under ~500 lines, dynamic imports for heavy/conditional components, consume data via `src/lib/api/` factories (not direct `src/data/` imports).
 - **Conventional Commits** for every commit (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:` …).
+- **Push straight to `main`; do not open a PR** unless asked. Decided
+  2026-08-19 — the review round trip cost more than it caught here. `main` is
+  protected with four required checks but `enforce_admins` is false, so the push
+  goes through.
+  **The gates move to your side of the fence.** Vercel deploys production from
+  `main` on push, so CI now reports _after_ customers have the code. Run the
+  green sequence before every push, and `bun run test:e2e:ci` as well for
+  anything touching auth, a portal gate, a permission or an identity.
 - **Never weaken a gate** (a lint rule, the tsconfig `strict` flag, a CI step, a husky hook) to make work pass. Propose gate changes explicitly and separately.
 - **Manual verification against the touched journey is still mandatory** — the suite covers authorisation and identity, not every screen. What it does cover, CI now enforces: `bun run test:e2e:ci` runs on every PR, so a loosened gate fails the build instead of shipping.
 - A spec added to `test:e2e:ci` **must clean up after itself**. There is one Postgres and CI writes to it; see the `afterAll` in [role-editor-writes.spec.ts](tests/e2e/role-editor-writes.spec.ts).

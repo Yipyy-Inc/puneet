@@ -34,6 +34,17 @@ Always use **bun** as the package manager (not npm, yarn, or pnpm).
 
 - Use `@/*` path alias for imports (unless the file is in the same directory)
 - Use conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`, etc.
+- **Commit and push straight to `main`. Do not open a pull request** unless
+  explicitly asked. `main` is protected but `enforce_admins` is false, so the
+  push is accepted. Decided 2026-08-19: the review round trip was costing more
+  than it caught on a single-maintainer project.
+  - **Run the green sequence locally BEFORE pushing.** Vercel deploys production
+    from `main` on push, so a bad commit reaches customers before CI reports it —
+    the required checks become a post-mortem rather than a gate. `bun run typecheck && bun run lint && bun run format:check`, plus `bun run build` for
+    anything structural.
+  - Touching auth, a portal gate, a permission or an identity? Run
+    `bun run test:e2e:ci` locally too. CI still runs it, but only after the
+    deploy is live.
 - Use the `DataTable` component for all tables — additions to DataTable must not break existing implementations
 - Plan before coding — outline approach before implementing
 
