@@ -14,11 +14,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  PLATFORM_ROLE_BLURB,
-  PLATFORM_ROLE_LABEL,
   revokePlatformInvitation,
   type PlatformTeamRow,
 } from "@/lib/api/platform-team";
+import {
+  PLATFORM_ROLE_BLURB,
+  PLATFORM_ROLE_LABEL,
+} from "@/lib/auth/platform-role";
 
 // ============================================================================
 // One person on the platform team, and everything actually known about them.

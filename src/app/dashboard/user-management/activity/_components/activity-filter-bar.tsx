@@ -19,21 +19,21 @@ interface ActivityFilterBarProps {
   filters: ActivityFilters;
   onChange: (next: ActivityFilters) => void;
   members: string[];
-  actionTypes: string[];
+  categories: string[];
 }
 
 export function ActivityFilterBar({
   filters,
   onChange,
   members,
-  actionTypes,
+  categories,
 }: ActivityFilterBarProps) {
   const set = (patch: Partial<ActivityFilters>) =>
     onChange({ ...filters, ...patch });
 
   const active =
     filters.member !== "all" ||
-    filters.actionType !== "all" ||
+    filters.category !== "all" ||
     filters.facility.trim() !== "" ||
     filters.from !== "" ||
     filters.to !== "";
@@ -41,16 +41,16 @@ export function ActivityFilterBar({
   return (
     <div className="bg-card flex flex-wrap items-end gap-3 rounded-xl border p-3">
       <div className="grid gap-1.5">
-        <Label className="text-muted-foreground text-xs">Team Member</Label>
+        <Label className="text-muted-foreground text-xs">User</Label>
         <Select
           value={filters.member}
           onValueChange={(v) => set({ member: v })}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Team Members" />
+            <SelectValue placeholder="All users" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Team Members</SelectItem>
+            <SelectItem value="all">All users</SelectItem>
             {members.map((m) => (
               <SelectItem key={m} value={m}>
                 {m}
@@ -61,17 +61,17 @@ export function ActivityFilterBar({
       </div>
 
       <div className="grid gap-1.5">
-        <Label className="text-muted-foreground text-xs">Action Type</Label>
+        <Label className="text-muted-foreground text-xs">Category</Label>
         <Select
-          value={filters.actionType}
-          onValueChange={(v) => set({ actionType: v })}
+          value={filters.category}
+          onValueChange={(v) => set({ category: v })}
         >
           <SelectTrigger className="w-[170px]">
-            <SelectValue placeholder="All Action Types" />
+            <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Action Types</SelectItem>
-            {actionTypes.map((t) => (
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map((t) => (
               <SelectItem key={t} value={t}>
                 {t}
               </SelectItem>
@@ -119,7 +119,7 @@ export function ActivityFilterBar({
           onClick={() =>
             onChange({
               member: "all",
-              actionType: "all",
+              category: "all",
               facility: "",
               from: "",
               to: "",

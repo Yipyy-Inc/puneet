@@ -1,39 +1,46 @@
-import { roleDisplayNames, type AdminUser } from "@/data/admin-users";
 import type { AuditLogEntry } from "@/lib/api/audit-log";
 
-// Unifies the platform's real logged-action sources into one row model so the
-// Activity Tracking page's three tabs and shared filter bar can work over them:
-//   - Activity Log  → admin/team member actions (AdminUser.activityLog, live roster)
-//   - Login History → admin sign-ins          (AdminUser.loginHistory, live roster)
-//   - Audit Trail   → the immutable, append-only audit log (lib/api/audit-log)
-// Nothing here mutates; the audit trail is read-only by construction.
-
-export type LogKind = "activity" | "login" | "audit";
+// ============================================================================
+// The audit trail, shaped for the screen that renders it.
+//
+// ── THIS FILE USED TO CLAIM MORE THAN IT DELIVERED ────────────────────────
+//
+// Its header said it "unifies the platform's real logged-action sources into
+// one row model" over three of them: an activity log, a login history and the
+// audit trail. Only the third was real. The other two were built from
+// `AdminUser.activityLog` and `AdminUser.loginHistory` — hand-written arrays on
+// five invented people in src/data/admin-users.ts — and the word "real" in that
+// sentence was doing a lot of work.
+//
+// There is no second source to unify with. Nothing records a sign-in anywhere
+// in this system, and there is no per-person action table. So the row model
+// stays (the filter bar and the CSV export are worth keeping) but it now
+// describes exactly one thing.
+//
+// Everything here is a pure transform: the fetch belongs to the screen's query,
+// which is also what makes these testable without a server. Nothing mutates —
+// the trail is append-only at the database level, not by convention here.
+// ============================================================================
 
 export interface TeamLogEntry {
   id: string;
-  kind: LogKind;
   timestamp: string; // ISO
   userId: string;
   userName: string;
-  userRole: string; // display label
+  userRole: string;
   action: string;
-  actionType: string; // drives the Action Type filter
+  category: string; // drives the Category filter
   target: string;
   facilityName: string | null; // drives the Target Facility filter
   details: string;
   severity?: string;
   status?: string;
-  ip?: string;
-  device?: string;
-  location?: string;
-  category?: string;
   changes?: { field: string; oldValue: string; newValue: string }[];
 }
 
 export interface ActivityFilters {
   member: string; // userName | "all"
-  actionType: string; // actionType | "all"
+  category: string; // category | "all"
   facility: string; // free text
   from: string; // YYYY-MM-DD | ""
   to: string; // YYYY-MM-DD | ""
@@ -41,81 +48,18 @@ export interface ActivityFilters {
 
 export const EMPTY_FILTERS: ActivityFilters = {
   member: "all",
-  actionType: "all",
+  category: "all",
   facility: "",
   from: "",
   to: "",
 };
 
-/** Coarse, filterable action type derived from a free-text action string. */
-export function deriveActivityType(action: string): string {
-  const a = action.toLowerCase();
-  if (/sign[\s-]?(in|out)|log[\s-]?(in|out)|login|logout|authenticat/.test(a))
-    return "Authentication";
-  if (/permission|\brole\b|access level|grant|revoke/.test(a))
-    return "Access Control";
-  if (/creat|invit|\badd(ed)?\b|\bnew\b/.test(a)) return "Created";
-  if (/delet|remov|deactiv|suspend/.test(a)) return "Deleted";
-  if (/export|download/.test(a)) return "Data Export";
-  if (/updat|modif|edit|chang|rename|config/.test(a)) return "Updated";
-  return "Other";
-}
-
-function byTimestampDesc(a: TeamLogEntry, b: TeamLogEntry) {
-  return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-}
-
-export function buildActivityEntries(team: AdminUser[]): TeamLogEntry[] {
-  return team
-    .flatMap((user) =>
-      user.activityLog.map((log) => ({
-        id: `act-${user.id}-${log.id}`,
-        kind: "activity" as const,
-        timestamp: log.timestamp,
-        userId: String(user.id),
-        userName: user.name,
-        userRole: roleDisplayNames[user.role] ?? user.role,
-        action: log.action,
-        actionType: deriveActivityType(log.action),
-        target: log.target,
-        facilityName: null,
-        details: log.details,
-        severity: log.severity,
-      })),
-    )
-    .sort(byTimestampDesc);
-}
-
-export function buildLoginEntries(team: AdminUser[]): TeamLogEntry[] {
-  return team
-    .flatMap((user) =>
-      user.loginHistory.map((login, idx) => ({
-        id: `login-${user.id}-${idx}`,
-        kind: "login" as const,
-        timestamp: login.date,
-        userId: String(user.id),
-        userName: user.name,
-        userRole: roleDisplayNames[user.role] ?? user.role,
-        action: "Signed in",
-        actionType: "Authentication",
-        target: login.location,
-        facilityName: null,
-        details: `${login.device} · ${login.location}`,
-        ip: login.ip,
-        device: login.device,
-        location: login.location,
-      })),
-    )
-    .sort(byTimestampDesc);
-}
-
 /**
  * Takes the entries rather than fetching them.
  *
  * It used to call getAuditLogs(), which read a frozen mock array synchronously.
- * The trail is a database table now, so the fetch belongs to the screen's
- * query and this stays a pure transform — which is also what makes it testable
- * without a server.
+ * The trail is a database table now, so the fetch belongs to the screen's query
+ * and this stays a pure transform.
  */
 export function buildAuditEntries(
   entries: readonly AuditLogEntry[],
@@ -123,23 +67,24 @@ export function buildAuditEntries(
   return entries
     .map((e) => ({
       id: e.id,
-      kind: "audit" as const,
       timestamp: e.timestamp,
       userId: e.userId,
       userName: e.userName,
       userRole: e.userRole,
       action: e.action,
-      actionType: e.category,
+      category: e.category,
       target: `${e.entityType}: ${e.entityName}`,
       facilityName:
         e.facilityName ?? (e.entityType === "Facility" ? e.entityName : null),
       details: e.description,
       severity: e.severity,
       status: e.status,
-      category: e.category,
       changes: e.changes,
     }))
-    .sort(byTimestampDesc);
+    .sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
 }
 
 export function filterEntries(
@@ -151,7 +96,7 @@ export function filterEntries(
   const fac = f.facility.trim().toLowerCase();
   return entries.filter((e) => {
     if (f.member !== "all" && e.userName !== f.member) return false;
-    if (f.actionType !== "all" && e.actionType !== f.actionType) return false;
+    if (f.category !== "all" && e.category !== f.category) return false;
     if (fac && !(e.facilityName?.toLowerCase().includes(fac) ?? false))
       return false;
     const t = new Date(e.timestamp).getTime();
@@ -161,16 +106,12 @@ export function filterEntries(
   });
 }
 
-export function memberOptions(...sets: TeamLogEntry[][]): string[] {
-  const names = new Set<string>();
-  for (const set of sets) for (const e of set) names.add(e.userName);
-  return [...names].sort();
+export function memberOptions(entries: TeamLogEntry[]): string[] {
+  return [...new Set(entries.map((e) => e.userName))].sort();
 }
 
-export function actionTypeOptions(...sets: TeamLogEntry[][]): string[] {
-  const types = new Set<string>();
-  for (const set of sets) for (const e of set) types.add(e.actionType);
-  return [...types].sort();
+export function categoryOptions(entries: TeamLogEntry[]): string[] {
+  return [...new Set(entries.map((e) => e.category))].sort();
 }
 
 const AUDIT_CSV_HEADERS = [
@@ -200,7 +141,7 @@ export function buildAuditCsv(entries: TeamLogEntry[]): string {
         e.userName,
         e.userRole,
         e.action,
-        e.category ?? "",
+        e.category,
         e.target,
         e.facilityName ?? "",
         e.severity ?? "",
