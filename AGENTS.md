@@ -26,25 +26,36 @@ Every task follows: **Ground → Plan → Implement → Verify → Encode.**
 
 ## Commands
 
-There is **no test runner** in this project. "Green" = the CI gates plus a manual look at the UI.
+There **is** a test runner: Playwright, 51 spec files under [tests/e2e/](tests/e2e/), driving a real browser against a real server. It was described here as absent long after it existed. "Green" = the CI gates, the auth & access specs, and a look at the touched journey.
 
-| Command                               | Purpose                                                                                            |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `bun run dev`                         | Dev server (webpack); `bun run dev:turbo` for turbo                                                |
-| `bun run typecheck`                   | `tsc --noEmit` — the primary gate (also runs on pre-commit & pre-push)                             |
-| `bun run lint`                        | ESLint (cached); `bun run lint:fix` to autofix                                                     |
-| `bun run format:check`                | Prettier check; `bun run format` to write                                                          |
-| `bun run build`                       | `next build` — full production build (CI runs this)                                                |
-| `bun run prune`                       | Knip — dead-code / unused-export report                                                            |
-| `bun run check:pricing`               | Project-specific pricing-consistency script                                                        |
-| `bun run check:settings-wiring`       | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                         |
-| `bun run check:rls-writes`            | Fails if an API update/delete cannot tell an RLS refusal from a no-op                              |
-| `bun run check:grooming-menu`         | Fails if a screen reads the grooming menu from the fixture, not Postgres                           |
-| `bun run check:facility-from-session` | Fails if an API route takes the facility from the request rather than the session or a parent row  |
-| `bun run check:success-claims`        | Fails if a screen claims an action succeeded with nothing that could perform it                    |
-| `bun run check:settings-fixture`      | Fails if a screen reads a facility-owned value (name, hours, rules, tips) from `src/data/settings` |
+| Command                               | Purpose                                                                                             |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `bun run dev`                         | Dev server (webpack); `bun run dev:turbo` for turbo                                                 |
+| `bun run typecheck`                   | `tsc --noEmit` — the primary gate (also runs on pre-commit & pre-push)                              |
+| `bun run lint`                        | ESLint (cached); `bun run lint:fix` to autofix                                                      |
+| `bun run format:check`                | Prettier check; `bun run format` to write                                                           |
+| `bun run build`                       | `next build` — full production build (CI runs this)                                                 |
+| `bun run prune`                       | Knip — dead-code / unused-export report                                                             |
+| `bun run test:e2e`                    | The whole Playwright suite (51 files, ~45 min, one worker — see the debt map before trusting a run) |
+| `bun run test:e2e:ci`                 | The 10 auth & access specs CI runs on every PR — 59 tests, ~4 min against a built server            |
+| `bun run check:pricing`               | Project-specific pricing-consistency script                                                         |
+| `bun run check:settings-wiring`       | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                          |
+| `bun run check:rls-writes`            | Fails if an API update/delete cannot tell an RLS refusal from a no-op                               |
+| `bun run check:grooming-menu`         | Fails if a screen reads the grooming menu from the fixture, not Postgres                            |
+| `bun run check:facility-from-session` | Fails if an API route takes the facility from the request rather than the session or a parent row   |
+| `bun run check:success-claims`        | Fails if a screen claims an action succeeded with nothing that could perform it                     |
+| `bun run check:settings-fixture`      | Fails if a screen reads a facility-owned value (name, hours, rules, tips) from `src/data/settings`  |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
+
+**Touching auth, a portal gate, a permission or an identity?** Run `bun run test:e2e:ci` too — CI runs exactly that command on every PR. Fastest locally against a built server rather than the dev one:
+
+```
+bun run build && bun run start --port 3000 &
+E2E_BASE_URL=http://localhost:3000 bun run test:e2e:ci
+```
+
+`E2E_BASE_URL` pointed at localhost is still a LOCAL run — [tests/e2e/\_fixtures.ts](tests/e2e/_fixtures.ts) treats it that way on purpose, so the production-identity specs skip rather than fail against staging keys.
 
 ## Docs map
 
@@ -73,7 +84,8 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
 - Follow the CLAUDE.md build-performance rules for all new code: Server Components by default for pages, types separated from mock data, components under ~500 lines, dynamic imports for heavy/conditional components, consume data via `src/lib/api/` factories (not direct `src/data/` imports).
 - **Conventional Commits** for every commit (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:` …).
 - **Never weaken a gate** (a lint rule, the tsconfig `strict` flag, a CI step, a husky hook) to make work pass. Propose gate changes explicitly and separately.
-- There is no test harness; until one exists, **manual verification against the touched journey is mandatory** and substitutes for "tests pass." If you add a test runner, that is its own change with its own ADR.
+- **Manual verification against the touched journey is still mandatory** — the suite covers authorisation and identity, not every screen. What it does cover, CI now enforces: `bun run test:e2e:ci` runs on every PR, so a loosened gate fails the build instead of shipping.
+- A spec added to `test:e2e:ci` **must clean up after itself**. There is one Postgres and CI writes to it; see the `afterAll` in [role-editor-writes.spec.ts](tests/e2e/role-editor-writes.spec.ts).
 - Boy-scout cleanup is **opt-in** — only refactor adjacent legacy code when explicitly asked.
 
 ## Legacy / risk zones — handle with care

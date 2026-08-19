@@ -65,3 +65,170 @@ jobs:
             nextjs-${{ runner.os }}-
 
       - run: bun run build
+
+  # ── THE BROWSER TESTS ──────────────────────────────────────────────────────
+  #
+  # Everything above proves the code COMPILES, is formatted and has no type
+  # errors. None of it proves the app behaves. Every authorisation guard in this
+  # repo — a groomer refused /facility, `manage_staff` unable to mint an owner,
+  # an invited hire routed to their checklist, the header naming the person
+  # actually signed in — was verified by somebody running Playwright by hand.
+  #
+  # Which means the realistic regression looks like this: a change loosens
+  # `canAccessFacilityPortal`, typecheck/lint/format/build all go green, the PR
+  # merges, and every staff member can reach the facility admin portal again
+  # with nothing anywhere saying so.
+  #
+  # ── WHY A SUBSET ──────────────────────────────────────────────────────────
+  #
+  # 51 spec files exist. This runs the 10 that cover AUTHORISATION AND IDENTITY
+  # — the guards that fail silently and are expensive to be wrong about. The
+  # rest (bookings, boarding, Clover, grooming) fail loudly the moment somebody
+  # opens the screen, and adding them would trade minutes on every PR for
+  # coverage of things a human notices anyway.
+  #
+  # The list lives in `bun run test:e2e:ci` rather than here, so the command CI
+  # runs is the command anybody can run locally, unchanged.
+  #
+  # ── WHY A BUILT SERVER AND NOT `bun run dev` ─────────────────────────────
+  #
+  # playwright.config.ts starts `bun run dev`, which compiles routes on first
+  # hit; the same 59 tests take minutes longer that way and the first navigation
+  # to each route is a coin flip against the 120s timeout. Measured on a built
+  # server: 59 tests, 4m09s, one skip, zero failures.
+  #
+  # `E2E_BASE_URL=http://localhost:3000` suppresses the config's webServer block
+  # so this job owns the server. It does NOT make the run "remote":
+  # tests/e2e/_fixtures.ts treats a localhost base as local on purpose, so the
+  # eight production-identity specs keep skipping honestly instead of failing at
+  # sign-in against staging keys.
+  #
+  # ── THESE TESTS TOUCH THE REAL DATABASE ──────────────────────────────────
+  #
+  # There is one Postgres. A localhost server still talks to it, so this subset
+  # was checked for write-cleanliness before being put on every PR: counts for
+  # facilities, memberships, clients, pets, bookings, profiles, platform team
+  # and role overrides were identical before and after a full run. Anything
+  # added to `test:e2e:ci` must clean up after itself the way
+  # role-editor-writes.spec.ts does.
+  e2e:
+    name: e2e (auth & access)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      # Fail here, with the list, rather than 59 identical sign-in timeouts.
+      # Absent keys failing loudly is the same rule tests/e2e/_workos-keys.ts
+      # applies — a suite that cannot authenticate should say so in one line.
+      - name: Check the required secrets are configured
+        env:
+          WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY }}
+          WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
+          WORKOS_COOKIE_PASSWORD: ${{ secrets.WORKOS_COOKIE_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: |
+          missing=""
+          for name in WORKOS_API_KEY WORKOS_CLIENT_ID WORKOS_COOKIE_PASSWORD \
+                      NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY \
+                      SUPABASE_SERVICE_ROLE_KEY E2E_PASSWORD; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing"
+            echo "Add them under Settings → Secrets and variables → Actions."
+            echo "WORKOS_API_KEY must be the STAGING key (sk_test_…) — the suite"
+            echo "refuses anything else, so a production key fails here too."
+            exit 1
+          fi
+          case "$WORKOS_API_KEY" in
+            sk_test_*) ;;
+            *) echo "::error::WORKOS_API_KEY is not a staging key (sk_test_…)."
+               echo "The e2e accounts live in the WorkOS Staging environment;"
+               echo "a production key would try to create them on the live one."
+               exit 1 ;;
+          esac
+          echo "All seven secrets present."
+
+      - run: bun install --frozen-lockfile
+
+      - name: Restore Next.js cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-e2e-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-e2e-${{ runner.os }}-
+            nextjs-${{ runner.os }}-
+
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_WORKOS_REDIRECT_URI: http://localhost:3000/auth/callback
+          NEXT_PUBLIC_APP_DOMAIN: yipyy.test
+        run: bun run build
+
+      # Backgrounded with a readiness poll rather than a fixed sleep: the first
+      # request is what decides whether the run is testing an app or an empty
+      # port, and `next start` is ready in seconds or not at all.
+      - name: Start the built server
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY }}
+          WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
+          WORKOS_COOKIE_PASSWORD: ${{ secrets.WORKOS_COOKIE_PASSWORD }}
+          NEXT_PUBLIC_WORKOS_REDIRECT_URI: http://localhost:3000/auth/callback
+          NEXT_PUBLIC_APP_DOMAIN: yipyy.test
+        run: |
+          bun run start --port 3000 > /tmp/server.log 2>&1 &
+          for i in $(seq 1 60); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/sign-in)" = "200" ]; then
+              echo "Server up after ${i}s."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::The server never became ready. Last 50 lines:"
+          tail -50 /tmp/server.log
+          exit 1
+
+      - name: Run the auth & access specs
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY }}
+          WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        run: bun run test:e2e:ci
+
+      # `|| echo` because the commonest failure is the preflight, which runs
+      # before any server exists — and `tail` on a missing file adds a second
+      # red ##[error] under the one that actually explains what to do.
+      - name: Server log (on failure)
+        if: failure()
+        run: |
+          tail -200 /tmp/server.log 2>/dev/null             || echo "(no server log — the run failed before the server started)"
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          # Same reason: a preflight failure produces no report, and the default
+          # is to warn about that on top of the real error.
+          if-no-files-found: ignore
