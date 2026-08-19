@@ -29,6 +29,8 @@ import {
 } from "@/lib/invoice-lifecycle";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { useReceiptFacility } from "@/hooks/use-receipt-facility";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import { useResolvedTerminal } from "@/lib/api/terminals";
 import { TerminalPicker } from "./TerminalPicker";
 
@@ -128,13 +130,27 @@ export function PaymentCheckoutFlow({
   >([]);
   const [paymentNote, setPaymentNote] = useState("");
 
+  const facilitySettings = useFacilitySettings();
+
   const otherTotal = otherUnpaidInvoices
     .filter((i) => includedInvoices.has(i.invoiceId))
     .reduce((s, i) => s + i.amount, 0);
 
   const loyaltyDiscountAmount = loyaltyDiscount?.amount ?? 0;
   const netAmountDue = Math.max(0, amountDue - loyaltyDiscountAmount);
-  const remaining = netAmountDue + tipAmount + otherTotal;
+  // Tax is part of what is COLLECTED, not a note on the receipt. The terminal
+  // charges subtotal + tax server-side, so a dialog that totalled the pre-tax
+  // figure would print "$49.01" on its own button while the customer was asked
+  // for $56.35. Computed on the discounted amount, because a discount reduces
+  // the price of the supply and therefore the tax on it.
+  const taxOnDue = computeTax(
+    Math.round(netAmountDue * 100),
+    facilitySettings.settings.tax_config.value as TaxConfig,
+  );
+  const taxDue = facilitySettings.settings.tax_config.value.pricesIncludeTax
+    ? 0
+    : taxOnDue.totalCents / 100;
+  const remaining = netAmountDue + taxDue + tipAmount + otherTotal;
   const splitTotal = splitPayments.reduce(
     (s, p) => s + (parseFloat(p.amount) || 0),
     0,
@@ -157,6 +173,9 @@ export function PaymentCheckoutFlow({
   const [confirming, setConfirming] = useState(false);
   // The facility's OWN header, not the fixture's — see use-receipt-facility.
   const receiptFacility = useReceiptFacility();
+  // The facility's own tax, shown on the printed copy for the same reason the
+  // terminal charges it — a receipt whose lines do not reach its total is the
+  // sort of thing a customer photographs.
   const [step, setStep] = useState<"pay" | "receipt">("pay");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -723,6 +742,13 @@ ${
         .join("")
     : `<div class="row"><span>Amount</span><span>$${amountDue.toFixed(2)}</span></div>`
 }
+<div class="row"><span>Subtotal</span><span>$${amountDue.toFixed(2)}</span></div>
+${taxOnDue.lines
+  .map(
+    (t) =>
+      `<div class="row sub"><span>${t.name} ${Number((t.rate * 100).toFixed(4))}%</span><span>$${(t.amountCents / 100).toFixed(2)}</span></div>`,
+  )
+  .join("")}
 ${depositPaid > 0 ? `<div class="row sub"><span>Deposit Applied</span><span>-$${depositPaid.toFixed(2)}</span></div>` : ""}
 ${tipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${tipAmount.toFixed(2)}</span></div>` : ""}
 ${otherTotal > 0 ? `<div class="row sub"><span>Other Invoices</span><span>$${otherTotal.toFixed(2)}</span></div>` : ""}

@@ -93,9 +93,14 @@ function centredWrap(text: string): string[] {
   return wrap(text).map(centred);
 }
 
-/** "5%" rather than "5.000%", and "9.975%" kept whole. */
+/**
+ * A stored FRACTION as a percentage: 0.09975 -> "9.975%".
+ *
+ * The rate is a fraction everywhere in this app (see lib/settings/tax.ts), and
+ * printing it raw would put "0.05%" beside a 5% tax on paper a customer keeps.
+ */
 function formatRate(rate: number): string {
-  return `${Number(rate.toFixed(3))}%`;
+  return `${Number((rate * 100).toFixed(4))}%`;
 }
 
 const RULE = "-".repeat(WIDTH);
@@ -115,6 +120,13 @@ export interface ReceiptFacility {
   website: string | null;
   /** "GST: RT 123456789 · QST: QT 987654321", when the facility shows them. */
   taxRegistrations: string | null;
+  /**
+   * A public URL for the facility's logo.
+   *
+   * Used by the email copy directly, and by the thermal copy through a separate
+   * image print — `/device/print/text` cannot carry it (lib/clover/print.ts).
+   */
+  logoUrl: string | null;
 }
 
 export interface ReceiptTaxLine {
@@ -285,6 +297,13 @@ export function buildReceiptHtml(input: ReceiptInput): string {
   return [
     '<div style="background:#f6f6f7;padding:24px;font-family:system-ui,sans-serif">',
     '<div style="max-width:440px;margin:0 auto;background:#fff;border-radius:12px;padding:24px">',
+    // The logo above the name, not instead of it: an image that fails to load
+    // in a mail client must not leave the receipt anonymous.
+    ...(input.facility.logoUrl
+      ? [
+          `<img src="${escapeHtml(input.facility.logoUrl)}" alt="${escapeHtml(input.facility.name)}" style="max-width:120px;max-height:60px;margin:0 0 8px;display:block" />`,
+        ]
+      : []),
     `<h1 style="margin:0;font-size:18px">${escapeHtml(input.facility.name)}</h1>`,
     ...contact.map(
       (line) =>

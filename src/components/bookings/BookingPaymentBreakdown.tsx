@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { balanceOf } from "@/lib/api/booking-money";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import type { Booking } from "@/types/booking";
 
@@ -35,14 +37,18 @@ import type { Booking } from "@/types/booking";
 //   balance          balanceOf(), the same helper the "Pay by card" button
 //                    uses, so the two figures on this screen cannot disagree
 //
-// ── AND NO TAX LINE, DELIBERATELY ─────────────────────────────────────────
+// ── AND THE TAX IS THE FACILITY'S OWN ─────────────────────────────────────
 //
-// The fixture invoice showed GST 5% and QST 9.975%. There is no tax
-// configuration anywhere real: `facility_settings` has six domains and none of
-// them is tax. Rendering a tax line would mean choosing a rate on the
-// facility's behalf and putting it on something they hand to a customer, so
-// this shows what is charged and stays quiet about how it is composed until
-// the facility can say.
+// There used to be no tax line here at all, and the reason was sound: nothing
+// stored a rate, so showing one meant choosing it on the facility's behalf and
+// putting it on something they hand to a customer.
+//
+// `tax_config` stores it now. It is read here rather than assumed, and a
+// facility that has configured none still sees no tax line.
+//
+// It is shown for the same reason the terminal charges it: the card is charged
+// subtotal + tax, so a panel that stopped at the subtotal would tell staff
+// $49.01 while the terminal asked the customer for $56.35.
 // ============================================================================
 
 interface BookingPaymentBreakdownProps {
@@ -113,6 +119,9 @@ export function BookingPaymentBreakdown({
     staleTime: 30_000,
   });
 
+  const settings = useFacilitySettings();
+  const taxConfig = settings.settings.tax_config.value as TaxConfig;
+
   const items = lineItems ?? [];
   const extras = items.reduce((sum, i) => sum + i.price, 0);
   const discount = booking.discount ?? 0;
@@ -131,7 +140,16 @@ export function BookingPaymentBreakdown({
   // balanceOf() is what the "Pay by card" button uses, so the two figures on
   // this screen cannot disagree.
   const total = booking.amountDue ?? subtotal;
-  const balance = balanceOf(booking);
+  const outstanding = balanceOf(booking);
+  // Tax on what is still OWED, which is what a payment will charge — not on the
+  // whole bill, or a part-paid booking would be taxed twice.
+  const tax = computeTax(Math.round(outstanding * 100), taxConfig);
+  const taxTotal = tax.totalCents / 100;
+  // A tax-inclusive facility's tax is already inside the price, so it is broken
+  // out rather than added.
+  const balance = taxConfig.pricesIncludeTax
+    ? outstanding
+    : outstanding + taxTotal;
 
   // `service` is stored lowercase ("boarding"); `serviceType` is the named
   // package when there is one. Either way it is the thing being charged for,
@@ -210,8 +228,27 @@ export function BookingPaymentBreakdown({
             </div>
           )}
 
+          {tax.lines.length > 0 && (
+            <div className="py-1">
+              {tax.lines.map((line) => (
+                <Line
+                  key={line.name}
+                  label={line.name}
+                  hint={`${Number((line.rate * 100).toFixed(4))}%`}
+                  value={line.amountCents / 100}
+                />
+              ))}
+            </div>
+          )}
+
           <div className="py-1">
-            <Line label="Total" value={total + tip} bold />
+            <Line
+              label="Total"
+              value={
+                (taxConfig.pricesIncludeTax ? total : total + taxTotal) + tip
+              }
+              bold
+            />
           </div>
 
           {paid > 0 && (
