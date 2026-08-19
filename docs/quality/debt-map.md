@@ -2070,6 +2070,41 @@ Signing the old blob would have fixed the tampering and nothing else; opacity
 also gives expiry, revocation and single-use as rows, and turns a database dump
 into hashes rather than live links.
 
+### 🟢 The `user_role` cookie no longer decides anything (was 🔴)
+
+A client-writable cookie that used to be the platform-level role. The auth
+cutover moved that decision to the session and every gate stopped reading it,
+but the machinery survived — including **a page at `/facility/set-role` whose
+two buttons were "Set as Facility Admin" and "Set as Super Admin"**, writing the
+cookie with `document.cookie` and navigating.
+
+It granted nothing by then; the gates ignored it. But three screens still
+branched on it, and two of them mattered:
+
+- `UserProfileSheet` showed the "Owner Account" group — Subscription, Payment
+  Method, Export Data, Yipyy Agreements — when the cookie said `facility_admin`,
+  while the pages behind it were guarded by `canManageFacilityAccount` reading
+  the session. **Two answers to one question, and a browser could change the
+  first.** The menu now IS that function's answer, passed from the server.
+- `SchedulingSettings` unlocked its "Roles & Departments (Admin Only)" card the
+  same way. It asks `usePermission("manage_roles")` now — the same cascade RLS
+  resolves.
+
+`getUserRole` / `setUserRole` / `ROLE_COOKIE_NAME` are deleted, and
+`/facility/set-role` with them.
+
+**Still reading it, and known:** `OperationsCalendarHelpers.parseUserRoleFromCookie`
+and the calendar's own `calendar_permission_level` cookie. With no writer left
+they take their fallbacks — which is exactly what every real session already got,
+since nobody in production ever visited the setter page. The calendar also takes
+its actor NAME from a cookie and stamps it on events it creates, so converting it
+is an identity change, not a permission one, and belongs in its own pass.
+
+**Do instead:** when a screen needs to know what somebody may do, ask
+`usePermission(key)`. When it needs to know who they are, take it from the
+session. A cookie is neither, and a screen that disagrees with the gate behind it
+is worse than one that simply refuses.
+
 ### 🟢 The platform-team ROSTER is real (was 🟡) — its three siblings are not
 
 ~~The four screens under `/dashboard/user-management` read

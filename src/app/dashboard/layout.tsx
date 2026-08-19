@@ -1,4 +1,7 @@
-import { canAccessAdminPortal } from "@/lib/auth/viewer";
+import {
+  canAccessAdminPortal,
+  canManageFacilityAccount,
+} from "@/lib/auth/viewer";
 import { guardPortal } from "@/lib/auth/portal-gate";
 import { AppSidebar } from "@/components/layout/super-admin-sidebar";
 import { Metadata } from "next";
@@ -53,6 +56,7 @@ export default async function DashboardLayout({
                 name: viewer.fullName,
                 email: viewer.email,
                 isPlatformAdmin: viewer.isPlatformAdmin,
+                canManageAccount: canManageFacilityAccount(viewer),
               }}
             />
           </div>
