@@ -2166,7 +2166,7 @@ management's two-admin restore, scheduled support messages and
 four real roles, but `mfaRequiredByRole` is still a localStorage preference that
 enforces nothing — enrolment is WorkOS's to require.
 
-### 🟠 The customer journey: a pet is real now, a booking still is not
+### 🟢 The customer journey reaches Postgres (was 🔴, then 🟠)
 
 **Walked end to end for the first time on 2026-08-19** (CUJ-20), against a built
 server on the facility's own hostname, writing to the live database. It gets
@@ -2233,14 +2233,47 @@ about the sentence above when it came to bookings, and both were found by trying
    call an API; it is a request-and-approval model that exists only in the
    browser.
 
-Making it real is a design decision plus a migration, not wiring: either a
-`booking_requests` table with RLS (a customer inserts their own, the facility's
-staff read and approve, approval creates the booking) — or the decision that a
-customer books straight into `bookings` with status `request_submitted` and the
-separate queue goes. Do not pick one by editing a component.
+**SETTLED 2026-08-19 — into `bookings`, no second table.** The product owner
+chose it, and the database turned out to have been built for it all along:
+**every INSERT into `bookings` is forced to `request_submitted`**, with
+`base_price`, `discount` and `total_cost` zeroed and preserved as
+`details.requestedQuote` (20260806840000). A booking is a REQUEST by
+construction, whoever makes it. A `booking_requests` table would have been a
+second model of the same thing.
 
-**Groundwork that IS in place**, because the booking route was wrong for a
-customer in a way worth fixing regardless of which UI calls it:
+`/customer/bookings/new` now calls `bookingMutations.create`. Proven with a real
+customer session against production:
+
+```
+bookings.ref 1000 · request_submitted · boarding · Walk Customer
+facility  doggieville-mtl   ← not the demo facility
+location  present            ← the migration below
+kennels held  0              ← no boarding_stays row
+```
+
+**No room is sent, on purpose.** `boarding_stays`' exclusion constraint keys on
+`released_at is null`, not on the booking's status — so an unconfirmed request
+naming a kennel would hold it against every other booking until somebody
+noticed. Rooms are assigned on the ops board after a stay exists, which is how
+the facility side already works.
+
+**The four "Booking Requests" surfaces are now visibly disconnected.**
+`useBookingRequestsStore` is localStorage seeded from a fixture, read by the
+facility bookings page, the online-booking page, `BookingRequestsPanel` and the
+topbar dropdown. It never carried a real request — a customer's browser and the
+facility's browser share no storage — and the customer path no longer writes to
+it at all. A customer's request lands on the **bookings** screen as
+`request_submitted`. Those four surfaces are the next thing to convert or
+delete.
+
+**Instabook is not implemented against the database.** `resolveInstabookEligibility`
+decided a booking should skip approval, and the screen said "<pet> is confirmed!
+Skipped staff approval" — which the insert trigger contradicts. Honouring it
+needs a second, permitted act that confirms the booking, and a customer cannot
+update their own booking's status. The claim is gone; the capability is not
+built.
+
+**What had to change before a customer could book at all:**
 
 - `POST /api/bookings` resolved the facility from `getFacilityContext()`, which
   falls back to the DEMO facility for any caller with no membership — so a pet
