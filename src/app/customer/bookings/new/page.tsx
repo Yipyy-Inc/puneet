@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { bookingMutations } from "@/lib/api/booking";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -10,19 +12,8 @@ import { unfinishedBookings } from "@/data/unfinished-bookings";
 import { buildResumePreselection } from "@/lib/resume-booking";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
-import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
-import {
-  memberships as allMemberships,
-  membershipPlans,
-} from "@/data/services-pricing";
-import { resolveInstabookEligibility } from "@/lib/instabook";
 import { toast } from "sonner";
-import type {
-  BookingRequest,
-  BookingRequestService,
-  ExtraService,
-  NewBooking,
-} from "@/types/booking";
+import type { NewBooking } from "@/types/booking";
 
 export default function NewBookingPage() {
   const { client: customer } = useCurrentCustomer();
@@ -33,7 +24,7 @@ export default function NewBookingPage() {
   const { selectedFacility } = useCustomerFacility();
 
   const { bookingFlow } = useSettings();
-  const { setRequests } = useBookingRequestsStore();
+  const queryClient = useQueryClient();
 
   const preSelectedService = searchParams?.get("service") ?? undefined;
   const preSelectedProgramId = searchParams?.get("program") ?? undefined;
@@ -147,7 +138,7 @@ export default function NewBookingPage() {
           }
           isCustomerMode={true}
           bookingRequestMessage={bookingFlow.bookingRequestConfirmationMessage}
-          onCreateBooking={(booking: NewBooking) => {
+          onCreateBooking={async (booking: NewBooking) => {
             if (!customer || !selectedFacility) return;
 
             const petId = Array.isArray(booking.petId)
@@ -155,86 +146,60 @@ export default function NewBookingPage() {
               : booking.petId;
             const pet = customer.pets?.find((p) => p.id === petId);
 
-            const validServices: BookingRequestService[] = [
-              "daycare",
-              "boarding",
-              "grooming",
-              "training",
-            ];
-            const service = validServices.includes(
-              booking.service as BookingRequestService,
-            )
-              ? (booking.service as BookingRequestService)
-              : "daycare";
+            try {
+              const created = await bookingMutations.create({
+                ...booking,
+                clientId: customer.id,
+                // ── THE DATABASE DECIDES THE STATUS, NOT THIS SCREEN ──────
+                //
+                // Every INSERT into `bookings` is forced to
+                // `request_submitted` with the prices zeroed and preserved as
+                // `details.requestedQuote` (20260806840000). So a booking is a
+                // REQUEST by construction, whoever makes it — which is exactly
+                // the model a customer needs, and it is why no separate
+                // `booking_requests` table is required.
+                //
+                // A status is still sent because `NewBooking` requires one and
+                // an absent field would read as an oversight. It is discarded;
+                // do not build anything on it being honoured.
+                status: "request_submitted",
+                // Deliberately dropped. A room creates a `boarding_stays` row,
+                // and its exclusion constraint keys on `released_at is null`
+                // rather than on the booking's status — so an unconfirmed
+                // request naming a kennel would hold that kennel against every
+                // other booking until somebody noticed. Rooms are assigned on
+                // the ops board after a stay exists, which is how the facility
+                // side already works.
+                unitAssignment: undefined,
+                kennel: undefined,
+              });
 
-            const appointmentAt = booking.checkInTime
-              ? `${booking.startDate}T${booking.checkInTime}:00`
-              : `${booking.startDate}T09:00:00`;
+              await queryClient.invalidateQueries({ queryKey: ["bookings"] });
 
-            const normalizedExtras: ExtraService[] | undefined =
-              booking.extraServices
-                ? booking.extraServices
-                    .map((es): ExtraService | null =>
-                      typeof es === "string"
-                        ? null
-                        : {
-                            serviceId: es.serviceId,
-                            quantity: es.quantity,
-                            petId: es.petId,
-                          },
-                    )
-                    .filter((es): es is ExtraService => es !== null)
-                : undefined;
+              // ── ONE MESSAGE, BECAUSE THERE IS ONE OUTCOME ─────────────
+              //
+              // This used to say "<pet> is confirmed! Skipped staff approval"
+              // when `resolveInstabookEligibility` said so. The database
+              // contradicts that: the insert trigger forces
+              // `request_submitted`, so an instabook-eligible customer was
+              // told their dog had a place while the row said otherwise.
+              //
+              // Instabook is not implemented against the database — honouring
+              // it means a second, permitted act that confirms the booking,
+              // and a customer cannot update their own booking's status. It is
+              // in the debt map. Until then this says what happened.
+              toast.success(`Request sent to ${selectedFacility.name}`, {
+                description: `Booking #${created.id} for ${pet?.name ?? "your pet"} is awaiting confirmation.`,
+              });
 
-            const customerMemberships = allMemberships.filter(
-              (m) => m.customerId === String(customer.id),
-            );
-            const instabook = resolveInstabookEligibility({
-              client: customer,
-              service,
-              customerMemberships,
-              membershipPlans,
-            });
-
-            const newRequest: BookingRequest = {
-              id: `br-${Date.now()}`,
-              facilityId: selectedFacility.id,
-              createdAt: new Date().toISOString(),
-              appointmentAt,
-              clientId: customer.id,
-              clientName: customer.name,
-              clientContact: customer.email || customer.phone || "",
-              petId: petId ?? 0,
-              petName: pet?.name ?? "",
-              services: [service],
-              // Instabook bypasses the requests queue entirely; the booking is
-              // auto-confirmed and the customer gets the same email/SMS they
-              // would receive after staff approval.
-              status: instabook.eligible ? "scheduled" : "pending",
-              notes: booking.specialRequests,
-              startDate: booking.startDate,
-              endDate: booking.endDate,
-              checkInTime: booking.checkInTime,
-              checkOutTime: booking.checkOutTime,
-              daycareDates: booking.daycareSelectedDates,
-              roomPreference: booking.unitAssignment ?? booking.kennel,
-              daycareSectionId: booking.sectionId,
-              extraServices: normalizedExtras,
-              feedingSchedule: booking.feedingSchedule,
-              medications: booking.medications,
-              notificationEmail: booking.notificationEmail,
-              notificationSMS: booking.notificationSMS,
-            };
-
-            setRequests((prev) => [newRequest, ...prev]);
-
-            if (instabook.eligible) {
-              const sourceLabel =
-                instabook.source === "membership"
-                  ? `${instabook.membershipPlanName ?? "your membership"} membership`
-                  : "instant booking";
-              toast.success(`${pet?.name ?? "Booking"} is confirmed!`, {
-                description: `Skipped staff approval (${sourceLabel}). Confirmation email & SMS sent.`,
+              router.push("/customer/bookings");
+            } catch (error) {
+              // The modal stays where it is, holding what was entered. There
+              // is no row, so saying anything else would be the claim this
+              // whole change removed.
+              toast.error("Could not send that booking", {
+                description:
+                  error instanceof Error ? error.message : "Please try again.",
               });
             }
           }}
