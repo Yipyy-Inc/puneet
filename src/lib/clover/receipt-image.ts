@@ -229,7 +229,12 @@ function rowsFor(input: ReceiptInput): Row[] {
     .filter(Boolean)
     .join("  ");
   if (card) rows.push({ kind: "left", text: card, size: SMALL });
+  // The TRANSACTION's time, restored. Minimising took it out on the grounds
+  // that the service window already dated the receipt — but that dates the
+  // BOOKING. A receipt is a record of a payment, and when the payment happened
+  // is one of the things a card-brand receipt is expected to carry.
   const trace = [
+    input.printedAt,
     input.authCode ? `Auth ${input.authCode}` : null,
     input.processorPaymentId ? `Ref ${input.processorPaymentId}` : null,
   ]
