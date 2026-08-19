@@ -50,6 +50,10 @@ import { boardingGuests, type BoardingGuest } from "@/data/boarding";
 import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-card-print";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InvoicePanel } from "@/components/bookings/InvoicePanel";
+import {
+  feedingEntriesFromSchedule,
+  medicationEntriesFromItems,
+} from "@/lib/bookings/care-instructions";
 import { BookingNotes } from "@/components/bookings/BookingNotes";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
@@ -1219,9 +1223,27 @@ export default function ClientBookingDetailPage({
                       id={careSectionDomIds.feeding}
                       className="rounded-xl transition-shadow"
                     >
+                      {/* ── WHAT THE OWNER ASKED FOR ─────────────────────
+                          `feedingInstructions` is the care CHECKLIST, and no
+                          booking made in this app has ever carried one — the
+                          wizard stores `feedingSchedule`, which is a different
+                          field of a different type. So these panels were empty
+                          for every real booking, and looked right only against
+                          the two hand-written entries in src/data/bookings.ts.
+
+                          The fixture field stays first so those demo bookings
+                          still render; everything else falls through to the
+                          owner's schedule, projected into the same shape. */}
                       <FeedingSection
-                        entries={booking.feedingInstructions ?? []}
+                        entries={
+                          booking.feedingInstructions?.length
+                            ? booking.feedingInstructions
+                            : feedingEntriesFromSchedule(
+                                booking.feedingSchedule,
+                              )
+                        }
                         required={feedingMode === "required"}
+                        canLog={false}
                       />
                     </div>
                   )}
@@ -1231,9 +1253,14 @@ export default function ClientBookingDetailPage({
                       className="rounded-xl transition-shadow"
                     >
                       <MedicationSection
-                        entries={booking.medicationInstructions ?? []}
+                        entries={
+                          booking.medicationInstructions?.length
+                            ? booking.medicationInstructions
+                            : medicationEntriesFromItems(booking.medications)
+                        }
                         required={medicationMode === "required"}
                         bookingId={booking.id}
+                        canLog={false}
                       />
                     </div>
                   )}

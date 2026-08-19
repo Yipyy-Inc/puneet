@@ -46,6 +46,19 @@ interface MedicationSectionProps {
    * button. Source (incidentId) is kept in the data only, never shown to staff.
    */
   bookingId?: number;
+  /**
+   * Whether staff may record a dose or add a medication here.
+   *
+   * FALSE on the booking page. Not a permission decision: `handleAdminister`
+   * and `handleAdd` set component state and toast, and a reload loses both.
+   * That was invisible while this panel was empty for every real booking, and
+   * became reachable the moment it started rendering the owner's medication
+   * list — so the controls are hidden rather than left to lose a dose record,
+   * which is the worst thing on this page to lose.
+   *
+   * Recorded in docs/quality/debt-map.md: administering a dose is not built.
+   */
+  canLog?: boolean;
 }
 
 // Map an incident-sourced medication onto the booking medication shape so the
@@ -121,6 +134,7 @@ export function MedicationSection({
   entries,
   required,
   bookingId,
+  canLog = true,
 }: MedicationSectionProps) {
   const [meds, setMeds] = useState<MedicationEntry[]>(() => [
     ...entries,
@@ -236,15 +250,17 @@ export function MedicationSection({
               </Badge>
             )}
           </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1 text-[11px]"
-            onClick={() => setAddOpen(!addOpen)}
-          >
-            <Plus className="size-3" />
-            Add Medication
-          </Button>
+          {canLog && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 text-[11px]"
+              onClick={() => setAddOpen(!addOpen)}
+            >
+              <Plus className="size-3" />
+              Add Medication
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -383,7 +399,9 @@ export function MedicationSection({
           <div className="py-6 text-center">
             <Pill className="text-muted-foreground/20 mx-auto size-8" />
             <p className="text-muted-foreground mt-2 text-xs">
-              No medications — click &quot;Add Medication&quot; to add
+              {canLog
+                ? "No medications — click “Add Medication” to add"
+                : "No medications were given for this booking"}
             </p>
           </div>
         ) : (
@@ -465,7 +483,7 @@ export function MedicationSection({
                             </p>
                           )}
                         </div>
-                        {dose.status === "pending" && (
+                        {canLog && dose.status === "pending" && (
                           <div className="flex items-center gap-1">
                             {/* Note popover */}
                             <Popover
