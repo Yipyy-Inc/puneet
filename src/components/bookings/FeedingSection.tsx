@@ -40,9 +40,19 @@ interface FeedingSectionProps {
    * moment it started rendering the owner's schedule, so the controls are
    * hidden rather than left to lose somebody's work.
    *
-   * Recorded in docs/quality/debt-map.md: logging a feeding is not built.
+   * TRUE again on the booking page as of the care-log table
+   * (20260819140000) — but only when `onLog` is supplied, because that is what
+   * makes it persist.
    */
   canLog?: boolean;
+  /**
+   * Record a meal. The parent owns the write and the refetch; this panel just
+   * says which slot and how it went.
+   *
+   * Absent means the panel is a display, which is what it was before there was
+   * anywhere to write to.
+   */
+  onLog?: (entryId: string, outcome: string) => void;
 }
 
 const FEEDBACK_OPTIONS = facilityConfig.careTaskFeedback.feeding;
@@ -76,6 +86,7 @@ export function FeedingSection({
   entries,
   required,
   canLog = true,
+  onLog,
 }: FeedingSectionProps) {
   const [items, setItems] = useState(entries);
   const [addOpen, setAddOpen] = useState(false);
@@ -88,6 +99,9 @@ export function FeedingSection({
   });
 
   const handleLog = (id: string, feedback: string) => {
+    // Optimistic, then authoritative: the row turns over immediately and the
+    // parent's refetch replaces it with what the database stored. This used to
+    // be the ONLY thing that happened, which is why a reload lost it.
     setItems((prev) =>
       prev.map((e) =>
         e.id === id
@@ -103,7 +117,7 @@ export function FeedingSection({
           : e,
       ),
     );
-    toast.success("Feeding logged");
+    onLog?.(id, feedback);
   };
 
   const handleAdd = () => {
@@ -128,7 +142,9 @@ export function FeedingSection({
       instructions: "",
     });
     setAddOpen(false);
-    toast.success("Meal added");
+    // No toast: nothing is written. Adding an unplanned meal has no home in
+    // `care_log_entries` — that row executes a SCHEDULED task — so this stays
+    // local until the schedule can be amended. `canLog` hides it meanwhile.
   };
 
   return (
@@ -307,7 +323,13 @@ export function FeedingSection({
                   {entry.status === "completed" ? (
                     <div className="shrink-0 text-right">
                       <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                        {entry.feedback}
+                        {/* A logged outcome arrives as its stored value
+                            ("ate_all"); one logged in this session arrives as
+                            a label. Both are put through the same lookup so
+                            the row reads the same either way. */}
+                        {FEEDBACK_OPTIONS.find(
+                          (o) => o.value === entry.feedback,
+                        )?.label ?? entry.feedback}
                       </span>
                       {entry.completedBy && (
                         <p className="text-muted-foreground mt-0.5 text-[10px]">
