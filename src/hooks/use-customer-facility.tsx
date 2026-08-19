@@ -36,13 +36,48 @@ const CustomerFacilityContext = createContext<
   CustomerFacilityContextValue | undefined
 >(undefined);
 
+/**
+ * The facility this portal is FOR, resolved from the hostname by the server
+ * layout. `null` on the apex, where there is no facility.
+ */
+export interface RealFacilityBranding {
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  primaryColor: string | null;
+  accentColor: string | null;
+}
+
 export function CustomerFacilityProvider({
   children,
+  branding,
 }: {
   children: ReactNode;
+  /** From `getBrandingBySlug()` in the customer layout. */
+  branding?: RealFacilityBranding | null;
 }) {
-  // Get available facilities for the customer
-  // TODO: Replace with actual API call to get customer's facilities
+  // ── WHY THE FIXTURE IS STILL HERE, AND WHAT IT IS STILL FOR ─────────────
+  //
+  // Walking CUJ-20 on 2026-08-19 found this provider naming the WRONG BUSINESS
+  // to every customer: it mapped src/data/facilities.ts, filtered to active,
+  // and defaulted to `availableFacilities[0]` — so somebody who joined
+  // Doggieville Mtl saw "Paws & Play Daycare" in the sidebar, the header, the
+  // switcher and the welcome line. /sign-in, /sign-up and /join were correct
+  // the whole time, because those read the hostname.
+  //
+  // So the NAME and the MARK now come from the hostname too, via
+  // getBrandingBySlug() in the server layout.
+  //
+  // The `id` deliberately does NOT. Twenty-eight call sites filter fixture
+  // arrays by `selectedFacility.id` — bookings, packages, report cards, the
+  // billing tabs — and a facility uuid matches none of them. Changing it would
+  // turn every one of those screens silently empty, which is a worse failure
+  // than a wrong name because nothing on screen says anything is missing. The
+  // id stays the fixture's until the screens behind it read Postgres; see
+  // docs/quality/debt-map.md.
+  //
+  // Stated plainly because the halves disagree: what you SEE is real, what the
+  // fixture screens FILTER BY is not.
   const availableFacilities: FacilityBranding[] = useMemo(
     () =>
       facilities
@@ -50,9 +85,9 @@ export function CustomerFacilityProvider({
         .map((f) => ({
           id: f.id,
           name: f.name,
-          logo: undefined, // TODO: Get from facility settings/API - defaults to Yipyy logo in header
-          primaryColor: undefined, // TODO: Get from facility settings
-          secondaryColor: undefined, // TODO: Get from facility settings
+          logo: undefined,
+          primaryColor: undefined,
+          secondaryColor: undefined,
           contact: f.contact,
         })),
     [],
@@ -96,10 +131,26 @@ export function CustomerFacilityProvider({
     }
   };
 
-  const selectedFacility =
+  const fixtureFacility =
     selectedFacilityId !== null
       ? (availableFacilities.find((f) => f.id === selectedFacilityId) ?? null)
       : null;
+
+  // The real facility's identity over the fixture's id. On the apex there is no
+  // hostname facility, so the fixture stands alone and this is a no-op — which
+  // is every customer who signed up before facilities had their own addresses.
+  const selectedFacility = useMemo(() => {
+    if (!branding) return fixtureFacility;
+    return {
+      id: fixtureFacility?.id ?? availableFacilities[0]?.id ?? 0,
+      name: branding.name,
+      logo: branding.logoUrl ?? undefined,
+      primaryColor: branding.primaryColor ?? undefined,
+      secondaryColor: branding.accentColor ?? undefined,
+      contact: fixtureFacility?.contact ??
+        availableFacilities[0]?.contact ?? { email: "", phone: "" },
+    };
+  }, [branding, fixtureFacility, availableFacilities]);
 
   return (
     <CustomerFacilityContext.Provider

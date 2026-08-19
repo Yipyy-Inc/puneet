@@ -2166,7 +2166,7 @@ management's two-admin restore, scheduled support messages and
 four real roles, but `mfaRequiredByRole` is still a localStorage preference that
 enforces nothing — enrolment is WorkOS's to require.
 
-### 🔴 The customer journey stops at "add a pet" — and the APIs it needs already exist
+### 🟠 The customer journey: a pet is real now, a booking still is not
 
 **Walked end to end for the first time on 2026-08-19** (CUJ-20), against a built
 server on the facility's own hostname, writing to the live database. It gets
@@ -2211,7 +2211,51 @@ whether `src/app/api/` already has the route. Here the backend was finished and
 the last hundred metres were never walked, which is exactly the failure the
 half-converted state of this repo produces.
 
-### 🟠 The customer portal is branded with a fixture, whichever facility you joined
+**FIXED 2026-08-19 — the pet.** `/customer/pets/add` calls `POST /api/pets` with
+the caller's own client ref. Verified against the live database: `pets.ref 9045`,
+Biscuit the Beagle, owner Walk Customer, facility `doggieville-mtl` — and the
+facility was derived by `pets_set_facility` from the owner, because nothing is
+sent and nothing would be honoured if it were.
+
+**NOT FIXED — the booking, and it is not one fetch away.** Two things were wrong
+about the sentence above when it came to bookings, and both were found by trying:
+
+1. **`CustomerBookingModal.tsx` is dead code** — 4,137 lines, imported nowhere,
+   and Knip has been reporting it. `/customer/bookings/new` renders the SHARED
+   `components/bookings/modals/BookingModal`, the same one the facility uses.
+   Editing the customer-named file changes nothing, which is precisely the trap
+   AGENTS.md §Ground warns about: confirm the component is wired in before
+   editing it. Grep the host page for the import.
+2. **The customer path does not create a booking at all.** It builds a
+   `BookingRequest` and hands it to `useBookingRequestsStore` — localStorage —
+   with an instabook-eligibility check deciding `scheduled` vs `pending`. There
+   is **no `booking_requests` table**. So this is not a screen that forgot to
+   call an API; it is a request-and-approval model that exists only in the
+   browser.
+
+Making it real is a design decision plus a migration, not wiring: either a
+`booking_requests` table with RLS (a customer inserts their own, the facility's
+staff read and approve, approval creates the booking) — or the decision that a
+customer books straight into `bookings` with status `request_submitted` and the
+separate queue goes. Do not pick one by editing a component.
+
+**Groundwork that IS in place**, because the booking route was wrong for a
+customer in a way worth fixing regardless of which UI calls it:
+
+- `POST /api/bookings` resolved the facility from `getFacilityContext()`, which
+  falls back to the DEMO facility for any caller with no membership — so a pet
+  owner's booking would have been written against a business they had never
+  heard of. A silent wrong-row write, not a refusal. It now resolves the client
+  FIRST and takes the facility from that client row when the caller has no
+  membership: `facilityContextForClient()`, a parent-row source, which is the
+  second of the two `check:facility-from-session` allows. The staff path is
+  byte-identical.
+- `locations_read` refused a customer, so their booking would have been the only
+  row in the table without a location. Migration `20260819100000` admits a
+  facility's own clients, mirroring what `facilities_read` has done since 20260801130000. Measured on production: the walk customer's readable
+  locations 0 -> 1, a groomer's and an owner's unchanged at 1.
+
+### 🟢 The customer portal names the facility you joined (was 🟠)
 
 `/sign-in`, `/sign-up` and `/join` are correctly branded from the hostname
 (`getBrandingBySlug`). The moment you are **inside** the portal, the sidebar, the
@@ -2231,7 +2275,21 @@ holds, not the fixture"). The customer side has no such guard.
 Two smaller things visible in the same first paint, from the same cause: the
 Getting Started checklist says **"Add your first pet: Done ✓"** directly above
 "My Pets 0 / No pets registered yet", and a brand-new account shows a
-notification badge of 3 and a chat badge of 2.
+notification badge of 3 and a chat badge of 2. Both still stand.
+
+**FIXED 2026-08-19.** The customer layout is already a Server Component and
+already reads `x-facility-slug`, so it now calls the same `getBrandingBySlug()`
+the auth screens use and passes the result down to the provider. Verified on the
+running app: the welcome line reads "Manage your pets and book services at
+Doggieville Mtl", and "Paws & Play" appears nowhere in the portal.
+
+**What deliberately did NOT change: `selectedFacility.id`.** Twenty-eight call
+sites filter fixture arrays by it — bookings, packages, report cards, the
+billing tabs — and a facility uuid matches none of them. Swapping it would turn
+every one of those screens silently empty, which is a worse failure than a wrong
+name because nothing on screen says anything is missing. So the NAME and MARK
+are real and the ID is still the fixture's, and the provider says so in as many
+words. That split goes when the screens behind it read Postgres.
 
 ### 🟡 `check:success-claims` misses "created successfully" — the commoner word order
 

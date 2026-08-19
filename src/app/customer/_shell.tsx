@@ -5,7 +5,10 @@ import { StrangerGate } from "@/components/customer/StrangerGate";
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 
-import { CustomerFacilityProvider } from "@/hooks/use-customer-facility";
+import {
+  CustomerFacilityProvider,
+  type RealFacilityBranding,
+} from "@/hooks/use-customer-facility";
 import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
 import { BookingModalProviderWrapper } from "@/components/providers/BookingModalProviderWrapper";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
@@ -19,13 +22,20 @@ import { CustomerSidebar } from "@/components/customer/CustomerSidebar";
  * run the auth gate. Everything here needs the pathname — which shell to draw,
  * and whether to show the chat bubble — so it stays on the client.
  */
-export function CustomerShell({ children }: { children: React.ReactNode }) {
+export function CustomerShell({
+  children,
+  branding,
+}: {
+  children: React.ReactNode;
+  /** The hostname's facility, resolved by the server layout. */
+  branding?: RealFacilityBranding | null;
+}) {
   const pathname = usePathname();
   const isAuthRoute = pathname?.startsWith("/customer/auth");
 
   return (
     <SettingsProviderWrapper>
-      <CustomerFacilityProvider>
+      <CustomerFacilityProvider branding={branding}>
         <BookingModalProviderWrapper>
           {isAuthRoute ? (
             <div className="flex min-h-screen flex-col">
