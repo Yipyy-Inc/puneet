@@ -1830,11 +1830,15 @@ export default function ClientBookingDetailPage({
                       ? "Customer declined a receipt."
                       : result.receiptMethod === "EMAIL"
                         ? result.receiptDelivered
-                          ? "Receipt emailed."
+                          ? result.receiptItemised
+                            ? "Itemised receipt emailed."
+                            : "Emailed, but WITHOUT the breakdown."
                           : "Email receipt FAILED — offer a printed one."
                         : result.receiptMethod === "SMS"
                           ? result.receiptDelivered
-                            ? "Receipt texted."
+                            ? result.receiptItemised
+                              ? "Itemised receipt texted."
+                              : "Texted, but WITHOUT the breakdown."
                             : "Text receipt FAILED — offer a printed one."
                           : result.receiptPrinted
                             ? "Itemised receipt printed."

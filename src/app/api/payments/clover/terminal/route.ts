@@ -13,7 +13,11 @@ import {
   readTipOnDevice,
   receiptOptionsOnDevice,
 } from "@/lib/clover/print";
-import { buildReceiptLines } from "@/lib/clover/receipt";
+import { buildReceiptLines, type ReceiptInput } from "@/lib/clover/receipt";
+import {
+  emailItemisedReceipt,
+  smsItemisedReceipt,
+} from "@/lib/clover/receipt-delivery";
 
 // ============================================================================
 // Charging a card on the counter's own terminal.
@@ -233,21 +237,35 @@ export async function POST(request: NextRequest) {
   );
   const wantsPrint = !choice || choice.method === "PRINT";
 
+  // Composed ONCE, whichever way it goes out, so the paper copy and the emailed
+  // copy cannot disagree.
+  const receipt =
+    choice?.method === "NO_RECEIPT"
+      ? null
+      : await receiptInputFor(
+          booking as unknown as BookingForReceipt,
+          supabase,
+          outcome,
+        );
+
   let printed: { printed: boolean; detail?: string } = {
     printed: false,
     detail: choice ? `customer chose ${choice.method}` : undefined,
   };
-  let delivered: { delivered: boolean; detail?: string } = {
-    delivered: false,
-  };
+  let delivered: { delivered: boolean; detail?: string } = { delivered: false };
+  // Whether what reached the customer carried the BREAKDOWN. Clover's fallback
+  // receipt does not, and staff should not have to guess which one went out.
+  let itemised = false;
 
   if (wantsPrint) {
-    printed = await printReceipt(
-      booking as unknown as BookingForReceipt,
-      supabase,
-      outcome,
-      parsed.data.deviceSerial,
-    );
+    if (receipt) {
+      printed = await printTextOnDevice(
+        booking.facility_id,
+        parsed.data.deviceSerial,
+        buildReceiptLines(receipt),
+      );
+      itemised = printed.printed;
+    }
     // AND Clover's own, which is the card-brand-compliant one. The docs put
     // that squarely on us for custom receipts — "You are responsible to ensure
     // the receipts printed by your app comply with all card brand" rules — and
@@ -261,17 +279,48 @@ export async function POST(request: NextRequest) {
         "PRINT",
       );
     }
-  } else if (
-    (choice.method === "EMAIL" || choice.method === "SMS") &&
-    outcome.processorPaymentId
-  ) {
-    delivered = await deliverStandardReceipt(
-      booking.facility_id,
-      parsed.data.deviceSerial,
-      outcome.processorPaymentId,
-      choice.method,
-      choice.additionalData,
-    );
+  } else if (choice.method === "EMAIL" || choice.method === "SMS") {
+    // ── OURS FIRST, CLOVER'S AS A FLOOR ───────────────────────────────────
+    //
+    // Clover will happily email a receipt, but it emails CLOVER's receipt, and
+    // that one has no line items — there is no Clover order behind this
+    // payment. Sending it would answer "the breakdown must be on the receipt"
+    // with the old behaviour plus extra steps.
+    //
+    // So we send ours when we can. When we cannot — no mail service configured
+    // on this deployment, a typo'd address — Clover's unitemised copy is still
+    // better than the customer walking away with nothing, and `itemised` says
+    // which of the two they got.
+    const address = choice.additionalData?.trim();
+    const ours =
+      !address || !receipt
+        ? {
+            sent: false,
+            detail: !address
+              ? "the device returned no address"
+              : "the receipt could not be composed",
+          }
+        : choice.method === "EMAIL"
+          ? await emailItemisedReceipt(address, receipt)
+          : await smsItemisedReceipt(address, receipt);
+
+    if (ours.sent) {
+      delivered = { delivered: true };
+      itemised = true;
+    } else if (outcome.processorPaymentId) {
+      delivered = await deliverStandardReceipt(
+        booking.facility_id,
+        parsed.data.deviceSerial,
+        outcome.processorPaymentId,
+        choice.method,
+        address,
+      );
+      delivered.detail = delivered.delivered
+        ? `sent without the breakdown (${ours.detail})`
+        : (delivered.detail ?? ours.detail);
+    } else {
+      delivered = { delivered: false, detail: ours.detail };
+    }
   }
 
   // ── HAND THE DEVICE BACK ────────────────────────────────────────────────
@@ -308,6 +357,7 @@ export async function POST(request: NextRequest) {
     receiptMethod: choice?.method ?? "PRINT",
     receiptDelivered: delivered.delivered,
     receiptDeliveryDetail: delivered.detail,
+    receiptItemised: itemised,
     tipCents,
     tipPrompted,
     screenCleared: screen.shown,
@@ -335,12 +385,24 @@ interface BookingForReceipt {
  * record of what was charged, and a caller that could name its own line items
  * could print a receipt that disagrees with the payment.
  */
-async function printReceipt(
+/**
+ * Compose the receipt, once, from the booking.
+ *
+ * Split out from printing because the customer may now ask for it by email or
+ * by text instead, and all three must say the same thing. Rendering the emailed
+ * copy from a second read is how a paper receipt and an emailed one end up
+ * disagreeing about a discount — and the customer holding both is the one who
+ * notices.
+ *
+ * The lines are read HERE rather than passed from the client: a receipt is a
+ * record of what was charged, and a caller that could name its own line items
+ * could produce one that disagrees with the payment.
+ */
+async function receiptInputFor(
   booking: BookingForReceipt,
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   outcome: Extract<Awaited<ReturnType<typeof chargeOnTerminal>>, { ok: true }>,
-  deviceSerial: string,
-): Promise<{ printed: boolean; detail?: string }> {
+): Promise<ReceiptInput | null> {
   try {
     const { data: rows } = await supabase
       .from("booking_line_items")
@@ -377,7 +439,7 @@ async function printReceipt(
       lines.reduce((sum, l) => sum + l.amountCents, 0) - discountCents;
     const tipCents = Math.max(0, outcome.amountCents - subtotalCents);
 
-    const text = buildReceiptLines({
+    return {
       facilityName: booking.facilities?.name ?? "Yipyy",
       reference: `Booking #${booking.ref}`,
       clientName: booking.clients?.name ?? null,
@@ -399,16 +461,9 @@ async function printReceipt(
         dateStyle: "medium",
         timeStyle: "short",
       }),
-    });
-
-    // The same device that took the payment, so the receipt comes out of the
-    // terminal the customer is standing at.
-    return await printTextOnDevice(booking.facility_id, deviceSerial, text);
-  } catch (error) {
-    console.warn("[terminal] receipt not printed:", error);
-    return {
-      printed: false,
-      detail: error instanceof Error ? error.message : "unknown",
     };
+  } catch (error) {
+    console.warn("[terminal] receipt could not be composed:", error);
+    return null;
   }
 }

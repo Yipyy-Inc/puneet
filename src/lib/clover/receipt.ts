@@ -145,3 +145,76 @@ export function buildReceiptLines(input: ReceiptInput): string[] {
 
   return out;
 }
+
+// ============================================================================
+// The same receipt, for a screen instead of a roll.
+//
+// ── WHY THESE LIVE BESIDE buildReceiptLines ───────────────────────────────
+//
+// A customer who chooses Email and a customer who chooses Print are owed the
+// same figures. Rendering the email from a different function, reading the
+// booking a second time, is how the paper copy and the emailed copy end up
+// disagreeing about a discount — and the customer holding both is the one who
+// notices. So all three renderers take the SAME ReceiptInput, built once by
+// the caller from one read.
+// ============================================================================
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * The receipt as an email body.
+ *
+ * Deliberately a `<pre>` of the very lines that go to the printer rather than a
+ * hand-built table: the two cannot drift, because there is only one layout. It
+ * reads as a receipt, which is what it is.
+ */
+export function buildReceiptHtml(input: ReceiptInput): string {
+  const body = buildReceiptLines(input).map(escapeHtml).join("\n");
+  return [
+    '<div style="background:#f6f6f7;padding:24px;font-family:system-ui,sans-serif">',
+    '<div style="max-width:420px;margin:0 auto;background:#fff;border-radius:12px;padding:24px">',
+    `<h1 style="margin:0 0 16px;font-size:18px">${escapeHtml(input.facilityName)}</h1>`,
+    '<pre style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.45;white-space:pre;overflow-x:auto;margin:0">',
+    body,
+    "</pre>",
+    '<p style="margin:16px 0 0;color:#6b7280;font-size:12px">Thank you for your business.</p>',
+    "</div></div>",
+  ].join("\n");
+}
+
+/**
+ * The receipt as a text message.
+ *
+ * NOT the 32-column layout: padded columns wrap raggedly in a chat bubble and
+ * turn a tidy receipt into nonsense. Same figures, same order, no padding — and
+ * short, because every 153 characters is another segment the facility pays for.
+ */
+export function buildReceiptSmsText(input: ReceiptInput): string {
+  const out: string[] = [];
+  out.push(
+    `${input.facilityName}${input.reference ? ` — ${input.reference}` : ""}`,
+  );
+  for (const line of input.lines) {
+    out.push(`${line.label}: ${money(line.amountCents)}`);
+  }
+  if (input.discountCents > 0) {
+    out.push(`Discount: ${money(-input.discountCents)}`);
+  }
+  out.push(`Subtotal: ${money(input.subtotalCents)}`);
+  if (input.tipCents > 0) out.push(`Tip: ${money(input.tipCents)}`);
+  out.push(`TOTAL: ${money(input.totalCents)}`);
+  const card = [
+    input.cardBrand,
+    input.cardLast4 ? `••${input.cardLast4}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (card) out.push(card);
+  return out.join("\n");
+}

@@ -156,8 +156,16 @@ export interface TerminalChargeResult {
   receiptPrinted: boolean;
   /** How the customer asked to receive it: PRINT, EMAIL, SMS or NO_RECEIPT. */
   receiptMethod: "NO_RECEIPT" | "PRINT" | "EMAIL" | "SMS";
-  /** Whether Clover's own (card-brand-compliant) receipt went out. */
+  /** Whether the receipt the customer asked for actually went out. */
   receiptDelivered: boolean;
+  /**
+   * Whether what reached them carried the BREAKDOWN.
+   *
+   * False with `receiptDelivered` true means Clover's unitemised fallback went
+   * instead of ours — worth knowing at the counter, because the customer who
+   * asked for the detail did not get it.
+   */
+  receiptItemised: boolean;
   /** The tip actually taken, in cents — the customer's answer, not the ask. */
   tipCents: number;
   /**
@@ -218,6 +226,7 @@ export function useChargeOnTerminal() {
         receiptDetail: parsed?.receiptDetail,
         receiptMethod: parsed?.receiptMethod ?? "PRINT",
         receiptDelivered: parsed?.receiptDelivered === true,
+        receiptItemised: parsed?.receiptItemised === true,
         tipCents: parsed?.tipCents ?? 0,
         tipPrompted: parsed?.tipPrompted === true,
       };
