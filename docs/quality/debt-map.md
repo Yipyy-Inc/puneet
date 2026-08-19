@@ -2232,10 +2232,33 @@ each burning a 30s timeout twice with retries.
 they skip honestly instead. **Do instead:** guard a fixture on whether it can be
 USED, not on whether somebody filled the variable in.
 
-### 🟡 e2e is not in CI, and a long local run is not a clean signal
+### 🟢 The auth & access specs run in CI (was 🟡) — the rest still do not
 
-The four required checks are Analyze, build, format, lint and typecheck. Nothing
-runs Playwright, so the suite's red/green state is unmonitored.
+~~Nothing runs Playwright, so the suite's red/green state is unmonitored.~~ A
+fifth job, `e2e (auth & access)`, runs `bun run test:e2e:ci` on every PR: the ten
+spec files covering authorisation and identity, 59 tests, measured at **4m00s**
+against a built server (`next start`, not `bun run dev` — on-demand compilation
+was most of the old runtime).
+
+**Why a subset.** The other 41 files cover bookings, boarding, Clover and
+grooming: things that fail loudly the moment somebody opens the screen. The ten
+chosen cover the guards that fail SILENTLY — a groomer refused `/facility`,
+`manage_staff` unable to mint an owner, an invited hire routed to their
+checklist, the header naming the person signed in. Those are the ones where
+typecheck, lint, format and build all go green while the app is wrong.
+
+**CI writes to the real database.** There is one Postgres, and a localhost
+server still talks to it. The subset was checked for write-cleanliness before
+being put on every PR — facilities, memberships, clients, pets, bookings,
+profiles, platform team and role-override counts were identical before and
+after a full run. **Anything added to `test:e2e:ci` must clean up after itself**
+the way `role-editor-writes.spec.ts` does, or every PR will leave residue in
+production data.
+
+**Still open:** the remaining 41 files, and the two-environment problem above
+that stops any single run covering everything.
+
+### 🟡 A long local run is still not a clean signal
 
 A full local run on 2026-08-18 did not complete cleanly. Every failure inspected
 was infrastructure: `ERR_CONNECTION_REFUSED`, or `/api/permissions -> 404` right
