@@ -154,6 +154,15 @@ export interface TerminalChargeResult {
    * counter needs to know whether to reach for the roll or hand over paper.
    */
   receiptPrinted: boolean;
+  /** The tip actually taken, in cents — the customer's answer, not the ask. */
+  tipCents: number;
+  /**
+   * Whether the customer was asked on the device AND answered.
+   *
+   * False covers both "declined" and "could not be asked", which the counter
+   * needs distinguished from "was never offered a tip".
+   */
+  tipPrompted: boolean;
   receiptDetail?: string;
 }
 
@@ -171,6 +180,11 @@ export function useChargeOnTerminal() {
       bookingRef: number;
       deviceSerial: string;
       tipCents?: number;
+      /**
+       * Ask the customer for the tip ON THE TERMINAL. When set, `tipCents` is
+       * ignored by the route — the payer's answer is the only one that counts.
+       */
+      tipOnDevice?: boolean;
     }): Promise<TerminalChargeResult> => {
       const response = await fetch("/api/payments/clover/terminal", {
         method: "POST",
@@ -198,6 +212,8 @@ export function useChargeOnTerminal() {
         cardLast4: parsed?.cardLast4 ?? null,
         receiptPrinted: parsed?.receiptPrinted === true,
         receiptDetail: parsed?.receiptDetail,
+        tipCents: parsed?.tipCents ?? 0,
+        tipPrompted: parsed?.tipPrompted === true,
       };
     },
     onSuccess: () => {

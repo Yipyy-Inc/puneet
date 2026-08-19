@@ -1798,12 +1798,15 @@ export default function ClientBookingDetailPage({
             // prints no receipt: on a terminal the customer has not tapped yet
             // when this begins.
             if (payment.method === "terminal" && payment.deviceSerial) {
+              // THE CUSTOMER IS ASKED ON THE TERMINAL, not here. A tip picked
+              // on this screen is staff choosing on the payer's behalf; the
+              // device asks the person actually paying. `tipCents` is therefore
+              // not sent at all — the route ignores it under `tipOnDevice`, and
+              // sending both would only invite the two to disagree.
               const result = await chargeOnTerminal.mutateAsync({
                 bookingRef: booking.id,
                 deviceSerial: payment.deviceSerial,
-                ...(payment.tip > 0
-                  ? { tipCents: Math.round(payment.tip * 100) }
-                  : {}),
+                tipOnDevice: true,
               });
               const card = result.cardLast4
                 ? `${result.cardBrand ?? "Card"} ···${result.cardLast4}`
@@ -1813,6 +1816,9 @@ export default function ClientBookingDetailPage({
                 {
                   description: [
                     card,
+                    result.tipPrompted
+                      ? `Tip $${(result.tipCents / 100).toFixed(2)}`
+                      : "No tip added.",
                     // Said out loud either way. A charge that went through with
                     // no paper is something the person at the counter has to
                     // know BEFORE the customer walks off, and silence would let

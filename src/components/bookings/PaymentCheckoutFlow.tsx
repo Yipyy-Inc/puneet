@@ -499,8 +499,18 @@ export function PaymentCheckoutFlow({
             </div>
           )}
 
-          {/* Tip — not shown for cash, check, or custom payments */}
-          {method !== "cash" && method !== "custom" && (
+          {/* Tip — not shown for cash, check, or custom payments, and NOT for
+              the terminal: there the customer is asked on the device itself
+              (lib/clover/print.ts readTipOnDevice), and the route ignores
+              anything picked here. Leaving these buttons on screen would let
+              staff select 20%, watch the customer choose nothing, and be handed
+              a total that matches neither. */}
+          {isTerminal && (
+            <div className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
+              The customer is asked for a tip on the terminal.
+            </div>
+          )}
+          {!isTerminal && method !== "cash" && method !== "custom" && (
             <div>
               <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
                 Add Tip (optional)
