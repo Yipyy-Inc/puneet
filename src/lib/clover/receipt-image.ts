@@ -52,18 +52,17 @@ const PADDING = 10;
 /**
  * Body text. Everything else is expressed relative to it.
  *
- * 16 -> 18 -> 27: raised twice, the second time by half again, because a
- * receipt is read at arm's length across a counter and the first two passes
- * were still small on an 80mm roll.
+ * 16 -> 18 -> 23. A receipt is read at arm's length across a counter, so the
+ * first passes were too small; 27 was too much and ran to 125mm of roll.
  *
- * At 27px a 384-dot head fits about 22 characters, so a long item name no
- * longer sits beside its amount. It WRAPS rather than truncating — see the
- * pair rows in buildReceiptSvg. A customer should be able to read what they
- * bought; "De-shedding t.." is not a line item.
+ * At this size a 384-dot head fits about 26 characters, so a long item name
+ * still may not sit beside its amount. It WRAPS rather than truncating — see
+ * the pair rows in buildReceiptSvg. A customer should be able to read what
+ * they bought; "De-shedding t.." is not a line item.
  */
-const FONT = 27;
-const SMALL = 22;
-const TINY = 20;
+const FONT = 23;
+const SMALL = 19;
+const TINY = 17;
 
 /**
  * A monospace advance is 0.6em. Used to decide where to wrap and truncate,
@@ -212,7 +211,7 @@ function rowsFor(input: ReceiptInput): Row[] {
   const rows: Row[] = [];
   const f = input.facility;
 
-  rows.push({ kind: "centre", text: f.name, size: 33 });
+  rows.push({ kind: "centre", text: f.name, size: 28 });
   if (f.address) {
     for (const line of wrapAddress(f.address, colsAt(SMALL))) {
       rows.push({ kind: "centre", text: line, size: SMALL });
@@ -283,7 +282,7 @@ function rowsFor(input: ReceiptInput): Row[] {
     kind: "pair",
     label: "TOTAL",
     amount: money(input.totalCents),
-    size: 30,
+    size: 26,
   });
   rows.push({ kind: "rule" });
 
@@ -379,10 +378,14 @@ export function buildReceiptSvg(
       // "De-shedding treatment" no longer sits beside its price. It wraps onto
       // its own lines and the amount rides the LAST of them — truncating would
       // leave a customer unable to read what they bought.
-      const cols = colsAt(size);
-      const room = cols - row.amount.length - 1;
+      // Wrapped to the ROOM BESIDE THE AMOUNT, not to the full width. Using
+      // the full width printed "Enrichment sessio$12.00" — 18 characters is
+      // under the 22 the line holds, so nothing wrapped, and the label ran
+      // straight under a right-anchored amount. The constraint was never the
+      // paper; it is the space the amount leaves.
+      const room = Math.max(4, colsAt(size) - row.amount.length - 1);
       const labelLines =
-        row.label.length > room ? wrap(row.label, cols) : [row.label];
+        row.label.length > room ? wrap(row.label, room) : [row.label];
 
       labelLines.forEach((line, index) => {
         if (index > 0) y += size + 4;
@@ -481,10 +484,16 @@ export async function renderReceiptPng(
     const png = await sharp(Buffer.from(svg))
       .flatten({ background: "#ffffff" })
       .greyscale()
-      // One ink, no greys - the head fires a dot or it does not. High, because
-      // anti-aliased text is mostly mid-grey at the edges and a low threshold
-      // eats the strokes.
-      .threshold(200)
+      // ── WHY 150 AND NOT 200 ────────────────────────────────────────────
+      //
+      // One ink, no greys: the head fires a dot or it does not. At 200 every
+      // pixel from black to light grey fired, so the anti-aliased halo around
+      // each stroke printed solid — roughly a dot wider on each side, which on
+      // paper reads as bold. Reported as "the font is too thick".
+      //
+      // 150 keeps the halo off the paper and prints the stroke at its drawn
+      // weight. Lower still starts eating thin strokes.
+      .threshold(150)
       .png({ colours: 2 })
       .toBuffer();
 
