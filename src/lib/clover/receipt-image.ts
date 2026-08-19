@@ -237,11 +237,6 @@ function rowsFor(input: ReceiptInput): Row[] {
       rows.push({ kind: "left", text: line, size: SMALL });
     }
   }
-  if (input.serviceWindow) {
-    for (const line of wrap(input.serviceWindow, colsAt(SMALL))) {
-      rows.push({ kind: "left", text: line, size: SMALL });
-    }
-  }
   rows.push({ kind: "rule" });
 
   for (const line of input.lines) {

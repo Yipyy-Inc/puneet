@@ -143,12 +143,6 @@ export interface ReceiptInput {
   reference: string | null;
   clientName: string | null;
   petNames: string[];
-  /**
-   * When the service was, in the facility's clock and already formatted —
-   * "19 Aug 2026, 8:00 a.m. – 6:00 p.m." A receipt for a day of daycare that
-   * does not say which day is not a record of anything.
-   */
-  serviceWindow: string | null;
   /** The service, the added items, the fees — in the order they should read. */
   lines: ReceiptLine[];
   discountCents: number;
@@ -210,9 +204,6 @@ export function buildReceiptLines(input: ReceiptInput): string[] {
   if (input.petNames.length > 0) {
     out.push(...wrap(`Pet: ${input.petNames.join(", ")}`));
   }
-  // The service window wraps rather than truncates — a date cut in half is
-  // worse than a date on two lines.
-  if (input.serviceWindow) out.push(...wrap(input.serviceWindow));
   out.push(input.printedAt);
   out.push(RULE);
 
@@ -330,7 +321,6 @@ export function buildReceiptSmsText(input: ReceiptInput): string {
   out.push(
     `${input.facility.name}${input.reference ? ` — ${input.reference}` : ""}`,
   );
-  if (input.serviceWindow) out.push(input.serviceWindow);
   for (const line of input.lines) {
     out.push(`${line.label}: ${money(line.amountCents)}`);
   }
