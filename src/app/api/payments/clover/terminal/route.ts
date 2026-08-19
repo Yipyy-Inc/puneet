@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       // the business, its address and how to reach it is the difference between
       // a record and a note. These columns exist on `facilities`
       // (20260809120000) and were simply never read here.
-      "id, ref, facility_id, client_id, amount_due, amount_paid, status, service, service_type, base_price, discount, tip_amount, start_at, end_at, facilities ( name, timezone, phone, email, website, address, logo_url ), clients ( name ), booking_pets ( pets ( name ) )",
+      "id, ref, facility_id, client_id, amount_due, amount_paid, status, service, service_type, base_price, discount, tip_amount, facilities ( name, timezone, phone, email, website, address, logo_url ), clients ( name ), booking_pets ( pets ( name ) )",
     )
     .eq("ref", parsed.data.bookingRef)
     .maybeSingle();
@@ -443,8 +443,6 @@ interface BookingForReceipt {
   base_price: number | string;
   discount: number | string | null;
   tip_amount: number | string | null;
-  start_at: string | null;
-  end_at: string | null;
   facilities: {
     name: string;
     timezone: string | null;
@@ -632,7 +630,6 @@ function receiptInputFor(
     petNames: (booking.booking_pets ?? [])
       .map((bp) => bp.pets?.name)
       .filter((n): n is string => Boolean(n)),
-    serviceWindow: formatWindow(booking.start_at, booking.end_at, zone),
     lines,
     discountCents: bill.discountCents,
     // For a tax-inclusive facility the tax is already inside what was owed, so
@@ -692,36 +689,6 @@ function formatAddress(
     .filter(Boolean)
     .join(", ");
   return line || null;
-}
-
-/**
- * "19 Aug 2026, 8:00 a.m. - 6:00 p.m." for a same-day service, or the two dates
- * in full for a stay.
- *
- * A receipt for a day of daycare that does not say WHICH day is not a record of
- * anything, and a boarding receipt that shows only the drop-off hides half of
- * what was bought.
- */
-function formatWindow(
-  startAt: string | null,
-  endAt: string | null,
-  zone: string,
-): string | null {
-  if (!startAt) return null;
-  const start = new Date(startAt);
-  if (Number.isNaN(start.getTime())) return null;
-  const date = (d: Date) =>
-    d.toLocaleDateString("en-CA", { timeZone: zone, dateStyle: "medium" });
-  const time = (d: Date) =>
-    d.toLocaleTimeString("en-CA", { timeZone: zone, timeStyle: "short" });
-
-  if (!endAt) return `${date(start)} ${time(start)}`;
-  const end = new Date(endAt);
-  if (Number.isNaN(end.getTime())) return `${date(start)} ${time(start)}`;
-
-  return date(start) === date(end)
-    ? `${date(start)}, ${time(start)} - ${time(end)}`
-    : `${date(start)} ${time(start)} - ${date(end)} ${time(end)}`;
 }
 
 /**
