@@ -219,6 +219,33 @@ test.describe("inviting somebody onto the platform team", () => {
     }
   });
 
+  test("the page that handed out roles is gone", async ({ page }) => {
+    // /facility/set-role was two buttons: "Set as Facility Admin" and "Set as
+    // Super Admin". Each wrote `user_role` with document.cookie and navigated.
+    // The gates stopped reading that cookie at the auth cutover, so it granted
+    // nothing — but it was still a page offering to make you a super admin.
+    await signIn(page, ACCOUNTS.owner);
+    // A plain fetch, not page.goto(): navigating to a route that no longer
+    // exists aborts in dev while Next compiles the not-found page, which made
+    // this flake on ERR_ABORTED. The status is the assertion either way.
+    const response = await page.request.get("/facility/set-role");
+    expect(response.status()).toBe(404);
+  });
+
+  test("the account menu agrees with the gate behind it", async ({ page }) => {
+    // The "Owner Account" group — Subscription, Payment Method, Export Data,
+    // Yipyy Agreements — appeared when the `user_role` cookie said
+    // facility_admin, while the pages behind it were guarded by
+    // canManageFacilityAccount reading the session. Two answers to one
+    // question, and a browser could change the first. Now it IS that function.
+    await signIn(page, ACCOUNTS.owner);
+    await page.goto("/facility/dashboard");
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await expect(page.getByText("My Subscription")).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
   test("the roster is refused to everyone else", async ({ page, request }) => {
     expect((await request.get("/api/admin/team")).status()).toBe(403);
 

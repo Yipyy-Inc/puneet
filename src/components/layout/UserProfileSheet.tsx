@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useHydrated } from "@/hooks/use-hydrated";
 import {
   LogOut,
   Bell,
@@ -45,15 +44,17 @@ import {
   Globe,
   Check,
 } from "lucide-react";
-import { getUserRole } from "@/lib/role-utils";
 import { useUiText } from "@/hooks/use-ui-text";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { openSupportDrawer } from "@/lib/support-drawer-store";
 import { cn } from "@/lib/utils";
 
-// Role → avatar tint for quick visual ID (spec Table 24). Keyed by the role
-// from getUserRole/role-utils; staff roles (manager/groomer/…) are included so
-// the tint is meaningful wherever a finer role is available.
+// Role → avatar tint for quick visual ID (spec Table 24).
+//
+// Only `super_admin` is reachable today: the finer roles were keyed off the
+// `user_role` cookie, and nothing writes that any more. The rest are kept
+// because the map is what a session-derived facility role would plug into, and
+// deleting them would make that a bigger change than it needs to be.
 const ROLE_AVATAR_COLOR: Record<string, string> = {
   super_admin: "bg-slate-700",
   facility_admin: "bg-indigo-600",
@@ -173,6 +174,17 @@ export interface ProfileViewer {
   email: string | null;
   /** True only for a real platform membership, never for an absent cookie. */
   isPlatformAdmin: boolean;
+  /**
+   * May this person act on the FACILITY'S OWN account — its subscription, its
+   * payment method, its data export, its Yipyy agreements?
+   *
+   * The menu group below used to appear when the `user_role` cookie said
+   * "facility_admin", while the pages it linked to were guarded by
+   * `canManageFacilityAccount` reading the session. Two different answers to
+   * one question, and the browser could change the first. This is that same
+   * function's answer, computed on the server, so the menu and the gate agree.
+   */
+  canManageAccount: boolean;
 }
 
 function initialsFor(viewer: ProfileViewer): string {
@@ -200,13 +212,6 @@ export function UserProfileSheet({
   const [isPending, startTransition] = useTransition();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // getUserRole() reads document.cookie, which is unavailable during SSR (it
-  // returns null on the server). Reading it on the first client render would
-  // mismatch the server-rendered HTML — most visibly the role-derived avatar
-  // color — so we defer to the cookie value only after hydration.
-  const hydrated = useHydrated();
-  const currentRole = hydrated ? getUserRole() : null;
-
   // ── THIS USED TO BE `!currentRole || currentRole === "super_admin"` ──────
   //
   // An ABSENT cookie meant super admin — the same "absent means allow" shape as
@@ -230,8 +235,12 @@ export function UserProfileSheet({
     setHQView,
     setLocation,
   } = useLocationContext();
+  // The tint used to come from the `user_role` cookie. Nothing writes that
+  // cookie any more — /facility/set-role, the page whose two buttons wrote it,
+  // is gone — so the read had become "always null, always the default tint" for
+  // everyone. It answers from the session now, which is the only identity left.
   const avatarBg = roleAvatarColor(
-    viewer.isPlatformAdmin ? "super_admin" : currentRole,
+    viewer.isPlatformAdmin ? "super_admin" : null,
   );
   const initials = initialsFor(viewer);
 
@@ -401,7 +410,7 @@ export function UserProfileSheet({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          {currentRole === "facility_admin" && (
+          {viewer.canManageAccount && (
             <>
               <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
                 {t("Owner Account")}

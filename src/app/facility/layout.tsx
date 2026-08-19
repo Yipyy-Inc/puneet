@@ -1,4 +1,8 @@
-import { canAccessFacilityPortal, canManageCustomers } from "@/lib/auth/viewer";
+import {
+  canAccessFacilityPortal,
+  canManageCustomers,
+  canManageFacilityAccount,
+} from "@/lib/auth/viewer";
 import { guardPortal } from "@/lib/auth/portal-gate";
 import { legacyStaffIdForEmail } from "@/lib/auth/legacy-identity";
 import { redirectIfStillOnboarding } from "@/lib/auth/onboarding-gate";
@@ -100,6 +104,8 @@ export default async function FacilityLayout({
                                 name: viewer.fullName,
                                 email: viewer.email,
                                 isPlatformAdmin: viewer.isPlatformAdmin,
+                                canManageAccount:
+                                  canManageFacilityAccount(viewer),
                               }}
                             />
                           </header>
