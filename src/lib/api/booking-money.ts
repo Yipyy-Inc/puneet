@@ -11,12 +11,18 @@ import { bookingMutations } from "./booking";
 // two closed the dialog and called `toast.success`, the third moved a string in
 // React state. Nothing reached the server on any of them.
 //
-// Two of those three could not even open the dialog. The list page never called
-// its own `setProcessingPayment`, so its mount is gone. The other,
-// `/facility/dashboard/bookings/[id]`, redirects to the client-nested route on
-// mount and is left alone — it has 1197 lines of unreachable UI behind that
-// redirect, and removing two dialogs while leaving the three buttons that open
-// them would be worse than either doing all of it or none.
+// That modal is GONE now. Its last mount — the client-nested booking page —
+// pointed the Accept Payment button under the itemised breakdown at it, so the
+// one button beside the bill offered card and cash and could not reach a card
+// reader, while the checkout flow that could was on a different control. Both
+// now open PaymentCheckoutFlow, and the modal was deleted rather than repaired:
+// it also reported "Base Price $62.50 + Tip $22.30 = Total $133.80", printing
+// the base price where the total used `amountDue`, so its own arithmetic
+// disagreed on any booking with an added item.
+//
+// `/facility/dashboard/bookings/[id]` still redirects to the client-nested
+// route on mount and is left alone — 1197 lines of unreachable UI behind that
+// redirect, which is its own change.
 //
 // The client-nested booking page is the surface, and it calls these.
 //

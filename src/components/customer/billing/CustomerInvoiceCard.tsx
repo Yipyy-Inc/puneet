@@ -24,7 +24,7 @@ import {
   buildInvoiceDocumentHtml,
   type InvoiceDocumentData,
 } from "@/lib/invoice-document";
-import { loadInvoiceTemplate } from "@/data/invoice-template";
+import { useCustomerInvoiceTemplate } from "@/hooks/use-invoice-template";
 import type { Booking, Invoice } from "@/types/booking";
 import type { Client } from "@/types/client";
 import type { PaymentMethod } from "@/types/payments";
@@ -140,13 +140,19 @@ export function CustomerInvoiceCard({
           : "estimate";
   const statusCfg = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.estimate;
 
+  // The facility's OWN identity, resolved through the client row. This used to
+  // be `loadInvoiceTemplate()` — localStorage falling back to a fixture that
+  // names "Example Pet Care Facility" and carries a fabricated GST number, on
+  // the document a pet owner downloads and keeps.
+  const invoiceTemplate = useCustomerInvoiceTemplate();
+
   const previewHtml = useMemo(() => {
     if (!previewOpen) return "";
-    return buildInvoiceDocumentHtml(loadInvoiceTemplate(), docData);
-  }, [previewOpen, docData]);
+    return buildInvoiceDocumentHtml(invoiceTemplate, docData);
+  }, [previewOpen, docData, invoiceTemplate]);
 
   const handleDownload = () => {
-    const html = buildInvoiceDocumentHtml(loadInvoiceTemplate(), docData);
+    const html = buildInvoiceDocumentHtml(invoiceTemplate, docData);
     const win = window.open("", "_blank", "width=900,height=1000");
     if (!win) return;
     win.document.write(html);
