@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { cancelBookingsMarked } from "./_sweep";
 
 // ============================================================================
 // A kennel holds one booking at a time, over real HTTP.
@@ -65,34 +66,17 @@ function stayBody(overrides: Record<string, unknown> = {}) {
 
 test.describe.configure({ mode: "serial" });
 
+// Both ends, on purpose: `afterAll` puts back what this run took, `beforeAll`
+// heals whatever a run that died mid-flight left behind. Four confirmed stays
+// from crashed runs sat in the live bookings list until 2026-08-19, when
+// somebody opened one and asked whether the product had lost their data. See
+// tests/e2e/_sweep.ts.
+test.beforeAll(async ({ browser }) => {
+  await cancelBookingsMarked(browser, MARKER, "before");
+});
+
 test.afterAll(async ({ browser }) => {
-  const page = await browser.newPage();
-  try {
-    await signIn(page, ACCOUNTS.owner);
-    const bookings = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as {
-      id: number;
-      specialRequests?: string;
-      status: string;
-    }[];
-
-    const mine = bookings.filter(
-      (b) => b.specialRequests?.includes(MARKER) && b.status !== "cancelled",
-    );
-
-    let cancelled = 0;
-    for (const b of mine) {
-      const res = await page.request.patch(`/api/bookings/${b.id}`, {
-        data: { status: "cancelled" },
-      });
-      if (res.ok()) cancelled++;
-      else console.log(`cleanup: id ${b.id} -> ${res.status()}`);
-    }
-    console.log(`cleanup: ${cancelled}/${mine.length} stay(s) cancelled`);
-  } finally {
-    await page.close();
-  }
+  await cancelBookingsMarked(browser, MARKER, "after");
 });
 
 test.describe("boarding occupancy", () => {
