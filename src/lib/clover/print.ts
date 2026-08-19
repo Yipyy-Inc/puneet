@@ -514,8 +514,14 @@ export async function deliverStandardReceipt(
 
 /** The printable width in dots. See the banner: safe on 58mm and 80mm alike. */
 const LOGO_WIDTH_PX = 320;
-/** A logo may not take more roll than this, whatever its aspect ratio. */
-const LOGO_MAX_HEIGHT_PX = 160;
+/**
+ * A logo may not take more roll than this, whatever its aspect ratio.
+ *
+ * 120 dots is 15mm. At 160 the logo was a fifth of an 89mm receipt, which is a
+ * lot of paper for a mark nobody reads twice — "clean minimalist layout" was
+ * asked for, and the logo was the largest single thing on it.
+ */
+const LOGO_MAX_HEIGHT_PX = 120;
 
 /**
  * Fetch a logo and turn it into something a receipt printer can render.

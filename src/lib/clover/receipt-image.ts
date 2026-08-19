@@ -29,27 +29,60 @@ import type { ReceiptInput } from "@/lib/clover/receipt";
 // It used to be its own print job before the text. One image means one job,
 // guaranteed ordering, and no second call that can half-fail.
 //
-// ── AND THE CALLER KEEPS THE TEXT PATH ────────────────────────────────────
+// ── AND THE FONT IS SHIPPED, NOT BORROWED ─────────────────────────────────
 //
-// SVG text needs a font in the runtime. If the deployment has none the render
-// comes back blank, so `renderReceiptPng` reports its ink coverage and the
-// caller falls back to text printing rather than handing somebody a blank
-// receipt. Ragged columns beat no receipt.
+// The first version of this file left the font to the runtime and guarded
+// against a BLANK render. Vercel's serverless runtime has no system fonts, and
+// a missing font does not render blank — librsvg draws the missing-glyph box
+// for every character, which is plenty of ink. The guard passed and a Clover
+// Flex printed rows of empty rectangles.
+//
+// So the font ships with the code, and the guard tests the right property: see
+// FONT_DIR and glyphsRender() below.
 // ============================================================================
 
-/** Dots across. Full width of a 58mm head, half of an 80mm one — safe on both. */
+import { join } from "node:path";
+
+/**
+ * Dots across a Clover FLEX head. 384 is its full printable width.
+ */
 const WIDTH = 384;
-const PADDING = 8;
-const FONT = 17;
-/** Monospace advance is ~0.6em; used only to decide where to wrap and truncate. */
+const PADDING = 10;
+
+/** Body text. Everything else is expressed relative to it. */
+const FONT = 16;
+const SMALL = 13;
+const TINY = 11;
+
+/** Roboto Mono's advance is 0.6em. Used to wrap and truncate, nothing else. */
 const CHAR = FONT * 0.6;
 const COLS = Math.floor((WIDTH - PADDING * 2) / CHAR);
-const FAMILY =
-  "DejaVu Sans Mono, Liberation Mono, Menlo, Consolas, Courier New, monospace";
+
+/**
+ * The font is SHIPPED, not borrowed from the runtime.
+ *
+ * A receipt printed on 2026-08-19 came out as rows of empty rectangles: Vercel's
+ * serverless runtime has no system fonts, so librsvg drew the missing-glyph box
+ * for every character. The layout was correct; there was simply nothing to draw
+ * with.
+ *
+ * Roboto Mono ships in `fonts/` beside this file (Latin subset, 22KB per
+ * weight) and next.config.ts traces the directory into the function bundle.
+ * FONTCONFIG_PATH points fontconfig at it before sharp is loaded.
+ */
+const FONT_DIR = join(process.cwd(), "src/lib/clover/fonts");
+const FAMILY = "Roboto Mono, monospace";
+
+function applyBundledFonts(): void {
+  process.env.FONTCONFIG_PATH = FONT_DIR;
+  // Writable, and the only writable place on a serverless filesystem. Without
+  // it fontconfig warns on every call and rebuilds its cache each time.
+  process.env.XDG_CACHE_HOME = "/tmp";
+}
 
 type Row =
   | { kind: "centre"; text: string; size?: number; bold?: boolean }
-  | { kind: "left"; text: string; size?: number }
+  | { kind: "left"; text: string; size?: number; bold?: boolean }
   | {
       kind: "pair";
       label: string;
@@ -90,39 +123,58 @@ function wrap(text: string, cols = COLS): string[] {
   return out.length ? out : [""];
 }
 
+/**
+ * The receipt, as rows.
+ *
+ * ── ASCII ONLY, DELIBERATELY ──────────────────────────────────────────────
+ *
+ * The bundled font is a LATIN SUBSET. A bullet, a middot or an en-dash may not
+ * be in it, and a character the font lacks is drawn as the same empty box that
+ * made the last receipt unreadable. Nothing here uses a character outside
+ * printable ASCII, so there is no glyph to be missing.
+ *
+ * ── AND KEPT SHORT ────────────────────────────────────────────────────────
+ *
+ * "clean minimalist layout", asked for after the first legible print ran to
+ * 111mm. The second timestamp is gone (the service window already dates it),
+ * the "Paid by card" row is gone (TOTAL is the same number, one line above),
+ * and the card details are two short lines instead of four.
+ */
 function rowsFor(input: ReceiptInput): Row[] {
   const rows: Row[] = [];
   const f = input.facility;
 
-  rows.push({ kind: "centre", text: f.name, size: 22, bold: true });
+  rows.push({ kind: "centre", text: f.name, size: 20, bold: true });
   if (f.address) {
-    for (const line of wrap(f.address))
-      rows.push({ kind: "centre", text: line });
+    for (const line of wrap(f.address, 34)) {
+      rows.push({ kind: "centre", text: line, size: SMALL });
+    }
   }
-  if (f.phone) rows.push({ kind: "centre", text: f.phone });
-  if (f.email) rows.push({ kind: "centre", text: f.email });
+  if (f.phone) rows.push({ kind: "centre", text: f.phone, size: SMALL });
   if (f.taxRegistrations) {
-    for (const line of wrap(f.taxRegistrations, COLS + 6)) {
-      rows.push({ kind: "centre", text: line, size: 14 });
+    for (const line of wrap(f.taxRegistrations, 40)) {
+      rows.push({ kind: "centre", text: line, size: TINY });
     }
   }
 
-  rows.push({ kind: "gap", height: 10 });
-  if (input.reference) rows.push({ kind: "left", text: input.reference });
+  rows.push({ kind: "gap", height: 12 });
+  if (input.reference) {
+    rows.push({ kind: "left", text: input.reference, bold: true });
+  }
   if (input.clientName) {
     for (const line of wrap(input.clientName))
       rows.push({ kind: "left", text: line });
   }
   if (input.petNames.length > 0) {
-    for (const line of wrap(`Pet: ${input.petNames.join(", ")}`)) {
-      rows.push({ kind: "left", text: line });
+    for (const line of wrap(input.petNames.join(", "))) {
+      rows.push({ kind: "left", text: line, size: SMALL });
     }
   }
   if (input.serviceWindow) {
-    for (const line of wrap(input.serviceWindow))
-      rows.push({ kind: "left", text: line });
+    for (const line of wrap(input.serviceWindow, 40)) {
+      rows.push({ kind: "left", text: line, size: SMALL });
+    }
   }
-  rows.push({ kind: "left", text: input.printedAt, size: 14 });
   rows.push({ kind: "rule" });
 
   for (const line of input.lines) {
@@ -153,6 +205,7 @@ function rowsFor(input: ReceiptInput): Row[] {
       // 9.975% keeps its decimals and a flat 5% does not gain any.
       label: `${tax.name} ${Number((tax.rate * 100).toFixed(4))}%`,
       amount: money(tax.amountCents),
+      size: SMALL,
     });
   }
   if (input.tipCents > 0) {
@@ -163,33 +216,38 @@ function rowsFor(input: ReceiptInput): Row[] {
     label: "TOTAL",
     amount: money(input.totalCents),
     bold: true,
+    size: 18,
   });
   rows.push({ kind: "rule" });
 
-  rows.push({
-    kind: "pair",
-    label: input.paymentMethod ?? "Paid",
-    amount: money(input.totalCents),
-  });
+  // Card, entry method and approval code on two lines rather than four.
   const card = [
     input.cardBrand,
-    input.cardLast4 ? `••${input.cardLast4}` : null,
+    input.cardLast4 ? `****${input.cardLast4}` : null,
+    input.entryMethod ? input.entryMethod.toUpperCase() : null,
   ]
     .filter(Boolean)
-    .join(" ");
-  if (card) rows.push({ kind: "left", text: card });
-  if (input.entryMethod)
-    rows.push({ kind: "left", text: `Entry: ${input.entryMethod}` });
-  if (input.authCode)
-    rows.push({ kind: "left", text: `Auth: ${input.authCode}` });
-  if (input.processorPaymentId) {
-    for (const line of wrap(`Ref: ${input.processorPaymentId}`)) {
-      rows.push({ kind: "left", text: line });
+    .join("  ");
+  if (card) rows.push({ kind: "left", text: card, size: SMALL });
+  // The TRANSACTION's time, restored. Minimising took it out on the grounds
+  // that the service window already dated the receipt — but that dates the
+  // BOOKING. A receipt is a record of a payment, and when the payment happened
+  // is one of the things a card-brand receipt is expected to carry.
+  const trace = [
+    input.printedAt,
+    input.authCode ? `Auth ${input.authCode}` : null,
+    input.processorPaymentId ? `Ref ${input.processorPaymentId}` : null,
+  ]
+    .filter(Boolean)
+    .join("  ");
+  if (trace) {
+    for (const line of wrap(trace, 44)) {
+      rows.push({ kind: "left", text: line, size: TINY });
     }
   }
 
-  rows.push({ kind: "gap", height: 12 });
-  rows.push({ kind: "centre", text: "Thank you" });
+  rows.push({ kind: "gap", height: 14 });
+  rows.push({ kind: "centre", text: "Thank you", size: SMALL });
   return rows;
 }
 
@@ -244,7 +302,7 @@ export function buildReceiptSvg(
       );
     } else if (row.kind === "left") {
       parts.push(
-        `<text x="${PADDING}" y="${y}" font-family="${FAMILY}" font-size="${size}" fill="#000">${escapeXml(row.text)}</text>`,
+        `<text x="${PADDING}" y="${y}" font-family="${FAMILY}" font-size="${size}"${row.bold ? ' font-weight="bold"' : ""} fill="#000">${escapeXml(row.text)}</text>`,
       );
     } else {
       // THE POINT OF THIS FILE. The amount is anchored to the right edge, so
@@ -252,7 +310,7 @@ export function buildReceiptSvg(
       const room = COLS - row.amount.length - 1;
       const label =
         row.label.length > room
-          ? `${row.label.slice(0, room - 1)}…`
+          ? `${row.label.slice(0, room - 2)}..`
           : row.label;
       const weight = row.bold ? ' font-weight="bold"' : "";
       parts.push(
@@ -278,20 +336,71 @@ export function buildReceiptSvg(
  *   produces a page that is technically valid and entirely blank, and handing
  *   somebody that is worse than a ragged text receipt.
  */
+/**
+ * Are the glyphs real, or is every one of them the missing-glyph box?
+ *
+ * ── WHY INK COVERAGE WAS THE WRONG TEST ───────────────────────────────────
+ *
+ * The first guard assumed a missing font renders BLANK, and fell back to text
+ * printing under 1% ink. It does not. librsvg draws a hollow rectangle for
+ * every character it cannot find, which is plenty of ink — so the guard passed
+ * and a Clover Flex printed a receipt of empty boxes.
+ *
+ * The property that actually distinguishes them: with a real font "iiii" and
+ * "WWWW" produce different pixels; with no font both are four identical boxes.
+ * So render one of each and compare. Cheap, and it cannot be fooled by a font
+ * that merely looks wrong.
+ */
+async function glyphsRender(sharp: typeof import("sharp")): Promise<boolean> {
+  const probe = (text: string) =>
+    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="30"><rect width="120" height="30" fill="#fff"/><text x="2" y="22" font-family="${FAMILY}" font-size="20" fill="#000">${text}</text></svg>`;
+
+  try {
+    const [a, b] = await Promise.all([
+      sharp(Buffer.from(probe("iiii")))
+        .greyscale()
+        .raw()
+        .toBuffer(),
+      sharp(Buffer.from(probe("WWWW")))
+        .greyscale()
+        .raw()
+        .toBuffer(),
+    ]);
+    if (a.length !== b.length) return true;
+    return !a.equals(b);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Render the receipt to a black-and-white PNG the device can print.
+ *
+ * @returns base64 PNG, or null when it could not be rendered legibly — the
+ *   caller falls back to text printing. Both failure modes are covered: a page
+ *   with no ink, and a page of missing-glyph boxes.
+ */
 export async function renderReceiptPng(
   input: ReceiptInput,
   logo?: { dataUri: string; width: number; height: number },
 ): Promise<{ image: string; ink: number } | null> {
   try {
-    const { svg } = buildReceiptSvg(input, logo);
-    // Imported here rather than at module scope: sharp is a native binary and
-    // this route must not fail to load on a runtime where it is unavailable.
+    // Before sharp is loaded, so fontconfig reads it on first use.
+    applyBundledFonts();
     const { default: sharp } = await import("sharp");
 
+    if (!(await glyphsRender(sharp))) {
+      console.warn(
+        "[clover-print] no usable font — every glyph would print as a box",
+      );
+      return null;
+    }
+
+    const { svg } = buildReceiptSvg(input, logo);
     const png = await sharp(Buffer.from(svg))
       .flatten({ background: "#ffffff" })
       .greyscale()
-      // One ink, no greys — the head fires a dot or it does not. High, because
+      // One ink, no greys - the head fires a dot or it does not. High, because
       // anti-aliased text is mostly mid-grey at the edges and a low threshold
       // eats the strokes.
       .threshold(200)
@@ -301,11 +410,10 @@ export async function renderReceiptPng(
     const raw = await sharp(png).greyscale().raw().toBuffer();
     let dark = 0;
     for (const value of raw) if (value < 128) dark += 1;
+    const ink = dark / Math.max(1, raw.length);
+    if (ink < 0.005) return null;
 
-    return {
-      image: png.toString("base64"),
-      ink: dark / Math.max(1, raw.length),
-    };
+    return { image: png.toString("base64"), ink };
   } catch (error) {
     console.warn("[clover-print] receipt image failed:", error);
     return null;

@@ -12,6 +12,16 @@ import type { NextConfig } from "next";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  // ── THE RECEIPT RENDERER NEEDS ITS FONT IN THE BUNDLE ──────────────────
+  //
+  // Vercel's serverless runtime ships no system fonts, so librsvg rendered
+  // every glyph on the thermal receipt as a missing-glyph box. Next only traces
+  // files it can see being imported, and a .ttf read through fontconfig is
+  // invisible to that analysis — so it is named here explicitly or it simply
+  // is not there at runtime.
+  outputFileTracingIncludes: {
+    "/api/payments/clover/**": ["./src/lib/clover/fonts/**"],
+  },
   reactCompiler: true,
 
   // ── RETIRED PORTALS ───────────────────────────────────────────────────────
