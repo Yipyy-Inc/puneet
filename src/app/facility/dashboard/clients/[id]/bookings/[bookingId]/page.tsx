@@ -40,7 +40,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
 import { getIncidentCareCharges } from "@/lib/incidents/incident-billing";
 import { getIncidentsForBooking, lockInStayCare } from "@/data/incidents";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { estimates } from "@/data/estimates";
 import { clientQueries } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,9 +51,14 @@ import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-car
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InvoicePanel } from "@/components/bookings/InvoicePanel";
 import {
+  applyFeedingLog,
+  applyMedicationLog,
+  careLogStamp,
   feedingEntriesFromSchedule,
   medicationEntriesFromItems,
+  medicationTaskKey,
 } from "@/lib/bookings/care-instructions";
+import { careLogKeys, careLogQueries, logCare } from "@/lib/api/care-log";
 import { BookingNotes } from "@/components/bookings/BookingNotes";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
@@ -204,6 +209,37 @@ export default function ClientBookingDetailPage({
   const { data: allClients = [], isPending: clientPending } = useQuery(
     clientQueries.all(),
   );
+  // ── THE CARE LOG ────────────────────────────────────────────────────────
+  //
+  // What was actually done, from `care_log_entries` (20260819140000). Before
+  // that table the FEEDING and MEDICATIONS panels kept their own useState and
+  // a reload lost every meal and dose, which is why their controls were hidden
+  // in PR #145.
+  //
+  // `logDay` is fixed for the life of the mount rather than read per render:
+  // `new Date()` in a render body is what the React Compiler rules exist to
+  // stop, and a journal that silently rolled over at midnight mid-shift would
+  // file the 00:05 dose against tomorrow.
+  const queryClient = useQueryClient();
+  const { data: careLog } = useQuery({
+    ...careLogQueries.forBooking(bookingId),
+    enabled: Number.isFinite(bookingId),
+  });
+  const [logDay] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const recordCare = useMutation({
+    mutationFn: logCare,
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: careLogKeys.forBooking(bookingId),
+      }),
+    onError: (error: unknown) =>
+      toast.error("Not recorded", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      }),
+  });
+
   const takePayment = useTakeBookingPayment();
   const cancelBooking = useCancelBooking();
   const refundBooking = useRefundBooking();
@@ -1235,15 +1271,27 @@ export default function ClientBookingDetailPage({
                           still render; everything else falls through to the
                           owner's schedule, projected into the same shape. */}
                       <FeedingSection
-                        entries={
+                        key={`feed-${careLogStamp(careLog)}`}
+                        entries={applyFeedingLog(
                           booking.feedingInstructions?.length
                             ? booking.feedingInstructions
                             : feedingEntriesFromSchedule(
                                 booking.feedingSchedule,
-                              )
-                        }
+                              ),
+                          careLog,
+                          logDay,
+                        )}
                         required={feedingMode === "required"}
-                        canLog={false}
+                        onLog={(entryId, outcome) =>
+                          recordCare.mutate({
+                            bookingRef: booking.id,
+                            petRef: pet?.id ?? null,
+                            taskKey: entryId,
+                            taskType: "feeding",
+                            outcome,
+                            occurredOn: logDay,
+                          })
+                        }
                       />
                     </div>
                   )}
@@ -1253,14 +1301,33 @@ export default function ClientBookingDetailPage({
                       className="rounded-xl transition-shadow"
                     >
                       <MedicationSection
-                        entries={
+                        key={`med-${careLogStamp(careLog)}`}
+                        entries={applyMedicationLog(
                           booking.medicationInstructions?.length
                             ? booking.medicationInstructions
-                            : medicationEntriesFromItems(booking.medications)
-                        }
+                            : medicationEntriesFromItems(
+                                booking.medications,
+                                logDay,
+                              ),
+                          careLog,
+                          logDay,
+                        )}
                         required={medicationMode === "required"}
                         bookingId={booking.id}
-                        canLog={false}
+                        onLog={(medicationId, scheduledAt, outcome, notes) =>
+                          recordCare.mutate({
+                            bookingRef: booking.id,
+                            petRef: pet?.id ?? null,
+                            taskKey: medicationTaskKey(
+                              medicationId,
+                              scheduledAt,
+                            ),
+                            taskType: "medication",
+                            outcome,
+                            notes,
+                            occurredOn: logDay,
+                          })
+                        }
                       />
                     </div>
                   )}

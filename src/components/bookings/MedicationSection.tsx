@@ -56,9 +56,21 @@ interface MedicationSectionProps {
    * list — so the controls are hidden rather than left to lose a dose record,
    * which is the worst thing on this page to lose.
    *
-   * Recorded in docs/quality/debt-map.md: administering a dose is not built.
+   * TRUE again on the booking page as of the care-log table
+   * (20260819140000) — but only when `onLog` is supplied, because that is what
+   * makes it persist.
    */
   canLog?: boolean;
+  /**
+   * Record a dose. The parent owns the write and the refetch; this panel says
+   * which medication, which scheduled time, and how it went.
+   */
+  onLog?: (
+    medicationId: string,
+    scheduledAt: string,
+    outcome: string,
+    notes?: string,
+  ) => void;
 }
 
 // Map an incident-sourced medication onto the booking medication shape so the
@@ -135,6 +147,7 @@ export function MedicationSection({
   required,
   bookingId,
   canLog = true,
+  onLog,
 }: MedicationSectionProps) {
   const [meds, setMeds] = useState<MedicationEntry[]>(() => [
     ...entries,
@@ -174,7 +187,11 @@ export function MedicationSection({
           : med,
       ),
     );
-    toast.success("Medication administered");
+    // Optimistic, then authoritative — the parent writes it and refetches.
+    // This used to be the only thing that happened, so a reload lost the dose.
+    const med = meds.find((m) => m.id === medId);
+    const dose = med?.doses[doseIdx];
+    if (med && dose) onLog?.(med.id, dose.scheduledAt, "given", notes);
   };
 
   const handleAddNote = (medId: string, doseIdx: number) => {
@@ -192,7 +209,9 @@ export function MedicationSection({
     );
     setDoseNote("");
     setNotePopover(null);
-    toast.success("Note added");
+    // A note on a dose that has not been given yet has nowhere to live —
+    // `care_log_entries` records an EXECUTION — so this stays local. Giving
+    // the dose sends the note along with it, which is the path that persists.
   };
 
   const handleAdd = () => {

@@ -2199,11 +2199,49 @@ yet done — rather than renaming either.
 
 **And the panels stopped offering actions that persist nothing.** `handleLog`,
 `handleAdd`, `handleAdminister` and `handleAddNote` set component state and
-toast; a reload loses all of it. That was invisible while the panels were empty
+toast; a reload lost all of it. That was invisible while the panels were empty
 and became reachable the moment they started rendering real instructions, so
-`canLog={false}` hides Add Meal, Add Medication, Log meal and Give. **Logging a
-feeding and administering a dose are not built** — the highest-value thing to
-build next on this page, because staff will expect to tick these off.
+`canLog={false}` hid Add Meal, Add Medication, Log meal and Give.
+
+### 🟢 Logging a feeding and giving a dose are real (was 🔴 — the follow-on)
+
+`public.care_log_entries` (20260819140000). A row is one execution of one
+scheduled task: booking, pet, `task_key`, `task_type`, day, clock time, outcome,
+notes, and who recorded it — the name snapshotted, because a journal that
+renames itself when somebody leaves the business is not a journal.
+
+**The permission was the interesting part.** The first draft gated writes on
+`edit_pet_records`, which reads sensibly and is wrong: measured against the
+presets, that key belongs to owner, admin, manager and supervisor — so the
+caretaker and the boarding attendant, the people who actually put the bowl down,
+could not record it. The right keys already existed and did not need inventing:
+
+```
+log_feedings / log_medications / log_potty_breaks
+  admin, boarding_attendant, caretaker, daycare_attendant, manager, owner, supervisor
+```
+
+`private.care_log_permission_for(task_type)` maps a row to the key its own type
+names, and the insert policy asks for that. Proved on production: a caretaker
+writes a feeding and a medication; a groomer and a receptionist are refused,
+while both can still READ. `supabase/tests/care-log.sql` keeps it that way.
+
+**One row per (booking, task, day)**, which is what `careLogStore.log()` merely
+intended — correcting a mis-tapped "refused" edits the record instead of
+appending a second meal. Enforced by `care_log_one_per_task_per_day`, and the
+route upserts on it. **No DELETE policy**: a wrong entry is corrected, and the
+correction is the record.
+
+**Still the in-memory store:** the Guest Journal and Daily Care read
+`src/data/care-log-store.ts` — `let executions` at module scope, seeded from
+fixtures. They carry photos, health observations and generated task schedules
+that `care_log_entries` does not model yet, so both exist. That is the next
+thing to converge, and when it does the store goes.
+
+**Not built, and deliberately:** adding an unplanned meal or a note on a dose
+that has not been given. `care_log_entries` records the EXECUTION of a scheduled
+task, so neither has a home; the note travels with the dose when it is given,
+which is the path that persists.
 
 **The sharper measurement**, taken afterwards: exactly **2** of 257 bookings
 carry `feedingInstructions` and **2** carry `medicationInstructions` — the two
