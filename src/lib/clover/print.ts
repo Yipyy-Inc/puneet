@@ -323,3 +323,156 @@ export async function readTipOnDevice(
     return null;
   }
 }
+
+// ============================================================================
+// Letting the CUSTOMER choose how they get their receipt.
+//
+// ── WHAT THIS RESTORES ────────────────────────────────────────────────────
+//
+// Reported from the running app, with photographs of the device: "it does
+// usually show options — if I click sale, then make the payment, it shows me
+// the options". Correct. Clover's own Sale app ends with Print receipt / Email
+// Receipt / Text Receipt, and a semi-integrated sale that just stops feels
+// broken beside it.
+//
+// It is NOT true, as first concluded here, that REST Pay Display cannot do
+// this. The guides index does not list it; the API reference does:
+//
+//   POST /connect/v1/device/receipt-options
+//        { deliveryOptions: [{ method }], message? }
+//     -> the customer's selection
+//
+// It needs no paymentId — it asks the question and hands back the answer. WE
+// then deliver, which is the useful part: an EMAIL choice returns the address
+// the customer typed on the device, so the receipt they get can be ours.
+// ============================================================================
+
+export type ReceiptMethod = "NO_RECEIPT" | "PRINT" | "EMAIL" | "SMS";
+
+export interface ReceiptChoice {
+  method: ReceiptMethod;
+  /** The email address or phone number the customer entered, when they did. */
+  additionalData?: string;
+}
+
+/**
+ * Ask the customer how they want their receipt.
+ *
+ * @returns their choice, or null if they were not asked — a device that could
+ *   not be reached, or a timeout. Null is not "no receipt": the caller should
+ *   fall back to printing, because a customer who was never asked has not
+ *   declined.
+ */
+export async function receiptOptionsOnDevice(
+  facilityId: string,
+  deviceSerial: string,
+  methods: ReceiptMethod[] = ["PRINT", "EMAIL", "SMS", "NO_RECEIPT"],
+): Promise<ReceiptChoice | null> {
+  const active = await validAccessToken(facilityId);
+  if (!active) return null;
+
+  const config = cloverConfig(active.environment);
+  if (!config) return null;
+
+  try {
+    const response = await fetch(
+      new URL("/connect/v1/device/receipt-options", config.apiOrigin),
+      {
+        method: "POST",
+        headers: headers(active.accessToken, active.merchantId, deviceSerial),
+        body: JSON.stringify({
+          deliveryOptions: methods.map((m) => ({ method: m })),
+        }),
+        // A person choosing, and possibly typing an email address on a small
+        // keyboard. The card is already charged, so nothing is held up by this.
+        signal: AbortSignal.timeout(120_000),
+      },
+    );
+    if (!response.ok) {
+      console.warn(
+        `[clover-print] receipt-options -> ${response.status} ${await response
+          .text()
+          .catch(() => "")}`.slice(0, 300),
+      );
+      return null;
+    }
+    const body = (await response.json().catch(() => null)) as {
+      deliveryOptions?: ReceiptChoice[];
+      response?: ReceiptChoice[] | ReceiptChoice;
+    } | null;
+
+    // The reference calls the result a ReceiptOptionsResponse carrying an
+    // ARRAY. Read defensively rather than assume a shape: a wrong guess here
+    // silently becomes "the customer chose nothing".
+    const raw = body?.deliveryOptions ?? body?.response;
+    const choice = Array.isArray(raw) ? raw[0] : raw;
+    if (!choice?.method) return null;
+    return { method: choice.method, additionalData: choice.additionalData };
+  } catch (error) {
+    console.warn("[clover-print] receipt-options failed:", error);
+    return null;
+  }
+}
+
+/**
+ * Have CLOVER deliver its own receipt for a payment.
+ *
+ * Distinct from `printTextOnDevice`, which prints ours. Clover's is the
+ * card-brand-compliant one — the docs are explicit that compliance is the
+ * integrator's problem for custom receipts: "You are responsible to ensure the
+ * receipts printed by your app comply with all card brand" rules. Ours carries
+ * the itemised breakdown the facility asked for and Clover's carries the
+ * payment furniture, so a PRINT choice sends both.
+ *
+ * @param processorPaymentId CLOVER's payment id, not ours.
+ */
+export async function deliverStandardReceipt(
+  facilityId: string,
+  deviceSerial: string,
+  processorPaymentId: string,
+  method: Exclude<ReceiptMethod, "NO_RECEIPT">,
+  additionalData?: string,
+): Promise<{ delivered: boolean; detail?: string }> {
+  const active = await validAccessToken(facilityId);
+  if (!active) return { delivered: false, detail: "no clover token" };
+
+  const config = cloverConfig(active.environment);
+  if (!config) return { delivered: false, detail: "clover is not configured" };
+
+  try {
+    const response = await fetch(
+      new URL(
+        `/connect/v1/payments/${encodeURIComponent(processorPaymentId)}/receipt`,
+        config.apiOrigin,
+      ),
+      {
+        method: "POST",
+        headers: headers(active.accessToken, active.merchantId, deviceSerial),
+        body: JSON.stringify({
+          deliveryOption: {
+            method,
+            ...(additionalData ? { additionalData } : {}),
+          },
+        }),
+        signal: AbortSignal.timeout(20_000),
+      },
+    );
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.warn(
+        `[clover-print] receipt ${method} -> ${response.status} ${detail}`.slice(
+          0,
+          300,
+        ),
+      );
+      return { delivered: false, detail: `${response.status}` };
+    }
+    return { delivered: true };
+  } catch (error) {
+    console.warn(`[clover-print] receipt ${method} failed:`, error);
+    return {
+      delivered: false,
+      detail: error instanceof Error ? error.message : "network",
+    };
+  }
+}
