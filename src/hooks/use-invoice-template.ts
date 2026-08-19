@@ -1,5 +1,8 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+
+import type { CustomerFacility } from "@/app/api/customer/facility/route";
 import { loadInvoiceTemplate } from "@/data/invoice-template";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
@@ -42,6 +45,46 @@ import type { InvoiceTemplate } from "@/types/invoice-template";
 // cannot disagree with the number on the thermal receipt.
 // ============================================================================
 
+/**
+ * Put a facility's identity into a stored template.
+ *
+ * Shared by the facility-side and customer-side hooks below so the invoice a
+ * facility prints and the one its customer downloads cannot describe two
+ * different businesses.
+ */
+function withIdentity(
+  stored: InvoiceTemplate,
+  identity: {
+    name: string;
+    logoUrl: string | null;
+    street: string | null;
+    cityLine: string | null;
+    phone: string | null;
+    email: string | null;
+    website: string | null;
+    taxRegistrations: { id: string; label: string; value: string }[];
+  } | null,
+): InvoiceTemplate {
+  if (!identity) return stored;
+  return {
+    ...stored,
+    // Falling back where the facility has not filled a field in: an empty
+    // header is worse than a stale one, and a facility that has customised its
+    // template should not lose it on the day this shipped.
+    facilityName: identity.name || stored.facilityName,
+    logoUrl: identity.logoUrl || stored.logoUrl,
+    addressLine1: identity.street || stored.addressLine1,
+    addressLine2: identity.cityLine || stored.addressLine2,
+    phone: identity.phone || stored.phone,
+    email: identity.email || stored.email,
+    website: identity.website || stored.website,
+    // NOT falling back here. The fixture's "123456789 RT0001" is a fabricated
+    // registration number; showing somebody else's on a tax document is worse
+    // than showing none, so a facility with none configured gets none.
+    taxRegistrations: identity.taxRegistrations,
+  };
+}
+
 export function useInvoiceTemplate(): InvoiceTemplate {
   const { profile } = useFacilityProfile();
   const settings = useFacilitySettings();
@@ -50,33 +93,54 @@ export function useInvoiceTemplate(): InvoiceTemplate {
   const stored = loadInvoiceTemplate();
   const address = profile.address;
 
-  const registrations = tax.taxes
-    .filter((entry) => entry.enabled && entry.registrationNumber.trim())
-    .map((entry) => ({
-      id: entry.id,
-      label: `${entry.name} Number`,
-      value: entry.registrationNumber,
-    }));
-
-  return {
-    ...stored,
-    // Falling back to the stored value where the facility has not filled a
-    // field in: an empty header is worse than a stale one, and a facility that
-    // has customised its template should not lose it on the day this shipped.
-    facilityName: profile.businessName || stored.facilityName,
-    logoUrl: profile.logo || stored.logoUrl,
-    addressLine1: address?.street || stored.addressLine1,
-    addressLine2:
+  return withIdentity(stored, {
+    name: profile.businessName,
+    logoUrl: profile.logo || null,
+    street: address?.street || null,
+    cityLine:
       [address?.city, address?.state, address?.zipCode]
         .map((part) => part?.trim())
         .filter(Boolean)
-        .join(", ") || stored.addressLine2,
-    phone: profile.phone || stored.phone,
-    email: profile.email || stored.email,
-    website: profile.website || stored.website,
-    // NOT falling back here. The fixture's "123456789 RT0001" is a fabricated
-    // registration number; showing somebody else's on a tax document is worse
-    // than showing none, so a facility with no numbers configured gets none.
-    taxRegistrations: registrations,
-  };
+        .join(", ") || null,
+    phone: profile.phone || null,
+    email: profile.email || null,
+    website: profile.website || null,
+    taxRegistrations: tax.taxes
+      .filter((entry) => entry.enabled && entry.registrationNumber.trim())
+      .map((entry) => ({
+        id: entry.id,
+        label: `${entry.name} Number`,
+        value: entry.registrationNumber,
+      })),
+  });
+}
+
+// ============================================================================
+// The same document, from the CUSTOMER's side.
+//
+// `useInvoiceTemplate()` above cannot be used here. It reads the facility
+// through the caller's MEMBERSHIP, and a customer has none — `getFacilityContext`
+// falls back to the demo facility for such a caller, so a pet owner's invoice
+// would have been headed with a different business's name and tax registration
+// number. Confidently, which is the dangerous kind.
+//
+// /api/customer/facility resolves it through the client row instead, and RLS
+// refuses that row to anyone else.
+// ============================================================================
+
+export function useCustomerInvoiceTemplate(): InvoiceTemplate {
+  const { data } = useQuery({
+    queryKey: ["customer", "facility"],
+    queryFn: async (): Promise<CustomerFacility> => {
+      const response = await fetch("/api/customer/facility");
+      if (!response.ok) throw new Error("Could not load your facility.");
+      return (await response.json()) as CustomerFacility;
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  // `data` is undefined while it loads, and withIdentity returns the stored
+  // template untouched for null. The fixture header shows for a moment rather
+  // than an empty one — the same trade the facility side makes.
+  return withIdentity(loadInvoiceTemplate(), data ?? null);
 }
