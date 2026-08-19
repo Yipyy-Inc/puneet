@@ -65,6 +65,8 @@ import {
 import { careLogKeys, careLogQueries, logCare } from "@/lib/api/care-log";
 import { BookingNotes } from "@/components/bookings/BookingNotes";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
+import { useUpdateBookingStatus } from "@/lib/api/booking-status";
+import type { Booking } from "@/types/booking";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
@@ -409,15 +411,42 @@ export default function ClientBookingDetailPage({
     };
   };
 
-  const autoTransition = (action: AutoTransitionAction) => {
+  /**
+   * Apply the facility's configured transition for an action.
+   *
+   * This used to resolve the target status from the rules and then only
+   * ANNOUNCE it — "Status auto-updated to Checked In (default rule)" — with no
+   * request behind the sentence. It writes now, and reports a refusal.
+   *
+   * Returns the new status so a caller can await the write before doing
+   * anything that depends on it.
+   */
+  const autoTransition = async (action: AutoTransitionAction) => {
     const { target, sourceLabel } = resolveAutoTransition(action);
-    if (!target) return;
+    if (!target || !booking) return null;
+    // Already there: the rules can name the status a booking is in, and a
+    // no-op PATCH would announce a change that did not happen.
+    if (target === booking.status) return target;
 
     const label = target
       .replace(/_/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase());
 
-    toast.success(`Status auto-updated to ${label} (${sourceLabel})`);
+    try {
+      await updateStatus.mutateAsync({
+        id: booking.id,
+        status: target as Booking["status"],
+      });
+      toast.success(`Status updated to ${label} (${sourceLabel})`);
+      return target;
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : `${label} could not be applied.`,
+      );
+      return null;
+    }
   };
 
   const [editOpen, setEditOpen] = useState(false);
@@ -536,6 +565,9 @@ export default function ClientBookingDetailPage({
   }, [isBoarding, booking, pet, client, nights]);
 
   const bookingRef = formatBookingRef(booking?.id ?? bookingId);
+  // Above the early returns below — a hook after a conditional return is
+  // called in a different order on the render where the booking is loading.
+  const updateStatus = useUpdateBookingStatus();
   // ── WHAT GOES ON A PRINTED RECEIPT ──────────────────────────────────────
   //
   // The same rows the Payment Summary panel shows, so the paper a customer
@@ -591,6 +623,30 @@ export default function ClientBookingDetailPage({
   if (assignedStaffId && !isBookingAssignedTo(booking, assignedStaffId)) {
     return <AccessRestricted />;
   }
+
+  /**
+   * Check the booking in.
+   *
+   * Prefers the facility's configured rule so a facility that checks in to
+   * something other than `checked_in` is honoured, and falls back to the system
+   * status when they have configured none — the old code called
+   * `autoTransition` alone, which did nothing at all when no rule matched.
+   */
+  const checkIn = async () => {
+    const moved = await autoTransition("onCheckIn");
+    if (moved) return;
+    if (booking.status === "checked_in") return;
+    try {
+      await updateStatus.mutateAsync({ id: booking.id, status: "checked_in" });
+      toast.success("Checked in — service in progress");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "That booking could not be checked in.",
+      );
+    }
+  };
 
   const invoice = booking.invoice;
   const addedSubtotal = booking.extrasTotal ?? 0;
@@ -789,7 +845,7 @@ export default function ClientBookingDetailPage({
                 className="gap-1.5"
                 onClick={() => {
                   toast.success("Booking confirmed — deposit rules now apply");
-                  autoTransition("onDepositPaid");
+                  void autoTransition("onDepositPaid");
                 }}
               >
                 <CheckCircle2 className="size-3.5" />
@@ -891,12 +947,7 @@ export default function ClientBookingDetailPage({
                   <Button
                     size="sm"
                     className="gap-1.5"
-                    onClick={() => {
-                      toast.success(
-                        "Checked in — invoice status changed to Open",
-                      );
-                      autoTransition("onCheckIn");
-                    }}
+                    onClick={() => void checkIn()}
                   >
                     Continue to Check In
                   </Button>
@@ -928,10 +979,24 @@ export default function ClientBookingDetailPage({
                 </h1>
                 <BookingStatusDropdown
                   currentStatus={booking.status}
-                  onStatusChange={(newStatus) => {
-                    toast.success(
-                      `${bookingRef} status changed to ${newStatus.replace(/_/g, " ")}`,
-                    );
+                  // Was a toast and nothing else: the dropdown reported a
+                  // change the row never made, and a reload put it back.
+                  onStatusChange={async (newStatus) => {
+                    try {
+                      await updateStatus.mutateAsync({
+                        id: booking.id,
+                        status: newStatus as Booking["status"],
+                      });
+                      toast.success(
+                        `${bookingRef} is now ${newStatus.replace(/_/g, " ")}`,
+                      );
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "That status could not be saved.",
+                      );
+                    }
                   }}
                 />
                 <TagsButton entityType="booking" entityId={booking.id} />
@@ -994,10 +1059,9 @@ export default function ClientBookingDetailPage({
             isCancelled={isCancelled}
             isEstimateSent={isEstimateSent}
             multiLocation={locations.length > 1}
-            onCheckIn={() => {
-              toast.success("Booking checked in — service in progress");
-              autoTransition("onCheckIn");
-            }}
+            // The toast used to fire FIRST and unconditionally, so a refusal
+            // still read as a success. The write decides now.
+            onCheckIn={() => void checkIn()}
             onProceedToCheckout={() => {
               if (careStatus.pending.length > 0) {
                 setCareGateOpen(true);
@@ -1012,8 +1076,20 @@ export default function ClientBookingDetailPage({
               }
               openCheckout();
             }}
-            onConfirmBooking={() => {
-              toast.success("Booking confirmed");
+            onConfirmBooking={async () => {
+              try {
+                await updateStatus.mutateAsync({
+                  id: booking.id,
+                  status: "confirmed",
+                });
+                toast.success("Booking confirmed");
+              } catch (error) {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "That booking could not be confirmed.",
+                );
+              }
             }}
             onEdit={() => setEditOpen(true)}
             onAddItem={() => setRetailOpen(true)}
@@ -1092,18 +1168,26 @@ export default function ClientBookingDetailPage({
             onTransfer={() => setTransferOpen(true)}
             onMarkAsReady={() =>
               guardCheckout(() => {
-                toast.success("Service marked as ready — proceed to checkout");
-                autoTransition("onCheckIn");
+                void (async () => {
+                  const moved = await autoTransition("onCheckIn");
+                  if (moved) {
+                    toast.success("Marked as ready — proceed to checkout");
+                  }
+                })();
               })
             }
             onEarlyCheckout={() =>
               guardCheckout(() => setEarlyCheckoutOpen(true))
             }
             onFinishWithoutPayment={() => {
-              toast.success(
-                "Appointment marked as finished — invoice stays open for later billing",
-              );
-              autoTransition("onCheckout");
+              void (async () => {
+                const moved = await autoTransition("onCheckout");
+                if (moved) {
+                  toast.success(
+                    "Finished — the invoice stays open for later billing",
+                  );
+                }
+              })();
             }}
             onSplitTips={() => setTipSplitOpen(true)}
             onIssueRefund={() => setRefundOpen(true)}
