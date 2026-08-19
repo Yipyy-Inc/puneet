@@ -2205,10 +2205,57 @@ and became reachable the moment they started rendering real instructions, so
 feeding and administering a dose are not built** — the highest-value thing to
 build next on this page, because staff will expect to tick these off.
 
-Still fixture-backed on the same page, and visibly wrong next to real data: the
-**Guest Journal** panel renders a different pet's stay (dates, kennel and owner
-from `src/data/boarding.ts`), and `boardingGuestForPrint` falls back to a
-synthesised guest for every real booking.
+**The sharper measurement**, taken afterwards: exactly **2** of 257 bookings
+carry `feedingInstructions` and **2** carry `medicationInstructions` — the two
+migrated fixture rows, refs 1 and 2. Every other booking, seeded or created, is
+sparse because nobody has entered anything. So the "rich" page anybody remembers
+is those two.
+
+### 🟢 The Guest Journal showed somebody else's stay (was 🔴 — the worst of these)
+
+Same page, found while fixing the care panels. `ReservationJournalPanel`
+resolved its guest two ways, and both were wrong for a real booking:
+
+```ts
+let matches = boardingGuests.filter((g) => g.bookingId === refId);
+if (matches.length === 0 && petIds?.length) {
+  matches = boardingGuests.filter((g) => petIds.includes(g.petId)); // any stay
+}
+```
+
+**The pet fallback** matched any stay in the fixture involving that animal. A
+December booking for Alice Johnson rendered `bg-001` — 22–29 April, owner "John
+Smith", Kennel 12 — with eight days of care entries: meals marked "Ate all",
+"Medications Given 08:05 AM". None of it happened for that animal, on the page
+staff read to find out what did. A pet has many stays; a journal belongs to one,
+so matching by pet can only ever be a guess.
+
+**The id spaces also overlap.** A numeric ref was turned into `bk-001`, and the
+fixture's ids run `bk-001`..`bk-024` while the seeded bookings start at ref 1 —
+so refs 1–24 collided. And the rows they name disagree:
+
+```
+booking ref 1   2–6 July 2026      Alice Johnson
+guest  bg-001   22–29 April 2026   "John Smith", Kennel 12, 7 nights
+```
+
+The fixture guest was never kept in step with the booking it claims, so even the
+"intended" match was wrong. A numeric ref now resolves to no journal; a STRING
+id still resolves, because that is what `DailyCareView` passes — a guest's own
+`bookingId`, read from the same fixture, where the match is correct by
+construction.
+
+The panel already had the right answer for a miss; the fallback was what stopped
+anyone seeing it. Its copy promised the journal "will populate automatically"
+once booking details are present, which is not built either, so it now says what
+is true.
+
+Verified on the running app: booking 1 shows no "John Smith", no "Kennel 12", no
+"Apr 22", no borrowed phone number, and Daily Care still renders its guests.
+
+Also still fixture-shaped, and harmless: `boardingGuestForPrint` synthesises a
+guest from the REAL booking and pet when no fixture row matches, so the printed
+kennel card carries the right animal.
 
 ### 🟢 Four e2e bookings were sitting in the live bookings list (was invisible)
 
