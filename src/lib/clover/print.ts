@@ -487,3 +487,129 @@ export async function deliverStandardReceipt(
     };
   }
 }
+
+// ============================================================================
+// The logo, on the thermal roll.
+//
+// ── WHY THIS IS A SEPARATE PRINT ──────────────────────────────────────────
+//
+// `/device/print/text` prints text. There is no field for an image, so a logo
+// on a printed receipt is a second call to a second endpoint:
+//
+//   POST /connect/v1/device/print/image  { printDeviceId, image: <base64 png> }
+//
+// Sent BEFORE the text so the two come off the roll in the right order.
+//
+// ── AND WHY IT IS CONVERTED FIRST ─────────────────────────────────────────
+//
+// Clover's requirement is a base64 PNG, "black and white, no transparency". A
+// receipt printer has one ink and no greys: it fires a dot or it does not. Hand
+// it a colour or alpha PNG and the result is a black rectangle, or mud.
+//
+// So the image is flattened onto white, greyscaled, thresholded to pure black
+// and white, and resized to the head's width. 384px is the safe figure — it is
+// the full width of a 58mm head and half of an 80mm one, so it prints correctly
+// on both rather than overflowing on the narrower Flex.
+// ============================================================================
+
+/** The printable width in dots. See the banner: safe on 58mm and 80mm alike. */
+const LOGO_WIDTH_PX = 384;
+
+/**
+ * Fetch a logo and turn it into something a receipt printer can render.
+ *
+ * @returns base64 PNG, or null if it could not be fetched or converted. Null is
+ *   never an error to the caller: a receipt without a logo is still a receipt.
+ */
+async function logoAsPrintablePng(logoUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch(logoUrl, {
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) return null;
+    const source = Buffer.from(await response.arrayBuffer());
+
+    // Imported here rather than at module scope: sharp is a native binary, and
+    // this route must not fail to load on a runtime where it is unavailable.
+    const { default: sharp } = await import("sharp");
+    const png = await sharp(source)
+      .resize({
+        width: LOGO_WIDTH_PX,
+        // Never enlarge: a 64px favicon blown up to 384 prints as a smear.
+        withoutEnlargement: true,
+        fit: "inside",
+      })
+      // Transparency becomes WHITE, not black. Most logos are dark art on a
+      // transparent ground, and flattening the other way prints a solid block.
+      .flatten({ background: "#ffffff" })
+      .greyscale()
+      // One ink, no greys. 190 rather than 128 because logos are typically
+      // dark-on-light and a middling threshold eats thin strokes.
+      .threshold(190)
+      .png({ colours: 2 })
+      .toBuffer();
+
+    return png.toString("base64");
+  } catch (error) {
+    console.warn("[clover-print] logo not printable:", error);
+    return null;
+  }
+}
+
+/**
+ * Print the facility's logo on the device.
+ *
+ * Cosmetic, like everything else in this file: returns rather than throws, and
+ * the caller prints the text whether this worked or not.
+ */
+export async function printLogoOnDevice(
+  facilityId: string,
+  deviceSerial: string,
+  logoUrl: string,
+  printDeviceId?: string,
+): Promise<{ printed: boolean; detail?: string }> {
+  const image = await logoAsPrintablePng(logoUrl);
+  if (!image) return { printed: false, detail: "logo could not be converted" };
+
+  const active = await validAccessToken(facilityId);
+  if (!active) return { printed: false, detail: "no clover token" };
+
+  const config = cloverConfig(active.environment);
+  if (!config) return { printed: false, detail: "clover is not configured" };
+
+  let printerId = printDeviceId;
+  if (!printerId) {
+    const printers = await devicePrinters(facilityId, deviceSerial);
+    printerId = printers[0]?.id;
+  }
+  if (!printerId) return { printed: false, detail: "no printer on the device" };
+
+  try {
+    const response = await fetch(
+      new URL("/connect/v1/device/print/image", config.apiOrigin),
+      {
+        method: "POST",
+        headers: headers(active.accessToken, active.merchantId, deviceSerial),
+        body: JSON.stringify({ printDeviceId: printerId, image }),
+        signal: AbortSignal.timeout(20_000),
+      },
+    );
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.warn(
+        `[clover-print] print image -> ${response.status} ${detail}`.slice(
+          0,
+          300,
+        ),
+      );
+      return { printed: false, detail: `${response.status}` };
+    }
+    return { printed: true };
+  } catch (error) {
+    console.warn("[clover-print] print image failed:", error);
+    return {
+      printed: false,
+      detail: error instanceof Error ? error.message : "network",
+    };
+  }
+}

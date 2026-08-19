@@ -9,6 +9,7 @@ import {
   deliverStandardReceipt,
   devicePrinters,
   endTransactionScreen,
+  printLogoOnDevice,
   printTextOnDevice,
   readTipOnDevice,
   receiptOptionsOnDevice,
@@ -18,6 +19,7 @@ import {
   computeTax,
   NO_TAX,
   taxConfigSchema,
+  type ComputedTax,
   type TaxConfig,
 } from "@/lib/settings/tax";
 import {
@@ -99,7 +101,7 @@ export async function POST(request: NextRequest) {
       // the business, its address and how to reach it is the difference between
       // a record and a note. These columns exist on `facilities`
       // (20260809120000) and were simply never read here.
-      "id, ref, facility_id, client_id, amount_due, amount_paid, status, service, service_type, base_price, discount, tip_amount, start_at, end_at, facilities ( name, timezone, phone, email, website, address ), clients ( name ), booking_pets ( pets ( name ) )",
+      "id, ref, facility_id, client_id, amount_due, amount_paid, status, service, service_type, base_price, discount, tip_amount, start_at, end_at, facilities ( name, timezone, phone, email, website, address, logo_url ), clients ( name ), booking_pets ( pets ( name ) )",
     )
     .eq("ref", parsed.data.bookingRef)
     .maybeSingle();
@@ -158,13 +160,34 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── TAX IS CHARGED, NOT JUST PRINTED ────────────────────────
+  //
+  // `amount_due` is a generated column: total_cost + extras_total. There is no
+  // tax in it. So a facility that configures GST and QST and then takes a
+  // payment was charging the pre-tax figure while the receipt claimed
+  // otherwise — Subtotal $49.01, GST $2.45, QST $4.89, TOTAL $49.01, which does
+  // not add up and is the sort of thing a customer photographs.
+  //
+  // Computed HERE, before the card is presented, and added to what is charged.
+  // The same numbers then go on the receipt, so paper and ledger cannot
+  // disagree — computing tax again at print time is how the two drift apart.
+  //
+  // A `pricesIncludeTax` facility is unaffected: the tax is already inside the
+  // marked price, so nothing is added and the receipt only says how much of the
+  // total was tax.
+  const bill = await billFor(booking as unknown as BookingForReceipt, supabase);
+  const taxOnCharge = computeTax(owedCents, bill.taxConfig);
+  const chargeableCents = bill.taxConfig.pricesIncludeTax
+    ? owedCents
+    : owedCents + taxOnCharge.totalCents;
+
   // ── THE TIP, ASKED OF THE PERSON PAYING ─────────────────────────────────
   //
   // BEFORE the card is presented, because the alternative — authorise, then
   // tip-adjust — needs a pre-authorisation and Canadian merchants cannot take
-  // those. `owedCents` is what the tip is calculated on, so the device shows
-  // "Tip based on" the subtotal rather than on a figure that already includes
-  // somebody else's tip.
+  // those. The tip is calculated on the PRE-TAX amount, which is the
+  // convention here and the one that favours the customer — a gratuity on top
+  // of sales tax is not what "20%" means to the person pressing it.
   //
   // A null answer is "no tip", never an error: the customer may have declined,
   // and a counter that cannot take money because a tip screen timed out is a
@@ -186,7 +209,7 @@ export async function POST(request: NextRequest) {
     facilityId: booking.facility_id,
     bookingId: booking.id,
     clientId: booking.client_id,
-    subtotalCents: owedCents,
+    subtotalCents: chargeableCents,
     tipCents,
     deviceSerial: parsed.data.deviceSerial,
     createdBy: viewer.userId,
@@ -252,9 +275,11 @@ export async function POST(request: NextRequest) {
   const receipt =
     choice?.method === "NO_RECEIPT"
       ? null
-      : await receiptInputFor(
+      : receiptInputFor(
           booking as unknown as BookingForReceipt,
-          supabase,
+          bill,
+          taxOnCharge,
+          owedCents,
           outcome,
         );
 
@@ -269,6 +294,17 @@ export async function POST(request: NextRequest) {
 
   if (wantsPrint) {
     if (receipt) {
+      // The logo BEFORE the text, so the two come off the roll in that order.
+      // Its own endpoint and its own conversion — `/print/text` has no field
+      // for an image. A failure here is not reported to the counter: a receipt
+      // without a logo is still a receipt.
+      if (receipt.facility.logoUrl) {
+        await printLogoOnDevice(
+          booking.facility_id,
+          parsed.data.deviceSerial,
+          receipt.facility.logoUrl,
+        );
+      }
       printed = await printTextOnDevice(
         booking.facility_id,
         parsed.data.deviceSerial,
@@ -391,6 +427,7 @@ interface BookingForReceipt {
     phone: string | null;
     email: string | null;
     website: string | null;
+    logo_url: string | null;
     address: {
       street?: string;
       city?: string;
@@ -423,11 +460,30 @@ interface BookingForReceipt {
  * record of what was charged, and a caller that could name its own line items
  * could produce one that disagrees with the payment.
  */
-async function receiptInputFor(
+interface Bill {
+  lines: { label: string; amountCents: number }[];
+  discountCents: number;
+  taxConfig: TaxConfig;
+}
+
+/**
+ * What this booking is made of, and what the facility taxes.
+ *
+ * Read ONCE per request, before the card is presented, because the figures it
+ * produces decide both what is charged and what is printed. Reading them twice
+ * is how a receipt comes to disagree with a ledger.
+ *
+ * The lines are read HERE rather than passed from the client: a receipt is a
+ * record of what was charged, and a caller that could name its own line items
+ * could produce one that disagrees with the payment.
+ */
+async function billFor(
   booking: BookingForReceipt,
   supabase: Awaited<ReturnType<typeof createServerClient>>,
-  outcome: Extract<Awaited<ReturnType<typeof chargeOnTerminal>>, { ok: true }>,
-): Promise<ReceiptInput | null> {
+): Promise<Bill> {
+  const cents = (v: number | string | null | undefined) =>
+    Math.round(Number(v ?? 0) * 100);
+
   try {
     const [{ data: rows }, { data: settingRow }] = await Promise.all([
       supabase
@@ -445,101 +501,144 @@ async function receiptInputFor(
         .maybeSingle(),
     ]);
 
-    const cents = (v: number | string | null | undefined) =>
-      Math.round(Number(v ?? 0) * 100);
-
-    const lines = [
-      {
-        label:
-          humaniseService(booking.service_type || booking.service) ?? "Service",
-        amountCents: cents(booking.base_price),
-      },
-      ...(
-        (rows ?? []) as {
-          name: string;
-          price: number | string | null;
-          unit_price: number | string;
-          quantity: number;
-        }[]
-      ).map((r) => ({
-        label: r.quantity > 1 ? `${r.name} x${r.quantity}` : r.name,
-        amountCents:
-          r.price === null
-            ? cents(Number(r.unit_price) * r.quantity)
-            : cents(r.price),
-      })),
-    ];
-
-    const discountCents = cents(booking.discount);
-    const subtotalCents =
-      lines.reduce((sum, l) => sum + l.amountCents, 0) - discountCents;
-
-    // ── TAX IS DERIVED, THE TIP IS WHAT IS LEFT ─────────────────────────────
-    //
-    // The terminal reports one number: what the customer actually paid. The
-    // subtotal and the tax are both computable from the booking, so the tip is
-    // the remainder — and it must be worked out AFTER tax, or a taxed sale
-    // reports its tax as gratuity.
-    const taxConfig = parseTaxConfig(settingRow?.value);
-    const tax = computeTax(subtotalCents, taxConfig);
-    const tipCents = Math.max(
-      0,
-      outcome.amountCents - subtotalCents - tax.totalCents,
-    );
-
-    const zone = booking.facilities?.timezone ?? "UTC";
-    const registrations = taxConfig.showRegistrationOnInvoice
-      ? taxConfig.taxes
-          .filter((t) => t.enabled && t.registrationNumber)
-          .map((t) => `${t.name}: ${t.registrationNumber}`)
-          .join(" · ")
-      : "";
-
     return {
-      facility: {
-        name: booking.facilities?.name ?? "Yipyy",
-        address: formatAddress(booking.facilities?.address ?? null),
-        phone: booking.facilities?.phone ?? null,
-        email: booking.facilities?.email ?? null,
-        website: booking.facilities?.website ?? null,
-        taxRegistrations: registrations || null,
-      },
-      bookingRef: booking.ref,
-      reference: `Booking #${booking.ref}`,
-      clientName: booking.clients?.name ?? null,
-      petNames: (booking.booking_pets ?? [])
-        .map((bp) => bp.pets?.name)
-        .filter((n): n is string => Boolean(n)),
-      serviceWindow: formatWindow(booking.start_at, booking.end_at, zone),
-      lines,
-      discountCents,
-      subtotalCents,
-      taxLines: tax.lines.map((t) => ({
-        name: t.name,
-        rate: t.rate,
-        amountCents: t.amountCents,
-      })),
-      taxTotalCents: tax.totalCents,
-      tipCents,
-      totalCents: outcome.amountCents,
-      paymentMethod: "Paid by card",
-      cardBrand: outcome.cardBrand,
-      cardLast4: outcome.cardLast4,
-      entryMethod: humaniseService(outcome.entryMethod ?? ""),
-      authCode: outcome.authCode ?? null,
-      processorPaymentId: outcome.processorPaymentId,
-      // The FACILITY's clock, not the server's. A receipt handed over a counter
-      // in Montreal saying 09:00 UTC is wrong on paper nobody can correct.
-      printedAt: new Date().toLocaleString("en-CA", {
-        timeZone: zone,
-        dateStyle: "medium",
-        timeStyle: "short",
-      }),
+      lines: [
+        {
+          label:
+            humaniseService(booking.service_type || booking.service) ??
+            "Service",
+          amountCents: cents(booking.base_price),
+        },
+        ...(
+          (rows ?? []) as {
+            name: string;
+            price: number | string | null;
+            unit_price: number | string;
+            quantity: number;
+          }[]
+        ).map((r) => ({
+          label: r.quantity > 1 ? `${r.name} x${r.quantity}` : r.name,
+          amountCents:
+            r.price === null
+              ? cents(Number(r.unit_price) * r.quantity)
+              : cents(r.price),
+        })),
+      ],
+      discountCents: cents(booking.discount),
+      taxConfig: parseTaxConfig(settingRow?.value),
     };
   } catch (error) {
-    console.warn("[terminal] receipt could not be composed:", error);
-    return null;
+    // A bill that cannot be read must not stop a payment: the amount owed comes
+    // off the booking row, which is already in hand. The receipt degrades to a
+    // single line rather than the sale failing at the counter.
+    console.warn("[terminal] bill could not be read:", error);
+    return {
+      lines: [
+        {
+          label:
+            humaniseService(booking.service_type || booking.service) ??
+            "Service",
+          amountCents: cents(booking.base_price),
+        },
+      ],
+      discountCents: cents(booking.discount),
+      taxConfig: NO_TAX,
+    };
   }
+}
+
+/**
+ * The receipt, from figures already decided.
+ *
+ * Pure, and takes the SAME tax the card was charged, so the arithmetic on the
+ * paper is the arithmetic in the ledger.
+ *
+ * @param owedCents what was owed before tax — the receipt's Subtotal.
+ */
+function receiptInputFor(
+  booking: BookingForReceipt,
+  bill: Bill,
+  tax: { lines: ComputedTax[]; totalCents: number },
+  owedCents: number,
+  outcome: Extract<Awaited<ReturnType<typeof chargeOnTerminal>>, { ok: true }>,
+): ReceiptInput {
+  const lineTotal =
+    bill.lines.reduce((sum, l) => sum + l.amountCents, 0) - bill.discountCents;
+
+  // A part-paid booking's line items describe the WHOLE stay while only the
+  // balance is being collected. Without this the printed lines would not sum to
+  // the subtotal beneath them, so the difference is shown rather than hidden.
+  const lines =
+    lineTotal !== owedCents
+      ? [
+          ...bill.lines,
+          { label: "Already paid", amountCents: owedCents - lineTotal },
+        ]
+      : bill.lines;
+
+  // The terminal reports one number: what the customer actually paid. Subtotal
+  // and tax are both known, so the tip is what is left — worked out AFTER tax,
+  // or a taxed sale reports its tax as gratuity.
+  const tipCents = Math.max(
+    0,
+    outcome.amountCents - owedCents - tax.totalCents,
+  );
+
+  const zone = booking.facilities?.timezone ?? "UTC";
+  const registrations = bill.taxConfig.showRegistrationOnInvoice
+    ? bill.taxConfig.taxes
+        .filter((t) => t.enabled && t.registrationNumber)
+        .map((t) => `${t.name}: ${t.registrationNumber}`)
+        .join(" · ")
+    : "";
+
+  return {
+    facility: {
+      name: booking.facilities?.name ?? "Yipyy",
+      address: formatAddress(booking.facilities?.address ?? null),
+      phone: booking.facilities?.phone ?? null,
+      email: booking.facilities?.email ?? null,
+      website: booking.facilities?.website ?? null,
+      taxRegistrations: registrations || null,
+      logoUrl: booking.facilities?.logo_url || null,
+    },
+    bookingRef: booking.ref,
+    reference: `Booking #${booking.ref}`,
+    clientName: booking.clients?.name ?? null,
+    petNames: (booking.booking_pets ?? [])
+      .map((bp) => bp.pets?.name)
+      .filter((n): n is string => Boolean(n)),
+    serviceWindow: formatWindow(booking.start_at, booking.end_at, zone),
+    lines,
+    discountCents: bill.discountCents,
+    // For a tax-inclusive facility the tax is already inside what was owed, so
+    // the subtotal has to come out from under it or Subtotal + tax would double
+    // count and the total would not match the card.
+    subtotalCents: bill.taxConfig.pricesIncludeTax
+      ? owedCents - tax.totalCents
+      : owedCents,
+    taxLines: tax.lines.map((t) => ({
+      name: t.name,
+      rate: t.rate,
+      amountCents: t.amountCents,
+    })),
+    taxTotalCents: tax.totalCents,
+    tipCents,
+    totalCents: outcome.amountCents,
+    paymentMethod: "Paid by card",
+    cardBrand: outcome.cardBrand,
+    cardLast4: outcome.cardLast4,
+    entryMethod: humaniseService(outcome.entryMethod ?? ""),
+    authCode: outcome.authCode ?? null,
+    processorPaymentId: outcome.processorPaymentId,
+    // The FACILITY's clock, not the server's. A receipt handed over a counter
+    // in Montreal saying 09:00 UTC is wrong on paper nobody can correct.
+    printedAt: new Date().toLocaleString("en-CA", {
+      timeZone: zone,
+      dateStyle: "medium",
+      timeStyle: "short",
+    }),
+  };
 }
 
 /** "full_groom" -> "Full groom". The column stores a key; paper wants a word. */
