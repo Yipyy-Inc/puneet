@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getBrandingBySlug } from "@/lib/api/facility-branding";
 import { canAccessCustomerPortal } from "@/lib/auth/viewer";
 import { guardPortal } from "@/lib/auth/portal-gate";
 import { createServerClient } from "@/lib/supabase/server";
@@ -57,5 +58,31 @@ export default async function CustomerLayout({
     if (!clientId) redirect("/join");
   }
 
-  return <CustomerShell>{children}</CustomerShell>;
+  // ── THE PORTAL NAMES THE BUSINESS WHOSE DOOR THEY CAME THROUGH ──────────
+  //
+  // The same read /sign-in, /sign-up and /join have always done. Those three
+  // were correctly branded while everything INSIDE the portal said "Paws &
+  // Play Daycare" to everybody — the shell's provider defaulted to the first
+  // entry in src/data/facilities.ts. Found by walking CUJ-20 on 2026-08-19.
+  //
+  // Resolved here rather than in the shell because the answer is a function of
+  // the hostname, which the server has and the client would have to be told.
+  // `null` on the apex is the honest answer, not a failure.
+  const branding = slug ? await getBrandingBySlug(slug) : null;
+
+  return (
+    <CustomerShell
+      branding={
+        branding && {
+          name: branding.name,
+          slug: branding.slug,
+          logoUrl: branding.logoUrl,
+          primaryColor: branding.primaryColor,
+          accentColor: branding.accentColor,
+        }
+      }
+    >
+      {children}
+    </CustomerShell>
+  );
 }

@@ -35,9 +35,14 @@ import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
 //
 // A CUSTOMER has no membership by design (viewer.ts), and a platform admin may
 // have none either. Both fall back to the demo facility, which is exactly
-// today's behaviour — so this change cannot regress a single-facility project,
-// and the fallback is what to delete when the customer portal learns to name
-// the facility it is booking at.
+// today's behaviour — so this change cannot regress a single-facility project.
+//
+// That fallback was the reason a customer could not be allowed to book: walking
+// CUJ-20 on 2026-08-19 showed a pet owner's booking would have been stamped
+// with the DEMO facility rather than the one they joined — a silent wrong-row
+// write, which is worse than a refusal. `facilityContextForClient()` below is
+// the answer for that caller, and it is the function a customer route should
+// use instead of this one.
 //
 // ── NOT A SECURITY BOUNDARY, AND THAT MATTERS HERE ────────────────────────
 //
@@ -120,6 +125,74 @@ export async function getFacilityContext(
     .eq("facility_id", facility.id)
     .eq("is_primary", true)
     .maybeSingle();
+
+  return {
+    facilityId: facility.id,
+    locationId: location?.id ?? null,
+    timeZone: facility.timezone ?? DEFAULT_TIMEZONE,
+    name: facility.name,
+    legacyRef: Number.isFinite(legacyRef) ? legacyRef : null,
+  };
+}
+
+/**
+ * The facility a CLIENT belongs to, for a caller who has no membership.
+ *
+ * ── WHY A SECOND FUNCTION AND NOT A FLAG ──────────────────────────────────
+ *
+ * `getFacilityContext()` answers "which facility is this MEMBER working in".
+ * A pet owner is not a member of anything, so the honest answer for them comes
+ * from a different place: the client row they own. Folding that into the same
+ * function would mean one call site could silently get either answer depending
+ * on who called it, and the wrong one is a booking written against the demo
+ * facility.
+ *
+ * ── THE FACILITY COMES FROM THE PARENT ROW, WHICH IS THE SANCTIONED PATH ──
+ *
+ * `check:facility-from-session` allows exactly two sources: the session, or a
+ * parent row already scoped by RLS. This is the second. The caller must have
+ * been able to READ the client — `clients_read` admits a customer only their
+ * own record — so a person naming somebody else's client id gets nothing back
+ * and no context at all, rather than a facility they have no business in.
+ *
+ * @param clientRowId the client's uuid, already resolved through RLS by the caller
+ */
+export async function facilityContextForClient(
+  clientRowId: string,
+): Promise<FacilityContext | null> {
+  const supabase = await createServerClient();
+
+  // Through the client, not around it. `facilities_read` admits a client of the
+  // facility (private.client_facility_ids, 20260801130000), so this read
+  // succeeds for the owner and for nobody else.
+  const { data: client } = await supabase
+    .from("clients")
+    .select("facility_id, facilities(id, timezone, name, legacy_id)")
+    .eq("id", clientRowId)
+    .maybeSingle();
+
+  const facility = client?.facilities as
+    | {
+        id: string;
+        timezone: string | null;
+        name: string;
+        legacy_id: string | null;
+      }
+    | null
+    | undefined;
+  if (!facility) return null;
+
+  // `locations_read` admits the facility's own clients as of 20260819100000.
+  // Before that this was always null for a customer, which is why their
+  // bookings would have been the only ones in the table without a location.
+  const { data: location } = await supabase
+    .from("locations")
+    .select("id")
+    .eq("facility_id", facility.id)
+    .eq("is_primary", true)
+    .maybeSingle();
+
+  const legacyRef = Number(facility.legacy_id);
 
   return {
     facilityId: facility.id,
