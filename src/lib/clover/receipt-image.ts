@@ -49,14 +49,29 @@ import { join } from "node:path";
 const WIDTH = 384;
 const PADDING = 10;
 
-/** Body text. Everything else is expressed relative to it. */
-const FONT = 16;
-const SMALL = 13;
-const TINY = 11;
+/**
+ * Body text. Everything else is expressed relative to it.
+ *
+ * Raised from 16/13/11 after the first clean print: legible, but small and
+ * light on an 80mm roll read at arm's length across a counter.
+ */
+const FONT = 18;
+const SMALL = 15;
+const TINY = 13;
 
-/** Roboto Mono's advance is 0.6em. Used to wrap and truncate, nothing else. */
-const CHAR = FONT * 0.6;
-const COLS = Math.floor((WIDTH - PADDING * 2) / CHAR);
+/**
+ * A monospace advance is 0.6em — true of both JetBrains Mono and the Roboto
+ * Mono it replaced. Used to decide where to wrap and truncate, nothing else.
+ *
+ * Derived PER SIZE, not once from the body size. The wrap widths used to be
+ * hardcoded (34, 40, 44 columns) against a 16px body; at 18px those same
+ * counts overflow 384 dots and the line would be clipped at the paper's edge.
+ */
+function colsAt(size: number): number {
+  return Math.floor((WIDTH - PADDING * 2) / (size * 0.6));
+}
+
+const COLS = colsAt(FONT);
 
 /**
  * The font is SHIPPED, not borrowed from the runtime.
@@ -71,7 +86,19 @@ const COLS = Math.floor((WIDTH - PADDING * 2) / CHAR);
  * FONTCONFIG_PATH points fontconfig at it before sharp is loaded.
  */
 const FONT_DIR = join(process.cwd(), "src/lib/clover/fonts");
-const FAMILY = "Roboto Mono, monospace";
+
+/**
+ * JetBrains Mono, at MEDIUM rather than regular.
+ *
+ * It replaced Roboto Mono to make the print clearer: a taller x-height and
+ * heavier stems survive a thermal head better, where a light weight prints
+ * thin and breaks up on the thin strokes. 500 is the body weight and 700 the
+ * emphasis, and both faces ship — asking for a weight the bundle does not
+ * carry gets a synthesised approximation, which on 384 dots looks like smudge.
+ */
+const FAMILY = "JetBrains Mono, monospace";
+const WEIGHT_BODY = 500;
+const WEIGHT_BOLD = 700;
 
 function applyBundledFonts(): void {
   process.env.FONTCONFIG_PATH = FONT_DIR;
@@ -140,19 +167,52 @@ function wrap(text: string, cols = COLS): string[] {
  * the "Paid by card" row is gone (TOTAL is the same number, one line above),
  * and the card details are two short lines instead of four.
  */
+/**
+ * Wrap an address, breaking at a comma where one is available.
+ *
+ * Plain word-wrapping split "3824 Saint Patrick St, Montreal, QC H4E 1A4" as
+ * "... QC H4E" / "1A4" once the body font grew — a postcode cut in half. An
+ * address has natural seams and they are exactly where the commas are.
+ *
+ * Falls back to word-wrapping any segment too long to stand on its own line.
+ */
+function wrapAddress(text: string, cols: number): string[] {
+  const segments = text.split(", ");
+  const out: string[] = [];
+  let line = "";
+
+  for (const [index, segment] of segments.entries()) {
+    const piece = index < segments.length - 1 ? `${segment},` : segment;
+    if (!line) {
+      line = piece;
+    } else if (line.length + 1 + piece.length <= cols) {
+      line += ` ${piece}`;
+    } else {
+      out.push(line);
+      line = piece;
+    }
+    if (line.length > cols) {
+      out.push(...wrap(line, cols));
+      line = "";
+    }
+  }
+  if (line) out.push(line);
+  return out.length > 0 ? out : [""];
+}
+
 function rowsFor(input: ReceiptInput): Row[] {
   const rows: Row[] = [];
   const f = input.facility;
 
-  rows.push({ kind: "centre", text: f.name, size: 20, bold: true });
+  rows.push({ kind: "centre", text: f.name, size: 22, bold: true });
   if (f.address) {
-    for (const line of wrap(f.address, 34)) {
+    for (const line of wrapAddress(f.address, colsAt(SMALL))) {
       rows.push({ kind: "centre", text: line, size: SMALL });
     }
   }
   if (f.phone) rows.push({ kind: "centre", text: f.phone, size: SMALL });
   if (f.taxRegistrations) {
-    for (const line of wrap(f.taxRegistrations, 40)) {
+    for (const line of wrap(f.taxRegistrations, colsAt(TINY))) {
       rows.push({ kind: "centre", text: line, size: TINY });
     }
   }
@@ -166,12 +226,12 @@ function rowsFor(input: ReceiptInput): Row[] {
       rows.push({ kind: "left", text: line });
   }
   if (input.petNames.length > 0) {
-    for (const line of wrap(input.petNames.join(", "))) {
+    for (const line of wrap(input.petNames.join(", "), colsAt(SMALL))) {
       rows.push({ kind: "left", text: line, size: SMALL });
     }
   }
   if (input.serviceWindow) {
-    for (const line of wrap(input.serviceWindow, 40)) {
+    for (const line of wrap(input.serviceWindow, colsAt(SMALL))) {
       rows.push({ kind: "left", text: line, size: SMALL });
     }
   }
@@ -216,7 +276,7 @@ function rowsFor(input: ReceiptInput): Row[] {
     label: "TOTAL",
     amount: money(input.totalCents),
     bold: true,
-    size: 18,
+    size: 20,
   });
   rows.push({ kind: "rule" });
 
@@ -241,7 +301,7 @@ function rowsFor(input: ReceiptInput): Row[] {
     .filter(Boolean)
     .join("  ");
   if (trace) {
-    for (const line of wrap(trace, 44)) {
+    for (const line of wrap(trace, colsAt(TINY))) {
       rows.push({ kind: "left", text: line, size: TINY });
     }
   }
@@ -298,11 +358,11 @@ export function buildReceiptSvg(
 
     if (row.kind === "centre") {
       parts.push(
-        `<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="${FAMILY}" font-size="${size}"${row.bold ? ' font-weight="bold"' : ""} fill="#000">${escapeXml(row.text)}</text>`,
+        `<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-size="${size}"${row.bold ? ` font-weight="${WEIGHT_BOLD}"` : ""}>${escapeXml(row.text)}</text>`,
       );
     } else if (row.kind === "left") {
       parts.push(
-        `<text x="${PADDING}" y="${y}" font-family="${FAMILY}" font-size="${size}"${row.bold ? ' font-weight="bold"' : ""} fill="#000">${escapeXml(row.text)}</text>`,
+        `<text x="${PADDING}" y="${y}" font-size="${size}"${row.bold ? ` font-weight="${WEIGHT_BOLD}"` : ""}>${escapeXml(row.text)}</text>`,
       );
     } else {
       // THE POINT OF THIS FILE. The amount is anchored to the right edge, so
@@ -312,10 +372,10 @@ export function buildReceiptSvg(
         row.label.length > room
           ? `${row.label.slice(0, room - 2)}..`
           : row.label;
-      const weight = row.bold ? ' font-weight="bold"' : "";
+      const weight = row.bold ? ` font-weight="${WEIGHT_BOLD}"` : "";
       parts.push(
-        `<text x="${PADDING}" y="${y}" font-family="${FAMILY}" font-size="${size}"${weight} fill="#000">${escapeXml(label)}</text>`,
-        `<text x="${WIDTH - PADDING}" y="${y}" text-anchor="end" font-family="${FAMILY}" font-size="${size}"${weight} fill="#000">${escapeXml(row.amount)}</text>`,
+        `<text x="${PADDING}" y="${y}" font-size="${size}"${weight}>${escapeXml(label)}</text>`,
+        `<text x="${WIDTH - PADDING}" y="${y}" text-anchor="end" font-size="${size}"${weight}>${escapeXml(row.amount)}</text>`,
       );
     }
     y += 4;
@@ -324,7 +384,10 @@ export function buildReceiptSvg(
   const height = y + PADDING;
   return {
     height,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}"><rect width="${WIDTH}" height="${height}" fill="#fff"/>${parts.join("")}</svg>`,
+    // Family, weight and colour on the ROOT so every line inherits them —
+    // one place to change the face, and a much smaller document than
+    // repeating the family on forty text elements.
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" font-family="${FAMILY}" font-weight="${WEIGHT_BODY}" fill="#000"><rect width="${WIDTH}" height="${height}" fill="#fff"/>${parts.join("")}</svg>`,
   };
 }
 
@@ -353,7 +416,7 @@ export function buildReceiptSvg(
  */
 async function glyphsRender(sharp: typeof import("sharp")): Promise<boolean> {
   const probe = (text: string) =>
-    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="30"><rect width="120" height="30" fill="#fff"/><text x="2" y="22" font-family="${FAMILY}" font-size="20" fill="#000">${text}</text></svg>`;
+    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="30"><rect width="120" height="30" fill="#fff"/><text x="2" y="22" font-family="${FAMILY}" font-weight="${WEIGHT_BODY}" font-size="20" fill="#000">${text}</text></svg>`;
 
   try {
     const [a, b] = await Promise.all([
