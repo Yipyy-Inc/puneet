@@ -212,9 +212,13 @@ jobs:
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
         run: bun run test:e2e:ci
 
+      # `|| echo` because the commonest failure is the preflight, which runs
+      # before any server exists — and `tail` on a missing file adds a second
+      # red ##[error] under the one that actually explains what to do.
       - name: Server log (on failure)
         if: failure()
-        run: tail -200 /tmp/server.log
+        run: |
+          tail -200 /tmp/server.log 2>/dev/null             || echo "(no server log — the run failed before the server started)"
 
       - name: Upload the Playwright report
         if: failure()
@@ -225,3 +229,6 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+          # Same reason: a preflight failure produces no report, and the default
+          # is to warn about that on top of the real error.
+          if-no-files-found: ignore
