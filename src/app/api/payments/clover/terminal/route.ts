@@ -179,9 +179,12 @@ export async function POST(request: NextRequest) {
   // total was tax.
   const bill = await billFor(booking as unknown as BookingForReceipt, supabase);
   const taxOnCharge = computeTax(owedCents, bill.taxConfig);
-  const chargeableCents = bill.taxConfig.pricesIncludeTax
-    ? owedCents
-    : owedCents + taxOnCharge.totalCents;
+  // A tax-inclusive facility's tax is already inside the price, so nothing is
+  // added to what is collected — the receipt only says how much of the total
+  // was tax.
+  const taxToAddCents = bill.taxConfig.pricesIncludeTax
+    ? 0
+    : taxOnCharge.totalCents;
 
   // ── THE TIP, ASKED OF THE PERSON PAYING ─────────────────────────────────
   //
@@ -211,7 +214,13 @@ export async function POST(request: NextRequest) {
     facilityId: booking.facility_id,
     bookingId: booking.id,
     clientId: booking.client_id,
-    subtotalCents: chargeableCents,
+    // The SUPPLY and the TAX go separately. Folding them into one figure put
+    // the tax in `payments.subtotal` and left `payments.tax` at zero, so every
+    // taxed booking recorded as overpaid by exactly its tax — and a facility's
+    // remittable tax was unreadable from its own ledger. `chargeOnTerminal`
+    // adds them for the amount it charges.
+    subtotalCents: owedCents,
+    taxCents: taxToAddCents,
     tipCents,
     deviceSerial: parsed.data.deviceSerial,
     createdBy: viewer.userId,
