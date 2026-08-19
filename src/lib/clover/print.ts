@@ -12,8 +12,19 @@ import { validAccessToken } from "@/lib/clover/connection";
 //
 // Two endpoints of the REST Pay Display API:
 //
-//   POST /connect/v1/device/printers   empty body, answers with the printers
-//   POST /connect/v1/device/print      { printDeviceId, text: [...] }
+//   POST /connect/v1/device/printers    empty body, answers with the printers
+//   POST /connect/v1/device/print/text  { printDeviceId, text: [...] }
+//
+// ── /print/text, NOT /print ───────────────────────────────────────────────
+//
+// The guide prose says "the /v1/device/print endpoints require the printer's
+// identifier", and building from that sentence produced /v1/device/print,
+// which answers 404 {"message":"Invalid URI"}. The reference gives the literal
+// path: /v1/device/print/text (and /v1/device/print/image for the other kind).
+//
+// It cost a live terminal test to find, because the failure is invisible from
+// the outside: the payment succeeds, the response says receiptPrinted false,
+// and the only place the 404 appears is the server log.
 //
 // ── NOTHING HERE MAY AFFECT A PAYMENT ─────────────────────────────────────
 //
@@ -128,7 +139,7 @@ export async function printTextOnDevice(
 
   try {
     const response = await fetch(
-      new URL("/connect/v1/device/print", config.apiOrigin),
+      new URL("/connect/v1/device/print/text", config.apiOrigin),
       {
         method: "POST",
         headers: headers(active.accessToken, active.merchantId, deviceSerial),

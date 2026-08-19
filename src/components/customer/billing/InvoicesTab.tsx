@@ -25,10 +25,12 @@ import {
 import { FileText, Download, Search, Calendar, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { InvoiceLoyaltySection } from "@/components/loyalty/InvoiceLoyaltySection";
-import { facilities } from "@/data/facilities";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
+import { useReceiptFacility } from "@/hooks/use-receipt-facility";
 
 export function InvoicesTab() {
+  // The facility's OWN header, not the fixture's — see use-receipt-facility.
+  const receiptFacility = useReceiptFacility();
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -263,7 +265,7 @@ export function InvoicesTab() {
       </head>
       <body>
         <div class="invoice-wrapper">
-          ${invoiceHeaderHtml(facilities.find((f) => f.id === (selectedFacility?.id ?? 11)))}
+          ${invoiceHeaderHtml(receiptFacility)}
           <div class="header">
             <div></div>
             <div class="meta">

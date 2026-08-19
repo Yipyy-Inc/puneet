@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { NO_TAX, taxConfigSchema } from "@/lib/settings/tax";
+
 import {
   bookingRulesSchema,
   dropOffPickUpOverrideSchema,
@@ -128,6 +130,14 @@ export const SETTING_DOMAINS = {
   // set of tip tiers while the payment screen offers another is not a display
   // bug.
   tip_config: { schema: tipConfigSchema, fallback: DEFAULT_TIPS },
+  // Money, and the most consequential entry here: it decides what a customer
+  // is CHARGED and what the facility owes a revenue authority.
+  //
+  // The fallback is NO_TAX — an empty list — and not the fixture's Quebec
+  // GST + QST. Carrying the fixture over would have every facility that never
+  // opened the screen quietly adding 14.975% to its receipts, in Ontario, in
+  // Alberta, in the United States. See the banner in lib/settings/tax.ts.
+  tax_config: { schema: taxConfigSchema, fallback: NO_TAX },
 
   // ── WHAT A CUSTOMER MAY BOOK ───────────────────────────────────────────
   //

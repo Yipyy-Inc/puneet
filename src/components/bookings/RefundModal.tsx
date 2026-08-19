@@ -21,10 +21,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { facilities } from "@/data/facilities";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
-
-const defaultFacility = facilities.find((f) => f.id === 11);
+import { useReceiptFacility } from "@/hooks/use-receipt-facility";
 
 interface RefundModalProps {
   open: boolean;
@@ -54,6 +52,8 @@ export function RefundModal({
   items,
   onConfirm,
 }: RefundModalProps) {
+  // The facility's OWN header, not the fixture's — see use-receipt-facility.
+  const receiptFacility = useReceiptFacility();
   const [step, setStep] = useState<"select" | "confirm">("select");
   const [refundType, setRefundType] = useState<RefundType>("full");
   const [partialAmount, setPartialAmount] = useState("");
@@ -136,7 +136,7 @@ h1{font-size:18px;margin:0;color:#dc2626}h2{font-size:12px;color:#666;margin:4px
 .badge{background:#fef2f2;color:#dc2626;padding:6px 14px;border-radius:8px;text-align:center;margin-top:14px;font-weight:600;font-size:13px}
 .note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-top:14px;font-size:11px;color:#64748b}
 </style></head><body>
-${invoiceHeaderHtml(defaultFacility)}
+${invoiceHeaderHtml(receiptFacility)}
 <h1>Refund Receipt</h1>
 <h2>Processed ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</h2>
 <div class="section">Refund Details</div>
