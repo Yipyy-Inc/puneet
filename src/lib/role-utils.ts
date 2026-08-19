@@ -1,7 +1,6 @@
 "use client";
 
 import type {
-  UserRole,
   FacilityRole,
   Permission,
   UserPermissionOverride,
@@ -388,7 +387,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<FacilityRole, Permission[]> = {
 };
 
 // Storage keys
-const ROLE_COOKIE_NAME = "user_role";
 const FACILITY_ROLE_COOKIE_NAME = "facility_role";
 const CUSTOM_ROLE_PERMISSIONS_KEY = "facility_custom_role_permissions";
 const USER_PERMISSION_OVERRIDES_KEY = "facility_user_permission_overrides";
@@ -562,27 +560,23 @@ const NAV_PERMISSIONS: Record<string, Permission> = {
   "/facility/dashboard/forms/submissions": "forms_view_submissions",
 };
 
-// Get platform-level role
-export function getUserRole(): UserRole | null {
-  if (typeof document === "undefined") return null;
-
-  const cookies = document.cookie.split("; ");
-  const roleCookie = cookies.find((cookie) =>
-    cookie.startsWith(`${ROLE_COOKIE_NAME}=`),
-  );
-
-  if (!roleCookie) return null;
-
-  const role = roleCookie.split("=")[1] as UserRole;
-  return role === "super_admin" || role === "facility_admin" ? role : null;
-}
-
-// Set platform-level role
-export function setUserRole(role: UserRole): void {
-  if (typeof document === "undefined") return;
-
-  document.cookie = `${ROLE_COOKIE_NAME}=${role}; path=/; max-age=31536000`; // 1 year
-}
+// ── getUserRole / setUserRole LIVED HERE ──────────────────────────────────
+//
+// The `user_role` cookie was the platform-level role: super_admin or
+// facility_admin, written by `document.cookie` from the browser and read to
+// decide which portal you were in. The auth cutover moved that decision to the
+// session (src/lib/auth/viewer.ts) and every gate stopped reading it, but the
+// accessors survived — along with a page at /facility/set-role whose two
+// buttons were "Set as Facility Admin" and "Set as Super Admin".
+//
+// Both are gone. Nothing writes the cookie and nothing reads it to decide
+// anything. Who you are comes from the session; what you may do comes from the
+// permission cascade.
+//
+// Still reading it, and known: OperationsCalendarHelpers.parseUserRoleFromCookie
+// and the calendar's own `calendar_permission_level`. With no writer left they
+// take their fallbacks, which is what every real session already got — that
+// conversion is its own change. See the debt map.
 
 // Get facility-specific role
 export function getFacilityRole(): FacilityRole {

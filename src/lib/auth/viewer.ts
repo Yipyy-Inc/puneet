@@ -45,10 +45,16 @@ import { createWorkosServerClient } from "@/lib/supabase/workos-server";
 // the database, from the same JWT. Both matter, and the second one is the reason
 // this deletion is safe rather than merely tidy.
 //
-// STILL TO GO: the `user_role` cookie itself survives, because portal switchers,
-// UserProfileSheet, OperationsCalendar and SchedulingSettings still steer UI by
-// it. Nothing about ACCESS depends on it any more, which is the part that
-// mattered. Removing the rest is UI work, not auth work.
+// DONE: the `user_role` cookie no longer decides anything. The portal switchers
+// are deleted, UserProfileSheet takes its identity and its account-menu gate
+// from this file, SchedulingSettings asks the permission cascade, and
+// /facility/set-role — a page whose two buttons wrote the cookie and offered
+// "Set as Super Admin" — is gone. getUserRole/setUserRole no longer exist.
+//
+// OperationsCalendar still READS it (and its own `calendar_permission_level`)
+// for the actor name it stamps on events. With no writer left those take their
+// fallbacks, which is what every real session already got. Converting it is an
+// identity change rather than an auth one; see the debt map.
 // ============================================================================
 
 export type ViewerMembership = {
