@@ -35,8 +35,18 @@ export const taxEntrySchema = z.object({
   id: z.string(),
   /** As it appears on the receipt — "GST", "QST", "HST", "Sales Tax". */
   name: z.string(),
-  /** A percentage, not a fraction: 9.975 means 9.975%. */
-  rate: z.number().min(0).max(100),
+  /**
+   * A FRACTION, not a percentage: 0.09975 means 9.975%.
+   *
+   * This is the convention the rest of the app already uses — `data/tax-presets`
+   * stores `rate: 0.05`, and the editor renders `rate * 100` and writes back
+   * `value / 100`. This schema first declared it a percentage, which would have
+   * charged 5% GST as 0.05% — a hundredfold undercharge on a real receipt, and
+   * silent, because the number still looks plausible.
+   *
+   * The saved rows are fractions. The code moved to meet the data.
+   */
+  rate: z.number().min(0).max(1),
   appliesTo: z.enum(["all", "services_only", "products_only"]),
   /** The number the facility must show on an invoice, where law requires it. */
   registrationNumber: z.string().default(""),
@@ -119,9 +129,7 @@ export function computeTax(
     // inclusively — so they are treated as simple, and the total is exact even
     // if an individual line rounds.
     const combined = active.reduce((sum, t) => sum + t.rate, 0);
-    const taxTotal = Math.round(
-      taxableCents - taxableCents / (1 + combined / 100),
-    );
+    const taxTotal = Math.round(taxableCents - taxableCents / (1 + combined));
     const lines: ComputedTax[] = [];
     let assigned = 0;
     active.forEach((t, index) => {
@@ -150,7 +158,7 @@ export function computeTax(
     // A compound tax is charged on the subtotal plus everything already added;
     // a simple one always on the subtotal alone.
     const base = t.isCompound ? running : taxableCents;
-    const amount = Math.round((base * t.rate) / 100);
+    const amount = Math.round(base * t.rate);
     running += amount;
     total += amount;
     lines.push({

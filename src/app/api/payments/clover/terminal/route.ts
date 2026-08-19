@@ -9,6 +9,7 @@ import {
   deliverStandardReceipt,
   devicePrinters,
   endTransactionScreen,
+  printLogoOnDevice,
   printTextOnDevice,
   readTipOnDevice,
   receiptOptionsOnDevice,
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       // the business, its address and how to reach it is the difference between
       // a record and a note. These columns exist on `facilities`
       // (20260809120000) and were simply never read here.
-      "id, ref, facility_id, client_id, amount_due, amount_paid, status, service, service_type, base_price, discount, tip_amount, start_at, end_at, facilities ( name, timezone, phone, email, website, address ), clients ( name ), booking_pets ( pets ( name ) )",
+      "id, ref, facility_id, client_id, amount_due, amount_paid, status, service, service_type, base_price, discount, tip_amount, start_at, end_at, facilities ( name, timezone, phone, email, website, address, logo_url ), clients ( name ), booking_pets ( pets ( name ) )",
     )
     .eq("ref", parsed.data.bookingRef)
     .maybeSingle();
@@ -269,6 +270,17 @@ export async function POST(request: NextRequest) {
 
   if (wantsPrint) {
     if (receipt) {
+      // The logo BEFORE the text, so the two come off the roll in that order.
+      // Its own endpoint and its own conversion — `/print/text` has no field
+      // for an image. A failure here is not reported to the counter: a receipt
+      // without a logo is still a receipt.
+      if (receipt.facility.logoUrl) {
+        await printLogoOnDevice(
+          booking.facility_id,
+          parsed.data.deviceSerial,
+          receipt.facility.logoUrl,
+        );
+      }
       printed = await printTextOnDevice(
         booking.facility_id,
         parsed.data.deviceSerial,
@@ -391,6 +403,7 @@ interface BookingForReceipt {
     phone: string | null;
     email: string | null;
     website: string | null;
+    logo_url: string | null;
     address: {
       street?: string;
       city?: string;
@@ -503,6 +516,7 @@ async function receiptInputFor(
         email: booking.facilities?.email ?? null,
         website: booking.facilities?.website ?? null,
         taxRegistrations: registrations || null,
+        logoUrl: booking.facilities?.logo_url || null,
       },
       bookingRef: booking.ref,
       reference: `Booking #${booking.ref}`,
