@@ -5,7 +5,12 @@ import { getViewer } from "@/lib/auth/viewer";
 import { holds, myPermissions } from "@/lib/auth/permissions";
 import { createServerClient } from "@/lib/supabase/server";
 import { chargeOnTerminal, deviceState } from "@/lib/clover/terminal";
-import { devicePrinters, printTextOnDevice } from "@/lib/clover/print";
+import {
+  devicePrinters,
+  endTransactionScreen,
+  printTextOnDevice,
+  readTipOnDevice,
+} from "@/lib/clover/print";
 import { buildReceiptLines } from "@/lib/clover/receipt";
 
 // ============================================================================
@@ -47,6 +52,13 @@ const TerminalInput = z.object({
   /** The device SERIAL from the terminals list — not its id. */
   deviceSerial: z.string().min(4).max(64),
   tipCents: z.number().int().min(0).max(100_000).default(0),
+  /**
+   * Ask the CUSTOMER for the tip on the terminal instead of taking `tipCents`
+   * from the screen behind the counter. When this is set, `tipCents` is ignored
+   * entirely rather than used as a fallback — a tip the payer declined must not
+   * reappear because a staff button was left on a percentage.
+   */
+  tipOnDevice: z.boolean().default(false),
   /** Ask the device whether it is awake, and charge nothing. */
   checkOnly: z.boolean().default(false),
 });
@@ -130,12 +142,36 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── THE TIP, ASKED OF THE PERSON PAYING ─────────────────────────────────
+  //
+  // BEFORE the card is presented, because the alternative — authorise, then
+  // tip-adjust — needs a pre-authorisation and Canadian merchants cannot take
+  // those. `owedCents` is what the tip is calculated on, so the device shows
+  // "Tip based on" the subtotal rather than on a figure that already includes
+  // somebody else's tip.
+  //
+  // A null answer is "no tip", never an error: the customer may have declined,
+  // and a counter that cannot take money because a tip screen timed out is a
+  // worse product than one that takes the money without a tip. `tipPrompted`
+  // goes back on the response so staff are told which happened.
+  let tipCents = parsed.data.tipCents;
+  let tipPrompted = false;
+  if (parsed.data.tipOnDevice) {
+    const chosen = await readTipOnDevice(
+      booking.facility_id,
+      parsed.data.deviceSerial,
+      owedCents,
+    );
+    tipPrompted = chosen !== null;
+    tipCents = chosen ?? 0;
+  }
+
   const outcome = await chargeOnTerminal({
     facilityId: booking.facility_id,
     bookingId: booking.id,
     clientId: booking.client_id,
     subtotalCents: owedCents,
-    tipCents: parsed.data.tipCents,
+    tipCents,
     deviceSerial: parsed.data.deviceSerial,
     createdBy: viewer.userId,
     authorName: viewer.email ?? "Terminal payment",
@@ -155,6 +191,14 @@ export async function POST(request: NextRequest) {
               outcome.code === "no_token"
             ? 503
             : 500;
+    // Hand the device back. Without this it spins forever (see below); and a
+    // customer who just declined or cancelled should not be thanked, so this
+    // arm gets the neutral welcome screen rather than the thank-you one.
+    await endTransactionScreen(
+      booking.facility_id,
+      parsed.data.deviceSerial,
+      "welcome",
+    );
     return NextResponse.json(
       { error: outcome.message, code: outcome.code },
       { status },
@@ -179,6 +223,27 @@ export async function POST(request: NextRequest) {
     parsed.data.deviceSerial,
   );
 
+  // ── HAND THE DEVICE BACK ────────────────────────────────────────────────
+  //
+  // Reported from the running app: after an approved sale "the clover terminal
+  // screen keeps loading". Not a hang, and not our timeout — REST Pay Display
+  // gives the POS the device for the whole transaction and takes it back only
+  // when told. Clover's own words: "End your customer transactions with a call
+  // to the Welcome or Thank You screen; otherwise, the spinning icon remains on
+  // the screen until another action is taken."
+  //
+  // We took the money and never told it, so EVERY sale left the terminal
+  // spinning until somebody reset it by hand.
+  //
+  // Last, after the receipt, so the paper is already coming out when the screen
+  // clears. Cosmetic, so — like the printer — it may fail without touching the
+  // payment.
+  const screen = await endTransactionScreen(
+    booking.facility_id,
+    parsed.data.deviceSerial,
+    "thank-you",
+  );
+
   return NextResponse.json({
     paid: true,
     paymentId: outcome.paymentId,
@@ -189,6 +254,9 @@ export async function POST(request: NextRequest) {
     cardLast4: outcome.cardLast4,
     receiptPrinted: printed.printed,
     receiptDetail: printed.detail,
+    tipCents,
+    tipPrompted,
+    screenCleared: screen.shown,
   });
 }
 
