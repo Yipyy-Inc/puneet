@@ -29,12 +29,16 @@ import type { ReceiptInput } from "@/lib/clover/receipt";
 // It used to be its own print job before the text. One image means one job,
 // guaranteed ordering, and no second call that can half-fail.
 //
-// ── AND THE CALLER KEEPS THE TEXT PATH ────────────────────────────────────
+// ── AND THE FONT IS SHIPPED, NOT BORROWED ─────────────────────────────────
 //
-// SVG text needs a font in the runtime. If the deployment has none the render
-// comes back blank, so `renderReceiptPng` reports its ink coverage and the
-// caller falls back to text printing rather than handing somebody a blank
-// receipt. Ragged columns beat no receipt.
+// The first version of this file left the font to the runtime and guarded
+// against a BLANK render. Vercel's serverless runtime has no system fonts, and
+// a missing font does not render blank — librsvg draws the missing-glyph box
+// for every character, which is plenty of ink. The guard passed and a Clover
+// Flex printed rows of empty rectangles.
+//
+// So the font ships with the code, and the guard tests the right property: see
+// FONT_DIR and glyphsRender() below.
 // ============================================================================
 
 import { join } from "node:path";
@@ -69,7 +73,7 @@ const COLS = Math.floor((WIDTH - PADDING * 2) / CHAR);
 const FONT_DIR = join(process.cwd(), "src/lib/clover/fonts");
 const FAMILY = "Roboto Mono, monospace";
 
-function useBundledFonts(): void {
+function applyBundledFonts(): void {
   process.env.FONTCONFIG_PATH = FONT_DIR;
   // Writable, and the only writable place on a serverless filesystem. Without
   // it fontconfig warns on every call and rebuilds its cache each time.
@@ -377,7 +381,7 @@ export async function renderReceiptPng(
 ): Promise<{ image: string; ink: number } | null> {
   try {
     // Before sharp is loaded, so fontconfig reads it on first use.
-    useBundledFonts();
+    applyBundledFonts();
     const { default: sharp } = await import("sharp");
 
     if (!(await glyphsRender(sharp))) {
