@@ -30,6 +30,19 @@ import type { FeedingEntry } from "@/types/booking";
 interface FeedingSectionProps {
   entries: FeedingEntry[];
   required?: boolean;
+  /**
+   * Whether staff may log a meal or add one here.
+   *
+   * FALSE on the booking page, and that is not a permission decision — it is
+   * that neither action writes anything. `handleLog` and `handleAdd` below set
+   * component state and toast; a reload loses both. That was invisible while
+   * this panel was empty for every real booking, and became reachable the
+   * moment it started rendering the owner's schedule, so the controls are
+   * hidden rather than left to lose somebody's work.
+   *
+   * Recorded in docs/quality/debt-map.md: logging a feeding is not built.
+   */
+  canLog?: boolean;
 }
 
 const FEEDBACK_OPTIONS = facilityConfig.careTaskFeedback.feeding;
@@ -59,7 +72,11 @@ function fmtTimestamp(ts: string) {
 
 let _feedId = 100;
 
-export function FeedingSection({ entries, required }: FeedingSectionProps) {
+export function FeedingSection({
+  entries,
+  required,
+  canLog = true,
+}: FeedingSectionProps) {
   const [items, setItems] = useState(entries);
   const [addOpen, setAddOpen] = useState(false);
   const [newEntry, setNewEntry] = useState({
@@ -127,15 +144,17 @@ export function FeedingSection({ entries, required }: FeedingSectionProps) {
               </Badge>
             )}
           </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1 text-[11px]"
-            onClick={() => setAddOpen(!addOpen)}
-          >
-            <Plus className="size-3" />
-            Add Meal
-          </Button>
+          {canLog && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 text-[11px]"
+              onClick={() => setAddOpen(!addOpen)}
+            >
+              <Plus className="size-3" />
+              Add Meal
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -245,7 +264,9 @@ export function FeedingSection({ entries, required }: FeedingSectionProps) {
           <div className="py-6 text-center">
             <UtensilsCrossed className="text-muted-foreground/20 mx-auto size-8" />
             <p className="text-muted-foreground mt-2 text-xs">
-              No feeding instructions — click &quot;Add Meal&quot; to add
+              {canLog
+                ? "No feeding instructions — click “Add Meal” to add"
+                : "No feeding instructions were given for this booking"}
             </p>
           </div>
         ) : (
@@ -297,7 +318,7 @@ export function FeedingSection({ entries, required }: FeedingSectionProps) {
                         </p>
                       )}
                     </div>
-                  ) : (
+                  ) : canLog ? (
                     <Select onValueChange={(v) => handleLog(entry.id, v)}>
                       <SelectTrigger className="h-7 w-[140px] text-[11px]">
                         <SelectValue placeholder="Log meal..." />
@@ -314,7 +335,7 @@ export function FeedingSection({ entries, required }: FeedingSectionProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                  )}
+                  ) : null}
                 </div>
                 {entry.notes && (
                   <p className="text-muted-foreground bg-muted/30 mt-1 ml-6 rounded-sm px-2 py-1 text-[11px]">

@@ -2166,6 +2166,71 @@ management's two-admin restore, scheduled support messages and
 four real roles, but `mfaRequiredByRole` is still a localStorage preference that
 enforces nothing — enrolment is WorkOS's to require.
 
+### 🟢 The booking page's care panels read what the wizard writes (was 🔴)
+
+Reported from the running app on 2026-08-19: "there were things missing in the
+facility side booking history — we designed the page to have a lot of details as
+it was with demo data." Three separate causes, and only one of them was a bug.
+
+**1. They opened a test row.** Special Requests read `[e2e boarding-occupancy]`
+and its `details` was `{}`. See the entry below.
+
+**2. Mock cleanup, exactly as suspected.** `src/data/bookings.ts` has 26
+bookings and **two** carry hand-written `feedingInstructions` /
+`medicationInstructions` arrays. Those two were what made the page look full.
+Measured against Postgres: 0 of 250 bookings had `feedingSchedule`,
+`medications`, `extraServices` or `groomingAddOns`; 174 had empty `details`.
+Nothing is dropped on write — `bookingToRow` routes anything outside
+`COLUMN_FIELDS` into `details` — so it is "nobody has entered one", not a lost
+write.
+
+**3. A real wiring gap, and this one is fixed.** The panels rendered
+`booking.feedingInstructions` and `booking.medicationInstructions`; the wizard
+collects and stores `booking.feedingSchedule` and `booking.medications`.
+Different names **and different types** — so the panels could never fill from a
+booking made in this app, whatever anybody typed.
+
+The two shapes are different on purpose and both are worth keeping:
+`FeedingScheduleItem` is what the OWNER asked for (occasions, prep, allergies,
+what to do if the dog refuses); `FeedingEntry` is what STAFF DID (a meal, a
+status, who completed it). So `src/lib/bookings/care-instructions.ts` projects
+the first into the second for display, with `status: "pending"` — asked for, not
+yet done — rather than renaming either.
+
+**And the panels stopped offering actions that persist nothing.** `handleLog`,
+`handleAdd`, `handleAdminister` and `handleAddNote` set component state and
+toast; a reload loses all of it. That was invisible while the panels were empty
+and became reachable the moment they started rendering real instructions, so
+`canLog={false}` hides Add Meal, Add Medication, Log meal and Give. **Logging a
+feeding and administering a dose are not built** — the highest-value thing to
+build next on this page, because staff will expect to tick these off.
+
+Still fixture-backed on the same page, and visibly wrong next to real data: the
+**Guest Journal** panel renders a different pet's stay (dates, kennel and owner
+from `src/data/boarding.ts`), and `boardingGuestForPrint` falls back to a
+synthesised guest for every real booking.
+
+### 🟢 Four e2e bookings were sitting in the live bookings list (was invisible)
+
+The suite is better behaved than it looked: **211 of 215** `[e2e …]` bookings
+were already cancelled. `bookings` has no DELETE policy by design — a booking is
+cancelled, not erased — so cancelled rows accumulate, and that is intended.
+
+**Four were still `confirmed`**, from runs that died before `afterAll` could
+execute. Those four showed on the facility's bookings screen as real work and
+held their kennels, and one of them is the booking that prompted the report
+above.
+
+**Do instead: sweep at BOTH ends.** `tests/e2e/_sweep.ts` cancels every booking
+carrying a spec's marker, and `boarding-occupancy.spec.ts` now calls it from
+`beforeAll` as well as `afterAll`. `role-editor-writes.spec.ts` concluded that
+cleaning up at the start is not _enough_ — it is not, but it is the only thing
+that heals a run which never reached its end. Together they are
+self-correcting; alone, neither is. Adopt the same pair in the other seventeen
+specs that create marked bookings.
+
+Cleared by hand at the same time: live bookings 38 -> 34, all real.
+
 ### 🟢 The customer journey reaches Postgres (was 🔴, then 🟠)
 
 **Walked end to end for the first time on 2026-08-19** (CUJ-20), against a built
