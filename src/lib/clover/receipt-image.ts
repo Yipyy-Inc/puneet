@@ -52,20 +52,26 @@ const PADDING = 10;
 /**
  * Body text. Everything else is expressed relative to it.
  *
- * Raised from 16/13/11 after the first clean print: legible, but small and
- * light on an 80mm roll read at arm's length across a counter.
+ * 16 -> 18 -> 27: raised twice, the second time by half again, because a
+ * receipt is read at arm's length across a counter and the first two passes
+ * were still small on an 80mm roll.
+ *
+ * At 27px a 384-dot head fits about 22 characters, so a long item name no
+ * longer sits beside its amount. It WRAPS rather than truncating — see the
+ * pair rows in buildReceiptSvg. A customer should be able to read what they
+ * bought; "De-shedding t.." is not a line item.
  */
-const FONT = 18;
-const SMALL = 15;
-const TINY = 13;
+const FONT = 27;
+const SMALL = 22;
+const TINY = 20;
 
 /**
- * A monospace advance is 0.6em — true of both JetBrains Mono and the Roboto
- * Mono it replaced. Used to decide where to wrap and truncate, nothing else.
+ * A monospace advance is 0.6em. Used to decide where to wrap and truncate,
+ * nothing else.
  *
  * Derived PER SIZE, not once from the body size. The wrap widths used to be
- * hardcoded (34, 40, 44 columns) against a 16px body; at 18px those same
- * counts overflow 384 dots and the line would be clipped at the paper's edge.
+ * hardcoded against a 16px body; at any larger size those counts overrun 384
+ * dots and the line is clipped at the paper's edge.
  */
 function colsAt(size: number): number {
   return Math.floor((WIDTH - PADDING * 2) / (size * 0.6));
@@ -88,17 +94,19 @@ const COLS = colsAt(FONT);
 const FONT_DIR = join(process.cwd(), "src/lib/clover/fonts");
 
 /**
- * JetBrains Mono, at MEDIUM rather than regular.
+ * JetBrains Mono, at REGULAR.
  *
- * It replaced Roboto Mono to make the print clearer: a taller x-height and
- * heavier stems survive a thermal head better, where a light weight prints
- * thin and breaks up on the thin strokes. 500 is the body weight and 700 the
- * emphasis, and both faces ship — asking for a weight the bundle does not
- * carry gets a synthesised approximation, which on 384 dots looks like smudge.
+ * One weight, and no bold anywhere: asked for after the medium-weight print
+ * read as heavy. Hierarchy comes from SIZE instead — the facility's name and
+ * the total are simply larger than the lines around them, which is what a
+ * receipt does on paper anyway.
+ *
+ * Only the 400 face ships. Asking for a weight the bundle does not carry gets
+ * a synthesised approximation, which at 384 dots looks like smudge, so nothing
+ * asks for one.
  */
 const FAMILY = "JetBrains Mono, monospace";
-const WEIGHT_BODY = 500;
-const WEIGHT_BOLD = 700;
+const WEIGHT = 400;
 
 function applyBundledFonts(): void {
   process.env.FONTCONFIG_PATH = FONT_DIR;
@@ -204,7 +212,7 @@ function rowsFor(input: ReceiptInput): Row[] {
   const rows: Row[] = [];
   const f = input.facility;
 
-  rows.push({ kind: "centre", text: f.name, size: 22, bold: true });
+  rows.push({ kind: "centre", text: f.name, size: 33 });
   if (f.address) {
     for (const line of wrapAddress(f.address, colsAt(SMALL))) {
       rows.push({ kind: "centre", text: line, size: SMALL });
@@ -219,7 +227,7 @@ function rowsFor(input: ReceiptInput): Row[] {
 
   rows.push({ kind: "gap", height: 12 });
   if (input.reference) {
-    rows.push({ kind: "left", text: input.reference, bold: true });
+    rows.push({ kind: "left", text: input.reference });
   }
   if (input.clientName) {
     for (const line of wrap(input.clientName))
@@ -275,8 +283,7 @@ function rowsFor(input: ReceiptInput): Row[] {
     kind: "pair",
     label: "TOTAL",
     amount: money(input.totalCents),
-    bold: true,
-    size: 20,
+    size: 30,
   });
   rows.push({ kind: "rule" });
 
@@ -358,25 +365,36 @@ export function buildReceiptSvg(
 
     if (row.kind === "centre") {
       parts.push(
-        `<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-size="${size}"${row.bold ? ` font-weight="${WEIGHT_BOLD}"` : ""}>${escapeXml(row.text)}</text>`,
+        `<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-size="${size}">${escapeXml(row.text)}</text>`,
       );
     } else if (row.kind === "left") {
       parts.push(
-        `<text x="${PADDING}" y="${y}" font-size="${size}"${row.bold ? ` font-weight="${WEIGHT_BOLD}"` : ""}>${escapeXml(row.text)}</text>`,
+        `<text x="${PADDING}" y="${y}" font-size="${size}">${escapeXml(row.text)}</text>`,
       );
     } else {
       // THE POINT OF THIS FILE. The amount is anchored to the right edge, so
       // every amount lands on the same vertical line whatever its label.
-      const room = COLS - row.amount.length - 1;
-      const label =
-        row.label.length > room
-          ? `${row.label.slice(0, room - 2)}..`
-          : row.label;
-      const weight = row.bold ? ` font-weight="${WEIGHT_BOLD}"` : "";
-      parts.push(
-        `<text x="${PADDING}" y="${y}" font-size="${size}"${weight}>${escapeXml(label)}</text>`,
-        `<text x="${WIDTH - PADDING}" y="${y}" text-anchor="end" font-size="${size}"${weight}>${escapeXml(row.amount)}</text>`,
-      );
+      //
+      // At 27px a 384-dot head fits about 22 characters, so a name like
+      // "De-shedding treatment" no longer sits beside its price. It wraps onto
+      // its own lines and the amount rides the LAST of them — truncating would
+      // leave a customer unable to read what they bought.
+      const cols = colsAt(size);
+      const room = cols - row.amount.length - 1;
+      const labelLines =
+        row.label.length > room ? wrap(row.label, cols) : [row.label];
+
+      labelLines.forEach((line, index) => {
+        if (index > 0) y += size + 4;
+        parts.push(
+          `<text x="${PADDING}" y="${y}" font-size="${size}">${escapeXml(line)}</text>`,
+        );
+        if (index === labelLines.length - 1) {
+          parts.push(
+            `<text x="${WIDTH - PADDING}" y="${y}" text-anchor="end" font-size="${size}">${escapeXml(row.amount)}</text>`,
+          );
+        }
+      });
     }
     y += 4;
   }
@@ -387,7 +405,7 @@ export function buildReceiptSvg(
     // Family, weight and colour on the ROOT so every line inherits them —
     // one place to change the face, and a much smaller document than
     // repeating the family on forty text elements.
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" font-family="${FAMILY}" font-weight="${WEIGHT_BODY}" fill="#000"><rect width="${WIDTH}" height="${height}" fill="#fff"/>${parts.join("")}</svg>`,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" font-family="${FAMILY}" font-weight="${WEIGHT}" fill="#000"><rect width="${WIDTH}" height="${height}" fill="#fff"/>${parts.join("")}</svg>`,
   };
 }
 
@@ -416,7 +434,7 @@ export function buildReceiptSvg(
  */
 async function glyphsRender(sharp: typeof import("sharp")): Promise<boolean> {
   const probe = (text: string) =>
-    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="30"><rect width="120" height="30" fill="#fff"/><text x="2" y="22" font-family="${FAMILY}" font-weight="${WEIGHT_BODY}" font-size="20" fill="#000">${text}</text></svg>`;
+    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="30"><rect width="120" height="30" fill="#fff"/><text x="2" y="22" font-family="${FAMILY}" font-weight="${WEIGHT}" font-size="20" fill="#000">${text}</text></svg>`;
 
   try {
     const [a, b] = await Promise.all([
