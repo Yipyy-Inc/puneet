@@ -66,9 +66,11 @@ import { careLogKeys, careLogQueries, logCare } from "@/lib/api/care-log";
 import { BookingNotes } from "@/components/bookings/BookingNotes";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import { useUpdateBookingStatus } from "@/lib/api/booking-status";
+import { useInvoiceTemplate } from "@/hooks/use-invoice-template";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import type { Booking } from "@/types/booking";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
-import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { CheckOutDialog } from "@/components/facility/dashboard/check-out-dialog";
 import type { UnifiedBooking } from "@/hooks/use-unified-bookings";
@@ -82,7 +84,6 @@ import { PrepaymentModal } from "@/components/bookings/PrepaymentModal";
 import { CareCompletionGateDialog } from "@/components/bookings/CareCompletionWarning";
 import { getPendingCareItems, careSectionDomIds } from "@/lib/care-completion";
 import { buildInvoiceDocumentHtml } from "@/lib/invoice-document";
-import { loadInvoiceTemplate } from "@/data/invoice-template";
 import {
   loadDepositRules,
   findApplicableDepositRule,
@@ -111,7 +112,6 @@ import {
   useChargeBooking,
   useRefundBooking,
   useRefundBookingToCard,
-  useTakeBookingPayment,
   type Tender,
 } from "@/lib/api/booking-money";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
@@ -247,7 +247,6 @@ export default function ClientBookingDetailPage({
       }),
   });
 
-  const takePayment = useTakeBookingPayment();
   const cancelBooking = useCancelBooking();
   const refundBooking = useRefundBooking();
   const refundToCard = useRefundBookingToCard();
@@ -450,7 +449,6 @@ export default function ClientBookingDetailPage({
   };
 
   const [editOpen, setEditOpen] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const { locations } = useLocationContext();
@@ -568,6 +566,12 @@ export default function ClientBookingDetailPage({
   // Above the early returns below — a hook after a conditional return is
   // called in a different order on the render where the booking is loading.
   const updateStatus = useUpdateBookingStatus();
+  // The printed invoice/receipt: the facility's own identity and its own tax,
+  // not the template fixture's "Example Pet Care Facility" and its fabricated
+  // GST number.
+  const invoiceTemplate = useInvoiceTemplate();
+  const facilityTaxConfig = useFacilitySettings().settings.tax_config
+    .value as TaxConfig;
   // ── WHAT GOES ON A PRINTED RECEIPT ──────────────────────────────────────
   //
   // The same rows the Payment Summary panel shows, so the paper a customer
@@ -1098,7 +1102,6 @@ export default function ClientBookingDetailPage({
             onTakePrepayment={() => setPrepaymentOpen(true)}
             onPrintInvoice={() => {
               const inv = invoice;
-              const template = loadInvoiceTemplate();
               const w = window.open("", "_blank", "width=720,height=900");
               if (!w) return;
               const formatDate = (d: string) =>
@@ -1115,8 +1118,67 @@ export default function ClientBookingDetailPage({
                   : booking.startDate
                     ? formatDate(booking.startDate)
                     : undefined;
-              const html = buildInvoiceDocumentHtml(template, {
-                invoiceNumber: inv?.id ?? String(booking.id),
+
+              // ── THE SAME LINES THE REST OF THE APP CHARGES ──────────────
+              //
+              // This used to read `booking.invoice` — the fixture blob that
+              // exists on 26 of 259 bookings — and fall back to ONE line for
+              // every booking without one. So the formal document a customer
+              // keeps showed a single "daycare $45.00" while the counter, the
+              // terminal and the emailed receipt all said $80.00 plus tax.
+              // "full_day" is a stored key, not a word. It reached the paper
+              // raw, next to hand-typed item names like "Treat pack".
+              const humaniseLabel = (raw: string) => {
+                const words = raw.replace(/[_-]+/g, " ").trim();
+                return words
+                  ? words.charAt(0).toUpperCase() + words.slice(1)
+                  : raw;
+              };
+              const printedItems = [
+                {
+                  name: humaniseLabel(booking.serviceType || booking.service),
+                  unitPrice: booking.basePrice,
+                  quantity: 1,
+                  price: booking.basePrice,
+                },
+                ...bookingLineItems
+                  .filter((item) => item.kind !== "fee")
+                  .map((item) => ({
+                    name: item.name,
+                    unitPrice: item.unitPrice,
+                    quantity: item.quantity,
+                    price: item.price,
+                  })),
+              ];
+              const printedFees = bookingLineItems
+                .filter((item) => item.kind === "fee")
+                .map((item) => ({
+                  name: item.name,
+                  unitPrice: item.unitPrice,
+                  quantity: item.quantity,
+                  price: item.price,
+                }));
+
+              // Tax on what is owed, from the facility's own setting — the same
+              // call the terminal makes, so the printed document and the card
+              // cannot disagree.
+              const printedSubtotal = booking.amountDue ?? booking.totalCost;
+              const printedTax = computeTax(
+                Math.round(printedSubtotal * 100),
+                facilityTaxConfig,
+              );
+              const tipTotal = booking.tipAmount ?? 0;
+              const printedTotal = facilityTaxConfig.pricesIncludeTax
+                ? printedSubtotal + tipTotal
+                : printedSubtotal + printedTax.totalCents / 100 + tipTotal;
+              const paid = booking.amountPaid ?? 0;
+
+              const html = buildInvoiceDocumentHtml(invoiceTemplate, {
+                // The BOOKING's ref, so a printed document can be traced back
+                // from a counter. It was `inv?.id ?? String(booking.id)`, which
+                // for a booking with no fixture invoice printed a bare number
+                // nobody could search for.
+                invoiceNumber: inv?.id ?? bookingRef,
                 invoiceStatus: inv?.status,
                 issuedDate: new Date().toLocaleDateString("en-US", {
                   month: "long",
@@ -1129,27 +1191,29 @@ export default function ClientBookingDetailPage({
                 clientPhone: client.phone,
                 petName: pet?.name,
                 serviceLabel: booking.service,
-                items: inv?.items ?? [
-                  {
-                    name: booking.service,
-                    unitPrice: booking.basePrice,
-                    quantity: 1,
-                    price: booking.totalCost,
-                  },
-                ],
-                fees: inv?.fees,
-                subtotal: inv?.subtotal ?? booking.totalCost,
-                discount: inv?.discount,
-                discountLabel: inv?.discountLabel,
-                taxes: inv?.taxes,
-                taxAmount: inv?.taxAmount,
-                taxRate: inv?.taxRate,
-                tipTotal: inv?.tipTotal,
-                total: inv?.total ?? booking.totalCost,
+                items: printedItems,
+                fees: printedFees.length > 0 ? printedFees : undefined,
+                subtotal: printedSubtotal,
+                discount: booking.discount || undefined,
+                discountLabel: booking.discountReason,
+                taxes: printedTax.lines.map(
+                  (line: {
+                    name: string;
+                    rate: number;
+                    amountCents: number;
+                  }) => ({
+                    name: line.name,
+                    rate: line.rate,
+                    amount: line.amountCents / 100,
+                  }),
+                ),
+                taxAmount: printedTax.totalCents / 100,
+                tipTotal: tipTotal || undefined,
+                total: printedTotal,
                 depositCollected: inv?.depositCollected,
-                remainingDue: inv?.remainingDue,
+                remainingDue: Math.max(0, printedTotal - paid),
                 payments: inv?.payments,
-                variant: inv?.status === "closed" ? "receipt" : "invoice",
+                variant: paid >= printedTotal ? "receipt" : "invoice",
               });
               w.document.write(html);
               w.document.close();
@@ -1728,7 +1792,23 @@ export default function ClientBookingDetailPage({
                       !isPaid && !isCancelled ? (
                         <AcceptPaymentButton
                           amount={balanceOf(booking)}
-                          onClick={() => setPaymentOpen(true)}
+                          // Opens the CHECKOUT FLOW, the one with a terminal.
+                          // It used to open ProcessPaymentModal, which offered
+                          // card and cash only — so the button sitting directly
+                          // under the itemised breakdown was the one that could
+                          // not reach a card reader, while the one that could
+                          // was elsewhere on the page.
+                          //
+                          // Same care gate as the action bar's own payment
+                          // actions: reaching checkout by a different button
+                          // must not skip the unlogged-care check.
+                          onClick={() => {
+                            if (careStatus.pending.length > 0) {
+                              setCareGateOpen(true);
+                              return;
+                            }
+                            openCheckout();
+                          }}
                         />
                       ) : null
                     }
@@ -1779,27 +1859,6 @@ export default function ClientBookingDetailPage({
           onCreateBooking={() => {
             setEditOpen(false);
             toast.success(`${bookingRef} updated`);
-          }}
-        />
-        {/* Both of these used to close the dialog and toast, and nothing else
-            — no state change, no request. They record money now, and the
-            booking's payment status follows from the ledger. */}
-        <ProcessPaymentModal
-          booking={booking}
-          open={paymentOpen}
-          onOpenChange={setPaymentOpen}
-          onConfirm={(bId, method, tipAmount) => {
-            setPaymentOpen(false);
-            takePayment.mutate(
-              { booking, method, ...(tipAmount ? { tipAmount } : {}) },
-              {
-                onSuccess: (charged) =>
-                  toast.success(
-                    `$${charged.toFixed(2)} taken by ${method} for ${bookingRef}`,
-                  ),
-                onError: (error) => toast.error(error.message),
-              },
-            );
           }}
         />
         <CancelBookingModal

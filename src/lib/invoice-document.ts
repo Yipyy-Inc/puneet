@@ -224,7 +224,11 @@ export function buildInvoiceDocumentHtml(
       ? taxes
           .map((t) =>
             summaryRow(
-              `${escapeHtml(t.name)} (${(t.rate * 100).toFixed(t.rate < 0.1 ? 1 : 3)}%)`,
+              // Trailing zeros trimmed rather than a fixed precision chosen by
+              // magnitude: `toFixed(rate < 0.1 ? 1 : 3)` printed Quebec's QST,
+              // 0.09975, as "10.0%" — a wrong rate on a tax document, and the
+              // one jurisdiction whose rate has three decimals.
+              `${escapeHtml(t.name)} (${Number((t.rate * 100).toFixed(4))}%)`,
               `$${fmt(t.amount)}`,
               { muted: true },
             ),
