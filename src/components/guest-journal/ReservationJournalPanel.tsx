@@ -540,18 +540,48 @@ function GuestJournalContent({ guest }: { guest: BoardingGuest }) {
   );
 }
 
-export function ReservationJournalPanel({ bookingId, petIds }: Props) {
+export function ReservationJournalPanel({ bookingId }: Props) {
+  // ── MATCHED BY BOOKING, AND ONLY BY BOOKING ─────────────────────────────
+  //
+  // There used to be a fallback: when no guest carried this booking's id, it
+  // matched `boardingGuests` BY PET instead. Every real booking misses the
+  // first lookup — the fixture's ids are `bk-001`..`bk-024` — so every real
+  // booking fell through to the second and rendered somebody else's stay.
+  //
+  // Seen on a live booking on 2026-08-19: a December stay for Alice Johnson
+  // displayed bg-001 — 22–29 April, owner John Smith, Kennel 12 — together
+  // with eight days of care entries. Meals marked "Ate all", "Medications
+  // Given 08:05 AM". None of it happened for that animal, on the page staff
+  // read to find out what did.
+  //
+  // A pet has many stays; a journal belongs to ONE. Matching by pet can only
+  // ever be a guess, and the panel already has the right answer for a miss —
+  // the "Journal not yet built for this reservation" card below, which the
+  // fallback was what prevented anyone from seeing.
+  //
+  // ── AND A NUMERIC REF IS NOT A FIXTURE ID ──────────────────────────────
+  //
+  // It also turned `1` into `"bk-001"` and looked that up. The fixture's ids
+  // run bk-001..bk-024 and the seeded bookings start at ref 1, so the two id
+  // spaces overlap — and the rows they name do not agree:
+  //
+  //   booking ref 1   2-6 July 2026      Alice Johnson
+  //   guest  bg-001   22-29 April 2026   "John Smith", Kennel 12, 7 nights
+  //
+  // The fixture guest was never kept in step with the booking it claims. So a
+  // numeric ref — which is a Postgres row, something this fixture cannot know
+  // about — resolves to no journal rather than to a coincidence.
+  //
+  // A STRING id still resolves, because that is what DailyCareView passes: a
+  // guest's own `bookingId`, read from this same fixture, where the match is
+  // correct by construction.
+  //
+  // `petIds` is kept on the props: both call sites pass it, and it is what a
+  // real per-booking journal will filter on once one exists.
   const guests = useMemo(() => {
-    const refId =
-      typeof bookingId === "number"
-        ? `bk-${String(bookingId).padStart(3, "0")}`
-        : bookingId;
-    let matches = boardingGuests.filter((g) => g.bookingId === refId);
-    if (matches.length === 0 && petIds && petIds.length > 0) {
-      matches = boardingGuests.filter((g) => petIds.includes(g.petId));
-    }
-    return matches;
-  }, [bookingId, petIds]);
+    if (typeof bookingId !== "string" || bookingId === "") return [];
+    return boardingGuests.filter((g) => g.bookingId === bookingId);
+  }, [bookingId]);
 
   if (guests.length === 0) {
     return (
@@ -567,13 +597,14 @@ export function ReservationJournalPanel({ bookingId, petIds }: Props) {
             <AlertTriangle className="size-4 shrink-0" />
             <div>
               <p className="font-medium">
-                Journal not yet built for this reservation.
+                No journal for this reservation yet.
               </p>
               <p className="mt-0.5">
-                The Guest Journal is auto-generated from the feeding plan,
-                medications, and add-ons entered when the booking was confirmed.
-                Once those details are present this panel will populate
-                automatically.
+                A guest journal records what happened each day of a stay —
+                meals, medications and rounds, as staff complete them. Nothing
+                records those yet, so this panel stays empty rather than showing
+                another stay&apos;s entries. The care instructions themselves
+                are above.
               </p>
             </div>
           </div>
