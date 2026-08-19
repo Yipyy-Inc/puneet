@@ -5,7 +5,6 @@ import {
   hashOnboardingToken,
   toByteaLiteral,
 } from "@/lib/api/onboarding-token";
-import type { AdminRole } from "@/data/admin-users";
 
 // ============================================================================
 // Inviting somebody onto the Yipyy platform team.
@@ -51,50 +50,3 @@ export function mintPlatformInviteToken(): { token: string; hash: Buffer } {
 export function hashPlatformInviteToken(token: string): Buffer {
   return hashOnboardingToken(token);
 }
-
-/** Mirrors public.platform_role. */
-export type PlatformRole = "superadmin" | "support" | "billing" | "readonly";
-
-const PLATFORM_ROLES = new Set<string>([
-  "superadmin",
-  "support",
-  "billing",
-  "readonly",
-]);
-
-/**
- * The admin console's five job-flavoured labels, mapped onto the four real
- * platform roles.
- *
- * `AdminRole` is one of the four dead role vocabularies ADR 0005 names: it has
- * no Postgres counterpart and never did, because the screen it belongs to reads
- * a fixture. This mapping is what lets that screen keep its labels while the
- * invitation it sends records something the database can act on.
- *
- * Conservative by construction — anything unrecognised becomes `readonly`,
- * which is the role that can look and not touch. The alternative, defaulting to
- * the caller's intent, is how an unfamiliar label becomes an accidental
- * superadmin.
- */
-const ADMIN_ROLE_TO_PLATFORM_ROLE: Record<AdminRole, PlatformRole> = {
-  system_administrator: "superadmin",
-  technical_support: "support",
-  account_manager: "support",
-  financial_auditor: "billing",
-  sales_team: "readonly",
-};
-
-export function toPlatformRole(role: string | null | undefined): PlatformRole {
-  if (!role) return "readonly";
-  // A caller may name a real platform role directly; that is the honest path
-  // and it is checked against the enum rather than trusted.
-  if (PLATFORM_ROLES.has(role)) return role as PlatformRole;
-  return ADMIN_ROLE_TO_PLATFORM_ROLE[role as AdminRole] ?? "readonly";
-}
-
-export const PLATFORM_ROLE_LABELS: Record<PlatformRole, string> = {
-  superadmin: "Superadmin — everything, including destructive and irreversible",
-  support: "Support — help customers; read broadly, no destruction",
-  billing: "Billing — the commercial surfaces",
-  readonly: "Read only — look, do not touch",
-};

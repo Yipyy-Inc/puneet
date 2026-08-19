@@ -85,7 +85,7 @@ export function ActivityFeed() {
           href="/dashboard/user-management/activity"
           className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs font-medium"
         >
-          View Full Log
+          View audit trail
           <ArrowRight className="size-3" />
         </Link>
       </div>

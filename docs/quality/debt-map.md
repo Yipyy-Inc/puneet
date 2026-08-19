@@ -2105,7 +2105,7 @@ is an identity change, not a permission one, and belongs in its own pass.
 session. A cookie is neither, and a screen that disagrees with the gate behind it
 is worse than one that simply refuses.
 
-### 🟢 The platform-team ROSTER is real (was 🟡) — its three siblings are not
+### 🟢 `/dashboard/user-management` is real (was 🟡, then 🟢-with-three-siblings)
 
 ~~The four screens under `/dashboard/user-management` read
 `src/data/admin-users.ts` plus a localStorage overlay, so a real invitation
@@ -2121,18 +2121,64 @@ permanently empty columns. The "Suspended" tile went for the same reason —
 `platform_memberships` has no such state, so the number could only ever have
 been zero dressed as a measurement.
 
-**Still fixture-backed, and this is the live seam:** `user-management/roles`,
-`user-management/activity` and `user-management/create`. Role definitions and the
-activity log still describe five invented people, next to a roster listing the
-real three.
+**The three siblings are done too** (2026-08-19). Each needed a different answer,
+and which one depended entirely on what the database actually held:
 
-**Do instead:** before keeping a column on a screen you are converting, check
-what the database records. A column with no source is worse than a missing one,
-because it is indistinguishable from a measured zero. `AdminRole`'s five job
-labels have no Postgres counterpart — `toPlatformRole` in
-`src/lib/auth/platform-invitation.ts` maps them onto the four real platform
-roles and defaults to `readonly`, so an unfamiliar label cannot become an
-accidental superadmin.
+| Screen      | What it was                                                                                                                    | What it is                                                                                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `/roles`    | Five roles that do not exist, each with an editable permission matrix, Create Role and Duplicate — all writing to localStorage | A read-only reference for the four values of `public.platform_role`, with live holder counts from `platform_memberships` |
+| `/activity` | Three tabs; two built from five invented people, including a login history with invented IP addresses, devices and cities      | One surface: the audit trail, which was already real                                                                     |
+| `/create`   | A form that waited 1500 ms and said "User Created Successfully"                                                                | Deleted — nothing linked to it, and the real door is the invite dialog on the roster                                     |
+
+**The measurement that decided `/roles`.** Every `has_platform_role()` call site
+in the schema asks for `superadmin`:
+
+```
+7 x has_platform_role('superadmin')      0 x support / billing / readonly
+85 policies gated on is_platform_admin() -- any membership at all
+```
+
+So there is no platform permission model to edit — `support`, `billing` and
+`readonly` are indistinguishable in effect today, and what a role may do lives in
+RLS policies changed by migration. A permission editor over that could only ever
+have been theatre. The screen now says so in as many words, and lists the seven
+superadmin-only surfaces by name so the claim can be checked.
+
+**The one that was a security-shaped lie, not just a fixture.** The invite form
+offered five job-flavoured roles which `toPlatformRole` collapsed onto four:
+"Sales Team" produced `readonly`, "Account Manager" produced `support`. A
+superadmin could choose a role, be shown its permissions, and grant a different
+one — and the invitation email named the label they picked rather than the role
+that was recorded. The form offers the four real roles now, and the email is
+built from `platformRole` so it cannot drift from the row again.
+
+**Do instead:** before keeping a column, a tab or a form field on a screen you
+are converting, check what the database records. A column with no source is worse
+than a missing one, because it is indistinguishable from a measured zero — and a
+fabricated login history is worse still, because it is the screen somebody opens
+to ask whether an attacker signed in.
+
+**Still open, deliberately:** `src/data/admin-users.ts` survives with six
+consumers outside user-management — the support inbox, global search, data
+management's two-admin restore, scheduled support messages and
+`report-data-sources`. Converting those is its own change; nothing under
+`/dashboard/user-management` reads it any more. `enforce-mfa-modal` now names the
+four real roles, but `mfaRequiredByRole` is still a localStorage preference that
+enforces nothing — enrolment is WorkOS's to require.
+
+### 🟡 `server-only` is invisible to `tsc --noEmit`
+
+Consolidating the platform-role label maps into `src/lib/auth/platform-invitation.ts`
+— which begins `import "server-only"` — and re-exporting them through a module
+that client components import type-checked **clean** and failed the build. Type
+imports are erased, so `import type { PlatformRole }` from a server-only module
+had always been fine; the first VALUE import is what breaks, and by then the
+mistake looks like a refactor that "passed".
+
+**Do instead:** when a module moves across the server/client line, run
+`bun run build`, not just `typecheck`. The vocabulary that both sides need now
+lives in `src/lib/auth/platform-role.ts` with no `server-only` guard; the token
+minting and hashing stay behind it.
 
 ### 🔴 Every member could read their employer's plan and Clover merchant (fixed)
 

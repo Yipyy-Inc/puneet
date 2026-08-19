@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getViewer } from "@/lib/auth/viewer";
-import type { PlatformRole } from "@/lib/auth/platform-invitation";
+import type { PlatformRole } from "@/lib/auth/platform-role";
 import { createServerClient } from "@/lib/supabase/server";
 
 // ============================================================================

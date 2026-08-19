@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { roleDisplayNames, type AdminRole } from "@/data/admin-users";
 import { buildInviteEmail } from "@/lib/admin-invite-email";
 import { getViewer } from "@/lib/auth/viewer";
 import {
   PLATFORM_INVITE_TTL_MS,
   mintPlatformInviteToken,
   toByteaLiteral,
-  toPlatformRole,
 } from "@/lib/auth/platform-invitation";
+import { PLATFORM_ROLE_LABEL, toPlatformRole } from "@/lib/auth/platform-role";
 import { platformOrigin } from "@/lib/public-origin";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -98,7 +97,12 @@ export async function POST(req: NextRequest) {
   // the facility-invite bug pointing the other way — see lib/public-origin.ts.
   const origin = platformOrigin(req);
   const setupUrl = `${origin}/setup/${token}`;
-  const roleLabel = roleDisplayNames[role as AdminRole] ?? role;
+  // The role that was GRANTED, not the label the client sent. These used to be
+  // able to differ — the form offered five job titles that collapsed onto four
+  // real roles, so an invitation email could announce "Sales Team" over a
+  // `readonly` membership. The form offers the real four now, and naming
+  // `platformRole` here means the email cannot drift from the row again.
+  const roleLabel = PLATFORM_ROLE_LABEL[platformRole];
 
   const email_ = buildInviteEmail({
     origin,

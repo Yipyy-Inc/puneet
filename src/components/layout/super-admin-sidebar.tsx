@@ -205,19 +205,19 @@ export function AppSidebar() {
       label: "Team & Access",
       items: [
         {
-          title: "Admin Users",
+          title: "Platform team",
           url: "/dashboard/user-management",
           icon: UserCog,
           disabled: false,
         },
         {
-          title: "Roles & Permissions",
+          title: "Platform roles",
           url: "/dashboard/user-management/roles",
           icon: KeyRound,
           disabled: false,
         },
         {
-          title: "Activity Log",
+          title: "Audit trail",
           url: "/dashboard/user-management/activity",
           icon: Activity,
           disabled: false,
