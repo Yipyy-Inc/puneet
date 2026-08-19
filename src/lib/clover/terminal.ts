@@ -163,6 +163,10 @@ export type TerminalOutcome =
       amountCents: number;
       currency: string;
       cardBrand: string | null;
+      /** "Contactless", "Chip", "Swiped" — what a compliant receipt names. */
+      entryMethod: string | null;
+      /** The acquirer's approval code, for the same reason. */
+      authCode: string | null;
       cardLast4: string | null;
     }
   | { ok: false; intentId: string | null; code: string; message: string };
@@ -443,6 +447,10 @@ export async function chargeOnTerminal(
     amountCents: (payment.amount ?? amountCents) + (payment.tipAmount ?? 0),
     currency: connection.currency,
     cardBrand: payment.cardTransaction?.cardType ?? null,
+    // Already recorded on the payments row above; returned as well so the
+    // receipt can carry them without a second read.
+    entryMethod: entryMethod(payment.cardTransaction?.entryType),
+    authCode: payment.cardTransaction?.authCode ?? null,
     cardLast4: payment.cardTransaction?.last4 ?? null,
   };
 }

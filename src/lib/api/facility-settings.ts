@@ -21,6 +21,7 @@ import type {
   ModuleConfig,
   TipConfig,
 } from "@/types/facility";
+import type { TaxConfig } from "@/lib/settings/tax";
 
 // ============================================================================
 // A facility's own settings, per domain.
@@ -47,6 +48,7 @@ export interface FacilitySettings {
   business_hours: SettingState<BusinessHours>;
   booking_rules: SettingState<BookingRules>;
   tip_config: SettingState<TipConfig>;
+  tax_config: SettingState<TaxConfig>;
   booking_flow: SettingState<FacilityBookingFlowConfig>;
   daycare_config: SettingState<ModuleConfig>;
   boarding_config: SettingState<ModuleConfig>;

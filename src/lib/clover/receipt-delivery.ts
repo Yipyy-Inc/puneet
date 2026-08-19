@@ -72,8 +72,8 @@ export async function emailItemisedReceipt(
         from: process.env.EMAIL_FROM ?? "Yipyy <onboarding@resend.dev>",
         to,
         subject: input.reference
-          ? `Your receipt from ${input.facilityName} (${input.reference})`
-          : `Your receipt from ${input.facilityName}`,
+          ? `Your receipt from ${input.facility.name} (${input.reference})`
+          : `Your receipt from ${input.facility.name}`,
         html: buildReceiptHtml(input),
         // Both parts, always. A text-only client showing an empty message is
         // indistinguishable from a receipt that never arrived.

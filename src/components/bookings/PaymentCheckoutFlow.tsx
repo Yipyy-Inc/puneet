@@ -27,13 +27,16 @@ import {
   calculateChange,
   type PaymentMethod,
 } from "@/lib/invoice-lifecycle";
-import { facilities } from "@/data/facilities";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
+import { useReceiptFacility } from "@/hooks/use-receipt-facility";
 import { useResolvedTerminal } from "@/lib/api/terminals";
 import { TerminalPicker } from "./TerminalPicker";
 
-// Default facility for receipt header
-const defaultFacility = facilities.find((f) => f.id === 11);
+/** One priced line on the printed receipt — the service, an item, a fee. */
+export interface ReceiptDetailLine {
+  label: string;
+  amount: number;
+}
 
 interface OtherUnpaidInvoice {
   invoiceId: string;
@@ -47,6 +50,19 @@ interface PaymentCheckoutFlowProps {
   amountDue: number;
   depositPaid: number;
   invoiceTotal: number;
+  /**
+   * What the customer is actually being charged FOR.
+   *
+   * Optional so the other callers of this dialog are unaffected, but a printed
+   * receipt without it is the bug being fixed: this window used to show
+   * "Amount / Total Charged" and nothing else, which is a total with no
+   * evidence behind it.
+   */
+  receiptLines?: ReceiptDetailLine[];
+  /** The booking's ref, so a printed receipt can be traced back from a counter. */
+  receiptReference?: string | null;
+  /** "19 Aug 2026, 8:00 a.m. - 6:00 p.m." — already in the facility's clock. */
+  receiptServiceWindow?: string | null;
   clientStoreCreditBalance?: number;
   otherUnpaidInvoices?: OtherUnpaidInvoice[];
   /** Auto-applied loyalty discount voucher — shown as a line and netted off the
@@ -90,6 +106,9 @@ export function PaymentCheckoutFlow({
   amountDue,
   depositPaid,
   invoiceTotal,
+  receiptLines,
+  receiptReference,
+  receiptServiceWindow,
   clientStoreCreditBalance = 0,
   otherUnpaidInvoices = [],
   loyaltyDiscount,
@@ -136,6 +155,8 @@ export function PaymentCheckoutFlow({
   };
 
   const [confirming, setConfirming] = useState(false);
+  // The facility's OWN header, not the fixture's — see use-receipt-facility.
+  const receiptFacility = useReceiptFacility();
   const [step, setStep] = useState<"pay" | "receipt">("pay");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -687,10 +708,21 @@ h1{font-size:18px;margin:0}h2{font-size:12px;color:#666;margin:4px 0 20px}
 .badge{background:#ecfdf5;color:#059669;padding:8px 16px;border-radius:8px;text-align:center;margin-top:16px;font-weight:600;font-size:13px}
 .footer{margin-top:24px;text-align:center;font-size:10px;color:#999}
 @media print{body{padding:20px}}</style></head><body>
-${invoiceHeaderHtml(defaultFacility)}
+${invoiceHeaderHtml(receiptFacility)}
 <h1>Payment Receipt</h1>
 <h2>${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</h2>
-<div class="row"><span>Amount</span><span>$${amountDue.toFixed(2)}</span></div>
+${receiptReference ? `<div class="row sub"><span>Reference</span><span>${receiptReference}</span></div>` : ""}
+${receiptServiceWindow ? `<div class="row sub"><span>Service</span><span>${receiptServiceWindow}</span></div>` : ""}
+${
+  receiptLines && receiptLines.length > 0
+    ? receiptLines
+        .map(
+          (l) =>
+            `<div class="row"><span>${l.label}</span><span>$${l.amount.toFixed(2)}</span></div>`,
+        )
+        .join("")
+    : `<div class="row"><span>Amount</span><span>$${amountDue.toFixed(2)}</span></div>`
+}
 ${depositPaid > 0 ? `<div class="row sub"><span>Deposit Applied</span><span>-$${depositPaid.toFixed(2)}</span></div>` : ""}
 ${tipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${tipAmount.toFixed(2)}</span></div>` : ""}
 ${otherTotal > 0 ? `<div class="row sub"><span>Other Invoices</span><span>$${otherTotal.toFixed(2)}</span></div>` : ""}
@@ -698,7 +730,7 @@ ${otherTotal > 0 ? `<div class="row sub"><span>Other Invoices</span><span>$${oth
 <div class="row sub"><span>Payment Method</span><span>${methodLabel}</span></div>
 ${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</span></div>` : ""}
 <div class="badge">PAYMENT COMPLETE</div>
-<div class="footer">Thank you for your business!<br>${defaultFacility?.name ?? ""}</div>
+<div class="footer">Thank you for your business!<br>${receiptFacility?.name ?? ""}</div>
 </body></html>`);
                   w.document.close();
                   w.print();

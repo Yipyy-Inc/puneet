@@ -64,6 +64,40 @@ function centred(text: string): string {
   return `${" ".repeat(pad)}${text}`;
 }
 
+/**
+ * Break a long value across lines instead of cutting it.
+ *
+ * `row()` truncates a LABEL because the amount beside it must stay on the same
+ * line. Free text has no such constraint, and an address or a payment reference
+ * loses its meaning when the tail is dropped.
+ */
+function wrap(text: string): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (current.length === 0) {
+      current = word.slice(0, WIDTH);
+    } else if (current.length + 1 + word.length <= WIDTH) {
+      current += ` ${word}`;
+    } else {
+      lines.push(current);
+      current = word.slice(0, WIDTH);
+    }
+  }
+  if (current) lines.push(current);
+  return lines.length > 0 ? lines : [""];
+}
+
+function centredWrap(text: string): string[] {
+  return wrap(text).map(centred);
+}
+
+/** "5%" rather than "5.000%", and "9.975%" kept whole. */
+function formatRate(rate: number): string {
+  return `${Number(rate.toFixed(3))}%`;
+}
+
 const RULE = "-".repeat(WIDTH);
 
 export interface ReceiptLine {
@@ -71,20 +105,55 @@ export interface ReceiptLine {
   amountCents: number;
 }
 
+/** Who the receipt is FROM. Every field is the facility's own, never a fixture. */
+export interface ReceiptFacility {
+  name: string;
+  /** One line, already assembled: "3824 Saint Patrick St, Montreal, QC H4E 1A4". */
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  /** "GST: RT 123456789 · QST: QT 987654321", when the facility shows them. */
+  taxRegistrations: string | null;
+}
+
+export interface ReceiptTaxLine {
+  name: string;
+  rate: number;
+  amountCents: number;
+}
+
 export interface ReceiptInput {
-  facilityName: string;
+  facility: ReceiptFacility;
+  /** The booking's own ref — what Yipyy is asked to trace this sale by. */
+  bookingRef: number | null;
   /** "Booking #1234" — whatever names this sale on paper. */
   reference: string | null;
   clientName: string | null;
   petNames: string[];
+  /**
+   * When the service was, in the facility's clock and already formatted —
+   * "19 Aug 2026, 8:00 a.m. – 6:00 p.m." A receipt for a day of daycare that
+   * does not say which day is not a record of anything.
+   */
+  serviceWindow: string | null;
   /** The service, the added items, the fees — in the order they should read. */
   lines: ReceiptLine[];
   discountCents: number;
+  /** Net of discount, before tax and tip. */
   subtotalCents: number;
+  taxLines: ReceiptTaxLine[];
+  taxTotalCents: number;
   tipCents: number;
   totalCents: number;
+  /** "Terminal", "Cash", "Card on file" — how it was actually paid. */
+  paymentMethod: string | null;
   cardBrand: string | null;
   cardLast4: string | null;
+  /** "Contactless", "Chip", "Swiped" — a card-brand receipt names the entry. */
+  entryMethod: string | null;
+  /** The acquirer's approval code. */
+  authCode: string | null;
   /** Clover's own payment id, so a paper receipt maps to a transaction. */
   processorPaymentId: string | null;
   /** Rendered as-is; the caller owns the timezone. */
@@ -101,15 +170,37 @@ export interface ReceiptInput {
 export function buildReceiptLines(input: ReceiptInput): string[] {
   const out: string[] = [];
 
-  out.push(centred(input.facilityName.slice(0, WIDTH)));
-  out.push("");
-  if (input.reference) out.push(input.reference);
-  if (input.clientName) out.push(input.clientName);
-  if (input.petNames.length > 0) {
-    // One line however many pets; a stay for three dogs should not push the
-    // total off the bottom of a short roll.
-    out.push(`Pet: ${input.petNames.join(", ")}`.slice(0, WIDTH));
+  // ── WHO THIS IS FROM ────────────────────────────────────────────────────
+  //
+  // Name, address, phone, email. A receipt that says only "Pawradise" is not
+  // something a customer can act on: they cannot phone about it, and in most
+  // jurisdictions a supplier's address is what makes it a receipt rather than a
+  // note. Each is skipped when the facility has not set it, rather than
+  // printing a blank line or a fixture's.
+  out.push(...centredWrap(input.facility.name));
+  if (input.facility.address) out.push(...centredWrap(input.facility.address));
+  // Phone and email on their OWN lines rather than joined with a separator:
+  // at 32 columns the pair almost always wraps, and it wraps mid-separator —
+  // "514 690 8911 ·" sitting alone above the address looks like a fault.
+  if (input.facility.phone) out.push(...centredWrap(input.facility.phone));
+  if (input.facility.email) out.push(...centredWrap(input.facility.email));
+  if (input.facility.taxRegistrations) {
+    out.push(...centredWrap(input.facility.taxRegistrations));
   }
+  out.push("");
+
+  // ── WHAT IT IS FOR ──────────────────────────────────────────────────────
+  //
+  // The booking ref first, and deliberately: it is what Yipyy is asked to trace
+  // a printed receipt by when a customer brings one back to a counter.
+  if (input.reference) out.push(input.reference);
+  if (input.clientName) out.push(...wrap(input.clientName));
+  if (input.petNames.length > 0) {
+    out.push(...wrap(`Pet: ${input.petNames.join(", ")}`));
+  }
+  // The service window wraps rather than truncates — a date cut in half is
+  // worse than a date on two lines.
+  if (input.serviceWindow) out.push(...wrap(input.serviceWindow));
   out.push(input.printedAt);
   out.push(RULE);
 
@@ -123,20 +214,32 @@ export function buildReceiptLines(input: ReceiptInput): string[] {
 
   out.push(RULE);
   out.push(row("Subtotal", input.subtotalCents));
+  for (const tax of input.taxLines) {
+    out.push(row(`${tax.name} ${formatRate(tax.rate)}`, tax.amountCents));
+  }
   if (input.tipCents > 0) out.push(row("Tip", input.tipCents));
   out.push(row("TOTAL", input.totalCents));
   out.push(RULE);
 
+  // ── HOW IT WAS PAID ─────────────────────────────────────────────────────
+  //
+  // Brand, masked pan, entry method and approval code. These are the fields a
+  // card-brand-compliant receipt is expected to carry, and the payments row
+  // already stores every one of them — printing a total and a last-4 while
+  // `auth_code` and `entry_method` sat unused was leaving the compliant version
+  // of this receipt one join away.
   const card = [
     input.cardBrand,
     input.cardLast4 ? `••${input.cardLast4}` : null,
   ]
     .filter(Boolean)
     .join(" ");
-  if (card) out.push(row("Paid by card", input.totalCents));
+  out.push(row(input.paymentMethod ?? "Paid", input.totalCents));
   if (card) out.push(card);
+  if (input.entryMethod) out.push(`Entry: ${input.entryMethod}`);
+  if (input.authCode) out.push(`Auth: ${input.authCode}`);
   if (input.processorPaymentId) {
-    out.push(`Ref: ${input.processorPaymentId}`.slice(0, WIDTH));
+    out.push(...wrap(`Ref: ${input.processorPaymentId}`));
   }
 
   out.push("");
@@ -145,7 +248,6 @@ export function buildReceiptLines(input: ReceiptInput): string[] {
 
   return out;
 }
-
 // ============================================================================
 // The same receipt, for a screen instead of a roll.
 //
@@ -176,10 +278,19 @@ function escapeHtml(text: string): string {
  */
 export function buildReceiptHtml(input: ReceiptInput): string {
   const body = buildReceiptLines(input).map(escapeHtml).join("\n");
+  const contact = [
+    input.facility.address,
+    [input.facility.phone, input.facility.email].filter(Boolean).join(" · "),
+  ].filter((line): line is string => Boolean(line));
   return [
     '<div style="background:#f6f6f7;padding:24px;font-family:system-ui,sans-serif">',
-    '<div style="max-width:420px;margin:0 auto;background:#fff;border-radius:12px;padding:24px">',
-    `<h1 style="margin:0 0 16px;font-size:18px">${escapeHtml(input.facilityName)}</h1>`,
+    '<div style="max-width:440px;margin:0 auto;background:#fff;border-radius:12px;padding:24px">',
+    `<h1 style="margin:0;font-size:18px">${escapeHtml(input.facility.name)}</h1>`,
+    ...contact.map(
+      (line) =>
+        `<p style="margin:2px 0 0;color:#6b7280;font-size:12px">${escapeHtml(line)}</p>`,
+    ),
+    '<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0" />',
     '<pre style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.45;white-space:pre;overflow-x:auto;margin:0">',
     body,
     "</pre>",
@@ -198,8 +309,9 @@ export function buildReceiptHtml(input: ReceiptInput): string {
 export function buildReceiptSmsText(input: ReceiptInput): string {
   const out: string[] = [];
   out.push(
-    `${input.facilityName}${input.reference ? ` — ${input.reference}` : ""}`,
+    `${input.facility.name}${input.reference ? ` — ${input.reference}` : ""}`,
   );
+  if (input.serviceWindow) out.push(input.serviceWindow);
   for (const line of input.lines) {
     out.push(`${line.label}: ${money(line.amountCents)}`);
   }
@@ -207,6 +319,9 @@ export function buildReceiptSmsText(input: ReceiptInput): string {
     out.push(`Discount: ${money(-input.discountCents)}`);
   }
   out.push(`Subtotal: ${money(input.subtotalCents)}`);
+  for (const tax of input.taxLines) {
+    out.push(`${tax.name}: ${money(tax.amountCents)}`);
+  }
   if (input.tipCents > 0) out.push(`Tip: ${money(input.tipCents)}`);
   out.push(`TOTAL: ${money(input.totalCents)}`);
   const card = [
@@ -216,5 +331,6 @@ export function buildReceiptSmsText(input: ReceiptInput): string {
     .filter(Boolean)
     .join(" ");
   if (card) out.push(card);
+  if (input.facility.phone) out.push(input.facility.phone);
   return out.join("\n");
 }
