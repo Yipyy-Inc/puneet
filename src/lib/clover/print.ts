@@ -513,15 +513,20 @@ export async function deliverStandardReceipt(
 // ============================================================================
 
 /** The printable width in dots. See the banner: safe on 58mm and 80mm alike. */
-const LOGO_WIDTH_PX = 384;
+const LOGO_WIDTH_PX = 320;
+/** A logo may not take more roll than this, whatever its aspect ratio. */
+const LOGO_MAX_HEIGHT_PX = 160;
 
 /**
  * Fetch a logo and turn it into something a receipt printer can render.
  *
- * @returns base64 PNG, or null if it could not be fetched or converted. Null is
- *   never an error to the caller: a receipt without a logo is still a receipt.
+ * @returns the base64 PNG and its final dimensions — the caller needs them to
+ *   place it — or null if it could not be fetched or converted. Null is never an
+ *   error: a receipt without a logo is still a receipt.
  */
-async function logoAsPrintablePng(logoUrl: string): Promise<string | null> {
+export async function logoAsPrintablePng(
+  logoUrl: string,
+): Promise<{ image: string; width: number; height: number } | null> {
   try {
     const response = await fetch(logoUrl, {
       signal: AbortSignal.timeout(8_000),
@@ -532,9 +537,21 @@ async function logoAsPrintablePng(logoUrl: string): Promise<string | null> {
     // Imported here rather than at module scope: sharp is a native binary, and
     // this route must not fail to load on a runtime where it is unavailable.
     const { default: sharp } = await import("sharp");
-    const png = await sharp(source)
+    // TRIM FIRST. The logo uploaded on 2026-08-19 was 1024x1024 with the art in
+    // the middle and transparent padding all round, so resizing it to 384 wide
+    // produced a 384x384 square that was 96.7% white — about 48mm of blank roll
+    // above the receipt, which is exactly what came out of the printer.
+    const trimmed = await sharp(source)
+      .trim({ threshold: 10 })
+      .toBuffer()
+      .catch(() => source);
+
+    const png = await sharp(trimmed)
       .resize({
         width: LOGO_WIDTH_PX,
+        // Capped, so a tall logo cannot push the bill off the bottom of a short
+        // roll — the receipt is the thing the customer needs.
+        height: LOGO_MAX_HEIGHT_PX,
         // Never enlarge: a 64px favicon blown up to 384 prints as a smear.
         withoutEnlargement: true,
         fit: "inside",
@@ -549,7 +566,25 @@ async function logoAsPrintablePng(logoUrl: string): Promise<string | null> {
       .png({ colours: 2 })
       .toBuffer();
 
-    return png.toString("base64");
+    const meta = await sharp(png).metadata();
+
+    // A logo that thresholds to almost nothing is a light mark meant for a dark
+    // background, and a thermal head has no white ink. Printing it would feed
+    // blank paper, so it is skipped — the same failure that put 48mm of nothing
+    // above the last receipt, for the other reason.
+    const raw = await sharp(png).greyscale().raw().toBuffer();
+    let dark = 0;
+    for (const value of raw) if (value < 128) dark += 1;
+    if (dark / Math.max(1, raw.length) < 0.01) {
+      console.warn("[clover-print] logo is blank once thresholded — skipping");
+      return null;
+    }
+
+    return {
+      image: png.toString("base64"),
+      width: meta.width ?? LOGO_WIDTH_PX,
+      height: meta.height ?? LOGO_MAX_HEIGHT_PX,
+    };
   } catch (error) {
     console.warn("[clover-print] logo not printable:", error);
     return null;
@@ -557,20 +592,18 @@ async function logoAsPrintablePng(logoUrl: string): Promise<string | null> {
 }
 
 /**
- * Print the facility's logo on the device.
+ * Print a prepared image on the device.
  *
  * Cosmetic, like everything else in this file: returns rather than throws, and
- * the caller prints the text whether this worked or not.
+ * the caller carries on whether this worked or not.
  */
-export async function printLogoOnDevice(
+export async function printImageOnDevice(
   facilityId: string,
   deviceSerial: string,
-  logoUrl: string,
+  /** Base64 PNG, already black and white. */
+  image: string,
   printDeviceId?: string,
 ): Promise<{ printed: boolean; detail?: string }> {
-  const image = await logoAsPrintablePng(logoUrl);
-  if (!image) return { printed: false, detail: "logo could not be converted" };
-
   const active = await validAccessToken(facilityId);
   if (!active) return { printed: false, detail: "no clover token" };
 
