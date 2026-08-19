@@ -2166,6 +2166,86 @@ management's two-admin restore, scheduled support messages and
 four real roles, but `mfaRequiredByRole` is still a localStorage preference that
 enforces nothing — enrolment is WorkOS's to require.
 
+### 🔴 The customer journey stops at "add a pet" — and the APIs it needs already exist
+
+**Walked end to end for the first time on 2026-08-19** (CUJ-20), against a built
+server on the facility's own hostname, writing to the live database. It gets
+further than anyone had confirmed, and then hits a wall.
+
+| Step                                           | Result                                                                                          |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Branded sign-up at `<slug>.yipyy.test/sign-up` | ✅ correct name, correct copy ("Create your account, **then join** Doggieville Mtl")            |
+| WorkOS account created                         | ✅ real user, name taken from the form                                                          |
+| Email verification code                        | ⚠️ WorkOS's, delivered by email — no inbox here, so `emailVerified` was flipped through the API |
+| `user.created` webhook → `profiles`            | ✅ delivered signed to the real route, 200, row written                                         |
+| Sign in, routed with no client record          | ✅ honest "You are not registered here yet" with a register form                                |
+| **Join → a `clients` row**                     | ✅ **`clients at doggieville-mtl` 0 → 1**, with name, phone and `profile_id`                    |
+| **Add a pet**                                  | ❌ **writes nothing**                                                                           |
+| **Book**                                       | ❌ **writes nothing**                                                                           |
+
+**The wall, exactly.** `src/app/customer/pets/add/page.tsx` defines its own
+`createPet` a hundred lines below the form:
+
+```ts
+// Placeholder function - replace with actual API call.
+const createPet = async (_petData) => {
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  return { id: Date.now() % 100000 }; // an invented id
+};
+```
+
+It sleeps, invents an id, toasts "Pet added!", and pushes the owner into a
+required-forms wizard **for a pet that does not exist**. The parameter is named
+`_petData` — the underscore is the file admitting the data is unused.
+`CustomerBookingModal.handleSubmit` is the same shape: `// TODO: Replace with
+actual API call`, `setTimeout(1000)`, then `toast.success("Booking created
+successfully!")`.
+
+**What makes this worth fixing rather than rebuilding:** `POST /api/pets` and
+`POST /api/bookings` both exist, are RLS-scoped, and are already used by the
+facility side. `/api/pets` even carries the comment "an owner may register and
+describe their pet". Nobody wired the customer screens to them.
+
+**Do instead:** when a screen defines its own `createX` next to the form, check
+whether `src/app/api/` already has the route. Here the backend was finished and
+the last hundred metres were never walked, which is exactly the failure the
+half-converted state of this repo produces.
+
+### 🟠 The customer portal is branded with a fixture, whichever facility you joined
+
+`/sign-in`, `/sign-up` and `/join` are correctly branded from the hostname
+(`getBrandingBySlug`). The moment you are **inside** the portal, the sidebar, the
+header, the facility switcher and the welcome line all read **"Paws & Play
+Daycare"** — a name from `src/data/facilities.ts` — for a customer who joined
+Doggieville Mtl.
+
+`src/hooks/use-customer-facility.tsx` is the whole story: it maps the fixture,
+filters `status === "active"`, and defaults to `availableFacilities[0]`. Nothing
+about the hostname, the `clients` row, or Postgres. Its own `TODO: Replace with
+actual API call` has been there since it was written.
+
+This is the customer-side twin of the facility-shell bug, which is fixed and
+guarded by `tests/e2e/facility-shell.spec.ts` ("names the facility the database
+holds, not the fixture"). The customer side has no such guard.
+
+Two smaller things visible in the same first paint, from the same cause: the
+Getting Started checklist says **"Add your first pet: Done ✓"** directly above
+"My Pets 0 / No pets registered yet", and a brand-new account shows a
+notification badge of 3 and a chat badge of 2.
+
+### 🟡 `check:success-claims` misses "created successfully" — the commoner word order
+
+The gate looks for `successfully (?:created|sent|saved|updated|deleted)`. Real
+copy far more often reads the other way round: `"Booking created successfully!"`,
+`"Pet added!"`, `"User Created Successfully"`. All three are claims made by code
+that writes nothing, and the gate passed all three — the deleted
+`/dashboard/user-management/create` page sat there for months because of it.
+
+**Not widened yet, deliberately:** `(created|added|saved|updated|sent|deleted|
+submitted) successfully` matches **19 files** today. Broadening the pattern means
+triaging all nineteen, and the baseline is a shrinking list whose own rule is DO
+NOT ADD — so it is its own change, not a line slipped into another one.
+
 ### 🟡 `server-only` is invisible to `tsc --noEmit`
 
 Consolidating the platform-role label maps into `src/lib/auth/platform-invitation.ts`
