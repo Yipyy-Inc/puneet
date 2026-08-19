@@ -308,8 +308,8 @@ export async function POST(request: NextRequest) {
         parsed.data.deviceSerial,
         receipt,
       );
-      // FALLBACK. SVG text needs a font in the runtime; without one the render
-      // is valid and entirely blank. Ragged columns beat blank paper.
+      // FALLBACK. The image render can fail for want of a usable font
+      // (lib/clover/receipt-image.ts), and ragged columns beat no receipt.
       if (!printed.printed) {
         printed = await printTextOnDevice(
           booking.facility_id,
@@ -319,12 +319,20 @@ export async function POST(request: NextRequest) {
       }
       itemised = printed.printed;
     }
-    // AND Clover's own, which is the card-brand-compliant one. The docs put
-    // that squarely on us for custom receipts — "You are responsible to ensure
-    // the receipts printed by your app comply with all card brand" rules — and
-    // ours is a breakdown, not a compliant payment record. Two prints off one
-    // roll is a cheap way to owe nobody an argument.
-    if (outcome.processorPaymentId) {
+
+    // ── CLOVER'S OWN SLIP IS A LAST RESORT, NOT A COMPANION ────────────────
+    //
+    // It used to print alongside ours on every sale, so the customer was handed
+    // two receipts and the facility spent twice the roll. That was defensible
+    // while ours was only a breakdown: the docs put card-brand compliance on
+    // the integrator for custom receipts, and ours carried no payment record.
+    //
+    // It does now — merchant name and address, the transaction's own timestamp,
+    // card brand, masked pan, entry method and approval code, all off the
+    // payments row. So the second slip earns its paper only when ours did not
+    // come out at all, which is the one case where something is better than
+    // nothing.
+    if (!printed.printed && outcome.processorPaymentId) {
       delivered = await deliverStandardReceipt(
         booking.facility_id,
         parsed.data.deviceSerial,
