@@ -1,3 +1,4 @@
+import type { CareLogEntry } from "@/app/api/care-log/route";
 import type {
   FeedingEntry,
   FeedingScheduleItem,
@@ -117,9 +118,16 @@ export function feedingEntriesFromSchedule(
   );
 }
 
-/** The owner's medications, as the panel's dose rows. */
+/**
+ * The owner's medications, as the panel's dose rows.
+ *
+ * @param day the stay day these doses belong to, `YYYY-MM-DD`. The panel
+ *   formats `scheduledAt` with `new Date(...)`, so a bare "08:00" renders as
+ *   "12:undefined AM" — it needs a timestamp, and a timestamp needs a day.
+ */
 export function medicationEntriesFromItems(
   medications: MedicationItem[] | undefined,
+  day: string,
 ): MedicationEntry[] {
   if (!medications?.length) return [];
 
@@ -146,9 +154,119 @@ export function medicationEntriesFromItems(
       // `isHighRisk` is the owner's flag and `isCritical` is the panel's; they
       // mean the same thing to the person holding the pill.
       isCritical: med.isHighRisk === true,
-      // No doses: a dose is a record of something administered, and nothing
-      // has been. An empty list is the truthful start.
-      doses: [],
+      // One pending dose per scheduled time. A medication with times and no
+      // doses renders as a name with nothing to give, which is not what
+      // "twice daily at 08:00 and 20:00" means.
+      doses: med.times.map((t) => ({
+        scheduledAt: `${day}T${t}:00`,
+        status: "pending" as const,
+      })),
     };
   });
+}
+
+// ============================================================================
+// Folding the care log back in.
+//
+// The entries above are what was ASKED FOR. `care_log_entries` is what was
+// DONE. These merge the second into the first so one panel shows both, which
+// is how somebody at the kennel reads it: this meal, at this time, and whether
+// it happened.
+//
+// Keyed on the entry's own id for feeding and on `<medication>#<time>` for a
+// dose. Those keys are what the panel sends back as `task_key`, so the round
+// trip is closed: the same string identifies the slot going out and coming in.
+// ============================================================================
+
+/** The task key a feeding row logs under. */
+export function feedingTaskKey(entry: FeedingEntry): string {
+  return entry.id;
+}
+
+/**
+ * The task key one scheduled dose logs under.
+ *
+ * Keyed on the TIME OF DAY, never the full timestamp: the same 08:00 dose
+ * recurs every day of a stay, and `care_log_entries` already separates the
+ * days with `occurred_on`. A date-qualified key would make the constraint
+ * that keeps one record per dose per day do nothing.
+ *
+ * Accepts either form, because `scheduledAt` is a timestamp for display and
+ * an "HH:MM" on the fixture path.
+ */
+export function medicationTaskKey(
+  medicationId: string,
+  scheduledAt: string,
+): string {
+  const time = scheduledAt.includes("T")
+    ? scheduledAt.slice(11, 16)
+    : scheduledAt.slice(0, 5);
+  return `${medicationId}#${time}`;
+}
+
+/** A stamp that changes whenever the log does, for remounting the panels. */
+export function careLogStamp(log: CareLogEntry[] | undefined): string {
+  if (!log?.length) return "empty";
+  return `${log.length}:${log.map((e) => e.id).join("")}`.slice(0, 120);
+}
+
+function forDay(
+  log: CareLogEntry[] | undefined,
+  taskKey: string,
+  day: string,
+): CareLogEntry | undefined {
+  return log?.find((e) => e.taskKey === taskKey && e.occurredOn === day);
+}
+
+export function applyFeedingLog(
+  entries: FeedingEntry[],
+  log: CareLogEntry[] | undefined,
+  day: string,
+): FeedingEntry[] {
+  return entries.map((entry) => {
+    const done = forDay(log, feedingTaskKey(entry), day);
+    if (!done) return entry;
+    return {
+      ...entry,
+      status: "completed" as FeedingEntry["status"],
+      feedback: done.outcome,
+      completedBy: done.recordedByName ?? "Staff",
+      // The panel formats this as a time; the row carries the day and the
+      // clock time separately, so they are put back together here.
+      completedAt: `${done.occurredOn}T${done.executedAt}:00`,
+      notes: done.notes ?? entry.notes,
+    };
+  });
+}
+
+export function applyMedicationLog(
+  entries: MedicationEntry[],
+  log: CareLogEntry[] | undefined,
+  day: string,
+): MedicationEntry[] {
+  return entries.map((med) => ({
+    ...med,
+    doses: med.doses.map((dose) => {
+      const done = forDay(
+        log,
+        medicationTaskKey(med.id, dose.scheduledAt),
+        day,
+      );
+      if (!done) return dose;
+      return {
+        ...dose,
+        // The log's own vocabulary, narrowed to what a dose can be. Anything
+        // unrecognised counts as given rather than silently pending — the row
+        // exists because somebody acted.
+        status: (["given", "skipped", "refused"] as const).includes(
+          done.outcome as "given" | "skipped" | "refused",
+        )
+          ? (done.outcome as "given" | "skipped" | "refused")
+          : ("given" as const),
+        administeredBy: done.recordedByName ?? "Staff",
+        administeredAt: `${done.occurredOn}T${done.executedAt}:00`,
+        notes: done.notes ?? dose.notes,
+      };
+    }),
+  }));
 }
