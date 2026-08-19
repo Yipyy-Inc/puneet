@@ -359,6 +359,84 @@ export type Database = {
           },
         ];
       };
+      care_log_entries: {
+        Row: {
+          id: string;
+          facility_id: string;
+          booking_id: string;
+          pet_id: string | null;
+          task_key: string;
+          task_type: string;
+          occurred_on: string;
+          executed_at: string;
+          served_at: string | null;
+          outcome: string;
+          notes: string | null;
+          recorded_by: string | null;
+          recorded_by_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          // Derived by care_log_set_facility from the booking; sending one is
+          // accepted and overwritten, so it is optional here and never sent.
+          facility_id?: string;
+          booking_id: string;
+          pet_id?: string | null;
+          task_key: string;
+          task_type: string;
+          occurred_on?: string;
+          executed_at?: string;
+          served_at?: string | null;
+          outcome: string;
+          notes?: string | null;
+          recorded_by?: string | null;
+          recorded_by_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          facility_id?: string;
+          booking_id?: string;
+          pet_id?: string | null;
+          task_key?: string;
+          task_type?: string;
+          occurred_on?: string;
+          executed_at?: string;
+          served_at?: string | null;
+          outcome?: string;
+          notes?: string | null;
+          recorded_by?: string | null;
+          recorded_by_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "care_log_entries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "care_log_entries_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "care_log_entries_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       daycare_attendance: {
         Row: {
           author_name: string;
