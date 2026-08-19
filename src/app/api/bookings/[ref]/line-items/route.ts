@@ -44,6 +44,84 @@ async function resolveBooking(
   return (data as { id: string; facility_id: string } | null) ?? null;
 }
 
+export interface BookingLineItem {
+  id: string;
+  kind: "item" | "fee";
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  price: number;
+  authorName: string;
+  createdAt: string;
+}
+
+/**
+ * The lines on a booking's bill.
+ *
+ * Added so the booking page can show a BREAKDOWN rather than a total. It had
+ * only `extras_total` — one number — so a bill of "Boarding, plus a bag of
+ * food, plus a late fee" rendered as "Base Price / Total", which is what the
+ * facility reported: "we are supposed to have all the breakdown".
+ *
+ * A separate read rather than a join on BOOKING_SELECT: that select feeds the
+ * bookings LIST too, and hanging every booking's lines off it would pay for
+ * them on a screen that shows none of them.
+ */
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ ref: string }> },
+) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const supabase = await createServerClient();
+  const booking = await resolveBooking(supabase, (await params).ref);
+  if (!booking) {
+    return NextResponse.json({ error: "No such booking." }, { status: 404 });
+  }
+
+  const { data, error } = await supabase
+    .from("booking_line_items")
+    .select(
+      "id, kind, name, unit_price, quantity, price, author_name, created_at",
+    )
+    .eq("booking_id", booking.id)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const rows = (data ?? []) as {
+    id: string;
+    kind: "item" | "fee";
+    name: string;
+    unit_price: number | string;
+    quantity: number;
+    price: number | string | null;
+    author_name: string;
+    created_at: string;
+  }[];
+
+  return NextResponse.json(
+    rows.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      name: r.name,
+      unitPrice: Number(r.unit_price),
+      quantity: r.quantity,
+      // `price` is generated (unit_price * quantity); computing it here when
+      // absent would be a second definition of the same number.
+      price:
+        r.price === null ? Number(r.unit_price) * r.quantity : Number(r.price),
+      authorName: r.author_name,
+      createdAt: r.created_at,
+    })) satisfies BookingLineItem[],
+  );
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ ref: string }> },

@@ -51,6 +51,10 @@ import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-car
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InvoicePanel } from "@/components/bookings/InvoicePanel";
 import {
+  AcceptPaymentButton,
+  BookingPaymentBreakdown,
+} from "@/components/bookings/BookingPaymentBreakdown";
+import {
   applyFeedingLog,
   applyMedicationLog,
   careLogStamp,
@@ -1585,76 +1589,26 @@ export default function ClientBookingDetailPage({
                     extraServiceItems={incidentCareItems}
                   />
                 ) : (
-                  <Card>
-                    <CardHeader className="bg-muted/30 pb-3">
-                      <CardTitle className="text-xs font-semibold tracking-wider uppercase">
-                        Payment Summary
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Base Price
-                          </span>
-                          <span className="font-[tabular-nums] font-medium">
-                            ${booking.basePrice.toFixed(2)}
-                          </span>
-                        </div>
-                        {booking.discount > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              Discount
-                            </span>
-                            <span className="font-[tabular-nums] font-medium text-emerald-600">
-                              -${booking.discount.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        {addedSubtotal > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              Added Items
-                            </span>
-                            <span className="font-[tabular-nums] font-medium text-amber-600">
-                              +${addedSubtotal.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        {incidentCareTotal > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              Incident Care
-                            </span>
-                            <span className="font-[tabular-nums] font-medium text-amber-600">
-                              +${incidentCareTotal.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        <Separator />
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-sm font-semibold">Total</span>
-                          <span className="font-[tabular-nums] text-2xl font-bold">
-                            $
-                            {(
-                              booking.totalCost +
-                              addedSubtotal +
-                              incidentCareTotal
-                            ).toFixed(2)}
-                          </span>
-                        </div>
-                        {!isPaid && !isCancelled && (
-                          <Button
-                            className="mt-2 h-10 w-full gap-1.5"
-                            onClick={() => setPaymentOpen(true)}
-                          >
-                            <CreditCard className="size-4" />
-                            Accept Payment
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  // ── THE BREAKDOWN, LINE BY LINE ──────────────────────────
+                  //
+                  // This was Base Price / Discount / Added Items / Total, with
+                  // "Added Items" aggregating every line into one number, no
+                  // tip, and no paid-or-owing at all — so a booking with
+                  // nothing added showed two rows, which is what the facility
+                  // reported. Each line now names what it is and where it came
+                  // from; see the component for which source each has.
+                  <BookingPaymentBreakdown
+                    booking={booking}
+                    incidentCareTotal={incidentCareTotal}
+                    action={
+                      !isPaid && !isCancelled ? (
+                        <AcceptPaymentButton
+                          amount={balanceOf(booking)}
+                          onClick={() => setPaymentOpen(true)}
+                        />
+                      ) : null
+                    }
+                  />
                 ))}
             </div>
           </div>
