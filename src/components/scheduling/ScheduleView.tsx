@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { CalendarRange } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import {
@@ -30,22 +35,26 @@ import { PostShiftOpportunityDialog } from "@/components/scheduling/PostShiftOpp
 import { ShiftOpportunityNotificationSettingsDialog } from "@/components/scheduling/ShiftOpportunityNotificationSettingsDialog";
 import { DraftReviewSummary } from "@/components/scheduling/DraftReviewSummary";
 import {
-  departments,
-  positions as allPositions,
-  scheduleEmployees,
-  scheduleShifts as initialShifts,
-  enhancedTimeOffRequests,
-  enhancedShiftSwaps,
   employeeAvailabilities,
   shiftOpportunities as initialShiftOpportunities,
   shiftOpportunityNotificationSettings as initialNotifSettings,
-  getPositionsForDepartment,
-  getDepartmentEmployees,
   calculateLaborCost,
 } from "@/data/scheduling";
+import {
+  schedulingQueries,
+  swapQueries,
+  timeOffQueries,
+  useCreateShift,
+  useDeleteShift,
+  usePublishSchedule,
+  useUpdateShift,
+} from "@/lib/api/scheduling";
+import { staffQueries } from "@/lib/api/staff";
 import { computeShiftHours } from "@/lib/scheduling-utils";
 import type {
   Department,
+  EnhancedTimeOffRequest,
+  ScheduleEmployee,
   ScheduleShift,
   HolidayRate,
   TimeClockEntry,
@@ -92,10 +101,7 @@ export function ScheduleView() {
   const canCreateShifts = usePermission("scheduling_create_shifts");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
-  const [selectedDepartment, setSelectedDepartment] = useState<Department>(
-    departments[0],
-  );
-  const [shifts, setShifts] = useState<ScheduleShift[]>(initialShifts);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
   const [addShiftOpen, setAddShiftOpen] = useState(false);
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<ScheduleShift | null>(null);
@@ -145,26 +151,128 @@ export function ScheduleView() {
     };
   }, [currentDate, viewMode]);
 
-  // Department employees and positions
-  const deptEmployees = useMemo(
-    () => getDepartmentEmployees(selectedDepartment.id),
-    [selectedDepartment.id],
+  // ── The rota, from Postgres ────────────────────────────────────────────
+  //
+  // Until 2026-08-21 this whole screen was `useState(scheduleShifts)` over a
+  // fixture — the scheduling module's LANDING page, where a manager plans the
+  // week, saving nowhere, while `/scheduling/roster` beside it read the real
+  // table. Two calendars of the same shifts, disagreeing.
+  //
+  // The window is part of the shifts key, so stepping to next week is a new
+  // query rather than a refetch that blanks the week on screen.
+  const { data: structure } = useQuery(schedulingQueries.structure());
+  const { data: roster, isPending: rosterPending } = useQuery(
+    schedulingQueries.shifts(dateRange.start, dateRange.end),
   );
-  const deptPositions = useMemo(
-    () => getPositionsForDepartment(selectedDepartment.id),
-    [selectedDepartment.id],
+  const { data: staff } = useQuery(staffQueries.profiles());
+  const { data: leave } = useQuery(timeOffQueries.list("all"));
+  const { data: swapData } = useQuery(swapQueries.list("pending"));
+
+  const createShift = useCreateShift();
+  const updateShift = useUpdateShift();
+  const removeShift = useDeleteShift();
+  const publishSchedule = usePublishSchedule();
+
+  const departments = useMemo(() => structure?.departments ?? [], [structure]);
+  const allPositions = useMemo(() => structure?.positions ?? [], [structure]);
+  const shifts = useMemo(() => roster?.shifts ?? [], [roster]);
+
+  // ── DERIVED, NOT SYNCHRONISED ───────────────────────────────────────────
+  //
+  // The first version defaulted this with an effect that called setState on
+  // arrival — a cascading render, and the exact shape "you might not need an
+  // effect" is about. Which department is on screen is a function of what the
+  // user picked and what exists: their choice if it is still there, otherwise
+  // the first one, and `undefined` for a facility whose org chart is empty —
+  // which is where every new facility starts, not an edge case. The fixture
+  // version indexed `departments[0]` and would simply have crashed.
+  const selectedDepartment = useMemo<Department | undefined>(
+    () =>
+      departments.find((d) => d.id === selectedDepartmentId) ?? departments[0],
+    [departments, selectedDepartmentId],
   );
 
-  // Filtered shifts for current view
-  const filteredShifts = useMemo(
+  // The RESOLVED department, not the raw selection. `selectedDepartmentId` is
+  // empty until somebody picks one, while `selectedDepartment` has already
+  // fallen back to the first — so filtering on the raw id would show an empty
+  // week under a header naming a department that has shifts in it.
+  //
+  // A facility with no departments has no calendar to draw at all. The hooks
+  // below still have to run, so they get an empty id and the render returns an
+  // empty state before any of it reaches the screen.
+  const deptId = selectedDepartment?.id ?? "";
+  const deptName = selectedDepartment?.name ?? "";
+
+  // `rowId`, NOT `id`: `StaffProfile.id` is the legacy string ("fs-003") and
+  // `staff_shifts.staff_id` is the uuid. Keying on the label matches no shift.
+  const scheduleEmployees = useMemo<ScheduleEmployee[]>(
     () =>
-      shifts.filter(
-        (s) =>
-          s.departmentId === selectedDepartment.id &&
-          s.date >= dateRange.start &&
-          s.date <= dateRange.end,
-      ),
-    [shifts, selectedDepartment.id, dateRange],
+      (staff ?? []).map((member) => ({
+        id: member.rowId ?? member.id,
+        name: `${member.firstName} ${member.lastName}`.trim(),
+        email: member.email,
+        phone: member.phone,
+        avatar: member.avatarUrl,
+        initials:
+          [member.firstName, member.lastName]
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? "")
+            .join("") || "—",
+        // Department and position membership live in `staff_departments` and on
+        // the shift, not on the person — so these stay empty and the screen
+        // reads the org chart, which is the one place that knows.
+        departmentIds: [],
+        positionIds: [],
+        primaryPositionId: "",
+        hireDate: member.employment?.hireDate ?? "",
+        status: member.status === "active" ? "active" : "inactive",
+        // `maxHoursPerWeek` and `employmentType` have nowhere to come from yet:
+        // `PayrollConfig` is WITHHELD without `view_payroll`, and a default of 0
+        // would render as a fact about somebody's contract. 40 is the same
+        // number `schedulingSettings.overtimeThresholdWeekly` already assumes.
+        maxHoursPerWeek: 40,
+        employmentType: "full_time",
+        role: member.jobTitle ?? member.primaryRole,
+      })),
+    [staff],
+  );
+
+  // The query already asked for this window, so the only filter left is the
+  // department.
+  const filteredShifts = useMemo(
+    () => shifts.filter((s) => s.departmentId === deptId),
+    [shifts, deptId],
+  );
+
+  // ── EVERY PERSON WITH A SHIFT, NOT JUST EVERY MEMBER ────────────────────
+  //
+  // The grid is people down the side and days across the top, so a person with
+  // no row has no shift ON SCREEN — however real the row in the table. Drawing
+  // only the department's declared members would therefore make a shift
+  // assigned to somebody covering from another department silently invisible,
+  // which is the same class of bug as the empty Daily Care board: no error, no
+  // gap, just work nobody can see.
+  //
+  // So it is the union: declared members, plus anybody actually rostered in the
+  // window. Today the first half is always empty — `staff_departments` has no
+  // writer yet, the Departments screen being still on fixtures — and this is
+  // the reason the calendar draws anything at all.
+  const deptEmployees = useMemo(() => {
+    const declared = new Set(selectedDepartment?.employeeIds ?? []);
+    const rostered = new Set(
+      filteredShifts
+        .map((shift) => shift.employeeId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    return scheduleEmployees.filter(
+      (e) => declared.has(e.id) || rostered.has(e.id),
+    );
+  }, [scheduleEmployees, selectedDepartment, filteredShifts]);
+
+  const deptPositions = useMemo(
+    () => allPositions.filter((p) => p.departmentId === deptId),
+    [allPositions, deptId],
   );
 
   const draftShifts = useMemo(
@@ -180,13 +288,11 @@ export function ScheduleView() {
         shifts
           .filter(
             (s) =>
-              s.departmentId === selectedDepartment.id &&
-              s.date === todayStr &&
-              s.employeeId,
+              s.departmentId === deptId && s.date === todayStr && s.employeeId,
           )
           .map((s) => s.employeeId),
       ).size,
-    [shifts, selectedDepartment.id, todayStr],
+    [shifts, deptId, todayStr],
   );
 
   const totalHours = useMemo(
@@ -200,18 +306,36 @@ export function ScheduleView() {
   );
 
   const laborCost = useMemo(
-    () =>
-      calculateLaborCost(selectedDepartment.id, dateRange.start, dateRange.end),
-    [selectedDepartment.id, dateRange],
+    () => calculateLaborCost(deptId, dateRange.start, dateRange.end),
+    [deptId, dateRange],
   );
 
-  const pendingTimeOff = enhancedTimeOffRequests.filter(
-    (r) => r.departmentId === selectedDepartment.id && r.status === "pending",
-  ).length;
+  // Leave and swaps belong to a PERSON, not to a department — so "this
+  // department's pending requests" is the requests whose requester is in it.
+  // The fixture carried a `departmentId` on the request itself, which was a
+  // second place for the same fact to be wrong.
+  const deptStaffIds = useMemo(
+    () => new Set(deptEmployees.map((e) => e.id)),
+    [deptEmployees],
+  );
 
-  const pendingSwaps = enhancedShiftSwaps.filter(
-    (r) => r.departmentId === selectedDepartment.id && r.status === "pending",
-  ).length;
+  const deptRequests = useMemo(
+    () => (leave?.requests ?? []).filter((r) => deptStaffIds.has(r.employeeId)),
+    [leave, deptStaffIds],
+  );
+
+  const pendingTimeOff = useMemo(
+    () => deptRequests.filter((r) => r.status === "pending").length,
+    [deptRequests],
+  );
+
+  const pendingSwaps = useMemo(
+    () =>
+      (swapData?.swaps ?? []).filter((sw) =>
+        deptStaffIds.has(sw.requestingEmployeeId),
+      ).length,
+    [swapData, deptStaffIds],
+  );
 
   const getEmployeeHours = useCallback(
     (employeeId: string) =>
@@ -236,12 +360,22 @@ export function ScheduleView() {
     return `${new Date(dateRange.start + "T00:00:00").toLocaleDateString("en-US", opts)} – ${new Date(dateRange.end + "T00:00:00").toLocaleDateString("en-US", yearOpts)}`;
   }, [dateRange]);
 
-  const deptTimeOff = useMemo(
+  // ── ADAPTED, NOT RESHAPED ───────────────────────────────────────────────
+  //
+  // `ScheduleCalendar`, `DraftReviewSummary` and `AddShiftDialog` all take
+  // `EnhancedTimeOffRequest[]`, but the only fields any of them reads are
+  // employeeId, status, startDate, endDate and type — see `checkTimeOff` in
+  // scheduling-conflicts.ts. Narrowing those three prop types to that Pick is
+  // the better shape and is its own change; this fills the two fields they
+  // declare and never look at, with the department DERIVED rather than stored.
+  const deptTimeOff = useMemo<EnhancedTimeOffRequest[]>(
     () =>
-      enhancedTimeOffRequests.filter(
-        (r) => r.departmentId === selectedDepartment.id,
-      ),
-    [selectedDepartment.id],
+      deptRequests.map((r) => ({
+        ...r,
+        departmentId: deptId,
+        reason: r.reason || "",
+      })),
+    [deptRequests, deptId],
   );
 
   // ─── Audit helpers ───────────────────────────────────────────────────────
@@ -255,8 +389,8 @@ export function ScheduleView() {
         ? deptEmployees.find((e) => e.id === shift.employeeId)
         : undefined;
       return {
-        departmentId: selectedDepartment.id,
-        departmentName: selectedDepartment.name,
+        departmentId: deptId,
+        departmentName: deptName,
         shiftId: shift.id,
         shiftDate: shift.date,
         shiftTimeRange:
@@ -272,7 +406,7 @@ export function ScheduleView() {
         actorType: "staff" as const,
       };
     },
-    [deptEmployees, deptPositions, selectedDepartment, user.id, user.name],
+    [deptEmployees, deptPositions, deptId, deptName, user.id, user.name],
   );
 
   const diffShifts = useCallback(
@@ -371,64 +505,124 @@ export function ScheduleView() {
     setAddShiftOpen(true);
   };
 
-  const handleSaveShift = (shiftsData: Omit<ScheduleShift, "id">[]) => {
+  const handleSaveShift = async (shiftsData: Omit<ScheduleShift, "id">[]) => {
     if (editingShift) {
-      const shiftData = shiftsData[0];
+      const shiftData = shiftsData[0]!;
       const changes = diffShifts(editingShift, shiftData);
-      setShifts((prev) =>
-        prev.map((s) =>
-          s.id === editingShift.id ? { ...s, ...shiftData } : s,
-        ),
-      );
+      try {
+        await updateShift.mutateAsync({
+          id: editingShift.id,
+          employeeId: shiftData.employeeId ?? null,
+          departmentId: shiftData.departmentId,
+          positionId: shiftData.positionId,
+          date: shiftData.date,
+          startTime: shiftData.startTime,
+          endTime: shiftData.endTime,
+          breakMinutes: shiftData.breakMinutes,
+          notes: shiftData.notes ?? null,
+        });
+      } catch (error) {
+        // The exclusion constraint refusing a double-booking arrives here as a
+        // sentence. Reporting success and then refetching the UNCHANGED row is
+        // how a screen tells somebody their edit saved when it did not.
+        toast.error((error as Error).message);
+        return;
+      }
       logShiftUpdated({
         ...buildShiftCtx({ ...editingShift, ...shiftData }),
         changes,
       });
       toast.success("Shift updated");
-    } else {
-      const timestamp = Date.now();
-      const newShifts: ScheduleShift[] = shiftsData.map((s, i) => ({
-        ...s,
-        id: `shift-new-${timestamp}-${i}`,
-        status: "draft" as const,
-      }));
-      setShifts((prev) => [...prev, ...newShifts]);
-      newShifts.forEach((s) => {
-        if (s.employeeId) {
-          logShiftCreated(buildShiftCtx(s));
-        } else {
-          logOpenShiftPosted(buildShiftCtx(s));
-        }
-      });
-      if (newShifts.length === 1) {
-        toast.success("Draft shift added");
-      } else {
-        toast.success(`${newShifts.length} recurring shifts added`, {
-          description: "All shifts added as drafts.",
-        });
+      return;
+    }
+
+    // A recurring series is several rows, and one of them can be refused while
+    // the others are written — so what is reported is what actually landed.
+    const written: ScheduleShift[] = [];
+    const refused: string[] = [];
+
+    for (const draft of shiftsData) {
+      try {
+        written.push(
+          await createShift.mutateAsync({
+            employeeId: draft.employeeId ?? null,
+            departmentId: draft.departmentId,
+            positionId: draft.positionId,
+            date: draft.date,
+            startTime: draft.startTime,
+            endTime: draft.endTime,
+            breakMinutes: draft.breakMinutes,
+            notes: draft.notes ?? null,
+            status: "draft",
+          }),
+        );
+      } catch (error) {
+        refused.push(`${draft.date}: ${(error as Error).message}`);
       }
+    }
+
+    written.forEach((shift) => {
+      if (shift.employeeId) {
+        logShiftCreated(buildShiftCtx(shift));
+      } else {
+        logOpenShiftPosted(buildShiftCtx(shift));
+      }
+    });
+
+    if (written.length === 0) {
+      toast.error(refused[0] ?? "That shift was not saved.");
+      return;
+    }
+    if (refused.length > 0) {
+      toast.warning(`${written.length} of ${shiftsData.length} shifts added`, {
+        description: refused[0],
+        duration: 8000,
+      });
+      return;
+    }
+    if (written.length === 1) {
+      toast.success("Draft shift added");
+    } else {
+      toast.success(`${written.length} recurring shifts added`, {
+        description: "All shifts added as drafts.",
+      });
     }
   };
 
-  const handleDeleteShift = (shiftId: string) => {
+  const handleDeleteShift = async (shiftId: string) => {
     const target = shifts.find((s) => s.id === shiftId);
-    setShifts((prev) => prev.filter((s) => s.id !== shiftId));
+    try {
+      await removeShift.mutateAsync(shiftId);
+    } catch (error) {
+      toast.error((error as Error).message);
+      return;
+    }
     if (target) logShiftDeleted(buildShiftCtx(target));
     toast.success("Shift deleted");
   };
 
   const handleMoveShift = useCallback(
-    (shiftId: string, newEmployeeId: string | undefined, newDate: string) => {
+    async (
+      shiftId: string,
+      newEmployeeId: string | undefined,
+      newDate: string,
+    ) => {
       // 5E: drag-move is an edit — no-op without scheduling_edit_shifts.
       if (!canEditShifts) return;
       const original = shifts.find((s) => s.id === shiftId);
-      setShifts((prev) =>
-        prev.map((s) =>
-          s.id === shiftId
-            ? { ...s, employeeId: newEmployeeId, date: newDate }
-            : s,
-        ),
-      );
+      try {
+        await updateShift.mutateAsync({
+          id: shiftId,
+          employeeId: newEmployeeId ?? null,
+          date: newDate,
+        });
+      } catch (error) {
+        // Dropping somebody onto a day they already work is refused by the
+        // exclusion constraint. The row does not move, and neither does the
+        // card — the refetch puts it back where it was.
+        toast.error((error as Error).message);
+        return;
+      }
       if (original) {
         const changes = diffShifts(original, {
           employeeId: newEmployeeId,
@@ -450,40 +644,67 @@ export function ScheduleView() {
       }
       toast.success("Shift moved");
     },
-    [shifts, deptEmployees, buildShiftCtx, diffShifts, canEditShifts],
+    [
+      shifts,
+      deptEmployees,
+      buildShiftCtx,
+      diffShifts,
+      canEditShifts,
+      updateShift,
+    ],
   );
 
   const handleCopyShift = useCallback(
-    (shiftId: string, newEmployeeId: string | undefined, newDate: string) => {
+    async (
+      shiftId: string,
+      newEmployeeId: string | undefined,
+      newDate: string,
+    ) => {
       // 5E: drag-copy is an edit — no-op without scheduling_edit_shifts.
       if (!canEditShifts) return;
-      const copyId = `shift-copy-${Date.now()}`;
-      let copied: ScheduleShift | null = null;
-      setShifts((prev) => {
-        const original = prev.find((s) => s.id === shiftId);
-        if (!original) return prev;
-        copied = {
-          ...original,
-          id: copyId,
-          employeeId: newEmployeeId,
+      const original = shifts.find((s) => s.id === shiftId);
+      if (!original) return;
+
+      // A copy is a NEW row, so it goes through create rather than update — and
+      // it lands as a draft with no recurrence, because a copied shift is not
+      // part of the series it was copied from.
+      let copied: ScheduleShift;
+      try {
+        copied = await createShift.mutateAsync({
+          employeeId: newEmployeeId ?? null,
+          departmentId: original.departmentId,
+          positionId: original.positionId,
           date: newDate,
+          startTime: original.startTime,
+          endTime: original.endTime,
+          breakMinutes: original.breakMinutes,
+          notes: original.notes ?? null,
           status: "draft",
-          recurrenceId: undefined,
-        };
-        return [...prev, copied];
-      });
-      if (copied) logShiftCopied(buildShiftCtx(copied));
+        });
+      } catch (error) {
+        toast.error((error as Error).message);
+        return;
+      }
+      logShiftCopied(buildShiftCtx(copied));
       toast.success("Shift copied");
     },
-    [buildShiftCtx, canEditShifts],
+    [shifts, buildShiftCtx, canEditShifts, createShift],
   );
 
   const handleAssignShift = useCallback(
-    (shiftId: string, employeeId: string | undefined) => {
+    async (shiftId: string, employeeId: string | undefined) => {
       const original = shifts.find((s) => s.id === shiftId);
-      setShifts((prev) =>
-        prev.map((s) => (s.id === shiftId ? { ...s, employeeId } : s)),
-      );
+      try {
+        // `null`, not undefined: making a shift OPEN is a value, and a field
+        // the route reads as "not sent" would leave the person on it.
+        await updateShift.mutateAsync({
+          id: shiftId,
+          employeeId: employeeId ?? null,
+        });
+      } catch (error) {
+        toast.error((error as Error).message);
+        return;
+      }
       if (original) {
         if (employeeId) {
           logShiftAssigned(buildShiftCtx({ ...original, employeeId }));
@@ -504,53 +725,86 @@ export function ScheduleView() {
         toast.success("Shift made open");
       }
     },
-    [shifts, deptEmployees, buildShiftCtx],
+    [shifts, deptEmployees, buildShiftCtx, updateShift],
   );
 
   // ─── Publish / Draft handlers ──────────────────────────────────────────
 
-  const handlePublish = () => {
-    const publishedCount = draftShifts.length;
-    setShifts((prev) =>
-      prev.map((s) =>
-        s.departmentId === selectedDepartment.id && s.status === "draft"
-          ? { ...s, status: "published" as const }
-          : s,
-      ),
-    );
+  const handlePublish = async () => {
+    let published: number;
+    try {
+      // One call for the window, not one per shift. A rota half-published is a
+      // rota nobody can act on and the screen cannot show which half made it.
+      ({ published } = await publishSchedule.mutateAsync({
+        departmentId: deptId,
+        from: dateRange.start,
+        to: dateRange.end,
+      }));
+    } catch (error) {
+      toast.error((error as Error).message);
+      return;
+    }
+
     logSchedulePublished({
-      departmentId: selectedDepartment.id,
-      departmentName: selectedDepartment.name,
-      count: publishedCount,
+      departmentId: deptId,
+      departmentName: deptName,
+      count: published,
       weekStart: dateRange.start,
       actorId: user.id,
       actorName: user.name,
     });
-    toast.success("Schedule published! Staff will be notified.", {
-      description: `${publishedCount} shifts have been published.`,
+
+    if (published === 0) {
+      toast.info("Nothing to publish", {
+        description: "There are no draft shifts in this week.",
+      });
+      return;
+    }
+
+    // NOT "Staff will be notified." Publishing changes a status in the roster
+    // and there is nothing here that sends anybody anything — the previous
+    // wording described a feature that does not exist.
+    toast.success(`${published} shift${published === 1 ? "" : "s"} published`, {
+      description: "They now appear on the staff schedule.",
     });
   };
 
-  const handleSaveDraft = () => {
-    toast.success("Draft saved");
-  };
+  const handleDiscard = async () => {
+    // Discarding is N deletes, and unlike publishing there is no single
+    // statement for it — each row goes through the same policy as any other
+    // delete. What is reported is what actually went.
+    const doomed = draftShifts.map((shift) => shift.id);
+    const removed: string[] = [];
 
-  const handleDiscard = () => {
-    const discardedCount = draftShifts.length;
-    setShifts((prev) =>
-      prev.filter(
-        (s) =>
-          !(s.departmentId === selectedDepartment.id && s.status === "draft"),
-      ),
-    );
+    for (const id of doomed) {
+      try {
+        await removeShift.mutateAsync(id);
+        removed.push(id);
+      } catch {
+        // Collected below rather than one toast per failure.
+      }
+    }
+
     logDraftDiscarded({
-      departmentId: selectedDepartment.id,
-      departmentName: selectedDepartment.name,
-      count: discardedCount,
+      departmentId: deptId,
+      departmentName: deptName,
+      count: removed.length,
       actorId: user.id,
       actorName: user.name,
     });
-    toast.info("Draft changes discarded");
+
+    if (removed.length < doomed.length) {
+      toast.error(
+        `${removed.length} of ${doomed.length} draft shifts discarded`,
+        { description: "The rest could not be removed." },
+      );
+      return;
+    }
+    toast.info(
+      removed.length === 0
+        ? "No draft shifts to discard"
+        : `${removed.length} draft shift${removed.length === 1 ? "" : "s"} discarded`,
+    );
   };
 
   const handlePrint = () => {
@@ -599,6 +853,38 @@ export function ScheduleView() {
     toast.success("Clocked out");
   }, []);
 
+  // ── AFTER EVERY HOOK, NEVER BEFORE ONE ─────────────────────────────────
+  //
+  // The fixture version indexed `departments[0]`, so a facility with none would
+  // have crashed on a property of undefined. Real facilities start with none —
+  // a brand-new one has an empty org chart until somebody builds it — so this
+  // is the ordinary first-run state, not an edge case.
+  if (!selectedDepartment) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-8 text-center">
+        <CalendarRange className="text-muted-foreground size-10 opacity-30" />
+        <div>
+          <p className="font-medium">
+            {structure ? "No departments yet" : "Loading the schedule…"}
+          </p>
+          {structure && (
+            <p className="text-muted-foreground mt-1 text-sm">
+              A rota is built per department. Add one under Departments and it
+              will appear here.
+            </p>
+          )}
+        </div>
+        {structure && (
+          <Button asChild size="sm" variant="outline">
+            <Link href="/facility/dashboard/services/scheduling/departments">
+              Go to Departments
+            </Link>
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full w-full min-w-0 flex-col overflow-x-hidden">
       <ScheduleHeader
@@ -610,7 +896,9 @@ export function ScheduleView() {
         draftShiftCount={draftShifts.length}
         onDateChange={setCurrentDate}
         onViewModeChange={setViewMode}
-        onDepartmentChange={setSelectedDepartment}
+        onDepartmentChange={(department) =>
+          setSelectedDepartmentId(department.id)
+        }
         onPublish={handlePublish}
         onAddShift={handleAddShift}
         onPrint={handlePrint}
@@ -636,36 +924,45 @@ export function ScheduleView() {
           shifts={filteredShifts}
           employees={deptEmployees}
           availabilities={employeeAvailabilities}
-          timeOffRequests={enhancedTimeOffRequests}
+          timeOffRequests={deptTimeOff}
           settings={schedulingSettings}
         />
       </div>
 
       <div className="min-w-0 flex-1 overflow-hidden border-t">
-        <ScheduleCalendar
-          viewMode={viewMode}
-          currentDate={currentDate}
-          employees={deptEmployees}
-          shifts={filteredShifts}
-          positions={deptPositions}
-          timeOffRequests={deptTimeOff}
-          holidayRates={holidayRates}
-          overtimeThreshold={schedulingSettings.overtimeThresholdWeekly}
-          onShiftClick={handleShiftClick}
-          onCellClick={handleCellClick}
-          onMoveShift={handleMoveShift}
-          onCopyShift={handleCopyShift}
-          onDeleteShift={handleDeleteShift}
-          onAssignShift={handleAssignShift}
-          getEmployeeHours={getEmployeeHours}
-        />
+        {/* An empty grid and a week still loading look identical, and the first
+            is a statement that nobody is working. */}
+        {rosterPending ? (
+          <div className="space-y-2 p-4">
+            {[0, 1, 2, 3, 4].map((row) => (
+              <Skeleton key={row} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : (
+          <ScheduleCalendar
+            viewMode={viewMode}
+            currentDate={currentDate}
+            employees={deptEmployees}
+            shifts={filteredShifts}
+            positions={deptPositions}
+            timeOffRequests={deptTimeOff}
+            holidayRates={holidayRates}
+            overtimeThreshold={schedulingSettings.overtimeThresholdWeekly}
+            onShiftClick={handleShiftClick}
+            onCellClick={handleCellClick}
+            onMoveShift={handleMoveShift}
+            onCopyShift={handleCopyShift}
+            onDeleteShift={handleDeleteShift}
+            onAssignShift={handleAssignShift}
+            getEmployeeHours={getEmployeeHours}
+          />
+        )}
       </div>
 
       <DraftPublishBar
         draftCount={draftShifts.length}
         hasChanges={draftShifts.length > 0}
         onPublish={handlePublish}
-        onSaveDraft={handleSaveDraft}
         onDiscard={handleDiscard}
       />
 
@@ -686,7 +983,7 @@ export function ScheduleView() {
         onOpenChange={setAddShiftOpen}
         employees={deptEmployees}
         positions={deptPositions}
-        departmentId={selectedDepartment.id}
+        departmentId={deptId}
         defaultDate={defaultShiftDate}
         defaultEmployeeId={defaultShiftEmployee}
         editingShift={editingShift}
@@ -694,7 +991,7 @@ export function ScheduleView() {
         onDelete={handleDeleteShift}
         allShifts={shifts}
         availabilities={employeeAvailabilities}
-        timeOffRequests={enhancedTimeOffRequests}
+        timeOffRequests={deptTimeOff}
         schedulingSettings={schedulingSettings}
         canViewPayRates={canViewPayRates}
       />
@@ -717,27 +1014,36 @@ export function ScheduleView() {
         departments={departments}
         positions={allPositions}
         employees={scheduleEmployees}
-        defaultDepartmentId={selectedDepartment.id}
+        defaultDepartmentId={deptId}
         canViewPayRates={canViewPayRates}
-        onPost={(opp) => {
+        onPost={async (opp) => {
           setShiftOpportunities((prev) => [opp, ...prev]);
-          // Add an unassigned draft shift so it shows in the calendar
-          const oppShift: ScheduleShift = {
-            id: `shift-opp-${opp.id}`,
-            departmentId: opp.departmentId,
-            positionId: opp.positionId,
-            date: opp.date,
-            startTime: opp.startTime,
-            endTime: opp.endTime,
-            breakMinutes: opp.breakMinutes,
-            status: "draft",
-            urgent: opp.urgency !== "normal",
-            notes: opp.reason || undefined,
-          };
-          setShifts((prev) => [...prev, oppShift]);
+
+          // The OPPORTUNITY is still local — nothing stores those yet. The
+          // SHIFT it creates is not: an open shift is a real row with no one on
+          // it, which is exactly what `staff_shifts.staff_id IS NULL` means and
+          // what the roster's read policy already shows to everybody.
+          try {
+            await createShift.mutateAsync({
+              employeeId: null,
+              departmentId: opp.departmentId,
+              positionId: opp.positionId,
+              date: opp.date,
+              startTime: opp.startTime,
+              endTime: opp.endTime,
+              breakMinutes: opp.breakMinutes,
+              status: "draft",
+              urgent: opp.urgency !== "normal",
+              notes: opp.reason || null,
+            });
+          } catch (error) {
+            toast.error((error as Error).message);
+            return;
+          }
+
           // Navigate the calendar to the department and week of the new shift
           const oppDept = departments.find((d) => d.id === opp.departmentId);
-          if (oppDept) setSelectedDepartment(oppDept);
+          if (oppDept) setSelectedDepartmentId(oppDept.id);
           setCurrentDate(new Date(opp.date + "T12:00:00"));
           const pos = allPositions.find((p) => p.id === opp.positionId);
           logOpenShiftPosted({

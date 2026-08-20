@@ -44,7 +44,7 @@ Always use **bun** as the package manager (not npm, yarn, or pnpm).
     anything structural.
   - Touching auth, a portal gate, a permission or an identity — or bookings,
     boarding, daycare, rooms, the care log, the calendar or the roster? Run
-    `bun run test:e2e:ci` locally too. It is 23 specs (~14 min), not 10.
+    `bun run test:e2e:ci` locally too. It is 25 specs (~15 min), not 10.
     CI still runs it, but only after the deploy is live — and the e2e job is
     not one of the four required checks, so it reports rather than gates.
 - Use the `DataTable` component for all tables — additions to DataTable must not break existing implementations

@@ -2740,32 +2740,69 @@ loaded, not that there are that many defects.
 
 ## 2026-08-21 — Scheduling, half converted
 
-### 🟡 Three scheduling screens still count leave and swaps from the fixture
+### ✅ ~~Three scheduling screens still count leave and swaps from the fixture~~
 
-Departments, positions, shifts, time off and shift swaps are Postgres now. The
-`enhancedTimeOffRequests` and `enhancedShiftSwaps` arrays in
-[src/data/scheduling.ts](../../src/data/scheduling.ts) are **not** gone: they are
-still read by
+**Two of the three were not what this entry said.** Corrected the same day:
 
-- `src/components/scheduling/ReportsView.tsx` — its time-off and swap counts
-- `src/components/scheduling/ScheduleNotificationsDropdown.tsx` — its pending list
-- `src/components/scheduling/ScheduleView.tsx`
+- `ScheduleNotificationsDropdown.tsx` was **imported nowhere** — dead code, and
+  Knip had been reporting it. Deleted rather than converted.
+- `ScheduleView.tsx` was not a stale mirror, it was the module's **landing
+  page** with the whole rota in `useState` over a fixture. Converted — see below.
+- `ReportsView.tsx` is the one that remains, and it is blocked, not merely
+  pending. See the next item.
 
-So the scheduling module's own reports and its own dropdown now disagree with
-the time-off and shift-swap pages beside them, and with the facility bell, which
-all read the database. **This is worse than before the conversion**: previously
-everything was equally wrong, and now two surfaces are right and three are
-confidently stale.
+### 🟡 The scheduling calendar is real, but four things around it are not
 
-**Why it's risky:** a manager reading "3 pending time-off requests" in Reports
-and finding none on the Time Off page will not conclude that Reports is a
-fixture. They will conclude the approval did not save.
+`ScheduleView` now reads and writes `staff_shifts`. Still local to the component
+or to a fixture, and clearly marked in the file:
 
-**Do instead:** convert them onto `timeOffQueries` / `swapQueries` in
-[src/lib/api/scheduling.ts](../../src/lib/api/scheduling.ts) — the endpoints take
-a `status` filter precisely so a dropdown can ask for `pending`. Do not add a
-second fetch of the same rows, and do not "fix" the disagreement by pointing the
-new pages back at the fixture.
+| What                  | Where it should live                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| Holiday rates         | a settings domain — hardcoded array at the top of the file, dated April 2026                        |
+| Employee availability | `employeeAvailabilities` fixture; feeds the draft-review warnings                                   |
+| Shift opportunities   | fixture + local state; the SHIFT it posts is now real, the opportunity is not                       |
+| Time clock            | local state; there is still no clock table, though `staff_hr_config` has `require_clock_in_confirm` |
+| Labour cost           | `calculateLaborCost` fixture — the real figures are in `facility_position_pay`                      |
+
+**Why it's risky:** these render beside real data and look equally real. The
+labour-cost tile reads **$0** against a rota that has actual wages behind it.
+
+**Do instead:** convert labour cost next — the table and the permission
+(`scheduling_view_labor_cost`) already exist, so it is a read, not a migration.
+
+### 🟠 `ReportsView` cannot be half-converted, and it is not the fixture that blocks it
+
+`src/components/scheduling/ReportsView.tsx` still reads `enhancedTimeOffRequests`
+and `enhancedShiftSwaps`, and also `scheduleShifts`, `departments`, `positions`,
+`scheduleEmployees` and `shiftOpportunities`.
+
+**Why it's risky:** its `departmentFilter` holds a FIXTURE department id, and the
+real ids are uuids. Converting only the leave and swap slices would leave a
+filter that renders, accepts a selection, and silently matches nothing — the
+counts would read 0 for every department and look like an empty quarter. **That
+is a worse defect than the stale number it would be fixing**, and it is invisible
+in review because the code reads correctly.
+
+**Do instead:** convert its spine first — departments, positions, employees and
+shifts, exactly as `ScheduleView` now does — and the leave and swap slices come
+free. If that is too much for one change, leave it alone; a stale report that is
+consistently stale is safer than a live one with a dead filter.
+
+### 🟠 Nothing writes `staff_departments`
+
+The table exists (2026-08-20), `/api/scheduling/structure` reads it into
+`Department.employeeIds`, and **no screen populates it** — the Departments screen
+is still fixture-backed. So every department has zero declared members.
+
+**Why it's risky:** `ScheduleView`'s grid is people down the side. Drawing only
+declared members rendered a completely empty calendar, with no error, over real
+shifts in the table — caught by the browser spec, not by any API test. The grid
+now shows declared members **plus anyone actually rostered in the window**, which
+is independently correct (a person covering from another department must appear,
+or their shift is invisible) and is currently the only reason it draws anything.
+
+**Do instead:** when converting the Departments screen, write `staff_departments`
+— do not add a second notion of membership on the staff record.
 
 ### 🟡 `scheduling/company` should be deleted, not converted
 

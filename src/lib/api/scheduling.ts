@@ -293,3 +293,96 @@ export function useDecideSwap() {
     },
   });
 }
+
+export interface ShiftPatch {
+  id: string;
+  /** `null` makes the shift OPEN. Absent leaves the assignment alone. */
+  employeeId?: string | null;
+  departmentId?: string;
+  positionId?: string;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  breakMinutes?: number;
+  notes?: string | null;
+  status?: ScheduleShift["status"];
+}
+
+/**
+ * Change one shift — a drag, an assignment, an edit, a cancellation.
+ *
+ * Only the fields that changed are sent; the route reads the row and applies
+ * them on top, because moving a shift to another day still needs both times to
+ * rebuild the instant range and a drag has no business sending six fields it
+ * did not touch.
+ */
+export function useUpdateShift() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (patch: ShiftPatch) =>
+      write<ScheduleShift>(
+        "/api/scheduling/shifts",
+        "PATCH",
+        patch,
+        "That change was not saved.",
+      ),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduling", "shifts"],
+      }),
+  });
+}
+
+export function useDeleteShift() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/scheduling/shifts?id=${id}`, {
+        method: "DELETE",
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(body.error ?? "That shift was not removed.");
+      }
+      return body as { removed: string };
+    },
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduling", "shifts"],
+      }),
+  });
+}
+
+export interface PublishWindow {
+  departmentId: string;
+  from: string;
+  to: string;
+}
+
+/**
+ * Publish every draft in a department's window.
+ *
+ * One call, not one per shift: a rota half-published is a rota nobody can act
+ * on, and the screen has no way to show which half made it.
+ */
+export function usePublishSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (window: PublishWindow) =>
+      write<{ published: number }>(
+        "/api/scheduling/shifts/publish",
+        "POST",
+        window,
+        "The schedule was not published.",
+      ),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduling", "shifts"],
+      }),
+  });
+}

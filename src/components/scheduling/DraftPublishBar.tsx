@@ -1,15 +1,24 @@
 "use client";
 
-import { FileEdit, Send, Undo2, Save, AlertTriangle } from "lucide-react";
+import { FileEdit, Send, Undo2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
+/**
+ * ── "SAVE DRAFT" IS GONE, AND ITS ABSENCE IS THE FIX ──────────────────────
+ *
+ * It called a handler whose entire body was `toast.success("Draft saved")`.
+ * That was honest enough while the whole rota lived in component state and
+ * nothing could be saved at all; now a shift is written to `staff_shifts` with
+ * `status = 'draft'` the moment it is added, so there is nothing left for the
+ * button to do. A button that reports success for doing nothing is worse than
+ * no button, because it teaches people to press it.
+ */
 interface DraftPublishBarProps {
   draftCount: number;
   hasChanges: boolean;
   onPublish: () => void;
-  onSaveDraft: () => void;
   onDiscard: () => void;
 }
 
@@ -17,7 +26,6 @@ export function DraftPublishBar({
   draftCount,
   hasChanges,
   onPublish,
-  onSaveDraft,
   onDiscard,
 }: DraftPublishBarProps) {
   const { can } = useCurrentUser();
@@ -57,17 +65,13 @@ export function DraftPublishBar({
             <Undo2 className="mr-1.5 size-3.5" />
             Discard
           </Button>
-          <Button variant="outline" size="sm" onClick={onSaveDraft}>
-            <Save className="mr-1.5 size-3.5" />
-            Save Draft
-          </Button>
           <Button
             size="sm"
             onClick={onPublish}
             className="bg-indigo-600 text-white hover:bg-indigo-700"
           >
             <Send className="mr-1.5 size-3.5" />
-            Publish & Notify Staff
+            Publish
           </Button>
         </div>
       </div>
