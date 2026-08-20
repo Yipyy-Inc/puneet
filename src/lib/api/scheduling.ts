@@ -4,6 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { SchedulingStructure } from "@/app/api/scheduling/structure/route";
 import type { ShiftsPayload } from "@/app/api/scheduling/shifts/route";
+import type {
+  TimeOffDecision,
+  TimeOffPayload,
+} from "@/app/api/scheduling/time-off/route";
+import type {
+  SwapDecision,
+  SwapsPayload,
+} from "@/app/api/scheduling/swaps/route";
+import type { RequestStatus, TimeOffType } from "@/lib/api/mappers/scheduling";
 import type { ScheduleShift } from "@/types/scheduling";
 
 // ============================================================================
@@ -19,7 +28,13 @@ export const schedulingKeys = {
   structure: ["scheduling", "structure"] as const,
   shifts: (from: string, to: string) =>
     ["scheduling", "shifts", from, to] as const,
+  timeOff: (status: StatusFilter) =>
+    ["scheduling", "time-off", status] as const,
+  swaps: (status: StatusFilter) => ["scheduling", "swaps", status] as const,
 };
+
+/** `"all"` is the absence of a filter, not a fifth status. */
+export type StatusFilter = RequestStatus | "all";
 
 async function read<T>(url: string, fallback: string): Promise<T> {
   const response = await fetch(url);
@@ -110,4 +125,171 @@ export function useCreateShift() {
 export function useCanSeePay(): boolean {
   const { data } = useQuery(schedulingQueries.structure());
   return data?.canSeePay ?? false;
+}
+
+// ============================================================================
+// Time off and shift swaps.
+//
+// Both lists are keyed on the status tab, so switching tabs is a new query
+// rather than a refetch that blanks the rows already on screen.
+//
+// Every decision invalidates the WHOLE family — an approved request leaves the
+// Pending tab and arrives in Approved, and the caller cannot know which of
+// those two lists somebody is looking at.
+// ============================================================================
+
+export const timeOffQueries = {
+  list: (status: StatusFilter) => ({
+    queryKey: schedulingKeys.timeOff(status),
+    queryFn: () =>
+      read<TimeOffPayload>(
+        `/api/scheduling/time-off?status=${status}`,
+        "Could not read the time-off requests.",
+      ),
+    staleTime: 30_000,
+  }),
+};
+
+export const swapQueries = {
+  list: (status: StatusFilter) => ({
+    queryKey: schedulingKeys.swaps(status),
+    queryFn: () =>
+      read<SwapsPayload>(
+        `/api/scheduling/swaps?status=${status}`,
+        "Could not read the swap requests.",
+      ),
+    staleTime: 30_000,
+  }),
+};
+
+async function write<T>(
+  url: string,
+  method: "POST" | "PATCH",
+  body: unknown,
+  fallback: string,
+): Promise<T> {
+  const response = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+  };
+  if (!response.ok) throw new Error(payload.error ?? fallback);
+  return payload as T;
+}
+
+export interface NewTimeOff {
+  /** Omitted means the signed-in person — the server resolves it, not this. */
+  employeeId?: string;
+  type: TimeOffType;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
+export function useRequestTimeOff() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: NewTimeOff) =>
+      write<TimeOffDecision>(
+        "/api/scheduling/time-off",
+        "POST",
+        request,
+        "That request was not filed.",
+      ),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduling", "time-off"],
+      }),
+  });
+}
+
+export interface Decision {
+  id: string;
+  status: "approved" | "denied" | "cancelled";
+  notes?: string;
+}
+
+/**
+ * Approve, deny or withdraw leave.
+ *
+ * The result carries `conflicts` when leave was approved over shifts the person
+ * is still rostered for. That is the one thing the screen it replaced could
+ * never show, so a caller that ignores it has thrown away the point.
+ */
+export function useDecideTimeOff() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (decision: Decision) =>
+      write<TimeOffDecision>(
+        "/api/scheduling/time-off",
+        "PATCH",
+        decision,
+        "That decision was not saved.",
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduling", "time-off"],
+      });
+      // Leave does not move a shift, but the roster draws who is away.
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduling", "shifts"],
+      });
+    },
+  });
+}
+
+export interface NewSwap {
+  requestingShiftId: string;
+  targetStaffId: string;
+  /** Omitted is a hand-off: give the shift up rather than trade for one. */
+  targetShiftId?: string;
+  reason?: string;
+}
+
+export function useRequestSwap() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: NewSwap) =>
+      write<SwapDecision>(
+        "/api/scheduling/swaps",
+        "POST",
+        request,
+        "That request was not filed.",
+      ),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["scheduling", "swaps"] }),
+  });
+}
+
+/**
+ * Approve, deny or withdraw a swap.
+ *
+ * Approving MOVES BOTH SHIFTS, so the roster is invalidated too — the store
+ * this replaced marked the request approved and left the rota untouched, which
+ * is exactly the disagreement a stale cache would recreate.
+ */
+export function useDecideSwap() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (decision: Decision) =>
+      write<SwapDecision>(
+        "/api/scheduling/swaps",
+        "PATCH",
+        decision,
+        "That decision was not saved.",
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["scheduling", "swaps"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduling", "shifts"],
+      });
+    },
+  });
 }

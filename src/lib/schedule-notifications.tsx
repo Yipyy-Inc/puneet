@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { broadcastMessages } from "@/data/scheduling";
-import { decideShiftSwap, useShiftSwaps } from "@/lib/shift-swaps-store";
+import { swapQueries, useDecideSwap } from "@/lib/api/scheduling";
 import type { FacilityNotification } from "@/types/facility";
 
 /**
@@ -17,8 +18,14 @@ import type { FacilityNotification } from "@/types/facility";
  *  - staff broadcasts     → type "staff_announcement" (informational)
  *
  * A swap notification carries the swap id in its notification id
- * (`sched-swap-<swapId>`); resolving it (Approve/Decline) flips the swap out of
- * "pending" in the store, so the derived notification simply disappears.
+ * (`sched-swap-<swapId>`); resolving it (Approve/Decline) decides the swap in
+ * Postgres, so the derived notification simply disappears.
+ *
+ * It reads the SAME endpoint the swaps page does, and that matters more than it
+ * looks: until 2026-08-21 this bell decided swaps into localStorage while the
+ * page below it decided them into localStorage too — one store, but a store
+ * neither the roster nor anybody else's browser could see. Two surfaces that
+ * agree with each other and with nothing real are still two lies.
  */
 const SWAP_PREFIX = "sched-swap-";
 
@@ -39,13 +46,15 @@ const BROADCAST_LINK = "/facility/dashboard/services/scheduling/notifications";
  * so they show in the list without inflating the actionable unread count.
  */
 export function useScheduleNotifications(): FacilityNotification[] {
-  const swaps = useShiftSwaps();
+  // Only the pending ones: a bell is a queue of things to do, and the page is
+  // where the decided ones are read back.
+  const { data } = useQuery(swapQueries.list("pending"));
+  const swaps = data?.swaps;
 
   return useMemo(() => {
     const items: FacilityNotification[] = [];
 
-    for (const swap of swaps) {
-      if (swap.status !== "pending") continue;
+    for (const swap of swaps ?? []) {
       items.push({
         id: `${SWAP_PREFIX}${swap.id}`,
         type: "shift_swap",
@@ -82,15 +91,23 @@ export function useScheduleNotifications(): FacilityNotification[] {
  * behave identically.
  */
 export function ShiftSwapNotificationActions({ swapId }: { swapId: string }) {
+  const decideSwap = useDecideSwap();
+
   const decide = (status: "approved" | "denied") => {
-    decideShiftSwap(swapId, status);
-    toast.success(
-      status === "approved" ? "Shift swap approved" : "Shift swap declined",
+    decideSwap.mutate(
+      { id: swapId, status },
       {
-        description:
-          status === "approved"
-            ? "Both employees have been notified."
-            : undefined,
+        onSuccess: (decided) => {
+          if (status === "denied") {
+            toast.success("Shift swap declined");
+            return;
+          }
+          const moved = decided.moved?.length ?? 0;
+          toast.success("Shift swap approved", {
+            description: `${moved} shift${moved === 1 ? "" : "s"} reassigned on the roster.`,
+          });
+        },
+        onError: (error: Error) => toast.error(error.message),
       },
     );
   };
