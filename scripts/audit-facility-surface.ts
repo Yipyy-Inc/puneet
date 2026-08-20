@@ -63,7 +63,26 @@ const PAGES_ROOT = "src/app/facility";
 const SPECS_DIR = "tests/e2e";
 
 const IMPORT = /from\s+["']([^"']+)["']/g;
-const FETCH_API = /fetch\(\s*[`"']\/api\//;
+/**
+ * A file that talks to the app's own API.
+ *
+ * Two wrong versions before this one, and both wrong in the direction that
+ * flatters or panics:
+ *
+ *   `fetch\("\/api\/` — missed the two commonest shapes here, a
+ *   `json("/api/rooms")` helper and `fetch(url)` with the path built a few
+ *   lines up. `use-rooms.tsx` does both, so the Rooms page — which
+ *   rooms-admin.spec.ts PROVES writes to Postgres — was reported as having no
+ *   backend, along with 16 others.
+ *
+ *   `["'\`]\/api\/` — matched a JSDoc line reading "read from `/api/staff`",
+ *   so seventeen scheduling screens that save to localStorage were reported as
+ *   backed. A comment about an endpoint is not a call to one.
+ *
+ * Hence `stripComments` below. Every pattern in this file runs against code
+ * only, which is what they were all meant to mean.
+ */
+const FETCH_API = /["'`]\/api\//;
 const MUTATION = /useMutation\s*[<(]/;
 const WRITE_METHOD = /method:\s*["'](POST|PATCH|PUT|DELETE)["']/;
 /**
@@ -77,11 +96,29 @@ const LOCAL_WRITE = /(?:local|session)Storage\.setItem/;
 
 const files = new Map<string, string>();
 
+/**
+ * Source with its comments removed.
+ *
+ * This file's whole job is asking what code DOES, and every one of its patterns
+ * — an `/api/` path, a `localStorage.setItem`, a `useMutation` — appears in the
+ * comments of a codebase that explains itself this thoroughly. Scanning prose
+ * is how the audit reported the opposite of the truth twice.
+ *
+ * Deliberately crude: no string-awareness, so a `"//"` inside a string literal
+ * takes the rest of that line with it. That costs a false negative on a URL
+ * written inline, and the alternative is a JavaScript parser.
+ */
+function stripComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:"'`\\])\/\/.*$/gm, "$1");
+}
+
 function read(path: string): string {
   let cached = files.get(path);
   if (cached === undefined) {
     try {
-      cached = readFileSync(path, "utf8");
+      cached = stripComments(readFileSync(path, "utf8"));
     } catch {
       cached = "";
     }
