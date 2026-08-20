@@ -47,6 +47,15 @@ export interface ShiftsPayload {
   from: string;
   to: string;
   shifts: ScheduleShift[];
+  /**
+   * The facility's own timezone.
+   *
+   * Returned because the client has no other source for it, and one screen
+   * genuinely needs it: attendance compares a clock-in INSTANT against a shift
+   * start expressed as a wall-clock time, and doing that in the viewer's zone
+   * grades people late for being in a different city.
+   */
+  timeZone: string;
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -99,6 +108,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     from,
     to,
+    timeZone: context.timeZone,
     shifts: ((data ?? []) as ShiftRow[]).map((row) =>
       toShift(row, context.timeZone),
     ),
