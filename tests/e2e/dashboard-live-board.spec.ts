@@ -93,15 +93,74 @@ function boardingBody(roomId: string) {
  * booked three more nights and then looked for a Check Out button that the card
  * correctly did not have.
  */
+/**
+ * The facility's own wall clock.
+ *
+ * Every seeded facility is America/Toronto, and a booking's end is an absolute
+ * instant — so "is this guest late" is decided by comparing instants, not by
+ * whose midnight it is. What that means for a test: a stay scheduled out at
+ * 11:00 Toronto is simply NOT late until 11:00 Toronto, wherever the runner
+ * happens to be sitting.
+ */
+const FACILITY_TZ = "America/Toronto";
+
+function facilityClock(): { date: string; minutesIntoDay: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: FACILITY_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const part = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? "00";
+  // ICU renders midnight as "24" under hour12:false in some versions.
+  const hour = Number(part("hour")) % 24;
+  return {
+    date: `${part("year")}-${part("month")}-${part("day")}`,
+    minutesIntoDay: hour * 60 + Number(part("minute")),
+  };
+}
+
+/**
+ * A stay that departed TODAY and is already overdue, in the facility's clock.
+ *
+ * The first version hardcoded `checkOutTime: "11:00"` and today's date from the
+ * RUNNER's clock, then asserted a late-pickup fee had been added. That holds
+ * only when the run happens after 11:15 in Toronto — so it passed on a Toronto
+ * afternoon and failed everywhere else, including CI, which is UTC. It went
+ * unnoticed because an assertion earlier in the same test failed first.
+ *
+ * Scheduling the departure two hours behind the facility's own now makes the
+ * lateness real regardless of where or when this runs.
+ */
 function departingTodayBody(roomId: string) {
-  const start = new Date();
-  start.setDate(start.getDate() - 1);
+  const { date, minutesIntoDay } = facilityClock();
+  const scheduled = minutesIntoDay - 120;
+  const hh = String(Math.floor(scheduled / 60)).padStart(2, "0");
+  const mm = String(scheduled % 60).padStart(2, "0");
+
+  const start = new Date(`${date}T00:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - 1);
+
   return {
     ...boardingBody(roomId),
     startDate: start.toISOString().slice(0, 10),
-    endDate: new Date().toISOString().slice(0, 10),
+    endDate: date,
+    checkOutTime: `${hh}:${mm}`,
   };
 }
+
+/**
+ * True in the first two hours of the facility's day, where "two hours ago" is
+ * yesterday and no departure today can be overdue yet.
+ *
+ * A skip rather than a fudge: the alternative is a stay that departs tonight,
+ * which is not the thing under test.
+ */
+const TOO_EARLY_FOR_A_LATE_FEE = facilityClock().minutesIntoDay < 150;
 
 async function createBooking(
   page: import("@playwright/test").Page,
@@ -352,6 +411,10 @@ test.describe("the facility home board", () => {
   test("checking out from the dashboard records the payment", async ({
     page,
   }) => {
+    test.skip(
+      TOO_EARLY_FOR_A_LATE_FEE,
+      "it is before 02:30 in the facility's timezone, so nothing departing today can be overdue yet",
+    );
     await signIn(page, ACCOUNTS.owner);
 
     const room = await freeRoom(page);
@@ -385,16 +448,28 @@ test.describe("the facility home board", () => {
     await expect(checkOut).toBeVisible({ timeout: 15_000 });
     await checkOut.getByRole("button", { name: /^check out$/i }).click();
 
-    // The payment modal. TERMINAL, not cash: the cash path keeps the confirm
-    // button disabled until a tendered amount covering the balance is typed in,
-    // and this test is about the ledger rather than about counting change.
-    // `terminal` is a tender the books recognise — `checkoutTender` throws on
-    // "custom", which is the whole reason that helper exists.
+    // The payment modal. E-TRANSFER, and the choice is load-bearing:
+    //
+    //   cash      keeps the confirm button disabled until a tendered amount
+    //             covering the balance is typed in, and this test is about the
+    //             ledger rather than about counting change
+    //   terminal  is disabled outright without a Clover device to charge on
+    //             ("a terminal payment with no terminal is not a payment",
+    //             PaymentCheckoutFlow.tsx). The e2e facility has no Clover
+    //             connection and should not have one, so this tender can never
+    //             arm here — it is what made this test hang on a disabled
+    //             button for 674 retries
+    //   custom    is not a tender the books recognise; `checkoutTender` throws
+    //             on it, which is the whole reason that helper exists
+    //
+    // e-transfer is in TENDER, needs no hardware and no second field. It is the
+    // only frictionless tender left, which is the point: everything else now
+    // demands evidence that the money actually moved.
     const payment = page
       .getByRole("dialog")
       .filter({ hasText: /payment checkout/i });
     await expect(payment).toBeVisible({ timeout: 15_000 });
-    await payment.getByRole("button", { name: /^terminal$/i }).click();
+    await payment.getByRole("button", { name: /^e-transfer$/i }).click();
 
     // Two presses by design: "Checkout & Charge" arms it, "Confirm & Charge"
     // takes the money.
