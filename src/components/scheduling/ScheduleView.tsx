@@ -38,7 +38,6 @@ import {
   employeeAvailabilities,
   shiftOpportunities as initialShiftOpportunities,
   shiftOpportunityNotificationSettings as initialNotifSettings,
-  calculateLaborCost,
 } from "@/data/scheduling";
 import {
   schedulingQueries,
@@ -50,7 +49,7 @@ import {
   useUpdateShift,
 } from "@/lib/api/scheduling";
 import { staffQueries } from "@/lib/api/staff";
-import { computeShiftHours } from "@/lib/scheduling-utils";
+import { computeLaborCost, computeShiftHours } from "@/lib/scheduling-utils";
 import type {
   Department,
   EnhancedTimeOffRequest,
@@ -92,8 +91,7 @@ const schedulingSettings = {
 };
 
 export function ScheduleView() {
-  const { user, can } = useCurrentUser();
-  const canViewPayRates = can("payroll.view");
+  const { user } = useCurrentUser();
   // Section 5E — editing shifts (opening the edit dialog, drag move/copy)
   // requires scheduling_edit_shifts; creating requires scheduling_create_shifts.
   // All-access fallback keeps admin intact.
@@ -305,9 +303,31 @@ export function ScheduleView() {
     [filteredShifts],
   );
 
+  // ── FROM THE ROTA ON SCREEN AND THE REAL PAY TABLE ──────────────────────
+  //
+  // `calculateLaborCost` read fixture shifts against fixture positions, so the
+  // tile showed a figure derived from neither the week being looked at nor
+  // anybody's actual wage — and after the calendar became real it read $0
+  // against a rota with real rates behind it.
+  //
+  // `canSeePay` is the structure route's answer from `my_permissions()`, which
+  // is the same cascade the `facility_position_pay` policy consults. Without
+  // it the positions arrive with no figures on them and this returns null, so
+  // the tile is ABSENT rather than zero.
+  // Both dialogs below take `canViewPayRates`, and it is THIS value — not
+  // `can("payroll.view")`, which they were given before. Those are two
+  // permission systems answering one question, and they disagree in exactly the
+  // case phase 1 was built around: the ACCOUNTANT holds
+  // `scheduling_view_labor_cost` and is not a facility administrator, so the
+  // legacy flag hid rates that RLS had already handed over.
   const laborCost = useMemo(
-    () => calculateLaborCost(deptId, dateRange.start, dateRange.end),
-    [deptId, dateRange],
+    () =>
+      computeLaborCost(
+        filteredShifts,
+        allPositions,
+        structure?.canSeePay ?? false,
+      ),
+    [filteredShifts, allPositions, structure],
   );
 
   // Leave and swaps belong to a PERSON, not to a department — so "this
@@ -912,11 +932,10 @@ export function ScheduleView() {
         totalEmployees={deptEmployees.length}
         scheduledToday={scheduledToday}
         totalHoursThisWeek={totalHours}
-        laborCost={laborCost.totalCost}
+        laborCost={laborCost?.total ?? null}
         pendingTimeOff={pendingTimeOff}
         pendingSwaps={pendingSwaps}
         overtimeAlerts={0}
-        canViewPayRates={canViewPayRates}
       />
 
       <div className="bg-muted/20 min-w-0 space-y-2 border-t px-4 py-2">
@@ -993,7 +1012,7 @@ export function ScheduleView() {
         availabilities={employeeAvailabilities}
         timeOffRequests={deptTimeOff}
         schedulingSettings={schedulingSettings}
-        canViewPayRates={canViewPayRates}
+        canViewPayRates={structure?.canSeePay ?? false}
       />
 
       <TimeClock
@@ -1015,7 +1034,7 @@ export function ScheduleView() {
         positions={allPositions}
         employees={scheduleEmployees}
         defaultDepartmentId={deptId}
-        canViewPayRates={canViewPayRates}
+        canViewPayRates={structure?.canSeePay ?? false}
         onPost={async (opp) => {
           setShiftOpportunities((prev) => [opp, ...prev]);
 

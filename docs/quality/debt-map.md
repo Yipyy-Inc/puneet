@@ -2751,6 +2751,42 @@ loaded, not that there are that many defects.
 - `ReportsView.tsx` is the one that remains, and it is blocked, not merely
   pending. See the next item.
 
+### 🟠 The accountant holds `scheduling_view_labor_cost` and can reach no screen that uses it
+
+`scheduling_view_labor_cost` is granted to owner, admin, manager **and
+accountant**. The phase-1 migration justified putting pay in its own table on
+exactly that basis — "the person whose job is payroll is not a facility
+administrator, and an admin-only rule would have locked out precisely the role
+that needs it."
+
+It locked them out anyway, one layer up. Admin access is forced by the job
+titles `owner | admin | manager | supervisor` (migration
+`20260818100000_a_membership_is_admin_or_staff`); `accountant` is not among them,
+so an accountant is staff-level, and `/facility/**` is admin-only under
+[ADR 0005](../architecture/decisions/0005-three-facility-roles-one-staff-portal.md).
+Every screen that displays labour cost is under `/facility/**`.
+
+**Why it's risky:** the permission is real, RLS honours it, and the API returns
+the figures — so this reads as working right up until an accountant signs in.
+Whoever fixes it will be tempted to add `accountant` to the admin-tier list,
+which would hand them the whole facility portal.
+
+**Do instead:** decide what an accountant is _for_ before changing anything. The
+likely answer is a payroll surface under `/employee/**`, not a fourth access
+level. Do not widen admin-tier.
+
+### 🟡 The absent labour-cost tile is unproven at the UI level
+
+Following from the above: no e2e identity can both reach the scheduling calendar
+and lack `scheduling_view_labor_cost`, so the branch where the tile renders as
+ABSENT rather than `$0` has no browser coverage. The _withholding_ is covered —
+`scheduling-roster.spec.ts` asserts a groomer reads a position with no rate — but
+this component's handling of that absence is not.
+
+**Do instead:** if you need it covered, add a seeded identity that is admin-tier
+with the labour-cost permission overridden to `none`, rather than editing a real
+person's permissions inside a spec.
+
 ### 🟡 The scheduling calendar is real, but four things around it are not
 
 `ScheduleView` now reads and writes `staff_shifts`. Still local to the component
