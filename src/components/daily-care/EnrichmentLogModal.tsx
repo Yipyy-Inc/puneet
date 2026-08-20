@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Camera, X, Image as ImageIcon, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
 import { LogMeta } from "./LogMeta";
@@ -24,6 +24,7 @@ import type {
   EngagementLevel,
   EnrichmentDetail,
 } from "@/types/care-log";
+import { PhotoProofNotice } from "./PhotoProofNotice";
 
 // Suggested activities — free text is still allowed via the datalist.
 const ACTIVITY_SUGGESTIONS = [
@@ -78,7 +79,6 @@ export function EnrichmentLogModal({
   const [duration, setDuration] = useState("");
   const [engagement, setEngagement] = useState<EngagementLevel | "">("");
   const [notes, setNotes] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
   const [nowValue, setNowValue] = useState("");
   const [logTime, setLogTime] = useState("");
 
@@ -103,16 +103,12 @@ export function EnrichmentLogModal({
       setDuration(e?.durationMinutes != null ? String(e.durationMinutes) : "");
       setEngagement(e?.engagement ?? "");
       setNotes(existing.notes ?? "");
-      setPhotos(
-        existing.photoUrls ?? (existing.photoUrl ? [existing.photoUrl] : []),
-      );
       setLogTime(existing.executedAt);
     } else {
       setActivityType(stepName);
       setDuration("");
       setEngagement("");
       setNotes("");
-      setPhotos([]);
       setLogTime("");
     }
   }, [open, task?.id, existing, stepName]);
@@ -122,28 +118,12 @@ export function EnrichmentLogModal({
   const meta = metaFor(task.taskType, task.subType);
   const Icon = meta.Icon;
   const requiresPhoto = task.requiresPhotoProof === true;
-  const MAX_PHOTOS = 3;
 
   const durationValue = Number(duration);
   const durationOk =
     duration === "" || (Number.isFinite(durationValue) && durationValue > 0);
 
-  const addPhoto = () => {
-    // TODO: open the real camera / library picker; mock URL for now.
-    setPhotos((prev) =>
-      prev.length >= MAX_PHOTOS
-        ? prev
-        : [...prev, `mock://photo-${prev.length + 1}`],
-    );
-  };
-  const removePhoto = (i: number) => {
-    setPhotos((prev) => prev.filter((_, idx) => idx !== i));
-  };
-
-  const canSubmit =
-    activityType.trim().length > 0 &&
-    durationOk &&
-    (!requiresPhoto || photos.length > 0);
+  const canSubmit = activityType.trim().length > 0 && durationOk && true;
 
   function handleSubmit() {
     if (activityType.trim().length === 0) return;
@@ -159,7 +139,6 @@ export function EnrichmentLogModal({
       staffName: user.name,
       staffInitials: user.initials,
       executedAt: logTime || undefined,
-      photoUrls: photos.length > 0 ? photos : undefined,
       enrichment,
     });
     onOpenChange(false);
@@ -249,47 +228,7 @@ export function EnrichmentLogModal({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">
-              Photos{" "}
-              <span className="text-muted-foreground font-normal">
-                {requiresPhoto ? "(required)" : "(optional)"}
-              </span>
-            </Label>
-            <div className="flex flex-wrap items-center gap-2">
-              {photos.map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-muted relative flex size-12 items-center justify-center rounded-md border"
-                >
-                  <ImageIcon className="text-muted-foreground size-5" />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(i)}
-                    aria-label={`Remove photo ${i + 1}`}
-                    className="bg-destructive absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full text-white"
-                  >
-                    <X className="size-2.5" />
-                  </button>
-                </div>
-              ))}
-              {photos.length < MAX_PHOTOS && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addPhoto}
-                  className="h-12 gap-1.5"
-                >
-                  <Camera className="size-4" />
-                  Add photo
-                </Button>
-              )}
-            </div>
-            <p className="text-muted-foreground text-[11px]">
-              {photos.length}/{MAX_PHOTOS} · camera or library
-            </p>
-          </div>
+          <PhotoProofNotice required={requiresPhoto} />
 
           <div className="space-y-1.5">
             <Label htmlFor="enrichment-notes" className="text-xs">

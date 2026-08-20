@@ -13,13 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Camera,
-  X,
-  Image as ImageIcon,
-  AlertTriangle,
-  Pill,
-} from "lucide-react";
+import { AlertTriangle, Pill } from "lucide-react";
 import { OUTCOME_OPTIONS, outcomeBadgeClass } from "./outcome-meta";
 import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
@@ -27,6 +21,7 @@ import { LogMeta } from "./LogMeta";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { ScheduledTask, TaskExecution } from "@/types/care-log";
 import type { MedAdminMethod } from "@/types/boarding";
+import { PhotoProofNotice } from "./PhotoProofNotice";
 
 const METHOD_LABEL: Record<MedAdminMethod, string> = {
   oral: "Oral",
@@ -85,7 +80,6 @@ export function MedicationLogModal({
   const [index, setIndex] = useState(0);
   const [outcome, setOutcome] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
   const [nowValue, setNowValue] = useState("");
   const [logTime, setLogTime] = useState("");
 
@@ -106,14 +100,10 @@ export function MedicationLogModal({
     if (existing) {
       setOutcome(String(existing.outcome));
       setNotes(existing.notes ?? "");
-      setPhotos(
-        existing.photoUrls ?? (existing.photoUrl ? [existing.photoUrl] : []),
-      );
       setLogTime(existing.executedAt);
     } else {
       setOutcome(null);
       setNotes("");
-      setPhotos([]);
       setLogTime("");
     }
   }, [open, existing]);
@@ -127,7 +117,6 @@ export function MedicationLogModal({
   const total = tasks.length;
   const isLast = index >= total - 1;
   const requiresPhoto = current.requiresPhotoProof === true;
-  const MAX_PHOTOS = 3;
 
   // Rule (c): a med task with no structured booking detail is stale.
   const med = current.medDetail;
@@ -136,20 +125,7 @@ export function MedicationLogModal({
   const noteRequired = outcome !== null && NOTE_REQUIRED_OUTCOMES.has(outcome);
   const noteOk = !noteRequired || notes.trim().length >= MIN_NOTE_LENGTH;
 
-  const addPhoto = () => {
-    // TODO: open the real camera / library picker; mock URL for now.
-    setPhotos((prev) =>
-      prev.length >= MAX_PHOTOS
-        ? prev
-        : [...prev, `mock://photo-${prev.length + 1}`],
-    );
-  };
-  const removePhoto = (i: number) => {
-    setPhotos((prev) => prev.filter((_, idx) => idx !== i));
-  };
-
-  const canSubmit =
-    outcome !== null && (!requiresPhoto || photos.length > 0) && noteOk;
+  const canSubmit = outcome !== null && noteOk;
 
   // Clear the log fields for the next med in the queue and refresh the clock.
   const resetForNext = () => {
@@ -161,7 +137,6 @@ export function MedicationLogModal({
     );
     setOutcome(null);
     setNotes("");
-    setPhotos([]);
     setLogTime("");
   };
 
@@ -173,7 +148,6 @@ export function MedicationLogModal({
       staffName: user.name,
       staffInitials: user.initials,
       executedAt: logTime || undefined,
-      photoUrls: photos.length > 0 ? photos : undefined,
     });
     if (isLast) {
       onOpenChange(false);
@@ -304,47 +278,7 @@ export function MedicationLogModal({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">
-              Photos{" "}
-              <span className="text-muted-foreground font-normal">
-                {requiresPhoto ? "(required)" : "(optional)"}
-              </span>
-            </Label>
-            <div className="flex flex-wrap items-center gap-2">
-              {photos.map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-muted relative flex size-12 items-center justify-center rounded-md border"
-                >
-                  <ImageIcon className="text-muted-foreground size-5" />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(i)}
-                    aria-label={`Remove photo ${i + 1}`}
-                    className="bg-destructive absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full text-white"
-                  >
-                    <X className="size-2.5" />
-                  </button>
-                </div>
-              ))}
-              {photos.length < MAX_PHOTOS && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addPhoto}
-                  className="h-12 gap-1.5"
-                >
-                  <Camera className="size-4" />
-                  Add photo
-                </Button>
-              )}
-            </div>
-            <p className="text-muted-foreground text-[11px]">
-              {photos.length}/{MAX_PHOTOS} · camera or library
-            </p>
-          </div>
+          <PhotoProofNotice required={requiresPhoto} />
 
           <div className="space-y-1.5">
             <Label htmlFor="med-notes" className="text-xs">

@@ -13,14 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Camera,
-  X,
-  Image as ImageIcon,
-  AlertTriangle,
-  UtensilsCrossed,
-  Pill,
-} from "lucide-react";
+import { AlertTriangle, UtensilsCrossed, Pill } from "lucide-react";
 import {
   OUTCOME_OPTIONS,
   outcomeBadgeClass,
@@ -35,6 +28,7 @@ import type {
   TaskExecution,
   MedicationOutcome,
 } from "@/types/care-log";
+import { PhotoProofNotice } from "./PhotoProofNotice";
 
 type Props = {
   open: boolean;
@@ -85,7 +79,6 @@ export function FeedingLogModal({
   const { user } = useCurrentUser();
   const [outcome, setOutcome] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
   // Log time: "" = stamp the current time on submit; a value backdates it.
   const [nowValue, setNowValue] = useState("");
   const [logTime, setLogTime] = useState("");
@@ -115,14 +108,10 @@ export function FeedingLogModal({
         existing.outcome === FEEDING_SERVED ? null : String(existing.outcome),
       );
       setNotes(existing.notes ?? "");
-      setPhotos(
-        existing.photoUrls ?? (existing.photoUrl ? [existing.photoUrl] : []),
-      );
       setLogTime(existing.executedAt);
     } else {
       setOutcome(null);
       setNotes("");
-      setPhotos([]);
       setLogTime("");
     }
     setMedOutcomes(
@@ -143,7 +132,6 @@ export function FeedingLogModal({
   const Icon = meta.Icon;
   const options = OUTCOME_OPTIONS.feeding;
   const requiresPhoto = task.requiresPhotoProof === true;
-  const MAX_PHOTOS = 3;
 
   // Plan instructions come from the task's subDetails (A4.4). A booking with no
   // feeding details yields only a blank "amount brand" line, which trims away —
@@ -158,19 +146,7 @@ export function FeedingLogModal({
   const medFollowUp =
     withMeds.length > 0 && (outcome === "refused" || outcome === "ate_little");
 
-  const addPhoto = () => {
-    // TODO: open the real camera / library picker; mock URL for now.
-    setPhotos((prev) =>
-      prev.length >= MAX_PHOTOS
-        ? prev
-        : [...prev, `mock://photo-${prev.length + 1}`],
-    );
-  };
-  const removePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const photoOk = !requiresPhoto || photos.length > 0;
+  const photoOk = true;
   // Serve step needs no outcome; consumption step needs an eaten-amount choice.
   const canSubmit = (step === "serve" ? true : outcome !== null) && photoOk;
 
@@ -185,7 +161,6 @@ export function FeedingLogModal({
         notes: notes.trim() || undefined,
         staffName: user.name,
         staffInitials: user.initials,
-        photoUrls: photos.length > 0 ? photos : undefined,
         // Each dose still writes its own medication log against its own task id.
         medOutcomes: withMeds.length > 0 ? medOutcomes : undefined,
       });
@@ -201,7 +176,6 @@ export function FeedingLogModal({
       staffName: user.name,
       staffInitials: user.initials,
       executedAt: logTime || undefined,
-      photoUrls: photos.length > 0 ? photos : undefined,
     });
     onOpenChange(false);
   }
@@ -431,47 +405,7 @@ export function FeedingLogModal({
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">
-              Photos{" "}
-              <span className="text-muted-foreground font-normal">
-                {requiresPhoto ? "(required)" : "(optional)"}
-              </span>
-            </Label>
-            <div className="flex flex-wrap items-center gap-2">
-              {photos.map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-muted relative flex size-12 items-center justify-center rounded-md border"
-                >
-                  <ImageIcon className="text-muted-foreground size-5" />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(i)}
-                    aria-label={`Remove photo ${i + 1}`}
-                    className="bg-destructive absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full text-white"
-                  >
-                    <X className="size-2.5" />
-                  </button>
-                </div>
-              ))}
-              {photos.length < MAX_PHOTOS && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addPhoto}
-                  className="h-12 gap-1.5"
-                >
-                  <Camera className="size-4" />
-                  Add photo
-                </Button>
-              )}
-            </div>
-            <p className="text-muted-foreground text-[11px]">
-              {photos.length}/{MAX_PHOTOS} · camera or library
-            </p>
-          </div>
+          <PhotoProofNotice required={requiresPhoto} />
 
           <div className="space-y-1.5">
             <Label htmlFor="notes" className="text-xs">
