@@ -203,8 +203,8 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
         {/* Leftmost action — clock in / out, the employee's always-on core
             action (the slot the admin header gives to Calling). The pill beside
             it makes the current clock state impossible to miss. */}
-        <OnTheClockPill staffId={staffId} />
-        <ClockInOut staffId={staffId} />
+        <OnTheClockPill />
+        <ClockInOut />
 
         {/* "+ New" — self-gates its items; renders nothing if none permitted. */}
         <FacilityHeader facilityId={11} />

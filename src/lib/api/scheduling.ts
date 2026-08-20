@@ -16,8 +16,10 @@ import type {
   AvailabilityDecision,
   AvailabilityPayload,
 } from "@/app/api/scheduling/availability/route";
+import type { ClockPayload } from "@/app/api/scheduling/clock/route";
 import type {
   AvailabilityDay,
+  ClockEntry,
   RequestStatus,
   TimeOffType,
 } from "@/lib/api/mappers/scheduling";
@@ -41,6 +43,8 @@ export const schedulingKeys = {
   swaps: (status: StatusFilter) => ["scheduling", "swaps", status] as const,
   availability: (status: StatusFilter) =>
     ["scheduling", "availability", status] as const,
+  clock: (from?: string, to?: string) =>
+    ["scheduling", "clock", from ?? "", to ?? ""] as const,
 };
 
 /** `"all"` is the absence of a filter, not a fifth status. */
@@ -471,4 +475,134 @@ export function useDecideAvailability() {
       });
     },
   });
+}
+
+// ============================================================================
+// The time clock.
+//
+// Replaces `src/lib/employee/clock-store.ts`, a `Map` in module scope — clock
+// in, refresh, and you were never there.
+//
+// `refetchInterval` is deliberate and short: this is the one scheduling read
+// where the answer changes because somebody ELSE acted. A manager watching who
+// is on the floor needs the floor, not a snapshot from when they opened the tab.
+// ============================================================================
+
+export const clockQueries = {
+  /** Everything the caller may see, plus their own open entry. */
+  state: (from?: string, to?: string) => ({
+    queryKey: schedulingKeys.clock(from, to),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+      const query = params.toString();
+      return read<ClockPayload>(
+        `/api/scheduling/clock${query ? `?${query}` : ""}`,
+        "Could not read the time clock.",
+      );
+    },
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  }),
+};
+
+export interface ClockInInput {
+  /** Omitted means the signed-in person — the server resolves it. */
+  employeeId?: string;
+  shiftId?: string;
+  /** ISO instant. Omitted means now. */
+  at?: string;
+  notes?: string;
+}
+
+export function useClockIn() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ClockInInput = {}) =>
+      write<ClockEntry>(
+        "/api/scheduling/clock",
+        "POST",
+        input,
+        "That clock-in was not recorded.",
+      ),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["scheduling", "clock"] }),
+  });
+}
+
+export interface ClockOutInput {
+  /** Omitted closes the caller's own open entry, found server-side. */
+  id?: string;
+  at?: string;
+  notes?: string;
+  /**
+   * Undo a clock-out — back on the clock, same session.
+   *
+   * Allowed for your own entry within two minutes of the stamp, and for a
+   * manager at any time. Beyond that it is editing a timesheet, and the API
+   * answers with a sentence saying so rather than failing silently.
+   */
+  reopen?: boolean;
+}
+
+/**
+ * Undo a clock-out.
+ *
+ * The same endpoint as clocking out, because it is the same row — the session
+ * that was ended is put back, rather than a second one started. Two rows would
+ * record a break that never happened.
+ */
+export function useUndoClockOut() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      write<ClockEntry>(
+        "/api/scheduling/clock",
+        "PATCH",
+        { id, reopen: true },
+        "That clock-out could not be undone.",
+      ),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["scheduling", "clock"] }),
+  });
+}
+
+export function useClockOut() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ClockOutInput = {}) =>
+      write<ClockEntry>(
+        "/api/scheduling/clock",
+        "PATCH",
+        input,
+        "That clock-out was not recorded.",
+      ),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["scheduling", "clock"] }),
+  });
+}
+
+/**
+ * Whether the signed-in person is on the clock, and since when.
+ *
+ * The shape the in-memory store exposed, so the surfaces reading it change
+ * their import rather than their logic — but `isPending` is new and matters:
+ * the old store answered instantly and wrongly, and a pill that renders "off
+ * the clock" while the answer is still in flight is the same lie in a hurry.
+ */
+export function useOwnClock(): {
+  clockedIn: boolean;
+  clockedInAt?: string;
+  isPending: boolean;
+} {
+  const { data, isPending } = useQuery(clockQueries.state());
+  return {
+    clockedIn: Boolean(data?.open),
+    clockedInAt: data?.open?.clockedInAt,
+    isPending,
+  };
 }

@@ -40,9 +40,12 @@ import {
 } from "@/data/scheduling";
 import {
   availabilityQueries,
+  clockQueries,
   schedulingQueries,
   swapQueries,
   timeOffQueries,
+  useClockIn,
+  useClockOut,
   useCreateShift,
   useDeleteShift,
   usePublishSchedule,
@@ -110,9 +113,6 @@ export function ScheduleView() {
   >();
   const [holidayRates] = useState<HolidayRate[]>(initialHolidayRates);
   const [timeClockOpen, setTimeClockOpen] = useState(false);
-  const [timeClockEntries, setTimeClockEntries] = useState<TimeClockEntry[]>(
-    [],
-  );
 
   // Shift opportunities state
   const [, setShiftOpportunities] = useState<ShiftOpportunity[]>(
@@ -167,7 +167,12 @@ export function ScheduleView() {
   const { data: leave } = useQuery(timeOffQueries.list("all"));
   const { data: swapData } = useQuery(swapQueries.list("pending"));
   const { data: availability } = useQuery(availabilityQueries.all("pending"));
+  const { data: clock } = useQuery(
+    clockQueries.state(dateRange.start, dateRange.end),
+  );
 
+  const clockIn = useClockIn();
+  const clockOut = useClockOut();
   const createShift = useCreateShift();
   const updateShift = useUpdateShift();
   const removeShift = useDeleteShift();
@@ -409,6 +414,29 @@ export function ScheduleView() {
         }),
       ),
     [availability],
+  );
+
+  // ── ADAPTED FROM THE REAL ENTRIES ───────────────────────────────────────
+  //
+  // `TimeClock` takes the fixture's `TimeClockEntry`, whose `status` is a
+  // FOURTH representation of a fact the row already carries: `clocked_out_at`
+  // null or not. Derived here rather than stored, so the two cannot disagree.
+  //
+  // Until 2026-08-21 this was `useState<TimeClockEntry[]>([])` — permanently
+  // empty, so the floor dialog showed nobody had ever clocked in.
+  const timeClockEntries = useMemo<TimeClockEntry[]>(
+    () =>
+      (clock?.entries ?? []).map((entry) => ({
+        id: entry.id,
+        shiftId: entry.shiftId ?? "",
+        employeeId: entry.employeeId,
+        date: entry.clockedInAt.slice(0, 10),
+        clockedInAt: entry.clockedInAt,
+        clockedOutAt: entry.clockedOutAt,
+        actualMinutes: entry.minutesWorked,
+        status: entry.clockedOutAt ? "clocked_out" : "clocked_in",
+      })),
+    [clock],
   );
 
   const deptTimeOff = useMemo<EnhancedTimeOffRequest[]>(
@@ -860,41 +888,43 @@ export function ScheduleView() {
 
   // ─── Time Clock handlers ───────────────────────────────────────────────
 
-  const handleClockIn = useCallback((shiftId: string, employeeId: string) => {
-    const newEntry: TimeClockEntry = {
-      id: `tc-${Date.now()}`,
-      shiftId,
-      employeeId,
-      date: new Date().toISOString().split("T")[0],
-      clockedInAt: new Date().toISOString(),
-      status: "clocked_in",
-    };
-    setTimeClockEntries((prev) => [...prev, newEntry]);
-    toast.success("Clocked in");
-  }, []);
+  // ── A MANAGER STAMPING FOR SOMEBODY ELSE ────────────────────────────────
+  //
+  // This dialog is the floor view: a supervisor clocking the team in at the
+  // start of a shift. `employeeId` is therefore SENT — unlike the employee
+  // portal's own button, where it is resolved from the session — and RLS
+  // requires `scheduling_edit_shifts` for it. The row records `source:
+  // 'manager'`, because a stamped timesheet and a worked one are different
+  // facts and a pay dispute turns on which.
+  const handleClockIn = useCallback(
+    (shiftId: string, employeeId: string) => {
+      clockIn.mutate(
+        { employeeId, shiftId },
+        {
+          onSuccess: () => toast.success("Clocked in"),
+          // "That overlaps a session this person already has" comes from the
+          // exclusion constraint, which is the only thing that can hold it when
+          // the person clocks themselves in from the back room at the same
+          // moment.
+          onError: (error: Error) => toast.error(error.message),
+        },
+      );
+    },
+    [clockIn],
+  );
 
-  const handleClockOut = useCallback((entryId: string) => {
-    setTimeClockEntries((prev) =>
-      prev.map((e) => {
-        if (e.id !== entryId) return e;
-        const clockedOutAt = new Date().toISOString();
-        const actualMinutes = e.clockedInAt
-          ? Math.round(
-              (new Date(clockedOutAt).getTime() -
-                new Date(e.clockedInAt).getTime()) /
-                60000,
-            )
-          : 0;
-        return {
-          ...e,
-          clockedOutAt,
-          actualMinutes,
-          status: "clocked_out" as const,
-        };
-      }),
-    );
-    toast.success("Clocked out");
-  }, []);
+  const handleClockOut = useCallback(
+    (entryId: string) => {
+      clockOut.mutate(
+        { id: entryId },
+        {
+          onSuccess: () => toast.success("Clocked out"),
+          onError: (error: Error) => toast.error(error.message),
+        },
+      );
+    },
+    [clockOut],
+  );
 
   // ── AFTER EVERY HOOK, NEVER BEFORE ONE ─────────────────────────────────
   //

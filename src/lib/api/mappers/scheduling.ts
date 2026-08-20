@@ -477,3 +477,61 @@ export function toAvailabilityRequest(
     reviewNotes: row.review_notes ?? undefined,
   };
 }
+
+// ============================================================================
+// The time clock.
+//
+// ── `clockedOutAt` ABSENT MEANS ON THE CLOCK ──────────────────────────────
+//
+// Not a boolean beside it — one fact, one place. `minutesWorked` is absent for
+// the same reason and is NOT zero: an unfinished session has no duration yet,
+// and a zero would render as "worked no time".
+//
+// ── AND IT IS AN INSTANT, NOT A WALL-CLOCK TIME ───────────────────────────
+//
+// Unlike a shift, which is planned in the facility's own clock and stored as a
+// range, a clock-in is a moment that happened. It stays an ISO instant all the
+// way to the screen, which formats it in whatever zone it is showing.
+// ============================================================================
+
+export interface ClockEntryRow {
+  id: string;
+  staff_id: string;
+  shift_id: string | null;
+  clocked_in_at: string;
+  clocked_out_at: string | null;
+  source: "self" | "manager";
+  notes: string | null;
+  minutes_worked: number | null;
+  staff: StaffName | null;
+}
+
+export interface ClockEntry {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  /** Absent when somebody is working without a rostered shift — they cover. */
+  shiftId?: string;
+  clockedInAt: string;
+  /** Absent means ON THE CLOCK right now. */
+  clockedOutAt?: string;
+  /** Absent while open. Never zero — a zero is a claim about time worked. */
+  minutesWorked?: number;
+  /** Who stamped it. A correction and a worked session are different facts. */
+  source: "self" | "manager";
+  notes?: string;
+}
+
+export function toClockEntry(row: ClockEntryRow): ClockEntry {
+  return {
+    id: row.id,
+    employeeId: row.staff_id,
+    employeeName: fullName(row.staff),
+    shiftId: row.shift_id ?? undefined,
+    clockedInAt: row.clocked_in_at,
+    clockedOutAt: row.clocked_out_at ?? undefined,
+    minutesWorked: row.minutes_worked ?? undefined,
+    source: row.source,
+    notes: row.notes ?? undefined,
+  };
+}
