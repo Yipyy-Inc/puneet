@@ -14,6 +14,7 @@ import type {
   ScheduleTimeOverride,
   DropOffPickUpOverride,
 } from "@/types/facility";
+import { FacilityCloverCard } from "@/components/integrations/FacilityCloverCard";
 import { toast } from "sonner";
 import { SettingsBlock } from "@/components/ui/settings-block";
 import { ReportCardBrandedHeader } from "@/components/shared/ReportCardBrandedHeader";
@@ -4270,6 +4271,13 @@ export default function SettingsPage() {
           {/* Integrations */}
           {activeSection === "integrations" && (
             <div className="space-y-6">
+              {/* Payments. FIRST, and a real connection rather than a toggle:
+                  the flow behind it has worked since the Clover OAuth routes
+                  landed, but the only way to reach it was to type /clover into
+                  the address bar. Everything below this card is still the
+                  fixture-backed switch list. */}
+              <FacilityCloverCard />
+
               {/* Communication Integrations */}
               <Card>
                 <CardHeader>
