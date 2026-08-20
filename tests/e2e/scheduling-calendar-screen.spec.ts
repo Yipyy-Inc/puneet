@@ -20,10 +20,28 @@ import { ACCOUNTS, signIn } from "./_auth";
 //
 // ── WHAT IT ASSERTS ───────────────────────────────────────────────────────
 //
-// A shift written to Postgres appears on the grid; the draft bar counts it; and
-// clicking Publish changes the ROW, not just the toast. The last one is the
-// point — the bar used to say "Publish & Notify Staff" next to a "Save Draft"
-// button whose whole implementation was `toast.success("Draft saved")`.
+// A shift written to Postgres appears on the grid; the hours and the wage bill
+// are computed from it; the draft bar counts it; and clicking Publish changes
+// the ROW, not just the toast. The last one is the point — the bar used to say
+// "Publish & Notify Staff" next to a "Save Draft" button whose whole
+// implementation was `toast.success("Draft saved")`.
+//
+// ── WHAT IT CANNOT ASSERT, AND WHY ────────────────────────────────────────
+//
+// That the labour-cost tile is ABSENT rather than $0 for somebody who may not
+// see pay. There is no identity that can reach this screen and lack the
+// permission: `/facility/**` is admin-only (ADR 0005), admin access is forced by
+// the job titles owner/admin/manager/supervisor, and all four hold
+// `scheduling_view_labor_cost`. Every account without it is staff-level and is
+// refused the portal before any of this renders.
+//
+// The withholding itself IS covered — `scheduling-roster.spec.ts` asserts a
+// groomer reads a position with no rate on it. What is uncovered is this
+// component's rendering of that absence, and forcing it would mean editing a
+// real person's permissions in production mid-run. Recorded in the debt map
+// instead, together with the sharper version of the same problem: the
+// ACCOUNTANT holds the labour-cost permission and cannot reach one screen that
+// uses it.
 // ============================================================================
 
 const DEPARTMENT = "E2E Calendar Screen Dept";
@@ -84,7 +102,15 @@ test("the calendar draws Postgres and publishes back to it", async ({
     positionId = existing.positions.find((p) => p.name === POSITION)?.id ?? "";
     if (!positionId) {
       const res = await page.request.post("/api/scheduling/structure", {
-        data: { kind: "position", name: POSITION, departmentId },
+        data: {
+          kind: "position",
+          name: POSITION,
+          departmentId,
+          // A round rate, so the arithmetic below is checkable by eye:
+          // 8h day + 8h night = 16h x $20 = $320.
+          payType: "hourly",
+          hourlyRate: 20,
+        },
       });
       expect(res.status(), await res.text()).toBe(201);
       positionId = ((await res.json()) as { id: string }).id;
@@ -110,6 +136,27 @@ test("the calendar draws Postgres and publishes back to it", async ({
     });
     expect(made.status(), await made.text()).toBe(201);
 
+    // ── AN OVERNIGHT SHIFT, ON PURPOSE ─────────────────────────────────
+    //
+    // `computeShiftHours` did `end - start` in minutes and clamped at zero, so
+    // 22:00 – 06:00 was `360 - 1320 = -960` → **0 hours**. Nine call sites read
+    // that helper: the week's total, overtime, attendance, conflict detection
+    // and the reports. Every night shift counted as no work and cost nothing.
+    //
+    // Nobody is on it, so it cannot collide with the day shift above.
+    const night = await page.request.post("/api/scheduling/shifts", {
+      data: {
+        employeeId: null,
+        departmentId,
+        positionId,
+        date: today,
+        startTime: "22:00",
+        endTime: "06:00",
+        status: "draft",
+      },
+    });
+    expect(night.status(), await night.text()).toBe(201);
+
     // ── The screen ─────────────────────────────────────────────────────
     await page.goto(SCHEDULING);
     await page.waitForLoadState("networkidle");
@@ -125,9 +172,20 @@ test("the calendar draws Postgres and publishes back to it", async ({
       "Loading the schedule",
     );
     expect(body, "the shift from Postgres is on the grid").toContain("DRAFT");
-    expect(body, "and the draft bar counted it").toContain(
-      "draft shift waiting to be published",
+    expect(body, "and the draft bar counted them").toContain(
+      "waiting to be published",
     );
+
+    // 8h day + 8h overnight. Before the fix the night shift contributed 0 and
+    // this read "8h" — a plausible number, which is what made it survive.
+    expect(
+      body,
+      "the overnight shift is counted, not clamped to zero",
+    ).toContain("16h");
+
+    // $20/h x 16h, from `facility_position_pay` via the structure route. The
+    // tile read $0 while `calculateLaborCost` was a fixture over fixture rates.
+    expect(body, "priced from the real pay table").toContain("$320");
 
     // ── Publish, the way a manager does ────────────────────────────────
     await page

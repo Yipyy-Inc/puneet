@@ -7,11 +7,20 @@ interface ScheduleStatsProps {
   totalEmployees: number;
   scheduledToday: number;
   totalHoursThisWeek: number;
-  laborCost: number;
+  /**
+   * `null` when the caller may not see labour cost — the tile is then absent
+   * rather than showing $0, which is a number and a wrong one.
+   *
+   * This replaces a `canViewPayRates` flag that was resolved from a DIFFERENT
+   * permission system than the data: the flag came from `can("payroll.view")`
+   * while the figures come from `facility_position_pay`, gated on
+   * `scheduling_view_labor_cost`. Two answers to one question drift, and the
+   * drift shows up as a tile full of zeroes. One value carries both now.
+   */
+  laborCost: number | null;
   pendingTimeOff: number;
   pendingSwaps: number;
   overtimeAlerts: number;
-  canViewPayRates?: boolean;
 }
 
 interface StatPillProps {
@@ -49,7 +58,6 @@ export function ScheduleStats({
   laborCost,
   pendingTimeOff,
   pendingSwaps,
-  canViewPayRates = true,
 }: ScheduleStatsProps) {
   return (
     <div className="grid min-w-0 grid-cols-2 gap-2 px-6 pb-2 sm:grid-cols-4">
@@ -59,15 +67,16 @@ export function ScheduleStats({
         value={`${scheduledToday}/${totalEmployees}`}
         accent="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400"
       />
-      {canViewPayRates && (
-        <StatPill
-          icon={Clock}
-          label="Scheduled"
-          value={`${totalHoursThisWeek.toFixed(0)}h`}
-          accent="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400"
-        />
-      )}
-      {canViewPayRates && (
+      {/* Hours are not wages. This was hidden behind the pay flag too, so a
+          groomer could not see how many hours the week held — which is their
+          own schedule, and nobody's salary. */}
+      <StatPill
+        icon={Clock}
+        label="Scheduled"
+        value={`${totalHoursThisWeek.toFixed(0)}h`}
+        accent="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400"
+      />
+      {laborCost !== null && (
         <StatPill
           icon={DollarSign}
           label="Labor cost"
