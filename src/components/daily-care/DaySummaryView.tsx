@@ -1,5 +1,6 @@
 "use client";
 
+import type { CareGuest } from "@/lib/daily-care/care-guest";
 import { useMemo, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,13 +25,12 @@ import { shiftNotesStore } from "@/data/shift-notes-store";
 import { downloadReportPdf } from "@/lib/report-export";
 import type { ScheduledTask, TaskExecution } from "@/types/care-log";
 import type { DailyCareStep } from "@/types/boarding";
-import type { BoardingGuest } from "@/data/boarding";
 
 type Props = {
   date: string;
   facilityId: number;
   facilityName: string;
-  guests: BoardingGuest[];
+  guests: CareGuest[];
   executions: TaskExecution[];
   sortedSteps: DailyCareStep[];
   tasksByStep: Map<string, ScheduledTask[]>;

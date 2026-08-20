@@ -1,4 +1,5 @@
-import type { BoardingGuest, MedicationSchedule } from "@/data/boarding";
+import type { CareGuest } from "@/lib/daily-care/care-guest";
+import type { MedicationSchedule } from "@/data/boarding";
 import type {
   FacilityDailyCareConfig,
   DailyCareStep,
@@ -13,7 +14,7 @@ import type { IncidentCareAction, IncidentMedication } from "@/types/incidents";
 // preserving the previous behaviour). Otherwise the booking-driven rule gates
 // the step's pet list.
 function guestMatchesAppliesTo(
-  guest: BoardingGuest,
+  guest: CareGuest,
   appliesTo: DailyCareStep["appliesTo"],
   guestTags: Set<string>,
 ): boolean {
@@ -69,7 +70,7 @@ function getDayOfStay(checkInDate: string, today: Date): number {
 
 export function shouldGiveMedToday(
   med: MedicationSchedule,
-  guest: BoardingGuest,
+  guest: CareGuest,
   today: Date,
 ): boolean {
   const rule = med.frequencyRule as MedFrequencyRule | undefined;
@@ -116,7 +117,7 @@ export function getFrequencyLabel(rule: MedFrequencyRule): string {
 
 // ── Build alert tags surfaced as colored badges next to each pet ───────────
 
-function buildAlertTags(guest: BoardingGuest): string[] {
+function buildAlertTags(guest: CareGuest): string[] {
   const tags: string[] = [];
   if (guest.allergies.length > 0) tags.push("Allergy");
   if (guest.medications.some((m) => m.times.length > 0)) tags.push("Meds");
@@ -221,7 +222,7 @@ function medFrequencyTimes(freq: string): string[] {
 // when it shouldn't appear (inactive, before its start, past checkout / x-days).
 function careActionTimesForDay(
   a: IncidentCareAction,
-  guest: BoardingGuest,
+  guest: CareGuest,
   today: Date,
 ): string[] {
   if (!a.active) return [];
@@ -244,7 +245,7 @@ function careActionTimesForDay(
 // was added through checkout, at its frequency-implied times.
 function medTimesForDay(
   med: IncidentMedication,
-  guest: BoardingGuest,
+  guest: CareGuest,
   today: Date,
 ): string[] {
   const todayMs = startOfDayMs(today);
@@ -291,7 +292,16 @@ function careFrequencyLabel(a: IncidentCareAction): string {
 // ── Scheduled-task generation ───────────────────────────────────────────────
 
 export function generateScheduledTasks(
-  guests: BoardingGuest[],
+  /**
+   * `CareGuest`, not `BoardingGuest`. This uses twenty-one fields and none of
+   * the money ones, and demanding the fixture's whole 30-field shape is what
+   * kept the Daily Care board on `getCurrentGuests()` — a real booking cannot
+   * produce a `discountApplied`, so a real booking could not be a guest.
+   *
+   * `BoardingGuest` still satisfies this structurally, so the fixture-backed
+   * callers keep working untouched.
+   */
+  guests: CareGuest[],
   dailyCareConfig: FacilityDailyCareConfig,
   today: Date = new Date(),
   /** Per-pet stay-long care-note overrides (A4.5), keyed by guest id. When a
@@ -595,7 +605,7 @@ type BaseTaskFields = {
 };
 
 function feedingTask(
-  guest: BoardingGuest,
+  guest: CareGuest,
   time: string,
   alertTags: string[],
   stepLabel: string | undefined,

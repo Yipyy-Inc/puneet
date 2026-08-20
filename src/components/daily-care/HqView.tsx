@@ -1,5 +1,6 @@
 "use client";
 
+import type { CareGuest } from "@/lib/daily-care/care-guest";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +11,11 @@ import { format12h } from "@/lib/care-log-scheduler";
 import { petFlagsStore } from "@/data/pet-flags-store";
 import type { ScheduledTask, TaskExecution } from "@/types/care-log";
 import type { DailyCareStep } from "@/types/boarding";
-import type { BoardingGuest } from "@/data/boarding";
 import type { StaffMember } from "@/types/staff";
 
 type Props = {
   date: string;
-  guests: BoardingGuest[];
+  guests: CareGuest[];
   staffList: StaffMember[];
   sortedSteps: DailyCareStep[];
   tasksByStep: Map<string, ScheduledTask[]>;
