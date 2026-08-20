@@ -1,5 +1,7 @@
 import "server-only";
 
+import { headers } from "next/headers";
+
 import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
@@ -43,6 +45,27 @@ import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
 // write, which is worse than a refusal. `facilityContextForClient()` below is
 // the answer for that caller, and it is the function a customer route should
 // use instead of this one.
+//
+// ── AND WHEN THE MEMBERSHIP DOES NOT DECIDE: THE HOSTNAME DOES ────────────
+//
+// One person can administer two facilities. `memberships[0]` then answers a
+// question it cannot know — the array comes back in whatever order Postgres
+// felt like — so half the app would be looking at one business while the other
+// half looked at the other, with nothing on screen saying which.
+//
+// The product already has the answer: a facility lives on its own subdomain
+// (spec 002 D2). `pawradise.yipyy.com` names Pawradise, and src/proxy.ts has
+// been stamping that slug onto every request as `x-facility-slug` since the
+// subdomains shipped — it just had no reader on this side.
+//
+// So the order is: what the route explicitly asked for, then what the hostname
+// says, then the first membership. The last is still a guess, but it is only
+// reached on the apex, and it is now the fallback rather than the rule.
+//
+// The Host header is caller-controlled, and that is fine here for exactly the
+// reason `preferFacilityId` is: it is intersected with the caller's own
+// memberships first, so forging one lets you choose among businesses you
+// already administer and nothing else.
 //
 // ── NOT A SECURITY BOUNDARY, AND THAT MATTERS HERE ────────────────────────
 //
@@ -103,17 +126,17 @@ export async function getFacilityContext(
     (viewer?.memberships ?? []).map((m) => m.facilityId),
   );
 
-  const chosen =
-    preferFacilityId && memberFacilityIds.has(preferFacilityId)
-      ? preferFacilityId
-      : (viewer?.memberships[0]?.facilityId ?? null);
+  const memberIds = [...memberFacilityIds];
 
-  const query = supabase
-    .from("facilities")
-    .select("id, timezone, name, legacy_id");
-  const { data: facility } = chosen
-    ? await query.eq("id", chosen).maybeSingle()
-    : await query.eq("legacy_id", DEMO_FACILITY_LEGACY_ID).maybeSingle();
+  const facility = memberIds.length
+    ? await chooseAmongMemberships(supabase, memberIds, preferFacilityId)
+    : (
+        await supabase
+          .from("facilities")
+          .select("id, timezone, name, legacy_id")
+          .eq("legacy_id", DEMO_FACILITY_LEGACY_ID)
+          .maybeSingle()
+      ).data;
 
   if (!facility) return null;
 
@@ -133,6 +156,115 @@ export async function getFacilityContext(
     name: facility.name,
     legacyRef: Number.isFinite(legacyRef) ? legacyRef : null,
   };
+}
+
+type FacilityRow = {
+  id: string;
+  timezone: string | null;
+  name: string;
+  legacy_id: string | null;
+};
+
+/**
+ * The slug the hostname names, as src/proxy.ts stamped it.
+ *
+ * Empty — never null — on the apex, on localhost and on preview URLs, because
+ * the proxy writes the header unconditionally so a client cannot smuggle its
+ * own past it. Empty is "this is Yipyy itself", not an error.
+ */
+async function facilitySlugFromRequest(): Promise<string> {
+  // Not wrapped in a catch. `headers()` throws only to signal a dynamic bailout,
+  // and swallowing that would resolve the slug to "" — a silent fall back to
+  // the first membership, which is the exact failure this function exists to
+  // remove. Both callers have already read cookies by this point, so the
+  // request is dynamic and this cannot be the call that trips it.
+  const requestHeaders = await headers();
+  return requestHeaders.get("x-facility-slug") ?? "";
+}
+
+/**
+ * Pick one of the caller's own facilities: asked-for, then hostname, then first.
+ *
+ * One query for all of them rather than one per candidate — a person with a
+ * single membership pays exactly what they paid before.
+ */
+async function chooseAmongMemberships(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  memberIds: string[],
+  preferFacilityId: string | undefined,
+): Promise<FacilityRow | null> {
+  const { data } = await supabase
+    .from("facilities")
+    .select("id, timezone, name, legacy_id, slug")
+    .in("id", memberIds);
+
+  const mine = data ?? [];
+  if (mine.length === 0) return null;
+
+  const slug = await facilitySlugFromRequest();
+
+  return (
+    mine.find((f) => f.id === preferFacilityId) ??
+    (slug ? mine.find((f) => f.slug === slug) : undefined) ??
+    // Membership order, which is the order viewer.ts read them in — so a
+    // single-facility caller resolves to precisely the row they always did.
+    mine.find((f) => f.id === memberIds[0]) ??
+    null
+  );
+}
+
+// ============================================================================
+// Which facility an ADMIN is administering — and saying so when it is unclear.
+//
+// `getFacilityContext()` above always returns something, because a route has to
+// read a row from somewhere. That is the wrong shape for a screen that changes
+// a business's configuration: connecting a Clover merchant decides where money
+// lands, and doing it to an arbitrary one of the caller's two facilities is a
+// mistake nobody would notice until a payout went missing.
+//
+// So this one is allowed to answer "I do not know". The caller renders the
+// question instead of guessing at it.
+// ============================================================================
+
+export type AdminFacility = { id: string; name: string; slug: string };
+
+export type ActiveAdminFacility =
+  /** The hostname named it, or it is the only one they administer. */
+  | { kind: "resolved"; facility: AdminFacility }
+  /** Several, and the hostname named none of them — ask. */
+  | { kind: "ambiguous"; choices: AdminFacility[] }
+  /** Not an admin anywhere. */
+  | { kind: "none" };
+
+export async function activeAdminFacility(): Promise<ActiveAdminFacility> {
+  const viewer = await getViewer().catch(() => null);
+  if (!viewer || viewer.source !== "session") return { kind: "none" };
+
+  // Admin ACCESS, never the job title — ADR 0005. A facility may promote its
+  // receptionist to admin access without granting an owner's 168 permissions,
+  // and the /facility portal gate already admits exactly this set.
+  const adminIds = viewer.memberships
+    .filter((m) => m.accessLevel === "admin")
+    .map((m) => m.facilityId);
+  if (adminIds.length === 0) return { kind: "none" };
+
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("facilities")
+    .select("id, name, slug")
+    .in("id", adminIds)
+    .order("name");
+
+  const mine = data ?? [];
+  if (mine.length === 0) return { kind: "none" };
+  if (mine.length === 1) return { kind: "resolved", facility: mine[0]! };
+
+  const slug = await facilitySlugFromRequest();
+  const named = slug ? mine.find((f) => f.slug === slug) : undefined;
+
+  return named
+    ? { kind: "resolved", facility: named }
+    : { kind: "ambiguous", choices: mine };
 }
 
 /**

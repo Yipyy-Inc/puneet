@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getViewer } from "@/lib/auth/viewer";
+import { activeAdminFacility } from "@/lib/api/facility-context";
 import { cloverConfig } from "@/lib/clover/config";
 import { authorizeUrl, createOAuthState } from "@/lib/clover/oauth";
 
@@ -44,19 +44,15 @@ export async function GET() {
     );
   }
 
-  const viewer = await getViewer().catch(() => null);
-  if (!viewer || viewer.source !== "session") {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  }
-
   // `accessLevel`, not the job title. A hardcoded owner/admin role set was
   // retired everywhere else in this codebase (see `viewer.ts`): a facility can
   // promote its receptionist to admin ACCESS without handing them an owner's
   // 168 permissions, and such a person reaches this screen — the /facility
   // portal gate is `accessLevel === "admin"` — so they must not meet a 403
   // from the button that screen shows them.
-  const membership = viewer.memberships.find((m) => m.accessLevel === "admin");
-  if (!membership) {
+  const active = await activeAdminFacility();
+
+  if (active.kind === "none") {
     return NextResponse.json(
       {
         error:
@@ -66,7 +62,26 @@ export async function GET() {
     );
   }
 
-  const state = createOAuthState(membership.facilityId);
+  // Someone who administers two facilities, on a hostname that names neither.
+  // There is no defensible answer here — sealing a guess into the state is how
+  // a merchant account ends up attached to the wrong business — so this refuses
+  // and names the addresses that would be unambiguous. The card does not
+  // normally let a caller reach this: it renders the same choice as links.
+  if (active.kind === "ambiguous") {
+    return NextResponse.json(
+      {
+        error:
+          "You administer more than one facility. Open the one you want to " +
+          "connect at its own address first: " +
+          active.choices.map((f) => f.name).join(", ") +
+          ".",
+        choices: active.choices,
+      },
+      { status: 409 },
+    );
+  }
+
+  const state = createOAuthState(active.facility.id);
   const destination = state ? authorizeUrl(state) : null;
   if (!destination) {
     return NextResponse.json(

@@ -39,6 +39,13 @@ import { terminalQueries } from "@/lib/api/terminals";
 // signed state server-side, so there is nothing for this component to pass and
 // nothing it could pass wrongly.
 //
+// ── AND WHICH FACILITY, WHICH IS NOT ALWAYS OBVIOUS ───────────────────────
+//
+// One person can administer two of them. The hostname decides — a facility
+// lives on its own subdomain — and this card states the name it resolved to, so
+// "connect Clover" can never quietly mean the other business. On the apex,
+// where the hostname names neither, it asks instead of guessing.
+//
 // ── AND IT SAYS WHICH ESTATE ──────────────────────────────────────────────
 //
 // Sandbox and production are different Clover worlds with different merchants.
@@ -46,7 +53,14 @@ import { terminalQueries } from "@/lib/api/terminals";
 // support ticket nobody can diagnose from a screenshot, so the badge is loud.
 // ============================================================================
 
-interface CloverStatus {
+interface FacilityChoice {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface CloverConnection {
+  ambiguous?: false;
   connected: boolean;
   status: "pending" | "connected" | "revoked" | "error" | "none";
   merchantId: string | null;
@@ -55,7 +69,32 @@ interface CloverStatus {
   country: string | null;
   connectedAt: string | null;
   lastError: string | null;
+  /** Which business this is about. Named, never inferred from the address bar. */
+  facility: { name: string; slug: string };
   configured: boolean;
+}
+
+/** The caller administers several facilities and the hostname named none. */
+interface CloverAmbiguous {
+  ambiguous: true;
+  choices: FacilityChoice[];
+  configured: boolean;
+}
+
+type CloverStatus = CloverConnection | CloverAmbiguous;
+
+/**
+ * Where a facility's own copy of this screen lives.
+ *
+ * Null in local development, where there are no subdomains — the chooser then
+ * names the facilities without linking them, which is honest rather than a
+ * link that goes nowhere.
+ */
+function settingsHref(slug: string): string | null {
+  const domain = process.env.NEXT_PUBLIC_APP_DOMAIN;
+  return domain
+    ? `https://${slug}.${domain}/facility/dashboard/settings?section=integrations`
+    : null;
 }
 
 /** Clover's four-leaf mark, drawn rather than imported — no asset to 404. */
@@ -108,11 +147,19 @@ export function FacilityCloverCard() {
     refetchOnWindowFocus: true,
   });
 
+  // Two shapes, split once. `connection` is null while the facility is
+  // undecided, which is what stops every branch below from rendering a merchant
+  // id that belongs to whichever business happened to sort first.
+  const ambiguous = data?.ambiguous === true ? data : null;
+  const connection = data && data.ambiguous !== true ? data : null;
+
   // Only asked for once connected — an unconnected facility has no devices and
-  // the call would just fail quietly behind the scenes.
+  // the call would just fail quietly behind the scenes. It resolves the facility
+  // the same way this card does (getFacilityContext reads the same hostname), so
+  // the devices listed cannot belong to the other one.
   const { data: terminals = [] } = useQuery({
     ...terminalQueries.all(),
-    enabled: data?.connected === true,
+    enabled: connection?.connected === true,
   });
 
   const disconnect = useMutation({
@@ -135,7 +182,7 @@ export function FacilityCloverCard() {
     onError: (error) => toast.error(error.message),
   });
 
-  const sandbox = data?.environment === "sandbox";
+  const sandbox = connection?.environment === "sandbox";
 
   return (
     <Card className="overflow-hidden">
@@ -143,11 +190,15 @@ export function FacilityCloverCard() {
         <CloverMark className="size-8 shrink-0" />
         <div className="min-w-0">
           <p className="leading-tight font-semibold">Clover</p>
-          <p className="text-xs text-white/80">
-            Card payments on your own terminal
+          {/* The business, not a tagline. This card changes where money lands,
+              so which one it means is the fact worth the line. */}
+          <p className="truncate text-xs text-white/80">
+            {connection
+              ? connection.facility.name
+              : "Card payments on your own terminal"}
           </p>
         </div>
-        {data?.connected && (
+        {connection?.connected && (
           <Badge className="ml-auto border-white/30 bg-white/15 text-white hover:bg-white/15">
             Connected
           </Badge>
@@ -179,12 +230,55 @@ export function FacilityCloverCard() {
           </div>
         )}
 
-        {!isPending && data?.configured && !data.connected && (
+        {!isPending && ambiguous?.configured && (
+          <>
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
+              <p className="text-sm/relaxed text-amber-900 dark:text-amber-200">
+                You administer more than one facility, and this address does not
+                say which. Open the one you want to connect at its own address —
+                a Clover account belongs to one business, not to an account.
+              </p>
+            </div>
+
+            <ul className="space-y-2">
+              {ambiguous.choices.map((choice) => {
+                const href = settingsHref(choice.slug);
+                return (
+                  <li key={choice.id}>
+                    {href ? (
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="w-full justify-between"
+                      >
+                        <a href={href}>
+                          {choice.name}
+                          <ExternalLink className="size-3.5 opacity-70" />
+                        </a>
+                      </Button>
+                    ) : (
+                      <div className="rounded-md border px-3 py-2 text-sm">
+                        {choice.name}
+                        <span className="text-muted-foreground ml-2 font-[tabular-nums] text-xs">
+                          {choice.slug}
+                        </span>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+
+        {!isPending && connection?.configured && !connection.connected && (
           <>
             <p className="text-muted-foreground text-sm/relaxed">
-              Take card payments on the Clover terminal you already own. You
-              sign in with your own Clover account — Yipyy never sees your
-              password, and you can disconnect at any time.
+              Take card payments at <strong>{connection.facility.name}</strong>{" "}
+              on the Clover terminal you already own. You sign in with your own
+              Clover account — Yipyy never sees your password, and you can
+              disconnect at any time.
             </p>
 
             <ol className="space-y-2.5">
@@ -201,11 +295,11 @@ export function FacilityCloverCard() {
               <Step n={4}>Clover sends you straight back here, connected.</Step>
             </ol>
 
-            {data.status === "error" && data.lastError && (
+            {connection.status === "error" && connection.lastError && (
               <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 dark:border-rose-500/30 dark:bg-rose-500/10">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0 text-rose-600" />
                 <p className="text-sm/relaxed text-rose-900 dark:text-rose-200">
-                  {data.lastError}
+                  {connection.lastError}
                 </p>
               </div>
             )}
@@ -222,13 +316,13 @@ export function FacilityCloverCard() {
           </>
         )}
 
-        {!isPending && data?.connected && (
+        {!isPending && connection?.connected && (
           <>
             <div className="flex items-start gap-2">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
               <p className="text-sm/relaxed">
                 Connected to your Clover merchant account. Card payments are
-                live on this facility.
+                live at <strong>{connection.facility.name}</strong>.
               </p>
             </div>
 
@@ -244,7 +338,7 @@ export function FacilityCloverCard() {
             )}
 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Detail label="Merchant" value={data.merchantId ?? "—"} />
+              <Detail label="Merchant" value={connection.merchantId ?? "—"} />
               <Detail
                 label="Environment"
                 value={sandbox ? "Sandbox" : "Production"}
@@ -252,17 +346,21 @@ export function FacilityCloverCard() {
               <Detail
                 label="Currency"
                 value={
-                  [data.currency, data.country].filter(Boolean).join(" · ") ||
-                  "—"
+                  [connection.currency, connection.country]
+                    .filter(Boolean)
+                    .join(" · ") || "—"
                 }
               />
               <Detail
                 label="Connected"
                 value={
-                  data.connectedAt
-                    ? new Date(data.connectedAt).toLocaleDateString("en-CA", {
-                        dateStyle: "medium",
-                      })
+                  connection.connectedAt
+                    ? new Date(connection.connectedAt).toLocaleDateString(
+                        "en-CA",
+                        {
+                          dateStyle: "medium",
+                        },
+                      )
                     : "—"
                 }
               />
