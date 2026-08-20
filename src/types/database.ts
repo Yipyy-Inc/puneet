@@ -4876,6 +4876,141 @@ export type Database = {
           },
         ];
       };
+      staff_availability: {
+        Row: {
+          available_from: string | null;
+          available_to: string | null;
+          day_of_week: number;
+          facility_id: string;
+          is_available: boolean;
+          notes: string | null;
+          staff_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          available_from?: string | null;
+          available_to?: string | null;
+          day_of_week: number;
+          facility_id: string;
+          is_available?: boolean;
+          notes?: string | null;
+          staff_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          available_from?: string | null;
+          available_to?: string | null;
+          day_of_week?: number;
+          facility_id?: string;
+          is_available?: boolean;
+          notes?: string | null;
+          staff_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_availability_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_availability_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "staff_availability_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      staff_availability_requests: {
+        Row: {
+          created_at: string;
+          effective_from: string;
+          facility_id: string;
+          id: string;
+          previous: Json;
+          proposed: Json;
+          reason: string;
+          requested_at: string;
+          review_notes: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          staff_id: string;
+          status: Database["public"]["Enums"]["approval_status"];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          effective_from: string;
+          facility_id: string;
+          id?: string;
+          previous?: Json;
+          proposed: Json;
+          reason?: string;
+          requested_at?: string;
+          review_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          staff_id: string;
+          status?: Database["public"]["Enums"]["approval_status"];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          effective_from?: string;
+          facility_id?: string;
+          id?: string;
+          previous?: Json;
+          proposed?: Json;
+          reason?: string;
+          requested_at?: string;
+          review_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          staff_id?: string;
+          status?: Database["public"]["Enums"]["approval_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_availability_requests_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_availability_requests_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_availability_requests_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "staff_availability_requests_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       staff_custom_roles: {
         Row: {
           custom_role_id: string;
@@ -5898,6 +6033,15 @@ export type Database = {
       accept_platform_invitation: {
         Args: { p_profile_id: string; p_token_hash: string };
         Returns: Json;
+      };
+      approve_availability_request: {
+        Args: { p_notes?: string; p_request_id: string };
+        Returns: {
+          available_from: string;
+          available_to: string;
+          day_of_week: number;
+          is_available: boolean;
+        }[];
       };
       approve_shift_swap: {
         Args: { p_notes?: string; p_request_id: string };

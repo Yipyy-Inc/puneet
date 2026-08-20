@@ -2751,6 +2751,23 @@ loaded, not that there are that many defects.
 - `ReportsView.tsx` is the one that remains, and it is blocked, not merely
   pending. See the next item.
 
+### 🟡 The scheduling nav gates on a fourth permission vocabulary
+
+`src/app/facility/dashboard/services/scheduling/layout.tsx` gates its tabs on
+strings like `availability.approve` from `src/lib/rbac.ts` — a capability list
+with no Postgres counterpart. The DATA behind those tabs is gated on the real
+cascade (`scheduling_manage_availability`, `scheduling_approve_time_off` and so
+on), so the tab a person can see and the rows they can act on are decided by two
+systems that were never reconciled.
+
+**Why it's risky:** they agree today by coincidence of how the presets were
+written. When they diverge the symptom is a visible tab whose every action is
+refused, or — worse — a hidden tab for somebody who holds the permission. The
+labour-cost tile was exactly this bug, and it took a conversion to notice.
+
+**Do instead:** when a scheduling tab is next touched, move its `requires` onto
+the permission key its API already uses. Do not add entries to `rbac.ts`.
+
 ### 🟠 The accountant holds `scheduling_view_labor_cost` and can reach no screen that uses it
 
 `scheduling_view_labor_cost` is granted to owner, admin, manager **and
@@ -2792,13 +2809,13 @@ person's permissions inside a spec.
 `ScheduleView` now reads and writes `staff_shifts`. Still local to the component
 or to a fixture, and clearly marked in the file:
 
-| What                  | Where it should live                                                                                |
-| --------------------- | --------------------------------------------------------------------------------------------------- |
-| Holiday rates         | a settings domain — hardcoded array at the top of the file, dated April 2026                        |
-| Employee availability | `employeeAvailabilities` fixture; feeds the draft-review warnings                                   |
-| Shift opportunities   | fixture + local state; the SHIFT it posts is now real, the opportunity is not                       |
-| Time clock            | local state; there is still no clock table, though `staff_hr_config` has `require_clock_in_confirm` |
-| Labour cost           | `calculateLaborCost` fixture — the real figures are in `facility_position_pay`                      |
+| What                      | Where it should live                                                                                |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| Holiday rates             | a settings domain — hardcoded array at the top of the file, dated April 2026                        |
+| ~~Employee availability~~ | ~~fixture~~ — **done 2026-08-21**: `staff_availability` plus a proposal/approval flow               |
+| Shift opportunities       | fixture + local state; the SHIFT it posts is now real, the opportunity is not                       |
+| Time clock                | local state; there is still no clock table, though `staff_hr_config` has `require_clock_in_confirm` |
+| Labour cost               | `calculateLaborCost` fixture — the real figures are in `facility_position_pay`                      |
 
 **Why it's risky:** these render beside real data and look equally real. The
 labour-cost tile reads **$0** against a rota that has actual wages behind it.

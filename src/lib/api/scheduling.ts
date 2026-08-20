@@ -12,7 +12,15 @@ import type {
   SwapDecision,
   SwapsPayload,
 } from "@/app/api/scheduling/swaps/route";
-import type { RequestStatus, TimeOffType } from "@/lib/api/mappers/scheduling";
+import type {
+  AvailabilityDecision,
+  AvailabilityPayload,
+} from "@/app/api/scheduling/availability/route";
+import type {
+  AvailabilityDay,
+  RequestStatus,
+  TimeOffType,
+} from "@/lib/api/mappers/scheduling";
 import type { ScheduleShift } from "@/types/scheduling";
 
 // ============================================================================
@@ -31,6 +39,8 @@ export const schedulingKeys = {
   timeOff: (status: StatusFilter) =>
     ["scheduling", "time-off", status] as const,
   swaps: (status: StatusFilter) => ["scheduling", "swaps", status] as const,
+  availability: (status: StatusFilter) =>
+    ["scheduling", "availability", status] as const,
 };
 
 /** `"all"` is the absence of a filter, not a fifth status. */
@@ -384,5 +394,81 @@ export function usePublishSchedule() {
       void queryClient.invalidateQueries({
         queryKey: ["scheduling", "shifts"],
       }),
+  });
+}
+
+// ============================================================================
+// Availability.
+//
+// One query for the patterns and the proposals — every screen that draws one
+// wants the other, and the approval queue compares them side by side.
+// ============================================================================
+
+export const availabilityQueries = {
+  all: (status: StatusFilter = "all") => ({
+    queryKey: schedulingKeys.availability(status),
+    queryFn: () =>
+      read<AvailabilityPayload>(
+        `/api/scheduling/availability?status=${status}`,
+        "Could not read availability.",
+      ),
+    // A weekly pattern changes about as often as somebody's life does.
+    staleTime: 5 * 60_000,
+  }),
+};
+
+export interface NewAvailabilityProposal {
+  /** Omitted means the signed-in person — the server resolves it. */
+  employeeId?: string;
+  /** Seven days, Sunday first. */
+  proposed: AvailabilityDay[];
+  effectiveFrom: string;
+  reason?: string;
+}
+
+export function useProposeAvailability() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (proposal: NewAvailabilityProposal) =>
+      write<AvailabilityDecision>(
+        "/api/scheduling/availability",
+        "POST",
+        proposal,
+        "That proposal was not filed.",
+      ),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduling", "availability"],
+      }),
+  });
+}
+
+/**
+ * Approve, deny or withdraw a proposed week.
+ *
+ * Approving APPLIES it, so the shifts are invalidated too: the draft-review
+ * warnings are computed against these patterns, and a stale cache would keep
+ * showing conflicts against the availability somebody just replaced.
+ */
+export function useDecideAvailability() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (decision: Decision) =>
+      write<AvailabilityDecision>(
+        "/api/scheduling/availability",
+        "PATCH",
+        decision,
+        "That decision was not saved.",
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduling", "availability"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduling", "shifts"],
+      });
+    },
   });
 }

@@ -35,11 +35,11 @@ import { PostShiftOpportunityDialog } from "@/components/scheduling/PostShiftOpp
 import { ShiftOpportunityNotificationSettingsDialog } from "@/components/scheduling/ShiftOpportunityNotificationSettingsDialog";
 import { DraftReviewSummary } from "@/components/scheduling/DraftReviewSummary";
 import {
-  employeeAvailabilities,
   shiftOpportunities as initialShiftOpportunities,
   shiftOpportunityNotificationSettings as initialNotifSettings,
 } from "@/data/scheduling";
 import {
+  availabilityQueries,
   schedulingQueries,
   swapQueries,
   timeOffQueries,
@@ -52,6 +52,7 @@ import { staffQueries } from "@/lib/api/staff";
 import { computeLaborCost, computeShiftHours } from "@/lib/scheduling-utils";
 import type {
   Department,
+  EmployeeAvailability,
   EnhancedTimeOffRequest,
   ScheduleEmployee,
   ScheduleShift,
@@ -165,6 +166,7 @@ export function ScheduleView() {
   const { data: staff } = useQuery(staffQueries.profiles());
   const { data: leave } = useQuery(timeOffQueries.list("all"));
   const { data: swapData } = useQuery(swapQueries.list("pending"));
+  const { data: availability } = useQuery(availabilityQueries.all("pending"));
 
   const createShift = useCreateShift();
   const updateShift = useUpdateShift();
@@ -388,6 +390,27 @@ export function ScheduleView() {
   // scheduling-conflicts.ts. Narrowing those three prop types to that Pick is
   // the better shape and is its own change; this fills the two fields they
   // declare and never look at, with the department DERIVED rather than stored.
+  // ── THE WARNINGS ARE ABOUT SOMEBODY AGAIN ───────────────────────────────
+  //
+  // `employeeAvailabilities` was keyed on `emp-1`, `emp-2` … — legacy ids that
+  // matched no staff row after the conversion to uuids. So `checkAvailability`
+  // found no pattern for anybody, returned null every time, and the draft
+  // review said "Schedule looks clean" about a rota it had not checked.
+  //
+  // Absent is the expensive kind of wrong: a warning that is missing looks
+  // exactly like a warning that was not needed.
+  const availabilities = useMemo<EmployeeAvailability[]>(
+    () =>
+      Object.entries(availability?.patterns ?? {}).map(
+        ([employeeId, weeklyAvailability]) => ({
+          employeeId,
+          weeklyAvailability,
+          updatedAt: "",
+        }),
+      ),
+    [availability],
+  );
+
   const deptTimeOff = useMemo<EnhancedTimeOffRequest[]>(
     () =>
       deptRequests.map((r) => ({
@@ -942,7 +965,7 @@ export function ScheduleView() {
         <DraftReviewSummary
           shifts={filteredShifts}
           employees={deptEmployees}
-          availabilities={employeeAvailabilities}
+          availabilities={availabilities}
           timeOffRequests={deptTimeOff}
           settings={schedulingSettings}
         />
@@ -1009,7 +1032,7 @@ export function ScheduleView() {
         onSave={handleSaveShift}
         onDelete={handleDeleteShift}
         allShifts={shifts}
-        availabilities={employeeAvailabilities}
+        availabilities={availabilities}
         timeOffRequests={deptTimeOff}
         schedulingSettings={schedulingSettings}
         canViewPayRates={structure?.canSeePay ?? false}

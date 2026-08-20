@@ -353,3 +353,127 @@ export function toSwapRequest(row: SwapRow, timeZone: string): SwapRequest {
     reviewNotes: row.review_notes ?? undefined,
   };
 }
+
+// ============================================================================
+// Availability: the weekly pattern, and a proposal to change it.
+//
+// ── DAY ZERO IS SUNDAY ────────────────────────────────────────────────────
+//
+// Matching `Date.getDay()`, which every screen reading this already uses. The
+// column carries the same convention on purpose — an ISO-8601 week here would
+// put a silent off-by-one between the table and the calendar.
+//
+// ── `time` COLUMNS ARRIVE AS `HH:MM:SS` ───────────────────────────────────
+//
+// The screens work in `HH:MM`. Trimmed here rather than at each of them, so a
+// window cannot render as "07:00:00 – 18:00:00" on one screen and "07:00" on
+// the next.
+// ============================================================================
+
+export interface AvailabilityDayRow {
+  day_of_week: number;
+  is_available: boolean;
+  available_from: string | null;
+  available_to: string | null;
+  notes: string | null;
+}
+
+export interface AvailabilityDay {
+  dayOfWeek: number;
+  isAvailable: boolean;
+  /** Absent while available means ALL DAY, not "no hours". */
+  startTime?: string;
+  endTime?: string;
+  notes?: string;
+}
+
+/** `07:00:00` → `07:00`. */
+function clockTime(value: string | null): string | undefined {
+  return value ? value.slice(0, 5) : undefined;
+}
+
+export function toAvailabilityDay(row: AvailabilityDayRow): AvailabilityDay {
+  return {
+    dayOfWeek: row.day_of_week,
+    isAvailable: row.is_available,
+    startTime: clockTime(row.available_from),
+    endTime: clockTime(row.available_to),
+    notes: row.notes ?? undefined,
+  };
+}
+
+/**
+ * A whole week, with the days nobody has said anything about filled in.
+ *
+ * A person with no rows is not a person who never works — it is a person who
+ * has not told anybody yet, and the conflict checker treats a missing day as
+ * "no opinion" rather than "unavailable". Returning a partial week would make
+ * that distinction depend on which screen was asking.
+ */
+export function toAvailabilityWeek(
+  rows: AvailabilityDayRow[],
+): AvailabilityDay[] {
+  const byDay = new Map(rows.map((row) => [row.day_of_week, row]));
+  return Array.from({ length: 7 }, (_, day) => {
+    const row = byDay.get(day);
+    return row
+      ? toAvailabilityDay(row)
+      : // No row means unstated. `isAvailable: true` with no window is the
+        // neutral reading — it produces no conflict either way, where `false`
+        // would flag every shift for everybody who has not filled this in.
+        { dayOfWeek: day, isAvailable: true };
+  });
+}
+
+export interface AvailabilityRequestRow {
+  id: string;
+  staff_id: string;
+  previous: AvailabilityDay[];
+  proposed: AvailabilityDay[];
+  effective_from: string;
+  reason: string;
+  status: RequestStatus;
+  requested_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  staff: StaffName | null;
+  reviewer: { full_name: string | null } | null;
+}
+
+export interface AvailabilityRequest {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  /** The pattern as it stood when this was filed — not the live one. */
+  currentAvailability: AvailabilityDay[];
+  proposedAvailability: AvailabilityDay[];
+  effectiveFrom: string;
+  reason: string;
+  status: RequestStatus;
+  requestedAt: string;
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+}
+
+export function toAvailabilityRequest(
+  row: AvailabilityRequestRow,
+): AvailabilityRequest {
+  return {
+    id: row.id,
+    employeeId: row.staff_id,
+    employeeName: fullName(row.staff),
+    currentAvailability: row.previous ?? [],
+    proposedAvailability: row.proposed ?? [],
+    effectiveFrom: row.effective_from,
+    reason: row.reason,
+    status: row.status,
+    requestedAt: row.requested_at,
+    reviewedBy: row.reviewed_by ?? undefined,
+    reviewedByName: row.reviewer?.full_name ?? undefined,
+    reviewedAt: row.reviewed_at ?? undefined,
+    reviewNotes: row.review_notes ?? undefined,
+  };
+}
