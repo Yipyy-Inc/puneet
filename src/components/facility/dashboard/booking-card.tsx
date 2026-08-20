@@ -114,7 +114,7 @@ export function BookingCard({
   // The facility's own surcharges and discounts, from `facility_settings`.
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
-  const { rules: pricingRules } = usePricingRules();
+  const { rules: pricingRules, isPending: pricingPending } = usePricingRules();
   // The facility's report-card settings — auto-send mode and send time. Read
   // from the fixture until now, so a facility that had turned auto-send off
   // still had it announced as scheduled.
@@ -556,13 +556,25 @@ export function BookingCard({
         )}
         {primaryAction === "check-out" && (
           <>
+            {/* ── DISABLED UNTIL THE PRICING RULES ARRIVE ──────────────────
+                `usePricingRules()` answers with the EMPTY fallback while its
+                query is in flight, and empty is indistinguishable from "this
+                facility charges no late fee". Checking out in that window
+                computes no late-pickup fee and charges the customer the bare
+                bill — silently, and only sometimes, which is the worst way for
+                a money bug to behave.
+
+                Caught by dashboard-live-board.spec.ts on 2026-08-20: it passed
+                twice and then failed three times running, on nothing but how
+                fast the settings query came back. */}
             <Button
               size="sm"
               onClick={handleCheckOutClick}
+              disabled={pricingPending}
               className="gap-1 bg-red-600 text-white hover:bg-red-700"
             >
               <LogOut className="size-3.5" />
-              Check Out
+              {pricingPending ? "Loading fees…" : "Check Out"}
             </Button>
             {checkOutOpen && (
               // Same wrapper, same reason — and here the consequence was worse
