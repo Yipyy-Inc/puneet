@@ -260,3 +260,138 @@ export async function DELETE(request: NextRequest) {
 
   return NextResponse.json({ removed: id });
 }
+
+interface ShiftPatch {
+  id?: string;
+  employeeId?: string | null;
+  departmentId?: string;
+  positionId?: string;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  breakMinutes?: number;
+  notes?: string | null;
+  status?: ScheduleShift["status"];
+}
+
+/**
+ * Change one shift.
+ *
+ * ── THE DOCSTRING BELOW THE DELETE PROMISED THIS AND IT DID NOT EXIST ─────
+ *
+ * "Cancelling is a status, and the PATCH does that." — written when this route
+ * shipped, about a handler nobody wrote. The scheduling module's main calendar
+ * could therefore only ever move a shift in component state, which is exactly
+ * what it did.
+ *
+ * ── DATE AND TIMES MOVE TOGETHER ──────────────────────────────────────────
+ *
+ * A shift is stored as two instants, so changing the day means recomputing
+ * both. A caller sending only a new `date` still needs the times to rebuild the
+ * range, so the existing row is read first and the change applied on top of it —
+ * rather than making every drag send six fields it did not change.
+ */
+export async function PATCH(request: NextRequest) {
+  const viewer = await getViewer().catch(() => null);
+  if (!viewer || viewer.source !== "session") {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const context = await getFacilityContext();
+  if (!context) {
+    return NextResponse.json({ error: "No facility." }, { status: 404 });
+  }
+
+  const input = (await request.json().catch(() => ({}))) as ShiftPatch;
+  if (!input.id) {
+    return NextResponse.json({ error: "`id` is required." }, { status: 400 });
+  }
+
+  const supabase = await createServerClient();
+
+  const { data: existing } = await supabase
+    .from("staff_shifts")
+    .select(SELECT)
+    .eq("id", input.id)
+    .maybeSingle();
+
+  if (!existing) {
+    return NextResponse.json(
+      { error: "No shift you can change with that id." },
+      { status: 404 },
+    );
+  }
+
+  const current = toShift(existing as ShiftRow, context.timeZone);
+
+  const date = input.date ?? current.date;
+  const startTime = input.startTime ?? current.startTime;
+  const endTime = input.endTime ?? current.endTime;
+
+  if (!DATE.test(date) || !TIME.test(startTime) || !TIME.test(endTime)) {
+    return NextResponse.json(
+      { error: "A date as YYYY-MM-DD and times as HH:MM." },
+      { status: 422 },
+    );
+  }
+
+  const movedInTime =
+    input.date !== undefined ||
+    input.startTime !== undefined ||
+    input.endTime !== undefined;
+
+  const patch: Record<string, unknown> = {};
+  if (movedInTime) {
+    Object.assign(
+      patch,
+      shiftInstants(date, startTime, endTime, context.timeZone),
+    );
+  }
+  // `null` is meaningful — it makes the shift OPEN — so the check is against
+  // `undefined`, not falsiness. `employeeId: null` treated as "not sent" is how
+  // an unassign silently does nothing.
+  if (input.employeeId !== undefined) patch.staff_id = input.employeeId;
+  if (input.departmentId !== undefined)
+    patch.department_id = input.departmentId;
+  if (input.positionId !== undefined) patch.position_id = input.positionId;
+  if (input.breakMinutes !== undefined)
+    patch.break_minutes = input.breakMinutes;
+  if (input.notes !== undefined) patch.notes = input.notes;
+  if (input.status !== undefined) patch.status = input.status;
+
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: "Nothing to change." }, { status: 422 });
+  }
+
+  const { data, error } = await supabase
+    .from("staff_shifts")
+    .update(patch as never)
+    .eq("id", input.id)
+    .select(SELECT);
+
+  if (error) {
+    if (error.code === "23P01") {
+      return NextResponse.json(
+        {
+          error:
+            "That person is already on a shift that overlaps this one. Move or cancel the other shift first.",
+        },
+        { status: 409 },
+      );
+    }
+    return writeFailure(error, {
+      duplicate: "That shift could not be changed.",
+      denied: "You do not have permission to change shifts.",
+    });
+  }
+
+  // An RLS-refused UPDATE affects 0 rows and does NOT raise — see
+  // check:rls-writes.
+  const refused = deniedIfUntouched(
+    data,
+    "No shift you can change with that id.",
+  );
+  if (refused) return refused;
+
+  return NextResponse.json(toShift((data as ShiftRow[])[0], context.timeZone));
+}
