@@ -177,3 +177,179 @@ export function shiftInstants(
     ),
   };
 }
+
+// ============================================================================
+// Phase 2: time off and shift swaps.
+//
+// ── THE EMBEDS ARE TO-ONE, SO THEY ARE OBJECTS ────────────────────────────
+//
+// `staff!staff_id(...)` and `profiles!reviewed_by(...)` come back as an OBJECT,
+// not a one-element array. Reading one as `row.staff?.[0]` yields undefined for
+// every row with no error anywhere — which is how the Daily Care board came
+// back empty on 2026-08-20. Typed as objects here so the compiler holds it.
+//
+// ── LEAVE IS DATES. A SWAP IS SHIFTS, AND SHIFTS ARE INSTANTS ─────────────
+//
+// `starts_on`/`ends_on` are already the calendar days the screen draws, so they
+// pass straight through. The shift times inside a swap do NOT: they are
+// instants and need the facility's timezone, the same conversion `toShift`
+// does, or a Saturday swap reads as a Friday one five timezones away.
+// ============================================================================
+
+export type TimeOffType =
+  | "vacation"
+  | "sick_leave"
+  | "personal"
+  | "bereavement"
+  | "parental"
+  | "unpaid"
+  | "other";
+
+/** `cancelled` is the requester withdrawing; `denied` is somebody refusing. */
+export type RequestStatus = "pending" | "approved" | "denied" | "cancelled";
+
+interface StaffName {
+  first_name: string | null;
+  last_name: string | null;
+}
+
+function fullName(who: StaffName | null | undefined): string {
+  const name = [who?.first_name, who?.last_name].filter(Boolean).join(" ");
+  return name || "Unknown";
+}
+
+export interface TimeOffRow {
+  id: string;
+  staff_id: string;
+  type: TimeOffType;
+  starts_on: string;
+  ends_on: string;
+  reason: string;
+  status: RequestStatus;
+  requested_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  staff: StaffName | null;
+  reviewer: { full_name: string | null } | null;
+}
+
+export interface TimeOffRequest {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  type: TimeOffType;
+  /** `YYYY-MM-DD`, inclusive at both ends — the 14th to the 14th is one day. */
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: RequestStatus;
+  requestedAt: string;
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+}
+
+export function toTimeOffRequest(row: TimeOffRow): TimeOffRequest {
+  return {
+    id: row.id,
+    employeeId: row.staff_id,
+    employeeName: fullName(row.staff),
+    type: row.type,
+    startDate: row.starts_on,
+    endDate: row.ends_on,
+    reason: row.reason,
+    status: row.status,
+    requestedAt: row.requested_at,
+    reviewedBy: row.reviewed_by ?? undefined,
+    // The reviewer is a PROFILE, and a facility's members can read each
+    // other's. Falling back to the raw `user_01…` id would put a WorkOS
+    // identifier on screen where a name belongs, so it is left absent instead.
+    reviewedByName: row.reviewer?.full_name ?? undefined,
+    reviewedAt: row.reviewed_at ?? undefined,
+    reviewNotes: row.review_notes ?? undefined,
+  };
+}
+
+interface ShiftWindow {
+  starts_at: string;
+  ends_at: string;
+}
+
+export interface SwapRow {
+  id: string;
+  requesting_shift_id: string;
+  requesting_staff_id: string;
+  target_staff_id: string;
+  target_shift_id: string | null;
+  reason: string;
+  status: RequestStatus;
+  requested_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  requester: StaffName | null;
+  target: StaffName | null;
+  reviewer: { full_name: string | null } | null;
+  requesting_shift: ShiftWindow | null;
+  target_shift: ShiftWindow | null;
+}
+
+export interface SwapRequest {
+  id: string;
+  requestingEmployeeId: string;
+  requestingEmployeeName: string;
+  requestingShiftId: string;
+  requestingShiftDate: string;
+  requestingShiftTime: string;
+  targetEmployeeId: string;
+  targetEmployeeName: string;
+  /** Absent on a HAND-OFF — the requester gives their shift up, gets none back. */
+  targetShiftId?: string;
+  targetShiftDate?: string;
+  targetShiftTime?: string;
+  reason: string;
+  status: RequestStatus;
+  requestedAt: string;
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+}
+
+function shiftLabel(
+  window: ShiftWindow | null | undefined,
+  timeZone: string,
+): { date: string; time: string } | null {
+  if (!window) return null;
+  const start = wallClockParts(window.starts_at, timeZone);
+  const end = wallClockParts(window.ends_at, timeZone);
+  return { date: start.date, time: `${start.time} – ${end.time}` };
+}
+
+export function toSwapRequest(row: SwapRow, timeZone: string): SwapRequest {
+  const requesting = shiftLabel(row.requesting_shift, timeZone);
+  const target = shiftLabel(row.target_shift, timeZone);
+
+  return {
+    id: row.id,
+    requestingEmployeeId: row.requesting_staff_id,
+    requestingEmployeeName: fullName(row.requester),
+    requestingShiftId: row.requesting_shift_id,
+    requestingShiftDate: requesting?.date ?? "",
+    requestingShiftTime: requesting?.time ?? "",
+    targetEmployeeId: row.target_staff_id,
+    targetEmployeeName: fullName(row.target),
+    targetShiftId: row.target_shift_id ?? undefined,
+    targetShiftDate: target?.date,
+    targetShiftTime: target?.time,
+    reason: row.reason,
+    status: row.status,
+    requestedAt: row.requested_at,
+    reviewedBy: row.reviewed_by ?? undefined,
+    reviewedByName: row.reviewer?.full_name ?? undefined,
+    reviewedAt: row.reviewed_at ?? undefined,
+    reviewNotes: row.review_notes ?? undefined,
+  };
+}

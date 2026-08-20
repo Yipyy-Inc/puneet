@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   CalendarOff,
   Check,
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,11 +26,14 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  enhancedTimeOffRequests as initialRequests,
-  departments,
-  scheduleEmployees,
-} from "@/data/scheduling";
-import type { EnhancedTimeOffRequest } from "@/types/scheduling";
+  schedulingQueries,
+  timeOffQueries,
+  useDecideTimeOff,
+} from "@/lib/api/scheduling";
+import { staffQueries } from "@/lib/api/staff";
+import type { TimeOffRequest } from "@/lib/api/mappers/scheduling";
+import type { StaffProfile } from "@/types/facility-staff";
+import type { Department } from "@/types/scheduling";
 
 type StatusFilter = "pending" | "approved" | "denied" | "all";
 
@@ -126,20 +131,33 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+/** Two letters from a name the server already assembled. */
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "??";
+}
+
 function RequestRow({
   req,
+  emp,
+  dept,
   expanded,
   onToggle,
   onDecide,
 }: {
-  req: EnhancedTimeOffRequest;
+  req: TimeOffRequest;
+  /** Resolved by the container: one lookup for the list, not one per row. */
+  emp?: StaffProfile;
+  /**
+   * The requester's department, which the REQUEST does not carry — a person
+   * belongs to a department, a day off does not. Derived from the org chart.
+   */
+  dept?: Department;
   expanded: boolean;
   onToggle: () => void;
   onDecide: (id: string, status: "approved" | "denied", notes: string) => void;
 }) {
   const [notes, setNotes] = useState("");
-  const emp = scheduleEmployees.find((e) => e.id === req.employeeId);
-  const dept = departments.find((d) => d.id === req.departmentId);
   const isPending = req.status === "pending";
   const days = dayCount(req.startDate, req.endDate);
 
@@ -155,9 +173,9 @@ function RequestRow({
         <td className="py-3 pr-3 pl-5">
           <div className="flex items-center gap-3">
             <Avatar className="size-9 shrink-0">
-              <AvatarImage src={emp?.avatar} alt={emp?.name} />
+              <AvatarImage src={emp?.avatarUrl} alt={req.employeeName} />
               <AvatarFallback className="bg-muted text-xs font-semibold">
-                {emp?.initials ?? "??"}
+                {initialsOf(req.employeeName)}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
@@ -383,11 +401,36 @@ function RequestRow({
 }
 
 export default function TimeOffPage() {
-  const [requests, setRequests] =
-    useState<EnhancedTimeOffRequest[]>(initialRequests);
   const [tab, setTab] = useState<StatusFilter>("pending");
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Everything, once. The tabs need counts as well as rows, and leave is not a
+  // volume where a query per tab buys anything — it would cost the counts.
+  const { data, isPending: loading } = useQuery(timeOffQueries.list("all"));
+  const { data: structure } = useQuery(schedulingQueries.structure());
+  const { data: staff } = useQuery(staffQueries.profiles());
+  const decideTimeOff = useDecideTimeOff();
+
+  const requests = useMemo(() => data?.requests ?? [], [data]);
+
+  // `staff_shifts.staff_id` and this table's `staff_id` are the ROW's uuid.
+  // `StaffProfile.id` is a legacy string and matches nothing.
+  const staffById = useMemo(() => {
+    const map = new Map<string, StaffProfile>();
+    for (const member of staff ?? []) {
+      if (member.rowId) map.set(member.rowId, member);
+    }
+    return map;
+  }, [staff]);
+
+  const departmentByStaff = useMemo(() => {
+    const map = new Map<string, Department>();
+    for (const dept of structure?.departments ?? []) {
+      for (const id of dept.employeeIds) map.set(id, dept);
+    }
+    return map;
+  }, [structure]);
 
   const counts = useMemo(
     () => ({
@@ -412,25 +455,29 @@ export default function TimeOffPage() {
   }, [requests, tab, query]);
 
   const decide = (id: string, status: "approved" | "denied", notes: string) => {
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status,
-              reviewedAt: new Date().toISOString().split("T")[0],
-              reviewedBy: "emp-1",
-              reviewedByName: "Sarah Johnson",
-              reviewNotes: notes || undefined,
-            }
-          : r,
-      ),
-    );
-    setExpandedId(null);
-    toast.success(
-      status === "approved"
-        ? "Time off request approved"
-        : "Time off request denied",
+    decideTimeOff.mutate(
+      { id, status, notes: notes || undefined },
+      {
+        onSuccess: (decided) => {
+          setExpandedId(null);
+          if (status === "denied") {
+            toast.success("Time off request denied");
+            return;
+          }
+          // THE POINT OF THE WHOLE FEATURE. Somebody can be granted leave they
+          // are still rostered to work, and the screen this replaced could not
+          // see it — it had no roster to compare against.
+          const clashes = decided.conflicts?.length ?? 0;
+          toast.success("Time off request approved", {
+            description:
+              clashes > 0
+                ? `Still rostered for ${clashes} shift${clashes === 1 ? "" : "s"} in that window — reassign or cancel ${clashes === 1 ? "it" : "them"}.`
+                : undefined,
+            duration: clashes > 0 ? 8000 : undefined,
+          });
+        },
+        onError: (error: Error) => toast.error(error.message),
+      },
     );
   };
 
@@ -531,6 +578,8 @@ export default function TimeOffPage() {
                   <RequestRow
                     key={req.id}
                     req={req}
+                    emp={staffById.get(req.employeeId)}
+                    dept={departmentByStaff.get(req.employeeId)}
                     expanded={expandedId === req.id}
                     onToggle={() =>
                       setExpandedId((cur) => (cur === req.id ? null : req.id))
@@ -540,6 +589,14 @@ export default function TimeOffPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : loading ? (
+          // "No pending requests" while the list is still in flight is a claim
+          // about the data, not a description of the screen.
+          <div className="space-y-3 p-5">
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} className="h-14 w-full" />
+            ))}
           </div>
         ) : (
           <div className="text-muted-foreground flex flex-col items-center py-16 text-center">

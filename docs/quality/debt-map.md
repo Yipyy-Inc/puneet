@@ -2738,6 +2738,43 @@ change with the subset that covers it rather than the whole suite. The config's
 own note already says a rotating cast of failures means the environment is
 loaded, not that there are that many defects.
 
+## 2026-08-21 — Scheduling, half converted
+
+### 🟡 Three scheduling screens still count leave and swaps from the fixture
+
+Departments, positions, shifts, time off and shift swaps are Postgres now. The
+`enhancedTimeOffRequests` and `enhancedShiftSwaps` arrays in
+[src/data/scheduling.ts](../../src/data/scheduling.ts) are **not** gone: they are
+still read by
+
+- `src/components/scheduling/ReportsView.tsx` — its time-off and swap counts
+- `src/components/scheduling/ScheduleNotificationsDropdown.tsx` — its pending list
+- `src/components/scheduling/ScheduleView.tsx`
+
+So the scheduling module's own reports and its own dropdown now disagree with
+the time-off and shift-swap pages beside them, and with the facility bell, which
+all read the database. **This is worse than before the conversion**: previously
+everything was equally wrong, and now two surfaces are right and three are
+confidently stale.
+
+**Why it's risky:** a manager reading "3 pending time-off requests" in Reports
+and finding none on the Time Off page will not conclude that Reports is a
+fixture. They will conclude the approval did not save.
+
+**Do instead:** convert them onto `timeOffQueries` / `swapQueries` in
+[src/lib/api/scheduling.ts](../../src/lib/api/scheduling.ts) — the endpoints take
+a `status` filter precisely so a dropdown can ask for `pending`. Do not add a
+second fetch of the same rows, and do not "fix" the disagreement by pointing the
+new pages back at the fixture.
+
+### 🟡 `scheduling/company` should be deleted, not converted
+
+It is a second place to set opening hours, address and tax id — all of which are
+already real in `facility_settings` and on the `facilities` row. Only
+`weekStartsOn` and `payPeriod` are genuinely new; both belong in a settings
+domain, which needs no migration. Converting the screen as it stands would give
+a facility two places to change its address and no rule about which wins.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

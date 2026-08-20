@@ -4672,6 +4672,114 @@ export type Database = {
           },
         ];
       };
+      shift_swap_requests: {
+        Row: {
+          created_at: string;
+          facility_id: string;
+          id: string;
+          reason: string;
+          requested_at: string;
+          requesting_shift_id: string;
+          requesting_staff_id: string;
+          review_notes: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database["public"]["Enums"]["approval_status"];
+          target_shift_id: string | null;
+          target_staff_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          reason?: string;
+          requested_at?: string;
+          requesting_shift_id: string;
+          requesting_staff_id: string;
+          review_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database["public"]["Enums"]["approval_status"];
+          target_shift_id?: string | null;
+          target_staff_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          reason?: string;
+          requested_at?: string;
+          requesting_shift_id?: string;
+          requesting_staff_id?: string;
+          review_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database["public"]["Enums"]["approval_status"];
+          target_shift_id?: string | null;
+          target_staff_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shift_swap_requests_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shift_swap_requests_requesting_shift_id_fkey";
+            columns: ["requesting_shift_id"];
+            isOneToOne: false;
+            referencedRelation: "staff_shifts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shift_swap_requests_requesting_staff_id_fkey";
+            columns: ["requesting_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "shift_swap_requests_requesting_staff_id_fkey";
+            columns: ["requesting_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shift_swap_requests_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shift_swap_requests_target_shift_id_fkey";
+            columns: ["target_shift_id"];
+            isOneToOne: false;
+            referencedRelation: "staff_shifts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shift_swap_requests_target_staff_id_fkey";
+            columns: ["target_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "shift_swap_requests_target_staff_id_fkey";
+            columns: ["target_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       staff: {
         Row: {
           access_level: Database["public"]["Enums"]["facility_access_level"];
@@ -5216,6 +5324,86 @@ export type Database = {
           },
         ];
       };
+      staff_time_off_requests: {
+        Row: {
+          created_at: string;
+          ends_on: string;
+          facility_id: string;
+          id: string;
+          reason: string;
+          requested_at: string;
+          review_notes: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          staff_id: string;
+          starts_on: string;
+          status: Database["public"]["Enums"]["approval_status"];
+          type: Database["public"]["Enums"]["time_off_type"];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          ends_on: string;
+          facility_id: string;
+          id?: string;
+          reason?: string;
+          requested_at?: string;
+          review_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          staff_id: string;
+          starts_on: string;
+          status?: Database["public"]["Enums"]["approval_status"];
+          type: Database["public"]["Enums"]["time_off_type"];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          ends_on?: string;
+          facility_id?: string;
+          id?: string;
+          reason?: string;
+          requested_at?: string;
+          review_notes?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          staff_id?: string;
+          starts_on?: string;
+          status?: Database["public"]["Enums"]["approval_status"];
+          type?: Database["public"]["Enums"]["time_off_type"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_time_off_requests_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_time_off_requests_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_time_off_requests_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "staff_time_off_requests_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       store_credit_entries: {
         Row: {
           amount: number;
@@ -5711,6 +5899,13 @@ export type Database = {
         Args: { p_profile_id: string; p_token_hash: string };
         Returns: Json;
       };
+      approve_shift_swap: {
+        Args: { p_notes?: string; p_request_id: string };
+        Returns: {
+          moved_shift_id: string;
+          now_assigned: string;
+        }[];
+      };
       assign_boarding_room: {
         Args: {
           p_booking_ref: number;
@@ -6109,9 +6304,18 @@ export type Database = {
         Returns: undefined;
       };
       submit_onboarding: { Args: { p_token: string }; Returns: boolean };
+      time_off_shift_conflicts: {
+        Args: { p_request_id: string };
+        Returns: {
+          ends_at: string;
+          shift_id: string;
+          starts_at: string;
+        }[];
+      };
     };
     Enums: {
       access_scope: "anytime" | "operating_hours" | "assigned_shifts" | "none";
+      approval_status: "pending" | "approved" | "denied" | "cancelled";
       booking_status:
         | "pending"
         | "estimate_sent"
@@ -6163,6 +6367,14 @@ export type Database = {
         | "past_due"
         | "suspended"
         | "cancelled";
+      time_off_type:
+        | "vacation"
+        | "sick_leave"
+        | "personal"
+        | "bereavement"
+        | "parental"
+        | "unpaid"
+        | "other";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -6294,6 +6506,7 @@ export const Constants = {
   public: {
     Enums: {
       access_scope: ["anytime", "operating_hours", "assigned_shifts", "none"],
+      approval_status: ["pending", "approved", "denied", "cancelled"],
       booking_status: [
         "pending",
         "estimate_sent",
@@ -6349,6 +6562,15 @@ export const Constants = {
         "past_due",
         "suspended",
         "cancelled",
+      ],
+      time_off_type: [
+        "vacation",
+        "sick_leave",
+        "personal",
+        "bereavement",
+        "parental",
+        "unpaid",
+        "other",
       ],
     },
   },

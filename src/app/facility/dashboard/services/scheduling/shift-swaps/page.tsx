@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeftRight,
   Check,
@@ -17,9 +18,16 @@ import { Input } from "@/components/ui/input";
 
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { departments, scheduleEmployees } from "@/data/scheduling";
-import type { EnhancedShiftSwap } from "@/types/scheduling";
-import { useShiftSwaps, decideShiftSwap } from "@/lib/shift-swaps-store";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  schedulingQueries,
+  swapQueries,
+  useDecideSwap,
+} from "@/lib/api/scheduling";
+import { staffQueries } from "@/lib/api/staff";
+import type { SwapRequest } from "@/lib/api/mappers/scheduling";
+import type { StaffProfile } from "@/types/facility-staff";
+import type { Department } from "@/types/scheduling";
 
 type StatusFilter = "pending" | "approved" | "denied" | "all";
 
@@ -61,15 +69,15 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function EmployeeChip({
-  id,
+  emp,
   name,
   align = "left",
 }: {
-  id: string;
+  /** Resolved by the container — the swap already carries the NAME. */
+  emp?: StaffProfile;
   name: string;
   align?: "left" | "right";
 }) {
-  const emp = scheduleEmployees.find((e) => e.id === id);
   return (
     <div
       className={cn(
@@ -78,9 +86,9 @@ function EmployeeChip({
       )}
     >
       <Avatar className="size-7 shrink-0">
-        <AvatarImage src={emp?.avatar} alt={name} />
+        <AvatarImage src={emp?.avatarUrl} alt={name} />
         <AvatarFallback className="bg-muted text-[10px] font-semibold">
-          {emp?.initials ?? name.slice(0, 2).toUpperCase()}
+          {name.slice(0, 2).toUpperCase()}
         </AvatarFallback>
       </Avatar>
       <span className="truncate text-sm font-medium">{name}</span>
@@ -88,7 +96,18 @@ function EmployeeChip({
   );
 }
 
-function ShiftCell({ date, time }: { date: string; time: string }) {
+function ShiftCell({ date, time }: { date?: string; time?: string }) {
+  // A HAND-OFF has no shift coming back: the requester gives theirs up and
+  // takes nothing. Drawing an empty date and time cell would read as missing
+  // data rather than as the shape of the request.
+  if (!date) {
+    return (
+      <span className="text-muted-foreground text-xs italic">
+        nothing in return
+      </span>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-foreground flex items-center gap-1 text-xs font-medium">
@@ -105,17 +124,27 @@ function ShiftCell({ date, time }: { date: string; time: string }) {
 
 function SwapRow({
   swap,
+  requester,
+  target,
+  dept,
   expanded,
   onToggle,
   onDecide,
 }: {
-  swap: EnhancedShiftSwap;
+  swap: SwapRequest;
+  requester?: StaffProfile;
+  target?: StaffProfile;
+  /**
+   * The requester's department. A SWAP has none — a department belongs to a
+   * person and to a shift, not to a request about them — so it is derived from
+   * the org chart the roster already loads.
+   */
+  dept?: Department;
   expanded: boolean;
   onToggle: () => void;
   onDecide: (id: string, status: "approved" | "denied", notes: string) => void;
 }) {
   const [notes, setNotes] = useState("");
-  const dept = departments.find((d) => d.id === swap.departmentId);
   const isPending = swap.status === "pending";
 
   return (
@@ -130,15 +159,9 @@ function SwapRow({
         {/* Swap participants */}
         <td className="py-3 pr-3 pl-5">
           <div className="flex items-center gap-2">
-            <EmployeeChip
-              id={swap.requestingEmployeeId}
-              name={swap.requestingEmployeeName}
-            />
+            <EmployeeChip emp={requester} name={swap.requestingEmployeeName} />
             <ArrowLeftRight className="text-muted-foreground size-3.5 shrink-0" />
-            <EmployeeChip
-              id={swap.targetEmployeeId}
-              name={swap.targetEmployeeName}
-            />
+            <EmployeeChip emp={target} name={swap.targetEmployeeName} />
           </div>
         </td>
 
@@ -248,8 +271,9 @@ function SwapRow({
                         {swap.targetEmployeeName} gives up
                       </span>
                       <span className="text-foreground text-right font-medium">
-                        {formatShiftDate(swap.targetShiftDate)} ·{" "}
-                        {swap.targetShiftTime}
+                        {swap.targetShiftDate
+                          ? `${formatShiftDate(swap.targetShiftDate)} · ${swap.targetShiftTime}`
+                          : "nothing — they are taking a shift on"}
                       </span>
                     </div>
                   </div>
@@ -325,10 +349,35 @@ const STATUS_TABS: { value: StatusFilter; label: string }[] = [
 ];
 
 export default function ShiftSwapsPage() {
-  const swaps = useShiftSwaps();
   const [tab, setTab] = useState<StatusFilter>("pending");
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Everything, once — the tabs need counts as well as rows.
+  const { data, isPending: loading } = useQuery(swapQueries.list("all"));
+  const { data: structure } = useQuery(schedulingQueries.structure());
+  const { data: staff } = useQuery(staffQueries.profiles());
+  const decideSwap = useDecideSwap();
+
+  const swaps = useMemo(() => data?.swaps ?? [], [data]);
+
+  // Keyed on the ROW uuid: `StaffProfile.id` is a legacy string and matches
+  // nothing a foreign key points at.
+  const staffById = useMemo(() => {
+    const map = new Map<string, StaffProfile>();
+    for (const member of staff ?? []) {
+      if (member.rowId) map.set(member.rowId, member);
+    }
+    return map;
+  }, [staff]);
+
+  const departmentByStaff = useMemo(() => {
+    const map = new Map<string, Department>();
+    for (const dept of structure?.departments ?? []) {
+      for (const id of dept.employeeIds) map.set(id, dept);
+    }
+    return map;
+  }, [structure]);
 
   const counts = useMemo(
     () => ({
@@ -353,17 +402,27 @@ export default function ShiftSwapsPage() {
   }, [swaps, tab, query]);
 
   const decide = (id: string, status: "approved" | "denied", notes: string) => {
-    // Persist through the shared store so the notification bell (and other tabs)
-    // reflect the same resolution.
-    decideShiftSwap(id, status, notes);
-    setExpandedId(null);
-    toast.success(
-      status === "approved" ? "Shift swap approved" : "Shift swap denied",
+    decideSwap.mutate(
+      { id, status, notes: notes || undefined },
       {
-        description:
-          status === "approved"
-            ? "Both employees have been notified."
-            : undefined,
+        onSuccess: (decided) => {
+          setExpandedId(null);
+          if (status === "denied") {
+            toast.success("Shift swap denied");
+            return;
+          }
+          // The description says what CHANGED, because the version this
+          // replaced said "Both employees have been notified" — of a swap that
+          // never moved either shift, by a mechanism that did not exist.
+          const moved = decided.moved?.length ?? 0;
+          toast.success("Shift swap approved", {
+            description: `${moved} shift${moved === 1 ? "" : "s"} reassigned on the roster.`,
+          });
+        },
+        // A trade that would double-book somebody is refused by the database and
+        // NOTHING moves — the message says so, so nobody goes looking for a
+        // half-applied swap.
+        onError: (error: Error) => toast.error(error.message),
       },
     );
   };
@@ -464,6 +523,9 @@ export default function ShiftSwapsPage() {
                   <SwapRow
                     key={swap.id}
                     swap={swap}
+                    requester={staffById.get(swap.requestingEmployeeId)}
+                    target={staffById.get(swap.targetEmployeeId)}
+                    dept={departmentByStaff.get(swap.requestingEmployeeId)}
                     expanded={expandedId === swap.id}
                     onToggle={() =>
                       setExpandedId((cur) => (cur === swap.id ? null : swap.id))
@@ -473,6 +535,14 @@ export default function ShiftSwapsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : loading ? (
+          // "No pending swaps" while the list is still loading is a claim about
+          // the data, not a description of the screen.
+          <div className="space-y-3 p-5">
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} className="h-14 w-full" />
+            ))}
           </div>
         ) : (
           <div className="text-muted-foreground flex flex-col items-center py-16 text-center">
