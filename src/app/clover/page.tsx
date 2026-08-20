@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { activeAdminFacility } from "@/lib/api/facility-context";
 import { getViewer } from "@/lib/auth/viewer";
 import { cloverConfig, defaultCloverEnvironment } from "@/lib/clover/config";
 import {
@@ -44,8 +45,6 @@ export const dynamic = "force-dynamic";
 // question — it catches a state completed in someone else's browser, which
 // signing alone does not.
 // ============================================================================
-
-const OWNER_ROLES = new Set(["owner", "admin"]);
 
 interface SearchParams {
   code?: string;
@@ -92,8 +91,14 @@ async function completeConnection(
     };
   }
 
+  // Admin ACCESS at THE FACILITY THE STATE NAMES — not a job title, and not
+  // "some facility they administer". A hardcoded owner/admin role set was
+  // retired everywhere else (ADR 0005): a facility may promote its receptionist
+  // to admin access without granting an owner's 168 permissions, and refusing
+  // that person HERE is the worst place to do it — they have already approved
+  // at Clover, so the merchant said yes and Yipyy then said no.
   const owns = viewer.memberships.some(
-    (m) => m.facilityId === state.facilityId && OWNER_ROLES.has(m.role),
+    (m) => m.facilityId === state.facilityId && m.accessLevel === "admin",
   );
   if (!owns) {
     return {
@@ -191,20 +196,24 @@ export default async function CloverPage({
     return <CloverResult outcome={await completeConnection(params)} />;
   }
 
-  // A launch, or somebody typing the URL. Say where they stand.
-  const viewer = await getViewer().catch(() => null);
-  const membership = viewer?.memberships.find((m) => OWNER_ROLES.has(m.role));
+  // A launch from the merchant's own Clover dashboard, or somebody typing the
+  // URL. Say where they stand — for the facility the HOSTNAME names, not for
+  // whichever membership sorted first.
+  const active = await activeAdminFacility();
 
-  if (!membership) {
+  if (active.kind !== "resolved") {
+    // "Ambiguous" lands here too, and deliberately so: this page is reached
+    // from Clover's dashboard with no facility in hand, so there is nothing to
+    // disambiguate with. Their own settings screen renders the choice.
     return <CloverResult outcome={{ kind: "signed-out" }} />;
   }
 
-  const status = await connectionStatus(membership.facilityId);
+  const status = await connectionStatus(active.facility.id);
 
   // Only asked once we know there IS a connection — reading devices needs the
   // merchant's token, and a facility that has not connected has none.
   const terminals = status.connected
-    ? await facilityTerminals(membership.facilityId)
+    ? await facilityTerminals(active.facility.id)
     : ({ kind: "not_connected" } as const);
 
   return (
