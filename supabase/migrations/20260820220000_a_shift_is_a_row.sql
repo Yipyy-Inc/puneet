@@ -232,7 +232,12 @@ revoke all on public.facility_position_pay from anon, authenticated;
 revoke all on public.staff_departments from anon;
 revoke all on public.staff_shifts from anon;
 
-grant select on public.facility_position_pay to authenticated;
+-- SELECT is not enough. `revoke all` above took INSERT/UPDATE/DELETE with it,
+-- and RLS cannot grant back a privilege the role does not hold — so the policy
+-- below was never reached and every attempt to SET a wage failed silently.
+-- Caught by scheduling-roster.spec.ts: an owner created a position with a rate
+-- on it and read back a position with no rate.
+grant select, insert, update, delete on public.facility_position_pay to authenticated;
 
 -- ── Departments ───────────────────────────────────────────────────────────
 

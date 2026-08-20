@@ -27,12 +27,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import {
-  departments,
-  positions as allPositions,
-  scheduleEmployees,
-  scheduleShifts,
-} from "@/data/scheduling";
+import { useQuery } from "@tanstack/react-query";
+
+import { schedulingQueries } from "@/lib/api/scheduling";
+import { staffQueries } from "@/lib/api/staff";
 import { computeShiftHours } from "@/lib/scheduling-utils";
 import type { ScheduleShift } from "@/types/scheduling";
 
@@ -97,8 +95,49 @@ export function RosterView() {
   const targetDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + dateOffset);
-    return d.toISOString().split("T")[0];
+    return d.toISOString().split("T")[0] as string;
   }, [dateOffset]);
+
+  // ── REAL DEPARTMENTS, POSITIONS, PEOPLE AND SHIFTS ──────────────────────
+  //
+  // All four were fixtures imported straight into this file, so a roster built
+  // on one browser did not exist on another. The employees come from `staff`,
+  // which was always real — only the roster around them was not.
+  //
+  // One day at a time: the screen shows one, and asking for a week would be
+  // fetching six days nobody is looking at.
+  const { data: structure } = useQuery(schedulingQueries.structure());
+  const { data: roster, isPending: rosterPending } = useQuery(
+    schedulingQueries.shifts(targetDate, targetDate),
+  );
+  const { data: staff = [] } = useQuery(staffQueries.profiles());
+
+  const departments = useMemo(() => structure?.departments ?? [], [structure]);
+  const allPositions = useMemo(() => structure?.positions ?? [], [structure]);
+  const scheduleShifts = useMemo(() => roster?.shifts ?? [], [roster]);
+
+  // `staff` in the roster's vocabulary. `initials` and a display name are
+  // rendering of the row rather than second facts about the person.
+  const scheduleEmployees = useMemo(
+    () =>
+      staff.map((member) => ({
+        // `rowId`, NOT `id`. `StaffProfile.id` is the legacy string ("fs-003");
+        // `staff_shifts.staff_id` is the uuid, and its own type comment says so:
+        // "needed wherever a write has to name a staff member as a FOREIGN KEY
+        // rather than as a label". Keying the roster on the label would match
+        // no shift at all.
+        id: member.rowId ?? member.id,
+        name: `${member.firstName} ${member.lastName}`.trim(),
+        avatar: member.avatarUrl,
+        initials:
+          [member.firstName, member.lastName]
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? "")
+            .join("") || "—",
+      })),
+    [staff],
+  );
 
   const isToday = dateOffset === 0;
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -111,7 +150,7 @@ export function RosterView() {
         return false;
       return true;
     });
-  }, [targetDate, departmentFilter]);
+  }, [scheduleShifts, targetDate, departmentFilter]);
 
   const entries = useMemo<RosterEntry[]>(() => {
     return todays
@@ -459,7 +498,17 @@ export function RosterView() {
           },
         )}
 
-        {entries.length === 0 && (
+        {/* "Nobody is working" and "we have not asked yet" are different
+            sentences, and the fixture never made this screen say the second —
+            it was present on the first render. A roster that claims an empty
+            day while its request is in flight is how a shift gets missed. */}
+        {entries.length === 0 && rosterPending && (
+          <div className="text-muted-foreground flex flex-col items-center py-12 text-center">
+            <Users className="mb-3 size-10 animate-pulse opacity-30" />
+            <p className="font-medium">Loading the roster…</p>
+          </div>
+        )}
+        {entries.length === 0 && !rosterPending && (
           <div className="text-muted-foreground flex flex-col items-center py-12 text-center">
             <Users className="mb-3 size-10 opacity-30" />
             <p className="font-medium">No shifts scheduled for {dateLabel}</p>

@@ -68,7 +68,8 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase.rpc("register_client", {
     p_facility_slug: slug,
     p_name: parsed.data.name,
-    p_phone: parsed.data.phone ?? null,
+    // Optional on the RPC (`DEFAULT NULL`); undefined omits it, same result.
+    p_phone: parsed.data.phone ?? undefined,
   });
 
   if (error) {

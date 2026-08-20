@@ -14,112 +14,76 @@ export type Database = {
   };
   public: {
     Tables: {
-      facility_rooms: {
+      audit_log: {
         Row: {
-          active: boolean;
-          capacity: number | null;
-          category_id: string;
-          created_at: string;
-          facility_id: string;
+          action: string;
+          category: string;
+          changes: Json;
+          description: string | null;
+          entity_id: string | null;
+          entity_name: string | null;
+          entity_type: string | null;
+          facility_id: string | null;
+          facility_name: string | null;
           id: string;
-          image_url: string | null;
-          legacy_id: string;
-          name: string;
-          sort_order: number;
-          staff_notes: string | null;
-          updated_at: string;
+          ip_address: unknown;
+          occurred_at: string;
+          severity: string;
+          status: string;
+          user_agent: string | null;
+          user_id: string | null;
+          user_name: string | null;
+          user_role: string | null;
         };
         Insert: {
-          active?: boolean;
-          capacity?: number | null;
-          category_id: string;
-          created_at?: string;
-          facility_id: string;
+          action: string;
+          category: string;
+          changes?: Json;
+          description?: string | null;
+          entity_id?: string | null;
+          entity_name?: string | null;
+          entity_type?: string | null;
+          facility_id?: string | null;
+          facility_name?: string | null;
           id?: string;
-          image_url?: string | null;
-          legacy_id: string;
-          name: string;
-          sort_order?: number;
-          staff_notes?: string | null;
-          updated_at?: string;
+          ip_address?: unknown;
+          occurred_at?: string;
+          severity?: string;
+          status?: string;
+          user_agent?: string | null;
+          user_id?: string | null;
+          user_name?: string | null;
+          user_role?: string | null;
         };
         Update: {
-          active?: boolean;
-          capacity?: number | null;
-          category_id?: string;
-          created_at?: string;
-          facility_id?: string;
+          action?: string;
+          category?: string;
+          changes?: Json;
+          description?: string | null;
+          entity_id?: string | null;
+          entity_name?: string | null;
+          entity_type?: string | null;
+          facility_id?: string | null;
+          facility_name?: string | null;
           id?: string;
-          image_url?: string | null;
-          legacy_id?: string;
-          name?: string;
-          sort_order?: number;
-          staff_notes?: string | null;
-          updated_at?: string;
+          ip_address?: unknown;
+          occurred_at?: string;
+          severity?: string;
+          status?: string;
+          user_agent?: string | null;
+          user_id?: string | null;
+          user_name?: string | null;
+          user_role?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "facility_rooms_category_id_fkey";
-            columns: ["category_id"];
+            foreignKeyName: "audit_log_facility_id_fkey";
+            columns: ["facility_id"];
             isOneToOne: false;
-            referencedRelation: "room_categories";
+            referencedRelation: "facilities";
             referencedColumns: ["id"];
           },
         ];
-      };
-      room_categories: {
-        Row: {
-          color: string;
-          created_at: string;
-          default_base_price: number | null;
-          default_capacity: number;
-          description: string | null;
-          facility_id: string;
-          id: string;
-          image_url: string | null;
-          legacy_id: string;
-          name: string;
-          rules: Json;
-          service: Database["public"]["Enums"]["service_module"];
-          sort_order: number;
-          updated_at: string;
-          visible_to_clients: boolean;
-        };
-        Insert: {
-          color?: string;
-          created_at?: string;
-          default_base_price?: number | null;
-          default_capacity?: number;
-          description?: string | null;
-          facility_id: string;
-          id?: string;
-          image_url?: string | null;
-          legacy_id: string;
-          name: string;
-          rules?: Json;
-          service: Database["public"]["Enums"]["service_module"];
-          sort_order?: number;
-          updated_at?: string;
-          visible_to_clients?: boolean;
-        };
-        Update: {
-          color?: string;
-          created_at?: string;
-          default_base_price?: number | null;
-          default_capacity?: number;
-          description?: string | null;
-          facility_id?: string;
-          id?: string;
-          image_url?: string | null;
-          legacy_id?: string;
-          name?: string;
-          rules?: Json;
-          service?: Database["public"]["Enums"]["service_module"];
-          sort_order?: number;
-          updated_at?: string;
-          visible_to_clients?: boolean;
-        };
-        Relationships: [];
       };
       boarding_stays: {
         Row: {
@@ -128,7 +92,7 @@ export type Database = {
           checked_out_at: string | null;
           created_at: string;
           facility_id: string;
-          occupies: string;
+          occupies: unknown;
           override_reason: string | null;
           released_at: string | null;
           room_id: string;
@@ -141,11 +105,11 @@ export type Database = {
           checked_out_at?: string | null;
           created_at?: string;
           facility_id: string;
-          occupies: string;
+          occupies: unknown;
           override_reason?: string | null;
           released_at?: string | null;
           room_id: string;
-          status?: never;
+          status?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -154,14 +118,21 @@ export type Database = {
           checked_out_at?: string | null;
           created_at?: string;
           facility_id?: string;
-          occupies?: string;
+          occupies?: unknown;
           override_reason?: string | null;
           released_at?: string | null;
           room_id?: string;
-          status?: never;
+          status?: string | null;
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "boarding_stays_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
           {
             foreignKeyName: "boarding_stays_booking_id_fkey";
             columns: ["booking_id"];
@@ -170,10 +141,124 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "boarding_stays_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "boarding_stays_room_id_fkey";
             columns: ["room_id"];
             isOneToOne: false;
             referencedRelation: "facility_rooms";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      booking_line_items: {
+        Row: {
+          author_name: string;
+          booking_id: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          kind: string;
+          name: string;
+          price: number | null;
+          quantity: number;
+          source_id: string | null;
+          unit_price: number;
+          updated_at: string;
+        };
+        Insert: {
+          author_name?: string;
+          booking_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          kind: string;
+          name: string;
+          price?: number | null;
+          quantity?: number;
+          source_id?: string | null;
+          unit_price: number;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string;
+          booking_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          name?: string;
+          price?: number | null;
+          quantity?: number;
+          source_id?: string | null;
+          unit_price?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_line_items_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "booking_line_items_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_line_items_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      booking_pets: {
+        Row: {
+          booking_id: string;
+          pet_id: string;
+        };
+        Insert: {
+          booking_id: string;
+          pet_id: string;
+        };
+        Update: {
+          booking_id?: string;
+          pet_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_pets_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "booking_pets_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_pets_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
             referencedColumns: ["id"];
           },
         ];
@@ -220,8 +305,29 @@ export type Database = {
             foreignKeyName: "booking_tip_allocations_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "booking_tip_allocations_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_tip_allocations_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_tip_allocations_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
           },
           {
             foreignKeyName: "booking_tip_allocations_staff_id_fkey";
@@ -232,324 +338,9 @@ export type Database = {
           },
         ];
       };
-      training_trainer_profiles: {
-        Row: {
-          bio: string;
-          calendar_color: string | null;
-          certifications: string[];
-          created_at: string;
-          facility_id: string;
-          id: string;
-          specializations: string[];
-          staff_id: string;
-          updated_at: string;
-          visible_online: boolean;
-          years_experience: number | null;
-        };
-        Insert: {
-          bio?: string;
-          calendar_color?: string | null;
-          certifications?: string[];
-          created_at?: string;
-          facility_id: string;
-          id?: string;
-          specializations?: string[];
-          staff_id: string;
-          updated_at?: string;
-          visible_online?: boolean;
-          years_experience?: number | null;
-        };
-        Update: {
-          bio?: string;
-          calendar_color?: string | null;
-          certifications?: string[];
-          created_at?: string;
-          facility_id?: string;
-          id?: string;
-          specializations?: string[];
-          staff_id?: string;
-          updated_at?: string;
-          visible_online?: boolean;
-          years_experience?: number | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "training_trainer_profiles_staff_id_fkey";
-            columns: ["staff_id"];
-            isOneToOne: true;
-            referencedRelation: "staff";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      training_attendance: {
-        Row: {
-          author_name: string | null;
-          booking_id: string;
-          checked_in_at: string | null;
-          checked_out_at: string | null;
-          created_at: string;
-          created_by: string | null;
-          facility_id: string;
-          session_notes: string;
-          status: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          author_name?: string | null;
-          booking_id: string;
-          checked_in_at?: string | null;
-          checked_out_at?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          facility_id: string;
-          session_notes?: string;
-          status?: never;
-          updated_at?: string;
-        };
-        Update: {
-          author_name?: string | null;
-          booking_id?: string;
-          checked_in_at?: string | null;
-          checked_out_at?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          facility_id?: string;
-          session_notes?: string;
-          status?: never;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "training_attendance_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: true;
-            referencedRelation: "bookings";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      booking_pets: {
-        Row: {
-          booking_id: string;
-          pet_id: string;
-        };
-        Insert: {
-          booking_id: string;
-          pet_id: string;
-        };
-        Update: {
-          booking_id?: string;
-          pet_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "booking_pets_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "bookings";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "booking_pets_pet_id_fkey";
-            columns: ["pet_id"];
-            isOneToOne: false;
-            referencedRelation: "pets";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      care_log_entries: {
-        Row: {
-          id: string;
-          facility_id: string;
-          booking_id: string;
-          pet_id: string | null;
-          task_key: string;
-          task_type: string;
-          occurred_on: string;
-          executed_at: string;
-          served_at: string | null;
-          outcome: string;
-          notes: string | null;
-          recorded_by: string | null;
-          recorded_by_name: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          // Derived by care_log_set_facility from the booking; sending one is
-          // accepted and overwritten, so it is optional here and never sent.
-          facility_id?: string;
-          booking_id: string;
-          pet_id?: string | null;
-          task_key: string;
-          task_type: string;
-          occurred_on?: string;
-          executed_at?: string;
-          served_at?: string | null;
-          outcome: string;
-          notes?: string | null;
-          recorded_by?: string | null;
-          recorded_by_name?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          facility_id?: string;
-          booking_id?: string;
-          pet_id?: string | null;
-          task_key?: string;
-          task_type?: string;
-          occurred_on?: string;
-          executed_at?: string;
-          served_at?: string | null;
-          outcome?: string;
-          notes?: string | null;
-          recorded_by?: string | null;
-          recorded_by_name?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "care_log_entries_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "bookings";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "care_log_entries_pet_id_fkey";
-            columns: ["pet_id"];
-            isOneToOne: false;
-            referencedRelation: "pets";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "care_log_entries_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      daycare_attendance: {
-        Row: {
-          author_name: string;
-          booking_id: string;
-          checked_in_at: string | null;
-          checked_out_at: string | null;
-          created_at: string;
-          created_by: string | null;
-          facility_id: string;
-          notes: string;
-          play_group: string | null;
-          rate_type: string | null;
-          status: string;
-          updated_at: string;
-        };
-        Insert: {
-          author_name?: string;
-          booking_id: string;
-          checked_in_at?: string | null;
-          checked_out_at?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          facility_id: string;
-          notes?: string;
-          play_group?: string | null;
-          rate_type?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          author_name?: string;
-          booking_id?: string;
-          checked_in_at?: string | null;
-          checked_out_at?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          facility_id?: string;
-          notes?: string;
-          play_group?: string | null;
-          rate_type?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      daycare_config: {
-        Row: {
-          capacity_by_size: Json;
-          capacity_total: number;
-          facility_id: string;
-          updated_at: string;
-        };
-        Insert: {
-          capacity_by_size?: Json;
-          capacity_total?: number;
-          facility_id: string;
-          updated_at?: string;
-        };
-        Update: {
-          capacity_by_size?: Json;
-          capacity_total?: number;
-          facility_id?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      booking_line_items: {
-        Row: {
-          author_name: string;
-          booking_id: string;
-          created_at: string;
-          created_by: string | null;
-          facility_id: string;
-          id: string;
-          kind: string;
-          name: string;
-          price: number;
-          quantity: number;
-          source_id: string | null;
-          unit_price: number;
-          updated_at: string;
-        };
-        Insert: {
-          author_name?: string;
-          booking_id: string;
-          created_at?: string;
-          created_by?: string | null;
-          facility_id: string;
-          id?: string;
-          kind: string;
-          name: string;
-          quantity?: number;
-          source_id?: string | null;
-          unit_price: number;
-          updated_at?: string;
-        };
-        Update: {
-          author_name?: string;
-          booking_id?: string;
-          created_at?: string;
-          created_by?: string | null;
-          facility_id?: string;
-          id?: string;
-          kind?: string;
-          name?: string;
-          quantity?: number;
-          source_id?: string | null;
-          unit_price?: number;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
       bookings: {
         Row: {
-          amount_due: number;
+          amount_due: number | null;
           amount_paid: number;
           assigned_staff_id: string | null;
           assigned_staff_name: string | null;
@@ -575,6 +366,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          amount_due?: number | null;
           amount_paid?: number;
           assigned_staff_id?: string | null;
           assigned_staff_name?: string | null;
@@ -600,6 +392,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          amount_due?: number | null;
           amount_paid?: number;
           assigned_staff_id?: string | null;
           assigned_staff_name?: string | null;
@@ -658,6 +451,99 @@ export type Database = {
             columns: ["location_id"];
             isOneToOne: false;
             referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      care_log_entries: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          details: Json;
+          executed_at: string;
+          facility_id: string;
+          id: string;
+          notes: string | null;
+          occurred_on: string;
+          outcome: string;
+          pet_id: string | null;
+          recorded_by: string | null;
+          recorded_by_name: string | null;
+          served_at: string | null;
+          task_key: string;
+          task_type: string;
+          updated_at: string;
+        };
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          details?: Json;
+          executed_at: string;
+          facility_id: string;
+          id?: string;
+          notes?: string | null;
+          occurred_on: string;
+          outcome: string;
+          pet_id?: string | null;
+          recorded_by?: string | null;
+          recorded_by_name?: string | null;
+          served_at?: string | null;
+          task_key: string;
+          task_type: string;
+          updated_at?: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          details?: Json;
+          executed_at?: string;
+          facility_id?: string;
+          id?: string;
+          notes?: string | null;
+          occurred_on?: string;
+          outcome?: string;
+          pet_id?: string | null;
+          recorded_by?: string | null;
+          recorded_by_name?: string | null;
+          served_at?: string | null;
+          task_key?: string;
+          task_type?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "care_log_entries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "care_log_entries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "care_log_entries_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "care_log_entries_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "care_log_entries_recorded_by_fkey";
+            columns: ["recorded_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -743,6 +629,122 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      communication_connections: {
+        Row: {
+          connected_at: string | null;
+          connected_by: string | null;
+          created_at: string;
+          facility_id: string;
+          friendly_name: string | null;
+          last_error: string | null;
+          last_verified_at: string | null;
+          provider: string;
+          status: string;
+          subaccount_sid: string;
+          suspended_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          connected_at?: string | null;
+          connected_by?: string | null;
+          created_at?: string;
+          facility_id: string;
+          friendly_name?: string | null;
+          last_error?: string | null;
+          last_verified_at?: string | null;
+          provider?: string;
+          status?: string;
+          subaccount_sid: string;
+          suspended_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          connected_at?: string | null;
+          connected_by?: string | null;
+          created_at?: string;
+          facility_id?: string;
+          friendly_name?: string | null;
+          last_error?: string | null;
+          last_verified_at?: string | null;
+          provider?: string;
+          status?: string;
+          subaccount_sid?: string;
+          suspended_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "communication_connections_connected_by_fkey";
+            columns: ["connected_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "communication_connections_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      communication_numbers: {
+        Row: {
+          country: string;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          mms_enabled: boolean;
+          number_sid: string | null;
+          phone_number: string;
+          provider: string;
+          purpose: string;
+          released_at: string | null;
+          sms_enabled: boolean;
+          updated_at: string;
+          voice_enabled: boolean;
+        };
+        Insert: {
+          country?: string;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          mms_enabled?: boolean;
+          number_sid?: string | null;
+          phone_number: string;
+          provider?: string;
+          purpose?: string;
+          released_at?: string | null;
+          sms_enabled?: boolean;
+          updated_at?: string;
+          voice_enabled?: boolean;
+        };
+        Update: {
+          country?: string;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          mms_enabled?: boolean;
+          number_sid?: string | null;
+          phone_number?: string;
+          provider?: string;
+          purpose?: string;
+          released_at?: string | null;
+          sms_enabled?: boolean;
+          updated_at?: string;
+          voice_enabled?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "communication_numbers_facility_id_provider_fkey";
+            columns: ["facility_id", "provider"];
+            isOneToOne: false;
+            referencedRelation: "communication_connections";
+            referencedColumns: ["facility_id", "provider"];
           },
         ];
       };
@@ -866,293 +868,101 @@ export type Database = {
           },
         ];
       };
-      /**
-       * The immutable audit trail (20260807460000).
-       *
-       * No Update type, deliberately: a trigger refuses UPDATE and DELETE for
-       * every role, and INSERT is revoked from `authenticated` — entries are
-       * written only by private.record_audit() from triggers on the tables the
-       * audited acts touch. Declaring a writable shape here would describe an
-       * API that does not exist.
-       */
-      audit_log: {
+      daycare_attendance: {
         Row: {
-          id: string;
-          occurred_at: string;
-          user_id: string | null;
-          user_name: string | null;
-          user_role: string | null;
-          action: string;
-          category: string;
-          entity_type: string | null;
-          entity_id: string | null;
-          entity_name: string | null;
-          changes: Json;
-          ip_address: string | null;
-          user_agent: string | null;
-          facility_id: string | null;
-          facility_name: string | null;
-          severity: string;
-          status: string;
-          description: string | null;
-        };
-        Insert: never;
-        Update: never;
-        Relationships: [];
-      };
-      /**
-       * A facility's own payment-processor account — the NON-SECRET half.
-       * The OAuth tokens live in private.payment_credentials as Vault secret
-       * ids; `public_api_key` is the PAKMS key Clover's hosted iframe needs in
-       * the browser, and is safe there by design.
-       *
-       * No Insert/Update shape: connecting is an OAuth callback on the server,
-       * through the service role. There is no client-side write path and
-       * declaring one here would describe an API that does not exist.
-       */
-      payment_connections: {
-        Row: {
-          facility_id: string;
-          processor: string;
-          environment: string;
-          merchant_id: string;
-          public_api_key: string | null;
-          currency: string | null;
-          country: string | null;
-          status: string;
-          scopes: string[];
-          connected_by: string | null;
-          connected_at: string | null;
-          revoked_at: string | null;
-          last_error: string | null;
-          last_verified_at: string | null;
+          author_name: string;
+          booking_id: string;
+          checked_in_at: string | null;
+          checked_out_at: string | null;
           created_at: string;
-          updated_at: string;
-        };
-        Insert: never;
-        Update: never;
-        Relationships: [];
-      };
-      /**
-       * A facility's Twilio SUBACCOUNT. The parent account is Yipyy's and lives
-       * in the environment, never here — a parent token acts on every
-       * subaccount at once (20260809200000).
-       */
-      communication_connections: {
-        Row: {
-          facility_id: string;
-          provider: string;
-          subaccount_sid: string;
-          friendly_name: string | null;
-          status: string;
-          connected_by: string | null;
-          connected_at: string | null;
-          suspended_at: string | null;
-          last_error: string | null;
-          last_verified_at: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: never;
-        Update: never;
-        Relationships: [];
-      };
-      /**
-       * Phone numbers a facility sends and receives on. A released number keeps
-       * its row: years of message history refer to it.
-       */
-      communication_numbers: {
-        Row: {
-          id: string;
-          facility_id: string;
-          provider: string;
-          phone_number: string;
-          number_sid: string | null;
-          country: string;
-          sms_enabled: boolean;
-          mms_enabled: boolean;
-          voice_enabled: boolean;
-          purpose: string;
-          released_at: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: never;
-        Update: never;
-        Relationships: [];
-      };
-      /**
-       * Written BEFORE the processor is called. Amounts are in CENTS here,
-       * unlike the dollars in `payments`: this is the number sent to Clover and
-       * it exists to be compared with what Clover reports.
-       */
-      payment_intents: {
-        Row: {
-          id: string;
-          facility_id: string;
-          booking_id: string | null;
-          client_id: string | null;
-          processor: string;
-          environment: string;
-          kind: string;
-          amount_cents: number;
-          currency: string;
-          idempotency_key: string;
-          status: string;
-          processor_payment_id: string | null;
-          device_id: string | null;
-          failure_code: string | null;
-          failure_message: string | null;
-          payment_id: string | null;
           created_by: string | null;
-          created_at: string;
-          updated_at: string;
-          completed_at: string | null;
-        };
-        Insert: never;
-        Update: never;
-        Relationships: [];
-      };
-      /**
-       * The plans Yipyy sells. A NULL limit column means unlimited, not
-       * unknown — the mock's -1 sentinel does not survive into the database.
-       */
-      subscription_tiers: {
-        Row: {
-          id: string;
-          name: string;
-          tier_type: string;
-          rank: number;
-          description: string;
-          price_monthly_cents: number;
-          price_quarterly_cents: number;
-          price_yearly_cents: number;
-          currency: string;
-          transaction_fee_bps: number;
-          max_users: number | null;
-          max_locations: number | null;
-          max_clients: number | null;
-          max_bookings_per_month: number | null;
-          storage_gb: number | null;
-          features: string[];
-          is_active: boolean;
-          is_public: boolean;
-          is_customizable: boolean;
-          sort_order: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id: string;
-          name: string;
-          tier_type: string;
-          rank: number;
-          description?: string;
-          price_monthly_cents?: number;
-          price_quarterly_cents?: number;
-          price_yearly_cents?: number;
-          currency?: string;
-          transaction_fee_bps?: number;
-          max_users?: number | null;
-          max_locations?: number | null;
-          max_clients?: number | null;
-          max_bookings_per_month?: number | null;
-          storage_gb?: number | null;
-          features?: string[];
-          is_active?: boolean;
-          is_public?: boolean;
-          is_customizable?: boolean;
-          sort_order?: number;
-        };
-        Update: Partial<
-          Database["public"]["Tables"]["subscription_tiers"]["Insert"]
-        >;
-        Relationships: [];
-      };
-      /**
-       * What Yipyy sells to a facility. Not service modules (daycare,
-       * boarding) — those are what a facility sells to a pet owner.
-       */
-      modules: {
-        Row: {
-          id: string;
-          slug: string;
-          name: string;
-          description: string;
-          category: string;
-          icon: string;
-          price_monthly_cents: number;
-          price_quarterly_cents: number;
-          price_yearly_cents: number;
-          currency: string;
-          min_tier_rank: number;
-          is_standalone: boolean;
-          is_active: boolean;
-          sort_order: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id: string;
-          slug: string;
-          name: string;
-          description?: string;
-          category: string;
-          icon?: string;
-          price_monthly_cents?: number;
-          price_quarterly_cents?: number;
-          price_yearly_cents?: number;
-          currency?: string;
-          min_tier_rank?: number;
-          is_standalone?: boolean;
-          is_active?: boolean;
-          sort_order?: number;
-        };
-        Update: Partial<Database["public"]["Tables"]["modules"]["Insert"]>;
-        Relationships: [];
-      };
-      module_dependencies: {
-        Row: { module_id: string; requires_module_id: string };
-        Insert: { module_id: string; requires_module_id: string };
-        Update: Partial<{ module_id: string; requires_module_id: string }>;
-        Relationships: [];
-      };
-      tier_modules: {
-        Row: { tier_id: string; module_id: string };
-        Insert: { tier_id: string; module_id: string };
-        Update: Partial<{ tier_id: string; module_id: string }>;
-        Relationships: [];
-      };
-      /**
-       * Departures from what the plan includes — no row means the plan
-       * decides. Written through set_facility_module/reset_facility_modules
-       * so a refusal is an error rather than an update that matched nothing.
-       */
-      facility_modules: {
-        Row: {
           facility_id: string;
-          module_id: string;
-          enabled: boolean;
-          price_override_cents: number | null;
-          note: string;
-          granted_by: string | null;
-          expires_at: string | null;
-          created_at: string;
+          notes: string;
+          play_group: string | null;
+          rate_type: string | null;
+          status: string | null;
           updated_at: string;
         };
         Insert: {
+          author_name?: string;
+          booking_id: string;
+          checked_in_at?: string | null;
+          checked_out_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
           facility_id: string;
-          module_id: string;
-          enabled: boolean;
-          price_override_cents?: number | null;
-          note?: string;
-          granted_by?: string | null;
-          expires_at?: string | null;
+          notes?: string;
+          play_group?: string | null;
+          rate_type?: string | null;
+          status?: string | null;
+          updated_at?: string;
         };
-        Update: Partial<
-          Database["public"]["Tables"]["facility_modules"]["Insert"]
-        >;
-        Relationships: [];
+        Update: {
+          author_name?: string;
+          booking_id?: string;
+          checked_in_at?: string | null;
+          checked_out_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          notes?: string;
+          play_group?: string | null;
+          rate_type?: string | null;
+          status?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "daycare_attendance_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "daycare_attendance_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "daycare_attendance_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      daycare_config: {
+        Row: {
+          capacity_by_size: Json;
+          capacity_total: number;
+          facility_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          capacity_by_size?: Json;
+          capacity_total?: number;
+          facility_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          capacity_by_size?: Json;
+          capacity_total?: number;
+          facility_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "daycare_config_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: true;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       facilities: {
         Row: {
@@ -1225,41 +1035,49 @@ export type Database = {
           },
         ];
       };
-      facility_settings: {
+      facility_branding: {
         Row: {
-          domain: string;
+          accent_color: string | null;
+          created_at: string;
           facility_id: string;
+          logo_url: string | null;
+          primary_color: string | null;
+          support_email: string | null;
+          support_phone: string | null;
+          tagline: string | null;
           updated_at: string;
-          updated_by: string | null;
-          value: Json;
+          wordmark_url: string | null;
         };
         Insert: {
-          domain: string;
+          accent_color?: string | null;
+          created_at?: string;
           facility_id: string;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          support_email?: string | null;
+          support_phone?: string | null;
+          tagline?: string | null;
           updated_at?: string;
-          updated_by?: string | null;
-          value: Json;
+          wordmark_url?: string | null;
         };
         Update: {
-          domain?: string;
+          accent_color?: string | null;
+          created_at?: string;
           facility_id?: string;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          support_email?: string | null;
+          support_phone?: string | null;
+          tagline?: string | null;
           updated_at?: string;
-          updated_by?: string | null;
-          value?: Json;
+          wordmark_url?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "facility_settings_facility_id_fkey";
+            foreignKeyName: "facility_branding_facility_id_fkey";
             columns: ["facility_id"];
-            isOneToOne: false;
+            isOneToOne: true;
             referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "facility_settings_updated_by_fkey";
-            columns: ["updated_by"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -1344,62 +1162,50 @@ export type Database = {
           },
         ];
       };
-      platform_invitations: {
+      facility_departments: {
         Row: {
-          accepted_at: string | null;
-          accepted_profile_id: string | null;
+          color: string;
           created_at: string;
-          email: string;
-          expires_at: string;
-          full_name: string | null;
+          description: string | null;
+          facility_id: string;
           id: string;
-          invited_by: string | null;
-          role: Database["public"]["Enums"]["platform_role"];
-          token_hash: string;
+          is_active: boolean;
+          name: string;
+          updated_at: string;
         };
         Insert: {
-          accepted_at?: string | null;
-          accepted_profile_id?: string | null;
+          color?: string;
           created_at?: string;
-          email: string;
-          expires_at: string;
-          full_name?: string | null;
+          description?: string | null;
+          facility_id: string;
           id?: string;
-          invited_by?: string | null;
-          role?: Database["public"]["Enums"]["platform_role"];
-          token_hash: string;
+          is_active?: boolean;
+          name: string;
+          updated_at?: string;
         };
         Update: {
-          accepted_at?: string | null;
-          accepted_profile_id?: string | null;
+          color?: string;
           created_at?: string;
-          email?: string;
-          expires_at?: string;
-          full_name?: string | null;
+          description?: string | null;
+          facility_id?: string;
           id?: string;
-          invited_by?: string | null;
-          role?: Database["public"]["Enums"]["platform_role"];
-          token_hash?: string;
+          is_active?: boolean;
+          name?: string;
+          updated_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "platform_invitations_invited_by_fkey";
-            columns: ["invited_by"];
+            foreignKeyName: "facility_departments_facility_id_fkey";
+            columns: ["facility_id"];
             isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "platform_invitations_accepted_profile_id_fkey";
-            columns: ["accepted_profile_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
+            referencedRelation: "facilities";
             referencedColumns: ["id"];
           },
         ];
       };
       facility_membership_grants: {
         Row: {
+          access_level: Database["public"]["Enums"]["facility_access_level"];
           claimed_at: string | null;
           claimed_profile_id: string | null;
           created_at: string;
@@ -1408,11 +1214,11 @@ export type Database = {
           facility_id: string;
           granted_by: string | null;
           id: string;
-          access_level: Database["public"]["Enums"]["facility_access_level"];
           role: Database["public"]["Enums"]["facility_staff_role"];
           staff_id: string;
         };
         Insert: {
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           claimed_at?: string | null;
           claimed_profile_id?: string | null;
           created_at?: string;
@@ -1421,11 +1227,11 @@ export type Database = {
           facility_id: string;
           granted_by?: string | null;
           id?: string;
-          access_level?: Database["public"]["Enums"]["facility_access_level"];
           role: Database["public"]["Enums"]["facility_staff_role"];
           staff_id: string;
         };
         Update: {
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           claimed_at?: string | null;
           claimed_profile_id?: string | null;
           created_at?: string;
@@ -1434,7 +1240,6 @@ export type Database = {
           facility_id?: string;
           granted_by?: string | null;
           id?: string;
-          access_level?: Database["public"]["Enums"]["facility_access_level"];
           role?: Database["public"]["Enums"]["facility_staff_role"];
           staff_id?: string;
         };
@@ -1450,6 +1255,13 @@ export type Database = {
             foreignKeyName: "facility_membership_grants_staff_id_fkey";
             columns: ["staff_id"];
             isOneToOne: true;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "facility_membership_grants_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
             referencedRelation: "staff";
             referencedColumns: ["id"];
           },
@@ -1457,6 +1269,7 @@ export type Database = {
       };
       facility_memberships: {
         Row: {
+          access_level: Database["public"]["Enums"]["facility_access_level"];
           created_at: string;
           departments: Database["public"]["Enums"]["service_module"][];
           facility_id: string;
@@ -1465,11 +1278,11 @@ export type Database = {
           is_active: boolean;
           legacy_id: string | null;
           profile_id: string;
-          access_level: Database["public"]["Enums"]["facility_access_level"];
           role: Database["public"]["Enums"]["facility_staff_role"];
           updated_at: string;
         };
         Insert: {
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           created_at?: string;
           departments?: Database["public"]["Enums"]["service_module"][];
           facility_id: string;
@@ -1478,11 +1291,11 @@ export type Database = {
           is_active?: boolean;
           legacy_id?: string | null;
           profile_id: string;
-          access_level?: Database["public"]["Enums"]["facility_access_level"];
           role: Database["public"]["Enums"]["facility_staff_role"];
           updated_at?: string;
         };
         Update: {
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           created_at?: string;
           departments?: Database["public"]["Enums"]["service_module"][];
           facility_id?: string;
@@ -1491,7 +1304,6 @@ export type Database = {
           is_active?: boolean;
           legacy_id?: string | null;
           profile_id?: string;
-          access_level?: Database["public"]["Enums"]["facility_access_level"];
           role?: Database["public"]["Enums"]["facility_staff_role"];
           updated_at?: string;
         };
@@ -1515,6 +1327,157 @@ export type Database = {
             columns: ["profile_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_modules: {
+        Row: {
+          created_at: string;
+          enabled: boolean;
+          expires_at: string | null;
+          facility_id: string;
+          granted_by: string | null;
+          module_id: string;
+          note: string;
+          price_override_cents: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          enabled: boolean;
+          expires_at?: string | null;
+          facility_id: string;
+          granted_by?: string | null;
+          module_id: string;
+          note?: string;
+          price_override_cents?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          enabled?: boolean;
+          expires_at?: string | null;
+          facility_id?: string;
+          granted_by?: string | null;
+          module_id?: string;
+          note?: string;
+          price_override_cents?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_modules_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_modules_granted_by_fkey";
+            columns: ["granted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_modules_module_id_fkey";
+            columns: ["module_id"];
+            isOneToOne: false;
+            referencedRelation: "modules";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_position_pay: {
+        Row: {
+          facility_id: string;
+          hourly_rate: number | null;
+          pay_type: Database["public"]["Enums"]["position_pay_type"];
+          position_id: string;
+          salary: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          facility_id: string;
+          hourly_rate?: number | null;
+          pay_type: Database["public"]["Enums"]["position_pay_type"];
+          position_id: string;
+          salary?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          facility_id?: string;
+          hourly_rate?: number | null;
+          pay_type?: Database["public"]["Enums"]["position_pay_type"];
+          position_id?: string;
+          salary?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_position_pay_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_position_pay_position_id_fkey";
+            columns: ["position_id"];
+            isOneToOne: true;
+            referencedRelation: "facility_positions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_positions: {
+        Row: {
+          color: string;
+          created_at: string;
+          department_id: string;
+          description: string | null;
+          facility_id: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          updated_at: string;
+        };
+        Insert: {
+          color?: string;
+          created_at?: string;
+          department_id: string;
+          description?: string | null;
+          facility_id: string;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          color?: string;
+          created_at?: string;
+          department_id?: string;
+          description?: string | null;
+          facility_id?: string;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_positions_department_id_fkey";
+            columns: ["department_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_departments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_positions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
             referencedColumns: ["id"];
           },
         ];
@@ -1552,6 +1515,222 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "permissions";
             referencedColumns: ["key"];
+          },
+        ];
+      };
+      facility_rooms: {
+        Row: {
+          active: boolean;
+          capacity: number | null;
+          category_id: string;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          legacy_id: string;
+          name: string;
+          sort_order: number;
+          staff_notes: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          active?: boolean;
+          capacity?: number | null;
+          category_id: string;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          legacy_id: string;
+          name: string;
+          sort_order?: number;
+          staff_notes?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          capacity?: number | null;
+          category_id?: string;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          legacy_id?: string;
+          name?: string;
+          sort_order?: number;
+          staff_notes?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_rooms_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "room_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_rooms_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_settings: {
+        Row: {
+          domain: string;
+          facility_id: string;
+          updated_at: string;
+          updated_by: string | null;
+          value: Json;
+        };
+        Insert: {
+          domain: string;
+          facility_id: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          value: Json;
+        };
+        Update: {
+          domain?: string;
+          facility_id?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          value?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_settings_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_settings_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_subscriptions: {
+        Row: {
+          amount_cents: number;
+          billing_cycle: string;
+          cancelled_at: string | null;
+          created_at: string;
+          currency: string;
+          facility_id: string;
+          period_end: string | null;
+          period_start: string;
+          seats: number | null;
+          status: Database["public"]["Enums"]["subscription_status"];
+          tier_id: string;
+          tier_name: string;
+          trial_ends_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents?: number;
+          billing_cycle?: string;
+          cancelled_at?: string | null;
+          created_at?: string;
+          currency?: string;
+          facility_id: string;
+          period_end?: string | null;
+          period_start?: string;
+          seats?: number | null;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          tier_id?: string;
+          tier_name?: string;
+          trial_ends_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          billing_cycle?: string;
+          cancelled_at?: string | null;
+          created_at?: string;
+          currency?: string;
+          facility_id?: string;
+          period_end?: string | null;
+          period_start?: string;
+          seats?: number | null;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          tier_id?: string;
+          tier_name?: string;
+          trial_ends_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_subscriptions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: true;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_subscriptions_tier_id_fkey";
+            columns: ["tier_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_tiers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_terminals: {
+        Row: {
+          created_at: string;
+          facility_id: string;
+          id: string;
+          is_active: boolean;
+          is_default: boolean;
+          label: string;
+          location_id: string | null;
+          serial: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          is_active?: boolean;
+          is_default?: boolean;
+          label: string;
+          location_id?: string | null;
+          serial: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          is_active?: boolean;
+          is_default?: boolean;
+          label?: string;
+          location_id?: string | null;
+          serial?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_terminals_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_terminals_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -1751,7 +1930,29 @@ export type Database = {
           id?: string;
           kind?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "grooming_appointment_history_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "grooming_appointment_history_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_appointment_history_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       grooming_appointments: {
         Row: {
@@ -1809,6 +2010,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "grooming_appointments_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
           {
             foreignKeyName: "grooming_appointments_booking_id_fkey";
             columns: ["booking_id"];
@@ -2761,6 +2969,93 @@ export type Database = {
           },
         ];
       };
+      module_dependencies: {
+        Row: {
+          module_id: string;
+          requires_module_id: string;
+        };
+        Insert: {
+          module_id: string;
+          requires_module_id: string;
+        };
+        Update: {
+          module_id?: string;
+          requires_module_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "module_dependencies_module_id_fkey";
+            columns: ["module_id"];
+            isOneToOne: false;
+            referencedRelation: "modules";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "module_dependencies_requires_module_id_fkey";
+            columns: ["requires_module_id"];
+            isOneToOne: false;
+            referencedRelation: "modules";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      modules: {
+        Row: {
+          category: string;
+          created_at: string;
+          currency: string;
+          description: string;
+          icon: string;
+          id: string;
+          is_active: boolean;
+          is_standalone: boolean;
+          min_tier_rank: number;
+          name: string;
+          price_monthly_cents: number;
+          price_quarterly_cents: number;
+          price_yearly_cents: number;
+          slug: string;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          category: string;
+          created_at?: string;
+          currency?: string;
+          description?: string;
+          icon?: string;
+          id: string;
+          is_active?: boolean;
+          is_standalone?: boolean;
+          min_tier_rank?: number;
+          name: string;
+          price_monthly_cents?: number;
+          price_quarterly_cents?: number;
+          price_yearly_cents?: number;
+          slug: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          category?: string;
+          created_at?: string;
+          currency?: string;
+          description?: string;
+          icon?: string;
+          id?: string;
+          is_active?: boolean;
+          is_standalone?: boolean;
+          min_tier_rank?: number;
+          name?: string;
+          price_monthly_cents?: number;
+          price_quarterly_cents?: number;
+          price_yearly_cents?: number;
+          slug?: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       offboarding_instances: {
         Row: {
           complete_notified_at: string | null;
@@ -3425,144 +3720,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      facility_subscriptions: {
-        Row: {
-          amount_cents: number;
-          billing_cycle: string;
-          cancelled_at: string | null;
-          created_at: string;
-          currency: string;
-          facility_id: string;
-          period_end: string | null;
-          period_start: string;
-          seats: number | null;
-          status: Database["public"]["Enums"]["subscription_status"];
-          tier_id: string;
-          tier_name: string;
-          trial_ends_at: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          amount_cents?: number;
-          billing_cycle?: string;
-          cancelled_at?: string | null;
-          created_at?: string;
-          currency?: string;
-          facility_id: string;
-          period_end?: string | null;
-          period_start?: string;
-          seats?: number | null;
-          status?: Database["public"]["Enums"]["subscription_status"];
-          tier_id?: string;
-          tier_name?: string;
-          trial_ends_at?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          amount_cents?: number;
-          billing_cycle?: string;
-          cancelled_at?: string | null;
-          created_at?: string;
-          currency?: string;
-          facility_id?: string;
-          period_end?: string | null;
-          period_start?: string;
-          seats?: number | null;
-          status?: Database["public"]["Enums"]["subscription_status"];
-          tier_id?: string;
-          tier_name?: string;
-          trial_ends_at?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      platform_memberships: {
-        Row: {
-          created_at: string;
-          granted_by: string | null;
-          profile_id: string;
-          role: Database["public"]["Enums"]["platform_role"];
-          updated_at: string;
-        };
-        Insert: {
-          created_at?: string;
-          granted_by?: string | null;
-          profile_id: string;
-          role?: Database["public"]["Enums"]["platform_role"];
-          updated_at?: string;
-        };
-        Update: {
-          created_at?: string;
-          granted_by?: string | null;
-          profile_id?: string;
-          role?: Database["public"]["Enums"]["platform_role"];
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      facility_branding: {
-        Row: {
-          accent_color: string | null;
-          created_at: string;
-          facility_id: string;
-          logo_url: string | null;
-          primary_color: string | null;
-          support_email: string | null;
-          support_phone: string | null;
-          tagline: string | null;
-          updated_at: string;
-          wordmark_url: string | null;
-        };
-        Insert: {
-          accent_color?: string | null;
-          created_at?: string;
-          facility_id: string;
-          logo_url?: string | null;
-          primary_color?: string | null;
-          support_email?: string | null;
-          support_phone?: string | null;
-          tagline?: string | null;
-          updated_at?: string;
-          wordmark_url?: string | null;
-        };
-        Update: {
-          accent_color?: string | null;
-          created_at?: string;
-          facility_id?: string;
-          logo_url?: string | null;
-          primary_color?: string | null;
-          support_email?: string | null;
-          support_phone?: string | null;
-          tagline?: string | null;
-          updated_at?: string;
-          wordmark_url?: string | null;
-        };
-        Relationships: [];
-      };
-      provisioning_requests: {
-        Row: {
-          created_at: string;
-          facility_id: string;
-          id: string;
-          requested_by: string;
-          response: Json;
-        };
-        Insert: {
-          created_at?: string;
-          facility_id: string;
-          id: string;
-          requested_by: string;
-          response: Json;
-        };
-        Update: {
-          created_at?: string;
-          facility_id?: string;
-          id?: string;
-          requested_by?: string;
-          response?: Json;
-        };
-        Relationships: [];
-      };
       package_pass_entries: {
         Row: {
           author_name: string;
@@ -3614,6 +3771,20 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: "package_pass_entries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "package_pass_entries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "package_pass_entries_customer_package_id_fkey";
             columns: ["customer_package_id"];
             isOneToOne: false;
@@ -3641,17 +3812,274 @@ export type Database = {
             referencedRelation: "facilities";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "package_pass_entries_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payment_connections: {
+        Row: {
+          connected_at: string | null;
+          connected_by: string | null;
+          country: string | null;
+          created_at: string;
+          currency: string | null;
+          environment: string;
+          facility_id: string;
+          last_error: string | null;
+          last_verified_at: string | null;
+          merchant_id: string;
+          processor: string;
+          public_api_key: string | null;
+          revoked_at: string | null;
+          scopes: string[];
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          connected_at?: string | null;
+          connected_by?: string | null;
+          country?: string | null;
+          created_at?: string;
+          currency?: string | null;
+          environment: string;
+          facility_id: string;
+          last_error?: string | null;
+          last_verified_at?: string | null;
+          merchant_id: string;
+          processor?: string;
+          public_api_key?: string | null;
+          revoked_at?: string | null;
+          scopes?: string[];
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          connected_at?: string | null;
+          connected_by?: string | null;
+          country?: string | null;
+          created_at?: string;
+          currency?: string | null;
+          environment?: string;
+          facility_id?: string;
+          last_error?: string | null;
+          last_verified_at?: string | null;
+          merchant_id?: string;
+          processor?: string;
+          public_api_key?: string | null;
+          revoked_at?: string | null;
+          scopes?: string[];
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payment_connections_connected_by_fkey";
+            columns: ["connected_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_connections_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payment_intents: {
+        Row: {
+          amount_cents: number;
+          booking_id: string | null;
+          client_id: string | null;
+          completed_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          currency: string;
+          device_id: string | null;
+          environment: string;
+          facility_id: string;
+          failure_code: string | null;
+          failure_message: string | null;
+          id: string;
+          idempotency_key: string;
+          kind: string;
+          payment_id: string | null;
+          processor: string;
+          processor_payment_id: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents: number;
+          booking_id?: string | null;
+          client_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          currency?: string;
+          device_id?: string | null;
+          environment: string;
+          facility_id: string;
+          failure_code?: string | null;
+          failure_message?: string | null;
+          id?: string;
+          idempotency_key: string;
+          kind: string;
+          payment_id?: string | null;
+          processor?: string;
+          processor_payment_id?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          booking_id?: string | null;
+          client_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          currency?: string;
+          device_id?: string | null;
+          environment?: string;
+          facility_id?: string;
+          failure_code?: string | null;
+          failure_message?: string | null;
+          id?: string;
+          idempotency_key?: string;
+          kind?: string;
+          payment_id?: string | null;
+          processor?: string;
+          processor_payment_id?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payment_intents_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "payment_intents_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_intents_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_intents_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_intents_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_intents_payment_id_fkey";
+            columns: ["payment_id"];
+            isOneToOne: false;
+            referencedRelation: "payments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payment_webhook_events: {
+        Row: {
+          app_id: string | null;
+          change: string | null;
+          environment: string;
+          facility_id: string | null;
+          id: string;
+          merchant_id: string | null;
+          object_id: string | null;
+          object_kind: string;
+          occurred_at: string | null;
+          outcome: string | null;
+          payload: Json;
+          processed_at: string | null;
+          processor: string;
+          received_at: string;
+          status: string;
+        };
+        Insert: {
+          app_id?: string | null;
+          change?: string | null;
+          environment: string;
+          facility_id?: string | null;
+          id?: string;
+          merchant_id?: string | null;
+          object_id?: string | null;
+          object_kind: string;
+          occurred_at?: string | null;
+          outcome?: string | null;
+          payload: Json;
+          processed_at?: string | null;
+          processor?: string;
+          received_at?: string;
+          status?: string;
+        };
+        Update: {
+          app_id?: string | null;
+          change?: string | null;
+          environment?: string;
+          facility_id?: string | null;
+          id?: string;
+          merchant_id?: string | null;
+          object_id?: string | null;
+          object_kind?: string;
+          occurred_at?: string | null;
+          outcome?: string | null;
+          payload?: Json;
+          processed_at?: string | null;
+          processor?: string;
+          received_at?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payment_webhook_events_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
         ];
       };
       payments: {
         Row: {
           amount_charged: number;
+          auth_code: string | null;
           author_name: string;
           booking_id: string | null;
+          card_brand: string | null;
+          card_last4: string | null;
           cash_received: number | null;
           client_id: string | null;
           created_at: string;
           created_by: string | null;
+          entry_method: string | null;
           facility_id: string;
           grand_total: number;
           id: string;
@@ -3659,38 +4087,28 @@ export type Database = {
           method: string;
           package_pass_applied: number;
           package_pass_id: string | null;
+          processor: string | null;
+          processor_payment_id: string | null;
           receipt_channels: string[];
+          refund_of_payment_id: string | null;
           saved_card_id: string | null;
           store_credit_applied: number;
           subtotal: number;
           tax: number;
           tip: number;
-          // The processor half (20260807680000). NULL on everything recorded
-          // by hand — cash, and every payment taken before Clover.
-          processor: string | null;
-          processor_payment_id: string | null;
-          card_brand: string | null;
-          /** Exactly four digits or NULL. Never a masked PAN. */
-          card_last4: string | null;
-          auth_code: string | null;
-          entry_method: string | null;
-          refund_of_payment_id: string | null;
         };
         Insert: {
           amount_charged: number;
+          auth_code?: string | null;
           author_name?: string;
-          processor?: string | null;
-          processor_payment_id?: string | null;
+          booking_id?: string | null;
           card_brand?: string | null;
           card_last4?: string | null;
-          auth_code?: string | null;
-          entry_method?: string | null;
-          refund_of_payment_id?: string | null;
-          booking_id?: string | null;
           cash_received?: number | null;
           client_id?: string | null;
           created_at?: string;
           created_by?: string | null;
+          entry_method?: string | null;
           facility_id: string;
           grand_total: number;
           id?: string;
@@ -3698,7 +4116,10 @@ export type Database = {
           method: string;
           package_pass_applied?: number;
           package_pass_id?: string | null;
+          processor?: string | null;
+          processor_payment_id?: string | null;
           receipt_channels?: string[];
+          refund_of_payment_id?: string | null;
           saved_card_id?: string | null;
           store_credit_applied?: number;
           subtotal: number;
@@ -3707,12 +4128,16 @@ export type Database = {
         };
         Update: {
           amount_charged?: number;
+          auth_code?: string | null;
           author_name?: string;
           booking_id?: string | null;
+          card_brand?: string | null;
+          card_last4?: string | null;
           cash_received?: number | null;
           client_id?: string | null;
           created_at?: string;
           created_by?: string | null;
+          entry_method?: string | null;
           facility_id?: string;
           grand_total?: number;
           id?: string;
@@ -3720,14 +4145,53 @@ export type Database = {
           method?: string;
           package_pass_applied?: number;
           package_pass_id?: string | null;
+          processor?: string | null;
+          processor_payment_id?: string | null;
           receipt_channels?: string[];
+          refund_of_payment_id?: string | null;
           saved_card_id?: string | null;
           store_credit_applied?: number;
           subtotal?: number;
           tax?: number;
           tip?: number;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "payments_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payments_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payments_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payments_refund_of_fkey";
+            columns: ["refund_of_payment_id"];
+            isOneToOne: false;
+            referencedRelation: "payments";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       permissions: {
         Row: {
@@ -3839,6 +4303,99 @@ export type Database = {
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      platform_invitations: {
+        Row: {
+          accepted_at: string | null;
+          accepted_profile_id: string | null;
+          created_at: string;
+          email: string;
+          expires_at: string;
+          full_name: string | null;
+          id: string;
+          invited_by: string | null;
+          role: Database["public"]["Enums"]["platform_role"];
+          token_hash: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          accepted_profile_id?: string | null;
+          created_at?: string;
+          email: string;
+          expires_at: string;
+          full_name?: string | null;
+          id?: string;
+          invited_by?: string | null;
+          role?: Database["public"]["Enums"]["platform_role"];
+          token_hash: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          accepted_profile_id?: string | null;
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          full_name?: string | null;
+          id?: string;
+          invited_by?: string | null;
+          role?: Database["public"]["Enums"]["platform_role"];
+          token_hash?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_invitations_accepted_profile_id_fkey";
+            columns: ["accepted_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_invitations_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      platform_memberships: {
+        Row: {
+          created_at: string;
+          granted_by: string | null;
+          profile_id: string;
+          role: Database["public"]["Enums"]["platform_role"];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          granted_by?: string | null;
+          profile_id: string;
+          role?: Database["public"]["Enums"]["platform_role"];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          granted_by?: string | null;
+          profile_id?: string;
+          role?: Database["public"]["Enums"]["platform_role"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_memberships_granted_by_fkey";
+            columns: ["granted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_memberships_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -3995,6 +4552,38 @@ export type Database = {
         };
         Relationships: [];
       };
+      provisioning_requests: {
+        Row: {
+          created_at: string;
+          facility_id: string;
+          id: string;
+          requested_by: string;
+          response: Json;
+        };
+        Insert: {
+          created_at?: string;
+          facility_id: string;
+          id: string;
+          requested_by: string;
+          response: Json;
+        };
+        Update: {
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          requested_by?: string;
+          response?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "provisioning_requests_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       role_preset_permissions: {
         Row: {
           permission_key: string;
@@ -4021,8 +4610,71 @@ export type Database = {
           },
         ];
       };
+      room_categories: {
+        Row: {
+          color: string;
+          created_at: string;
+          default_base_price: number | null;
+          default_capacity: number;
+          description: string | null;
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          legacy_id: string;
+          name: string;
+          rules: Json;
+          service: Database["public"]["Enums"]["service_module"];
+          sort_order: number;
+          updated_at: string;
+          visible_to_clients: boolean;
+        };
+        Insert: {
+          color?: string;
+          created_at?: string;
+          default_base_price?: number | null;
+          default_capacity?: number;
+          description?: string | null;
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          legacy_id: string;
+          name: string;
+          rules?: Json;
+          service: Database["public"]["Enums"]["service_module"];
+          sort_order?: number;
+          updated_at?: string;
+          visible_to_clients?: boolean;
+        };
+        Update: {
+          color?: string;
+          created_at?: string;
+          default_base_price?: number | null;
+          default_capacity?: number;
+          description?: string | null;
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          legacy_id?: string;
+          name?: string;
+          rules?: Json;
+          service?: Database["public"]["Enums"]["service_module"];
+          sort_order?: number;
+          updated_at?: string;
+          visible_to_clients?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "room_categories_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       staff: {
         Row: {
+          access_level: Database["public"]["Enums"]["facility_access_level"];
           additional_roles: Database["public"]["Enums"]["facility_staff_role"][];
           avatar_url: string | null;
           color_hex: string | null;
@@ -4038,7 +4690,6 @@ export type Database = {
           legacy_id: string | null;
           membership_id: string | null;
           phone: string | null;
-          access_level: Database["public"]["Enums"]["facility_access_level"];
           primary_role: Database["public"]["Enums"]["facility_staff_role"];
           service_assignments: Database["public"]["Enums"]["service_module"][];
           show_on_calendar: boolean;
@@ -4049,6 +4700,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           additional_roles?: Database["public"]["Enums"]["facility_staff_role"][];
           avatar_url?: string | null;
           color_hex?: string | null;
@@ -4064,7 +4716,6 @@ export type Database = {
           legacy_id?: string | null;
           membership_id?: string | null;
           phone?: string | null;
-          access_level?: Database["public"]["Enums"]["facility_access_level"];
           primary_role: Database["public"]["Enums"]["facility_staff_role"];
           service_assignments?: Database["public"]["Enums"]["service_module"][];
           show_on_calendar?: boolean;
@@ -4075,6 +4726,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          access_level?: Database["public"]["Enums"]["facility_access_level"];
           additional_roles?: Database["public"]["Enums"]["facility_staff_role"][];
           avatar_url?: string | null;
           color_hex?: string | null;
@@ -4090,7 +4742,6 @@ export type Database = {
           legacy_id?: string | null;
           membership_id?: string | null;
           phone?: string | null;
-          access_level?: Database["public"]["Enums"]["facility_access_level"];
           primary_role?: Database["public"]["Enums"]["facility_staff_role"];
           service_assignments?: Database["public"]["Enums"]["service_module"][];
           show_on_calendar?: boolean;
@@ -4147,6 +4798,56 @@ export type Database = {
           },
           {
             foreignKeyName: "staff_custom_roles_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      staff_departments: {
+        Row: {
+          created_at: string;
+          department_id: string;
+          facility_id: string;
+          staff_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          department_id: string;
+          facility_id: string;
+          staff_id: string;
+        };
+        Update: {
+          created_at?: string;
+          department_id?: string;
+          facility_id?: string;
+          staff_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_departments_department_id_fkey";
+            columns: ["department_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_departments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_departments_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_departments_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "staff_departments_staff_id_fkey";
             columns: ["staff_id"];
             isOneToOne: false;
             referencedRelation: "staff";
@@ -4336,6 +5037,99 @@ export type Database = {
           },
         ];
       };
+      staff_shifts: {
+        Row: {
+          break_minutes: number;
+          created_at: string;
+          department_id: string;
+          ends_at: string;
+          facility_id: string;
+          id: string;
+          notes: string | null;
+          position_id: string;
+          recurrence_id: string | null;
+          required_skills: string[];
+          slots: number;
+          staff_id: string | null;
+          starts_at: string;
+          status: Database["public"]["Enums"]["shift_status"];
+          updated_at: string;
+          urgent: boolean;
+        };
+        Insert: {
+          break_minutes?: number;
+          created_at?: string;
+          department_id: string;
+          ends_at: string;
+          facility_id: string;
+          id?: string;
+          notes?: string | null;
+          position_id: string;
+          recurrence_id?: string | null;
+          required_skills?: string[];
+          slots?: number;
+          staff_id?: string | null;
+          starts_at: string;
+          status?: Database["public"]["Enums"]["shift_status"];
+          updated_at?: string;
+          urgent?: boolean;
+        };
+        Update: {
+          break_minutes?: number;
+          created_at?: string;
+          department_id?: string;
+          ends_at?: string;
+          facility_id?: string;
+          id?: string;
+          notes?: string | null;
+          position_id?: string;
+          recurrence_id?: string | null;
+          required_skills?: string[];
+          slots?: number;
+          staff_id?: string | null;
+          starts_at?: string;
+          status?: Database["public"]["Enums"]["shift_status"];
+          updated_at?: string;
+          urgent?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_shifts_department_id_fkey";
+            columns: ["department_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_departments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_shifts_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_shifts_position_id_fkey";
+            columns: ["position_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_positions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_shifts_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "staff_shifts_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       staff_signatures: {
         Row: {
           agreement_hash: string;
@@ -4462,7 +5256,273 @@ export type Database = {
           payment_id?: string | null;
           reason?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "store_credit_entries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "store_credit_entries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "store_credit_entries_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "store_credit_entries_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "store_credit_entries_payment_id_fkey";
+            columns: ["payment_id"];
+            isOneToOne: false;
+            referencedRelation: "payments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      subscription_tiers: {
+        Row: {
+          created_at: string;
+          currency: string;
+          description: string;
+          features: string[];
+          id: string;
+          is_active: boolean;
+          is_customizable: boolean;
+          is_public: boolean;
+          max_bookings_per_month: number | null;
+          max_clients: number | null;
+          max_locations: number | null;
+          max_users: number | null;
+          name: string;
+          price_monthly_cents: number;
+          price_quarterly_cents: number;
+          price_yearly_cents: number;
+          rank: number;
+          sort_order: number;
+          storage_gb: number | null;
+          tier_type: string;
+          transaction_fee_bps: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          currency?: string;
+          description?: string;
+          features?: string[];
+          id: string;
+          is_active?: boolean;
+          is_customizable?: boolean;
+          is_public?: boolean;
+          max_bookings_per_month?: number | null;
+          max_clients?: number | null;
+          max_locations?: number | null;
+          max_users?: number | null;
+          name: string;
+          price_monthly_cents?: number;
+          price_quarterly_cents?: number;
+          price_yearly_cents?: number;
+          rank: number;
+          sort_order?: number;
+          storage_gb?: number | null;
+          tier_type: string;
+          transaction_fee_bps?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          currency?: string;
+          description?: string;
+          features?: string[];
+          id?: string;
+          is_active?: boolean;
+          is_customizable?: boolean;
+          is_public?: boolean;
+          max_bookings_per_month?: number | null;
+          max_clients?: number | null;
+          max_locations?: number | null;
+          max_users?: number | null;
+          name?: string;
+          price_monthly_cents?: number;
+          price_quarterly_cents?: number;
+          price_yearly_cents?: number;
+          rank?: number;
+          sort_order?: number;
+          storage_gb?: number | null;
+          tier_type?: string;
+          transaction_fee_bps?: number;
+          updated_at?: string;
+        };
         Relationships: [];
+      };
+      tier_modules: {
+        Row: {
+          module_id: string;
+          tier_id: string;
+        };
+        Insert: {
+          module_id: string;
+          tier_id: string;
+        };
+        Update: {
+          module_id?: string;
+          tier_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tier_modules_module_id_fkey";
+            columns: ["module_id"];
+            isOneToOne: false;
+            referencedRelation: "modules";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tier_modules_tier_id_fkey";
+            columns: ["tier_id"];
+            isOneToOne: false;
+            referencedRelation: "subscription_tiers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      training_attendance: {
+        Row: {
+          author_name: string | null;
+          booking_id: string;
+          checked_in_at: string | null;
+          checked_out_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          session_notes: string;
+          status: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          author_name?: string | null;
+          booking_id: string;
+          checked_in_at?: string | null;
+          checked_out_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          session_notes?: string;
+          status?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string | null;
+          booking_id?: string;
+          checked_in_at?: string | null;
+          checked_out_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          session_notes?: string;
+          status?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_attendance_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "training_attendance_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_attendance_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      training_trainer_profiles: {
+        Row: {
+          bio: string;
+          calendar_color: string | null;
+          certifications: string[];
+          created_at: string;
+          facility_id: string;
+          id: string;
+          specializations: string[];
+          staff_id: string;
+          updated_at: string;
+          visible_online: boolean;
+          years_experience: number | null;
+        };
+        Insert: {
+          bio?: string;
+          calendar_color?: string | null;
+          certifications?: string[];
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          specializations?: string[];
+          staff_id: string;
+          updated_at?: string;
+          visible_online?: boolean;
+          years_experience?: number | null;
+        };
+        Update: {
+          bio?: string;
+          calendar_color?: string | null;
+          certifications?: string[];
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          specializations?: string[];
+          staff_id?: string;
+          updated_at?: string;
+          visible_online?: boolean;
+          years_experience?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_trainer_profiles_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_trainer_profiles_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "training_trainer_profiles_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: {
@@ -4484,7 +5544,22 @@ export type Database = {
           facility_id: string | null;
           last_activity_at: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "store_credit_entries_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "store_credit_entries_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       customer_package_pool_status: {
         Row: {
@@ -4582,273 +5657,151 @@ export type Database = {
           },
         ];
       };
+      unreconciled_payments: {
+        Row: {
+          amount_cents: number | null;
+          booking_id: string | null;
+          client_id: string | null;
+          completed_at: string | null;
+          created_at: string | null;
+          currency: string | null;
+          environment: string | null;
+          facility_id: string | null;
+          facility_name: string | null;
+          intent_id: string | null;
+          kind: string | null;
+          processor: string | null;
+          processor_payment_id: string | null;
+          unreconciled_for: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payment_intents_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "payment_intents_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_intents_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_intents_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
+      accept_platform_invitation: {
+        Args: { p_profile_id: string; p_token_hash: string };
+        Returns: Json;
+      };
       assign_boarding_room: {
         Args: {
           p_booking_ref: number;
-          p_override_reason?: string | null;
-          p_room_id?: string | null;
-        };
-        Returns: string | null;
-      };
-      set_booking_tip_split: {
-        Args: {
-          p_booking_ref: number;
-          p_method: string;
-          p_allocations: Json;
-        };
-        Returns: number;
-      };
-      record_boarding_arrival: {
-        Args: {
-          p_booking_ref: number;
-          p_action: string;
-        };
-        Returns: string;
-      };
-      create_booking: {
-        Args: {
-          p_booking: Json;
-          p_boarding?: Json;
-          p_grooming?: Json;
-          p_pet_ids?: string[];
-        };
-        Returns: { booking_id: string; booking_ref: number }[];
-      };
-      link_client_record: {
-        Args: { p_facility_slug: string };
-        Returns: string;
-      };
-      register_client: {
-        Args: {
-          p_facility_slug: string;
-          p_name: string;
-          p_phone?: string | null;
-        };
-        Returns: string;
-      };
-      set_customer_signup: {
-        Args: { p_enabled: boolean; p_facility_id: string };
-        Returns: boolean;
-      };
-      /** Re-aim an unclaimed owner invitation at a corrected address. */
-      set_facility_owner_email: {
-        Args: { p_facility_id: string; p_email: string };
-        Returns: Json;
-      };
-      link_staff_invite: {
-        Args: { p_profile_id: string; p_staff_legacy_id: string };
-        Returns: Json;
-      };
-      record_membership_grant: {
-        Args: { p_expires_at?: string | null; p_staff_legacy_id: string };
-        Returns: Json;
-      };
-      facility_branding_by_slug: {
-        Args: { p_slug: string };
-        Returns: {
-          facility_id: string;
-          name: string;
-          slug: string;
-          logo_url: string | null;
-          wordmark_url: string | null;
-          primary_color: string | null;
-          accent_color: string | null;
-          tagline: string | null;
-          allow_customer_signup: boolean;
-        }[];
-      };
-      /** The caller's own client id at a facility, by slug, or null. */
-      my_client_at: {
-        Args: { p_facility_slug: string };
-        Returns: string | null;
-      };
-      /**
-       * The effective module list for one facility: the plan, with this
-       * facility's overrides applied. Runs as the caller, so RLS decides what
-       * is visible rather than a check inside the function.
-       */
-      facility_module_entitlements: {
-        Args: { p_facility_id: string };
-        Returns: {
-          module_id: string;
-          slug: string;
-          name: string;
-          description: string;
-          category: string;
-          icon: string;
-          enabled: boolean;
-          source: string;
-          price_cents: number;
-          list_price_cents: number;
-          price_override_cents: number | null;
-          included_in_plan: boolean;
-          available_on_plan: boolean;
-          is_standalone: boolean;
-          min_tier_rank: number;
-          expires_at: string | null;
-          note: string;
-          missing_dependencies: string[];
-        }[];
-      };
-      /**
-       * One facility's bookings and takings by SERVICE month. Revenue excludes
-       * tips. Returns a whole report as jsonb — see the header of
-       * 20260807620000 for why each of those is the way it is.
-       */
-      facility_report: {
-        Args: { p_facility_id: string; p_months?: number };
-        Returns: Json;
-      };
-      /**
-       * Records that a facility's data was exported. The one audited act with
-       * no row to hang a trigger on — see the header of 20260807640000.
-       */
-      record_facility_export: {
-        Args: {
-          p_facility_id: string;
-          p_datasets: string[];
-          p_row_count: number;
-        };
-        Returns: string;
-      };
-      /**
-       * Records a merchant connection and puts its OAuth tokens in Vault.
-       * EXECUTE is granted to service_role alone — calling this with the
-       * ordinary cookie-bound client fails, by design (20260807700000).
-       */
-      store_payment_credentials: {
-        Args: {
-          p_facility_id: string;
-          p_merchant_id: string;
-          p_environment: string;
-          p_access_token: string;
-          p_refresh_token?: string | null;
-          p_access_expires?: string | null;
-          p_refresh_expires?: string | null;
-          p_public_api_key?: string | null;
-          p_scopes?: string[];
-          p_connected_by?: string | null;
-          p_processor?: string;
-          p_currency?: string | null;
-          p_country?: string | null;
-        };
-        Returns: undefined;
-      };
-      /** Live merchant tokens. service_role only. Never call this for status. */
-      payment_access_token: {
-        Args: { p_facility_id: string; p_processor?: string };
-        Returns: {
-          access_token: string;
-          refresh_token: string | null;
-          access_token_expires_at: string | null;
-          refresh_token_expires_at: string | null;
-          merchant_id: string;
-          environment: string;
-          connection_status: string;
-        }[];
-      };
-      record_payment_connection_error: {
-        Args: { p_facility_id: string; p_error: string; p_processor?: string };
-        Returns: undefined;
-      };
-      /**
-       * Records a facility's Twilio subaccount and puts its auth token in
-       * Vault. EXECUTE is granted to service_role alone (20260809200000).
-       */
-      store_communication_credentials: {
-        Args: {
-          p_facility_id: string;
-          p_subaccount_sid: string;
-          p_auth_token: string;
-          p_friendly_name?: string | null;
-          p_connected_by?: string | null;
-          p_provider?: string;
-        };
-        Returns: undefined;
-      };
-      /**
-       * The live auth token, for a server about to call Twilio or validate an
-       * X-Twilio-Signature. service_role only. Never call this for status —
-       * that is what communication_connections is for.
-       */
-      communication_auth_token: {
-        Args: { p_facility_id: string; p_provider?: string };
-        Returns: {
-          auth_token: string;
-          subaccount_sid: string;
-          status: string;
-        }[];
-      };
-      record_communication_connection_error: {
-        Args: { p_facility_id: string; p_error: string; p_provider?: string };
-        Returns: undefined;
-      };
-      open_payment_intent: {
-        Args: {
-          p_facility_id: string;
-          p_amount_cents: number;
-          p_currency: string;
-          p_kind: string;
-          p_idempotency_key: string;
-          p_booking_id?: string | null;
-          p_client_id?: string | null;
-          p_created_by?: string | null;
-          p_device_id?: string | null;
+          p_override_reason?: string;
+          p_room_id?: string;
         };
         Returns: string;
       };
       close_payment_intent: {
         Args: {
+          p_failure_code?: string;
+          p_failure_message?: string;
           p_intent_id: string;
           p_status: string;
-          p_failure_code?: string | null;
-          p_failure_message?: string | null;
         };
         Returns: undefined;
       };
-      /** Ledger row + intent link in ONE transaction. Idempotent. */
-      record_clover_payment: {
+      close_payment_webhook: {
+        Args: { p_event_id: string; p_outcome?: string; p_status: string };
+        Returns: undefined;
+      };
+      communication_auth_token: {
+        Args: { p_facility_id: string; p_provider?: string };
+        Returns: {
+          auth_token: string;
+          status: string;
+          subaccount_sid: string;
+        }[];
+      };
+      create_booking: {
         Args: {
-          p_intent_id: string;
-          p_processor_payment_id: string;
-          p_subtotal_cents: number;
-          p_tax_cents?: number;
-          p_tip_cents?: number;
-          p_card_brand?: string | null;
-          p_card_last4?: string | null;
-          p_auth_code?: string | null;
-          p_entry_method?: string;
-          p_author_name?: string;
+          p_boarding?: Json;
+          p_booking: Json;
+          p_grooming?: Json;
+          p_pet_ids?: string[];
         };
-        Returns: string;
+        Returns: {
+          booking_id: string;
+          booking_ref: number;
+        }[];
+      };
+      disconnect_payment_connection: {
+        Args: { p_facility_id: string; p_processor?: string; p_reason: string };
+        Returns: {
+          connection_revoked: boolean;
+          credentials_removed: boolean;
+        }[];
+      };
+      facility_branding_by_slug: {
+        Args: { p_slug: string };
+        Returns: {
+          accent_color: string;
+          allow_customer_signup: boolean;
+          facility_id: string;
+          logo_url: string;
+          name: string;
+          primary_color: string;
+          slug: string;
+          tagline: string;
+          wordmark_url: string;
+        }[];
       };
       facility_has_module: {
         Args: { p_facility_id: string; p_module_id: string };
         Returns: boolean;
       };
-      set_facility_module: {
-        Args: {
-          p_facility_id: string;
-          p_module_id: string;
-          p_enabled: boolean;
-          p_price_override_cents?: number | null;
-          p_note?: string;
-          p_expires_at?: string | null;
-        };
-        Returns: undefined;
-      };
-      /** Drops every exception for a facility; returns how many were dropped. */
-      reset_facility_modules: {
+      facility_module_entitlements: {
         Args: { p_facility_id: string };
-        Returns: number;
+        Returns: {
+          available_on_plan: boolean;
+          category: string;
+          description: string;
+          enabled: boolean;
+          expires_at: string;
+          icon: string;
+          included_in_plan: boolean;
+          is_standalone: boolean;
+          list_price_cents: number;
+          min_tier_rank: number;
+          missing_dependencies: string[];
+          module_id: string;
+          name: string;
+          note: string;
+          price_cents: number;
+          price_override_cents: number;
+          slug: string;
+          source: string;
+        }[];
       };
-      set_subscription_status: {
-        Args: {
-          p_facility_id: string;
-          p_status: Database["public"]["Enums"]["subscription_status"];
-        };
+      facility_report: {
+        Args: { p_facility_id: string; p_months?: number };
         Returns: Json;
       };
       grant_platform_role: {
@@ -4858,50 +5811,33 @@ export type Database = {
         };
         Returns: Json;
       };
-      revoke_platform_role: { Args: { p_profile_id: string }; Returns: Json };
+      invite_facility_owner: {
+        Args: { p_expires_at?: string; p_facility_id: string };
+        Returns: Json;
+      };
       invite_platform_admin: {
         Args: {
           p_email: string;
           p_expires_at: string;
-          p_full_name: string | null;
+          p_full_name: string;
           p_role: Database["public"]["Enums"]["platform_role"];
           p_token_hash: string;
         };
         Returns: Json;
       };
-      revoke_platform_invitation: {
-        Args: { p_invitation_id: string };
+      link_client_record: {
+        Args: { p_facility_slug: string };
+        Returns: string;
+      };
+      link_staff_invite: {
+        Args: { p_profile_id: string; p_staff_legacy_id: string };
         Returns: Json;
       };
-      accept_platform_invitation: {
-        Args: { p_profile_id: string; p_token_hash: string };
-        Returns: Json;
+      migrate_profile_subject: {
+        Args: { p_new_id: string; p_old_id: string };
+        Returns: undefined;
       };
-      invite_facility_owner: {
-        Args: { p_expires_at?: string | null; p_facility_id: string };
-        Returns: Json;
-      };
-      revoke_facility_owner_invite: {
-        Args: { p_facility_id: string };
-        Returns: Json;
-      };
-      provision_facility: {
-        Args: {
-          p_contact_email?: string | null;
-          p_contact_phone?: string | null;
-          p_locations?: Json;
-          p_name: string;
-          p_owner_email: string;
-          p_owner_name: string;
-          p_owner_phone?: string | null;
-          p_request_id: string;
-          p_slug: string;
-          p_timezone: string;
-          p_website?: string | null;
-          p_business_types?: string[] | null;
-        };
-        Returns: Json;
-      };
+      my_client_at: { Args: { p_facility_slug: string }; Returns: string };
       my_permissions: {
         Args: never;
         Returns: {
@@ -4919,6 +5855,49 @@ export type Database = {
         Returns: Json;
       };
       onboarding_by_token: { Args: { p_token: string }; Returns: Json };
+      open_payment_intent: {
+        Args: {
+          p_amount_cents: number;
+          p_booking_id?: string;
+          p_client_id?: string;
+          p_created_by?: string;
+          p_currency: string;
+          p_device_id?: string;
+          p_facility_id: string;
+          p_idempotency_key: string;
+          p_kind: string;
+        };
+        Returns: string;
+      };
+      payment_access_token: {
+        Args: { p_facility_id: string; p_processor?: string };
+        Returns: {
+          access_token: string;
+          access_token_expires_at: string;
+          connection_status: string;
+          environment: string;
+          merchant_id: string;
+          refresh_token: string;
+          refresh_token_expires_at: string;
+        }[];
+      };
+      provision_facility: {
+        Args: {
+          p_business_types?: string[];
+          p_contact_email?: string;
+          p_contact_phone?: string;
+          p_locations?: Json;
+          p_name: string;
+          p_owner_email: string;
+          p_owner_name: string;
+          p_owner_phone?: string;
+          p_request_id: string;
+          p_slug: string;
+          p_timezone: string;
+          p_website?: string;
+        };
+        Returns: Json;
+      };
       purchase_package: {
         Args: {
           p_client_id: string;
@@ -4926,6 +5905,42 @@ export type Database = {
           p_price_override?: number;
         };
         Returns: string;
+      };
+      purge_e2e_bookings: { Args: never; Returns: number };
+      record_boarding_arrival: {
+        Args: { p_action: string; p_booking_ref: number };
+        Returns: string;
+      };
+      record_clover_payment: {
+        Args: {
+          p_auth_code?: string;
+          p_author_name?: string;
+          p_card_brand?: string;
+          p_card_last4?: string;
+          p_entry_method?: string;
+          p_intent_id: string;
+          p_processor_payment_id: string;
+          p_subtotal_cents: number;
+          p_tax_cents?: number;
+          p_tip_cents?: number;
+        };
+        Returns: string;
+      };
+      record_communication_connection_error: {
+        Args: { p_error: string; p_facility_id: string; p_provider?: string };
+        Returns: undefined;
+      };
+      record_facility_export: {
+        Args: {
+          p_datasets: string[];
+          p_facility_id: string;
+          p_row_count: number;
+        };
+        Returns: string;
+      };
+      record_membership_grant: {
+        Args: { p_expires_at?: string; p_staff_legacy_id: string };
+        Returns: Json;
       };
       record_payment: {
         Args: {
@@ -4954,6 +5969,27 @@ export type Database = {
         };
         Returns: Json;
       };
+      record_payment_connection_error: {
+        Args: { p_error: string; p_facility_id: string; p_processor?: string };
+        Returns: undefined;
+      };
+      record_payment_webhook: {
+        Args: {
+          p_app_id: string;
+          p_change: string;
+          p_environment: string;
+          p_merchant_id: string;
+          p_object_id: string;
+          p_object_kind: string;
+          p_occurred_at: string;
+          p_payload: Json;
+          p_processor: string;
+        };
+        Returns: {
+          event_id: string;
+          is_new: boolean;
+        }[];
+      };
       redeem_package_pass: {
         Args: {
           p_booking_id?: string;
@@ -4965,6 +6001,27 @@ export type Database = {
         };
         Returns: number;
       };
+      register_client: {
+        Args: { p_facility_slug: string; p_name: string; p_phone?: string };
+        Returns: string;
+      };
+      reset_facility_modules: {
+        Args: { p_facility_id: string };
+        Returns: number;
+      };
+      revoke_facility_owner_invite: {
+        Args: { p_facility_id: string };
+        Returns: Json;
+      };
+      revoke_payment_connection: {
+        Args: { p_facility_id: string; p_processor?: string; p_reason: string };
+        Returns: boolean;
+      };
+      revoke_platform_invitation: {
+        Args: { p_invitation_id: string };
+        Returns: Json;
+      };
+      revoke_platform_role: { Args: { p_profile_id: string }; Returns: Json };
       save_onboarding_section: {
         Args: {
           p_data: Json;
@@ -4975,9 +6032,43 @@ export type Database = {
         };
         Returns: boolean;
       };
+      set_booking_tip_split: {
+        Args: { p_allocations: Json; p_booking_ref: number; p_method: string };
+        Returns: number;
+      };
+      set_customer_signup: {
+        Args: { p_enabled: boolean; p_facility_id: string };
+        Returns: boolean;
+      };
+      set_default_terminal: {
+        Args: { p_terminal_id: string };
+        Returns: undefined;
+      };
+      set_facility_module: {
+        Args: {
+          p_enabled: boolean;
+          p_expires_at?: string;
+          p_facility_id: string;
+          p_module_id: string;
+          p_note?: string;
+          p_price_override_cents?: number;
+        };
+        Returns: undefined;
+      };
+      set_facility_owner_email: {
+        Args: { p_email: string; p_facility_id: string };
+        Returns: Json;
+      };
       set_onboarding_account_complete: {
         Args: { p_token: string };
         Returns: boolean;
+      };
+      set_subscription_status: {
+        Args: {
+          p_facility_id: string;
+          p_status: Database["public"]["Enums"]["subscription_status"];
+        };
+        Returns: Json;
       };
       settle_bookings: {
         Args: {
@@ -4988,17 +6079,39 @@ export type Database = {
         };
         Returns: Json;
       };
+      store_communication_credentials: {
+        Args: {
+          p_auth_token: string;
+          p_connected_by?: string;
+          p_facility_id: string;
+          p_friendly_name?: string;
+          p_provider?: string;
+          p_subaccount_sid: string;
+        };
+        Returns: undefined;
+      };
+      store_payment_credentials: {
+        Args: {
+          p_access_expires?: string;
+          p_access_token: string;
+          p_connected_by?: string;
+          p_country?: string;
+          p_currency?: string;
+          p_environment: string;
+          p_facility_id: string;
+          p_merchant_id: string;
+          p_processor?: string;
+          p_public_api_key?: string;
+          p_refresh_expires?: string;
+          p_refresh_token?: string;
+          p_scopes?: string[];
+        };
+        Returns: undefined;
+      };
       submit_onboarding: { Args: { p_token: string }; Returns: boolean };
     };
     Enums: {
       access_scope: "anytime" | "operating_hours" | "assigned_shifts" | "none";
-      platform_role: "superadmin" | "support" | "billing" | "readonly";
-      subscription_status:
-        | "trialing"
-        | "active"
-        | "past_due"
-        | "suspended"
-        | "cancelled";
       booking_status:
         | "pending"
         | "estimate_sent"
@@ -5027,6 +6140,8 @@ export type Database = {
         | "retail"
         | "accountant"
         | "sanitation";
+      platform_role: "superadmin" | "support" | "billing" | "readonly";
+      position_pay_type: "hourly" | "salary";
       service_module:
         | "grooming"
         | "training"
@@ -5036,6 +6151,18 @@ export type Database = {
         | "retail"
         | "sanitation"
         | "transport";
+      shift_status:
+        | "draft"
+        | "published"
+        | "confirmed"
+        | "completed"
+        | "cancelled";
+      subscription_status:
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "suspended"
+        | "cancelled";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -5197,6 +6324,8 @@ export const Constants = {
         "accountant",
         "sanitation",
       ],
+      platform_role: ["superadmin", "support", "billing", "readonly"],
+      position_pay_type: ["hourly", "salary"],
       service_module: [
         "grooming",
         "training",
@@ -5206,6 +6335,20 @@ export const Constants = {
         "retail",
         "sanitation",
         "transport",
+      ],
+      shift_status: [
+        "draft",
+        "published",
+        "confirmed",
+        "completed",
+        "cancelled",
+      ],
+      subscription_status: [
+        "trialing",
+        "active",
+        "past_due",
+        "suspended",
+        "cancelled",
       ],
     },
   },
