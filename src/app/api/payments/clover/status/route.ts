@@ -29,16 +29,15 @@ import { connectionStatus } from "@/lib/clover/status";
 
 export const dynamic = "force-dynamic";
 
-/** Connecting a merchant decides where a business's money lands. */
-const ADMIN_ROLES = new Set(["owner", "admin"]);
-
 export async function GET() {
   const viewer = await getViewer().catch(() => null);
   if (!viewer || viewer.source !== "session") {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  const membership = viewer.memberships.find((m) => ADMIN_ROLES.has(m.role));
+  // Admin ACCESS, not an admin job title — same rule as /connect, so the card
+  // and the button it renders agree about who may use them.
+  const membership = viewer.memberships.find((m) => m.accessLevel === "admin");
   if (!membership) {
     return NextResponse.json(
       {

@@ -36,7 +36,7 @@ import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 /** Disconnecting stops a business taking card payments. Not a receptionist's. */
-const ADMIN_ROLES = new Set(["owner", "admin"]);
+// Admin ACCESS, not an admin job title — see /connect.
 
 export async function POST() {
   const viewer = await getViewer().catch(() => null);
@@ -44,7 +44,7 @@ export async function POST() {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  const membership = viewer.memberships.find((m) => ADMIN_ROLES.has(m.role));
+  const membership = viewer.memberships.find((m) => m.accessLevel === "admin");
   if (!membership) {
     return NextResponse.json(
       {
