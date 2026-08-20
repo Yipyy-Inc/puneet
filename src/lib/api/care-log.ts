@@ -27,10 +27,20 @@ export interface LogCareInput {
   executedAt?: string;
   servedAt?: string | null;
   notes?: string | null;
+  /**
+   * Per-task-type extras: how a kennel was cleaned, how long an add-on ran, how
+   * a dog engaged, a health observation, why a task was missed.
+   *
+   * Never photos. The board's "Add photo" button appends `mock://photo-1` and
+   * there is nothing behind it — see migration 20260820180000.
+   */
+  details?: Record<string, unknown>;
 }
 
 export const careLogKeys = {
+  all: ["care-log"] as const,
   forBooking: (bookingRef: number) => ["care-log", bookingRef] as const,
+  forDate: (date: string) => ["care-log", "on", date] as const,
 };
 
 export const careLogQueries = {
@@ -49,6 +59,29 @@ export const careLogQueries = {
     // A booking's log is read while somebody is standing at the kennel; a
     // stale minute is fine, a refetch on every focus is noise.
     staleTime: 60_000,
+  }),
+
+  /**
+   * One DAY across every guest, for the Daily Care board.
+   *
+   * No facility parameter. `care_log_entries` is scoped by RLS to bookings the
+   * caller can read, so this is already "today, where I work" — and the board
+   * is the screen somebody refreshes between kennels, so a stale minute is
+   * worse here than on a single booking.
+   */
+  forDate: (date: string) => ({
+    queryKey: careLogKeys.forDate(date),
+    queryFn: async (): Promise<CareLogEntry[]> => {
+      const response = await fetch(`/api/care-log?on=${date}`);
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(body.error ?? "Could not read the day's care log.");
+      }
+      return (await response.json()) as CareLogEntry[];
+    },
+    staleTime: 15_000,
   }),
 };
 

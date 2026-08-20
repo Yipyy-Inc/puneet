@@ -55,10 +55,19 @@ export interface CareLogEntry {
   notes: string | null;
   recordedByName: string | null;
   createdAt: string;
+  /**
+   * Per-task-type extras the booking page never needed and the Daily Care board
+   * does: how a kennel was cleaned, how long an add-on ran, how a dog engaged,
+   * a health observation, why a task was missed.
+   *
+   * `{}` when there are none — never null, so no caller has to tell the two
+   * apart. Never photos; see the header of migration 20260820180000.
+   */
+  details: Record<string, unknown>;
 }
 
 const SELECT =
-  "id, task_key, task_type, occurred_on, executed_at, served_at, outcome, notes, recorded_by_name, created_at, bookings!inner(ref), pets(ref)";
+  "id, task_key, task_type, occurred_on, executed_at, served_at, outcome, notes, details, recorded_by_name, created_at, bookings!inner(ref), pets(ref)";
 
 type Row = {
   id: string;
@@ -69,6 +78,7 @@ type Row = {
   served_at: string | null;
   outcome: string;
   notes: string | null;
+  details: Record<string, unknown> | null;
   recorded_by_name: string | null;
   created_at: string;
   bookings: { ref: number } | null;
@@ -88,6 +98,9 @@ function toEntry(row: Row): CareLogEntry {
     servedAt: row.served_at ? row.served_at.slice(0, 5) : null,
     outcome: row.outcome,
     notes: row.notes,
+    // The column is NOT NULL DEFAULT '{}', so the coalesce is for rows written
+    // by a build older than the migration rather than for anything current.
+    details: row.details ?? {},
     recordedByName: row.recorded_by_name,
     createdAt: row.created_at,
   };
@@ -99,21 +112,38 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  const bookingRef = Number(
-    new URL(request.url).searchParams.get("bookingRef"),
-  );
-  if (!Number.isFinite(bookingRef)) {
+  // Two ways to ask, because two screens need different slices of the same
+  // journal: the booking page wants one stay's whole history, the Daily Care
+  // board wants one DAY across every guest in the building.
+  //
+  // The day form takes no facility, and must not: `care_log_entries` is scoped
+  // by RLS to bookings the caller can read, so "today, everywhere I work" is
+  // already the only thing this can return. Naming a facility would add a
+  // parameter that could be wrong without adding anything that could be right.
+  const params = new URL(request.url).searchParams;
+  const on = params.get("on");
+  const bookingRef = Number(params.get("bookingRef"));
+
+  if (!on && !Number.isFinite(bookingRef)) {
     return NextResponse.json(
-      { error: "bookingRef is required." },
+      { error: "Ask for one booking (bookingRef) or one day (on)." },
+      { status: 400 },
+    );
+  }
+  if (on && !/^\d{4}-\d{2}-\d{2}$/.test(on)) {
+    return NextResponse.json(
+      { error: "`on` must be a date, YYYY-MM-DD." },
       { status: 400 },
     );
   }
 
   const supabase = await createServerClient();
-  const { data, error } = await supabase
-    .from("care_log_entries")
-    .select(SELECT)
-    .eq("bookings.ref", bookingRef)
+  let query = supabase.from("care_log_entries").select(SELECT);
+  query = on
+    ? query.eq("occurred_on", on)
+    : query.eq("bookings.ref", bookingRef);
+
+  const { data, error } = await query
     .order("occurred_on", { ascending: true })
     .order("executed_at", { ascending: true });
 
@@ -134,6 +164,8 @@ interface LogInput {
   servedAt?: string | null;
   outcome?: string;
   notes?: string | null;
+  /** Per-task-type extras. An object or nothing; never an array or a scalar. */
+  details?: Record<string, unknown> | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -207,6 +239,11 @@ export async function POST(request: NextRequest) {
         served_at: input.servedAt ?? null,
         outcome: input.outcome.trim(),
         notes: input.notes?.trim() || null,
+        // Guarded here as well as by the check constraint: an array or a string
+        // would be refused by Postgres with a constraint name, and a caller
+        // deserves to be told what the field is for.
+        details:
+          input.details && !Array.isArray(input.details) ? input.details : {},
         recorded_by: viewer.userId,
         // Snapshotted, not joined: a journal that renames itself when somebody
         // leaves the business is not a journal.
