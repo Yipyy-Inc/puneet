@@ -42,9 +42,11 @@ Always use **bun** as the package manager (not npm, yarn, or pnpm).
     from `main` on push, so a bad commit reaches customers before CI reports it —
     the required checks become a post-mortem rather than a gate. `bun run typecheck && bun run lint && bun run format:check`, plus `bun run build` for
     anything structural.
-  - Touching auth, a portal gate, a permission or an identity? Run
-    `bun run test:e2e:ci` locally too. CI still runs it, but only after the
-    deploy is live.
+  - Touching auth, a portal gate, a permission or an identity — or bookings,
+    boarding, daycare, rooms, the care log or the calendar? Run
+    `bun run test:e2e:ci` locally too. It is 21 specs (~12 min), not 10.
+    CI still runs it, but only after the deploy is live — and the e2e job is
+    not one of the four required checks, so it reports rather than gates.
 - Use the `DataTable` component for all tables — additions to DataTable must not break existing implementations
 - Plan before coding — outline approach before implementing
 
