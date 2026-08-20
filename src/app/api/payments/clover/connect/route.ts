@@ -29,8 +29,6 @@ import { authorizeUrl, createOAuthState } from "@/lib/clover/oauth";
 
 export const dynamic = "force-dynamic";
 
-const OWNER_ROLES = new Set(["owner", "admin"]);
-
 // No `request` parameter, and that is the documentation: nothing about where
 // this connection points may depend on what the caller sent.
 export async function GET() {
@@ -51,7 +49,13 @@ export async function GET() {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  const membership = viewer.memberships.find((m) => OWNER_ROLES.has(m.role));
+  // `accessLevel`, not the job title. A hardcoded owner/admin role set was
+  // retired everywhere else in this codebase (see `viewer.ts`): a facility can
+  // promote its receptionist to admin ACCESS without handing them an owner's
+  // 168 permissions, and such a person reaches this screen — the /facility
+  // portal gate is `accessLevel === "admin"` — so they must not meet a 403
+  // from the button that screen shows them.
+  const membership = viewer.memberships.find((m) => m.accessLevel === "admin");
   if (!membership) {
     return NextResponse.json(
       {
