@@ -48,7 +48,9 @@ There **is** a test runner: Playwright, 51 spec files under [tests/e2e/](tests/e
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
 
-**Touching auth, a portal gate, a permission or an identity?** Run `bun run test:e2e:ci` too — CI runs exactly that command on every PR. Fastest locally against a built server rather than the dev one:
+**Touching auth, a portal gate, a permission or an identity — or bookings, boarding, daycare, rooms, the care log or the calendar?** Run `bun run test:e2e:ci` too. It is 21 specs now, not 10: the 10 auth & access ones plus the 11 daily-operations ones, which were added on 2026-08-20 after their first run found a production 500 on booking creation, a checkout that priced with no late fee while settings loaded, and an empty board caused by reading a PostgREST to-one relation as an array.
+
+CI runs exactly that command, but **the e2e job is not one of the four required status checks** — it reports, it does not gate, and pushes go straight to `main` regardless. Running it locally first is the only thing that actually stops a bad commit. Fastest locally against a built server rather than the dev one:
 
 ```
 bun run build && bun run start --port 3000 &
