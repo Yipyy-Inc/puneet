@@ -14,13 +14,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Camera, X, Image as ImageIcon } from "lucide-react";
 import { OUTCOME_OPTIONS, outcomeBadgeClass } from "./outcome-meta";
 import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
 import { LogMeta } from "./LogMeta";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { ScheduledTask, TaskExecution } from "@/types/care-log";
+import { PhotoProofNotice } from "./PhotoProofNotice";
 
 type Props = {
   open: boolean;
@@ -52,7 +52,6 @@ export function TaskLogModal({
   const [outcome, setOutcome] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [servedAt, setServedAt] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
   // Log time: "" = stamp the current time on submit; a value backdates it.
   const [nowValue, setNowValue] = useState("");
   const [logTime, setLogTime] = useState("");
@@ -70,16 +69,12 @@ export function TaskLogModal({
       setOutcome(String(existing.outcome));
       setNotes(existing.notes ?? "");
       setServedAt(existing.servedAt ?? "");
-      setPhotos(
-        existing.photoUrls ?? (existing.photoUrl ? [existing.photoUrl] : []),
-      );
       // Preserve the original log time (still editable via the override input).
       setLogTime(existing.executedAt);
     } else {
       setOutcome(null);
       setNotes("");
       setServedAt("");
-      setPhotos([]);
       setLogTime("");
     }
   }, [open, task?.id, existing]);
@@ -91,21 +86,8 @@ export function TaskLogModal({
   const options = OUTCOME_OPTIONS[task.taskType];
   const isFeeding = task.taskType === "feeding";
   const requiresPhoto = task.requiresPhotoProof === true;
-  const MAX_PHOTOS = 3;
 
-  const addPhoto = () => {
-    // TODO: open the real camera / library picker; mock URL for now.
-    setPhotos((prev) =>
-      prev.length >= MAX_PHOTOS
-        ? prev
-        : [...prev, `mock://photo-${prev.length + 1}`],
-    );
-  };
-  const removePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const canSubmit = outcome !== null && (!requiresPhoto || photos.length > 0);
+  const canSubmit = outcome !== null;
 
   function handleSubmit() {
     if (!outcome) return;
@@ -116,7 +98,6 @@ export function TaskLogModal({
       staffInitials: user.initials,
       executedAt: logTime || undefined,
       servedAt: isFeeding && servedAt ? servedAt : undefined,
-      photoUrls: photos.length > 0 ? photos : undefined,
     });
     onOpenChange(false);
   }
@@ -194,47 +175,7 @@ export function TaskLogModal({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">
-              Photos{" "}
-              <span className="text-muted-foreground font-normal">
-                {requiresPhoto ? "(required)" : "(optional)"}
-              </span>
-            </Label>
-            <div className="flex flex-wrap items-center gap-2">
-              {photos.map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-muted relative flex size-12 items-center justify-center rounded-md border"
-                >
-                  <ImageIcon className="text-muted-foreground size-5" />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(i)}
-                    aria-label={`Remove photo ${i + 1}`}
-                    className="bg-destructive absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full text-white"
-                  >
-                    <X className="size-2.5" />
-                  </button>
-                </div>
-              ))}
-              {photos.length < MAX_PHOTOS && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addPhoto}
-                  className="h-12 gap-1.5"
-                >
-                  <Camera className="size-4" />
-                  Add photo
-                </Button>
-              )}
-            </div>
-            <p className="text-muted-foreground text-[11px]">
-              {photos.length}/{MAX_PHOTOS} · camera or library
-            </p>
-          </div>
+          <PhotoProofNotice required={requiresPhoto} />
 
           <div className="space-y-1.5">
             <Label htmlFor="notes" className="text-xs">

@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Camera, X, Image as ImageIcon, Wrench } from "lucide-react";
+import { Wrench } from "lucide-react";
 import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
 import { LogMeta } from "./LogMeta";
@@ -25,6 +25,7 @@ import type {
   CleaningType,
   CleaningDetail,
 } from "@/types/care-log";
+import { PhotoProofNotice } from "./PhotoProofNotice";
 
 const CLEANING_TYPES: { value: CleaningType; label: string; hint: string }[] = [
   { value: "full", label: "Full clean", hint: "Strip, disinfect, re-bed" },
@@ -78,7 +79,6 @@ export function KennelCleanLogModal({
   const [cleaningType, setCleaningType] = useState<CleaningType>("full");
   const [products, setProducts] = useState("");
   const [notes, setNotes] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
   const [nowValue, setNowValue] = useState("");
   const [logTime, setLogTime] = useState("");
   // Maintenance path — off until damage/issues are noticed.
@@ -99,9 +99,6 @@ export function KennelCleanLogModal({
     );
     if (existing) {
       setNotes(existing.notes ?? "");
-      setPhotos(
-        existing.photoUrls ?? (existing.photoUrl ? [existing.photoUrl] : []),
-      );
       setLogTime(existing.executedAt);
       const c = existing.cleaning;
       setCleaningType(c?.type ?? "full");
@@ -112,7 +109,6 @@ export function KennelCleanLogModal({
       setCleaningType("full");
       setProducts("");
       setNotes("");
-      setPhotos([]);
       setLogTime("");
       setDamageNoticed(false);
       setConditionNote("");
@@ -124,23 +120,10 @@ export function KennelCleanLogModal({
   const meta = metaFor(task.taskType, task.subType);
   const Icon = meta.Icon;
   const requiresPhoto = task.requiresPhotoProof === true;
-  const MAX_PHOTOS = 3;
-
-  const addPhoto = () => {
-    // TODO: open the real camera / library picker; mock URL for now.
-    setPhotos((prev) =>
-      prev.length >= MAX_PHOTOS
-        ? prev
-        : [...prev, `mock://photo-${prev.length + 1}`],
-    );
-  };
-  const removePhoto = (i: number) => {
-    setPhotos((prev) => prev.filter((_, idx) => idx !== i));
-  };
 
   // If damage is flagged, the condition note must describe it (maintenance log).
   const conditionOk = !damageNoticed || conditionNote.trim().length > 0;
-  const canSubmit = (!requiresPhoto || photos.length > 0) && conditionOk;
+  const canSubmit = conditionOk;
 
   function handleSubmit() {
     const cleaning: CleaningDetail = {
@@ -157,7 +140,6 @@ export function KennelCleanLogModal({
       staffName: user.name,
       staffInitials: user.initials,
       executedAt: logTime || undefined,
-      photoUrls: photos.length > 0 ? photos : undefined,
       cleaning,
     });
     onOpenChange(false);
@@ -267,47 +249,7 @@ export function KennelCleanLogModal({
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">
-              Photos{" "}
-              <span className="text-muted-foreground font-normal">
-                {requiresPhoto ? "(required)" : "(optional)"}
-              </span>
-            </Label>
-            <div className="flex flex-wrap items-center gap-2">
-              {photos.map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-muted relative flex size-12 items-center justify-center rounded-md border"
-                >
-                  <ImageIcon className="text-muted-foreground size-5" />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(i)}
-                    aria-label={`Remove photo ${i + 1}`}
-                    className="bg-destructive absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full text-white"
-                  >
-                    <X className="size-2.5" />
-                  </button>
-                </div>
-              ))}
-              {photos.length < MAX_PHOTOS && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addPhoto}
-                  className="h-12 gap-1.5"
-                >
-                  <Camera className="size-4" />
-                  Add photo
-                </Button>
-              )}
-            </div>
-            <p className="text-muted-foreground text-[11px]">
-              {photos.length}/{MAX_PHOTOS} · camera or library
-            </p>
-          </div>
+          <PhotoProofNotice required={requiresPhoto} />
 
           <div className="space-y-1.5">
             <Label htmlFor="clean-notes" className="text-xs">
