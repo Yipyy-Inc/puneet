@@ -28,7 +28,9 @@ import {
   Flag,
   Printer,
 } from "lucide-react";
-import { getCurrentGuests } from "@/data/boarding";
+import { useQuery } from "@tanstack/react-query";
+import { dailyCareQueries } from "@/lib/api/daily-care";
+import { useDayCareLog } from "@/hooks/use-day-care-log";
 import { logCareAction } from "@/data/incidents";
 import { staffMembers } from "@/data/staff";
 import { shiftNotesStore } from "@/data/shift-notes-store";
@@ -36,7 +38,7 @@ import { petFlagsStore } from "@/data/pet-flags-store";
 import { headCountStore } from "@/data/head-count-store";
 import { petCareNotesStore } from "@/data/pet-care-notes";
 import { useDailyCareConfig } from "@/hooks/use-daily-care-config";
-import { useCareLog, useDateCareLog } from "@/hooks/use-care-log";
+import { useCareLog } from "@/hooks/use-care-log";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   generateScheduledTasks,
@@ -92,9 +94,22 @@ export function DailyCareView() {
   // schedule all follow it, so managers can review a past day or preview a
   // future one. Seeded from today.
   const [date, setDate] = useState(() => todayIso());
-  const { executions, log } = useDateCareLog(date);
+  // ── REAL GUESTS, REAL LOG ────────────────────────────────────────────────
+  //
+  // Both used to be fixtures, and they had to move together: the log keys on
+  // `guestId`, and only a real booking has a ref to write a log against.
+  //
+  // `getCurrentGuests()` filtered a fixture array, so this board listed animals
+  // that were not in the building — with feeding schedules nobody had given and
+  // medications nobody had prescribed — and staff ticked them off. The log was
+  // `careLogStore`, an array in the JavaScript heap, so everything they ticked
+  // was gone on the next navigation and none of it reached the stay.
+  const { data: roster, isPending: rosterPending } = useQuery(
+    dailyCareQueries.forDate(date),
+  );
+  const { executions, log } = useDayCareLog(date);
 
-  const guests = useMemo(() => getCurrentGuests(), []);
+  const guests = useMemo(() => roster?.guests ?? [], [roster]);
 
   // Pets flagged for attention on any day (A8.2) — a stable snapshot from the
   // store; the ⚑ in the journal guest list reads this.
@@ -988,7 +1003,15 @@ export function DailyCareView() {
                 />
               ) : (
                 <div className="space-y-2">
-                  {guests.length === 0 ? (
+                  {rosterPending ? (
+                    /* "Nobody is in the building" and "we have not asked yet"
+                       are different sentences, and a floor board that says the
+                       first while it means the second is how a dog gets
+                       skipped. */
+                    <p className="text-muted-foreground text-sm">
+                      Loading today&apos;s guests…
+                    </p>
+                  ) : guests.length === 0 ? (
                     <p className="text-muted-foreground text-sm">
                       No guests in house.
                     </p>

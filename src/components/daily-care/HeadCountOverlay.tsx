@@ -1,5 +1,6 @@
 "use client";
 
+import type { CareGuest } from "@/lib/daily-care/care-guest";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -8,13 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Check, X, AlertTriangle, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
-import type { BoardingGuest } from "@/data/boarding";
 
 type DogStatus = "pending" | "inside" | "cannot_locate";
 
 type Props = {
   /** All dogs currently in the facility (getCurrentGuests). */
-  guests: BoardingGuest[];
+  guests: CareGuest[];
   /** The Last Call step's name, shown in the banner. */
   stepName: string;
   facilityName: string;
@@ -70,14 +70,14 @@ export function HeadCountOverlay({
     pendingCount === 0 &&
     (!needsOverride || overrideNote.trim().length > 0);
 
-  function setInside(guest: BoardingGuest) {
+  function setInside(guest: CareGuest) {
     setStatus((prev) => ({
       ...prev,
       [guest.id]: prev[guest.id] === "inside" ? "pending" : "inside",
     }));
   }
 
-  function setCannotLocate(guest: BoardingGuest) {
+  function setCannotLocate(guest: CareGuest) {
     const next =
       (status[guest.id] ?? "pending") === "cannot_locate"
         ? "pending"
