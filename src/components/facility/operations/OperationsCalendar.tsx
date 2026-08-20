@@ -7,10 +7,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { bookingMutations, bookingQueries } from "@/lib/api/booking";
+import { clientQueries } from "@/lib/api/client";
+import { Skeleton } from "@/components/ui/skeleton";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { getModuleWorkflowQuestionnaire } from "@/data/custom-services";
-import { bookings } from "@/data/bookings";
-import { clients } from "@/data/clients";
 import { customServiceCheckIns } from "@/data/custom-service-checkins";
 import { facilityTasks, type FacilityTask } from "@/data/facility-tasks";
 import { getAllTransactions } from "@/data/retail";
@@ -588,11 +591,52 @@ export function OperationsCalendar() {
   const [userName, setUserName] = useState("Manager on Duty");
   const [userId, setUserId] = useState("facility-user");
 
-  const [bookingRecords, setBookingRecords] = useState<Booking[]>(bookings);
+  // ── REAL BOOKINGS ───────────────────────────────────────────────────────
+  //
+  // This was `useState<Booking[]>(bookings)` — the fixture, seeded once. So the
+  // operations calendar drew a month of bookings that did not exist, and every
+  // action on them (check in, check out, cancel, reassign) edited the copy in
+  // this component's memory and was gone on the next navigation.
+  //
+  // `taskRecords` below is still `facilityTasks`, and deliberately: facility
+  // tasks have no table at all. That is a build, not a wiring job, and it is
+  // not quietly included here.
+  const { data: bookingRecords = [], isPending: bookingsPending } = useQuery(
+    bookingQueries.all(),
+  );
+  const queryClient = useQueryClient();
+
+  /**
+   * One booking, changed on the server.
+   *
+   * Every handler below used to map over a local array. `bookingToRow` routes
+   * anything outside the column list into `details`, so a status, a staff
+   * assignment and a cancellation reason all persist through the same call.
+   */
+  const patchBooking = useMutation({
+    mutationFn: (input: { id: number; patch: Partial<Booking> }) =>
+      bookingMutations.update(input.id, input.patch),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+    onError: (error: unknown) =>
+      toast.error("Not saved", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "That change did not reach the booking.",
+      }),
+  });
+
   const [taskRecords, setTaskRecords] = useState<FacilityTask[]>(facilityTasks);
   const [bookingAddOnState, setBookingAddOnState] = useState<
     Record<number, BookingDrawerAddOnItem[]>
-  >(() => mapBookingToAddOns(bookings));
+  >({});
+
+  // The drawer's add-on chips, derived from whatever the bookings actually
+  // carry rather than seeded once from a fixture.
+  useEffect(() => {
+    setBookingAddOnState(mapBookingToAddOns(bookingRecords));
+  }, [bookingRecords]);
 
   const [taskCompletionAudit, setTaskCompletionAudit] = useState<
     TaskCompletionAuditEntry[]
@@ -825,9 +869,15 @@ export function OperationsCalendar() {
     });
   }, [generatedWorkflowTasks]);
 
+  // Real clients, for the same reason as real bookings: a calendar drawing
+  // Postgres bookings and naming their customers from `src/data/clients` would
+  // show nothing beside every real booking, since the fixture's ids are its
+  // own. The two had to move together.
+  const { data: clientRecords = [] } = useQuery(clientQueries.all());
+
   const clientLookup = useMemo(() => {
-    return new Map(clients.map((client) => [client.id, client]));
-  }, []);
+    return new Map(clientRecords.map((client) => [client.id, client]));
+  }, [clientRecords]);
 
   const convertedLeadBookings = useConvertedLeadBookings();
   const convertedLeadEventIds = useConvertedLeadEventIds();
@@ -842,7 +892,7 @@ export function OperationsCalendar() {
   const allEvents = useMemo(() => {
     const merged = buildUnifiedEvents({
       bookings: bookingRecords,
-      clients,
+      clients: clientRecords,
       customServiceCheckIns,
       tasks: taskRecords,
       transactions: getAllTransactions(),
@@ -2437,16 +2487,7 @@ export function OperationsCalendar() {
       }
     }
 
-    setBookingRecords((previous) =>
-      previous.map((booking) =>
-        booking.id === bookingId
-          ? {
-              ...booking,
-              status: "in_progress",
-            }
-          : booking,
-      ),
-    );
+    patchBooking.mutate({ id: bookingId, patch: { status: "in_progress" } });
     appendAuditEntry("booking_checkin", { bookingId });
     toast.success(`Checked in by ${toDisplayRole(userRole)}`);
   };
@@ -2472,16 +2513,7 @@ export function OperationsCalendar() {
       }
     }
 
-    setBookingRecords((previous) =>
-      previous.map((entry) =>
-        entry.id === bookingId
-          ? {
-              ...entry,
-              status: "completed",
-            }
-          : entry,
-      ),
-    );
+    patchBooking.mutate({ id: bookingId, patch: { status: "completed" } });
 
     appendAuditEntry("booking_checkout", { bookingId });
     toast.success(`Checked out by ${toDisplayRole(userRole)}`);
@@ -2497,24 +2529,19 @@ export function OperationsCalendar() {
       return;
     }
 
-    setBookingRecords((previous) =>
-      previous.map((booking) => {
-        if (booking.id !== bookingId) return booking;
-
-        if (booking.service.toLowerCase() === "training") {
-          return {
-            ...booking,
-            trainerId: primary === "Unassigned" ? undefined : primary,
-          };
-        }
-
-        return {
-          ...booking,
-          stylistPreference: primary === "Unassigned" ? undefined : primary,
-          trainerId: secondary || booking.trainerId,
-        };
-      }),
-    );
+    // Training bookings carry a trainer; everything else carries a stylist
+    // preference. Read from the query rather than a local array.
+    const target = bookingRecords.find((entry) => entry.id === bookingId);
+    patchBooking.mutate({
+      id: bookingId,
+      patch:
+        target?.service.toLowerCase() === "training"
+          ? { trainerId: primary === "Unassigned" ? undefined : primary }
+          : {
+              stylistPreference: primary === "Unassigned" ? undefined : primary,
+              trainerId: secondary || target?.trainerId,
+            },
+    });
 
     appendAuditEntry("booking_edited", {
       bookingId,
@@ -2549,11 +2576,11 @@ export function OperationsCalendar() {
       bookingId,
       petId: bookingPetId,
       petName:
-        clients
+        clientRecords
           .flatMap((client) => client.pets)
           .find((pet) => pet.id === bookingPetId)?.name ?? "Pet",
       ownerName:
-        clients.find((client) => client.id === booking.clientId)?.name ??
+        clientRecords.find((client) => client.id === booking.clientId)?.name ??
         "Owner",
       name: task.name ?? "New task",
       description: task.description,
@@ -2595,27 +2622,11 @@ export function OperationsCalendar() {
       [bookingId]: [addOn, ...(previous[bookingId] ?? [])],
     }));
 
-    setBookingRecords((previous) =>
-      previous.map((booking) => {
-        if (booking.id !== bookingId) return booking;
-
-        const extras = booking.extraServices ?? [];
-        if (
-          extras.some(
-            (entry) =>
-              (typeof entry === "string" ? entry : entry.serviceId) ===
-              addOn.name,
-          )
-        ) {
-          return booking;
-        }
-
-        return {
-          ...booking,
-          extraServices: [...extras, addOn.name],
-        };
-      }),
-    );
+    // NOT written to the booking. `bookingAddOnState` above is what the drawer
+    // renders, and the mirror this replaced only ever edited a local array —
+    // it did not bill the add-on, which is what attaching one is for. Billing
+    // is `/api/bookings/[ref]/line-items`, which the booking page uses; wiring
+    // this drawer to it is its own change.
 
     appendAuditEntry("booking_edited", {
       bookingId,
@@ -2716,19 +2727,8 @@ export function OperationsCalendar() {
     }));
 
     if (removedName) {
-      setBookingRecords((previous) =>
-        previous.map((booking) => {
-          if (booking.id !== bookingId) return booking;
-
-          return {
-            ...booking,
-            extraServices: (booking.extraServices ?? []).filter((entry) => {
-              const name = typeof entry === "string" ? entry : entry.serviceId;
-              return name !== removedName;
-            }),
-          };
-        }),
-      );
+      // Same as adding: local to the drawer, and no longer mirrored onto a
+      // booking it never actually changed.
     }
 
     appendAuditEntry("booking_edited", {
@@ -2829,16 +2829,10 @@ export function OperationsCalendar() {
     );
     if (!confirmed) return;
 
-    setBookingRecords((previous) =>
-      previous.map((booking) =>
-        booking.id === bookingId
-          ? {
-              ...booking,
-              status: "cancelled",
-            }
-          : booking,
-      ),
-    );
+    patchBooking.mutate({
+      id: bookingId,
+      patch: { status: "cancelled", cancellationReason: reason },
+    });
 
     appendAuditEntry("booking_cancelled", {
       bookingId,
@@ -3022,23 +3016,21 @@ export function OperationsCalendar() {
       const toTime = (date: Date) =>
         `${`${date.getHours()}`.padStart(2, "0")}:${`${date.getMinutes()}`.padStart(2, "0")}`;
 
-      setBookingRecords((previous) =>
-        previous.map((booking) => {
-          if (booking.id !== event.bookingId) return booking;
-          const next = {
-            ...booking,
-            startDate: formatDateKey(newStart),
-            endDate: formatDateKey(newEnd),
-            checkInTime: toTime(newStart),
-            checkOutTime: toTime(newEnd),
-          };
-          if (newStaff) {
-            next.stylistPreference =
-              newStaff === "Unassigned" ? undefined : newStaff;
-          }
-          return next;
-        }),
-      );
+      patchBooking.mutate({
+        id: event.bookingId,
+        patch: {
+          startDate: formatDateKey(newStart),
+          endDate: formatDateKey(newEnd),
+          checkInTime: toTime(newStart),
+          checkOutTime: toTime(newEnd),
+          ...(newStaff
+            ? {
+                stylistPreference:
+                  newStaff === "Unassigned" ? undefined : newStaff,
+              }
+            : {}),
+        },
+      });
     }
 
     appendAuditEntry("booking_rescheduled", {
@@ -3158,6 +3150,20 @@ export function OperationsCalendar() {
     );
     toast.success("Day schedule exported as PDF");
   };
+
+  // ── AN EMPTY CALENDAR AND AN UNANSWERED ONE ARE DIFFERENT ────────────────
+  //
+  // The fixture was there on the first render, so this screen never had a
+  // loading state. A month grid with nothing on it reads as "no bookings",
+  // which is a statement about the business rather than about the request.
+  if (bookingsPending) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-3 bg-slate-50 p-4">
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-[70vh] w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     // Stacks below lg: side-by-side, the w-72 panel leaves a phone ~100px for
