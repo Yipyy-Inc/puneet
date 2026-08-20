@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   CalendarCheck,
   Check,
@@ -23,15 +24,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  availabilityChangeRequests as initialRequests,
-  departments,
-  scheduleEmployees,
-} from "@/data/scheduling";
-import type {
-  AvailabilityChangeRequest,
-  AvailabilityDay,
-} from "@/types/scheduling";
+  availabilityQueries,
+  schedulingQueries,
+  useDecideAvailability,
+} from "@/lib/api/scheduling";
+import { staffQueries } from "@/lib/api/staff";
+import type { AvailabilityRequest } from "@/lib/api/mappers/scheduling";
+import type { StaffProfile } from "@/types/facility-staff";
+import type { AvailabilityDay, Department } from "@/types/scheduling";
+
+/** Two letters from a name the server already assembled. */
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "??";
+}
 
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -90,7 +98,7 @@ function DayPill({ letter, kind }: { letter: string; kind: DayDiffKind }) {
   );
 }
 
-function DayPills({ req }: { req: AvailabilityChangeRequest }) {
+function DayPills({ req }: { req: AvailabilityRequest }) {
   return (
     <div className="flex items-center gap-1">
       {DAY_LETTERS.map((letter, i) => {
@@ -133,7 +141,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function DiffDetail({ req }: { req: AvailabilityChangeRequest }) {
+function DiffDetail({ req }: { req: AvailabilityRequest }) {
   const changes = req.proposedAvailability
     .filter((prop) => {
       const cur = req.currentAvailability.find(
@@ -203,18 +211,26 @@ function DiffDetail({ req }: { req: AvailabilityChangeRequest }) {
 
 function RequestRow({
   req,
+  emp,
+  dept,
   expanded,
   onToggle,
   onDecide,
 }: {
-  req: AvailabilityChangeRequest;
+  req: AvailabilityRequest;
+  /** Resolved by the container: one lookup for the list, not one per row. */
+  emp?: StaffProfile;
+  /**
+   * The requester's department. A REQUEST has none — a person belongs to a
+   * department, a proposal about their week does not — so it comes from the
+   * org chart.
+   */
+  dept?: Department;
   expanded: boolean;
   onToggle: () => void;
   onDecide: (id: string, status: "approved" | "denied", notes: string) => void;
 }) {
   const [notes, setNotes] = useState("");
-  const emp = scheduleEmployees.find((e) => e.id === req.employeeId);
-  const dept = departments.find((d) => d.id === req.departmentId);
   const isPending = req.status === "pending";
 
   return (
@@ -229,9 +245,9 @@ function RequestRow({
         <td className="py-3 pr-3 pl-5">
           <div className="flex items-center gap-3">
             <Avatar className="size-9 shrink-0">
-              <AvatarImage src={emp?.avatar} alt={emp?.name} />
+              <AvatarImage src={emp?.avatarUrl} alt={req.employeeName} />
               <AvatarFallback className="bg-muted text-xs font-semibold">
-                {emp?.initials ?? "??"}
+                {initialsOf(req.employeeName)}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
@@ -451,10 +467,36 @@ const STATUS_TABS: { value: StatusFilter; label: string }[] = [
 ];
 
 export default function AvailabilityChangesPage() {
-  const [requests, setRequests] = useState(initialRequests);
   const [tab, setTab] = useState<StatusFilter>("pending");
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Everything, once — the tabs need counts as well as rows, and proposals are
+  // not a volume where a query per tab buys anything.
+  const { data, isPending: loading } = useQuery(availabilityQueries.all("all"));
+  const { data: structure } = useQuery(schedulingQueries.structure());
+  const { data: staff } = useQuery(staffQueries.profiles());
+  const decideAvailability = useDecideAvailability();
+
+  const requests = useMemo(() => data?.requests ?? [], [data]);
+
+  // Keyed on the ROW uuid: `StaffProfile.id` is a legacy string and matches
+  // nothing a foreign key points at.
+  const staffById = useMemo(() => {
+    const map = new Map<string, StaffProfile>();
+    for (const member of staff ?? []) {
+      if (member.rowId) map.set(member.rowId, member);
+    }
+    return map;
+  }, [staff]);
+
+  const departmentByStaff = useMemo(() => {
+    const map = new Map<string, Department>();
+    for (const dept of structure?.departments ?? []) {
+      for (const id of dept.employeeIds) map.set(id, dept);
+    }
+    return map;
+  }, [structure]);
 
   const counts = useMemo(
     () => ({
@@ -479,28 +521,29 @@ export default function AvailabilityChangesPage() {
   }, [requests, tab, query]);
 
   const decide = (id: string, status: "approved" | "denied", notes: string) => {
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status,
-              reviewedAt: new Date().toISOString().split("T")[0],
-              reviewedBy: "emp-1",
-              reviewedByName: "Sarah Johnson",
-              reviewNotes: notes || undefined,
-            }
-          : r,
-      ),
-    );
-    setExpandedId(null);
-    toast.success(
-      status === "approved" ? "Availability change approved" : "Request denied",
+    decideAvailability.mutate(
+      { id, status, notes: notes || undefined },
       {
-        description:
-          status === "approved"
-            ? "New schedule will apply from the effective date."
-            : undefined,
+        onSuccess: (decided) => {
+          setExpandedId(null);
+          if (status === "denied") {
+            toast.success("Request denied");
+            return;
+          }
+          // NOT "will apply from the effective date". Approving applies the
+          // week NOW — there is no job runner to swap it over later, and a
+          // promise about a future date that nothing schedules is the shape
+          // this project keeps finding. The date is recorded and shown; the
+          // change is immediate, and the message says which.
+          const days = decided.applied?.filter((d) => d.isAvailable).length;
+          toast.success("Availability updated", {
+            description:
+              days === undefined
+                ? undefined
+                : `In effect now — available on ${days} day${days === 1 ? "" : "s"} a week.`,
+          });
+        },
+        onError: (error: Error) => toast.error(error.message),
       },
     );
   };
@@ -602,6 +645,8 @@ export default function AvailabilityChangesPage() {
                   <RequestRow
                     key={req.id}
                     req={req}
+                    emp={staffById.get(req.employeeId)}
+                    dept={departmentByStaff.get(req.employeeId)}
                     expanded={expandedId === req.id}
                     onToggle={() =>
                       setExpandedId((cur) => (cur === req.id ? null : req.id))
@@ -611,6 +656,14 @@ export default function AvailabilityChangesPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : loading ? (
+          // "No pending requests" while the list is still in flight is a claim
+          // about the data, not a description of the screen.
+          <div className="space-y-3 p-5">
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} className="h-14 w-full" />
+            ))}
           </div>
         ) : (
           <div className="text-muted-foreground flex flex-col items-center py-16 text-center">
