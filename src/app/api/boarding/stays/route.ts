@@ -62,8 +62,12 @@ export async function PUT(request: NextRequest) {
   const supabase = await createServerClient();
   const { data, error } = await supabase.rpc("assign_boarding_room", {
     p_booking_ref: input.bookingRef,
-    p_room_id: input.roomId,
-    p_override_reason: input.overrideReason ?? null,
+    // Both are `DEFAULT NULL::text` on the RPC, so omitting one and passing
+    // null reach the same value — and the regenerated types say they are
+    // optional. `roomId: null` RELEASES the kennel, which is exactly that
+    // default; nothing about releasing changes here.
+    p_room_id: input.roomId ?? undefined,
+    p_override_reason: input.overrideReason ?? undefined,
   });
 
   if (error) {

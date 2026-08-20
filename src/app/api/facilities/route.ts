@@ -203,10 +203,13 @@ export async function POST(request: NextRequest) {
     p_timezone: input.timezone,
     p_owner_name: input.ownerName,
     p_owner_email: input.ownerEmail,
-    p_owner_phone: input.ownerPhone ?? null,
-    p_contact_email: input.contactEmail || null,
-    p_contact_phone: input.contactPhone ?? null,
-    p_website: input.website ?? null,
+    // `undefined`, not `null`: every one of these params is
+    // `DEFAULT NULL::text`, so omitting it and passing null reach the same
+    // value — and the generated types now say so, which is what surfaced this.
+    p_owner_phone: input.ownerPhone ?? undefined,
+    p_contact_email: input.contactEmail || undefined,
+    p_contact_phone: input.contactPhone ?? undefined,
+    p_website: input.website ?? undefined,
     p_locations: input.locations,
     p_business_types: input.businessTypes,
   });

@@ -109,9 +109,11 @@ export async function POST(
     p_facility_id: id,
     p_module_id: parsed.data.moduleId,
     p_enabled: parsed.data.enabled,
-    p_price_override_cents: parsed.data.priceOverrideCents,
-    p_note: parsed.data.note,
-    p_expires_at: parsed.data.expiresAt,
+    // All three are `DEFAULT NULL` on the RPC. Zod gives null for an absent
+    // optional; undefined omits the argument and lands on the same default.
+    p_price_override_cents: parsed.data.priceOverrideCents ?? undefined,
+    p_note: parsed.data.note ?? undefined,
+    p_expires_at: parsed.data.expiresAt ?? undefined,
   });
 
   if (error) {
