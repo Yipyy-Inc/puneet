@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getViewer } from "@/lib/auth/viewer";
+import { activeAdminFacility } from "@/lib/api/facility-context";
 import { cloverConfig } from "@/lib/clover/config";
 import { connectionStatus } from "@/lib/clover/status";
 
@@ -30,15 +30,15 @@ import { connectionStatus } from "@/lib/clover/status";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const viewer = await getViewer().catch(() => null);
-  if (!viewer || viewer.source !== "session") {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  }
+  // Whether the DEPLOYMENT can do this at all, which is a different question
+  // from whether this facility has connected. Without it the card would offer a
+  // Connect button that answers 503, and the facility would reasonably conclude
+  // their own account was at fault.
+  const configured = cloverConfig() !== null;
 
-  // Admin ACCESS, not an admin job title — same rule as /connect, so the card
-  // and the button it renders agree about who may use them.
-  const membership = viewer.memberships.find((m) => m.accessLevel === "admin");
-  if (!membership) {
+  const active = await activeAdminFacility();
+
+  if (active.kind === "none") {
     return NextResponse.json(
       {
         error: "Only an owner or administrator can see the payment connection.",
@@ -47,14 +47,25 @@ export async function GET() {
     );
   }
 
-  const status = await connectionStatus(membership.facilityId);
+  // Two facilities and a hostname that names neither. Answered rather than
+  // guessed: the card asks which one instead of showing a Connect button whose
+  // target it cannot state.
+  if (active.kind === "ambiguous") {
+    return NextResponse.json({
+      ambiguous: true,
+      choices: active.choices,
+      configured,
+    });
+  }
+
+  const status = await connectionStatus(active.facility.id);
 
   return NextResponse.json({
     ...status,
-    // Whether the DEPLOYMENT can do this at all, which is a different question
-    // from whether this facility has connected. Without it the card would offer
-    // a Connect button that answers 503, and the facility would reasonably
-    // conclude their account was at fault.
-    configured: cloverConfig() !== null,
+    // So the card can NAME the business it is about. A screen that changes
+    // where money lands must not leave that to be inferred from the address
+    // bar.
+    facility: { name: active.facility.name, slug: active.facility.slug },
+    configured,
   });
 }

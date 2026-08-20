@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { activeAdminFacility } from "@/lib/api/facility-context";
 import { getViewer } from "@/lib/auth/viewer";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 
@@ -35,17 +36,13 @@ import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-/** Disconnecting stops a business taking card payments. Not a receptionist's. */
-// Admin ACCESS, not an admin job title — see /connect.
-
 export async function POST() {
-  const viewer = await getViewer().catch(() => null);
-  if (!viewer || viewer.source !== "session") {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  }
+  // Admin ACCESS, not an admin job title — see /connect. And the facility comes
+  // from the hostname when the caller administers more than one, because
+  // revoking the wrong business's connection stops it taking money.
+  const active = await activeAdminFacility();
 
-  const membership = viewer.memberships.find((m) => m.accessLevel === "admin");
-  if (!membership) {
+  if (active.kind === "none") {
     return NextResponse.json(
       {
         error:
@@ -54,6 +51,20 @@ export async function POST() {
       { status: 403 },
     );
   }
+
+  if (active.kind === "ambiguous") {
+    return NextResponse.json(
+      {
+        error:
+          "You administer more than one facility. Open the one you want to " +
+          "disconnect at its own address first.",
+        choices: active.choices,
+      },
+      { status: 409 },
+    );
+  }
+
+  const viewer = await getViewer().catch(() => null);
 
   if (!hasServiceRoleKey()) {
     return NextResponse.json(
@@ -64,8 +75,8 @@ export async function POST() {
 
   const admin = createAdminClient();
   const { data, error } = await admin.rpc("revoke_payment_connection", {
-    p_facility_id: membership.facilityId,
-    p_reason: `Disconnected from settings by ${viewer.email ?? "an administrator"}.`,
+    p_facility_id: active.facility.id,
+    p_reason: `Disconnected from settings by ${viewer?.email ?? "an administrator"}.`,
   });
 
   if (error) {
