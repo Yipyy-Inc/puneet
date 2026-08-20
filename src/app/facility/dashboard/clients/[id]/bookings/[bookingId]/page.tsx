@@ -180,7 +180,7 @@ export default function ClientBookingDetailPage({
   // The facility's own surcharges and discounts, from `facility_settings`.
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
-  const { rules: pricingRules } = usePricingRules();
+  const { rules: pricingRules, isPending: pricingPending } = usePricingRules();
   // Hide the booking dollar amount from staff without view_booking_financials
   // (Table 21). TODO: also strip server-side when a backend exists.
   const { maskAmount, canSee } = useFieldMask();
@@ -708,6 +708,22 @@ export default function ClientBookingDetailPage({
   };
 
   const openCheckout = () => {
+    // ── NOT WHILE THE PRICING RULES ARE IN FLIGHT ─────────────────────────
+    //
+    // `usePricingRules()` answers with the EMPTY fallback until its query
+    // lands, and empty is indistinguishable from "this facility charges no late
+    // fee". Opening the till in that window computes no late-pickup fee and
+    // presents the bare bill — silently, and only when the request happens to
+    // be slow, which is the worst way for a money bug to behave.
+    //
+    // The same window on the dashboard card disabled its Check Out button
+    // instead; here four call sites funnel through this one function, so the
+    // guard belongs in it.
+    if (pricingPending) {
+      toast.info("One moment — loading this facility's fees.");
+      return;
+    }
+
     const scheduledEndIso = `${booking.endDate}T${booking.checkOutTime ?? "12:00"}:00`;
     const petCount = Array.isArray(booking.petId) ? booking.petId.length : 1;
     const fee = computeLatePickupFee({
