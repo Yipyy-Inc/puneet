@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   CheckCircle2,
   CreditCard,
@@ -11,6 +12,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,6 +173,8 @@ export function FacilityCloverCard() {
     enabled: connection?.connected === true,
   });
 
+  const [confirming, setConfirming] = useState(false);
+
   const disconnect = useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/payments/clover/disconnect", {
@@ -175,7 +188,12 @@ export function FacilityCloverCard() {
       }
     },
     onSuccess: () => {
-      toast.success("Clover disconnected. Card payments are off.");
+      setConfirming(false);
+      // What actually happened, not "done". Yipyy's copy of the keys is gone;
+      // the merchant account itself is untouched and only they can sever that.
+      toast.success(
+        "Clover disconnected. Your stored credentials were erased.",
+      );
       void queryClient.invalidateQueries({ queryKey: ["clover"] });
       void queryClient.invalidateQueries({ queryKey: ["clover-terminals"] });
     },
@@ -418,12 +436,14 @@ export function FacilityCloverCard() {
                   <ExternalLink className="size-3.5 opacity-70" />
                 </a>
               </Button>
+              {/* Destructive now, so it asks. Disconnecting erases the stored
+                  tokens, and there is no undo short of authorising again. */}
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-destructive hover:text-destructive gap-2"
                 disabled={disconnect.isPending}
-                onClick={() => disconnect.mutate()}
+                onClick={() => setConfirming(true)}
               >
                 {disconnect.isPending && (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -431,6 +451,65 @@ export function FacilityCloverCard() {
                 Disconnect
               </Button>
             </div>
+
+            <AlertDialog open={confirming} onOpenChange={setConfirming}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Disconnect Clover from {connection.facility.name}?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 text-sm/relaxed">
+                      <p>
+                        Card payments stop immediately and the Clover
+                        credentials Yipyy has stored are erased. To take cards
+                        again you would authorise from scratch.
+                      </p>
+                      {/* Said plainly rather than discovered later by someone
+                          trying to refund a customer. */}
+                      <p>
+                        <strong>
+                          Refunds for past card payments will no longer work
+                          here.
+                        </strong>{" "}
+                        Issue them from your own Clover dashboard instead — you
+                        keep your merchant account either way.
+                      </p>
+                      {/* Clover publishes no API to revoke a token or uninstall
+                          an app for a merchant. Only they can, so only they can
+                          be told to. */}
+                      <p>
+                        This does not uninstall Yipyy at Clover — only you can
+                        do that, from your Clover dashboard under{" "}
+                        <span className="font-medium">
+                          Account &amp; Setup → App Market
+                        </span>
+                        . Do that too if you are disconnecting because something
+                        looks wrong.
+                      </p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep it connected</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-600 text-white hover:bg-red-700"
+                    disabled={disconnect.isPending}
+                    onClick={(event) => {
+                      // The dialog closes itself on action; the mutation needs
+                      // to survive that, so onSuccess closes it instead.
+                      event.preventDefault();
+                      disconnect.mutate();
+                    }}
+                  >
+                    {disconnect.isPending && (
+                      <Loader2 className="mr-2 size-3.5 animate-spin" />
+                    )}
+                    Disconnect and erase credentials
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
       </CardContent>

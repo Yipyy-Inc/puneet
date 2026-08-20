@@ -14,13 +14,27 @@ import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 // one, sandbox instead of production — has no way back, and has to ask somebody
 // with database access. That is the opposite of self-service.
 //
-// ── REVOKED, NOT DELETED ──────────────────────────────────────────────────
+// ── THE ROW IS REVOKED; THE CREDENTIALS ARE DESTROYED ─────────────────────
 //
-// `public.revoke_payment_connection` already existed and is what this calls.
-// The row stays and its status becomes `revoked`; `chargeableConnection`
-// refuses anything that is not `connected`, so card payments stop at once,
-// while the record of WHICH merchant was connected — and when — survives for
-// anyone reconciling old payments against it.
+// This used to call `revoke_payment_connection`, which flips a status and stops
+// there. That left Yipyy holding a WORKING access token — and a refresh token
+// that mints more, indefinitely, because it rotates — for a merchant account
+// whose owner had just asked us to let go of it. `validAccessToken()` does not
+// look at the status, so the keys stayed usable.
+//
+// Clover cannot be told. Checked against their docs on 2026-08-20: there is no
+// endpoint that revokes a token or uninstalls an app on a merchant's behalf —
+// only the merchant can, from their own dashboard. So the half that is ours to
+// give up is our copy, and `disconnect_payment_connection` destroys it: the
+// credential row and both Vault secrets, in the same transaction as the revoke.
+//
+// The row itself stays and becomes `revoked`, because the record of WHICH
+// merchant was connected and when is what anyone reconciling old payments needs.
+//
+// COST, stated because it is real: refunding a card payment through Yipyy stops
+// working for that facility. No money is trapped — they still own the merchant
+// account and can refund from Clover's own dashboard — and the alternative is a
+// button that says disconnected while the keys are still in the vault.
 //
 // ── THE AUTHORISATION IS HERE, BECAUSE IT CANNOT BE ANYWHERE ELSE ─────────
 //
@@ -74,7 +88,7 @@ export async function POST() {
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin.rpc("revoke_payment_connection", {
+  const { data, error } = await admin.rpc("disconnect_payment_connection", {
     p_facility_id: active.facility.id,
     p_reason: `Disconnected from settings by ${viewer?.email ?? "an administrator"}.`,
   });
@@ -83,15 +97,24 @@ export async function POST() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // The RPC returns false when it changed nothing — no connection, or one
-  // already revoked. Reporting that as success would be a screen claiming an
+  // `returns table` arrives as an array of one row.
+  const outcome = Array.isArray(data) ? data[0] : null;
+  const revoked = outcome?.connection_revoked === true;
+  const credentialsRemoved = outcome?.credentials_removed === true;
+
+  // Neither half changed: no connection, or one already revoked whose keys were
+  // already gone. Reporting that as success would be a screen claiming an
   // action it did not perform.
-  if (data !== true) {
+  //
+  // Note the OR. An already-revoked connection that still had credentials in
+  // the vault is exactly the state this change exists to clear, so destroying
+  // them counts as having done something even though the status did not move.
+  if (!revoked && !credentialsRemoved) {
     return NextResponse.json(
       { error: "There is no active Clover connection to disconnect." },
       { status: 409 },
     );
   }
 
-  return NextResponse.json({ disconnected: true });
+  return NextResponse.json({ disconnected: true, credentialsRemoved });
 }
