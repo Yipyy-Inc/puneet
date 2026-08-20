@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePricingRules } from "@/lib/api/facility-settings";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -110,6 +111,10 @@ export function BookingCard({
   primaryAction = "none",
 }: BookingCardProps) {
   const router = useRouter();
+  // The facility's own surcharges and discounts, from `facility_settings`.
+  // These used to come from localStorage, so what a customer was charged
+  // depended on which browser took the booking.
+  const { rules: pricingRules } = usePricingRules();
   // The facility's report-card settings — auto-send mode and send time. Read
   // from the fixture until now, so a facility that had turned auto-send off
   // still had it announced as scheduled.
@@ -192,6 +197,7 @@ export function BookingCard({
     earlyCheckout?: EarlyCheckoutAdjustment;
   }) => {
     const lateFee = computeLatePickupFee({
+      rules: pricingRules,
       serviceId: booking.serviceKey,
       scheduledEndIso: booking.scheduledEnd,
       actualEndIso: timestamp,

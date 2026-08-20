@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePricingRules } from "@/lib/api/facility-settings";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -338,6 +339,10 @@ export function GroomingBookingFlow({
   onOpenChange,
 }: GroomingBookingFlowProps) {
   const { client: customer } = useCurrentCustomer();
+  // The facility's own surcharges and discounts, from `facility_settings`.
+  // These used to come from localStorage, so what a customer was charged
+  // depended on which browser took the booking.
+  const { rules: pricingRules } = usePricingRules();
   const customerId = customer?.id;
 
   const router = useRouter();
@@ -948,6 +953,7 @@ export function GroomingBookingFlow({
       : undefined;
 
     return applyDynamicPricingRules({
+      rules: pricingRules,
       serviceId: "grooming",
       basePrice: totalPriceWithAddOns,
       existingExtraServices: [],

@@ -1,4 +1,19 @@
-import { getStoredPricingRules } from "@/lib/pricing-rules";
+import type { PricingRules } from "@/lib/settings/pricing";
+
+// ============================================================================
+// What a guest owes for being collected late.
+//
+// ── THE RULES ARE PASSED IN, NOT FETCHED ──────────────────────────────────
+//
+// This used to call `getStoredPricingRules(scopeKey)` itself, which read
+// localStorage — so the fee depended on which browser the front desk happened
+// to be standing at. The rules now come from `facility_settings` through
+// `usePricingRules()`, and a pure function cannot reach a React hook, so the
+// caller hands them over.
+//
+// That is also the better shape regardless: this decides money, and a function
+// that decides money should take its inputs rather than go looking for them.
+// ============================================================================
 
 export interface LateFeeResult {
   amount: number;
@@ -13,13 +28,16 @@ export interface LateFeeInput {
   actualEndIso: string;
   petCount?: number;
   basePrice?: number;
-  scopeKey?: string | number;
+  /** The facility's own rules, from `usePricingRules()`. */
+  rules: PricingRules;
 }
 
 export function computeLatePickupFee(
   input: LateFeeInput,
 ): LateFeeResult | null {
-  const rules = getStoredPricingRules(input.scopeKey);
+  const { rules } = input;
+  // No rule is the ordinary state for a facility that has not set one up, and
+  // it means no fee — never a default fee.
   if (!rules?.latePickupFees?.length) return null;
 
   const scheduled = new Date(input.scheduledEndIso);

@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState, useEffect, useMemo } from "react";
+import { usePricingRules } from "@/lib/api/facility-settings";
 import Link from "next/link";
 import {
   PawPrint,
@@ -176,6 +177,10 @@ export default function ClientBookingDetailPage({
 }) {
   const { id, bookingId: bookingIdStr } = use(params);
   const { role } = useFacilityRole();
+  // The facility's own surcharges and discounts, from `facility_settings`.
+  // These used to come from localStorage, so what a customer was charged
+  // depended on which browser took the booking.
+  const { rules: pricingRules } = usePricingRules();
   // Hide the booking dollar amount from staff without view_booking_financials
   // (Table 21). TODO: also strip server-side when a backend exists.
   const { maskAmount, canSee } = useFieldMask();
@@ -706,6 +711,7 @@ export default function ClientBookingDetailPage({
     const scheduledEndIso = `${booking.endDate}T${booking.checkOutTime ?? "12:00"}:00`;
     const petCount = Array.isArray(booking.petId) ? booking.petId.length : 1;
     const fee = computeLatePickupFee({
+      rules: pricingRules,
       serviceId: booking.service.toLowerCase(),
       scheduledEndIso,
       actualEndIso: new Date().toISOString(),

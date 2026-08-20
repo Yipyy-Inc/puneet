@@ -3995,7 +3995,7 @@ export default function SettingsPage() {
           {/* Pricing Rules */}
           {activeSection === "pricing-rules" && (
             <div className="space-y-6">
-              <PricingRulesSettings facilityId={11} />
+              <PricingRulesSettings />
             </div>
           )}
 

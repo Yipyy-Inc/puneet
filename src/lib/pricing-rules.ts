@@ -16,20 +16,12 @@ import type {
 import type { ServiceAddOn } from "@/types/facility";
 import type { Pet } from "@/types/pet";
 
-export const PRICING_RULES_STORAGE_KEY = "settings-pricing-rules";
 export const SERVICE_ADDONS_STORAGE_KEY = "settings-service-addons";
 
 function toScopeToken(scopeKey?: string | number): string | null {
   if (scopeKey == null) return null;
   const token = String(scopeKey).trim();
   return token.length > 0 ? token : null;
-}
-
-export function getPricingRulesStorageKey(scopeKey?: string | number): string {
-  const token = toScopeToken(scopeKey);
-  return token
-    ? `${PRICING_RULES_STORAGE_KEY}::facility-${token}`
-    : PRICING_RULES_STORAGE_KEY;
 }
 
 export function getServiceAddOnsStorageKey(scopeKey?: string | number): string {
@@ -97,6 +89,8 @@ interface PricingContextCustomer {
 }
 
 export interface ApplyPricingRulesInput {
+  /** The facility's own rules, from `usePricingRules()`. */
+  rules: StoredPricingRules;
   serviceId: string;
   basePrice: number;
   existingExtraServices: ExtraService[];
@@ -172,77 +166,22 @@ function uniqueKeys(keys: string[]): string[] {
   return Array.from(new Set(keys.filter((key) => key.trim().length > 0)));
 }
 
-export function getStoredPricingRules(
-  scopeKey?: string | number,
-): StoredPricingRules {
-  const defaults = defaultPricingRules();
-  const parsed = parseStoredJsonFromKeys<Partial<StoredPricingRules>>(
-    uniqueKeys([
-      getPricingRulesStorageKey(scopeKey),
-      getPricingRulesStorageKey(),
-    ]),
-  );
-
-  if (!parsed || typeof parsed !== "object") {
-    return defaults;
-  }
-
-  return {
-    discountStacking:
-      parsed.discountStacking === "apply_all_sequence"
-        ? "apply_all_sequence"
-        : "best_only",
-    multiPetDiscounts: normalizeRuleArray(
-      parsed.multiPetDiscounts,
-      defaults.multiPetDiscounts,
-    ),
-    latePickupFees: normalizeRuleArray(
-      parsed.latePickupFees,
-      defaults.latePickupFees,
-    ),
-    exceed24Hour:
-      parsed.exceed24Hour && typeof parsed.exceed24Hour === "object"
-        ? (parsed.exceed24Hour as Exceed24HourFee)
-        : defaults.exceed24Hour,
-    customFees: normalizeRuleArray(parsed.customFees, defaults.customFees),
-    multiNightDiscounts: normalizeRuleArray(
-      parsed.multiNightDiscounts,
-      defaults.multiNightDiscounts,
-    ),
-    peakDateSurcharges: normalizeRuleArray(
-      parsed.peakDateSurcharges,
-      defaults.peakDateSurcharges,
-    ),
-    roomTypeAdjustments: normalizeRuleArray(
-      parsed.roomTypeAdjustments,
-      defaults.roomTypeAdjustments,
-    ),
-    groomingConditionAdjustments: normalizeRuleArray(
-      parsed.groomingConditionAdjustments,
-      defaults.groomingConditionAdjustments,
-    ),
-    serviceBundles: normalizeRuleArray(
-      parsed.serviceBundles,
-      defaults.serviceBundles,
-    ),
-  };
-}
-
-export function saveStoredPricingRules(rules: StoredPricingRules): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(getPricingRulesStorageKey(), JSON.stringify(rules));
-}
-
-export function saveStoredPricingRulesForScope(
-  rules: StoredPricingRules,
-  scopeKey?: string | number,
-): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(
-    getPricingRulesStorageKey(scopeKey),
-    JSON.stringify(rules),
-  );
-}
+// ── THE PRICING RULES USED TO BE READ AND WRITTEN HERE ────────────────────
+//
+// `getStoredPricingRules` / `saveStoredPricingRules` / `…ForScope` are gone,
+// and so is their storage key. They read and wrote `settings-pricing-rules` in
+// localStorage, which meant a facility's surcharges and discounts were whatever
+// the browser in front of you remembered — and fell back to an ENABLED $10
+// late-pickup fee from `data/facility-config.ts` when it remembered nothing.
+//
+// They now live in `facility_settings` under the `pricing_rules` domain. Read
+// them with `usePricingRules()` and pass them in; see lib/settings/pricing.ts.
+//
+// Deleted rather than deprecated: a helper that silently disagrees with the
+// database about what a customer is charged should not be within reach.
+//
+// `getStoredServiceAddOns` below is still localStorage-backed. Add-ons are a
+// separate domain and a separate conversion.
 
 export function getStoredServiceAddOns(
   scopeKey?: string | number,
@@ -680,10 +619,18 @@ function shouldApplyCustomFee(
   }
 }
 
+/**
+ * Every surcharge and discount that applies to one booking.
+ *
+ * The rules are PASSED IN. This used to call `getStoredPricingRules()`, which
+ * read localStorage — so what a customer was charged depended on which browser
+ * took the booking. They now come from `facility_settings` via
+ * `usePricingRules()`, which a pure function cannot reach.
+ */
 export function applyDynamicPricingRules(
   input: ApplyPricingRulesInput,
 ): PricingRuleComputation {
-  const rules = getStoredPricingRules();
+  const { rules } = input;
   const basePrice = Math.max(0, input.basePrice || 0);
   const selectedPetSet = new Set(input.selectedPetIds);
 

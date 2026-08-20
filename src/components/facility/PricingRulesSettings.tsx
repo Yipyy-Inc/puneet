@@ -1,10 +1,19 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+
+import {
+  usePricingRules,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import type { PricingRules } from "@/lib/settings/pricing";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
+  TriangleAlert,
   Users,
   Moon,
   BedDouble,
@@ -22,10 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { PricingRulesPanel } from "./PricingRulesPanel";
-import {
-  getStoredPricingRules,
-  type StoredPricingRules,
-} from "@/lib/pricing-rules";
+import { type StoredPricingRules } from "@/lib/pricing-rules";
 
 // ── Category definitions ─────────────────────────────────────────────────────
 
@@ -197,9 +203,8 @@ function collectRuleText(entry: Record<string, unknown>): string {
 function getCategoryStats(
   countKey: keyof StoredPricingRules,
   serviceValues: string[],
-  facilityId?: number,
+  rules: PricingRules,
 ): CategoryStats {
-  const rules = getStoredPricingRules(facilityId);
   const data = rules[countKey];
   const serviceSet = new Set(serviceValues);
 
@@ -257,7 +262,54 @@ type CategoryWithStats = CategoryDef & {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
+// ============================================================================
+// Pricing rules, read from and written to `facility_settings`.
+//
+// They lived in localStorage until 2026-08-20, keyed by a `facilityId` prop the
+// settings page hardcoded to 11. So every facility wrote to the demo facility's
+// key, in its own browser, and a late-pickup fee set at the front desk did not
+// exist on the manager's laptop. See the banner in lib/settings/pricing.ts.
+//
+// The prop is gone rather than corrected: the facility now comes from the
+// session, server-side, which is the rule `check:facility-from-session` exists
+// to keep.
+// ============================================================================
+
+export function PricingRulesSettings() {
+  const { rules, configured, isPending } = usePricingRules();
+  const saveSetting = useSaveFacilitySetting();
+
+  // Every keystroke in the panel reports the whole domain, and each report is a
+  // PATCH. Debounced so typing an amount is one write rather than one per
+  // digit; the ref survives re-renders, which a plain timeout would not.
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persist = useCallback(
+    (next: PricingRules) => {
+      if (pending.current) clearTimeout(pending.current);
+      pending.current = setTimeout(() => {
+        saveSetting.mutate(
+          { domain: "pricing_rules", value: next },
+          {
+            onError: (error) =>
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Those pricing rules were not saved.",
+              ),
+          },
+        );
+      }, 600);
+    },
+    [saveSetting],
+  );
+
+  useEffect(
+    () => () => {
+      if (pending.current) clearTimeout(pending.current);
+    },
+    [],
+  );
+
   const uniqueCategories = useMemo(() => {
     const seenIds = new Set<string>();
     const seenSections = new Set<string>();
@@ -303,7 +355,7 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
         const { activeCount, warningCount, searchText } = getCategoryStats(
           category.countKey,
           serviceValues,
-          facilityId,
+          rules,
         );
         const status: CategoryStatus =
           warningCount > 0
@@ -313,7 +365,7 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
               : "inactive";
         return { ...category, activeCount, warningCount, status, searchText };
       }),
-    [uniqueCategories, facilityId, serviceValues],
+    [uniqueCategories, rules, serviceValues],
   );
 
   const groups = categoriesWithCounts.reduce(
@@ -398,8 +450,41 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
     });
   };
 
+  // ── NOTHING RENDERS UNTIL THE RULES HAVE ARRIVED ────────────────────────
+  //
+  // Not cosmetic. `PricingRulesPanel` seeds ten `useState` calls from these
+  // props, and a `useState` initialiser runs once — so mounting it against the
+  // empty fallback and letting the query land afterwards would leave the screen
+  // showing no rules whatever the facility had saved, and the first edit would
+  // report that emptiness back as the new value. The facility's pricing would
+  // be erased by opening the page.
+  if (isPending) {
+    return (
+      <div className="w-full space-y-4">
+        <div className="grid items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <Skeleton className="h-[420px] w-full rounded-xl" />
+          <Skeleton className="h-[420px] w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-4">
+      {/* "No rules" and "not set up yet" look identical on screen, and one of
+          them is a decision. The fallback is empty on purpose — inheriting the
+          fixture's $10 late fee would charge customers a number nobody at this
+          business agreed to. */}
+      {!configured && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
+          <p className="text-sm/relaxed text-amber-900 dark:text-amber-200">
+            No pricing rules have been set up for this facility yet, so no
+            surcharges or discounts are being applied. Anything you change here
+            is saved for everyone, on every device.
+          </p>
+        </div>
+      )}
       <div className="grid items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
         <div className="xl:sticky xl:top-20">
           <Card className="border-slate-200/90 shadow-sm">
@@ -615,7 +700,8 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
               >
                 <PricingRulesPanel
                   serviceType="all"
-                  facilityId={facilityId}
+                  rules={rules}
+                  onChange={persist}
                   hideSectionHeader
                   showSections={[
                     (activeCategory?.section ?? "stacking") as
