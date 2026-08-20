@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertCircle,
   CheckCircle2,
@@ -33,13 +35,9 @@ import {
   reconcileBatch,
   type AttendanceStatus,
 } from "@/lib/scheduling-attendance";
-import {
-  departments,
-  positions as allPositions,
-  scheduleEmployees,
-  scheduleShifts,
-  timeClockEntries,
-} from "@/data/scheduling";
+import { clockQueries, schedulingQueries } from "@/lib/api/scheduling";
+import { staffQueries } from "@/lib/api/staff";
+import type { TimeClockEntry } from "@/types/scheduling";
 
 const statusColor: Record<AttendanceStatus, string> = {
   on_time:
@@ -76,20 +74,68 @@ export function AttendanceView() {
 
   const today = new Date().toISOString().split("T")[0];
 
+  // ── FROM POSTGRES ───────────────────────────────────────────────────────
+  //
+  // This screen grades people LATE and NO-SHOW. Until 2026-08-21 it did so
+  // against `scheduleShifts` and `timeClockEntries` fixtures — a table of
+  // judgements about invented people, sitting in a facility's own dashboard
+  // under the heading Attendance.
+  const { data: structure } = useQuery(schedulingQueries.structure());
+  const { data: roster, isPending: rosterPending } = useQuery(
+    schedulingQueries.shifts(cutoffDate, today),
+  );
+  const { data: clock } = useQuery(clockQueries.state(cutoffDate, today));
+  const { data: staff } = useQuery(staffQueries.profiles());
+
+  const departments = useMemo(() => structure?.departments ?? [], [structure]);
+  const allPositions = useMemo(() => structure?.positions ?? [], [structure]);
+
+  const scheduleEmployees = useMemo(
+    () =>
+      (staff ?? []).map((member) => ({
+        // `rowId`, not `id` — the shift's foreign key is the uuid.
+        id: member.rowId ?? member.id,
+        name: `${member.firstName} ${member.lastName}`.trim(),
+        avatar: member.avatarUrl,
+        initials:
+          [member.firstName, member.lastName]
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? "")
+            .join("") || "—",
+      })),
+    [staff],
+  );
+
   const scopedShifts = useMemo(
     () =>
-      scheduleShifts.filter(
+      (roster?.shifts ?? []).filter(
         (s) =>
-          s.date >= cutoffDate &&
-          s.date <= today &&
-          (departmentFilter === "all" || s.departmentId === departmentFilter),
+          departmentFilter === "all" || s.departmentId === departmentFilter,
       ),
-    [cutoffDate, today, departmentFilter],
+    [roster, departmentFilter],
+  );
+
+  // `status` is derived, not stored — `clocked_out_at` null or not is the fact,
+  // and a second copy of it is a second thing to get wrong.
+  const entries = useMemo<TimeClockEntry[]>(
+    () =>
+      (clock?.entries ?? []).map((entry) => ({
+        id: entry.id,
+        shiftId: entry.shiftId ?? "",
+        employeeId: entry.employeeId,
+        date: entry.clockedInAt.slice(0, 10),
+        clockedInAt: entry.clockedInAt,
+        clockedOutAt: entry.clockedOutAt,
+        actualMinutes: entry.minutesWorked,
+        status: entry.clockedOutAt ? "clocked_out" : "clocked_in",
+      })),
+    [clock],
   );
 
   const { records, summary } = useMemo(
-    () => reconcileBatch(scopedShifts, timeClockEntries),
-    [scopedShifts],
+    () => reconcileBatch(scopedShifts, entries),
+    [scopedShifts, entries],
   );
 
   const visible = useMemo(() => {
@@ -215,7 +261,15 @@ export function AttendanceView() {
       {/* Records table */}
       <Card>
         <CardContent className="p-0">
-          {visible.length === 0 ? (
+          {rosterPending ? (
+            // "No attendance records" while the rota is still loading is a
+            // statement about whether anybody turned up.
+            <div className="space-y-3 p-6">
+              {[0, 1, 2, 3].map((row) => (
+                <Skeleton key={row} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : visible.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center py-12 text-center">
               <ClipboardList className="mb-3 size-10 opacity-30" />
               <p className="font-medium">No attendance records</p>

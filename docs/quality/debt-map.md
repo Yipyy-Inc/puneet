@@ -2751,6 +2751,26 @@ loaded, not that there are that many defects.
 - `ReportsView.tsx` is the one that remains, and it is blocked, not merely
   pending. See the next item.
 
+### 🟠 Attendance grades people late using the BROWSER's timezone
+
+`reconcileShift` in [src/lib/scheduling-attendance.ts](../../src/lib/scheduling-attendance.ts)
+does `new Date(\`${shift.date}T${shift.startTime}:00\`)` — a date string with no
+zone, which JavaScript parses in whatever zone the VIEWER is in. The shift's
+date and time came out of the facility mapper in the facility's zone and are
+then re-parsed locally.
+
+**Why it's risky:** a manager checking the rota from another timezone sees
+everybody arriving hours late or not at all. The output of this function is
+`late`, `no_show` and `early_departure` against named people — an employment
+record, computed from where the reader happens to be sitting.
+
+The time-clock conversion (2026-08-21) made this reachable: the function now
+receives real entries instead of a fixture nobody looked at.
+
+**Do instead:** pass the facility timezone in and use `instantFromWallClock`
+from [src/lib/time/facility-time.ts](../../src/lib/time/facility-time.ts), the
+same helper the shift mapper uses. Do not "fix" it by storing a local time.
+
 ### 🟡 The scheduling nav gates on a fourth permission vocabulary
 
 `src/app/facility/dashboard/services/scheduling/layout.tsx` gates its tabs on
@@ -2809,13 +2829,13 @@ person's permissions inside a spec.
 `ScheduleView` now reads and writes `staff_shifts`. Still local to the component
 or to a fixture, and clearly marked in the file:
 
-| What                      | Where it should live                                                                                |
-| ------------------------- | --------------------------------------------------------------------------------------------------- |
-| Holiday rates             | a settings domain — hardcoded array at the top of the file, dated April 2026                        |
-| ~~Employee availability~~ | ~~fixture~~ — **done 2026-08-21**: `staff_availability` plus a proposal/approval flow               |
-| Shift opportunities       | fixture + local state; the SHIFT it posts is now real, the opportunity is not                       |
-| Time clock                | local state; there is still no clock table, though `staff_hr_config` has `require_clock_in_confirm` |
-| Labour cost               | `calculateLaborCost` fixture — the real figures are in `facility_position_pay`                      |
+| What                      | Where it should live                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| Holiday rates             | a settings domain — hardcoded array at the top of the file, dated April 2026          |
+| ~~Employee availability~~ | ~~fixture~~ — **done 2026-08-21**: `staff_availability` plus a proposal/approval flow |
+| Shift opportunities       | fixture + local state; the SHIFT it posts is now real, the opportunity is not         |
+| ~~Time clock~~            | ~~local state, no table~~ — **done 2026-08-21**: `staff_time_clock_entries`           |
+| Labour cost               | `calculateLaborCost` fixture — the real figures are in `facility_position_pay`        |
 
 **Why it's risky:** these render beside real data and look equally real. The
 labour-cost tile reads **$0** against a rota that has actual wages behind it.

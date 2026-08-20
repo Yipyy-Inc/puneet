@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useClock } from "@/lib/employee/clock-store";
+import { useOwnClock } from "@/lib/api/scheduling";
 
 function elapsed(iso: string, nowMs: number): string {
   const mins = Math.max(
@@ -17,8 +17,11 @@ function elapsed(iso: string, nowMs: number): string {
 // unnoticed. Lives beside ClockInOut in the employee header. Clocked-in is
 // deliberately loud (green pulsing dot + live elapsed time driven off
 // clockedInAt); clocked-out is a subtle, quiet label.
-export function OnTheClockPill({ staffId }: { staffId: string }) {
-  const { clockedIn, clockedInAt } = useClock(staffId);
+export function OnTheClockPill() {
+  // No `staffId` prop any more: who is asking comes from the session, and a
+  // component that takes an id is a component that can be pointed at somebody
+  // else's clock.
+  const { clockedIn, clockedInAt, isPending } = useOwnClock();
   const [now, setNow] = useState(() => Date.now());
 
   // Refresh the elapsed timer every 30s while on the clock (an immediate async
@@ -34,6 +37,18 @@ export function OnTheClockPill({ staffId }: { staffId: string }) {
       clearInterval(id);
     };
   }, [clockedIn, clockedInAt]);
+
+  // "Off the clock" before the answer has arrived is a statement about
+  // somebody's working day, and the in-memory store this replaces made it
+  // instantly and confidently every time the page loaded.
+  if (isPending) {
+    return (
+      <span className="text-muted-foreground hidden items-center gap-1.5 text-xs sm:inline-flex">
+        <span className="bg-muted-foreground/20 size-1.5 animate-pulse rounded-full" />
+        Checking…
+      </span>
+    );
+  }
 
   if (!clockedIn) {
     return (

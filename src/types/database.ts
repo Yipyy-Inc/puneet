@@ -5459,6 +5459,77 @@ export type Database = {
           },
         ];
       };
+      staff_time_clock_entries: {
+        Row: {
+          clocked_in_at: string;
+          clocked_out_at: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          minutes_worked: number | null;
+          notes: string | null;
+          shift_id: string | null;
+          source: Database["public"]["Enums"]["time_clock_source"];
+          staff_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          clocked_in_at?: string;
+          clocked_out_at?: string | null;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          minutes_worked?: number | null;
+          notes?: string | null;
+          shift_id?: string | null;
+          source?: Database["public"]["Enums"]["time_clock_source"];
+          staff_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          clocked_in_at?: string;
+          clocked_out_at?: string | null;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          minutes_worked?: number | null;
+          notes?: string | null;
+          shift_id?: string | null;
+          source?: Database["public"]["Enums"]["time_clock_source"];
+          staff_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_time_clock_entries_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_time_clock_entries_shift_id_fkey";
+            columns: ["shift_id"];
+            isOneToOne: false;
+            referencedRelation: "staff_shifts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_time_clock_entries_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "staff_time_clock_entries_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       staff_time_off_requests: {
         Row: {
           created_at: string;
@@ -6511,6 +6582,7 @@ export type Database = {
         | "past_due"
         | "suspended"
         | "cancelled";
+      time_clock_source: "self" | "manager";
       time_off_type:
         | "vacation"
         | "sick_leave"
@@ -6707,6 +6779,7 @@ export const Constants = {
         "suspended",
         "cancelled",
       ],
+      time_clock_source: ["self", "manager"],
       time_off_type: [
         "vacation",
         "sick_leave",

@@ -36,8 +36,8 @@ There **is** a test runner: Playwright, 51 spec files under [tests/e2e/](tests/e
 | `bun run format:check`                | Prettier check; `bun run format` to write                                                           |
 | `bun run build`                       | `next build` — full production build (CI runs this)                                                 |
 | `bun run prune`                       | Knip — dead-code / unused-export report                                                             |
-| `bun run test:e2e`                    | The whole Playwright suite (58 files, ~45 min, one worker — see the debt map before trusting a run) |
-| `bun run test:e2e:ci`                 | The 26 specs CI runs on every PR — auth & access, daily operations, scheduling; ~15 min             |
+| `bun run test:e2e`                    | The whole Playwright suite (59 files, ~45 min, one worker — see the debt map before trusting a run) |
+| `bun run test:e2e:ci`                 | The 27 specs CI runs on every PR — auth & access, daily operations, scheduling; ~17 min             |
 | `bun run check:pricing`               | Project-specific pricing-consistency script                                                         |
 | `bun run check:settings-wiring`       | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                          |
 | `bun run check:rls-writes`            | Fails if an API update/delete cannot tell an RLS refusal from a no-op                               |
@@ -48,7 +48,7 @@ There **is** a test runner: Playwright, 51 spec files under [tests/e2e/](tests/e
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
 
-**Touching auth, a portal gate, a permission or an identity — or bookings, boarding, daycare, rooms, the care log, the calendar or the roster?** Run `bun run test:e2e:ci` too. It is 26 specs now, not 10: the 10 auth & access ones, the 11 daily-operations ones added on 2026-08-20, and the 5 scheduling ones added on 2026-08-20/21. Each batch earned its place on its first run — the operations set found a production 500 on booking creation, a checkout that priced with no late fee while settings loaded, and an empty board caused by reading a PostgREST to-one relation as an array; the scheduling set found a UTC window that dropped every night shift out of its own day, a wage that could be read but never written, and a groomer told they could see labour cost.
+**Touching auth, a portal gate, a permission or an identity — or bookings, boarding, daycare, rooms, the care log, the calendar or the roster?** Run `bun run test:e2e:ci` too. It is 27 specs now, not 10: the 10 auth & access ones, the 11 daily-operations ones added on 2026-08-20, and the 6 scheduling ones added on 2026-08-20/21. Each batch earned its place on its first run — the operations set found a production 500 on booking creation, a checkout that priced with no late fee while settings loaded, and an empty board caused by reading a PostgREST to-one relation as an array; the scheduling set found a UTC window that dropped every night shift out of its own day, a wage that could be read but never written, and a groomer told they could see labour cost.
 
 CI runs exactly that command, but **the e2e job is not one of the four required status checks** — it reports, it does not gate, and pushes go straight to `main` regardless. Running it locally first is the only thing that actually stops a bad commit. Fastest locally against a built server rather than the dev one:
 
