@@ -22,7 +22,7 @@ import {
   positions,
   timeClockEntries,
 } from "@/data/scheduling";
-import { hoursByEmployee } from "@/lib/scheduling-reports";
+import { FIXTURE_TIMEZONE, hoursByEmployee } from "@/lib/scheduling-reports";
 import {
   getSalesByCategory,
   getTopProducts,
@@ -935,6 +935,8 @@ export function staffPerformance(
       positions,
       timeClockEntries,
       { start: fromStr, end: toStr },
+      // Fixture data — see FIXTURE_TIMEZONE and the debt map.
+      FIXTURE_TIMEZONE,
     );
     for (const h of hours) {
       const row = staff.get(normalizeName(h.employee.name));
@@ -971,6 +973,8 @@ export function laborCost(
       positions,
       timeClockEntries,
       { start: fromStr, end: toStr },
+      // Fixture data — see FIXTURE_TIMEZONE and the debt map.
+      FIXTURE_TIMEZONE,
     );
     const perf = staffPerformance(range, opts);
     const revenueByName = new Map(

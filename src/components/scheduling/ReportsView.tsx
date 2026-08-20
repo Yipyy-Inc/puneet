@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  FIXTURE_TIMEZONE,
   hoursByEmployee,
   hoursByDepartment,
   coverageByDayHour,
@@ -147,6 +148,9 @@ export function ReportsView() {
         allPositions,
         timeClockEntries,
         range,
+        // Fixture data — see the constant, and the debt map for why this screen
+        // cannot be half-converted.
+        FIXTURE_TIMEZONE,
       ),
     [scopedShifts, scopedEmployees, range],
   );
@@ -214,7 +218,7 @@ export function ReportsView() {
   const labor = useMemo(() => laborCost(drRange), [drRange]);
   const grooming = useMemo(() => groomingAnalytics(drRange), [drRange]);
   const punct = useMemo(
-    () => punctuality(scopedShifts, timeClockEntries, range),
+    () => punctuality(scopedShifts, timeClockEntries, range, FIXTURE_TIMEZONE),
     [scopedShifts, range],
   );
 

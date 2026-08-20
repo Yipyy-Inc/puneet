@@ -133,9 +133,12 @@ export function AttendanceView() {
     [clock],
   );
 
+  // The FACILITY's zone, returned by the shifts route because the client has no
+  // other source for it. Without this the screen graded people late for being
+  // read from a different city.
   const { records, summary } = useMemo(
-    () => reconcileBatch(scopedShifts, entries),
-    [scopedShifts, entries],
+    () => reconcileBatch(scopedShifts, entries, roster?.timeZone ?? "UTC"),
+    [scopedShifts, entries, roster],
   );
 
   const visible = useMemo(() => {

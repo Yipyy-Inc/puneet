@@ -2751,25 +2751,27 @@ loaded, not that there are that many defects.
 - `ReportsView.tsx` is the one that remains, and it is blocked, not merely
   pending. See the next item.
 
-### 🟠 Attendance grades people late using the BROWSER's timezone
+### ✅ ~~Attendance grades people late using the BROWSER's timezone~~
 
-`reconcileShift` in [src/lib/scheduling-attendance.ts](../../src/lib/scheduling-attendance.ts)
-does `new Date(\`${shift.date}T${shift.startTime}:00\`)` — a date string with no
-zone, which JavaScript parses in whatever zone the VIEWER is in. The shift's
-date and time came out of the facility mapper in the facility's zone and are
-then re-parsed locally.
+**Fixed 2026-08-21.** `reconcileShift` now takes the facility timezone (required
+— a default is how a caller keeps the bug) and derives both scheduled instants
+through `shiftInstants`, the same helper that WRITES a shift. `/api/scheduling/shifts`
+returns `timeZone` because the client had no other source for it.
 
-**Why it's risky:** a manager checking the rota from another timezone sees
-everybody arriving hours late or not at all. The output of this function is
-`late`, `no_show` and `early_departure` against named people — an employment
-record, computed from where the reader happens to be sitting.
+A second bug came out with it: a shift running past midnight ENDS THE NEXT DAY,
+and the old code compared a 06:00 clock-out against 06:00 on the shift's own
+date — grading a night worker 1440 minutes out.
 
-The time-clock conversion (2026-08-21) made this reachable: the function now
-receives real entries instead of a fixture nobody looked at.
+`scheduling-attendance.spec.ts` covers both, and was **verified to fail on the
+old code** before being kept: the runner is not in Toronto (Africa/Algiers
+locally, UTC in CI), so a clock-in at the exact scheduled instant read as hours
+early. It would only be blind on a machine already set to the facility's zone.
 
-**Do instead:** pass the facility timezone in and use `instantFromWallClock`
-from [src/lib/time/facility-time.ts](../../src/lib/time/facility-time.ts), the
-same helper the shift mapper uses. Do not "fix" it by storing a local time.
+**Still fixture:** `ReportsView` and `report-data-sources` pass
+`FIXTURE_TIMEZONE` from [scheduling-reports.ts](../../src/lib/scheduling-reports.ts),
+named so the fixture-ness is visible at each call site rather than a bare
+string. It goes when those two convert — see the entry above for why they
+cannot be half-converted.
 
 ### 🟡 The scheduling nav gates on a fourth permission vocabulary
 

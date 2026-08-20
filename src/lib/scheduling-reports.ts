@@ -47,12 +47,28 @@ export interface EmployeeHoursRow {
   cost: number;
 }
 
+/**
+ * The zone to reconcile FIXTURE data in.
+ *
+ * `ReportsView` and `report-data-sources` still read `scheduleShifts` and
+ * `timeClockEntries` from src/data — see the debt map, where the reason they
+ * cannot be half-converted is written down. Fixture dates are self-consistent
+ * in any single zone, and every seeded facility is Toronto, so this is the
+ * honest constant rather than a silent `new Date()` in the reader's zone.
+ *
+ * A real facility's zone comes from `/api/scheduling/shifts`. When those two
+ * surfaces convert, this goes with them.
+ */
+export const FIXTURE_TIMEZONE = "America/Toronto";
+
 export function hoursByEmployee(
   shifts: ScheduleShift[],
   employees: ScheduleEmployee[],
   positions: Position[],
   entries: TimeClockEntry[],
   range: { start: string; end: string },
+  /** The FACILITY's zone. Required, so a caller cannot keep the old bug. */
+  timeZone: string,
 ): EmployeeHoursRow[] {
   const scoped = shifts.filter(
     (s) =>
@@ -60,7 +76,7 @@ export function hoursByEmployee(
       s.employeeId &&
       inRange(s.date, range.start, range.end),
   );
-  const { records } = reconcileBatch(scoped, entries);
+  const { records } = reconcileBatch(scoped, entries, timeZone);
 
   return employees
     .map((employee) => {
@@ -304,6 +320,8 @@ export function punctuality(
   shifts: ScheduleShift[],
   entries: TimeClockEntry[],
   range: { start: string; end: string },
+  /** The FACILITY's zone. Required, so a caller cannot keep the old bug. */
+  timeZone: string,
 ): PunctualityStats {
   const scoped = shifts.filter(
     (s) =>
@@ -311,7 +329,7 @@ export function punctuality(
       s.employeeId &&
       inRange(s.date, range.start, range.end),
   );
-  const { records } = reconcileBatch(scoped, entries);
+  const { records } = reconcileBatch(scoped, entries, timeZone);
   const clocked = records.filter((r) => r.actualHours !== null);
   const onTime = clocked.filter((r) => r.status === "on_time").length;
   const late = clocked.filter((r) => r.status === "late").length;

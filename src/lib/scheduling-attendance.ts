@@ -1,5 +1,28 @@
+import { shiftInstants } from "@/lib/api/mappers/scheduling";
 import { computeShiftHours } from "@/lib/scheduling-utils";
 import type { ScheduleShift, TimeClockEntry } from "@/types/scheduling";
+
+// ============================================================================
+// Did they turn up, and when.
+//
+// ── THIS FILE OUTPUTS `late` AND `no_show` ABOUT NAMED PEOPLE ─────────────
+//
+// So two things it used to get wrong were not rounding errors.
+//
+// It did `new Date(`${shift.date}T${shift.startTime}:00`)` — a date string
+// with NO ZONE, which JavaScript parses in whatever zone the VIEWER is in. A
+// manager opening the rota from another city saw the whole team arriving hours
+// late, or not at all. The times came out of the shift mapper in the facility's
+// zone and were then re-parsed locally, which undid it.
+//
+// And a shift's END is on the NEXT DAY when it runs past midnight. Comparing a
+// 06:00 clock-out against "06:00 on the shift's date" made a night worker look
+// 1440 minutes early. `shiftInstants` — the same helper the mapper uses to
+// WRITE a shift — is the one place that pairing is decided.
+//
+// The timezone is therefore required, not defaulted. A default is how a caller
+// keeps the bug without noticing.
+// ============================================================================
 
 export type AttendanceStatus =
   | "on_time"
@@ -30,14 +53,11 @@ const EARLY_DEPARTURE_THRESHOLD_MIN = 5;
 const STAYED_LATE_THRESHOLD_MIN = 15;
 const NO_SHOW_GRACE_MIN = 30;
 
-function diffMin(
-  actualIso: string,
-  scheduledDate: string,
-  scheduledTime: string,
-): number {
-  const scheduled = new Date(`${scheduledDate}T${scheduledTime}:00`);
-  const actual = new Date(actualIso);
-  return Math.round((actual.getTime() - scheduled.getTime()) / 60_000);
+/** Minutes between an actual instant and a scheduled instant. */
+function diffMin(actualIso: string, scheduledIso: string): number {
+  return Math.round(
+    (new Date(actualIso).getTime() - new Date(scheduledIso).getTime()) / 60_000,
+  );
 }
 
 /**
@@ -47,6 +67,7 @@ function diffMin(
 export function reconcileShift(
   shift: ScheduleShift,
   entry: TimeClockEntry | null,
+  timeZone: string,
   now: Date = new Date(),
 ): AttendanceRecord {
   const scheduledHours = computeShiftHours(
@@ -55,11 +76,21 @@ export function reconcileShift(
     shift.breakMinutes,
   );
 
+  // The one place a shift's wall-clock times become instants for this file —
+  // in the FACILITY's zone, and with the end on the next day when it runs past
+  // midnight. Both are what `shiftInstants` already decides when a shift is
+  // written, so a shift cannot mean one thing going in and another coming out.
+  const scheduled = shiftInstants(
+    shift.date,
+    shift.startTime,
+    shift.endTime,
+    timeZone,
+  );
+
   if (!entry) {
     // Decide if it's a no-show (scheduled start passed by grace) or just upcoming.
-    const scheduledStart = new Date(`${shift.date}T${shift.startTime}:00`);
     const minutesPastStart =
-      (now.getTime() - scheduledStart.getTime()) / 60_000;
+      (now.getTime() - new Date(scheduled.starts_at).getTime()) / 60_000;
     return {
       shift,
       entry: null,
@@ -73,10 +104,10 @@ export function reconcileShift(
   }
 
   const clockInDelta = entry.clockedInAt
-    ? diffMin(entry.clockedInAt, shift.date, shift.startTime)
+    ? diffMin(entry.clockedInAt, scheduled.starts_at)
     : null;
   const clockOutDelta = entry.clockedOutAt
-    ? diffMin(entry.clockedOutAt, shift.date, shift.endTime)
+    ? diffMin(entry.clockedOutAt, scheduled.ends_at)
     : null;
 
   const actualHours = entry.actualMinutes ? entry.actualMinutes / 60 : null;
@@ -94,8 +125,7 @@ export function reconcileShift(
     if (
       entry.clockedInAt &&
       !entry.clockedOutAt &&
-      now.getTime() >
-        new Date(`${shift.date}T${shift.endTime}:00`).getTime() + 15 * 60_000
+      now.getTime() > new Date(scheduled.ends_at).getTime() + 15 * 60_000
     ) {
       status = "missing_clock_out";
     }
@@ -146,13 +176,14 @@ export interface ReconciliationSummary {
 export function reconcileBatch(
   shifts: ScheduleShift[],
   entries: TimeClockEntry[],
+  timeZone: string,
   now: Date = new Date(),
 ): { records: AttendanceRecord[]; summary: ReconciliationSummary } {
   const records = shifts
     .filter((s) => s.employeeId && s.status !== "cancelled")
     .map((s) => {
       const entry = entries.find((e) => e.shiftId === s.id) ?? null;
-      return reconcileShift(s, entry, now);
+      return reconcileShift(s, entry, timeZone, now);
     });
 
   const summary: ReconciliationSummary = {
