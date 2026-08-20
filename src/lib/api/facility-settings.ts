@@ -21,6 +21,7 @@ import type {
   ModuleConfig,
   TipConfig,
 } from "@/types/facility";
+import type { PricingRules } from "@/lib/settings/pricing";
 import type { TaxConfig } from "@/lib/settings/tax";
 
 // ============================================================================
@@ -49,6 +50,7 @@ export interface FacilitySettings {
   booking_rules: SettingState<BookingRules>;
   tip_config: SettingState<TipConfig>;
   tax_config: SettingState<TaxConfig>;
+  pricing_rules: SettingState<PricingRules>;
   booking_flow: SettingState<FacilityBookingFlowConfig>;
   daycare_config: SettingState<ModuleConfig>;
   boarding_config: SettingState<ModuleConfig>;
@@ -115,6 +117,30 @@ export const facilitySettingsQueries = {
 export function useFacilitySettings() {
   const { data, isPending, error } = useQuery(facilitySettingsQueries.all());
   return { settings: data ?? fallbackSettings(), isPending, error };
+}
+
+/**
+ * The facility's surcharges and discounts.
+ *
+ * A named hook rather than five call sites reaching into
+ * `settings.pricing_rules.value` themselves, because these decide what a
+ * customer is CHARGED — and `configured` has to travel with them. A screen
+ * showing no late fee because the facility chose none, and one showing no late
+ * fee because the settings have not loaded, must not look the same to the code
+ * that puts a number on a bill.
+ */
+export function usePricingRules(): {
+  rules: PricingRules;
+  /** False means no row: no fees at all, not "we could not tell". */
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    rules: settings.pricing_rules.value,
+    configured: settings.pricing_rules.configured,
+    isPending,
+  };
 }
 
 /** Save one whole domain. The response is the STORED value. */

@@ -162,6 +162,43 @@ function departingTodayBody(roomId: string) {
  */
 const TOO_EARLY_FOR_A_LATE_FEE = facilityClock().minutesIntoDay < 150;
 
+/**
+ * The `pricing_rules` domain with nothing in it — what the API reports for a
+ * facility that has never configured any, and what this spec restores.
+ */
+const EMPTY_PRICING_RULES = {
+  discountStacking: "best_only",
+  multiPetDiscounts: [],
+  latePickupFees: [],
+  exceed24Hour: {
+    id: "exceed-24h",
+    enabled: false,
+    amount: 0,
+    scope: "per_pet",
+  },
+  customFees: [],
+  multiNightDiscounts: [],
+  peakDateSurcharges: [],
+  roomTypeAdjustments: [],
+  groomingConditionAdjustments: [],
+  serviceBundles: [],
+};
+
+/** $10 per 30 minutes after 15 minutes' grace — enough to show on a bill. */
+const LATE_FEE_RULE = {
+  id: "e2e-late-pickup",
+  name: "Late Pickup Fee",
+  enabled: true,
+  condition: "late_pickup",
+  graceMinutes: 15,
+  feeType: "per_30min",
+  amount: 10,
+  maxFee: 50,
+  scope: "per_pet",
+  basedOn: "business_hours",
+  applicableServices: ["boarding", "daycare"],
+};
+
 async function createBooking(
   page: import("@playwright/test").Page,
   body: Record<string, unknown>,
@@ -285,7 +322,15 @@ test.afterAll(async ({ browser }) => {
       });
       if (cancel.ok()) cancelled++;
     }
-    console.log(`cleanup: ${cleared} stay(s) cleared, ${cancelled} cancelled`);
+    // The pricing rules go back to empty. One Postgres, and a late fee left
+    // configured would silently change what every other spec's checkout costs.
+    const restored = await page.request.patch("/api/facility/settings", {
+      data: { domain: "pricing_rules", value: EMPTY_PRICING_RULES },
+    });
+    console.log(
+      `cleanup: ${cleared} stay(s) cleared, ${cancelled} cancelled, ` +
+        `pricing rules ${restored.ok() ? "restored" : "NOT RESTORED"}`,
+    );
   } finally {
     await page.close();
   }
@@ -416,6 +461,28 @@ test.describe("the facility home board", () => {
       "it is before 02:30 in the facility's timezone, so nothing departing today can be overdue yet",
     );
     await signIn(page, ACCOUNTS.owner);
+
+    // ── THE FACILITY HAS TO HAVE A LATE FEE BEFORE ONE CAN BE CHARGED ─────
+    //
+    // Pricing rules moved from localStorage into `facility_settings` on
+    // 2026-08-20, and the fallback there is EMPTY — deliberately, because the
+    // old fixture default charged every facility on the platform a $10 late fee
+    // nobody had agreed to.
+    //
+    // So this configures the rule it is about to assert on, which is a stronger
+    // test than the one it replaces: it now proves the whole chain — a row in
+    // facility_settings reaching the booking card and landing on the bill —
+    // where before it proved that a seed file had a number in it.
+    const savedRule = await page.request.patch("/api/facility/settings", {
+      data: {
+        domain: "pricing_rules",
+        value: {
+          ...EMPTY_PRICING_RULES,
+          latePickupFees: [LATE_FEE_RULE],
+        },
+      },
+    });
+    expect(savedRule.status(), await savedRule.text()).toBe(200);
 
     const room = await freeRoom(page);
     const created = await createBooking(page, departingTodayBody(room));

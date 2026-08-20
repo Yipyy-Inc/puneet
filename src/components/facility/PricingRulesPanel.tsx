@@ -44,12 +44,8 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import {
-  getStoredServiceAddOns,
-  getStoredPricingRules,
-  saveStoredPricingRules,
-  saveStoredPricingRulesForScope,
-} from "@/lib/pricing-rules";
+import { getStoredServiceAddOns } from "@/lib/pricing-rules";
+import type { PricingRules } from "@/lib/settings/pricing";
 import type {
   MultiPetDiscountRule,
   LatePickupFee,
@@ -337,7 +333,17 @@ type PricingSection =
 
 interface PricingRulesPanelProps {
   serviceType: string;
-  facilityId?: number;
+  /**
+   * The facility's stored rules.
+   *
+   * A PROP, not a lookup. This used to call `getStoredPricingRules(facilityId)`
+   * and write straight back to localStorage, which is why a late-pickup fee
+   * configured at the front desk did not exist on any other device. The parent
+   * now loads them from `facility_settings` and persists them there.
+   */
+  rules: PricingRules;
+  /** Called with the whole domain whenever any rule changes. */
+  onChange: (next: PricingRules) => void;
   showSections?: PricingSection[];
   hideSectionHeader?: boolean;
 }
@@ -359,12 +365,12 @@ const ALL_SECTIONS: PricingSection[] = [
 
 export function PricingRulesPanel({
   serviceType,
-  facilityId,
+  rules,
+  onChange,
   showSections,
   hideSectionHeader = false,
 }: PricingRulesPanelProps) {
   const sections = showSections ?? ALL_SECTIONS;
-  const rules = getStoredPricingRules(facilityId);
   const { activeModules } = useCustomServices();
 
   const serviceOptions: ServiceOption[] = [
@@ -378,7 +384,12 @@ export function PricingRulesPanel({
     serviceOptions.map((service) => [service.value, service.label]),
   ) as Record<string, string>;
   const allServiceValues = serviceOptions.map((service) => service.value);
-  const addOnOptions = getStoredServiceAddOns(facilityId).filter(
+  // Service add-ons are still a localStorage fixture and are NOT part of this
+  // change. Unscoped deliberately: the scope key used to be the `facilityId={11}`
+  // the settings page hardcoded, so every facility on the platform read and
+  // wrote the demo facility's key. Dropping a scope that was the same wrong
+  // value for everyone loses nothing and removes one more hardcoded 11.
+  const addOnOptions = getStoredServiceAddOns().filter(
     (addOn) => addOn.isActive,
   );
   const serviceScopeLabel =
@@ -441,8 +452,19 @@ export function PricingRulesPanel({
   );
   const holidayRulesAutoSyncedRef = useRef(false);
 
+  // The effect below runs once on mount with state that is merely a copy of the
+  // props. Reporting that as a change would PATCH the settings the moment
+  // somebody opened the screen — writing a row, and flipping `configured` from
+  // "they have not set this up" to "they chose this", without anyone choosing
+  // anything. That distinction is the whole reason `configured` exists.
+  const settled = useRef(false);
+
   useEffect(() => {
-    const nextRules = {
+    if (!settled.current) {
+      settled.current = true;
+      return;
+    }
+    onChange({
       discountStacking: stacking,
       multiPetDiscounts: multiPet,
       latePickupFees: timeFees,
@@ -453,16 +475,9 @@ export function PricingRulesPanel({
       roomTypeAdjustments,
       groomingConditionAdjustments,
       serviceBundles,
-    };
-
-    if (facilityId != null) {
-      saveStoredPricingRulesForScope(nextRules, facilityId);
-      return;
-    }
-
-    saveStoredPricingRules(nextRules);
+    });
   }, [
-    facilityId,
+    onChange,
     stacking,
     multiPet,
     timeFees,

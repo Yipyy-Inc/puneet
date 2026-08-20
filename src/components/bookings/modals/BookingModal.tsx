@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useRef,
 } from "react";
+import { usePricingRules } from "@/lib/api/facility-settings";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -67,7 +68,6 @@ import { useCustomServices } from "@/hooks/use-custom-services";
 import { isBuiltinService } from "@/lib/service-registry";
 import {
   applyDynamicPricingRules,
-  getPricingRulesStorageKey,
   getServiceAddOnsStorageKey,
   getStoredServiceAddOns,
 } from "@/lib/pricing-rules";
@@ -281,6 +281,10 @@ export function BookingModal({
     evaluation: evaluationConfig,
     notifications: notificationToggles,
   } = useSettings();
+  // The facility's own surcharges and discounts, from `facility_settings`.
+  // These used to come from localStorage, so what a customer was charged
+  // depended on which browser took the booking.
+  const { rules: pricingRules } = usePricingRules();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),
     [daycare, boarding, grooming, training],
@@ -329,10 +333,6 @@ export function BookingModal({
   // Customer booking request confirmation state
   const [bookingRequested, setBookingRequested] = useState(false);
 
-  const pricingRulesStorageKey = useMemo(
-    () => getPricingRulesStorageKey(facilityId),
-    [facilityId],
-  );
   const addOnsStorageKey = useMemo(
     () => getServiceAddOnsStorageKey(facilityId),
     [facilityId],
@@ -342,10 +342,12 @@ export function BookingModal({
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
       if (!event.key) return;
+      // Add-ons only. The pricing RULES moved to `facility_settings`, where
+      // TanStack Query owns freshness — another tab saving them invalidates the
+      // query rather than poking localStorage, so watching for a storage event
+      // that can no longer fire would be dead code pretending to be a feature.
       if (
-        event.key === pricingRulesStorageKey ||
         event.key === addOnsStorageKey ||
-        event.key === getPricingRulesStorageKey() ||
         event.key === getServiceAddOnsStorageKey()
       ) {
         setPricingStorageVersion((prev) => prev + 1);
@@ -354,7 +356,7 @@ export function BookingModal({
 
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
-  }, [pricingRulesStorageKey, addOnsStorageKey]);
+  }, [addOnsStorageKey]);
 
   const facilityTaxConfig = useMemo(
     () => facilities.find((facility) => facility.id === facilityId)?.taxConfig,
@@ -1503,6 +1505,7 @@ export function BookingModal({
         : daycareSelectedDates.map((date) => formatDateOnly(date));
 
     const pricingComputation = applyDynamicPricingRules({
+      rules: pricingRules,
       serviceId: selectedService,
       basePrice,
       existingExtraServices: extraServices,

@@ -7,6 +7,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { usePricingRules } from "@/lib/api/facility-settings";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import Image from "next/image";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
@@ -183,6 +184,10 @@ export function CustomerBookingModal({
   onBookingCreated,
 }: CustomerBookingModalProps) {
   const { client: customer } = useCurrentCustomer();
+  // The facility's own surcharges and discounts, from `facility_settings`.
+  // These used to come from localStorage, so what a customer was charged
+  // depended on which browser took the booking.
+  const { rules: pricingRules } = usePricingRules();
   const customerId = customer?.id;
 
   const { selectedFacility } = useCustomerFacility();
@@ -1190,6 +1195,7 @@ export function CustomerBookingModal({
         : effectiveEndDate || effectiveStartDate || undefined;
 
     return applyDynamicPricingRules({
+      rules: pricingRules,
       serviceId: selectedService,
       basePrice: baseServicePrice,
       existingExtraServices:

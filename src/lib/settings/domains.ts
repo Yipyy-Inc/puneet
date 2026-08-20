@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
 import { NO_TAX, taxConfigSchema } from "@/lib/settings/tax";
 
 import {
@@ -138,6 +139,17 @@ export const SETTING_DOMAINS = {
   // opened the screen quietly adding 14.975% to its receipts, in Ontario, in
   // Alberta, in the United States. See the banner in lib/settings/tax.ts.
   tax_config: { schema: taxConfigSchema, fallback: NO_TAX },
+  // Money, and the one a facility is most likely to get charged FOR rather
+  // than charge: surcharges and discounts — late pickup, peak dates, multi-pet,
+  // room-type adjustments, bundles.
+  //
+  // These lived in localStorage until 2026-08-20, so a facility's late fee was
+  // whatever the browser in front of you remembered. The fallback is EMPTY for
+  // the same reason tax_config's is NO_TAX: the fixture ships an enabled $10
+  // late fee, and inheriting it would have every facility on the platform
+  // taking money from customers on a number a seed file invented. See the
+  // banner in lib/settings/pricing.ts.
+  pricing_rules: { schema: pricingRulesSchema, fallback: NO_PRICING_RULES },
 
   // ── WHAT A CUSTOMER MAY BOOK ───────────────────────────────────────────
   //
