@@ -2,6 +2,11 @@ import { z } from "zod";
 
 import { NO_PAYROLL_RULES, payrollConfigSchema } from "@/lib/settings/payroll";
 
+import {
+  NO_LOYALTY_PROGRAM,
+  loyaltyConfigSchema,
+} from "@/lib/settings/loyalty";
+
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
 import { NO_TAX, taxConfigSchema } from "@/lib/settings/tax";
 
@@ -255,6 +260,23 @@ export const SETTING_DOMAINS = {
   // read by the roster and billed by payroll. It is not a third holiday
   // concept; see the same banner.
   payroll_config: { schema: payrollConfigSchema, fallback: NO_PAYROLL_RULES },
+
+  // ── THE LOYALTY PROGRAMME ──────────────────────────────────────────────
+  //
+  // Tiers, earn rules, badges, reward types, referrals and the redemption
+  // rate — everything the twelve screens under /facility/dashboard/loyalty
+  // edit. It lived in `localStorage` under `loyalty-program-1` until
+  // 2026-08-21: per browser, and under a facility id hardcoded to 1, so every
+  // facility on the platform shared one key.
+  //
+  // The fallback is OFF and EMPTY, not the fixture's four-tier scheme.
+  // Points are a liability a facility owes its customers, and one nobody
+  // agreed to is not a default. See the banner in lib/settings/loyalty.ts,
+  // which also says how much of this is validated and how much is not.
+  loyalty_config: {
+    schema: loyaltyConfigSchema,
+    fallback: NO_LOYALTY_PROGRAM,
+  },
 
   // No exported schema for this one — it is a plain map of id -> hex, defined
   // in lib/operations-calendar rather than types/facility.

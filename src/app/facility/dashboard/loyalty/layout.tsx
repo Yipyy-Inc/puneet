@@ -80,13 +80,24 @@ export default function LoyaltyConfigLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { config, patchConfig } = useLoyaltyProgram();
+  const { config, patchConfig, isPending, isSaving } = useLoyaltyProgram();
 
-  const handleToggleEnabled = (checked: boolean) => {
-    patchConfig({ enabled: checked });
-    toast.success(
-      checked ? "Loyalty program enabled" : "Loyalty program disabled",
-    );
+  // Awaited, and the failure reported. Switching the programme on is a write
+  // Postgres can refuse; announcing it before the write lands is how a screen
+  // ends up claiming something the database declined.
+  const handleToggleEnabled = async (checked: boolean) => {
+    try {
+      await patchConfig({ enabled: checked });
+      toast.success(
+        checked ? "Loyalty program enabled" : "Loyalty program disabled",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "The loyalty program was not changed.",
+      );
+    }
   };
 
   return (
@@ -113,9 +124,13 @@ export default function LoyaltyConfigLayout({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Enabled</span>
+              {/* Disabled until the programme has been READ. A switch drawn
+                  from the empty fallback shows "off" for a facility whose
+                  programme is on, and one click would then write that back. */}
               <Switch
                 checked={config.enabled}
                 onCheckedChange={handleToggleEnabled}
+                disabled={isPending || isSaving}
                 aria-label="Enable loyalty program"
               />
             </div>

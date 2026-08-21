@@ -24,6 +24,7 @@ import type {
 import type { PricingRules } from "@/lib/settings/pricing";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
+import type { LoyaltyProgramConfig } from "@/lib/settings/loyalty";
 
 // ============================================================================
 // A facility's own settings, per domain.
@@ -53,6 +54,13 @@ export interface FacilitySettings {
   tax_config: SettingState<TaxConfig>;
   /** Overtime rule + statutory holidays. `configured: false` = nobody has said. */
   payroll_config: SettingState<PayrollConfig>;
+  /**
+   * Tiers, earn rules, badges, referrals, the redemption rate.
+   *
+   * `configured: false` means no programme has been set up — which is NOT the
+   * same as one that is switched off, and the loyalty screens say which.
+   */
+  loyalty_config: SettingState<LoyaltyProgramConfig>;
   pricing_rules: SettingState<PricingRules>;
   booking_flow: SettingState<FacilityBookingFlowConfig>;
   daycare_config: SettingState<ModuleConfig>;

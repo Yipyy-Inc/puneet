@@ -37,6 +37,7 @@ import {
   type PointsExpiryValue,
 } from "@/components/loyalty/config/PointsExpiryEditor";
 import { SaveBar } from "@/components/loyalty/config/SaveBar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import { loyaltyQueries } from "@/lib/api/loyalty";
 import { summarizeExpiry } from "@/lib/loyalty/points-expiry";
@@ -51,8 +52,18 @@ import type {
 // (gated behind hydration), so it never affects server-rendered markup.
 const NOW_ISO = new Date().toISOString();
 
-export default function AdvancedPage() {
-  const { config, updateConfig, facilityId } = useLoyaltyProgram();
+/**
+ * Mounted only once the programme has been READ.
+ *
+ * Every editor below seeds itself from the stored config in a `useState`
+ * initialiser, which runs on the first render — before the settings request can
+ * have answered. Seeded from the empty fallback, this screen would offer to
+ * save a redemption rate, an expiry rule and a stacking policy that nobody set
+ * over the ones a facility did. Gating the mount is what makes those seeds
+ * safe; see the default export.
+ */
+function AdvancedSettings() {
+  const { config, updateConfig, facilityId, isSaving } = useLoyaltyProgram();
   const { data: accounts = [] } = useQuery(loyaltyQueries.accounts(facilityId));
 
   const [expiry, setExpiry] = useState<PointsExpiryValue>(() => ({
@@ -327,23 +338,53 @@ export default function AdvancedPage() {
 
       <SaveBar
         dirty={dirty}
-        onSave={() => {
-          updateConfig({
-            ...config,
-            pointsExpiryEnabled: expiry.enabled,
-            pointsExpiryDays: expiry.days,
-            pointsExpiration: expiration,
-            pointsScope: scope,
-            discountStacking: stacking,
-            settings,
-            tierDowngradeEnabled: tierDowngrade,
-            discountSelectionStrategy: discountStrategy,
-            redemptionRate,
-          });
-          toast.success("Advanced settings saved");
+        saving={isSaving}
+        onSave={async () => {
+          try {
+            await updateConfig({
+              ...config,
+              pointsExpiryEnabled: expiry.enabled,
+              pointsExpiryDays: expiry.days,
+              pointsExpiration: expiration,
+              pointsScope: scope,
+              discountStacking: stacking,
+              settings,
+              tierDowngradeEnabled: tierDowngrade,
+              discountSelectionStrategy: discountStrategy,
+              redemptionRate,
+            });
+            toast.success("Advanced settings saved");
+          } catch (error) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Advanced settings were not saved.",
+            );
+          }
         }}
         onReset={handleReset}
       />
     </div>
   );
+}
+
+/**
+ * Waits for the programme, then mounts the editors.
+ *
+ * The gate is the whole point — see the note on `AdvancedSettings`.
+ */
+export default function AdvancedPage() {
+  const { isPending } = useLoyaltyProgram();
+
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  return <AdvancedSettings />;
 }

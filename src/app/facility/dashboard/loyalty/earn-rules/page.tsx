@@ -12,43 +12,67 @@ import {
   getArchivedEarnRules,
   reconcileEarnRules,
 } from "@/lib/loyalty/earn-rule-versioning";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import type { EarnRule, PointsEarningRule } from "@/types/loyalty";
 
 export default function EarnRulesPage() {
-  const { config, updateConfig, facilityId } = useLoyaltyProgram();
+  const { config, updateConfig, facilityId, isPending, isSaving } =
+    useLoyaltyProgram();
 
-  const [rules, setRules] = useState<EarnRule[]>(() =>
-    getActiveEarnRules(config.earnRules ?? []),
-  );
-  const [legacyRule, setLegacyRule] = useState<PointsEarningRule>(
-    () => config.pointsEarning,
+  // Derived, not seeded — an earn rule decides what a customer is owed, and a
+  // `useState` initialiser runs before the programme has been read. See the
+  // badges page.
+  const [ruleDraft, setRuleDraft] = useState<EarnRule[] | null>(null);
+  const [legacyDraft, setLegacyDraft] = useState<PointsEarningRule | null>(
+    null,
   );
   const [showLegacy, setShowLegacy] = useState(false);
 
   const storedActive = getActiveEarnRules(config.earnRules ?? []);
   const archivedCount = getArchivedEarnRules(config.earnRules ?? []).length;
 
+  const rules = ruleDraft ?? storedActive;
+  const legacyRule = legacyDraft ?? config.pointsEarning;
+
   const dirty =
-    JSON.stringify(rules) !== JSON.stringify(storedActive) ||
-    JSON.stringify(legacyRule) !== JSON.stringify(config.pointsEarning);
+    (ruleDraft !== null &&
+      JSON.stringify(ruleDraft) !== JSON.stringify(storedActive)) ||
+    (legacyDraft !== null &&
+      JSON.stringify(legacyDraft) !== JSON.stringify(config.pointsEarning));
 
   const handleReset = () => {
-    setRules(getActiveEarnRules(config.earnRules ?? []));
-    setLegacyRule(config.pointsEarning);
+    setRuleDraft(null);
+    setLegacyDraft(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const reconciled = reconcileEarnRules(config.earnRules ?? [], rules);
-    updateConfig({
-      ...config,
-      earnRules: reconciled,
-      pointsEarning: legacyRule,
-    });
-    // Re-sync local draft to the persisted active set (new versions get new ids).
-    setRules(getActiveEarnRules(reconciled));
-    toast.success("Earn rules saved");
+    try {
+      await updateConfig({
+        ...config,
+        earnRules: reconciled,
+        pointsEarning: legacyRule,
+      });
+      // Drop the drafts: the stored value is the truth again, and versioning
+      // gives new rule versions new ids, so a retained draft would disagree.
+      handleReset();
+      toast.success("Earn rules saved");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Earn rules were not saved.",
+      );
+    }
   };
+
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -66,7 +90,7 @@ export default function EarnRulesPage() {
 
       <EarnRuleListEditor
         value={rules}
-        onChange={setRules}
+        onChange={setRuleDraft}
         facilityId={facilityId}
       />
 
@@ -102,12 +126,17 @@ export default function EarnRulesPage() {
               above are the newer model; the engine will be migrated to consume
               them.
             </p>
-            <EarnRulesEditor value={legacyRule} onChange={setLegacyRule} />
+            <EarnRulesEditor value={legacyRule} onChange={setLegacyDraft} />
           </div>
         )}
       </div>
 
-      <SaveBar dirty={dirty} onSave={handleSave} onReset={handleReset} />
+      <SaveBar
+        dirty={dirty}
+        saving={isSaving}
+        onSave={handleSave}
+        onReset={handleReset}
+      />
     </div>
   );
 }
