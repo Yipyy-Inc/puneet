@@ -29,6 +29,7 @@ import type { GroomingAppointment } from "@/types/grooming";
 import type { Client } from "@/types/client";
 import type { CustomerPackageRecord } from "@/data/customer-packages";
 import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
+import { toast } from "sonner";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 
 export type PaymentMethodKind =
@@ -153,7 +154,7 @@ export function PaymentDialog({
   // Auto-applied loyalty discount voucher (tier / badge / earn-rule reward).
   const { discount: loyaltyDiscount, consume: consumeLoyaltyDiscount } =
     useActiveLoyaltyDiscount({
-      customerId: client?.id,
+      clientRef: client?.id,
       subtotal: preTaxSubtotal,
       serviceType: "grooming",
     });
@@ -224,12 +225,37 @@ export function PaymentDialog({
     return true;
   })();
 
-  function handleConfirm() {
+  async function handleConfirm() {
     const channels: ("sms" | "email")[] = [];
     if (receiptSms) channels.push("sms");
     if (receiptEmail) channels.push("email");
-    // Mark the loyalty discount voucher used now that the invoice is finalized.
-    if (loyaltyDiscountAmount > 0) consumeLoyaltyDiscount();
+
+    // ── THE REWARD IS SPENT FIRST, AND CAN REFUSE ──────────────────────────
+    //
+    // This used to call a `consume` that spliced an in-memory array and could
+    // not fail, so a voucher another till had already taken still came off this
+    // invoice. Spending it against the database first means a reward that has
+    // gone stops the payment rather than discounting it silently.
+    //
+    // Unlike the two booking checkouts, grooming keeps its own arithmetic:
+    // `amountCharged` already has the discount subtracted and that figure IS
+    // what gets charged here, so there is no negative line item to write. The
+    // gap that leaves — no release if the parent's recordPayment then fails —
+    // is in the debt map; this money path does not run through `bookings`.
+    if (loyaltyDiscountAmount > 0) {
+      try {
+        await consumeLoyaltyDiscount();
+      } catch (error) {
+        toast.error("That reward is no longer available", {
+          description:
+            error instanceof Error
+              ? error.message
+              : "It may have been used on another bill.",
+        });
+        return;
+      }
+    }
+
     onConfirm({
       method: effectiveMethod,
       savedCardId:

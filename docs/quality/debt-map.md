@@ -3339,29 +3339,71 @@ below, and writing it a second time knowingly would have been worse than having
 written it once. Append-only against applications is enforced by RLS instead:
 there is no DELETE policy at all.
 
-#### 🟠 The ledger is real; the SCREENS still read the fixtures
+#### ✅ The checkout path is REAL — 2026-08-21
 
-The tables, the routes (`/api/loyalty/accounts|transactions|vouchers`) and the
-query factory `lib/api/loyalty-ledger.ts` are live. **Nothing renders from them
-yet.** Members, redemptions, the client loyalty tab and the customer wallet all
-still read `src/data/loyalty-*` through `lib/api/loyalty.ts`, which is why that
-fixture module keeps its name and its callers.
+`useActiveLoyaltyDiscount` reads the ledger now: the customer's account by
+`clients.ref`, their spendable vouchers (active and unexpired **as the database
+sees the clock**, not the till's), and `selectBestDiscount` over the facility's
+own strategy.
 
-**So the checkout voucher path is still the fixture one.**
-`useActiveLoyaltyDiscount` → `PaymentCheckoutFlow` computes
-`netAmountDue = amountDue − loyaltyDiscount.amount`, the tax and the Clover total
-follow from it, and `consume()` mutates an in-memory array. Repointing it at
-`useConsumeLoyaltyVoucher` is the next change and the reason the ledger was
-built first — there was nothing correct to point it at.
+**Two different bugs were sitting in the two booking checkouts, and neither was
+the one the fixture was blamed for.**
 
-Still inert meanwhile: of the three fixture discount vouchers one expired in
-June and two are `status: "used"`, so `getActiveDiscountRedemptions` returns
-nothing for anyone.
+- `booking-card.tsx` displayed the discount and **charged the full amount**. It
+  rebuilt the charge from `booking.amountDue`, so the number in the dialog never
+  reached the money.
+- The booking detail page **charged the discounted amount and never lowered what
+  was owed**, so the booking would have sat permanently part-paid with no line
+  saying why.
 
-Also not built: points EARNING. Nothing fires the earn rules on a checkout yet,
+Both are fixed the same way, and it is the way the late-pickup fee already
+worked: **the discount is a negative LINE ITEM.** `extras_total` moves,
+`amount_due` is generated from it, the bill and the charge agree, and the
+receipt says what happened. It also _has_ to be a row rather than a number,
+because the TERMINAL tender charges server-side from `amount_due` — a figure
+living in the browser was never going to reach it.
+
+**The reward is spent BEFORE the money moves.** It used to be spent afterwards
+(booking-card) or unconditionally (detail page), against a `consume()` that
+could not fail. Now a reward another till has taken refuses the checkout instead
+of silently discounting it. The cost of that order is a window — reward spent,
+charge then fails — and `release_loyalty_voucher` closes it: the two booking
+paths call it on every failure branch.
+
+`used_on_booking_id` is recorded, so a spent reward names the bill it came off.
+
+**Walked against production, twice**, on top of the API tests:
+
+| booking | bill   | reward   | line   | `amount_due` | `amount_paid` | voucher          |
+| ------- | ------ | -------- | ------ | ------------ | ------------- | ---------------- |
+| 113     | $25.00 | $5 fixed | −$5.00 | 20.00        | 20.00         | used             |
+| 112     | $45.00 | 10%      | −$4.50 | 40.50        | 40.50         | used, on booking |
+
+A first walk reported no discount and looked like an app bug. It was the WALK:
+`locator.isVisible()` resolves immediately and ignores the `timeout` option
+passed to it. Worth remembering — it fails in the direction that looks like a
+real defect.
+
+#### 🟠 What the checkout change did NOT cover
+
+**Grooming keeps its own arithmetic.** `grooming/payment-dialog.tsx` gets the
+real voucher and a consume that can refuse, but its money path does not run
+through `bookings` — it charges `amountCharged`, which it computes itself with
+the discount already subtracted, and records through `useRecordPayment`. So
+there is no negative line item there and **no release if that recording then
+fails**. Changing a second money path blind would have been worse than leaving
+it; it needs its own pass.
+
+**The SCREENS still read fixtures.** Members, redemptions, the client loyalty
+tab and the customer wallet all still go through `lib/api/loyalty.ts` to
+`src/data/loyalty-*`. That is why the fixture module keeps its name and its
+callers, and why `DEFAULT_LOYALTY_FACILITY_ID` is still handed out — as a
+fixture key, not a facility.
+
+**Points EARNING does not exist.** Nothing fires the earn rules on a checkout,
 so an account gains points only by a manual ledger entry. The rules are real
-(`loyalty_config`) and the ledger is real; what is missing is the thing that
-reads one and writes the other.
+(`loyalty_config`) and the ledger is real; the thing that reads one and writes
+the other is missing.
 
 ### 🟡 `payroll_summary` reads a domain that may be absent, and says so
 

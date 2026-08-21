@@ -274,12 +274,15 @@ export default function ClientBookingDetailPage({
         : undefined,
     [booking],
   );
-  const { discount: loyaltyDiscount, consume: consumeLoyaltyDiscount } =
-    useActiveLoyaltyDiscount({
-      customerId: clientId,
-      subtotal: booking?.totalCost ?? 0,
-      serviceType: booking?.service?.toLowerCase(),
-    });
+  const {
+    discount: loyaltyDiscount,
+    consume: consumeLoyaltyDiscount,
+    release: releaseLoyaltyDiscount,
+  } = useActiveLoyaltyDiscount({
+    clientRef: clientId,
+    subtotal: booking?.totalCost ?? 0,
+    serviceType: booking?.service?.toLowerCase(),
+  });
   const [reportCardSent, setReportCardSent] = useState(false);
   const [pendingLateFee, setPendingLateFee] = useState<LateFeeResult | null>(
     null,
@@ -2015,8 +2018,33 @@ export default function ClientBookingDetailPage({
             }))}
           loyaltyDiscount={loyaltyDiscount ?? undefined}
           onConfirm={async (payment) => {
-            if (loyaltyDiscount) consumeLoyaltyDiscount();
             const lateFee = pendingLateFee;
+            const reward = loyaltyDiscount;
+
+            // ── THE REWARD IS SPENT BEFORE THE MONEY MOVES ────────────────
+            //
+            // It used to be spent here unconditionally, before anything was
+            // known about whether the charge would work — and, because
+            // `consume` could not fail, a voucher another till had already
+            // taken came off this bill anyway.
+            //
+            // Now a spent reward stops the checkout instead of silently
+            // discounting it. If the charge later fails, `release` puts it
+            // back: the customer must not retry at full price still holding a
+            // reward the system has eaten.
+            if (reward) {
+              try {
+                await consumeLoyaltyDiscount(booking.id);
+              } catch (error) {
+                toast.error("That reward is no longer available", {
+                  description:
+                    error instanceof Error
+                      ? error.message
+                      : "It may have been used on another bill.",
+                });
+                return;
+              }
+            }
 
             // ── THE TERMINAL TENDER ACTUALLY CHARGES A CARD NOW ───────────
             //
@@ -2092,28 +2120,56 @@ export default function ClientBookingDetailPage({
             // booking and immediately reopen it.
             void (async () => {
               try {
+                // ── THE DISCOUNT IS A LINE ON THE BILL ────────────────────
+                //
+                // The dialog already subtracted it from what it CHARGES
+                // (`payment.amount`), but nothing lowered what is OWED — so
+                // the booking would have been charged less than `amount_due`
+                // and sat partially unpaid for ever, with no line saying why.
+                //
+                // A negative line item is the mechanism the late fee already
+                // uses: `extras_total` moves, `amount_due` is generated from
+                // it, the two agree, and the receipt says what happened.
+                const items: {
+                  kind: "item" | "fee";
+                  name: string;
+                  unitPrice: number;
+                  quantity: number;
+                }[] = [];
                 if (lateFee) {
+                  items.push({
+                    kind: "fee",
+                    name: lateFee.label,
+                    unitPrice: lateFee.amount,
+                    quantity: 1,
+                  });
+                }
+                if (reward && reward.amount > 0) {
+                  items.push({
+                    kind: "item",
+                    name: reward.label,
+                    unitPrice: -reward.amount,
+                    quantity: 1,
+                  });
+                }
+                if (items.length > 0) {
                   await addLineItems.mutateAsync({
                     bookingRef: booking.id,
-                    items: [
-                      {
-                        kind: "fee",
-                        name: lateFee.label,
-                        unitPrice: lateFee.amount,
-                        quantity: 1,
-                      },
-                    ],
+                    items,
                   });
                 }
                 await chargeBooking.mutateAsync({
                   booking: {
                     ...booking,
-                    // The line just added is not in `booking` yet — the refetch
-                    // has not landed — and `useChargeBooking` refuses more than
-                    // the balance. Tell it what the bill now is.
-                    amountDue:
+                    // The lines just added are not in `booking` yet — the
+                    // refetch has not landed — and `useChargeBooking` refuses
+                    // more than the balance. Tell it what the bill now is.
+                    amountDue: Math.max(
+                      0,
                       (booking.amountDue ?? booking.totalCost) +
-                      (lateFee?.amount ?? 0),
+                        (lateFee?.amount ?? 0) -
+                        (reward?.amount ?? 0),
+                    ),
                   },
                   amount: payment.amount,
                   // Throws on "Custom", which has no ledger meaning.
@@ -2128,6 +2184,9 @@ export default function ClientBookingDetailPage({
                   `Charged $${payment.amount.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
                 );
               } catch (error) {
+                // The reward is already spent and no money moved. Give it back
+                // before saying so.
+                await releaseLoyaltyDiscount();
                 toast.error(
                   error instanceof Error
                     ? error.message

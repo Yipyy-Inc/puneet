@@ -205,11 +205,35 @@ export function useRedeemLoyaltyPoints() {
 export function useConsumeLoyaltyVoucher() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { voucherId: string; bookingId?: string }) =>
+    mutationFn: async (input: { voucherId: string; bookingRef?: number }) =>
       (
         await send<{ voucher: { id: string; status: string; usedAt: string } }>(
           `/api/loyalty/vouchers/${encodeURIComponent(input.voucherId)}/consume`,
-          { bookingId: input.bookingId },
+          { bookingRef: input.bookingRef },
+        )
+      ).voucher,
+    onSuccess: () => invalidateLedger(queryClient),
+  });
+}
+
+/**
+ * Give a voucher back after a charge that did not happen.
+ *
+ * Checkout spends the reward BEFORE it charges, which is the right order: the
+ * alternative is taking money off a bill for a reward that turns out to be
+ * gone. The cost of that order is this window — the charge fails and the
+ * voucher is already spent — and this closes it.
+ *
+ * Only undoes a `used`. An expired or cancelled voucher stays where it is.
+ */
+export function useReleaseLoyaltyVoucher() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { voucherId: string }) =>
+      (
+        await send<{ voucher: { id: string; status: string } }>(
+          `/api/loyalty/vouchers/${encodeURIComponent(input.voucherId)}/release`,
+          {},
         )
       ).voucher,
     onSuccess: () => invalidateLedger(queryClient),
