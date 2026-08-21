@@ -24,6 +24,7 @@ import {
   DollarSign,
   CreditCard,
   Vault,
+  Receipt,
   Gift,
   BarChart3,
   Megaphone,
@@ -273,6 +274,16 @@ export const NAV_SECTIONS: NavSection[] = [
         url: "/facility/dashboard/billing/cash-drawer",
         icon: Vault,
         permKey: "open_close_register",
+      },
+      {
+        // The screen the ACCOUNTANT was missing: they hold `view_payroll` and
+        // are staff-level, so every money surface in the admin-only portal was
+        // out of reach. In the shared nav, so BOTH sidebars render it and the
+        // permission decides who sees it — no new access level required.
+        title: "Payroll",
+        url: "/facility/dashboard/payroll",
+        icon: Receipt,
+        permKey: "view_payroll",
       },
       {
         title: "Subscription & Billing",

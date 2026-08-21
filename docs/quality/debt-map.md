@@ -2790,29 +2790,88 @@ labour-cost tile was exactly this bug, and it took a conversion to notice.
 **Do instead:** when a scheduling tab is next touched, move its `requires` onto
 the permission key its API already uses. Do not add entries to `rbac.ts`.
 
-### 🟠 The accountant holds `scheduling_view_labor_cost` and can reach no screen that uses it
+### ✅ ~~The accountant can reach no screen that shows what they may see~~
 
-`scheduling_view_labor_cost` is granted to owner, admin, manager **and
-accountant**. The phase-1 migration justified putting pay in its own table on
-exactly that basis — "the person whose job is payroll is not a facility
-administrator, and an admin-only rule would have locked out precisely the role
-that needs it."
+**Closed 2026-08-21.** The question turned out to be malformed, which is what
+made it hard: the accountant does not need the calendar's labour-cost TILE. That
+answers "what will next week's rota cost" — a forecast over planned shifts, for
+whoever builds the rota, and it belongs where it is. An accountant needs "what
+do we owe people for the period that just ended", from ACTUAL clock entries.
 
-It locked them out anyway, one layer up. Admin access is forced by the job
-titles `owner | admin | manager | supervisor` (migration
-`20260818100000_a_membership_is_admin_or_staff`); `accountant` is not among them,
-so an accountant is staff-level, and `/facility/**` is admin-only under
-[ADR 0005](../architecture/decisions/0005-three-facility-roles-one-staff-portal.md).
-Every screen that displays labour cost is under `/facility/**`.
+So nobody was let into the admin portal. `/employee/payroll` renders in the
+staff shell behind `RequirePermission permKey="view_payroll"` — a permission
+they already held, in a portal they can already reach, using the per-feature
+gating the staff shell already does. No new access level, no carve-out in the
+admin gate, nothing added to `rbac.ts`.
 
-**Why it's risky:** the permission is real, RLS honours it, and the API returns
-the figures — so this reads as working right up until an accountant signs in.
-Whoever fixes it will be tempted to add `accountant` to the admin-tier list,
-which would hand them the whole facility portal.
+`payroll_summary` is SECURITY DEFINER and returns TOTALS: an accountant has no
+`scheduling_view_all`, and widening two read policies to admit `view_payroll`
+would have handed them every shift and every session as raw rows to arrive at a
+figure. `payroll.spec.ts` asserts they get the numbers AND still cannot read the
+roster.
 
-**Do instead:** decide what an accountant is _for_ before changing anything. The
-likely answer is a payroll surface under `/employee/**`, not a fourth access
-level. Do not widen admin-tier.
+**Do not** "improve" this by adding `accountant` to the admin-tier job titles in
+`20260818100000_a_membership_is_admin_or_staff`. That hands them bookings,
+clients, settings and billing to solve a payroll problem, and the spec's
+"the admin portal stays shut" assertion exists to catch it.
+
+### 🟡 The absent labour-cost tile is now provable, and still unproven
+
+`accountant@yipyy.dev` was seeded on 2026-08-21 with the payroll screen — the
+only identity that holds `view_payroll` and `scheduling_view_labor_cost` WITHOUT
+admin access. That unblocks the case nothing could reach before: the calendar's
+labour-cost tile rendering as ABSENT rather than `$0` for a caller without the
+permission.
+
+It is still not asserted, because the calendar is an admin-portal screen and an
+accountant cannot reach it — so the branch needs an identity that is admin-tier
+with the permission overridden to `none`, which the role editor can now do.
+
+**Do instead:** add that override in the spec's `beforeAll` and restore it in
+`afterAll`, the way `role-editor-writes.spec.ts` does. Do not edit a real
+person's permissions without restoring them.
+
+### 🟡 The scheduling nav gates on a fourth permission vocabulary
+
+`src/app/facility/dashboard/services/scheduling/layout.tsx` gates its tabs on
+strings like `availability.approve` from `src/lib/rbac.ts` — a capability list
+with no Postgres counterpart. The DATA behind those tabs is gated on the real
+cascade (`scheduling_manage_availability`, `scheduling_approve_time_off` and so
+on), so the tab a person can see and the rows they can act on are decided by two
+systems that were never reconciled.
+
+**Why it's risky:** they agree today by coincidence of how the presets were
+written. When they diverge the symptom is a visible tab whose every action is
+refused, or — worse — a hidden tab for somebody who holds the permission. The
+labour-cost tile was exactly this bug, and it took a conversion to notice.
+
+**Do instead:** when a scheduling tab is next touched, move its `requires` onto
+the permission key its API already uses. Do not add entries to `rbac.ts`.
+
+### ✅ ~~The accountant can reach no screen that shows what they may see~~
+
+**Closed 2026-08-21.** The question turned out to be malformed, which is what
+made it hard: the accountant does not need the calendar's labour-cost TILE. That
+answers "what will next week's rota cost" — a forecast over planned shifts, for
+whoever builds the rota, and it belongs where it is. An accountant needs "what
+do we owe people for the period that just ended", from ACTUAL clock entries.
+
+So nobody was let into the admin portal. `/employee/payroll` renders in the
+staff shell behind `RequirePermission permKey="view_payroll"` — a permission
+they already held, in a portal they can already reach, using the per-feature
+gating the staff shell already does. No new access level, no carve-out in the
+admin gate, nothing added to `rbac.ts`.
+
+`payroll_summary` is SECURITY DEFINER and returns TOTALS: an accountant has no
+`scheduling_view_all`, and widening two read policies to admit `view_payroll`
+would have handed them every shift and every session as raw rows to arrive at a
+figure. `payroll.spec.ts` asserts they get the numbers AND still cannot read the
+roster.
+
+**Do not** "improve" this by adding `accountant` to the admin-tier job titles in
+`20260818100000_a_membership_is_admin_or_staff`. That hands them bookings,
+clients, settings and billing to solve a payroll problem, and the spec's
+"the admin portal stays shut" assertion exists to catch it.
 
 ### 🟡 The absent labour-cost tile is unproven at the UI level
 
