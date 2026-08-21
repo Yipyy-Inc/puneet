@@ -6231,6 +6231,44 @@ export type Database = {
           },
         ];
       };
+      loyalty_account_overview: {
+        Row: {
+          client_email: string | null;
+          client_id: string | null;
+          client_name: string | null;
+          client_ref: number | null;
+          created_at: string | null;
+          credit_balance: number | null;
+          current_tier_id: string | null;
+          facility_id: string | null;
+          id: string | null;
+          last_activity_at: string | null;
+          lifetime_points_earned: number | null;
+          lifetime_points_redeemed: number | null;
+          points_balance: number | null;
+          referral_code: string | null;
+          tier_joined_at: string | null;
+          total_spend: number | null;
+          total_visits: number | null;
+          updated_at: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_accounts_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_accounts_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       prepaid_package_pricing: {
         Row: {
           facility_id: string | null;

@@ -55,6 +55,16 @@ export interface LoyaltyAccountRow {
   currentTierId: string | null;
   tierJoinedAt: string | null;
   referralCode: string | null;
+  /**
+   * What this customer has PAID this facility, and how many times.
+   *
+   * Derived from bookings at read time, never stored on the account — see the
+   * view. A cancelled or unsettled booking is not spend.
+   */
+  totalSpend: number;
+  totalVisits: number;
+  /** The newest ledger entry, or when the account last changed. */
+  lastActivityAt: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,15 +81,26 @@ interface AccountRow {
   referral_code: string | null;
   created_at: string;
   updated_at: string;
-  // A to-one embed arrives as an OBJECT, not an array. Reading it as an array
-  // is the mistake that emptied the kennel board — see the debt map.
-  client: { ref: number; name: string; email: string } | null;
+  client_ref: number;
+  client_name: string;
+  client_email: string;
+  total_spend: string | number;
+  total_visits: number;
+  last_activity_at: string;
 }
 
-const SELECT =
-  "id, client_id, points_balance, lifetime_points_earned, " +
-  "lifetime_points_redeemed, credit_balance, current_tier_id, tier_joined_at, " +
-  "referral_code, created_at, updated_at, client:clients(ref, name, email)";
+// ── READ THROUGH THE VIEW ──────────────────────────────────────────────────
+//
+// `loyalty_account_overview` joins the client and derives spend, visits and
+// last activity from the rows that own them. It is `security_invoker`, so the
+// caller's own RLS still decides which accounts come back — a customer sees
+// theirs, a staff member with `marketing_view` sees the facility's.
+//
+// Reading the table directly with an embed would have cost a second round trip
+// per screen to work out spend, and there is no way to express it in PostgREST
+// at all: it needs an aggregate over bookings.
+const VIEW = "loyalty_account_overview";
+const SELECT = "*";
 
 /**
  * `clients.ref` -> `clients.id`, within the caller's own facility.
@@ -109,9 +130,9 @@ function toRow(row: AccountRow): LoyaltyAccountRow {
   return {
     id: row.id,
     clientId: row.client_id,
-    clientRef: row.client?.ref ?? 0,
-    clientName: row.client?.name ?? "Unknown",
-    clientEmail: row.client?.email ?? "",
+    clientRef: row.client_ref,
+    clientName: row.client_name,
+    clientEmail: row.client_email,
     pointsBalance: row.points_balance,
     lifetimePointsEarned: row.lifetime_points_earned,
     lifetimePointsRedeemed: row.lifetime_points_redeemed,
@@ -119,6 +140,9 @@ function toRow(row: AccountRow): LoyaltyAccountRow {
     currentTierId: row.current_tier_id,
     tierJoinedAt: row.tier_joined_at,
     referralCode: row.referral_code,
+    totalSpend: Number(row.total_spend),
+    totalVisits: row.total_visits,
+    lastActivityAt: row.last_activity_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -139,7 +163,7 @@ export async function GET(request: NextRequest) {
   const askedRef = new URL(request.url).searchParams.get("clientRef");
 
   let query = supabase
-    .from("loyalty_accounts")
+    .from(VIEW)
     .select(SELECT)
     .eq("facility_id", context.facilityId)
     .order("points_balance", { ascending: false });
@@ -211,7 +235,7 @@ export async function POST(request: NextRequest) {
   }
 
   const existing = await supabase
-    .from("loyalty_accounts")
+    .from(VIEW)
     .select(SELECT)
     .eq("facility_id", context.facilityId)
     .eq("client_id", clientId)
@@ -227,19 +251,28 @@ export async function POST(request: NextRequest) {
   // The facility comes from the SESSION, never from the request body. A
   // caller naming their own facility_id is how one facility writes into
   // another's data; `check:facility-from-session` fails the build on it.
-  const { data, error } = await supabase
+  const { data: inserted, error } = await supabase
     .from("loyalty_accounts")
     .insert({
       facility_id: context.facilityId,
       client_id: clientId,
       referral_code: body.referralCode ?? null,
     })
-    .select(SELECT)
+    .select("id")
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  // Read it back through the view, so a newly opened account is the same shape
+  // as every other one — with spend and visits already on it rather than zeroes
+  // the caller would have to refetch to correct.
+  const { data } = await supabase
+    .from(VIEW)
+    .select(SELECT)
+    .eq("id", (inserted as { id: string }).id)
+    .single();
 
   return NextResponse.json(
     { account: toRow(data as unknown as AccountRow), created: true },

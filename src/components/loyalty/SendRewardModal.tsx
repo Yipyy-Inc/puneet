@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import {
+  usePostLoyaltyTransaction,
+  useRedeemLoyaltyPoints,
+} from "@/lib/api/loyalty-ledger";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,25 +26,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Gift } from "lucide-react";
-import { useCurrentUser } from "@/hooks/use-current-user";
-import { grantReward } from "@/data/loyalty-transactions";
 
+// ============================================================================
+// Granting a customer points or credit.
+//
+// `grantReward` pushed onto an in-memory array. Points now post to the LEDGER
+// and credit goes through `redeem_loyalty_points`, which puts it on the account
+// atomically — the two are different operations and were only ever one function
+// because a fixture could pretend they were.
+//
+// Note that a granted reward costs the customer NOTHING: `points: 0`. It is a
+// gift from the facility, not something they redeemed, and charging their
+// balance for it would be the opposite of what the button says.
+// ============================================================================
 export function SendRewardModal({
   open,
   onOpenChange,
-  facilityId,
-  customerId,
+  accountId,
   customerName,
   onSent,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  facilityId: number;
-  customerId: number;
+  accountId: string;
   customerName?: string;
   onSent: () => void;
 }) {
-  const { user } = useCurrentUser();
+  const post = usePostLoyaltyTransaction();
+  const redeem = useRedeemLoyaltyPoints();
   const [rewardType, setRewardType] = useState<"points" | "credit">("points");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -54,19 +67,33 @@ export function SendRewardModal({
     setNote("");
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!valid) return;
-    const txn = grantReward({
-      facilityId,
-      customerId,
-      rewardType,
-      amount: amt,
-      note: note.trim(),
-      staffId: user.id,
-      staffName: user.name,
-    });
-    if (!txn) {
-      toast.error("Could not send reward.");
+    try {
+      if (rewardType === "points") {
+        await post.mutateAsync({
+          accountId,
+          points: Math.round(amt),
+          kind: "adjusted",
+          source: "manual",
+          description: note.trim() || "Reward from the facility",
+          reason: note.trim() || undefined,
+        });
+      } else {
+        // Credit is granted, not bought — `points: 0`, so the customer's
+        // balance is untouched and the credit lands on the account.
+        await redeem.mutateAsync({
+          accountId,
+          rewardType: "credit_balance",
+          rewardValue: amt,
+          points: 0,
+          description: note.trim() || "Credit from the facility",
+        });
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "The reward was not sent.",
+      );
       return;
     }
     toast.success(
@@ -149,9 +176,9 @@ export function SendRewardModal({
             Cancel
           </Button>
           <Button
-            disabled={!valid}
+            disabled={!valid || post.isPending || redeem.isPending}
             className="bg-emerald-600 text-white hover:bg-emerald-700"
-            onClick={handleSend}
+            onClick={() => void handleSend()}
           >
             Send reward
           </Button>

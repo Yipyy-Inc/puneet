@@ -4,13 +4,21 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { LoyaltyMembersTable } from "@/components/loyalty/LoyaltyMembersTable";
-import { loyaltyQueries } from "@/lib/api/loyalty";
-import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
+import { loyaltyLedgerQueries } from "@/lib/api/loyalty-ledger";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Coins, Wallet, Gift } from "lucide-react";
 
 export default function MembersPage() {
-  const { facilityId } = useLoyaltyProgram();
-  const { data: accounts = [] } = useQuery(loyaltyQueries.accounts(facilityId));
+  // ── FROM POSTGRES ──────────────────────────────────────────────────────
+  //
+  // These four tiles read `src/data/loyalty-accounts` until 2026-08-21, and for
+  // a few hours after the ledger became real they were the most misleading
+  // numbers on the platform: "Points Outstanding" is a LIABILITY a facility
+  // owes its customers, and it was being summed from a seed file that had
+  // nothing to do with the balances the database held.
+  const { data: accounts = [], isPending } = useQuery(
+    loyaltyLedgerQueries.accounts(),
+  );
 
   const pointsOutstanding = accounts.reduce((s, a) => s + a.pointsBalance, 0);
   const creditOutstanding = accounts.reduce((s, a) => s + a.creditBalance, 0);
@@ -18,6 +26,16 @@ export default function MembersPage() {
     (s, a) => s + a.lifetimePointsRedeemed,
     0,
   );
+
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

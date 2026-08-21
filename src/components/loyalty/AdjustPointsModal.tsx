@@ -14,25 +14,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { useCurrentUser } from "@/hooks/use-current-user";
-import { addManualAdjustment } from "@/data/loyalty-transactions";
+import { usePostLoyaltyTransaction } from "@/lib/api/loyalty-ledger";
 
+// ============================================================================
+// Moving a customer's points by hand.
+//
+// It used to call `addManualAdjustment`, which pushed onto an in-memory array
+// and could not fail — then toasted success. Now it posts a row to the LEDGER,
+// which is the only thing that moves a balance, and the database refuses an
+// adjustment that would overdraw the account.
+//
+// The staff member who posted it is stamped server-side from the session, so
+// this no longer sends a name it was handed.
+// ============================================================================
 export function AdjustPointsModal({
   open,
   onOpenChange,
-  facilityId,
-  customerId,
+  accountId,
   currentBalance,
   onAdjusted,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  facilityId: number;
-  customerId: number;
+  accountId: string;
   currentBalance: number;
   onAdjusted: () => void;
 }) {
-  const { user } = useCurrentUser();
+  const post = usePostLoyaltyTransaction();
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
 
@@ -57,16 +65,26 @@ export function AdjustPointsModal({
     onOpenChange(next);
   };
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!valid) return;
-    addManualAdjustment({
-      facilityId,
-      customerId,
-      points,
-      reason: reason.trim(),
-      staffId: user.id,
-      staffName: user.name,
-    });
+    // Awaited, and the failure reported. An adjustment that would take the
+    // balance below zero is refused by the database with a sentence naming what
+    // the account actually holds — better than anything invented here.
+    try {
+      await post.mutateAsync({
+        accountId,
+        points,
+        kind: "adjusted",
+        source: "manual",
+        description: `Staff adjustment: ${reason.trim()}`,
+        reason: reason.trim(),
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "The points were not changed.",
+      );
+      return;
+    }
     onAdjusted();
     toast.success(
       `${points > 0 ? "Added" : "Removed"} ${Math.abs(points).toLocaleString()} points`,
@@ -123,7 +141,8 @@ export function AdjustPointsModal({
           </div>
 
           <p className="text-muted-foreground text-xs">
-            Recorded by {user.name}.
+            Recorded against your account, and visible in the customer&apos;s
+            points history.
           </p>
         </div>
 
@@ -132,8 +151,8 @@ export function AdjustPointsModal({
             Cancel
           </Button>
           <Button
-            onClick={handleApply}
-            disabled={!valid}
+            onClick={() => void handleApply()}
+            disabled={!valid || post.isPending}
             className="bg-emerald-600 text-white hover:bg-emerald-700"
           >
             Apply adjustment

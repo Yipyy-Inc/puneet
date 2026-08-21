@@ -3384,6 +3384,45 @@ A first walk reported no discount and looked like an app bug. It was the WALK:
 passed to it. Worth remembering — it fails in the direction that looks like a
 real defect.
 
+#### ✅ The members screen and the client loyalty tab are REAL — 2026-08-21
+
+For a few hours these were the most misleading surface on the platform. The
+ledger became real that morning and the screens still read
+`src/data/loyalty-accounts`, so **"Points Outstanding" — a liability a facility
+owes its customers — was summed from a seed file** that had nothing to do with
+any balance the database held, and the members list showed people with no
+account at all. That was a gap I opened, and closing it was the next change.
+
+- `LoyaltyMembersTable`, the members KPIs and the client loyalty tab read
+  `loyaltyLedgerQueries`.
+- `AdjustPointsModal` posts to the LEDGER instead of pushing onto an array and
+  toasting success. The author is stamped **server-side from the session** —
+  the browser no longer says who made an adjustment.
+- `SendRewardModal` posts points, or grants credit through
+  `redeem_loyalty_points` at `points: 0` — a gift costs the customer nothing,
+  and the fixture's single `grantReward` had blurred two different operations.
+- The client tab's empty state promised an account would appear "automatically
+  when this customer next books". **Nothing did that**, so the screen said no
+  and meant never. It now has a button that opens one.
+
+**`total_spend` and `total_visits` are derived, not stored.** The account table
+deliberately does not carry them (bookings do), but the screen shows and sorts
+by them — so `loyalty_account_overview` computes them at read time, with
+`security_invoker = true` so the caller's own RLS still decides what comes back.
+Without that flag a view runs as its owner and becomes a hole around every
+policy underneath.
+
+Covered by
+[loyalty-members-screen.spec.ts](../../tests/e2e/loyalty-members-screen.spec.ts)
+in `test:e2e:ci`. Its assertion is not "the page renders" — it is that what the
+SCREEN shows and what the LEDGER holds are the same number, compared in the same
+run.
+
+**`LoyaltyTransactionHistory` took a transitional shape** — `kind` from a real
+row, `transactionType` from the fixture — because the customer wallet still
+passes the old one. The fixture half goes when the wallet does; it is optional
+and documented rather than blessed.
+
 #### 🟠 What the checkout change did NOT cover
 
 **Grooming keeps its own arithmetic.** `grooming/payment-dialog.tsx` gets the
@@ -3394,11 +3433,12 @@ there is no negative line item there and **no release if that recording then
 fails**. Changing a second money path blind would have been worse than leaving
 it; it needs its own pass.
 
-**The SCREENS still read fixtures.** Members, redemptions, the client loyalty
-tab and the customer wallet all still go through `lib/api/loyalty.ts` to
-`src/data/loyalty-*`. That is why the fixture module keeps its name and its
-callers, and why `DEFAULT_LOYALTY_FACILITY_ID` is still handed out — as a
-fixture key, not a facility.
+**Some SCREENS still read fixtures.** The members screen, its three modals and
+the client loyalty tab were converted on 2026-08-21 — see below. Redemptions and
+the customer wallet still go through `lib/api/loyalty.ts` to
+`src/data/loyalty-*`, which is why that module keeps its name and why
+`DEFAULT_LOYALTY_FACILITY_ID` is still handed out — as a fixture key, not a
+facility.
 
 **Points EARNING does not exist.** Nothing fires the earn rules on a checkout,
 so an account gains points only by a manual ledger entry. The rules are real
