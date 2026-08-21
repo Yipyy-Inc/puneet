@@ -2955,6 +2955,57 @@ already real in `facility_settings` and on the `facilities` row. Only
 domain, which needs no migration. Converting the screen as it stands would give
 a facility two places to change its address and no rule about which wins.
 
+## Snapshot (2026-08-21, live-deploy verification)
+
+### 🟡 `supabase/migrations/` is a RECORD of production, not a script that can rebuild it
+
+Ten commits went to `main` on 2026-08-21 and the deployed build was checked for
+the first time. The deploy itself was clean — all seven new API routes answer
+`401` anonymously (and unknown paths answer `404`, so that `401` means the route
+shipped rather than a blanket middleware refusal), `PATCH`/`PUT` on
+`/api/scheduling/structure` answer `401` rather than `405`, which pins
+production to the last commit, and `/employee/payroll` returns a
+`NEXT_REDIRECT;replace;/sign-in` shell with zero wage content in it.
+
+What the check _did_ turn up is older than any of that work: **137 of the 141
+files in `supabase/migrations/` carry version stamps that appear nowhere in
+`supabase_migrations.schema_migrations`, and 162 of the 165 ledger rows have no
+matching file.** It goes back to the first migration in the project.
+
+The cause is mechanical, not careless. Every migration here has been applied
+through the Supabase MCP `apply_migration` tool, which stamps the ledger with
+the **wall-clock time at apply time**, while the files are hand-named with round
+timestamps (`…220000`). The two naming schemes have never agreed and never will.
+
+**Why it is risky.** `supabase db push` against this project would consider all
+141 files unapplied. It would not fail cleanly on the first one either: much of
+the DDL is `create table if not exists` / `create policy if not exists` and
+would sail straight past, reaching seed migrations that have **no `on conflict`
+guard at all** — `20260806340000_prepaid_package_seed.sql` (6 inserts),
+`20260805230000_grooming_demo_day.sql` (4 inserts). The failure mode is
+duplicated production seed data, not an error message.
+
+**What saves us today** is that nothing invokes it: no `package.json` script, no
+CI step, no documented command. The only mention of the CLI in the whole repo is
+a comment in `supabase/tests/booking-write-integrity.sql`.
+
+**What to do instead.** Keep applying migrations through MCP `apply_migration`,
+which is what every one of them has used. Do **not** run `supabase db push` or
+`supabase migration up` against the live project to "catch it up" — that is the
+command this entry exists to warn about. If the ledger ever genuinely needs to
+agree with the files (a second Supabase project, a disaster-recovery rebuild),
+the tool for it is `supabase migration repair --status applied <version>` per
+file, decided deliberately and verified row by row — not a push.
+
+**A related trap, already survived once.** The ledger holds
+`20260820162248 pay_can_be_written_not_only_read`, which has no file, because it
+was an intermediate fix applied via MCP and then folded back into
+`20260820220000_a_shift_is_a_row.sql`. That is the _correct_ handling and the
+file was verified against the live policy (both arms
+`is_facility_admin AND has_permission`, byte-identical). But it means **a ledger
+row with no file is not automatically drift** — check whether the DDL was folded
+into a neighbouring file before treating one as missing.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
