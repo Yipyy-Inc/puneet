@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
 import { getViewer } from "@/lib/auth/viewer";
+import type { PayrollConfig } from "@/lib/settings/payroll";
 import { createServerClient } from "@/lib/supabase/server";
 
 // ============================================================================
@@ -46,7 +47,17 @@ export interface PayrollLine {
   salariedMinutes: number;
   /** No shift, or a position with no rate. Real work that cannot be priced. */
   unpricedMinutes: number;
+  /** Billable minutes at the ordinary rate — the ones that are neither. */
+  regularMinutes: number;
+  /** Beyond the facility's weekly threshold. Zero when no rule is configured. */
+  overtimeMinutes: number;
+  /** Worked on a day the facility declared a holiday, at that day's multiplier. */
+  holidayMinutes: number;
   gross: number;
+  /** The PREMIUM alone — what the overtime hours cost ABOVE the ordinary rate. */
+  overtimePay: number;
+  /** Likewise for holidays: the extra, not the whole line. */
+  holidayPremium: number;
   /** Still on the clock. Counted, never guessed at. */
   openSessions: number;
 }
@@ -65,11 +76,24 @@ export interface PayrollPayload {
    */
   timeZone: string;
   lines: PayrollLine[];
+  /**
+   * Whether the facility has an overtime rule at all.
+   *
+   * FALSE MEANS NOBODY HAS SAID, not "no overtime is owed". The screen has to
+   * show the difference: an unconfigured run that looks finished is how
+   * somebody gets underpaid and nobody notices. See lib/settings/payroll.ts.
+   */
+  overtimeConfigured: boolean;
   totals: {
     gross: number;
     hourlyMinutes: number;
     salariedMinutes: number;
     unpricedMinutes: number;
+    regularMinutes: number;
+    overtimeMinutes: number;
+    holidayMinutes: number;
+    overtimePay: number;
+    holidayPremium: number;
     openSessions: number;
   };
 }
@@ -82,8 +106,14 @@ interface SummaryRow {
   hourly_minutes: number;
   salaried_minutes: number;
   unpriced_minutes: number;
+  regular_minutes: number;
+  overtime_minutes: number;
+  holiday_minutes: number;
   gross: string | number;
+  overtime_pay: string | number;
+  holiday_premium: string | number;
   open_sessions: number;
+  overtime_configured: boolean;
 }
 
 export async function GET(request: NextRequest) {
@@ -153,20 +183,62 @@ export async function GET(request: NextRequest) {
     hourlyMinutes: row.hourly_minutes,
     salariedMinutes: row.salaried_minutes,
     unpricedMinutes: row.unpriced_minutes,
+    regularMinutes: row.regular_minutes,
+    overtimeMinutes: row.overtime_minutes,
+    holidayMinutes: row.holiday_minutes,
     // `numeric` arrives as a string over the wire. `Number(...)` once, here,
     // rather than in each of the places that add it up.
     gross: Number(row.gross),
+    overtimePay: Number(row.overtime_pay),
+    holidayPremium: Number(row.holiday_premium),
     openSessions: row.open_sessions,
   }));
+
+  // ── READ FROM THE SETTING, NOT FROM A ROW ────────────────────────────
+  //
+  // This was `data[0]?.overtime_configured ?? false`, which is wrong in the one
+  // case that matters: a facility WITH a rule and nobody on the clock that
+  // period returns no rows, so the flag fell to false and the screen announced
+  // "no overtime rule is set" to a facility that had set one. A quiet fortnight
+  // is not a missing rule.
+  //
+  // Every row does carry the flag, and they all agree — it is a property of the
+  // facility. But rows are exactly what a payroll period can legitimately have
+  // none of.
+  //
+  // The normalisation below MUST match `payroll_summary`: a threshold of zero
+  // with the rule on is treated as unset there, because taking it literally
+  // makes every minute overtime. Change one and change the other.
+  const { data: rules } = await supabase
+    .from("facility_settings")
+    .select("value")
+    .eq("facility_id", context.facilityId)
+    .eq("domain", "payroll_config")
+    .maybeSingle();
+
+  const overtime = (rules as { value?: { overtime?: PayrollConfig["overtime"] } } | null)
+    ?.value?.overtime;
+  const overtimeConfigured = Boolean(
+    overtime?.enabled && (overtime.weeklyThresholdHours ?? 0) > 0,
+  );
 
   return NextResponse.json({
     from,
     to,
     timeZone: context.timeZone,
     lines,
+    overtimeConfigured,
     totals: {
       gross: lines.reduce((sum, line) => sum + line.gross, 0),
       hourlyMinutes: lines.reduce((sum, line) => sum + line.hourlyMinutes, 0),
+      regularMinutes: lines.reduce((sum, line) => sum + line.regularMinutes, 0),
+      overtimeMinutes: lines.reduce(
+        (sum, line) => sum + line.overtimeMinutes,
+        0,
+      ),
+      holidayMinutes: lines.reduce((sum, line) => sum + line.holidayMinutes, 0),
+      overtimePay: lines.reduce((sum, line) => sum + line.overtimePay, 0),
+      holidayPremium: lines.reduce((sum, line) => sum + line.holidayPremium, 0),
       salariedMinutes: lines.reduce(
         (sum, line) => sum + line.salariedMinutes,
         0,

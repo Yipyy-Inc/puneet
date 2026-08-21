@@ -47,6 +47,7 @@ import { StaffNotificationPreferences } from "@/components/facility/StaffNotific
 import { NotificationRoleDefaults } from "@/components/facility/NotificationRoleDefaults";
 import { FeedingMedicationConfig } from "@/components/facility/FeedingMedicationConfig";
 import { TaxSettings } from "@/components/facility/TaxSettings";
+import { PayrollRulesSettings } from "@/components/facility/PayrollRulesSettings";
 import { BrandingSettings } from "@/components/facility/BrandingSettings";
 import { CustomerSignupSettings } from "@/components/facility/CustomerSignupSettings";
 import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
@@ -4748,6 +4749,15 @@ export default function SettingsPage() {
           {activeSection === "taxes" && (
             <div className="space-y-6">
               <TaxSettings />
+            </div>
+          )}
+
+          {/* Payroll rules — the overtime threshold and the holiday list that
+              `payroll_summary` bills from. Shipped WITH the function that reads
+              them: a domain with no editor is a setting nobody can set. */}
+          {activeSection === "payroll-rules" && (
+            <div className="space-y-6">
+              <PayrollRulesSettings />
             </div>
           )}
 

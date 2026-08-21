@@ -23,6 +23,7 @@ import type {
 } from "@/types/facility";
 import type { PricingRules } from "@/lib/settings/pricing";
 import type { TaxConfig } from "@/lib/settings/tax";
+import type { PayrollConfig } from "@/lib/settings/payroll";
 
 // ============================================================================
 // A facility's own settings, per domain.
@@ -50,6 +51,8 @@ export interface FacilitySettings {
   booking_rules: SettingState<BookingRules>;
   tip_config: SettingState<TipConfig>;
   tax_config: SettingState<TaxConfig>;
+  /** Overtime rule + statutory holidays. `configured: false` = nobody has said. */
+  payroll_config: SettingState<PayrollConfig>;
   pricing_rules: SettingState<PricingRules>;
   booking_flow: SettingState<FacilityBookingFlowConfig>;
   daycare_config: SettingState<ModuleConfig>;

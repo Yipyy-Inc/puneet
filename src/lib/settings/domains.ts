@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { NO_PAYROLL_RULES, payrollConfigSchema } from "@/lib/settings/payroll";
+
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
 import { NO_TAX, taxConfigSchema } from "@/lib/settings/tax";
 
@@ -240,6 +242,20 @@ export const SETTING_DOMAINS = {
     schema: z.array(weatherWarningRuleSchema),
     fallback: weatherWarningRules as WeatherWarningRule[],
   },
+  // ── WHAT A FACILITY PAYS ABOVE THE BASE RATE ───────────────────────────
+  //
+  // Overtime rules and the statutory-holiday list. Money, and the kind that is
+  // owed to a PERSON rather than collected from a customer — so the fallback
+  // being empty does not mean "nothing is owed", it means nobody has said, and
+  // `payroll_summary` returns `overtime_configured` so a screen cannot present
+  // an unconfigured run as a complete one. See the banner in
+  // lib/settings/payroll.ts.
+  //
+  // `holidays` here IS the holiday-rate list the calendar draws — one list,
+  // read by the roster and billed by payroll. It is not a third holiday
+  // concept; see the same banner.
+  payroll_config: { schema: payrollConfigSchema, fallback: NO_PAYROLL_RULES },
+
   // No exported schema for this one — it is a plain map of id -> hex, defined
   // in lib/operations-calendar rather than types/facility.
   service_color_overrides: {

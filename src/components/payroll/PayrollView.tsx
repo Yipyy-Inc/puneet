@@ -128,6 +128,42 @@ export function PayrollView() {
         ),
     },
     {
+      key: "overtimeMinutes",
+      label: "Overtime",
+      align: "right",
+      sortable: true,
+      sortValue: (line) => line.overtimeMinutes,
+      render: (line) =>
+        line.overtimeMinutes > 0 ? (
+          <span
+            className="font-medium text-indigo-600 dark:text-indigo-400"
+            title={`Beyond the weekly threshold — premium ${formatCurrency(line.overtimePay)}`}
+          >
+            {hoursLabel(line.overtimeMinutes)}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: "holidayMinutes",
+      label: "Holiday",
+      align: "right",
+      sortable: true,
+      sortValue: (line) => line.holidayMinutes,
+      render: (line) =>
+        line.holidayMinutes > 0 ? (
+          <span
+            className="font-medium text-violet-600 dark:text-violet-400"
+            title={`Worked on a declared holiday — premium ${formatCurrency(line.holidayPremium)}`}
+          >
+            {hoursLabel(line.holidayMinutes)}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
       key: "unpricedMinutes",
       label: "Unpriced",
       align: "right",
@@ -162,16 +198,26 @@ export function PayrollView() {
       "Employee",
       "Sessions",
       "Paid minutes",
+      "Regular minutes",
+      "Overtime minutes",
+      "Holiday minutes",
       "Salaried minutes",
       "Unpriced minutes",
+      "Overtime premium",
+      "Holiday premium",
       "Gross",
     ];
     const rows = lines.map((line) => [
       line.employeeName,
       line.sessions,
       line.hourlyMinutes,
+      line.regularMinutes,
+      line.overtimeMinutes,
+      line.holidayMinutes,
       line.salariedMinutes,
       line.unpricedMinutes,
+      line.overtimePay.toFixed(2),
+      line.holidayPremium.toFixed(2),
       line.gross.toFixed(2),
     ]);
     // Minutes rather than "8h 05m" — a spreadsheet has to be able to add them
@@ -252,14 +298,22 @@ export function PayrollView() {
           <KpiTile
             label="Gross"
             value={formatCurrency(totals?.gross ?? 0)}
-            hint="Hourly positions only"
+            hint={
+              totals && (totals.overtimePay || totals.holidayPremium)
+                ? `incl. ${formatCurrency(totals.overtimePay + totals.holidayPremium)} in premiums`
+                : "Hourly positions only"
+            }
             icon={DollarSign}
             tone="emerald"
           />
           <KpiTile
             label="Paid hours"
             value={hoursLabel(totals?.hourlyMinutes ?? 0)}
-            hint={`${lines.length} ${lines.length === 1 ? "person" : "people"}`}
+            hint={
+              totals && (totals.overtimeMinutes || totals.holidayMinutes)
+                ? `${hoursLabel(totals.overtimeMinutes)} overtime · ${hoursLabel(totals.holidayMinutes)} holiday`
+                : `${lines.length} ${lines.length === 1 ? "person" : "people"}`
+            }
             icon={Clock}
             tone="indigo"
           />
@@ -279,6 +333,30 @@ export function PayrollView() {
           />
         </div>
       )}
+
+      {/* ── THE MOST IMPORTANT SENTENCE ON THIS SCREEN ──────────────────
+          `overtimeConfigured: false` does NOT mean no overtime is owed. It
+          means nobody has told the system what this facility's rule is, so
+          every figure above is hours x rate and flat.
+
+          An unconfigured run that LOOKS finished is how somebody gets underpaid
+          and nobody notices — and unlike an unset tax rate, which under-collects
+          against the facility's own liability, this lands on a person. So it is
+          stated, in the same place and the same weight as the open-sessions
+          warning, rather than being inferable from an absent column. */}
+      {shown && !shown.overtimeConfigured ? (
+        <Card className="flex items-start gap-2.5 border-amber-200 bg-amber-50/60 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <p>
+            <span className="font-medium">
+              No overtime rule is set for this facility.
+            </span>{" "}
+            Every figure here is hours × rate. That is not the same as “no
+            overtime is owed” — nobody has said what the rule is. Set the weekly
+            threshold and multiplier in Settings → Payroll.
+          </p>
+        </Card>
+      ) : null}
 
       {/* A period closed over hours that have not finished happening is a pay
           run somebody has to redo. */}

@@ -3165,6 +3165,137 @@ The remaining `@/data/scheduling` importers are all screens already recorded as
 their own work: `templates`, `onboarding`, `company`, `notifications`, the audit
 trail, and `ScheduleView`'s holiday rates and shift-opportunity state.
 
+## Snapshot (2026-08-21, overtime and holidays in payroll)
+
+### 🔴 A setting seeded into `useState` latches to its fallback forever
+
+`PayrollRulesSettings` did this, and it is the shape to watch for anywhere in
+this codebase:
+
+    const settings = useFacilitySettings();
+    const [enabled, setEnabled] = useState(saved?.overtime?.enabled ?? false);
+
+`useState`'s initialiser runs on the FIRST render, when the settings query has
+not resolved and `useFacilitySettings` is returning `fallbackSettings()`. The
+toggle therefore latched to `false` for the life of the page — so a facility
+that HAD configured overtime opened the screen and saw it switched off, and the
+threshold and multiplier fields, which only render when it is on, never appeared
+at all.
+
+`facility-settings.ts` already warns about exactly this confusion for pricing
+rules: _"A screen showing no late fee because the facility chose none, and one
+showing no late fee because the settings have not loaded, must not look the
+same."_ The hook returns `isPending` for that reason and this component ignored
+it.
+
+Fixed the way the employee availability screen was fixed the same day: the
+server's value is the truth, state holds only what has been EDITED
+(`draft ?? draftFrom(saved)`), plus a skeleton while `isPending`.
+
+**Only a browser walk found it.** The API tests passed — the route and the
+function were correct throughout.
+
+#### 🔴 AND `TaxSettings` HAS THE SAME SHAPE, WHERE IT CAN LOSE DATA
+
+Not fixed here, and worse than the payroll one. `TaxSettings.tsx:63-64` seeds
+`country`, `province` and `taxes` from `settings.tax_config.value` in `useState`
+initialisers, with no `isPending` guard. Its Save then writes `taxes` straight
+back out of that state.
+
+There is **no prefetch of `facilitySettingsQueries.all()` anywhere** — grep it —
+and the settings page is `"use client"`. So on a COLD load the first render sees
+`fallbackSettings()`, whose `tax_config` is `NO_TAX` with `taxes: []`. The
+screen shows a facility with no taxes configured, and pressing Save writes that
+over their real GST/QST entries and registration numbers.
+
+Reachable path: hard-refresh `/facility/dashboard/settings?section=taxes`, press
+Save. Mitigated only by React Query having the data cached from an earlier
+navigation in the same SPA session.
+
+`CheckinRequirementsSettings.tsx:94` shares the shape with lower stakes.
+
+Fix is the same three lines as the payroll one. It is called out separately
+rather than folded into a payroll commit because tax has its own semantics worth
+testing on the way through — a fraction-vs-percentage rate, compound taxes, and
+registration numbers that appear on documents.
+
+### 🟡 `payroll_summary` reads a domain that may be absent, and says so
+
+Overtime and holidays now come from `facility_settings.payroll_config`. The
+fallback is OFF and EMPTY — the rule `tax_config` follows, because a threshold
+this codebase invented is not one anybody agreed to.
+
+**But silence is not safe here the way it is for tax.** An unset tax rate
+under-collects against the facility's OWN liability; an unset overtime rule
+underpays a PERSON. So the function returns `overtime_configured` and the
+screen states it, rather than presenting a flat run as a finished one. Do not
+"simplify" that flag away because the numbers look complete without it.
+
+Other decisions worth not re-litigating:
+
+- **Overtime buckets by WEEK**, in the facility timezone, starting on the
+  facility's own `weekStartsOn`. A fortnight holds two weeks; summing 80 hours
+  against a 40-hour threshold invents 40 hours of overtime. `date_trunc('week')`
+  is deliberately NOT used — it is ISO-Monday only.
+- **The overtime hours are the LAST ones worked** in the week, allocated by a
+  running total over entries ordered by clock-in. Rates differ per entry
+  (somebody can work two positions), so it has to name specific minutes rather
+  than blend a rate nobody agreed to.
+- **No minute is paid twice.** Holiday minutes pay their multiplier and still
+  count toward the weekly threshold, but are not also given the overtime
+  premium; the premium comes off the ordinary tail.
+- **A threshold of 0 with the rule ON is treated as UNSET**, not as
+  all-overtime. Taking it literally inflates the wage bill by half, and it is
+  far likelier a half-finished form.
+- **`dailyThresholdHours` was drafted and removed before shipping.** Only the
+  weekly rule is implemented, so the field would have been a setting a facility
+  could fill in and be paid nothing by. BC has a daily rule; adding it needs a
+  second bucket dimension AND a precedence rule (they do not simply add).
+
+### 🔴 A facility-wide flag read off a ROW is wrong whenever there are no rows
+
+`/api/payroll` reported `overtimeConfigured` as
+`data[0]?.overtime_configured ?? false`. Every row genuinely carries the flag
+and they all agree — it is a property of the facility, not a person — so the
+shortcut looked safe, and there was even a comment reasoning it through.
+
+It is wrong in the one case that matters. A payroll period with nobody on the
+clock returns NO rows, so the flag fell to `false` and the screen announced "no
+overtime rule is set" to a facility that had set one. On the payroll screen's
+default period — the last fortnight — that is most facilities most of the time.
+
+Now read from `facility_settings.payroll_config` directly, which is answerable
+whether or not anyone worked. **The normalisation in the route must match
+`payroll_summary`** (a zero threshold with the rule on counts as unset); the
+duplication is deliberate and flagged at both sites.
+
+Found by a browser walk, again — the four API tests all passed, because every
+one of them seeded hours first. Covered now by "a quiet period does not look
+like a missing rule", which asks for a week in 2019.
+
+### 🟡 The holiday list had two homes and the calendar's was hardcoded
+
+`ScheduleView` held three 2026 dates inline — Easter Monday, Victoria Day,
+Canada Day — drawn on every facility's roster as "x1.5 pay rate" while
+`payroll_summary` had never heard of them. The roster said a day cost time and a
+half; the wage bill for that day was flat.
+
+`payroll_config.holidays` is now the one list, read by the calendar and billed
+by payroll. `HolidayRate.departmentId` was dropped: no caller of `isHoliday` has
+ever passed one.
+
+**`facilityHolidays` in `src/data/settings` is a DIFFERENT question** — recurring
+`{month, day, name}` with no multiplier, about whether the business is OPEN. It
+stays parked read-only. Merging "we are closed" with "this pays double" would
+answer both wrongly.
+
+### 🟡 The settings deep-link guard defaults to ALLOW
+
+`canAccessSettingsSection` is `!key || permissions[key] !== false` — a section
+missing from `SETTINGS_SECTION_KEYS` is permitted. So adding a sidebar entry
+with a `permKey` and forgetting the map entry hides the link from someone who
+may still deep-link straight to it. `payroll-rules` was added to both.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
