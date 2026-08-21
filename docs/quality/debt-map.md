@@ -3091,6 +3091,80 @@ rather than scheduling's. Note also that `punctuality(..., FIXTURE_TIMEZONE)` in
 there is no partial fix available. Convert the data and the timezone together or
 neither.
 
+## Snapshot (2026-08-21, the scheduling reports screen)
+
+### 🔴 `memoCache` in `report-data-sources.ts` is only safe for functions whose inputs never change
+
+The module keeps `const memoCache = new Map<string, unknown>()` at module scope
+with **no eviction**, and `cacheKey()` builds its key from the selector name,
+the date range and `opts` — nothing else. That is exactly right for the
+selectors it was written for, whose other inputs are module-scope fixtures.
+
+`staffPerformance` and `laborCost` stopped being that on 2026-08-21: the roster
+became an argument, so their inputs now change twice on an ordinary page load —
+empty while the queries are in flight, then again whenever somebody picks a
+department. Neither is in the key.
+
+The result was a screen that loaded, rendered nothing, and **never recovered**:
+the first call cached `[]` under `laborCost|from|to`, and every later call for
+that range got it back for the lifetime of the page. The department filter had
+the same defect — a new scope, the same key, the previous answer.
+
+Both are now un-memoized, with the reasoning written at the top of
+`staffPerformance`. The caller is a React component that already wraps them in
+`useMemo` with the right dependencies, which is the correct tool for an input
+that varies; adding the roster to the key would also have worked and would have
+grown an unbounded cache with every filter change.
+
+**Before adding an argument to anything in this file, check whether it reaches
+`cacheKey`.** If it does not, either put it there or drop the `memo()` wrapper.
+A stale entry here does not look like a cache bug — it looks like an empty
+quarter.
+
+Caught by `scheduling-reports-screen.spec.ts`, and only because that spec opens
+a second tab. The KPI row above it was correct throughout, because those figures
+are computed in the component rather than through this module.
+
+### 🟡 Two things were REMOVED from the reports screen rather than converted
+
+Both would look like regressions to anyone reading the diff alone:
+
+- **Revenue / Labour % / Sales-per-hour**, on the staff tab. `staffPerformance`
+  attributes revenue from retail transactions and grooming appointments. Retail
+  has **no backend at all**; grooming's real table is not wired to this screen.
+  With the cost side real, showing them together produced labour-as-percent-of-
+  revenue from a real numerator over an invented denominator — a fabricated
+  financial ratio that looks reconciled _because_ half of it is true, which is
+  worse than the all-fixture version it replaced.
+- **Open-shift fill rate, Posted/Claimed/Expired/Cancelled, and Top claimers.**
+  These reported on a post-and-claim board that does not exist. `staff_shifts`
+  knows exactly one thing about an unclaimed shift: `staff_id IS NULL`. "0%
+  filled" reads as a failing process rather than an absent feature. The tab now
+  lists the shifts that genuinely have nobody on them.
+
+Four buttons went with them, in `RosterView`: "Post for pickup" and "Replace /
+find cover" (both claimed "Posted to Shift Opportunities board — eligible staff
+will be notified"), and "Send reminder" / "Message employee" (both claimed a
+message was sent). Nothing was sent, and a manager who believes they have
+reminded somebody about a 6am shift has been told something false about their
+own roster.
+
+`PostShiftOpportunityDialog` was KEPT — its `onPost` really does create an
+unassigned shift — but its toast no longer promises notifications. Its
+`claimMode`, invite list and expiry fields still write to local state only, and
+it still stamps `postedBy: "emp-1" / "Sarah Johnson"`, a hardcoded person.
+
+### 🟡 What is still a fixture on the scheduling reports screen
+
+Nothing — but `groomingAnalytics` was removed rather than converted, so
+"Appointments per groomer" is gone from the staff tab. There IS a real
+`grooming_appointments` table and a route for it; wiring it is the grooming
+module's job.
+
+The remaining `@/data/scheduling` importers are all screens already recorded as
+their own work: `templates`, `onboarding`, `company`, `notifications`, the audit
+trail, and `ScheduleView`'s holiday rates and shift-opportunity state.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

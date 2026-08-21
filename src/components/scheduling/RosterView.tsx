@@ -3,13 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  Bell,
   CheckCircle2,
   Clock,
-  Hand,
-  MessageSquare,
   PlayCircle,
-  Replace,
   Timer,
   UserCheck,
   UserX,
@@ -26,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 
 import { schedulingQueries } from "@/lib/api/scheduling";
@@ -212,16 +207,22 @@ export function RosterView() {
     { weekday: "long", month: "short", day: "numeric", year: "numeric" },
   );
 
-  const handleNotify = (shift: ScheduleShift, action: string) => {
-    const emp = scheduleEmployees.find((e) => e.id === shift.employeeId);
-    toast.success(`${action} sent to ${emp?.name ?? "team"}`);
-  };
-
-  const handlePost = (_shift: ScheduleShift) => {
-    toast.success("Posted to Shift Opportunities board.", {
-      description: "Eligible staff will be notified.",
-    });
-  };
+  // ── FOUR BUTTONS REMOVED HERE ON 2026-08-21 ──────────────────────────
+  //
+  // "Post for pickup" and "Replace / find cover" both said "Posted to Shift
+  // Opportunities board. Eligible staff will be notified." There is no such
+  // board: an unclaimed shift is `staff_shifts.staff_id IS NULL` and nothing
+  // more — no posting, no claiming, no notification. The Reports tab that
+  // charted its fill rate went in the same change, and a button that posts to
+  // a board whose report no longer exists is worse than either alone.
+  //
+  // "Send reminder" and "Message employee" said "Reminder sent to Dana" and
+  // "Message sent to Dana". Nothing was sent. A manager who believes they have
+  // reminded somebody about a 6am shift has been told something false about
+  // their own roster.
+  //
+  // Restoring any of them is a build: a shift-offer table for the first pair,
+  // a notification path for the second. Not a re-wiring.
 
   return (
     <div className="space-y-5 p-6">
@@ -446,45 +447,17 @@ export function RosterView() {
 
                           <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                             {bucket === "unfilled" ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handlePost(shift)}
+                              <Badge
+                                variant="secondary"
+                                className="border-amber-200 bg-amber-50 text-[10px] text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
                               >
-                                <Hand className="mr-1 size-3.5" />
-                                Post for pickup
-                              </Button>
+                                Nobody assigned
+                              </Badge>
                             ) : (
                               <>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="size-7"
-                                  onClick={() =>
-                                    handleNotify(shift, "Reminder")
-                                  }
-                                  title="Send reminder"
-                                >
-                                  <Bell className="size-3.5" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="size-7"
-                                  onClick={() => handleNotify(shift, "Message")}
-                                  title="Message employee"
-                                >
-                                  <MessageSquare className="size-3.5" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="size-7"
-                                  onClick={() => handlePost(shift)}
-                                  title="Replace / find cover"
-                                >
-                                  <Replace className="size-3.5" />
-                                </Button>
+                                <span className="text-muted-foreground text-xs">
+                                  —
+                                </span>
                               </>
                             )}
                           </div>

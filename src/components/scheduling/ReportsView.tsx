@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -35,33 +36,29 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  FIXTURE_TIMEZONE,
   hoursByEmployee,
   hoursByDepartment,
   coverageByDayHour,
   timeOffByType,
   frequentSwappers,
-  openShiftAnalytics,
   dailyLaborCost,
   punctuality,
 } from "@/lib/scheduling-reports";
-import {
-  staffPerformance,
-  laborCost,
-  groomingAnalytics,
-} from "@/lib/report-data-sources";
+import { laborCost } from "@/lib/report-data-sources";
 import { formatCurrency, formatCount, formatPercent } from "@/lib/format";
 import { downloadReportCsv } from "@/lib/report-export";
+import { useQuery } from "@tanstack/react-query";
 import {
-  departments,
-  positions as allPositions,
-  scheduleEmployees,
-  scheduleShifts,
-  enhancedTimeOffRequests,
-  enhancedShiftSwaps,
-  shiftOpportunities,
-  timeClockEntries,
-} from "@/data/scheduling";
+  clockQueries,
+  schedulingQueries,
+  swapQueries,
+  timeOffQueries,
+} from "@/lib/api/scheduling";
+import { staffQueries } from "@/lib/api/staff";
+import {
+  toAttendanceEntries,
+  toScheduleEmployees,
+} from "@/lib/api/mappers/scheduling";
 
 const RANGE_OPTIONS = [
   { value: "7", label: "Last 7 days" },
@@ -122,42 +119,83 @@ export function ReportsView() {
     };
   }, [days]);
 
+  // ── EVERY FIGURE ON THIS SCREEN CAME FROM src/data UNTIL 2026-08-21 ─────
+  //
+  // Shifts, clock entries, departments, positions, leave and swaps were all
+  // fixtures, on the module's own Reports tab, while Payroll — one nav item
+  // away — read the real tables. Same facility, two answers about the same
+  // fortnight, and the fixture one looked more complete.
+  //
+  // The window is the report's range, so stepping it is a new query rather
+  // than a refetch that blanks the numbers already on screen.
+  const { data: roster, isPending: rosterPending } = useQuery(
+    schedulingQueries.shifts(range.start, range.end),
+  );
+  const { data: structure } = useQuery(schedulingQueries.structure());
+  const { data: staff } = useQuery(staffQueries.profiles());
+  const { data: clock } = useQuery(clockQueries.state(range.start, range.end));
+  const { data: leave } = useQuery(timeOffQueries.list("all"));
+  const { data: swaps } = useQuery(swapQueries.list("all"));
+
+  const departments = useMemo(() => structure?.departments ?? [], [structure]);
+  const allPositions = useMemo(() => structure?.positions ?? [], [structure]);
+
+  // The FACILITY's zone, carried by the shifts payload. Every reconciliation
+  // below grades somebody late or absent, so doing it in the reader's zone is
+  // the bug that put night shifts on the wrong day in the attendance view.
+  const timeZone = roster?.timeZone ?? "UTC";
+
+  const allShifts = useMemo(() => roster?.shifts ?? [], [roster]);
+  // Bridged to the shape the attendance math speaks, in the FACILITY's zone —
+  // one shared adapter, so this screen and AttendanceView cannot come to
+  // different conclusions about who was late.
+  const clockEntries = useMemo(
+    () => toAttendanceEntries(clock?.entries ?? [], timeZone),
+    [clock, timeZone],
+  );
+  const employees = useMemo(() => toScheduleEmployees(staff ?? []), [staff]);
+
+  // Scoping by department filters the SHIFTS, not the people. A shift carries
+  // its own department, so the report then names whoever actually worked there
+  // — including a cover from elsewhere, which is what a manager means. The old
+  // version filtered `scheduleEmployees` on `departmentIds`, fixture ids that
+  // matched nothing real.
   const scopedShifts = useMemo(
     () =>
-      scheduleShifts.filter(
-        (s) =>
-          departmentFilter === "all" || s.departmentId === departmentFilter,
+      allShifts.filter(
+        (shift) =>
+          departmentFilter === "all" || shift.departmentId === departmentFilter,
       ),
-    [departmentFilter],
+    [allShifts, departmentFilter],
   );
-  const scopedEmployees = useMemo(
-    () =>
-      scheduleEmployees.filter(
-        (e) =>
-          departmentFilter === "all" ||
-          e.departmentIds.includes(departmentFilter),
-      ),
-    [departmentFilter],
+
+  const rosterInput = useMemo(
+    () => ({
+      shifts: scopedShifts,
+      employees,
+      positions: allPositions,
+      clockEntries,
+      timeZone,
+    }),
+    [scopedShifts, employees, allPositions, clockEntries, timeZone],
   );
 
   const empHours = useMemo(
     () =>
       hoursByEmployee(
         scopedShifts,
-        scopedEmployees,
+        employees,
         allPositions,
-        timeClockEntries,
+        clockEntries,
         range,
-        // Fixture data — see the constant, and the debt map for why this screen
-        // cannot be half-converted.
-        FIXTURE_TIMEZONE,
+        timeZone,
       ),
-    [scopedShifts, scopedEmployees, range],
+    [scopedShifts, employees, allPositions, clockEntries, range, timeZone],
   );
 
   const deptHours = useMemo(
-    () => hoursByDepartment(scheduleShifts, departments, allPositions, range),
-    [range],
+    () => hoursByDepartment(allShifts, departments, allPositions, range),
+    [allShifts, departments, allPositions, range],
   );
 
   const coverage = useMemo(
@@ -165,88 +203,76 @@ export function ReportsView() {
     [scopedShifts, range],
   );
 
+  // Leave and swaps carry no department of their own in the real model — the
+  // shift does. Filtering them by department would need a join this screen
+  // does not have, so they are facility-wide and the header says so.
   const timeOff = useMemo(
-    () =>
-      timeOffByType(
-        enhancedTimeOffRequests.filter(
-          (r) =>
-            departmentFilter === "all" || r.departmentId === departmentFilter,
-        ),
-        range,
-      ),
-    [departmentFilter, range],
+    () => timeOffByType(leave?.requests ?? [], range),
+    [leave, range],
   );
 
   const swappers = useMemo(
-    () =>
-      frequentSwappers(
-        enhancedShiftSwaps.filter(
-          (s) =>
-            departmentFilter === "all" || s.departmentId === departmentFilter,
-        ),
-        scopedEmployees,
-        range,
-      ),
-    [departmentFilter, range, scopedEmployees],
+    () => frequentSwappers(swaps?.swaps ?? [], employees, range),
+    [swaps, employees, range],
   );
 
+  // An OPEN shift is one with nobody on it — `staff_shifts.staff_id IS NULL`.
+  // That is the whole of what the schema knows.
   const openShifts = useMemo(
-    () =>
-      openShiftAnalytics(
-        shiftOpportunities.filter(
-          (o) =>
-            departmentFilter === "all" || o.departmentId === departmentFilter,
-        ),
-        range,
-      ),
-    [departmentFilter, range],
+    () => scopedShifts.filter((shift) => !shift.employeeId),
+    [scopedShifts],
   );
 
   const costSeries = useMemo(
     () => dailyLaborCost(scopedShifts, allPositions, range),
-    [scopedShifts, range],
+    [scopedShifts, allPositions, range],
   );
 
-  // ─── Staff performance (sales + labor + productivity), facility-wide over the
-  // selected window. Sales/appointments come from transactions + grooming
-  // appointments attributed to each staff member; labor from shift × pay rate.
   const drRange = useMemo(
     () => ({ from: range.start, to: range.end }),
     [range],
   );
-  const staffPerf = useMemo(() => staffPerformance(drRange), [drRange]);
-  const labor = useMemo(() => laborCost(drRange), [drRange]);
-  const grooming = useMemo(() => groomingAnalytics(drRange), [drRange]);
+  const labor = useMemo(
+    () => laborCost(drRange, rosterInput),
+    [drRange, rosterInput],
+  );
   const punct = useMemo(
-    () => punctuality(scopedShifts, timeClockEntries, range, FIXTURE_TIMEZONE),
-    [scopedShifts, range],
+    () => punctuality(scopedShifts, clockEntries, range, timeZone),
+    [scopedShifts, clockEntries, range, timeZone],
   );
 
-  const staffRows = useMemo(() => {
-    const salesByName = new Map(
-      staffPerf.map((p) => [p.staffName.toLowerCase(), p]),
-    );
-    return labor
-      .map((l) => {
-        const sp = salesByName.get(l.staffName.toLowerCase());
-        return {
-          id: l.staffId,
-          name: l.staffName,
-          hours: l.hoursWorked,
-          laborCost: l.laborCost,
-          revenue: l.revenue,
-          laborPct: l.laborCostPct,
-          salesPerHour:
-            sp?.salesPerHour ??
-            (l.hoursWorked > 0 ? l.revenue / l.hoursWorked : 0),
-        };
-      })
-      .filter((r) => r.hours > 0 || r.revenue > 0)
-      .sort((a, b) => b.revenue - a.revenue);
-  }, [labor, staffPerf]);
+  // ── WHAT A STAFF ROW CAN HONESTLY SAY ──────────────────────────────────
+  //
+  // This table used to carry Revenue, Labour %, and Sales/hour beside the
+  // hours. Those come from `staffPerformance`, which attributes revenue from
+  // retail transactions and grooming appointments — retail has NO backend at
+  // all, and grooming's real table is not wired to this screen.
+  //
+  // Now that the cost side is real, showing them together would produce a
+  // labour-as-percent-of-revenue figure computed from a real numerator and an
+  // invented denominator: a fabricated financial ratio that looks reconciled
+  // precisely because half of it is true. Worse than the all-fixture version
+  // it replaces.
+  //
+  // So the columns are gone and the hours and cost remain. They come from the
+  // same shifts and clock entries Payroll bills from, so the two screens agree
+  // by construction. Restoring the revenue side means converting retail and
+  // grooming, not this file.
+  const staffRows = useMemo(
+    () =>
+      labor
+        .filter((row) => row.hoursWorked > 0 || row.laborCost > 0)
+        .map((row) => ({
+          id: row.staffId,
+          name: row.staffName,
+          hours: row.hoursWorked,
+          laborCost: row.laborCost,
+        }))
+        .sort((a, b) => b.laborCost - a.laborCost),
+    [labor],
+  );
 
-  const totalSales = staffPerf.reduce((s, p) => s + p.revenue, 0);
-  const totalLaborCost = labor.reduce((s, l) => s + l.laborCost, 0);
+  const totalLaborCost = labor.reduce((sum, row) => sum + row.laborCost, 0);
 
   // ─── Top-line metrics
   const totalHours = empHours.reduce((s, r) => s + r.scheduledHours, 0);
@@ -264,23 +290,8 @@ export function ReportsView() {
     rows.push(["Workforce Report", `${range.start} to ${range.end}`]);
     rows.push([]);
     rows.push(["Staff Performance"]);
-    rows.push([
-      "Staff",
-      "Hours",
-      "Labor Cost",
-      "Revenue",
-      "Labor %",
-      "Sales / Hour",
-    ]);
-    for (const s of staffRows)
-      rows.push([
-        s.name,
-        s.hours,
-        s.laborCost,
-        s.revenue,
-        s.laborPct,
-        Math.round(s.salesPerHour * 100) / 100,
-      ]);
+    rows.push(["Staff", "Hours", "Labor Cost"]);
+    for (const s of staffRows) rows.push([s.name, s.hours, s.laborCost]);
     rows.push([]);
     rows.push(["Hours by Department"]);
     rows.push(["Department", "Scheduled Hours", "Labor Cost"]);
@@ -333,33 +344,45 @@ export function ReportsView() {
         </div>
       </div>
 
-      {/* Headline KPIs */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KpiCard
-          icon={Clock}
-          label="Scheduled hours"
-          value={`${totalHours.toFixed(0)}h`}
-          accent="blue"
-        />
-        <KpiCard
-          icon={TrendingUp}
-          label="Labor cost"
-          value={`$${totalCost.toFixed(0)}`}
-          accent="emerald"
-        />
-        <KpiCard
-          icon={AlertTriangle}
-          label="Overtime"
-          value={`${totalOvertime.toFixed(1)}h (${overtimePct.toFixed(1)}%)`}
-          accent={overtimePct > 5 ? "red" : "amber"}
-        />
-        <KpiCard
-          icon={Hand}
-          label="Open shift fill rate"
-          value={`${(openShifts.fillRate * 100).toFixed(0)}%`}
-          accent={openShifts.fillRate >= 0.7 ? "emerald" : "amber"}
-        />
-      </div>
+      {/* Headline KPIs.
+
+          Guarded on the roster query: "0 scheduled hours, $0 labour cost" is a
+          statement about a fortnight, and rendering it while the request is
+          still in flight tells a manager their facility did no work. */}
+      {rosterPending ? (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[0, 1, 2, 3].map((tile) => (
+            <Skeleton key={tile} className="h-[86px] w-full" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <KpiCard
+            icon={Clock}
+            label="Scheduled hours"
+            value={`${totalHours.toFixed(0)}h`}
+            accent="blue"
+          />
+          <KpiCard
+            icon={TrendingUp}
+            label="Labor cost"
+            value={`$${totalCost.toFixed(0)}`}
+            accent="emerald"
+          />
+          <KpiCard
+            icon={AlertTriangle}
+            label="Overtime"
+            value={`${totalOvertime.toFixed(1)}h (${overtimePct.toFixed(1)}%)`}
+            accent={overtimePct > 5 ? "red" : "amber"}
+          />
+          <KpiCard
+            icon={Hand}
+            label="Shifts with nobody on them"
+            value={formatCount(openShifts.length)}
+            accent={openShifts.length > 0 ? "amber" : "emerald"}
+          />
+        </div>
+      )}
 
       <Tabs defaultValue="hours" className="space-y-4">
         <TabsList>
@@ -514,8 +537,8 @@ export function ReportsView() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <KpiCard
               icon={TrendingUp}
-              label="Attributed sales"
-              value={formatCurrency(totalSales)}
+              label="Hours worked"
+              value={formatCount(Math.round(totalHours))}
               accent="emerald"
             />
             <KpiCard
@@ -540,14 +563,11 @@ export function ReportsView() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">
-                Sales &amp; labor by staff
-              </CardTitle>
+              <CardTitle className="text-base">Labour by staff</CardTitle>
               <p className="text-muted-foreground text-xs">
-                Sales attributed via POS transactions + grooming appointments;
-                labor from scheduled shifts × pay rate. Booking revenue
-                (boarding/daycare/training) is not attributed to an individual,
-                so labor % reflects staff-attributed sales only.
+                Hours from the rostered shifts and the time clock; cost from
+                each shift&apos;s position rate. The same rows Payroll bills
+                from, so the two screens agree.
               </p>
             </CardHeader>
             <CardContent className="p-0">
@@ -561,10 +581,7 @@ export function ReportsView() {
                     <TableRow>
                       <TableHead>Staff</TableHead>
                       <TableHead className="text-right">Hours</TableHead>
-                      <TableHead className="text-right">Sales</TableHead>
-                      <TableHead className="text-right">Labor Cost</TableHead>
-                      <TableHead className="text-right">Labor %</TableHead>
-                      <TableHead className="text-right">Sales / Hr</TableHead>
+                      <TableHead className="text-right">Labour Cost</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -577,16 +594,7 @@ export function ReportsView() {
                           {r.hours.toFixed(1)}h
                         </TableCell>
                         <TableCell className="text-right text-sm tabular-nums">
-                          {formatCurrency(r.revenue)}
-                        </TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">
                           {formatCurrency(r.laborCost)}
-                        </TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">
-                          {r.revenue > 0 ? formatPercent(r.laborPct) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">
-                          {formatCurrency(r.salesPerHour)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -596,49 +604,12 @@ export function ReportsView() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Appointments per groomer
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {grooming.byGroomer.length === 0 ? (
-                <p className="text-muted-foreground p-6 text-center text-sm">
-                  No grooming appointments in this period.
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Groomer</TableHead>
-                      <TableHead className="text-right">Appointments</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">Avg Ticket</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {grooming.byGroomer.map((g) => (
-                      <TableRow key={g.stylistId}>
-                        <TableCell className="text-sm font-medium">
-                          {g.name}
-                        </TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">
-                          {formatCount(g.appointments)}
-                        </TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">
-                          {formatCurrency(g.revenue)}
-                        </TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">
-                          {formatCurrency(g.avgTicket)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          {/* "Appointments per groomer" lived here and read
+              `groomingAnalytics`, which counts the grooming FIXTURE. There is a
+              real `grooming_appointments` table and a route for it, but wiring
+              it is the grooming module's job — and a fixture appointment count
+              beside a real wage bill invites exactly the comparison neither
+              number can support. */}
         </TabsContent>
 
         {/* ── Coverage tab ────────────────────────────────────────── */}
@@ -781,55 +752,76 @@ export function ReportsView() {
           </div>
         </TabsContent>
 
-        {/* ── Open shifts tab ─────────────────────────────────────── */}
+        {/* ── Open shifts tab ─────────────────────────────────────────
+            WHAT THIS USED TO CLAIM, AND WHY IT IS SMALLER NOW.
+
+            It reported Posted / Claimed / Expired / Cancelled and a "top
+            claimers" league table, off `shiftOpportunities` — a fixture
+            describing an open-shift BOARD: post a shift, staff claim it, it
+            expires. None of that exists. `staff_shifts` knows one thing about
+            an unclaimed shift: `staff_id IS NULL`. There is no posting, no
+            claiming, no expiry, and nowhere to record any of it.
+
+            Reporting a fill rate against it would not merely be a fixture — it
+            would be a metric for a workflow the product does not have, and
+            "0% filled" reads as a failing process rather than an absent one.
+            So this shows the shifts that genuinely have nobody on them, and
+            says only that. */}
         <TabsContent value="open" className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-4">
-            <KpiCard
-              icon={Hand}
-              label="Posted"
-              value={openShifts.postedTotal}
-              accent="blue"
-            />
-            <KpiCard
-              icon={Hand}
-              label="Claimed"
-              value={openShifts.claimedTotal}
-              accent="emerald"
-            />
-            <KpiCard
-              icon={AlertTriangle}
-              label="Expired"
-              value={openShifts.expiredTotal}
-              accent="amber"
-            />
-            <KpiCard
-              icon={CalendarOff}
-              label="Cancelled"
-              value={openShifts.cancelledTotal}
-              accent="red"
-            />
-          </div>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Top claimers</CardTitle>
+              <CardTitle className="text-base">Unassigned shifts</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Rostered shifts in this period with nobody on them. Urgent ones
+                are flagged.
+              </p>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {openShifts.topClaimers.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  No claimed shifts in this period.
+            <CardContent className="p-0">
+              {openShifts.length === 0 ? (
+                <p className="text-muted-foreground p-6 text-center text-sm">
+                  Every shift in this period has somebody on it.
                 </p>
               ) : (
-                openShifts.topClaimers.map((c) => (
-                  <div
-                    key={c.employeeId}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span>{c.employeeName}</span>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {c.count} shifts
-                    </Badge>
-                  </div>
-                ))
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Position</TableHead>
+                      <TableHead className="text-right">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {openShifts.map((shift) => (
+                      <TableRow key={shift.id}>
+                        <TableCell className="text-sm font-medium">
+                          {shift.date}
+                        </TableCell>
+                        <TableCell className="text-sm tabular-nums">
+                          {shift.startTime}–{shift.endTime}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {allPositions.find((p) => p.id === shift.positionId)
+                            ?.name ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {shift.urgent ? (
+                            <Badge
+                              variant="secondary"
+                              className="border-amber-200 bg-amber-50 text-[10px] text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
+                            >
+                              Urgent
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-[10px]">
+                              {shift.status}
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>

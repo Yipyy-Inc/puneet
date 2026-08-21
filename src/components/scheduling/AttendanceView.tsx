@@ -36,6 +36,7 @@ import {
   type AttendanceStatus,
 } from "@/lib/scheduling-attendance";
 import { clockQueries, schedulingQueries } from "@/lib/api/scheduling";
+import { toAttendanceEntries } from "@/lib/api/mappers/scheduling";
 import { staffQueries } from "@/lib/api/staff";
 import type { TimeClockEntry } from "@/types/scheduling";
 
@@ -118,27 +119,22 @@ export function AttendanceView() {
 
   // `status` is derived, not stored — `clocked_out_at` null or not is the fact,
   // and a second copy of it is a second thing to get wrong.
+  // One name for the facility's zone in this file. It was spelled out inline
+  // at the reconciliation and implied at the adapter; two spellings of the same
+  // fact is how they end up disagreeing.
+  const timeZone = roster?.timeZone ?? "UTC";
+
   const entries = useMemo<TimeClockEntry[]>(
-    () =>
-      (clock?.entries ?? []).map((entry) => ({
-        id: entry.id,
-        shiftId: entry.shiftId ?? "",
-        employeeId: entry.employeeId,
-        date: entry.clockedInAt.slice(0, 10),
-        clockedInAt: entry.clockedInAt,
-        clockedOutAt: entry.clockedOutAt,
-        actualMinutes: entry.minutesWorked,
-        status: entry.clockedOutAt ? "clocked_out" : "clocked_in",
-      })),
-    [clock],
+    () => toAttendanceEntries(clock?.entries ?? [], timeZone),
+    [clock, timeZone],
   );
 
   // The FACILITY's zone, returned by the shifts route because the client has no
   // other source for it. Without this the screen graded people late for being
   // read from a different city.
   const { records, summary } = useMemo(
-    () => reconcileBatch(scopedShifts, entries, roster?.timeZone ?? "UTC"),
-    [scopedShifts, entries, roster],
+    () => reconcileBatch(scopedShifts, entries, timeZone),
+    [scopedShifts, entries, timeZone],
   );
 
   const visible = useMemo(() => {
