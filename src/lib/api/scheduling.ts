@@ -23,7 +23,7 @@ import type {
   RequestStatus,
   TimeOffType,
 } from "@/lib/api/mappers/scheduling";
-import type { ScheduleShift } from "@/types/scheduling";
+import type { Department, Position, ScheduleShift } from "@/types/scheduling";
 
 // ============================================================================
 // The roster, from Postgres.
@@ -178,7 +178,7 @@ export const swapQueries = {
 
 async function write<T>(
   url: string,
-  method: "POST" | "PATCH",
+  method: "POST" | "PATCH" | "PUT",
   body: unknown,
   fallback: string,
 ): Promise<T> {
@@ -605,4 +605,133 @@ export function useOwnClock(): {
     clockedInAt: data?.open?.clockedInAt,
     isPending,
   };
+}
+
+// ============================================================================
+// The org chart, edited.
+//
+// The Departments and Positions screens held all of this in `useState` over a
+// fixture while the calendar, roster and payroll read the real tables — so a
+// facility could add a department, watch it appear, reload, and find it gone.
+// Converting the readers first and not the editors was worse than leaving both
+// alone.
+//
+// Every one of these invalidates the STRUCTURE key, which is what the calendar,
+// roster, payroll and availability screens all read their org chart from.
+// ============================================================================
+
+export interface NewDepartment {
+  name: string;
+  color?: string;
+  description?: string | null;
+}
+
+export interface NewPosition {
+  name: string;
+  departmentId: string;
+  color?: string;
+  description?: string | null;
+  payType?: "hourly" | "salary";
+  hourlyRate?: number | null;
+  salary?: number | null;
+}
+
+/** The position POST/PATCH answer, which may carry a pay-specific complaint. */
+type PositionResult = Position & { payProblem?: string };
+
+function useStructureMutation<TInput, TResult>(
+  method: "POST" | "PATCH" | "PUT",
+  fallback: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: TInput) =>
+      write<TResult>("/api/scheduling/structure", method, input, fallback),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: schedulingKeys.structure,
+      }),
+  });
+}
+
+export function useCreateDepartment() {
+  return useStructureMutation<
+    NewDepartment & { kind?: "department" },
+    Department
+  >("POST", "That department was not created.");
+}
+
+export function useUpdateDepartment() {
+  return useStructureMutation<
+    Partial<NewDepartment> & {
+      id: string;
+      kind?: "department";
+      isActive?: boolean;
+    },
+    Department
+  >("PATCH", "That department was not saved.");
+}
+
+export function useCreatePosition() {
+  return useStructureMutation<
+    NewPosition & { kind?: "position" },
+    PositionResult
+  >("POST", "That position was not created.");
+}
+
+export function useUpdatePosition() {
+  return useStructureMutation<
+    Partial<NewPosition> & {
+      id: string;
+      kind?: "position";
+      isActive?: boolean;
+    },
+    PositionResult
+  >("PATCH", "That position was not saved.");
+}
+
+/**
+ * Set who is in a department — the COMPLETE set, not a diff.
+ *
+ * `staff_departments` had no writer at all until now: the table shipped with
+ * the roster, the structure route read it, and nothing populated it.
+ */
+export function useSetDepartmentMembers() {
+  return useStructureMutation<
+    { departmentId: string; employeeIds: string[] },
+    { departmentId: string; employeeIds: string[] }
+  >("PUT", "Those members were not saved.");
+}
+
+export function useRemoveStructure() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      target: { department: string } | { position: string },
+    ) => {
+      const param =
+        "department" in target
+          ? `department=${target.department}`
+          : `position=${target.position}`;
+      const response = await fetch(`/api/scheduling/structure?${param}`, {
+        method: "DELETE",
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!response.ok) {
+        // "That department still has positions in it" arrives from a RESTRICT
+        // foreign key, and it is the sentence to show — deleting the shape of
+        // an organisation out from under its shifts is refused on purpose.
+        throw new Error(body.error ?? "That could not be removed.");
+      }
+      return body as { removed: string };
+    },
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: schedulingKeys.structure,
+      }),
+  });
 }

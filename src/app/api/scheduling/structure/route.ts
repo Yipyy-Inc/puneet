@@ -346,3 +346,317 @@ export async function DELETE(request: NextRequest) {
 
   return NextResponse.json({ removed: id });
 }
+
+interface DepartmentPatch {
+  kind: "department";
+  id?: string;
+  name?: string;
+  color?: string;
+  description?: string | null;
+  isActive?: boolean;
+}
+
+interface PositionPatch {
+  kind: "position";
+  id?: string;
+  name?: string;
+  departmentId?: string;
+  color?: string;
+  description?: string | null;
+  isActive?: boolean;
+  payType?: "hourly" | "salary";
+  hourlyRate?: number | null;
+  salary?: number | null;
+}
+
+/**
+ * Rename a department, move a position, change what it pays.
+ *
+ * ── THIS DID NOT EXIST, AND THAT WAS THE GAP ──────────────────────────────
+ *
+ * The Departments and Positions screens — where a facility SETS SCHEDULING UP
+ * — held everything in `useState` over a fixture, while the calendar, the
+ * roster and payroll all read the real tables. So a facility could add a
+ * department, watch it appear, reload, and find it gone, with the calendar next
+ * door reading a table that screen could not write to.
+ *
+ * Reading was converted first and the editors were not. That is worse than
+ * leaving both alone: before, everything was equally unreal.
+ *
+ * ── PAY IS UPSERTED SEPARATELY, AND MAY FAIL ON ITS OWN ───────────────────
+ *
+ * `facility_position_pay` has its own policy, so a caller may be allowed to
+ * rename a position and not to change its rate. The rename stands and the pay
+ * problem is REPORTED — the same shape as POST, and for the same reason: a
+ * write that quietly does nothing is what this project keeps finding.
+ */
+export async function PATCH(request: NextRequest) {
+  const viewer = await getViewer().catch(() => null);
+  if (!viewer || viewer.source !== "session") {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const context = await getFacilityContext();
+  if (!context) {
+    return NextResponse.json({ error: "No facility." }, { status: 404 });
+  }
+
+  const input = (await request.json().catch(() => ({}))) as
+    | DepartmentPatch
+    | PositionPatch;
+
+  if (!input.id) {
+    return NextResponse.json({ error: "`id` is required." }, { status: 400 });
+  }
+  if (input.name !== undefined && !input.name.trim()) {
+    return NextResponse.json(
+      { error: "A name cannot be blank." },
+      { status: 422 },
+    );
+  }
+
+  const supabase = await createServerClient();
+
+  const patch: Record<string, unknown> = {};
+  if (input.name !== undefined) patch.name = input.name.trim();
+  if (input.color !== undefined) patch.color = input.color;
+  if (input.description !== undefined) patch.description = input.description;
+  if (input.isActive !== undefined) patch.is_active = input.isActive;
+
+  if (input.kind === "department") {
+    if (Object.keys(patch).length === 0) {
+      return NextResponse.json(
+        { error: "Nothing to change." },
+        { status: 422 },
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("facility_departments")
+      .update(patch as never)
+      .eq("id", input.id)
+      .select(
+        "id, facility_id, name, color, description, is_active, created_at",
+      );
+
+    if (error) {
+      return writeFailure(error, {
+        duplicate: "This facility already has a department with that name.",
+        denied: "You do not have permission to change a department.",
+      });
+    }
+
+    // An RLS-refused UPDATE affects 0 rows and does NOT raise — see
+    // check:rls-writes.
+    const refused = deniedIfUntouched(
+      data,
+      "No department you can change with that id.",
+    );
+    if (refused) return refused;
+
+    return NextResponse.json(
+      toDepartment((data as DepartmentRow[])[0]!, [], context.legacyRef ?? 0),
+    );
+  }
+
+  if (input.departmentId !== undefined)
+    patch.department_id = input.departmentId;
+
+  let row: PositionRow | null = null;
+
+  if (Object.keys(patch).length > 0) {
+    const { data, error } = await supabase
+      .from("facility_positions")
+      .update(patch as never)
+      .eq("id", input.id)
+      .select(
+        "id, facility_id, department_id, name, color, description, is_active",
+      );
+
+    if (error) {
+      return writeFailure(error, {
+        duplicate: "This facility already has a position with that name.",
+        denied: "You do not have permission to change a position.",
+      });
+    }
+
+    const refused = deniedIfUntouched(
+      data,
+      "No position you can change with that id.",
+    );
+    if (refused) return refused;
+
+    row = (data as PositionRow[])[0]!;
+  } else {
+    const { data } = await supabase
+      .from("facility_positions")
+      .select(
+        "id, facility_id, department_id, name, color, description, is_active",
+      )
+      .eq("id", input.id)
+      .maybeSingle();
+    row = (data as PositionRow | null) ?? null;
+  }
+
+  if (!row) {
+    return NextResponse.json(
+      { error: "No position you can change with that id." },
+      { status: 404 },
+    );
+  }
+
+  let payRow: PositionPayRow | null = null;
+  let payProblem: string | null = null;
+
+  if (input.payType) {
+    const { data: saved, error: payError } = await supabase
+      .from("facility_position_pay")
+      .upsert(
+        {
+          position_id: row.id,
+          facility_id: context.facilityId,
+          pay_type: input.payType,
+          hourly_rate: input.hourlyRate ?? null,
+          salary: input.salary ?? null,
+        } as never,
+        { onConflict: "position_id" },
+      )
+      .select("position_id, pay_type, hourly_rate, salary")
+      .maybeSingle();
+
+    payRow = (saved as PositionPayRow | null) ?? null;
+    if (payError || !payRow) {
+      payProblem =
+        payError?.message ??
+        "The position was updated, but you do not have permission to change what it pays.";
+    }
+  } else {
+    const { data: existing } = await supabase
+      .from("facility_position_pay")
+      .select("position_id, pay_type, hourly_rate, salary")
+      .eq("position_id", row.id)
+      .maybeSingle();
+    payRow = (existing as PositionPayRow | null) ?? null;
+  }
+
+  return NextResponse.json({
+    ...toPosition(row, payRow),
+    ...(payProblem ? { payProblem } : {}),
+  });
+}
+
+interface MembersInput {
+  departmentId?: string;
+  /** The COMPLETE set. Anybody not named is removed. */
+  employeeIds?: string[];
+}
+
+/**
+ * Set who is in a department.
+ *
+ * ── `staff_departments` HAD NO WRITER AT ALL ──────────────────────────────
+ *
+ * The table shipped with the roster, this route READ it into
+ * `Department.employeeIds`, and nothing anywhere populated it — so every
+ * department had zero declared members. The calendar only drew anybody because
+ * it falls back to "plus whoever is rostered this week".
+ *
+ * ── A COMPLETE SET, NOT A DIFF ────────────────────────────────────────────
+ *
+ * The screen is a checklist: you tick people and save. Sending the additions
+ * and removals separately would make the result depend on the order two
+ * managers pressed Save. Delete-then-insert inside one request means the
+ * department has the membership the last writer saw, whole.
+ */
+export async function PUT(request: NextRequest) {
+  const viewer = await getViewer().catch(() => null);
+  if (!viewer || viewer.source !== "session") {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const context = await getFacilityContext();
+  if (!context) {
+    return NextResponse.json({ error: "No facility." }, { status: 404 });
+  }
+
+  const input = (await request.json().catch(() => ({}))) as MembersInput;
+
+  if (!input.departmentId || !Array.isArray(input.employeeIds)) {
+    return NextResponse.json(
+      { error: "A `departmentId` and the complete `employeeIds` set." },
+      { status: 422 },
+    );
+  }
+
+  const supabase = await createServerClient();
+
+  // Clearing a department that has no members legitimately removes 0 rows, so
+  // `deniedIfUntouched` would turn "nothing to do" into "you may not". The
+  // refusal is caught below by comparing the membership READ BACK against the
+  // one requested — exact, rather than inferred from a row count.
+  //
+  // rls-write-ok: the read-back comparison below answers 403 on a refusal.
+  const { error: cleared } = await supabase
+    .from("staff_departments")
+    .delete()
+    .eq("department_id", input.departmentId);
+
+  if (cleared) {
+    return writeFailure(cleared, {
+      duplicate: "That membership could not be changed.",
+      denied: "You do not have permission to change who is in a department.",
+    });
+  }
+
+  if (input.employeeIds.length > 0) {
+    const { error } = await supabase.from("staff_departments").insert(
+      input.employeeIds.map((staffId) => ({
+        staff_id: staffId,
+        department_id: input.departmentId,
+        facility_id: context.facilityId,
+      })) as never,
+    );
+
+    if (error) {
+      return writeFailure(error, {
+        duplicate: "Somebody is listed twice.",
+        denied: "You do not have permission to change who is in a department.",
+      });
+    }
+  }
+
+  // Read it back rather than echoing the request: an RLS-refused DELETE removes
+  // nothing and raises nothing, so a route that reported the set it was SENT
+  // would confirm a change it had not made.
+  const { data } = await supabase
+    .from("staff_departments")
+    .select("staff_id")
+    .eq("department_id", input.departmentId);
+
+  const saved = ((data ?? []) as { staff_id: string }[]).map(
+    (row) => row.staff_id,
+  );
+
+  // ── THE REFUSAL, CAUGHT EXACTLY ─────────────────────────────────────────
+  //
+  // If the membership is not what was asked for, the write did not take —
+  // which for this endpoint means the DELETE was refused and the insert never
+  // ran (an empty set has nothing to insert, so nothing would have raised).
+  // Reporting 200 here would be a screen saying "saved" over an unchanged
+  // department.
+  const asked = new Set(input.employeeIds);
+  const unchanged =
+    saved.length !== asked.size || saved.some((id) => !asked.has(id));
+
+  if (unchanged) {
+    return NextResponse.json(
+      { error: "You do not have permission to change who is in a department." },
+      { status: 403 },
+    );
+  }
+
+  return NextResponse.json({
+    departmentId: input.departmentId,
+    employeeIds: saved,
+  });
+}

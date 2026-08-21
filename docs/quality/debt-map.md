@@ -2922,21 +2922,30 @@ shifts, exactly as `ScheduleView` now does — and the leave and swap slices com
 free. If that is too much for one change, leave it alone; a stale report that is
 consistently stale is safer than a live one with a dead filter.
 
-### 🟠 Nothing writes `staff_departments`
+### ✅ ~~Nothing writes `staff_departments`~~ — and the editors were fixtures
 
-The table exists (2026-08-20), `/api/scheduling/structure` reads it into
-`Department.employeeIds`, and **no screen populates it** — the Departments screen
-is still fixture-backed. So every department has zero declared members.
+**Closed 2026-08-21.** Two problems, and the second was worse than recorded.
 
-**Why it's risky:** `ScheduleView`'s grid is people down the side. Drawing only
-declared members rendered a completely empty calendar, with no error, over real
-shifts in the table — caught by the browser spec, not by any API test. The grid
-now shows declared members **plus anyone actually rostered in the window**, which
-is independently correct (a person covering from another department must appear,
-or their shift is invisible) and is currently the only reason it draws anything.
+`scheduling/departments` and `scheduling/positions` — where a facility DEFINES
+its org chart — were still `useState` over a fixture, while the calendar,
+roster, payroll and availability screens had all been converted to read the
+real tables. So a facility could add a department, watch it appear, reload, and
+find it gone, with the calendar next door reading a table that screen could not
+write to. **Converting the readers first and leaving the editors is worse than
+leaving both alone**: before, everything was at least equally unreal.
 
-**Do instead:** when converting the Departments screen, write `staff_departments`
-— do not add a second notion of membership on the staff record.
+That was also the cause of the membership gap. `staff_departments` shipped with
+the roster, the structure route read it, and nothing populated it — because the
+only screen that would have was a fixture.
+
+`PATCH` (rename, move, re-rate) and `PUT` (set a department's members, as a
+COMPLETE set) were added to `/api/scheduling/structure`; both screens now drive
+them. `scheduling-org-chart.spec.ts` covers it, including that a groomer cannot
+reshape the organisation and still cannot see what a position pays.
+
+The calendar's "declared members PLUS anyone rostered this week" union stays —
+it was never a workaround for the missing writer. A person covering from another
+department must appear on the grid or their shift is invisible.
 
 ### 🟡 `scheduling/company` should be deleted, not converted
 
