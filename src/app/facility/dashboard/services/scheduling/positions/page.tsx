@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Plus, Edit2, Trash2, DollarSign, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,11 +30,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  positions as initialPositions,
-  departments,
-  scheduleEmployees,
-} from "@/data/scheduling";
+  schedulingQueries,
+  useCreatePosition,
+  useRemoveStructure,
+  useUpdatePosition,
+} from "@/lib/api/scheduling";
 import type { Position } from "@/types/scheduling";
 
 const colorOptions = [
@@ -50,7 +53,28 @@ const colorOptions = [
 ];
 
 export default function PositionsPage() {
-  const [positions, setPositions] = useState<Position[]>(initialPositions);
+  // ── FROM POSTGRES ───────────────────────────────────────────────────────
+  //
+  // A position is what a SHIFT is for, and what it pays is what payroll prices
+  // an hour by — both real tables since 2026-08-20. This screen, where a
+  // facility defines them, was still `useState` over a fixture: set a rate,
+  // reload, and the rate was gone while payroll went on reading the table this
+  // screen could not write to.
+  const { data: structure, isPending } = useQuery(
+    schedulingQueries.structure(),
+  );
+
+  const createPosition = useCreatePosition();
+  const updatePosition = useUpdatePosition();
+  const removeStructure = useRemoveStructure();
+
+  const departments = useMemo(() => structure?.departments ?? [], [structure]);
+  const positions = useMemo(() => structure?.positions ?? [], [structure]);
+  // Without `scheduling_view_labor_cost` the rates simply are not in the
+  // payload — RLS keeps them out of `facility_position_pay`, so the form hides
+  // the pay fields rather than showing empty ones somebody could overwrite.
+  const canSeePay = structure?.canSeePay ?? false;
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Position | null>(null);
   const [name, setName] = useState("");
@@ -90,50 +114,56 @@ export default function PositionsPage() {
 
   const handleSave = () => {
     if (!name.trim() || !departmentId) return;
+
+    // Pay is sent ONLY when the caller may see it. Somebody without
+    // `scheduling_view_labor_cost` gets a position with no figures on it, and a
+    // form that posted the empty fields back would wipe a rate they were never
+    // shown.
+    const pay = canSeePay
+      ? {
+          payType,
+          hourlyRate:
+            payType === "hourly" ? parseFloat(hourlyRate) || null : null,
+          salary: payType === "salary" ? parseFloat(salary) || null : null,
+        }
+      : {};
+
+    const done = (message: string, payProblem?: string) => {
+      // The position saved and the RATE did not — its own policy, its own
+      // refusal. Reported rather than swallowed: phase 1 shipped that bug and a
+      // facility set a wage, saw no complaint, and got a position with no rate.
+      if (payProblem) toast.warning(message, { description: payProblem });
+      else toast.success(message);
+      setDialogOpen(false);
+    };
+    const failed = (error: Error) => toast.error(error.message);
+
     if (editing) {
-      setPositions((prev) =>
-        prev.map((p) =>
-          p.id === editing.id
-            ? {
-                ...p,
-                name,
-                departmentId,
-                payType,
-                hourlyRate:
-                  payType === "hourly"
-                    ? parseFloat(hourlyRate) || undefined
-                    : undefined,
-                salary:
-                  payType === "salary"
-                    ? parseFloat(salary) || undefined
-                    : undefined,
-                description,
-                color,
-              }
-            : p,
-        ),
+      updatePosition.mutate(
+        {
+          kind: "position",
+          id: editing.id,
+          name,
+          departmentId,
+          description,
+          color,
+          ...pay,
+        },
+        {
+          onSuccess: (saved) => done("Position updated", saved.payProblem),
+          onError: failed,
+        },
       );
-      toast.success("Position updated");
-    } else {
-      const newPos: Position = {
-        id: `pos-${Date.now()}`,
-        name,
-        departmentId,
-        payType,
-        hourlyRate:
-          payType === "hourly"
-            ? parseFloat(hourlyRate) || undefined
-            : undefined,
-        salary:
-          payType === "salary" ? parseFloat(salary) || undefined : undefined,
-        description,
-        color,
-        isActive: true,
-      };
-      setPositions((prev) => [...prev, newPos]);
-      toast.success("Position created");
+      return;
     }
-    setDialogOpen(false);
+
+    createPosition.mutate(
+      { kind: "position", name, departmentId, description, color, ...pay },
+      {
+        onSuccess: (saved) => done("Position created", saved.payProblem),
+        onError: failed,
+      },
+    );
   };
 
   const filteredPositions =
@@ -183,6 +213,16 @@ export default function PositionsPage() {
       </div>
 
       {/* Position Cards by Department */}
+      {isPending ? (
+        // An empty list and one still loading look identical, and the first
+        // says this facility has defined no roles.
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((card) => (
+            <Skeleton key={card} className="h-32 w-full" />
+          ))}
+        </div>
+      ) : null}
+
       {groupedByDept
         .filter((g) => g.positions.length > 0)
         .map((group) => (
@@ -199,10 +239,6 @@ export default function PositionsPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {group.positions.map((pos) => {
-                const empCount = scheduleEmployees.filter((e) =>
-                  e.positionIds.includes(pos.id),
-                ).length;
-
                 return (
                   <Card
                     key={pos.id}
@@ -233,12 +269,21 @@ export default function PositionsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
-                            onClick={() => {
-                              setPositions((prev) =>
-                                prev.filter((p) => p.id !== pos.id),
-                              );
-                              toast.success("Position deleted");
-                            }}
+                            onClick={() =>
+                              removeStructure.mutate(
+                                { position: pos.id },
+                                {
+                                  onSuccess: () =>
+                                    toast.success("Position deleted"),
+                                  // "That position still has shifts on it"
+                                  // comes from a RESTRICT foreign key — a shift
+                                  // pointing at a deleted position is a shift
+                                  // nobody can describe.
+                                  onError: (error: Error) =>
+                                    toast.error(error.message),
+                                },
+                              )
+                            }
                           >
                             <Trash2 className="mr-2 size-3.5" /> Delete
                           </DropdownMenuItem>
@@ -252,15 +297,22 @@ export default function PositionsPage() {
                         </p>
                       )}
                       <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="gap-1 text-xs">
-                          <DollarSign className="size-2.5" />
-                          {pos.payType === "hourly"
-                            ? `$${pos.hourlyRate?.toFixed(2)}/hr`
-                            : `$${(pos.salary || 0).toLocaleString()}/yr`}
-                        </Badge>
-                        <span className="text-muted-foreground text-xs">
-                          {empCount} staff
-                        </span>
+                        {/* ABSENT, not $0 and not "$undefined/hr". Without
+                            `scheduling_view_labor_cost` the figures are simply
+                            not in the payload, and a badge rendering the gap
+                            would be either a wage or a bug on screen. */}
+                        {pos.payType === "hourly" && pos.hourlyRate != null ? (
+                          <Badge variant="outline" className="gap-1 text-xs">
+                            <DollarSign className="size-2.5" />
+                            {`$${pos.hourlyRate.toFixed(2)}/hr`}
+                          </Badge>
+                        ) : null}
+                        {pos.payType === "salary" && pos.salary != null ? (
+                          <Badge variant="outline" className="gap-1 text-xs">
+                            <DollarSign className="size-2.5" />
+                            {`$${pos.salary.toLocaleString()}/yr`}
+                          </Badge>
+                        ) : null}
                       </div>
                     </CardContent>
                   </Card>
@@ -302,43 +354,53 @@ export default function PositionsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Pay Type</Label>
-              <Select
-                value={payType}
-                onValueChange={(v) => setPayType(v as "hourly" | "salary")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hourly">Hourly</SelectItem>
-                  <SelectItem value="salary">Salary</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {payType === "hourly" ? (
-              <div className="space-y-1.5">
-                <Label>Hourly Rate ($)</Label>
-                <Input
-                  type="number"
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                  placeholder="18.50"
-                  step="0.50"
-                />
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                <Label>Annual Salary ($)</Label>
-                <Input
-                  type="number"
-                  value={salary}
-                  onChange={(e) => setSalary(e.target.value)}
-                  placeholder="55000"
-                />
-              </div>
-            )}
+            {/* ── HIDDEN, NOT DISABLED ────────────────────────────────────
+                Without `scheduling_view_labor_cost` the rates are not in the
+                payload at all, so these fields would open EMPTY on a position
+                that has one — and saving would post the blank back over it.
+                The permission is the same one the pay table's own policy
+                consults, so the form and the data agree by construction. */}
+            {canSeePay ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Pay Type</Label>
+                  <Select
+                    value={payType}
+                    onValueChange={(v) => setPayType(v as "hourly" | "salary")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hourly">Hourly</SelectItem>
+                      <SelectItem value="salary">Salary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {payType === "hourly" ? (
+                  <div className="space-y-1.5">
+                    <Label>Hourly Rate ($)</Label>
+                    <Input
+                      type="number"
+                      value={hourlyRate}
+                      onChange={(e) => setHourlyRate(e.target.value)}
+                      placeholder="18.50"
+                      step="0.50"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label>Annual Salary ($)</Label>
+                    <Input
+                      type="number"
+                      value={salary}
+                      onChange={(e) => setSalary(e.target.value)}
+                      placeholder="55000"
+                    />
+                  </div>
+                )}
+              </>
+            ) : null}
             <div className="space-y-1.5">
               <Label>Description</Label>
               <Textarea
