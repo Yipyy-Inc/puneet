@@ -2,38 +2,39 @@
 
 import { cn } from "@/lib/utils";
 import {
-  Building2,
-  Palette,
-  DollarSign,
-  Bell,
-  Plug,
-  Smartphone,
-  CreditCard,
-  History,
-  FileText,
-  Shield,
-  Tag,
-  PawPrint,
-  UtensilsCrossed,
-  CircleDot,
   Bed,
-  Sun,
-  Scissors,
-  GraduationCap,
-  Puzzle,
-  Package,
-  ChevronDown,
-  CloudSun,
-  Receipt,
-  Sparkles,
-  Globe,
-  Siren,
-  ClipboardList,
-  LogOut,
+  Bell,
   Briefcase,
-  UserX,
-  UserCog,
+  Building2,
+  ChevronDown,
+  CircleDot,
+  ClipboardList,
+  CloudSun,
+  CreditCard,
+  DollarSign,
+  FileText,
+  Globe,
+  GraduationCap,
+  History,
+  LogOut,
+  Package,
+  Palette,
+  PawPrint,
+  Plug,
+  Puzzle,
+  Receipt,
+  Scissors,
+  Shield,
+  Siren,
   SlidersHorizontal,
+  Smartphone,
+  Sparkles,
+  Sun,
+  Tag,
+  Timer,
+  UserCog,
+  UserX,
+  UtensilsCrossed,
 } from "lucide-react";
 import { UserCircle } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
@@ -63,6 +64,12 @@ export interface SettingsSection {
  *  page reuses this to guard deep-links and pick a visible default. */
 export const SETTINGS_SECTION_KEYS: Record<string, PermissionKey> = {
   business: "settings_general",
+  // Must agree with the sidebar entry's `permKey`. An unmapped section is
+  // ALLOWED by `canAccessSettingsSection` (`!key` is true), so leaving it out
+  // would hide the link from a groomer and still let them deep-link to it. The
+  // component refuses them either way, but a gate that disagrees with its own
+  // menu is a gate nobody can reason about.
+  "payroll-rules": "view_payroll",
   branding: "settings_general",
   notifications: "settings_manage_notifications",
   "smart-insights": "manage_facility_settings",
@@ -214,6 +221,15 @@ const STATIC_GROUPS: SettingsGroup[] = [
       { id: "invoice-template", label: "Invoice Template", icon: FileText },
       { id: "financial", label: "Payments & Billing", icon: DollarSign },
       { id: "taxes", label: "Taxes", icon: DollarSign },
+      // Gated on `view_payroll` rather than a settings key: the people who
+      // decide what overtime costs are the ones who see the wage bill, and the
+      // screen itself refuses anyone who is not an owner or a manager.
+      {
+        id: "payroll-rules",
+        label: "Payroll Rules",
+        icon: Timer,
+        permKey: "view_payroll",
+      },
       { id: "subscription", label: "Subscription", icon: CreditCard },
     ],
   },

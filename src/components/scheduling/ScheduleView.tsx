@@ -32,6 +32,7 @@ import { AddShiftDialog } from "@/components/scheduling/AddShiftDialog";
 import { SaveAsTemplateDialog } from "@/components/scheduling/SaveAsTemplateDialog";
 import { TimeClock } from "@/components/scheduling/TimeClock";
 import { PostShiftOpportunityDialog } from "@/components/scheduling/PostShiftOpportunityDialog";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { ShiftOpportunityNotificationSettingsDialog } from "@/components/scheduling/ShiftOpportunityNotificationSettingsDialog";
 import { DraftReviewSummary } from "@/components/scheduling/DraftReviewSummary";
 import {
@@ -65,28 +66,6 @@ import type {
   ShiftOpportunityNotificationSettings,
 } from "@/types/scheduling";
 
-// Mock holiday rates (dates near today: 2026-04-13)
-const initialHolidayRates: HolidayRate[] = [
-  {
-    id: "holiday-1",
-    date: "2026-04-14",
-    name: "Easter Monday",
-    multiplier: 1.5,
-  },
-  {
-    id: "holiday-2",
-    date: "2026-05-18",
-    name: "Victoria Day",
-    multiplier: 1.5,
-  },
-  {
-    id: "holiday-3",
-    date: "2026-07-01",
-    name: "Canada Day",
-    multiplier: 2.0,
-  },
-];
-
 // Scheduling settings (matching schedulingSettingsSchema)
 const schedulingSettings = {
   overtimeThresholdWeekly: 40,
@@ -111,7 +90,27 @@ export function ScheduleView() {
   const [defaultShiftEmployee, setDefaultShiftEmployee] = useState<
     string | undefined
   >();
-  const [holidayRates] = useState<HolidayRate[]>(initialHolidayRates);
+  // ── THE HOLIDAYS THE FACILITY DECLARED, WHICH PAYROLL ALSO BILLS ──────
+  //
+  // This was three hardcoded 2026 dates — Easter Monday, Victoria Day, Canada
+  // Day — shown on every facility's roster as "x1.5 pay rate" while
+  // `payroll_summary` had never heard of them. So the calendar told a manager a
+  // day cost time and a half and the wage bill for that day was flat.
+  //
+  // One list now, in `facility_settings.payroll_config`, read here and billed
+  // there. The `id` is synthesised for React keys only; the settings shape has
+  // none because a holiday is identified by its date.
+  const payrollConfig = useFacilitySettings().settings.payroll_config.value;
+  const holidayRates = useMemo<HolidayRate[]>(
+    () =>
+      (payrollConfig?.holidays ?? []).map((holiday) => ({
+        id: `holiday-${holiday.date}`,
+        date: holiday.date,
+        name: holiday.name,
+        multiplier: holiday.multiplier,
+      })),
+    [payrollConfig],
+  );
   const [timeClockOpen, setTimeClockOpen] = useState(false);
 
   // Shift opportunities state
