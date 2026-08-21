@@ -16,13 +16,13 @@ import {
 import { daycareCheckIns, daycareRates } from "@/data/daycare";
 import { getTotalDaycareCapacity } from "@/data/daycare-areas";
 import { clients } from "@/data/clients";
-import {
-  scheduleShifts,
-  scheduleEmployees,
-  positions,
-  timeClockEntries,
-} from "@/data/scheduling";
-import { FIXTURE_TIMEZONE, hoursByEmployee } from "@/lib/scheduling-reports";
+import { hoursByEmployee } from "@/lib/scheduling-reports";
+import type {
+  Position,
+  ScheduleEmployee,
+  ScheduleShift,
+  TimeClockEntry,
+} from "@/types/scheduling";
 import {
   getSalesByCategory,
   getTopProducts,
@@ -876,11 +876,33 @@ function normalizeName(name: string): string {
   return name.trim().toLowerCase();
 }
 
+/**
+ * NOT memoized, unlike every other selector in this file — and that is the
+ * point of the comment.
+ *
+ * `memoCache` is a module-scope Map with no eviction, keyed on name + range +
+ * opts. That is exactly right for a function whose other inputs are
+ * module-scope fixtures that never change, which is what these two were until
+ * 2026-08-21.
+ *
+ * The roster is now an ARGUMENT, and it changes: it is empty on first render
+ * while the queries are in flight, and it changes again whenever somebody picks
+ * a department. Neither is in the key. The first call would cache an empty
+ * result under `staffPerformance|from|to` and every later call for that range
+ * would get it back — a screen that loads, shows nothing, and never recovers.
+ * That is not hypothetical; it is what the spec caught.
+ *
+ * Adding the roster to the key would work and would also make an unbounded
+ * cache grow with every filter change. The caller is a React component that
+ * already wraps this in `useMemo` with the right dependencies, which is the
+ * correct tool for an input that varies.
+ */
 export function staffPerformance(
   range: DateRange,
+  roster: RosterInput,
   opts?: ReportFilterOpts,
 ): StaffPerformancePoint[] {
-  return memo(cacheKey("staffPerformance", range, opts), () => {
+  return ((): StaffPerformancePoint[] => {
     const from = toDate(range.from);
     const to = endOfDay(range.to);
 
@@ -930,13 +952,12 @@ export function staffPerformance(
     const fromStr = from.toISOString().split("T")[0];
     const toStr = to.toISOString().split("T")[0];
     const hours = hoursByEmployee(
-      scheduleShifts,
-      scheduleEmployees,
-      positions,
-      timeClockEntries,
+      roster.shifts,
+      roster.employees,
+      roster.positions,
+      roster.clockEntries,
       { start: fromStr, end: toStr },
-      // Fixture data — see FIXTURE_TIMEZONE and the debt map.
-      FIXTURE_TIMEZONE,
+      roster.timeZone,
     );
     for (const h of hours) {
       const row = staff.get(normalizeName(h.employee.name));
@@ -952,31 +973,59 @@ export function staffPerformance(
             : 0,
       }))
       .sort((a, b) => b.revenue - a.revenue);
-  });
+  })();
+}
+
+// ── The roster, supplied rather than imported ──────────────────────────────
+//
+// `staffPerformance` and `laborCost` used to read `scheduleShifts`,
+// `timeClockEntries`, `positions` and `scheduleEmployees` straight out of
+// src/data — inside the module that is the SSOT for every facility report. So
+// the Reports screen showed fixture labour cost while Payroll, next to it,
+// showed real gross. Same facility, two answers, and no way to tell from a call
+// site which you were getting.
+//
+// This module is SYNCHRONOUS and memoized; it cannot fetch. So the dependency
+// is inverted: the caller — a client component with the queries already open —
+// hands the roster in.
+//
+// **`roster` is REQUIRED, with no fixture default.** A default is how a caller
+// keeps the old behaviour by accident, which is exactly what happened to
+// `reconcileShift`'s timezone before it was made mandatory. Passing the fixture
+// is still possible; it just has to be written down at the call site.
+
+export interface RosterInput {
+  shifts: ScheduleShift[];
+  employees: ScheduleEmployee[];
+  positions: Position[];
+  clockEntries: TimeClockEntry[];
+  /** The FACILITY's zone. Grading a shift by the reader's clock is a bug. */
+  timeZone: string;
 }
 
 // ── Labor cost (scheduled shifts × pay rate) ────────────────────────────────
 
+/** Not memoized either — see `staffPerformance` directly above for why. */
 export function laborCost(
   range: DateRange,
+  roster: RosterInput,
   opts?: ReportFilterOpts,
 ): LaborCostPoint[] {
-  return memo(cacheKey("laborCost", range, opts), () => {
+  return ((): LaborCostPoint[] => {
     const from = toDate(range.from);
     const to = endOfDay(range.to);
     const fromStr = from.toISOString().split("T")[0];
     const toStr = to.toISOString().split("T")[0];
 
     const hours = hoursByEmployee(
-      scheduleShifts,
-      scheduleEmployees,
-      positions,
-      timeClockEntries,
+      roster.shifts,
+      roster.employees,
+      roster.positions,
+      roster.clockEntries,
       { start: fromStr, end: toStr },
-      // Fixture data — see FIXTURE_TIMEZONE and the debt map.
-      FIXTURE_TIMEZONE,
+      roster.timeZone,
     );
-    const perf = staffPerformance(range, opts);
+    const perf = staffPerformance(range, roster, opts);
     const revenueByName = new Map(
       perf.map((p) => [normalizeName(p.staffName), p.revenue]),
     );
@@ -997,7 +1046,7 @@ export function laborCost(
         };
       })
       .sort((a, b) => b.laborCost - a.laborCost);
-  });
+  })();
 }
 
 // ── Revenue summary + payment methods (financial reports) ───────────────────

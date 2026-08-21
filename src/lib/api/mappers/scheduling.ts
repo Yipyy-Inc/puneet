@@ -2,8 +2,10 @@ import { instantFromWallClock, wallClockParts } from "@/lib/time/facility-time";
 import type {
   Department,
   Position,
+  ScheduleEmployee,
   ScheduleShift,
   ShiftStatus,
+  TimeClockEntry,
 } from "@/types/scheduling";
 
 // ============================================================================
@@ -534,4 +536,117 @@ export function toClockEntry(row: ClockEntryRow): ClockEntry {
     source: row.source,
     notes: row.notes ?? undefined,
   };
+}
+
+// ============================================================================
+// A member of staff, as the scheduling module talks about people.
+//
+// ── ONE MAPPING, BECAUSE THERE WERE ABOUT TO BE TWO ───────────────────────
+//
+// RosterView built this inline; ReportsView needed the same thing on
+// 2026-08-21. Two copies of "which id identifies a person to the roster" is
+// precisely the mistake this project keeps paying for — the employee schedule
+// screen compared `viewer.id` against fixture `fs-*` ids for weeks.
+//
+// **`rowId`, never `id`.** `StaffProfile.id` is the legacy string ("fs-003");
+// `staff_shifts.staff_id` is the row uuid. Keying the roster on the label
+// matches no shift at all, silently — every total comes back zero and reads as
+// a quiet week.
+// ============================================================================
+
+/** The fields a StaffProfile must carry to be mapped. */
+export interface StaffLike {
+  id: string;
+  rowId?: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  avatarUrl?: string;
+  jobTitle?: string;
+  status?: string;
+}
+
+export function toScheduleEmployee(member: StaffLike): ScheduleEmployee {
+  const name = `${member.firstName} ${member.lastName}`.trim();
+  return {
+    id: member.rowId ?? member.id,
+    name,
+    email: member.email ?? "",
+    phone: member.phone ?? "",
+    avatar: member.avatarUrl,
+    initials:
+      [member.firstName, member.lastName]
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? "")
+        .join("") || "—",
+    // Left EMPTY on purpose. Department and position membership live in
+    // `staff_departments` and on the shift itself; duplicating them onto the
+    // person would be a second answer to the same question. Callers that scope
+    // by department filter the SHIFTS — a report then names whoever actually
+    // worked there, which is what a manager means by "who is in this
+    // department this week".
+    departmentIds: [],
+    positionIds: [],
+    primaryPositionId: "",
+    hireDate: "",
+    status: member.status === "active" ? "active" : "inactive",
+    maxHoursPerWeek: 0,
+    employmentType: "full_time",
+    role: member.jobTitle ?? "",
+  } as ScheduleEmployee;
+}
+
+export function toScheduleEmployees(staff: StaffLike[]): ScheduleEmployee[] {
+  return staff.map(toScheduleEmployee);
+}
+
+// ============================================================================
+// A clock entry, in the vocabulary the attendance math speaks.
+//
+// `scheduling-attendance.ts` and `scheduling-reports.ts` are typed against
+// `TimeClockEntry` from src/types — the shape the fixture had. The real row is
+// `ClockEntry` above. Two fields differ (`minutesWorked` / `actualMinutes`, and
+// a nullable `shiftId`), so a bridge is needed.
+//
+// ── WHY IT LIVES HERE RATHER THAN IN EACH SCREEN ──────────────────────────
+//
+// AttendanceView wrote this inline on 2026-08-21; ReportsView needed it the
+// same day. A second copy is how two screens start disagreeing about who was
+// late.
+//
+// ── AND WHY IT TAKES A TIMEZONE FOR A FIELD NOTHING READS ─────────────────
+//
+// `date` and `status` are required by the type and consumed by NOTHING: the
+// reconciliation matches on `shiftId`, and the status counts read the derived
+// record, not the entry. The inline version filled `date` with
+// `clockedInAt.slice(0, 10)` — the UTC date, which for a 22:00 shift in Toronto
+// is TOMORROW. Harmless only for as long as nobody reads it, which is not a
+// property worth relying on. It is derived properly here instead.
+// ============================================================================
+
+export function toAttendanceEntry(
+  entry: ClockEntry,
+  timeZone: string,
+): TimeClockEntry {
+  return {
+    id: entry.id,
+    shiftId: entry.shiftId ?? "",
+    employeeId: entry.employeeId,
+    date: wallClockParts(entry.clockedInAt, timeZone).date,
+    clockedInAt: entry.clockedInAt,
+    clockedOutAt: entry.clockedOutAt,
+    actualMinutes: entry.minutesWorked,
+    // Derived, never stored: `clocked_out_at` null or not IS the fact, and a
+    // second copy of it is a second thing to get wrong.
+    status: entry.clockedOutAt ? "clocked_out" : "clocked_in",
+  };
+}
+
+export function toAttendanceEntries(
+  entries: ClockEntry[],
+  timeZone: string,
+): TimeClockEntry[] {
+  return entries.map((entry) => toAttendanceEntry(entry, timeZone));
 }

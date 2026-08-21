@@ -5,8 +5,6 @@ import type {
   Position,
   ScheduleEmployee,
   ScheduleShift,
-  EnhancedTimeOffRequest,
-  EnhancedShiftSwap,
   ShiftOpportunity,
   TimeClockEntry,
 } from "@/types/scheduling";
@@ -185,8 +183,21 @@ export function coverageByDayHour(
 
 // ─── Time-off + swap trends ─────────────────────────────────────────────────
 
+/**
+ * What this actually reads. Narrower than `EnhancedTimeOffRequest` on purpose:
+ * demanding the wide fixture shape — `departmentId` above all, which the real
+ * table does not have — is what made these helpers unusable against Postgres.
+ * Both the fixture and `TimeOffRequest` from the mapper satisfy it.
+ */
+export interface TimeOffLike {
+  type: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+}
+
 export function timeOffByType(
-  requests: EnhancedTimeOffRequest[],
+  requests: TimeOffLike[],
   range: { start: string; end: string },
 ): { type: string; count: number; days: number }[] {
   const scoped = requests.filter(
@@ -206,8 +217,14 @@ export function timeOffByType(
   return Array.from(map.entries()).map(([type, v]) => ({ type, ...v }));
 }
 
+/** Likewise — a swap is counted by who raised it and when. */
+export interface SwapLike {
+  requestedAt: string;
+  requestingEmployeeId: string;
+}
+
 export function frequentSwappers(
-  swaps: EnhancedShiftSwap[],
+  swaps: SwapLike[],
   employees: ScheduleEmployee[],
   range: { start: string; end: string },
 ): { employee: ScheduleEmployee; count: number }[] {

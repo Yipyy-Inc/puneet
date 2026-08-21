@@ -199,11 +199,14 @@ export function PostShiftOpportunityDialog({
     };
 
     onPost(opp);
-    toast.success("Shift opportunity posted!", {
-      description:
-        form.claimMode === "invite_only"
-          ? `${form.invitedEmployeeIds.length} invited employee${form.invitedEmployeeIds.length === 1 ? "" : "s"} will be notified.`
-          : "Eligible employees will be notified.",
+    // WHAT ACTUALLY HAPPENS: the caller creates a real shift with nobody on it
+    // (`staff_shifts.staff_id IS NULL`), which every member of staff can already
+    // see on the roster. What does NOT happen is any notification — there is no
+    // path that sends one, and there is no table holding the invite list or the
+    // expiry this form collects. Saying "eligible employees will be notified"
+    // told a manager their cover was being chased when nothing was.
+    toast.success("Open shift added to the roster.", {
+      description: "It has nobody on it, and staff can see it there.",
     });
     setForm(emptyForm);
     onOpenChange(false);
