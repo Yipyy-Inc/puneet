@@ -18,7 +18,7 @@ A large number of tables render through the one `DataTable` component. CLAUDE.md
 
 Several domains carry two overlapping systems; editing the wrong one silently does nothing or corrupts the other:
 
-- **Loyalty:** editable `useLoyaltyProgram` provider vs. read-only `useLoyaltyConfig`; two loyalty models.
+- **Loyalty:** editable `useLoyaltyProgram` provider vs. read-only `useLoyaltyConfig`; two loyalty models. The editable one is REAL as of 2026-08-21 — see “The loyalty programme moved out of the browser” below.
 - **Training:** two parallel enrollment systems.
 - **Calling:** new `CallRoutingRule` (calling module) vs. old communications `RoutingRule`; and three distinct "tag" concepts (`inquiryTag` vs. `ActiveCall.tags` vs. `callLog.tags`).
 - **Staff identity — three id namespaces for people.** `facilityStaff` (`fs-*`, the RBAC/employee-portal identity), `scheduleEmployees` (`emp-N`, the scheduling module — different people, and it spans the cafe and Laval too), and `users` (numeric, the legacy roster that `staffTasks`, `staffAvailability`, `staffPerformance`, `schedules`, `timeOffRequests` and `shiftSwapRequests` are keyed to). `users` ids 4–9 and `emp-1..6` are the same six people by name; **`fs-*` overlaps with neither**, so there is no mapping to discover — don't invent one.
@@ -3244,6 +3244,81 @@ Named alongside the above and NOT the same bug, which the first note got wrong:
 `facilities`/`defaultFacility` at MODULE SCOPE — the shared fixture, not a
 query. So there is no latch to fix; it is an unconverted screen, and belongs
 with the rest of the fixture-backed surface in the facility audit.
+
+### ✅ The loyalty programme moved out of the browser — 2026-08-21
+
+`LoyaltyProgramProvider` stored a facility's entire loyalty programme — tiers,
+earn rules, badges, reward types, referrals, the redemption rate — like this:
+
+```
+const storageKey = (facilityId: number) => `loyalty-program-${facilityId}`;
+window.localStorage.setItem(storageKey(facilityId), JSON.stringify(next));
+```
+
+Per browser, and under a `facilityId` that was the constant `1` at every call
+site. So an owner set their tiers, watched them stick, and every other member of
+staff, every other device and every customer went on seeing the seed file —
+while a second facility signing in on the same browser read the first one's
+programme. Third instance of this exact bug: opening hours and booking rules
+were per browser until 2026-08-19, surcharges and discounts until 2026-08-20.
+
+It is now the `loyalty_config` domain in `facility_settings` — **no migration**,
+which is what the domain registry is for. One seam, twenty-four consumers: the
+provider's own header had said the swap was `loadConfig`/`persist`, and it was.
+
+**The fallback is off and empty**, not the fixture's four-tier scheme with
+badges and a referral bonus. Points are a liability a facility owes its
+customers; one nobody agreed to is not a default. Same rule as `tax_config` and
+`pricing_rules`.
+
+**The writes are awaitable and their refusals are reported.** They returned
+`void` when the destination was localStorage, which cannot refuse; Postgres can,
+and ten call sites toasted success unconditionally straight after.
+
+**Every editor was the latch shape** — `useState(() => config.badges ?? [])`
+and eight more like it. Against a query that is fatal: the initialiser runs
+before the answer arrives, so the editor latches onto the empty fallback and
+Save writes it over the facility's real programme. Fixed two ways: the small
+editors derive (`draft ?? saved`), and the two wizard-shaped screens (`setup`,
+`advanced`) had their MOUNT gated so seeding is safe again.
+
+Covered by [loyalty-program.spec.ts](../../tests/e2e/loyalty-program.spec.ts),
+in `test:e2e:ci`. The assertion that matters is the one localStorage could never
+have passed: a different person, in a different browser, reading what the owner
+just saved.
+
+#### 🟡 What the conversion deliberately did NOT do
+
+**The four legacy/new pairs are kept, not blessed.** `FacilityLoyaltyConfig`
+carries `pointsEarning` and `earnRules`, `tiers` and `tierDefinitions`,
+`pointsExpiration` and `pointsExpiryEnabled`/`pointsExpiryDays`,
+`referralProgram` and `referralProgramSetup`. In each pair the engine reads the
+older and the admin UI edits the newer, and both tab screens carry a
+"Drives current tier resolution" disclosure saying so. Dropping a legacy side
+would silently stop the engine. Which model wins is its own change.
+
+**The deep trees are validated as objects, not field by field.** `z.custom<T>`
+gives the exact inferred type with a shallow runtime check. Restating eight
+nested interfaces in Zod would be a second copy whose failure mode is refusing a
+save a facility legitimately made. Reasoning in the banner of
+`src/lib/settings/loyalty.ts`.
+
+#### 🟠 The ledger is still fixtures, and one path reaches a card
+
+Accounts, transactions, redemptions and badges-earned are still hand-authored
+files keyed by `facilityId: 1` — which is why the provider still hands that
+number out, now documented as a fixture key rather than a facility.
+
+The one that matters: `useActiveLoyaltyDiscount` → `PaymentCheckoutFlow`
+computes `netAmountDue = amountDue − loyaltyDiscount.amount`, and the tax and
+the Clover total are computed from it. The voucher comes from
+`src/data/loyalty-redemptions`, and `consume()` mutates that fixture in memory
+— so a voucher survives a refresh and could be spent repeatedly.
+
+**Not firing today**: of the three discount vouchers in the fixture one expired
+in June and two are already `status: "used"`, so `getActiveDiscountRedemptions`
+returns nothing for anyone. Live wiring over a currently-empty fixture. It goes
+with the ledger, which is the next loyalty change.
 
 ### 🟡 `payroll_summary` reads a domain that may be absent, and says so
 

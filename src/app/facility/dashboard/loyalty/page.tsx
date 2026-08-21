@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { LoyaltyPerformanceBanner } from "@/components/loyalty/LoyaltyPerformanceBanner";
 import { SaveBar } from "@/components/loyalty/config/SaveBar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import {
   Coins,
@@ -24,29 +25,56 @@ import {
 } from "lucide-react";
 
 export default function LoyaltyOverviewPage() {
-  const { config, patchConfig, resetConfig } = useLoyaltyProgram();
+  const { config, patchConfig, resetConfig, isPending, isSaving } =
+    useLoyaltyProgram();
 
-  const [name, setName] = useState(() => config.programName ?? "");
-  const [description, setDescription] = useState(
-    () => config.programDescription ?? "",
-  );
+  // Derived, not seeded. See the badges page.
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [descriptionDraft, setDescriptionDraft] = useState<string | null>(null);
+
+  const savedName = config.programName ?? "";
+  const savedDescription = config.programDescription ?? "";
+  const name = nameDraft ?? savedName;
+  const description = descriptionDraft ?? savedDescription;
 
   const dirty =
-    name !== (config.programName ?? "") ||
-    description !== (config.programDescription ?? "");
-
-  const handleSave = () => {
-    patchConfig({
-      programName: name.trim() || undefined,
-      programDescription: description.trim() || undefined,
-    });
-    toast.success("Program details saved");
-  };
+    (nameDraft !== null && nameDraft !== savedName) ||
+    (descriptionDraft !== null && descriptionDraft !== savedDescription);
 
   const handleReset = () => {
-    setName(config.programName ?? "");
-    setDescription(config.programDescription ?? "");
+    setNameDraft(null);
+    setDescriptionDraft(null);
   };
+
+  const handleSave = async () => {
+    try {
+      await patchConfig({
+        programName: name.trim() || undefined,
+        programDescription: description.trim() || undefined,
+      });
+      handleReset();
+      toast.success("Program details saved");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Program details were not saved.",
+      );
+    }
+  };
+
+  // Every count below is drawn from the programme. Rendering them before it
+  // has been read would state "0 badges, 0 tiers" about a facility that has
+  // them — an overview is exactly the screen that must not do that.
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-56 w-full" />
+      </div>
+    );
+  }
 
   const enabledRewardTypes = config.rewardTypes.filter((r) => r.enabled).length;
   const badgeCount = config.badges?.length ?? 0;
@@ -169,7 +197,7 @@ export default function LoyaltyOverviewPage() {
             <Input
               id="program-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setNameDraft(e.target.value)}
               placeholder="e.g., Yipyy Rewards"
             />
           </div>
@@ -178,7 +206,7 @@ export default function LoyaltyOverviewPage() {
             <Textarea
               id="program-description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => setDescriptionDraft(e.target.value)}
               placeholder="Earn points on every visit and redeem them for rewards."
               rows={3}
             />
@@ -189,30 +217,40 @@ export default function LoyaltyOverviewPage() {
       {/* Danger zone */}
       <Card className="border-destructive/30">
         <CardHeader>
-          <CardTitle className="text-base">Reset Configuration</CardTitle>
+          <CardTitle className="text-base">Clear Configuration</CardTitle>
           <p className="text-muted-foreground text-sm">
-            Discard all local changes and restore this facility&apos;s default
-            loyalty configuration.
+            Clear this facility&apos;s loyalty programme entirely — no tiers, no
+            earn rules, no badges. It is switched off afterwards, and nothing is
+            restored from a template.
           </p>
         </CardHeader>
         <CardContent>
           <Button
             variant="outline"
-            onClick={() => {
-              resetConfig();
-              setName(config.programName ?? "");
-              setDescription(config.programDescription ?? "");
-              toast.success("Configuration reset to defaults");
+            disabled={isSaving}
+            onClick={async () => {
+              try {
+                await resetConfig();
+                handleReset();
+                toast.success("Loyalty configuration cleared");
+              } catch (error) {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "The configuration was not cleared.",
+                );
+              }
             }}
           >
             <RotateCcw className="mr-2 size-4" />
-            Reset to defaults
+            Clear the programme
           </Button>
         </CardContent>
       </Card>
 
       <SaveBar
         dirty={dirty}
+        saving={isSaving}
         onSave={handleSave}
         onReset={handleReset}
         saveLabel="Save details"

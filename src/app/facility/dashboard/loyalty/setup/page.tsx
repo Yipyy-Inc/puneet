@@ -21,6 +21,7 @@ import { EarnRulesWizardStep } from "@/components/loyalty/setup/EarnRulesWizardS
 import { TiersWizardStep } from "@/components/loyalty/setup/TiersWizardStep";
 import { BadgesWizardStep } from "@/components/loyalty/setup/BadgesWizardStep";
 import { ReviewPublishStep } from "@/components/loyalty/setup/ReviewPublishStep";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import { facilities } from "@/data/facilities";
 import { notifyCustomersOfLoyaltyLaunch } from "@/lib/loyalty/publish";
@@ -63,9 +64,21 @@ const STEPS = [
   },
 ];
 
-export default function LoyaltySetupWizardPage() {
+/**
+ * The wizard proper, mounted only once the programme has been READ.
+ *
+ * Its steps seed themselves from the stored config in `useState` initialisers,
+ * which is the right shape for a wizard — a draft that jumped under the user
+ * mid-edit would be worse than one that starts late. But an initialiser runs on
+ * the first render, and the programme now arrives from a request, so the seeds
+ * would be the empty fallback: a facility editing its live programme would find
+ * every step blank, and "Save changes" would write that.
+ *
+ * Gating the MOUNT is what makes seeding safe again. See the default export.
+ */
+function SetupWizard() {
   const router = useRouter();
-  const { config, patchConfig, facilityId } = useLoyaltyProgram();
+  const { config, patchConfig, facilityId, isSaving } = useLoyaltyProgram();
 
   const facilityName = useMemo(
     () => facilities.find((f) => f.id === facilityId)?.name ?? "Your Facility",
@@ -94,46 +107,61 @@ export default function LoyaltySetupWizardPage() {
   // skip the publish/notify flow. An unpublished draft still uses publish flow.
   const editMode = config.enabled === true;
 
-  const handleSave = () => {
-    if (step === 1) {
-      patchConfig({
-        programName: basics.programName.trim() || undefined,
-        programDescription: basics.tagline.trim() || undefined,
-        primaryColor: basics.primaryColor,
-        programIcon: basics.programIcon,
-      });
-      toast.success("Program basics saved");
-    } else if (step === 2) {
-      const reconciled = reconcileEarnRules(config.earnRules ?? [], earnRules);
-      patchConfig({ earnRules: reconciled });
-      setEarnRules(getActiveEarnRules(reconciled));
-      toast.success("Earn rules saved");
-    } else if (step === 3) {
-      patchConfig({ tierDefinitions: tiers, tiersEnabled });
-      toast.success("Tiers saved");
-    } else if (step === 4) {
-      patchConfig({ badges });
-      toast.success("Badges saved");
+  // Every save below is awaited and its failure reported. These write to
+  // Postgres now, and RLS can refuse them — a wizard that announced "Tiers
+  // saved" over a refusal and then advanced a step would lose the work twice.
+  const handleSave = async (): Promise<boolean> => {
+    try {
+      if (step === 1) {
+        await patchConfig({
+          programName: basics.programName.trim() || undefined,
+          programDescription: basics.tagline.trim() || undefined,
+          primaryColor: basics.primaryColor,
+          programIcon: basics.programIcon,
+        });
+        toast.success("Program basics saved");
+      } else if (step === 2) {
+        const reconciled = reconcileEarnRules(
+          config.earnRules ?? [],
+          earnRules,
+        );
+        await patchConfig({ earnRules: reconciled });
+        setEarnRules(getActiveEarnRules(reconciled));
+        toast.success("Earn rules saved");
+      } else if (step === 3) {
+        await patchConfig({ tierDefinitions: tiers, tiersEnabled });
+        toast.success("Tiers saved");
+      } else if (step === 4) {
+        await patchConfig({ badges });
+        toast.success("Badges saved");
+      }
+      return true;
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "That step was not saved.",
+      );
+      return false;
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (step === 1 && basics.programName.trim().length === 0) {
       toast.error("Please name your program before continuing");
       return;
     }
-    handleSave();
+    // Only advance on a save that actually landed.
+    if (!(await handleSave())) return;
     if (step < STEPS.length) {
       setStep(step + 1);
     }
   };
 
-  const persistProgram = (enabled: boolean) => {
+  const persistProgram = async (enabled: boolean) => {
     const reconciledEarn = reconcileEarnRules(
       config.earnRules ?? [],
       earnRules,
     );
-    patchConfig({
+    await patchConfig({
       programName: basics.programName.trim() || undefined,
       programDescription: basics.tagline.trim() || undefined,
       primaryColor: basics.primaryColor,
@@ -147,14 +175,23 @@ export default function LoyaltySetupWizardPage() {
     setEarnRules(getActiveEarnRules(reconciledEarn));
   };
 
-  const handleSaveDraft = () => {
-    persistProgram(false);
+  const handleSaveDraft = async () => {
+    try {
+      await persistProgram(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "The draft was not saved.",
+      );
+      return;
+    }
     toast.success("Saved as draft");
     router.push("/facility/dashboard/loyalty");
   };
 
-  const handlePublish = () => {
-    persistProgram(true);
+  const handlePublish = async (): Promise<number> => {
+    // The programme is published FIRST and customers are told second. The
+    // reverse order would announce a launch that the database refused.
+    await persistProgram(true);
     const count = notifyCustomersOfLoyaltyLaunch(
       facilityId,
       basics.programName.trim() || "Your rewards program",
@@ -163,9 +200,15 @@ export default function LoyaltySetupWizardPage() {
     return count;
   };
 
-  const handleSaveChanges = () => {
-    persistProgram(config.enabled ?? false);
-    toast.success("Changes saved");
+  const handleSaveChanges = async () => {
+    try {
+      await persistProgram(config.enabled ?? false);
+      toast.success("Changes saved");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "The changes were not saved.",
+      );
+    }
   };
 
   const current = STEPS[step - 1];
@@ -296,14 +339,21 @@ export default function LoyaltySetupWizardPage() {
           <ChevronLeft className="mr-1.5 size-4" /> Back
         </Button>
         <div className="flex items-center gap-2">
+          {/* Both write to Postgres, so both stay disabled until the write
+              lands — a second click would queue a second save of the same step
+              and, on Continue, advance twice. */}
           {step <= 4 && (
-            <Button variant="outline" onClick={handleSave}>
-              Save
+            <Button
+              variant="outline"
+              onClick={() => void handleSave()}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving…" : "Save"}
             </Button>
           )}
           {step < STEPS.length && (
-            <Button onClick={handleContinue}>
-              Save & Continue
+            <Button onClick={() => void handleContinue()} disabled={isSaving}>
+              Save &amp; Continue
               <ChevronRight className="ml-1.5 size-4" />
             </Button>
           )}
@@ -311,4 +361,25 @@ export default function LoyaltySetupWizardPage() {
       </div>
     </div>
   );
+}
+
+/**
+ * Waits for the programme, then mounts the wizard.
+ *
+ * The gate is the whole point — see the note on `SetupWizard`.
+ */
+export default function LoyaltySetupWizardPage() {
+  const { isPending } = useLoyaltyProgram();
+
+  if (isPending) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  return <SetupWizard />;
 }

@@ -90,13 +90,21 @@ export function ReviewPublishStep({
   referralProgram?: ReferralProgramConfig;
   facilityId: number;
   onSaveDraft: () => void;
-  onPublish: () => number;
+  /**
+   * Publishes the programme and returns how many customers were told.
+   *
+   * Async since 2026-08-21: publishing writes to Postgres and the write can be
+   * refused. A rejection must leave the step on its buttons rather than on a
+   * "you told N customers" panel about a launch that did not happen.
+   */
+  onPublish: () => Promise<number>;
   /** True when editing an already-live program (Manage Settings) — replaces the
    *  publish/notify flow with a plain "Save changes". */
   editMode?: boolean;
   onSaveChanges?: () => void;
 }) {
   const [notifiedCount, setNotifiedCount] = useState<number | null>(null);
+  const [publishing, setPublishing] = useState(false);
   const recipientCount = useMemo(
     () => getFacilityCustomers(facilityId).length,
     [facilityId],
@@ -304,11 +312,21 @@ export function ReviewPublishStep({
             </Button>
             <Button
               className="bg-emerald-600 text-white hover:bg-emerald-700"
-              onClick={() => {
-                if (notifiedCount === null) setNotifiedCount(onPublish());
+              disabled={publishing}
+              onClick={async () => {
+                if (notifiedCount !== null || publishing) return;
+                setPublishing(true);
+                try {
+                  setNotifiedCount(await onPublish());
+                } catch {
+                  // The wizard reports the failure; this step just stays put.
+                } finally {
+                  setPublishing(false);
+                }
               }}
             >
-              <CheckCircle2 className="mr-1.5 size-4" /> Publish program
+              <CheckCircle2 className="mr-1.5 size-4" />{" "}
+              {publishing ? "Publishing…" : "Publish program"}
             </Button>
           </>
         )}

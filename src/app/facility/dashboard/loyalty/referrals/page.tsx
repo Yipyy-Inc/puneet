@@ -4,17 +4,32 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { ReferralProgramEditor } from "@/components/loyalty/config/ReferralProgramEditor";
 import { SaveBar } from "@/components/loyalty/config/SaveBar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import type { ReferralProgramConfig } from "@/types/loyalty";
 
 export default function ReferralsPage() {
-  const { config, updateConfig } = useLoyaltyProgram();
-  const [draft, setDraft] = useState<ReferralProgramConfig | undefined>(
-    () => config.referralProgram,
-  );
+  const { config, updateConfig, isPending, isSaving } = useLoyaltyProgram();
 
+  // `undefined` is a legitimate stored value here (no referral programme), so
+  // "nothing edited yet" cannot be represented by it. A wrapper object gives
+  // the two states somewhere separate to live.
+  const [draft, setDraft] = useState<{
+    value: ReferralProgramConfig | undefined;
+  } | null>(null);
+  const saved = config.referralProgram;
+  const referralProgram = draft ? draft.value : saved;
   const dirty =
-    JSON.stringify(draft) !== JSON.stringify(config.referralProgram);
+    draft !== null && JSON.stringify(draft.value) !== JSON.stringify(saved);
+
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -27,15 +42,28 @@ export default function ReferralsPage() {
         </p>
       </div>
 
-      <ReferralProgramEditor value={draft} onChange={setDraft} />
+      <ReferralProgramEditor
+        value={referralProgram}
+        onChange={(value) => setDraft({ value })}
+      />
 
       <SaveBar
         dirty={dirty}
-        onSave={() => {
-          updateConfig({ ...config, referralProgram: draft });
-          toast.success("Referral program saved");
+        saving={isSaving}
+        onSave={async () => {
+          try {
+            await updateConfig({ ...config, referralProgram });
+            setDraft(null);
+            toast.success("Referral program saved");
+          } catch (error) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "The referral program was not saved.",
+            );
+          }
         }}
-        onReset={() => setDraft(config.referralProgram)}
+        onReset={() => setDraft(null)}
       />
     </div>
   );

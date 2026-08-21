@@ -5,9 +5,16 @@ import { Save, RotateCcw } from "lucide-react";
 
 interface SaveBarProps {
   dirty: boolean;
-  onSave: () => void;
+  /**
+   * May be async. It writes to Postgres now rather than to localStorage, and
+   * the bar has to stay disabled until that lands — otherwise a second click
+   * queues a second write of the same draft.
+   */
+  onSave: () => void | Promise<void>;
   onReset: () => void;
   saveLabel?: string;
+  /** True while the write is in flight. */
+  saving?: boolean;
 }
 
 /**
@@ -20,6 +27,7 @@ export function SaveBar({
   onSave,
   onReset,
   saveLabel = "Save changes",
+  saving = false,
 }: SaveBarProps) {
   return (
     <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky bottom-0 z-10 -mx-6 flex items-center justify-end gap-2 border-t px-6 py-3 backdrop-blur-sm">
@@ -28,13 +36,13 @@ export function SaveBar({
           You have unsaved changes
         </span>
       )}
-      <Button variant="ghost" onClick={onReset} disabled={!dirty}>
+      <Button variant="ghost" onClick={onReset} disabled={!dirty || saving}>
         <RotateCcw className="mr-2 size-4" />
         Discard
       </Button>
-      <Button onClick={onSave} disabled={!dirty}>
+      <Button onClick={() => void onSave()} disabled={!dirty || saving}>
         <Save className="mr-2 size-4" />
-        {saveLabel}
+        {saving ? "Saving…" : saveLabel}
       </Button>
     </div>
   );

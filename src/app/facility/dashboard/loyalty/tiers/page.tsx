@@ -6,28 +6,47 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { TierDefinitionsEditor } from "@/components/loyalty/config/TierDefinitionsEditor";
 import { TiersEditor } from "@/components/loyalty/config/TiersEditor";
 import { SaveBar } from "@/components/loyalty/config/SaveBar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import type { Tier, LoyaltyTierConfig } from "@/types/loyalty";
 
 export default function TiersPage() {
-  const { config, updateConfig, facilityId } = useLoyaltyProgram();
+  const { config, updateConfig, facilityId, isPending, isSaving } =
+    useLoyaltyProgram();
 
-  const [tiers, setTiers] = useState<Tier[]>(
-    () => config.tierDefinitions ?? [],
-  );
-  const [legacyTiers, setLegacyTiers] = useState<LoyaltyTierConfig[]>(
-    () => config.tiers,
+  // Derived, not seeded. A `useState` initialiser runs before the programme
+  // has been read, and this page would otherwise offer to save an empty tier
+  // list over a facility's real one. See the badges page.
+  const [tierDraft, setTierDraft] = useState<Tier[] | null>(null);
+  const [legacyDraft, setLegacyDraft] = useState<LoyaltyTierConfig[] | null>(
+    null,
   );
   const [showLegacy, setShowLegacy] = useState(false);
 
+  const savedTiers = config.tierDefinitions ?? [];
+  const savedLegacy = config.tiers;
+  const tiers = tierDraft ?? savedTiers;
+  const legacyTiers = legacyDraft ?? savedLegacy;
+
   const dirty =
-    JSON.stringify(tiers) !== JSON.stringify(config.tierDefinitions ?? []) ||
-    JSON.stringify(legacyTiers) !== JSON.stringify(config.tiers);
+    (tierDraft !== null &&
+      JSON.stringify(tierDraft) !== JSON.stringify(savedTiers)) ||
+    (legacyDraft !== null &&
+      JSON.stringify(legacyDraft) !== JSON.stringify(savedLegacy));
 
   const handleReset = () => {
-    setTiers(config.tierDefinitions ?? []);
-    setLegacyTiers(config.tiers);
+    setTierDraft(null);
+    setLegacyDraft(null);
   };
+
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -42,7 +61,7 @@ export default function TiersPage() {
 
       <TierDefinitionsEditor
         value={tiers}
-        onChange={setTiers}
+        onChange={setTierDraft}
         facilityId={facilityId}
       />
 
@@ -70,20 +89,28 @@ export default function TiersPage() {
               <code>getCustomerTier</code>). The customisable tiers above are
               the newer model; the engine will be migrated to consume them.
             </p>
-            <TiersEditor value={legacyTiers} onChange={setLegacyTiers} />
+            <TiersEditor value={legacyTiers} onChange={setLegacyDraft} />
           </div>
         )}
       </div>
 
       <SaveBar
         dirty={dirty}
-        onSave={() => {
-          updateConfig({
-            ...config,
-            tierDefinitions: tiers,
-            tiers: legacyTiers,
-          });
-          toast.success("Tiers saved");
+        saving={isSaving}
+        onSave={async () => {
+          try {
+            await updateConfig({
+              ...config,
+              tierDefinitions: tiers,
+              tiers: legacyTiers,
+            });
+            handleReset();
+            toast.success("Tiers saved");
+          } catch (error) {
+            toast.error(
+              error instanceof Error ? error.message : "Tiers were not saved.",
+            );
+          }
         }}
         onReset={handleReset}
       />

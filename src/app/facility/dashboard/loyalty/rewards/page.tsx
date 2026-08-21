@@ -4,13 +4,29 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { RewardTypesEditor } from "@/components/loyalty/config/RewardTypesEditor";
 import { SaveBar } from "@/components/loyalty/config/SaveBar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
+import type { RewardTypeConfig } from "@/types/loyalty";
 
 export default function RewardsPage() {
-  const { config, updateConfig } = useLoyaltyProgram();
-  const [draft, setDraft] = useState(() => config.rewardTypes);
+  const { config, updateConfig, isPending, isSaving } = useLoyaltyProgram();
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(config.rewardTypes);
+  // Derived, not seeded — the programme arrives from a request, and a
+  // `useState` initialiser runs before it can. See the badges page.
+  const [draft, setDraft] = useState<RewardTypeConfig[] | null>(null);
+  const saved = config.rewardTypes;
+  const rewardTypes = draft ?? saved;
+  const dirty =
+    draft !== null && JSON.stringify(draft) !== JSON.stringify(saved);
+
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -22,15 +38,25 @@ export default function RewardsPage() {
         </p>
       </div>
 
-      <RewardTypesEditor value={draft} onChange={setDraft} />
+      <RewardTypesEditor value={rewardTypes} onChange={setDraft} />
 
       <SaveBar
         dirty={dirty}
-        onSave={() => {
-          updateConfig({ ...config, rewardTypes: draft });
-          toast.success("Reward types saved");
+        saving={isSaving}
+        onSave={async () => {
+          try {
+            await updateConfig({ ...config, rewardTypes });
+            setDraft(null);
+            toast.success("Reward types saved");
+          } catch (error) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Reward types were not saved.",
+            );
+          }
         }}
-        onReset={() => setDraft(config.rewardTypes)}
+        onReset={() => setDraft(null)}
       />
     </div>
   );
