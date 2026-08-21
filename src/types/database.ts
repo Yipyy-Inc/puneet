@@ -6291,6 +6291,20 @@ export type Database = {
           refresh_token_expires_at: string;
         }[];
       };
+      payroll_summary: {
+        Args: { p_facility_id: string; p_from: string; p_to: string };
+        Returns: {
+          first_name: string;
+          gross: number;
+          hourly_minutes: number;
+          last_name: string;
+          open_sessions: number;
+          salaried_minutes: number;
+          sessions: number;
+          staff_id: string;
+          unpriced_minutes: number;
+        }[];
+      };
       provision_facility: {
         Args: {
           p_business_types?: string[];

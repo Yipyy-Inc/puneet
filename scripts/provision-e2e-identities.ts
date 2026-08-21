@@ -92,6 +92,23 @@ const ACCOUNTS = [
     fullName: "Iris Nakamura",
     role: "reception",
   },
+  /**
+   * The ACCOUNTANT, added 2026-08-21 with the payroll screen.
+   *
+   * The only seeded identity that holds `view_payroll` and
+   * `scheduling_view_labor_cost` WITHOUT admin access — accountant is not an
+   * admin-tier job title, so they land in /employee. That combination is the
+   * whole point: it is the one that proves a money surface is reachable by the
+   * person whose job it is, and that the admin portal stays shut to them.
+   *
+   * It also unblocks a case nothing else could reach: the labour-cost tile
+   * rendering as ABSENT rather than $0 for a caller without the permission.
+   */
+  {
+    email: "accountant@yipyy.dev",
+    fullName: "Noor Haddad",
+    role: "accountant",
+  },
   { email: "customer@yipyy.dev", fullName: "Sam Whitlock", role: null },
 ] as const satisfies readonly {
   email: string;

@@ -66,6 +66,8 @@ export const ACCOUNTS = {
   groomer: "groomer@yipyy.dev",
   reception: "reception@yipyy.dev",
   caretaker: "caretaker@yipyy.dev",
+  /** Holds view_payroll and NO admin access — the only identity that does. */
+  accountant: "accountant@yipyy.dev",
   customer: "customer@yipyy.dev",
 } as const;
 
