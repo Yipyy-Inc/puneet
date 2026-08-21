@@ -3303,22 +3303,65 @@ nested interfaces in Zod would be a second copy whose failure mode is refusing a
 save a facility legitimately made. Reasoning in the banner of
 `src/lib/settings/loyalty.ts`.
 
-#### 🟠 The ledger is still fixtures, and one path reaches a card
+#### ✅ The ledger is REAL — 2026-08-21
 
-Accounts, transactions, redemptions and badges-earned are still hand-authored
-files keyed by `facilityId: 1` — which is why the provider still hands that
-number out, now documented as a fixture key rather than a facility.
+`loyalty_accounts`, `loyalty_transactions` and `loyalty_vouchers`, with RLS,
+replacing three hand-authored files keyed by `facilityId: 1`.
 
-The one that matters: `useActiveLoyaltyDiscount` → `PaymentCheckoutFlow`
-computes `netAmountDue = amountDue − loyaltyDiscount.amount`, and the tax and
-the Clover total are computed from it. The voucher comes from
-`src/data/loyalty-redemptions`, and `consume()` mutates that fixture in memory
-— so a voucher survives a refresh and could be spent repeatedly.
+**A balance is not a number somebody sets.** The fixture kept `pointsBalance` on
+the account AND a separate transaction list — two sources of truth for one fact,
+free to drift, so a customer could not be shown a balance and the history
+explaining it. Now the ledger is the truth: `points_balance` and the two
+lifetime columns are trigger-maintained from it, and
+`private.loyalty_balances_come_from_the_ledger` refuses a hand-written change so
+`PATCH {"points_balance": 999999}` through PostgREST is not a door.
 
-**Not firing today**: of the three discount vouchers in the fixture one expired
-in June and two are already `status: "used"`, so `getActiveDiscountRedemptions`
-returns nothing for anyone. Live wiring over a currently-empty fixture. It goes
-with the ledger, which is the next loyalty change.
+**A voucher can be spent once, and the database is what says so.**
+`consume_loyalty_voucher` updates WHERE the row is still active and not past
+expiry, and raises when that matches nothing. Two tills racing for one reward:
+exactly one wins. No read-then-write in a route could promise that.
+
+**Overdrafts are refused with a sentence**, not a constraint name. The balance
+trigger does `select ... for update` first, which also serialises two staff
+redeeming the last of an account at the same moment.
+
+Proved against production by a self-cleaning probe: 13/13 scenarios, including
+the second consume, the ledger edit and the hand-set balance all refused, and
+zero residue. Covered by
+[loyalty-ledger.spec.ts](../../tests/e2e/loyalty-ledger.spec.ts) in
+`test:e2e:ci` (6 tests).
+
+**A flaw caught before it shipped:** an append-only DELETE trigger was written
+here and removed. `account_id` is ON DELETE CASCADE, and a BEFORE DELETE trigger
+that always raises fires on the cascade — so deleting a client would have hit it
+and aborted, making the client undeletable. That is exactly the `audit_log` bug
+below, and writing it a second time knowingly would have been worse than having
+written it once. Append-only against applications is enforced by RLS instead:
+there is no DELETE policy at all.
+
+#### 🟠 The ledger is real; the SCREENS still read the fixtures
+
+The tables, the routes (`/api/loyalty/accounts|transactions|vouchers`) and the
+query factory `lib/api/loyalty-ledger.ts` are live. **Nothing renders from them
+yet.** Members, redemptions, the client loyalty tab and the customer wallet all
+still read `src/data/loyalty-*` through `lib/api/loyalty.ts`, which is why that
+fixture module keeps its name and its callers.
+
+**So the checkout voucher path is still the fixture one.**
+`useActiveLoyaltyDiscount` → `PaymentCheckoutFlow` computes
+`netAmountDue = amountDue − loyaltyDiscount.amount`, the tax and the Clover total
+follow from it, and `consume()` mutates an in-memory array. Repointing it at
+`useConsumeLoyaltyVoucher` is the next change and the reason the ledger was
+built first — there was nothing correct to point it at.
+
+Still inert meanwhile: of the three fixture discount vouchers one expired in
+June and two are `status: "used"`, so `getActiveDiscountRedemptions` returns
+nothing for anyone.
+
+Also not built: points EARNING. Nothing fires the earn rules on a checkout yet,
+so an account gains points only by a manual ledger entry. The rules are real
+(`loyalty_config`) and the ledger is real; what is missing is the thing that
+reads one and writes the other.
 
 ### 🟡 `payroll_summary` reads a domain that may be absent, and says so
 

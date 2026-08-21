@@ -2936,6 +2936,207 @@ export type Database = {
           },
         ];
       };
+      loyalty_accounts: {
+        Row: {
+          client_id: string;
+          created_at: string;
+          credit_balance: number;
+          current_tier_id: string | null;
+          facility_id: string;
+          id: string;
+          lifetime_points_earned: number;
+          lifetime_points_redeemed: number;
+          points_balance: number;
+          referral_code: string | null;
+          tier_joined_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          created_at?: string;
+          credit_balance?: number;
+          current_tier_id?: string | null;
+          facility_id: string;
+          id?: string;
+          lifetime_points_earned?: number;
+          lifetime_points_redeemed?: number;
+          points_balance?: number;
+          referral_code?: string | null;
+          tier_joined_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          created_at?: string;
+          credit_balance?: number;
+          current_tier_id?: string | null;
+          facility_id?: string;
+          id?: string;
+          lifetime_points_earned?: number;
+          lifetime_points_redeemed?: number;
+          points_balance?: number;
+          referral_code?: string | null;
+          tier_joined_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_accounts_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_accounts_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      loyalty_transactions: {
+        Row: {
+          account_id: string;
+          booking_id: string | null;
+          created_at: string;
+          description: string;
+          facility_id: string;
+          id: string;
+          kind: string;
+          points: number;
+          reason: string | null;
+          source: string;
+          source_id: string | null;
+          staff_id: string | null;
+        };
+        Insert: {
+          account_id: string;
+          booking_id?: string | null;
+          created_at?: string;
+          description: string;
+          facility_id: string;
+          id?: string;
+          kind: string;
+          points: number;
+          reason?: string | null;
+          source: string;
+          source_id?: string | null;
+          staff_id?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          booking_id?: string | null;
+          created_at?: string;
+          description?: string;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          points?: number;
+          reason?: string | null;
+          source?: string;
+          source_id?: string | null;
+          staff_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_transactions_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "loyalty_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_transactions_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_transactions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_transactions_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      loyalty_vouchers: {
+        Row: {
+          account_id: string;
+          applies_to_services: string[] | null;
+          expires_at: string | null;
+          facility_id: string;
+          id: string;
+          issued_at: string;
+          points_spent: number;
+          reward_type: string;
+          reward_value: number;
+          status: string;
+          used_at: string | null;
+          used_on_booking_id: string | null;
+        };
+        Insert: {
+          account_id: string;
+          applies_to_services?: string[] | null;
+          expires_at?: string | null;
+          facility_id: string;
+          id?: string;
+          issued_at?: string;
+          points_spent?: number;
+          reward_type: string;
+          reward_value: number;
+          status?: string;
+          used_at?: string | null;
+          used_on_booking_id?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          applies_to_services?: string[] | null;
+          expires_at?: string | null;
+          facility_id?: string;
+          id?: string;
+          issued_at?: string;
+          points_spent?: number;
+          reward_type?: string;
+          reward_value?: number;
+          status?: string;
+          used_at?: string | null;
+          used_on_booking_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_vouchers_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "loyalty_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_vouchers_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_vouchers_used_on_booking_id_fkey";
+            columns: ["used_on_booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       membership_permissions: {
         Row: {
           membership_id: string;
@@ -6150,6 +6351,23 @@ export type Database = {
           subaccount_sid: string;
         }[];
       };
+      consume_loyalty_voucher: {
+        Args: { p_booking_id?: string; p_voucher_id: string };
+        Returns: {
+          account_id: string;
+          applies_to_services: string[] | null;
+          expires_at: string | null;
+          facility_id: string;
+          id: string;
+          issued_at: string;
+          points_spent: number;
+          reward_type: string;
+          reward_value: number;
+          status: string;
+          used_at: string | null;
+          used_on_booking_id: string | null;
+        };
+      };
       create_booking: {
         Args: {
           p_boarding?: Json;
@@ -6296,9 +6514,15 @@ export type Database = {
         Returns: {
           first_name: string;
           gross: number;
+          holiday_minutes: number;
+          holiday_premium: number;
           hourly_minutes: number;
           last_name: string;
           open_sessions: number;
+          overtime_configured: boolean;
+          overtime_minutes: number;
+          overtime_pay: number;
+          regular_minutes: number;
           salaried_minutes: number;
           sessions: number;
           staff_id: string;
@@ -6413,6 +6637,31 @@ export type Database = {
           event_id: string;
           is_new: boolean;
         }[];
+      };
+      redeem_loyalty_points: {
+        Args: {
+          p_account_id: string;
+          p_applies_to?: string[];
+          p_description?: string;
+          p_expires_at?: string;
+          p_points: number;
+          p_reward_type: string;
+          p_reward_value: number;
+        };
+        Returns: {
+          account_id: string;
+          applies_to_services: string[] | null;
+          expires_at: string | null;
+          facility_id: string;
+          id: string;
+          issued_at: string;
+          points_spent: number;
+          reward_type: string;
+          reward_value: number;
+          status: string;
+          used_at: string | null;
+          used_on_booking_id: string | null;
+        };
       };
       redeem_package_pass: {
         Args: {
