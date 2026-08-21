@@ -3195,29 +3195,55 @@ server's value is the truth, state holds only what has been EDITED
 **Only a browser walk found it.** The API tests passed — the route and the
 function were correct throughout.
 
-#### 🔴 AND `TaxSettings` HAS THE SAME SHAPE, WHERE IT CAN LOSE DATA
+#### ✅ `TaxSettings` HAD THE SAME SHAPE, WHERE IT COULD LOSE DATA — FIXED 2026-08-21
 
-Not fixed here, and worse than the payroll one. `TaxSettings.tsx:63-64` seeds
-`country`, `province` and `taxes` from `settings.tax_config.value` in `useState`
-initialisers, with no `isPending` guard. Its Save then writes `taxes` straight
-back out of that state.
+Same latch, one screen along, and it destroyed data rather than merely hiding
+it. `TaxSettings.tsx` seeded `country`, `province` and `taxes` from
+`settings.tax_config.value` in `useState` initialisers with no `isPending`
+guard, and Save wrote `taxes` straight back out of that state.
 
-There is **no prefetch of `facilitySettingsQueries.all()` anywhere** — grep it —
-and the settings page is `"use client"`. So on a COLD load the first render sees
-`fallbackSettings()`, whose `tax_config` is `NO_TAX` with `taxes: []`. The
-screen shows a facility with no taxes configured, and pressing Save writes that
-over their real GST/QST entries and registration numbers.
+**It was not a race a fast connection wins.** Nothing on the settings page reads
+`useFacilitySettings` — grep it — so the request does not start until
+`TaxSettings` itself mounts, and a `useState` initialiser runs on that same
+first render. The initialiser cannot observe a request that has not been made.
+So the form latched onto `fallbackSettings()`, whose `tax_config` is `NO_TAX`
+with `taxes: []`, **every time**. A facility that had entered its GST and QST
+registration numbers opened the screen cold, read "No tax rates configured", and
+pressing Save wrote the empty list over the real one.
 
-Reachable path: hard-refresh `/facility/dashboard/settings?section=taxes`, press
-Save. Mitigated only by React Query having the data cached from an earlier
-navigation in the same SPA session.
+A second defect underneath: reading a saved row hardcoded `description: ""` and
+`isCompound: false`, discarding both. `isCompound` decides whether a tax is
+charged on the subtotal or on the subtotal plus the taxes above it — a different
+amount of money — so a correctly entered compound tax silently flattened on the
+next save of any unrelated field. It was possible because the file kept a
+hand-copied local `TaxEntry` interface; it now imports the schema's own, so
+there is no second shape to drift.
 
-`CheckinRequirementsSettings.tsx:94` shares the shape with lower stakes.
+Fixed with `draft ?? draftFrom(saved)` plus an `isPending` skeleton, as the
+payroll and availability screens already were.
 
-Fix is the same three lines as the payroll one. It is called out separately
-rather than folded into a payroll commit because tax has its own semantics worth
-testing on the way through — a fraction-vs-percentage rate, compound taxes, and
-registration numbers that appear on documents.
+**Covered by [tax-settings-screen.spec.ts](../../tests/e2e/tax-settings-screen.spec.ts)**, in
+`test:e2e:ci`. Its sharpest assertion is _open the screen, touch nothing, press
+Save, and read the row back_ — one action that catches both defects, and what a
+real user does constantly. The spec was run against the pre-fix build as a
+negative control: two of its three tests failed with the tax rows absent from
+the screen, and the third — an unconfigured facility correctly shown the empty
+state — passed, which is what proves the fix did not swap one wrong answer for
+the other.
+
+**Neither defect was reachable from the API.** `PATCH`/`GET` were correct
+throughout; the bug lived entirely in what the screen carried between them, and
+every test that had exercised it typed values in first — exactly the state in
+which neither appears. Third consecutive day a browser walk found what the API
+layer structurally could not.
+
+#### 🟡 `CheckinRequirementsSettings` still reads the fixture
+
+Named alongside the above and NOT the same bug, which the first note got wrong:
+`CheckinRequirementsSettings.tsx:60` reads `defaultConfig` from
+`facilities`/`defaultFacility` at MODULE SCOPE — the shared fixture, not a
+query. So there is no latch to fix; it is an unconverted screen, and belongs
+with the rest of the fixture-backed surface in the facility audit.
 
 ### 🟡 `payroll_summary` reads a domain that may be absent, and says so
 

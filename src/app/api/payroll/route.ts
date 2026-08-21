@@ -216,8 +216,9 @@ export async function GET(request: NextRequest) {
     .eq("domain", "payroll_config")
     .maybeSingle();
 
-  const overtime = (rules as { value?: { overtime?: PayrollConfig["overtime"] } } | null)
-    ?.value?.overtime;
+  const overtime = (
+    rules as { value?: { overtime?: PayrollConfig["overtime"] } } | null
+  )?.value?.overtime;
   const overtimeConfigured = Boolean(
     overtime?.enabled && (overtime.weeklyThresholdHours ?? 0) > 0,
   );

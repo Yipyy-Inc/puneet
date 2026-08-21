@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -23,7 +24,7 @@ import {
   useFacilitySettings,
   useSaveFacilitySetting,
 } from "@/lib/api/facility-settings";
-import type { TaxConfig } from "@/lib/settings/tax";
+import type { TaxConfig, TaxEntry } from "@/lib/settings/tax";
 
 // ============================================================================
 // ── THIS SCREEN USED TO SAVE NOTHING ──────────────────────────────────────
@@ -39,53 +40,98 @@ import type { TaxConfig } from "@/lib/settings/tax";
 //
 // It now reads and writes the `tax_config` setting domain, which is what makes
 // a tax line appear on a receipt at all.
+//
+// ── AND THEN IT ERASED WHAT IT HAD SAVED ──────────────────────────────────
+//
+// Two ways, both silent, both found by reading rather than by any test — every
+// test that exercised this screen typed values in first, which is precisely the
+// state in which neither bug appears.
+//
+// FIRST: the form was SEEDED from the query with `useState`, whose initialiser
+// runs on the first render. Nothing on the settings page reads
+// `useFacilitySettings`, so the request does not start until this component
+// mounts — the initialisers therefore ran BEFORE it could possibly have
+// resolved, every time, and latched onto the fallback. That fallback is
+// `NO_TAX`: an empty list. So a facility that had entered its GST and QST
+// numbers opened this screen cold, saw "No tax rates configured", and pressing
+// Save wrote the empty list over the real one.
+//
+// It is not a race that a fast connection wins. The initialiser cannot observe
+// a request that has not been made. The state holds only what has been EDITED
+// since the server's value arrived — the same fix the availability screen and
+// the payroll-rules screen already carry.
+//
+// SECOND: reading a saved row hardcoded `description: ""` and
+// `isCompound: false`, discarding both. `isCompound` decides whether a tax is
+// charged on the subtotal or on the subtotal plus the taxes above it — so a
+// compound tax, correctly entered, silently became a simple one on the next
+// save of any unrelated field. The local `TaxEntry` interface that made that
+// possible was a hand-copy of the schema's; it now imports the real one, and
+// there is no second shape to drift.
 // ============================================================================
-
-interface TaxEntry {
-  id: string;
-  name: string;
-  rate: number;
-  appliesTo: "all" | "services_only" | "products_only";
-  registrationNumber: string;
-  description: string;
-  isCompound: boolean; // compound = calculated on subtotal + previous taxes
-  enabled: boolean;
-}
 
 let _taxId = 500;
 
+/** The form, as the saved config would fill it in. */
+interface Draft {
+  country: string;
+  province: string;
+  taxes: TaxEntry[];
+  pricesIncludeTax: boolean;
+  showSeparately: boolean;
+  showRegistration: boolean;
+  exemptGiftCards: boolean;
+  exemptStoreCredit: boolean;
+}
+
+function draftFrom(saved: TaxConfig): Draft {
+  return {
+    country: saved.country,
+    province: saved.province,
+    // Spread, not a field list: every property the schema carries survives a
+    // round trip through the editor, including the two that used to be dropped.
+    taxes: saved.taxes.map((t) => ({ ...t })),
+    pricesIncludeTax: saved.pricesIncludeTax,
+    showSeparately: saved.showTaxesSeparately,
+    showRegistration: saved.showRegistrationOnInvoice,
+    exemptGiftCards: saved.exemptions.giftCards,
+    exemptStoreCredit: saved.exemptions.storeCredit,
+  };
+}
+
 export function TaxSettings() {
   const { role } = useFacilityRole();
-  const settings = useFacilitySettings();
+  const { settings, isPending } = useFacilitySettings();
   const saveSetting = useSaveFacilitySetting();
-  const defaultConfig = settings.settings.tax_config.value as TaxConfig;
+  const saved = settings.tax_config.value;
 
-  const [country, setCountry] = useState(defaultConfig?.country ?? "CA");
-  const [province, setProvince] = useState(defaultConfig?.province ?? "QC");
-  const [taxes, setTaxes] = useState<TaxEntry[]>(
-    (defaultConfig?.taxes ?? []).map((t) => ({
-      ...t,
-      registrationNumber:
-        (t as unknown as Record<string, string>).registrationNumber ?? "",
-      description: "",
-      isCompound: false,
-    })),
-  );
-  const [pricesIncludeTax, setPricesIncludeTax] = useState(
-    defaultConfig?.pricesIncludeTax ?? false,
-  );
-  const [showSeparately, setShowSeparately] = useState(
-    defaultConfig?.showTaxesSeparately ?? true,
-  );
-  const [showRegistration, setShowRegistration] = useState(
-    defaultConfig?.showRegistrationOnInvoice ?? true,
-  );
-  const [exemptGiftCards, setExemptGiftCards] = useState(
-    defaultConfig?.exemptions.giftCards ?? true,
-  );
-  const [exemptStoreCredit, setExemptStoreCredit] = useState(
-    defaultConfig?.exemptions.storeCredit ?? true,
-  );
+  // Derived from the server, never seeded from it. See the banner.
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const form = draft ?? draftFrom(saved);
+  const {
+    country,
+    province,
+    taxes,
+    pricesIncludeTax,
+    showSeparately,
+    showRegistration,
+    exemptGiftCards,
+    exemptStoreCredit,
+  } = form;
+
+  const patch = (changes: Partial<Draft>) =>
+    setDraft((prev) => ({ ...(prev ?? draftFrom(saved)), ...changes }));
+
+  const setPricesIncludeTax = (value: boolean) =>
+    patch({ pricesIncludeTax: value });
+  const setShowSeparately = (value: boolean) =>
+    patch({ showSeparately: value });
+  const setShowRegistration = (value: boolean) =>
+    patch({ showRegistration: value });
+  const setExemptGiftCards = (value: boolean) =>
+    patch({ exemptGiftCards: value });
+  const setExemptStoreCredit = (value: boolean) =>
+    patch({ exemptStoreCredit: value });
 
   const selectedCountry = TAX_PRESETS.find((c) => c.code === country);
   const regions = selectedCountry?.regions ?? [];
@@ -94,37 +140,42 @@ export function TaxSettings() {
     .filter((t) => t.enabled)
     .reduce((sum, t) => sum + t.rate, 0);
 
+  const presetRows = (countryCode: string, regionCode: string): TaxEntry[] =>
+    (getPreset(countryCode, regionCode) ?? []).map((p, i) => ({
+      id: `preset-${i}`,
+      name: p.name,
+      rate: p.rate,
+      appliesTo: p.appliesTo,
+      registrationNumber: "",
+      description: "",
+      isCompound: false,
+      enabled: true,
+    }));
+
+  // Country and region move together with the rates they imply — one patch, so
+  // a preset can never land against the previous province.
   const handleCountryChange = (code: string) => {
-    setCountry(code);
     const c = TAX_PRESETS.find((p) => p.code === code);
-    if (c && c.regions.length > 0) {
-      setProvince(c.regions[0].code);
-      applyPreset(code, c.regions[0].code);
+    const region = c?.regions[0]?.code;
+    if (!region) {
+      patch({ country: code });
+      return;
     }
+    const rows = presetRows(code, region);
+    patch({
+      country: code,
+      province: region,
+      ...(rows.length > 0 ? { taxes: rows } : {}),
+    });
   };
 
   const handleProvinceChange = (code: string) => {
-    setProvince(code);
-    applyPreset(country, code);
+    const rows = presetRows(country, code);
+    patch({ province: code, ...(rows.length > 0 ? { taxes: rows } : {}) });
   };
 
-  const applyPreset = (countryCode: string, regionCode: string) => {
-    const preset = getPreset(countryCode, regionCode);
-    if (preset) {
-      setTaxes(
-        preset.map((p, i) => ({
-          id: `preset-${i}`,
-          name: p.name,
-          rate: p.rate,
-          appliesTo: p.appliesTo,
-          registrationNumber: "",
-          description: "",
-          isCompound: false,
-          enabled: true,
-        })),
-      );
-    }
-  };
+  const setTaxes = (update: (prev: TaxEntry[]) => TaxEntry[]) =>
+    patch({ taxes: update(form.taxes) });
 
   const handleAddTax = () => {
     _taxId += 1;
@@ -177,6 +228,9 @@ export function TaxSettings() {
           },
         } satisfies TaxConfig,
       });
+      // The server's copy is the truth again; drop the edits so the form
+      // follows the refetched value rather than shadowing it.
+      setDraft(null);
       toast.success("Tax settings saved");
     } catch (error) {
       toast.error(
@@ -184,6 +238,19 @@ export function TaxSettings() {
       );
     }
   };
+
+  // Nothing is rendered from the fallback. "No tax rates configured" is a
+  // statement about the facility, and it must not be made about a request that
+  // has not answered yet — this screen's Save button would then act on it.
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
 
   if (role !== "owner" && role !== "manager") {
     return (
@@ -550,8 +617,12 @@ export function TaxSettings() {
 
       {/* Save */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} className="gap-1.5">
-          Save Tax Settings
+        <Button
+          onClick={handleSave}
+          disabled={saveSetting.isPending}
+          className="gap-1.5"
+        >
+          {saveSetting.isPending ? "Saving…" : "Save Tax Settings"}
         </Button>
       </div>
     </div>
