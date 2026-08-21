@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { LoyaltyAccountRow } from "@/app/api/loyalty/accounts/route";
 import type { LoyaltyTransactionRow } from "@/app/api/loyalty/transactions/route";
 import type { LoyaltyVoucherRow } from "@/app/api/loyalty/vouchers/route";
+import type { EarnResult } from "@/app/api/loyalty/earn/route";
 
 // ============================================================================
 // The loyalty ledger, from the browser.
@@ -28,7 +29,12 @@ import type { LoyaltyVoucherRow } from "@/app/api/loyalty/vouchers/route";
 // change — a mutation for it could only ever return an error.
 // ============================================================================
 
-export type { LoyaltyAccountRow, LoyaltyTransactionRow, LoyaltyVoucherRow };
+export type {
+  LoyaltyAccountRow,
+  LoyaltyTransactionRow,
+  LoyaltyVoucherRow,
+  EarnResult,
+};
 
 async function get<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -236,6 +242,26 @@ export function useReleaseLoyaltyVoucher() {
           {},
         )
       ).voucher,
+    onSuccess: () => invalidateLedger(queryClient),
+  });
+}
+
+/**
+ * Award a completed booking its points.
+ *
+ * Everything the award is computed from — the booking, the rules, the visit
+ * count — is read on the SERVER. The browser sends a reference and gets back
+ * what was awarded and why.
+ *
+ * Safe to call twice: a booking that has already earned comes back
+ * `alreadyEarned`, refused by a unique index rather than by a check the second
+ * caller could race past.
+ */
+export function useEarnLoyaltyPoints() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { bookingRef: number }) =>
+      await send<EarnResult>("/api/loyalty/earn", input),
     onSuccess: () => invalidateLedger(queryClient),
   });
 }

@@ -39,8 +39,8 @@ import {
   computeLatePickupFee,
   type LateFeeResult,
 } from "@/lib/late-pickup-fee";
-import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
+import { useEarnLoyaltyPoints } from "@/lib/api/loyalty-ledger";
 import {
   balanceOf,
   checkoutTender,
@@ -122,7 +122,7 @@ export function BookingCard({
   const { updateStatus } = useUnifiedBookings();
   const takePayment = useTakeBookingPayment();
   const addLineItems = useAddLineItems();
-  const { recordEvent } = useLoyaltyEngine();
+  const earnPoints = useEarnLoyaltyPoints();
   const {
     discount: loyaltyDiscount,
     consume: consumeLoyaltyDiscount,
@@ -255,15 +255,36 @@ export function BookingCard({
     // one that has already gone stops the payment instead of quietly
     // discounting it — see handlePaymentConfirm.
 
-    if (booking.ownerId != null) {
-      recordEvent({
-        type: "booking_completed",
-        id: booking.id,
-        customerId: booking.ownerId,
-        amount: charged,
-        serviceType: booking.serviceKey,
-        isService: true,
-      });
+    // ── THE POINTS THIS BOOKING EARNED ──────────────────────────────────
+    //
+    // This used to call the fixture engine, which wrote to an in-memory array
+    // and toasted a summary — so a customer was told they had earned points
+    // that no balance anywhere reflected.
+    //
+    // The award is computed on the SERVER now, from the booking and the
+    // facility's own rules, and posted to the ledger. Fire-and-forget on
+    // purpose: the money is already taken and the checkout must not fail
+    // because an award did not land. A failure is said out loud rather than
+    // swallowed, and the booking can be re-awarded — the route is idempotent.
+    // `afterPayment` is also reached from the already-settled path, so the
+    // reference is resolved here rather than passed in.
+    const bookingRef = Number(booking.rawId);
+    if (Number.isFinite(bookingRef)) {
+      void earnPoints
+        .mutateAsync({ bookingRef })
+        .then((result) => {
+          if (result.awarded && result.points > 0) {
+            toast.success(`+${result.points.toLocaleString()} points`, {
+              description: result.reasons.join(" · ") || undefined,
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          toast.error("The points for this booking were not awarded", {
+            description:
+              error instanceof Error ? error.message : "Try the booking again.",
+          });
+        });
     }
 
     toast.success(

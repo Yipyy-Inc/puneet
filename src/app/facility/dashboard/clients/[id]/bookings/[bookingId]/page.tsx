@@ -79,6 +79,7 @@ import { TagList } from "@/components/shared/TagList";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
+import { useEarnLoyaltyPoints } from "@/lib/api/loyalty-ledger";
 import { TipSplitModal } from "@/components/bookings/TipSplitModal";
 import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
 import { PrepaymentModal } from "@/components/bookings/PrepaymentModal";
@@ -274,6 +275,7 @@ export default function ClientBookingDetailPage({
         : undefined,
     [booking],
   );
+  const earnPoints = useEarnLoyaltyPoints();
   const {
     discount: loyaltyDiscount,
     consume: consumeLoyaltyDiscount,
@@ -2177,6 +2179,36 @@ export default function ClientBookingDetailPage({
                   ...(payment.tip > 0 ? { tipAmount: payment.tip } : {}),
                 });
                 setPendingLateFee(null);
+
+                // ── THE POINTS THIS BOOKING EARNED ────────────────────────
+                //
+                // Computed on the SERVER from the booking and the facility's
+                // own rules, then posted to the ledger. Fire-and-forget: the
+                // money is already taken and a checkout must not fail because
+                // an award did not land. The route is idempotent, so a booking
+                // whose award failed can simply be awarded again.
+                void earnPoints
+                  .mutateAsync({ bookingRef: booking.id })
+                  .then((result) => {
+                    if (result.awarded && result.points > 0) {
+                      toast.success(
+                        `+${result.points.toLocaleString()} points`,
+                        {
+                          description: result.reasons.join(" · ") || undefined,
+                        },
+                      );
+                    }
+                  })
+                  .catch((error: unknown) => {
+                    toast.error(
+                      "The points for this booking were not awarded",
+                      {
+                        description:
+                          error instanceof Error ? error.message : undefined,
+                      },
+                    );
+                  });
+
                 const extra = payment.includedInvoices?.length
                   ? ` + ${payment.includedInvoices.length} other invoices`
                   : "";
