@@ -1,12 +1,17 @@
 "use client";
 
 import { use, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { Coins, Crown, Gift, Wallet, Plus, Star } from "lucide-react";
-import { loyaltyQueries } from "@/lib/api/loyalty";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  loyaltyLedgerQueries,
+  useOpenLoyaltyAccount,
+} from "@/lib/api/loyalty-ledger";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { AdjustPointsModal } from "@/components/loyalty/AdjustPointsModal";
@@ -20,33 +25,45 @@ export default function ClientLoyaltyPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const customerId = parseInt(id, 10);
+  const clientRef = parseInt(id, 10);
 
-  const { config, facilityId } = useLoyaltyProgram();
+  const { config } = useLoyaltyProgram();
   const { user } = useCurrentUser();
   const canAdjust = ADJUST_ROLES.includes(user.role);
 
-  const queryClient = useQueryClient();
-  const { data: account } = useQuery(
-    loyaltyQueries.account(facilityId, customerId),
+  // ── FROM POSTGRES ──────────────────────────────────────────────────────
+  //
+  // Balance, credit and history all came from `src/data/loyalty-*` keyed by a
+  // numeric customer id. `null` from this query is a real answer — a customer
+  // who has never been enrolled — and is not the same as a request that has not
+  // finished, which is why `isPending` is checked separately below.
+  const { data: account, isPending } = useQuery(
+    loyaltyLedgerQueries.accountForClient(clientRef),
   );
   const { data: transactions = [] } = useQuery(
-    loyaltyQueries.transactions(facilityId, customerId),
+    loyaltyLedgerQueries.transactions(account?.id),
   );
 
+  const openAccount = useOpenLoyaltyAccount();
   const [adjustOpen, setAdjustOpen] = useState(false);
 
   const tier = account?.currentTierId
     ? config.tierDefinitions?.find((t) => t.id === account.currentTierId)
     : undefined;
 
-  const refresh = () => {
-    queryClient.invalidateQueries({
-      queryKey: ["loyalty", "account", facilityId, customerId],
-    });
-    queryClient.invalidateQueries({
-      queryKey: ["loyalty", "transactions", facilityId, customerId],
-    });
+  // The mutations invalidate the whole ledger key themselves, so there is
+  // nothing for a caller to remember to refresh.
+  const refresh = () => {};
+
+  const handleEnrol = async () => {
+    try {
+      await openAccount.mutateAsync({ clientRef });
+      toast.success("Loyalty account opened");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "The account was not opened.",
+      );
+    }
   };
 
   return (
@@ -68,15 +85,33 @@ export default function ClientLoyaltyPage({
         )}
       </div>
 
-      {!account ? (
+      {isPending ? (
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : !account ? (
         <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <Star className="text-muted-foreground size-8" />
             <p className="text-sm font-medium">No loyalty account yet</p>
             <p className="text-muted-foreground max-w-md text-sm">
-              A loyalty account is created automatically when this customer next
-              books at a facility with an active program.
+              This customer is not in the programme. Opening an account starts
+              them at zero points — nothing is awarded until they earn it or a
+              member of staff grants it.
             </p>
+            {/* The old copy promised an account would appear "automatically
+                when this customer next books". Nothing did that, so the screen
+                said no and meant never. This button is the thing that does it. */}
+            {canAdjust && (
+              <Button
+                onClick={() => void handleEnrol()}
+                disabled={openAccount.isPending}
+              >
+                <Plus className="mr-1.5 size-4" />
+                {openAccount.isPending ? "Opening…" : "Open a loyalty account"}
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -127,8 +162,7 @@ export default function ClientLoyaltyPage({
           <AdjustPointsModal
             open={adjustOpen}
             onOpenChange={setAdjustOpen}
-            facilityId={facilityId}
-            customerId={customerId}
+            accountId={account.id}
             currentBalance={account.pointsBalance}
             onAdjusted={refresh}
           />

@@ -20,13 +20,39 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { LoyaltyTransaction } from "@/types/loyalty";
+/**
+ * What this list needs from a points transaction, and nothing more.
+ *
+ * ── A TRANSITIONAL SHAPE, DELIBERATELY ────────────────────────────────────
+ *
+ * Two callers now pass REAL ledger rows (`kind`) and one still passes the
+ * fixture shape (`transactionType`) — the customer wallet, which is not
+ * converted yet. Rather than adapt at three call sites, this names the union of
+ * what they have and reads whichever is present.
+ *
+ * `transactionType` goes when the wallet does. It is optional here, not
+ * blessed: a row with neither field lands in "adjusted", which is the honest
+ * answer for a movement nobody has classified.
+ */
+export interface LoyaltyHistoryEntry {
+  id: string;
+  points: number;
+  description: string;
+  createdAt: string;
+  /** A cash value moved alongside the points, if any. */
+  value?: number;
+  staffName?: string | null;
+  /** On a real ledger row. */
+  kind?: string;
+  /** On the fixture shape. Superseded by `kind`. */
+  transactionType?: string;
+}
 
 type HistoryFilter = "all" | "earned" | "redeemed";
 
-const isEarnedTxn = (t: LoyaltyTransaction) =>
+const isEarnedTxn = (t: LoyaltyHistoryEntry) =>
   t.points > 0 || (t.points === 0 && (t.value ?? 0) > 0);
-const isRedeemedTxn = (t: LoyaltyTransaction) => t.points < 0;
+const isRedeemedTxn = (t: LoyaltyHistoryEntry) => t.points < 0;
 
 const PAGE_SIZE = 20;
 
@@ -47,8 +73,8 @@ const KIND_LABEL: Record<Kind, string> = {
   referral: "Referral",
 };
 
-function kindOf(t: LoyaltyTransaction): Kind {
-  switch (t.transactionType) {
+function kindOf(t: LoyaltyHistoryEntry): Kind {
+  switch (t.kind ?? t.transactionType) {
     case "earned":
       return t.description?.startsWith("Badge unlocked") ? "badge" : "earned";
     case "redeemed":
@@ -59,6 +85,11 @@ function kindOf(t: LoyaltyTransaction): Kind {
       return "referral";
     case "adjusted":
     case "manual_adjustment":
+      return "adjusted";
+    default:
+      // A movement nobody classified. The switch used to be exhaustive over an
+      // enum; the entry type is now a union of two shapes, so this is the
+      // honest answer rather than a crash.
       return "adjusted";
   }
 }
@@ -91,7 +122,7 @@ export function LoyaltyTransactionHistory({
   showTime = false,
   emptyText = "No transactions yet.",
 }: {
-  transactions: LoyaltyTransaction[];
+  transactions: LoyaltyHistoryEntry[];
   currentBalance: number;
   /** Show an earned/redeemed/all type filter above the table. */
   filterable?: boolean;

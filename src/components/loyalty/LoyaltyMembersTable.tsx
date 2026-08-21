@@ -47,15 +47,16 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { loyaltyQueries } from "@/lib/api/loyalty";
+import {
+  loyaltyLedgerQueries,
+  type LoyaltyAccountRow,
+} from "@/lib/api/loyalty-ledger";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { clients } from "@/data/clients";
 import { AdjustPointsModal } from "@/components/loyalty/AdjustPointsModal";
 import { SendRewardModal } from "@/components/loyalty/SendRewardModal";
 import { LoyaltyTransactionHistory } from "@/components/loyalty/LoyaltyTransactionHistory";
-import type { CustomerLoyaltyAccount } from "@/types/loyalty";
 
 const ADJUST_ROLES = ["owner", "general_manager", "department_manager"];
 const ACTIVE_DAYS = 30;
@@ -87,7 +88,7 @@ const STATUS_TONE: Record<Status, string> = {
 };
 
 interface MemberRow {
-  account: CustomerLoyaltyAccount;
+  account: LoyaltyAccountRow;
   customerId: number;
   name: string;
   tierId: string | null;
@@ -146,7 +147,16 @@ export function LoyaltyMembersTable() {
   const { config, facilityId } = useLoyaltyProgram();
   const { user } = useCurrentUser();
   const queryClient = useQueryClient();
-  const { data: accounts = [] } = useQuery(loyaltyQueries.accounts(facilityId));
+  // ── FROM POSTGRES ──────────────────────────────────────────────────────
+  //
+  // This read `src/data/loyalty-accounts` until 2026-08-21 — a hand-authored
+  // file keyed by `facilityId: 1`. The ledger became real earlier the same day,
+  // so for a few hours this table showed fixture balances beside a database
+  // that disagreed with every one of them. `totalSpend` and `totalVisits` come
+  // from the customer's actual bookings now, not from a number in a seed file.
+  const { data: accounts = [], isPending } = useQuery(
+    loyaltyLedgerQueries.accounts(),
+  );
 
   const canManage = ADJUST_ROLES.includes(user.role);
 
@@ -173,28 +183,22 @@ export function LoyaltyMembersTable() {
   const [sortKey, setSortKey] = useState<SortKey>("points");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const [historyFor, setHistoryFor] = useState<CustomerLoyaltyAccount | null>(
-    null,
-  );
-  const [adjustFor, setAdjustFor] = useState<CustomerLoyaltyAccount | null>(
-    null,
-  );
-  const [rewardFor, setRewardFor] = useState<CustomerLoyaltyAccount | null>(
-    null,
-  );
+  const [historyFor, setHistoryFor] = useState<LoyaltyAccountRow | null>(null);
+  const [adjustFor, setAdjustFor] = useState<LoyaltyAccountRow | null>(null);
+  const [rewardFor, setRewardFor] = useState<LoyaltyAccountRow | null>(null);
 
   const rows = useMemo<MemberRow[]>(() => {
     return accounts.map((a) => {
       const tier = a.currentTierId ? tierMap.get(a.currentTierId) : undefined;
-      const name =
-        clients.find((c) => c.id === a.customerId)?.name ??
-        `Client #${a.customerId}`;
-      const lastActivityISO = a.lastActivityAt ?? a.updatedAt;
+      // The name comes with the row now. It used to be looked up in the clients
+      // FIXTURE by a numeric id, which is why an unknown one read
+      // "Client #15" — the two files simply disagreed about who existed.
+      const lastActivityISO = a.lastActivityAt;
       const lastActivityMs = new Date(lastActivityISO).getTime();
       return {
         account: a,
-        customerId: a.customerId,
-        name,
+        customerId: a.clientRef,
+        name: a.clientName,
         tierId: a.currentTierId,
         tierName: tier?.name ?? "—",
         tierColor: tier?.color,
@@ -217,7 +221,7 @@ export function LoyaltyMembersTable() {
       if (
         q &&
         !r.name.toLowerCase().includes(q) &&
-        !r.account.referralCode.toLowerCase().includes(q)
+        !(r.account.referralCode ?? "").toLowerCase().includes(q)
       ) {
         return false;
       }
@@ -529,15 +533,12 @@ export function LoyaltyMembersTable() {
           {historyFor && (
             <MemberHistoryBody
               account={historyFor}
-              facilityId={facilityId}
               tierName={
                 historyFor.currentTierId
                   ? tierMap.get(historyFor.currentTierId)?.name
                   : undefined
               }
-              customerName={
-                clients.find((c) => c.id === historyFor.customerId)?.name
-              }
+              customerName={historyFor.clientName}
             />
           )}
         </SheetContent>
@@ -547,8 +548,7 @@ export function LoyaltyMembersTable() {
         <AdjustPointsModal
           open
           onOpenChange={(v) => !v && setAdjustFor(null)}
-          facilityId={facilityId}
-          customerId={adjustFor.customerId}
+          accountId={adjustFor.id}
           currentBalance={adjustFor.pointsBalance}
           onAdjusted={refresh}
         />
@@ -557,11 +557,8 @@ export function LoyaltyMembersTable() {
         <SendRewardModal
           open
           onOpenChange={(v) => !v && setRewardFor(null)}
-          facilityId={facilityId}
-          customerId={rewardFor.customerId}
-          customerName={
-            clients.find((c) => c.id === rewardFor.customerId)?.name
-          }
+          accountId={rewardFor.id}
+          customerName={rewardFor.clientName}
           onSent={refresh}
         />
       )}
@@ -611,24 +608,23 @@ function SortHead({
 
 function MemberHistoryBody({
   account,
-  facilityId,
   tierName,
   customerName,
 }: {
-  account: CustomerLoyaltyAccount;
-  facilityId: number;
+  account: LoyaltyAccountRow;
   tierName?: string;
   customerName?: string;
 }) {
+  // The real ledger, by account. It used to read a fixture keyed by a numeric
+  // customer id — so a balance shown above could have no history below it, and
+  // nothing reconciled the two.
   const { data: transactions = [] } = useQuery(
-    loyaltyQueries.transactions(facilityId, account.customerId),
+    loyaltyLedgerQueries.transactions(account.id),
   );
   return (
     <>
       <SheetHeader>
-        <SheetTitle>
-          {customerName ?? `Client #${account.customerId}`}
-        </SheetTitle>
+        <SheetTitle>{customerName ?? account.clientName}</SheetTitle>
         <SheetDescription>
           Loyalty balances and transaction history
         </SheetDescription>
@@ -655,7 +651,7 @@ function MemberHistoryBody({
         </div>
         <Button variant="outline" size="sm" asChild>
           <Link
-            href={`/facility/dashboard/clients/${account.customerId}/loyalty`}
+            href={`/facility/dashboard/clients/${account.clientRef}/loyalty`}
           >
             Open full profile
             <ExternalLink className="ml-1.5 size-4" />
