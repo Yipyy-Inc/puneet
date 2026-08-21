@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { ownStaffId } from "@/lib/api/own-staff";
 import {
   toTimeOffRequest,
   type RequestStatus,
@@ -98,7 +99,8 @@ export async function GET(request: NextRequest) {
   // Narrowed against the enum rather than passed through: an unrecognised
   // status would otherwise reach PostgREST as a filter on a value the column
   // cannot hold, and come back as a 500 rather than an empty list.
-  const asked = new URL(request.url).searchParams.get("status");
+  const params = new URL(request.url).searchParams;
+  const asked = params.get("status");
   const status = STATUSES.find((s) => s === asked);
 
   const supabase = await createServerClient();
@@ -108,6 +110,21 @@ export async function GET(request: NextRequest) {
     .order("requested_at", { ascending: false });
 
   if (status) query = query.eq("status", status);
+
+  // `?mine=1` — the personal screen, not the approval queue. An approver reads
+  // the whole facility from this endpoint, so without this their own "My
+  // requests" panel would list everybody's leave. Not rostered? Then you have
+  // filed nothing, and an empty list is the honest answer.
+  if (params.get("mine") === "1") {
+    const staffId = await ownStaffId(supabase, viewer, context.facilityId);
+    if (!staffId) {
+      return NextResponse.json({
+        requests: [],
+        canDecide: false,
+      } satisfies TimeOffPayload);
+    }
+    query = query.eq("staff_id", staffId);
+  }
 
   const [{ data, error }, decide] = await Promise.all([
     query,
@@ -184,25 +201,9 @@ export async function POST(request: NextRequest) {
   // Filing for yourself is the default, so the client never has to know its own
   // staff uuid. Naming somebody else is a manager entering leave that was
   // phoned in, and RLS decides whether this caller may.
-  //
-  // The membership is the link: `staff.membership_id` is the only thing that
-  // ties a signed-in identity to a staff row, and the viewer already carries
-  // one per facility. `private.own_staff_ids()` answers the same question
-  // inside the policies but lives in a schema PostgREST cannot reach.
-  let staffId = input.employeeId;
-  if (!staffId) {
-    const membership = viewer.memberships.find(
-      (m) => m.facilityId === context.facilityId,
-    );
-    if (membership) {
-      const { data } = await supabase
-        .from("staff")
-        .select("id")
-        .eq("membership_id", membership.membershipId)
-        .maybeSingle();
-      staffId = (data as { id: string } | null)?.id;
-    }
-  }
+  const staffId =
+    input.employeeId ??
+    (await ownStaffId(supabase, viewer, context.facilityId));
 
   if (!staffId) {
     return NextResponse.json(

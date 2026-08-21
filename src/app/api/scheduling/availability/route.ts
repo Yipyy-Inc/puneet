@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { ownStaffId } from "@/lib/api/own-staff";
 import {
   toAvailabilityRequest,
   toAvailabilityWeek,
@@ -60,6 +61,14 @@ export interface AvailabilityPayload {
   requests: AvailabilityRequest[];
   /** False when the caller may not approve — so a screen can say so. */
   canDecide: boolean;
+  /**
+   * The caller's own staff row, when they have one.
+   *
+   * `patterns` is keyed by staff uuid and the browser has no other way to get
+   * from a session to one, so without this the personal screen cannot find
+   * which of these weeks is its own.
+   */
+  myStaffId?: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -85,10 +94,11 @@ export async function GET(request: NextRequest) {
 
   if (status) requestQuery = requestQuery.eq("status", status);
 
-  const [patterns, requests, permissions] = await Promise.all([
+  const [patterns, requests, permissions, myStaffId] = await Promise.all([
     supabase.from("staff_availability").select(PATTERN_SELECT),
     requestQuery,
     supabase.rpc("my_permissions"),
+    ownStaffId(supabase, viewer, context.facilityId),
   ]);
 
   if (patterns.error) {
@@ -126,6 +136,7 @@ export async function GET(request: NextRequest) {
         entry.permission_key === "scheduling_manage_availability" &&
         entry.scope !== "none",
     ),
+    myStaffId,
   } satisfies AvailabilityPayload);
 }
 
@@ -206,17 +217,7 @@ export async function POST(request: NextRequest) {
 
   let staffId = input.employeeId;
   if (!staffId) {
-    const membership = viewer.memberships.find(
-      (m) => m.facilityId === context.facilityId,
-    );
-    if (membership) {
-      const { data } = await supabase
-        .from("staff")
-        .select("id")
-        .eq("membership_id", membership.membershipId)
-        .maybeSingle();
-      staffId = (data as { id: string } | null)?.id;
-    }
+    staffId = await ownStaffId(supabase, viewer, context.facilityId);
   }
 
   if (!staffId) {

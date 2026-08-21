@@ -38,9 +38,13 @@ export const schedulingKeys = {
   structure: ["scheduling", "structure"] as const,
   shifts: (from: string, to: string) =>
     ["scheduling", "shifts", from, to] as const,
+  myShifts: (from: string, to: string) =>
+    ["scheduling", "shifts", "mine", from, to] as const,
   timeOff: (status: StatusFilter) =>
     ["scheduling", "time-off", status] as const,
+  myTimeOff: () => ["scheduling", "time-off", "mine"] as const,
   swaps: (status: StatusFilter) => ["scheduling", "swaps", status] as const,
+  mySwaps: () => ["scheduling", "swaps", "mine"] as const,
   availability: (status: StatusFilter) =>
     ["scheduling", "availability", status] as const,
   clock: (from?: string, to?: string) =>
@@ -86,6 +90,24 @@ export const schedulingQueries = {
       read<ShiftsPayload>(
         `/api/scheduling/shifts?from=${from}&to=${to}`,
         "Could not read the roster.",
+      ),
+    staleTime: 30_000,
+  }),
+
+  /**
+   * The CALLER's own shifts in a window.
+   *
+   * A separate key from `shifts`, not a filter over it: a manager holds
+   * `scheduling_view_all` and gets the whole roster from that one, so sharing a
+   * cache entry would put everybody's shifts on their personal screen the
+   * moment the roster had been looked at first.
+   */
+  myShifts: (from: string, to: string) => ({
+    queryKey: schedulingKeys.myShifts(from, to),
+    queryFn: () =>
+      read<ShiftsPayload>(
+        `/api/scheduling/shifts?from=${from}&to=${to}&mine=1`,
+        "Could not read your shifts.",
       ),
     staleTime: 30_000,
   }),
@@ -162,6 +184,17 @@ export const timeOffQueries = {
       ),
     staleTime: 30_000,
   }),
+
+  /** The caller's OWN leave, every status. The personal screen's list. */
+  mine: () => ({
+    queryKey: schedulingKeys.myTimeOff(),
+    queryFn: () =>
+      read<TimeOffPayload>(
+        "/api/scheduling/time-off?status=all&mine=1",
+        "Could not read your time-off requests.",
+      ),
+    staleTime: 30_000,
+  }),
 };
 
 export const swapQueries = {
@@ -171,6 +204,23 @@ export const swapQueries = {
       read<SwapsPayload>(
         `/api/scheduling/swaps?status=${status}`,
         "Could not read the swap requests.",
+      ),
+    staleTime: 30_000,
+  }),
+
+  /**
+   * Swaps the caller is PART OF — raised by them or aimed at them.
+   *
+   * Both sides, because a personal screen that showed only what you raised
+   * would hide the offer somebody made you, which is the half that needs an
+   * answer.
+   */
+  mine: () => ({
+    queryKey: schedulingKeys.mySwaps(),
+    queryFn: () =>
+      read<SwapsPayload>(
+        "/api/scheduling/swaps?status=all&mine=1",
+        "Could not read your swap requests.",
       ),
     staleTime: 30_000,
   }),

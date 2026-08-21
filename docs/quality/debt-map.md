@@ -3006,6 +3006,91 @@ file was verified against the live policy (both arms
 row with no file is not automatically drift** — check whether the DDL was folded
 into a neighbouring file before treating one as missing.
 
+## Snapshot (2026-08-21, the employee's own half of scheduling)
+
+### 🔴 Three approval queues had no requester — FIXED, but read why it happened
+
+Leave, swaps and availability became real tables on 2026-08-21, and the
+APPROVER's screens were converted to read them the same day. The REQUESTER's
+were not. So the facility had three approval queues that nothing could file
+into, and the insert policies — written for exactly that caller, own staff row
+plus a personal permission (`request_time_off`, `request_shift_swap`,
+`view_own_schedule`) — had never once been exercised.
+
+Worse, `/employee/schedule` is the landing path for **every staff member** in
+the product (`landingPathForClaims`), and it filtered `scheduleShifts` — a
+fixture — by `viewer.id`. The comparison was between two namespaces: the
+fixture holds `fs-*` ids and `viewer.id` is an identity id, so it matched
+nothing for anybody. Meanwhile the clock those same people punched and the
+payroll built from it were real rows. **They clocked in against shifts that did
+not exist.**
+
+**The rule this earns, which is the same one the org-chart gap earned a day
+earlier and did not generalise far enough:** when you make a table real, convert
+everything that READS or WRITES it in the same change — not just the screen the
+task named. "Find its writer" was too narrow. The question is _who are all the
+parties to this row_, and for anything in scheduling the answer is always two:
+the person it is about, and the person who decides.
+
+Fixed by `employee-self-service.spec.ts` (8 tests) plus `?mine=1` on shifts,
+time-off and swaps. `ownStaffId()` in `src/lib/api/own-staff.ts` replaces six
+copy-pasted `membership_id -> staff.id` lookups across four routes.
+
+### 🟡 RLS scoping is not the same as personal scoping
+
+`staff_shifts_read` already narrows a plain staff member to their own shifts, so
+it is tempting to treat "what RLS returns" as "mine". It is not. Anyone holding
+`scheduling_view_all` or an approval permission reads the WHOLE facility from
+the same endpoint, so their personal screen would silently become everybody's —
+a manager's "My Schedule" showing the entire roster, their "My requests" panel
+listing every colleague's leave.
+
+That is why `?mine=1` exists and why its tests assert against the OWNER rather
+than the groomer: on a groomer the parameter changes nothing, so a test that
+only exercises a groomer proves almost nothing.
+
+**Do not re-derive "who am I" in the browser.** That is what produced the
+original bug. The server resolves the staff row from the membership; where a
+screen genuinely needs the id (to tell "I offered this" from "this was offered
+to me"), the payload carries `myStaffId` rather than the client guessing.
+
+### 🟡 Three fakes removed from the staff schedule screen, not repaired
+
+All three claimed success with nothing behind them, and all three sat next to
+real data once the shifts were converted — which is what made them dangerous
+rather than merely unfinished:
+
+- **"Message sent to manager"** — no backend. Already unreachable
+  (`setIsMessageModalOpen(true)` had no caller), so a staff member reporting a
+  real problem would have been silently discarded.
+- **"Swap request accepted"** — the target accepting an offer. `shift_swap_update`
+  admits an approver, or the REQUESTER cancelling; there is no transition by
+  which the person asked accepts. The offer is now SHOWN (real rows, via
+  `?mine=1`) without the button. Giving the target a real say is a schema change
+  and its own work.
+- **"Schedule update acknowledged"** — `mockScheduleUpdates`, a hardcoded array
+  with 2025 dates, announcing a publication to every staff member forever.
+
+`check:success-claims` caught none of them: its CLAIM regex wants
+`successfully (created|sent|saved…)`, and "Time off request submitted
+successfully" puts the adverb after the verb. **Worth widening**, but widening it
+will surface a backlog — do it as its own change with the baseline updated in
+the same commit.
+
+### 🟡 `ReportsView` and `report-data-sources.ts` are the remaining fixture readers
+
+`src/lib/report-data-sources.ts` still imports `scheduleShifts` and
+`timeClockEntries` from `src/data/scheduling` and feeds them to `hoursByEmployee`
+and `laborCost`. It is the SSOT for facility reports, so the facility's Reports
+screen shows fixture labour cost while Payroll next door shows real gross.
+
+Deliberately NOT converted with the employee screens. It is a different job: the
+same two functions feed several facility reports, so the blast radius is theirs
+rather than scheduling's. Note also that `punctuality(..., FIXTURE_TIMEZONE)` in
+`ReportsView` is **currently correct** — the fixtures really are Toronto — so
+there is no partial fix available. Convert the data and the timezone together or
+neither.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

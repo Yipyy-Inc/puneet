@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { ownStaffId } from "@/lib/api/own-staff";
 import {
   shiftInstants,
   toShift,
@@ -83,6 +84,35 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  let mine: string | undefined;
+
+  // ── `?mine=1` IS NARROWER THAN RLS, ON PURPOSE ─────────────────────────
+  //
+  // `staff_shifts_read` already scopes a plain staff member to their own
+  // shifts, so for a groomer this filter changes nothing. It exists for the
+  // people it DOES change: anyone holding `scheduling_view_all` — a manager, a
+  // supervisor — reads the whole roster from this endpoint, and their personal
+  // "My Schedule" screen must not become everybody's.
+  //
+  // Doing it here rather than in the browser makes "mine" mean the same thing
+  // for every caller. The filter that was there before lived in the client and
+  // compared the VIEWER's id against a shift's employee id — two different
+  // namespaces, which is why it matched nothing once the data was real.
+  //
+  // Not rostered anywhere? Then you have no shifts, and an empty list is the
+  // honest answer — not everyone's.
+  if (params.get("mine") === "1") {
+    const staffId = await ownStaffId(supabase, viewer, context.facilityId);
+    if (!staffId) {
+      return NextResponse.json({
+        from,
+        to,
+        timeZone: context.timeZone,
+        shifts: [],
+      } satisfies ShiftsPayload);
+    }
+    mine = staffId;
+  }
 
   // ── THE WINDOW IS IN THE FACILITY'S TIME, NOT UTC ──────────────────────
   //
@@ -94,12 +124,15 @@ export async function GET(request: NextRequest) {
   //
   // The same helper the mapper uses on the way out, so the boundary of a day
   // means one thing in this file.
-  const { data, error } = await supabase
+  let query = supabase
     .from("staff_shifts")
     .select(SELECT)
     .gte("starts_at", instantFromWallClock(from, "00:00", context.timeZone))
-    .lte("starts_at", instantFromWallClock(to, "23:59", context.timeZone))
-    .order("starts_at");
+    .lte("starts_at", instantFromWallClock(to, "23:59", context.timeZone));
+
+  if (mine) query = query.eq("staff_id", mine);
+
+  const { data, error } = await query.order("starts_at");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
