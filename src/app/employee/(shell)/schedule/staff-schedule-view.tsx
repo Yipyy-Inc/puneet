@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -32,49 +33,43 @@ import {
   FileText,
   CalendarDays,
   ArrowRightLeft,
-  CheckCircle2,
   AlertCircle,
-  Info,
   ChevronLeft,
   ChevronRight,
   List,
   Grid3x3,
   Calendar as CalendarIcon,
 } from "lucide-react";
-import { schedules, type Schedule } from "@/data/schedules";
-import {
-  timeOffRequests,
-  defaultTimeOffReasons,
-  shiftSwapRequests,
-  type ShiftSwapRequest,
-  shiftTasks,
-  type ShiftTask,
-} from "@/data/staff-availability";
+import type { Schedule } from "@/types/staff";
+// Leave, swaps and the reason list all come from Postgres now. What is left
+// from this fixture is `shiftTasks` — the checklist attached to a shift, which
+// has no table yet and is flagged on screen as such.
+import { shiftTasks, type ShiftTask } from "@/data/staff-availability";
 import { useMyShifts } from "@/lib/employee-schedule";
+import {
+  swapQueries,
+  timeOffQueries,
+  useRequestSwap,
+  useRequestTimeOff,
+} from "@/lib/api/scheduling";
+import { staffQueries } from "@/lib/api/staff";
+import { useQuery } from "@tanstack/react-query";
+import type { TimeOffType } from "@/lib/api/mappers/scheduling";
 import { useFacilityViewer } from "@/hooks/use-facility-rbac";
-import { facilityStaff } from "@/data/facility-staff";
 
-// Schedule update acknowledgment interface
-interface ScheduleUpdate {
-  id: string;
-  publishedAt: string;
-  weekStart: string;
-  weekEnd: string;
-  acknowledgedBy: string[];
-  facility: string;
-}
-
-// Mock schedule updates (in production, this would come from backend)
-const mockScheduleUpdates: ScheduleUpdate[] = [
-  {
-    id: "update-1",
-    publishedAt: new Date().toISOString(),
-    weekStart: "2025-11-17",
-    weekEnd: "2025-11-23",
-    acknowledgedBy: [],
-    facility: "Yipyy",
-  },
-];
+// The seven values `time_off_type` actually holds. The dropdown used to be
+// driven by `defaultTimeOffReasons` — a fixture whose ids ("annual-leave",
+// "family-emergency") are not members of the enum, so every one of them would
+// have been refused by the column had the form ever reached it.
+const TIME_OFF_LABELS: Record<TimeOffType, string> = {
+  vacation: "Vacation",
+  sick_leave: "Sick leave",
+  personal: "Personal",
+  bereavement: "Bereavement",
+  parental: "Parental",
+  unpaid: "Unpaid",
+  other: "Other",
+};
 
 // Status pill for a time-off / swap request (Pending / Approved / Declined …).
 function requestStatusBadge(status: string): {
@@ -136,13 +131,6 @@ export function StaffScheduleView() {
   const [isTimeOffModalOpen, setIsTimeOffModalOpen] = useState(false);
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
   const [isSickCallModalOpen, setIsSickCallModalOpen] = useState(false);
-  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
-  const [isSwapResponseModalOpen, setIsSwapResponseModalOpen] = useState(false);
-  const [selectedSwapRequest, setSelectedSwapRequest] =
-    useState<ShiftSwapRequest | null>(null);
-  const [acknowledgedUpdateIds, setAcknowledgedUpdateIds] = useState<
-    Set<string>
-  >(new Set());
 
   // Time off request state
   const [timeOffData, setTimeOffData] = useState({
@@ -166,62 +154,51 @@ export function StaffScheduleView() {
     reason: "",
   });
 
-  // Message state
-  const [messageData, setMessageData] = useState({
-    subject: "",
-    message: "",
-  });
-
   // The signed-in staff profile.
   const staffMember = viewer;
 
-  // Section 5E — the grid shows the SIGNED-IN employee's own shifts, resolved
-  // by identity from the real scheduling data (not the legacy `schedules`
-  // sample, which is keyed to a different set of people).
-  const myShifts = useMyShifts();
-  const mySchedules = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
-    return myShifts.filter((s) => s.date >= today);
-  }, [myShifts]);
+  // Section 5E — the grid shows the SIGNED-IN employee's own shifts, read from
+  // `staff_shifts` and scoped to this caller by the server (`?mine=1`).
+  //
+  // The "upcoming" cut used to be made here against `new Date()` — the READER's
+  // date. It now happens inside the hook in the FACILITY's timezone, which is
+  // the only clock a shift's date means anything in.
+  const {
+    shifts: mySchedules,
+    isPending: shiftsPending,
+    error: shiftsError,
+  } = useMyShifts();
 
-  // Get pending schedule updates
-  const pendingUpdates = useMemo(() => {
-    if (!staffMember) return [];
-    return mockScheduleUpdates.filter(
-      (update) =>
-        !update.acknowledgedBy.includes(staffMember.id) &&
-        !acknowledgedUpdateIds.has(update.id),
-    );
-  }, [staffMember, acknowledgedUpdateIds]);
+  // ── MY REQUESTS, FROM POSTGRES ─────────────────────────────────────────
+  //
+  // `?mine=1` on both. RLS alone would widen these for anyone holding an
+  // approval permission — a manager's personal panel would list the whole
+  // facility's leave — so "mine" is decided server-side from their staff row.
+  const { data: myTimeOff } = useQuery(timeOffQueries.mine());
+  const { data: mySwaps } = useQuery(swapQueries.mine());
 
-  // Get time off reasons
-  const timeOffReasons = useMemo(() => {
-    return defaultTimeOffReasons.filter((r) => r.isActive);
-  }, []);
+  const myTimeOffRequests = myTimeOff?.requests ?? [];
 
-  // Get my pending time off requests
-  const myTimeOffRequests = useMemo(
-    () => timeOffRequests.filter((r) => r.staffId === userId),
-    [userId],
-  );
+  // Both sides come back in one list, so the payload names which staff row is
+  // the caller. Without it a screen cannot tell "I offered this shift" from
+  // "somebody offered me theirs".
+  const myStaffId = mySwaps?.myStaffId;
 
-  // Get my pending swap requests
   const mySwapRequests = useMemo(
-    () => shiftSwapRequests.filter((r) => r.requestingStaffId === userId),
-    [userId],
+    () =>
+      (mySwaps?.swaps ?? []).filter(
+        (r) => r.requestingEmployeeId === myStaffId,
+      ),
+    [mySwaps, myStaffId],
   );
 
-  // Get swap requests I can respond to (targeted at me or open to anyone)
-  const availableSwapRequests = useMemo(
+  // Offers pointed AT me and still open.
+  const incomingSwaps = useMemo(
     () =>
-      shiftSwapRequests.filter(
-        (r) =>
-          r.status === "pending" &&
-          // Open to anyone (no targetStaffId) OR specifically targeted at me
-          (!r.targetStaffId || r.targetStaffId === userId) &&
-          r.requestingStaffId !== userId,
+      (mySwaps?.swaps ?? []).filter(
+        (r) => r.targetEmployeeId === myStaffId && r.status === "pending",
       ),
-    [userId],
+    [mySwaps, myStaffId],
   );
 
   // Get tasks for a specific shift
@@ -284,20 +261,60 @@ export function StaffScheduleView() {
     setIsShiftDetailModalOpen(true);
   };
 
-  // Handle time off request
+  // ── THE THREE REQUESTS BELOW NOW REACH POSTGRES ────────────────────────
+  //
+  // Each of these ended in `toast.success(...)` over a comment reading "in
+  // production, this would make an API call". The facility side of all three
+  // was converted on 2026-08-21 — so there were three approval queues that
+  // nothing could file into, and a staff member who was told their leave was
+  // booked while no row existed anywhere.
+  //
+  // The INSERT policies were written for exactly this caller: own staff row
+  // plus a personal permission (`request_time_off`, `request_shift_swap`). The
+  // server resolves which staff row is "me"; this screen never sends an id.
+
+  const requestTimeOff = useRequestTimeOff();
+  const requestSwap = useRequestSwap();
+
+  // Who a shift can be offered to. Only people with a `rowId` — somebody with
+  // no staff row cannot hold a shift, so offering them one would be refused by
+  // the foreign key after the person had already been told it was sent.
+  const { data: allStaff } = useQuery(staffQueries.profiles());
+  const coworkers = useMemo(
+    () =>
+      (allStaff ?? []).filter(
+        (s) => Boolean(s.rowId) && s.id !== userId && s.status === "active",
+      ),
+    [allStaff, userId],
+  );
+
   const handleTimeOffSubmit = () => {
     if (!timeOffData.type || !timeOffData.startDate || !timeOffData.endDate) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    // In production, this would make an API call
-    toast.success("Time off request submitted successfully");
-    setIsTimeOffModalOpen(false);
-    setTimeOffData({ type: "", startDate: "", endDate: "", reason: "" });
+    requestTimeOff.mutate(
+      {
+        type: timeOffData.type as TimeOffType,
+        startDate: timeOffData.startDate,
+        endDate: timeOffData.endDate,
+        reason: timeOffData.reason,
+      },
+      {
+        // The toast moves INSIDE the callback. Announcing it beside the call
+        // rather than after it is what let the old version claim a booking that
+        // never happened.
+        onSuccess: () => {
+          toast.success("Time off requested. Your manager will review it.");
+          setIsTimeOffModalOpen(false);
+          setTimeOffData({ type: "", startDate: "", endDate: "", reason: "" });
+        },
+        onError: (error: Error) => toast.error(error.message),
+      },
+    );
   };
 
-  // Handle swap request
   const handleSwapSubmit = () => {
     if (!swapData.shiftId || !swapData.reason) {
       toast.error("Please select a shift and provide a reason");
@@ -309,60 +326,59 @@ export function StaffScheduleView() {
       return;
     }
 
-    // In production, this would make an API call
-    toast.success("Shift swap request submitted successfully");
-    setIsSwapModalOpen(false);
-    setSwapData({
-      shiftId: "",
-      swapType: "specific",
-      targetStaffId: "",
-      reason: "",
-    });
+    requestSwap.mutate(
+      {
+        requestingShiftId: swapData.shiftId,
+        targetStaffId: swapData.targetStaffId,
+        reason: swapData.reason,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Swap requested. Your manager will review it.");
+          setIsSwapModalOpen(false);
+          setSwapData({
+            shiftId: "",
+            swapType: "specific",
+            targetStaffId: "",
+            reason: "",
+          });
+        },
+        onError: (error: Error) => toast.error(error.message),
+      },
+    );
   };
 
-  // Handle sick call
+  // Calling in sick IS leave, of type `sick_leave`, for the day of the shift.
+  // Modelling it as its own thing would have given the facility two tables
+  // holding "who is not coming in" and no rule about which the roster believes.
   const handleSickCallSubmit = () => {
     if (!sickCallData.shiftId || !sickCallData.reason) {
       toast.error("Please select a shift and provide a reason");
       return;
     }
 
-    // In production, this would make an API call
-    toast.success("Sick call reported. Managers have been notified.");
-    setIsSickCallModalOpen(false);
-    setSickCallData({ shiftId: "", reason: "" });
-  };
-
-  // Handle message to manager
-  const handleMessageSubmit = () => {
-    if (!messageData.subject || !messageData.message) {
-      toast.error("Please fill in all fields");
+    const shift = mySchedules.find((s) => s.shiftId === sickCallData.shiftId);
+    if (!shift) {
+      toast.error("Pick the shift you are calling in for.");
       return;
     }
 
-    // In production, this would make an API call
-    toast.success("Message sent to manager");
-    setIsMessageModalOpen(false);
-    setMessageData({ subject: "", message: "" });
-  };
-
-  // Handle swap response
-  const handleSwapResponse = (accept: boolean) => {
-    if (!selectedSwapRequest) return;
-
-    // In production, this would make an API call
-    toast.success(accept ? "Swap request accepted" : "Swap request declined");
-    setIsSwapResponseModalOpen(false);
-    setSelectedSwapRequest(null);
-  };
-
-  // Handle schedule update acknowledgment
-  const handleAcknowledgeUpdate = (updateId: string) => {
-    if (!staffMember) return;
-
-    // In production, this would make an API call
-    setAcknowledgedUpdateIds((prev) => new Set([...prev, updateId]));
-    toast.success("Schedule update acknowledged");
+    requestTimeOff.mutate(
+      {
+        type: "sick_leave",
+        startDate: shift.date,
+        endDate: shift.date,
+        reason: sickCallData.reason,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Sick leave filed for that shift.");
+          setIsSickCallModalOpen(false);
+          setSickCallData({ shiftId: "", reason: "" });
+        },
+        onError: (error: Error) => toast.error(error.message),
+      },
+    );
   };
 
   // Format date for display
@@ -469,94 +485,45 @@ export function StaffScheduleView() {
       </div>
 
       {/* Schedule Updates Notification */}
-      {pendingUpdates.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Info className="size-5 text-blue-600" />
-              New Schedule Updates
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {pendingUpdates.map((update) => (
-              <div
-                key={update.id}
-                className="bg-background flex items-center justify-between rounded-lg border p-3"
-              >
-                <div>
-                  <p className="font-medium">
-                    Schedule published for {formatDate(update.weekStart)} -{" "}
-                    {formatDate(update.weekEnd)}
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    Published{" "}
-                    {new Date(update.publishedAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => handleAcknowledgeUpdate(update.id)}
-                >
-                  <CheckCircle2 className="mr-2 size-4" />
-                  Acknowledge
-                </Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      {/* ── OFFERS AIMED AT ME ────────────────────────────────────────────
+          These are real rows now. What is NOT here is the "Accept" button that
+          used to sit on them: `shift_swap_update` admits an approver, or the
+          REQUESTER cancelling — there is no transition by which the person
+          being asked accepts. The old button toasted "Swap request accepted"
+          and changed nothing, on a fixture, for a request that did not exist.
 
-      {/* Swap Requests I Can Respond To */}
-      {availableSwapRequests.length > 0 && (
-        <Card className="border-green-200 bg-green-50/50">
+          Showing the offer and not the button is the honest half: the person
+          knows they were asked, and the decision genuinely is their manager's.
+          Giving the target a real say is a schema change and its own piece of
+          work. */}
+      {incomingSwaps.length > 0 && (
+        <Card className="border-green-200 bg-green-50/50 dark:border-green-900/50 dark:bg-green-950/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <ArrowRightLeft className="size-5 text-green-600" />
-              Available Swap Requests
+              Swaps offered to you
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {availableSwapRequests.map((request) => (
+            {incomingSwaps.map((request) => (
               <div
                 key={request.id}
-                className="bg-background flex items-center justify-between rounded-lg border p-3"
+                className="bg-background rounded-lg border p-3"
               >
-                <div className="flex-1">
-                  <p className="font-medium">
-                    {request.requestingStaffName} wants to swap
+                <p className="font-medium">
+                  {request.requestingEmployeeName} wants to swap
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  {request.requestingShiftDate} · {request.requestingShiftTime}
+                </p>
+                {request.reason && (
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Reason: {request.reason}
                   </p>
-                  <p className="text-muted-foreground text-sm">
-                    {request.requestingShiftDate} -{" "}
-                    {request.requestingShiftTime}
-                    {(() => {
-                      // Find the shift to get the role (search in all schedules, not just mySchedules)
-                      const shift = schedules.find(
-                        (s) => s.id === request.requestingShiftId,
-                      );
-                      return shift ? ` (${shift.role})` : "";
-                    })()}
-                  </p>
-                  {request.reason && (
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      Reason: {request.reason}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setSelectedSwapRequest(request);
-                    setIsSwapResponseModalOpen(true);
-                  }}
-                >
-                  View & Respond
-                </Button>
+                )}
+                <p className="text-muted-foreground mt-2 text-xs">
+                  Waiting on your manager to approve it.
+                </p>
               </div>
             ))}
           </CardContent>
@@ -577,11 +544,7 @@ export function StaffScheduleView() {
                 </p>
                 {myTimeOffRequests.map((req) => {
                   const badge = requestStatusBadge(req.status);
-                  const reason =
-                    defaultTimeOffReasons.find((r) => r.id === req.type)
-                      ?.name ??
-                    req.customTypeName ??
-                    req.type;
+                  const reason = TIME_OFF_LABELS[req.type] ?? req.type;
                   return (
                     <div
                       key={req.id}
@@ -626,14 +589,13 @@ export function StaffScheduleView() {
                           {req.requestingShiftDate} · {req.requestingShiftTime}
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          {req.targetStaffName
-                            ? `With ${req.targetStaffName}`
+                          {req.targetEmployeeName
+                            ? `With ${req.targetEmployeeName}`
                             : "Open to anyone"}
                           {req.status === "pending"
                             ? " · awaiting approval"
-                            : req.status === "approved" &&
-                                req.reviewedByStaffName
-                              ? ` · approved by ${req.reviewedByStaffName}`
+                            : req.status === "approved" && req.reviewedByName
+                              ? ` · approved by ${req.reviewedByName}`
                               : ""}
                         </p>
                       </div>
@@ -747,7 +709,25 @@ export function StaffScheduleView() {
               <CardTitle>My Shifts</CardTitle>
             </CardHeader>
             <CardContent>
-              {mySchedules.length === 0 ? (
+              {/* "No upcoming shifts" is a CLAIM about the roster. Saying it
+                  while the request is still in flight, or after it failed, is
+                  telling somebody they are not working when nobody has looked
+                  — so both cases get their own answer. */}
+              {shiftsPending ? (
+                <div className="space-y-3">
+                  {[0, 1, 2].map((row) => (
+                    <Skeleton key={row} className="h-20 w-full" />
+                  ))}
+                </div>
+              ) : shiftsError ? (
+                <div className="py-8 text-center text-sm text-rose-600 dark:text-rose-400">
+                  <AlertCircle className="mx-auto mb-3 size-10 opacity-70" />
+                  <p className="font-medium">Could not load your shifts.</p>
+                  <p className="text-muted-foreground mt-1">
+                    {shiftsError.message}
+                  </p>
+                </div>
+              ) : mySchedules.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
                   <Calendar className="mx-auto mb-4 size-12 opacity-50" />
                   <p>No upcoming shifts scheduled</p>
@@ -1123,11 +1103,13 @@ export function StaffScheduleView() {
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {timeOffReasons.map((reason) => (
-                    <SelectItem key={reason.id} value={reason.id}>
-                      {reason.name}
-                    </SelectItem>
-                  ))}
+                  {(Object.keys(TIME_OFF_LABELS) as TimeOffType[]).map(
+                    (type) => (
+                      <SelectItem key={type} value={type}>
+                        {TIME_OFF_LABELS[type]}
+                      </SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -1209,7 +1191,7 @@ export function StaffScheduleView() {
                         s.status === "scheduled" || s.status === "confirmed",
                     )
                     .map((shift) => (
-                      <SelectItem key={shift.id} value={shift.id.toString()}>
+                      <SelectItem key={shift.shiftId} value={shift.shiftId}>
                         {formatDate(shift.date)} - {shift.startTime} to{" "}
                         {shift.endTime} ({shift.role})
                       </SelectItem>
@@ -1252,13 +1234,15 @@ export function StaffScheduleView() {
                     <SelectValue placeholder="Choose a coworker" />
                   </SelectTrigger>
                   <SelectContent>
-                    {facilityStaff
-                      .filter((s) => s.id !== userId && s.status === "active")
-                      .map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.firstName} {s.lastName}
-                        </SelectItem>
-                      ))}
+                    {/* Real colleagues, and addressed by `rowId` — the staff
+                        row uuid the swap's foreign key needs. The fixture's
+                        `id` is a legacy "fs-003" string that names no row, so
+                        a swap built from it could never have been inserted. */}
+                    {coworkers.map((s) => (
+                      <SelectItem key={s.rowId} value={s.rowId!}>
+                        {s.firstName} {s.lastName}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1313,7 +1297,7 @@ export function StaffScheduleView() {
                         s.status === "scheduled" || s.status === "confirmed",
                     )
                     .map((shift) => (
-                      <SelectItem key={shift.id} value={shift.id.toString()}>
+                      <SelectItem key={shift.shiftId} value={shift.shiftId}>
                         {formatDate(shift.date)} - {shift.startTime} to{" "}
                         {shift.endTime} ({shift.role})
                       </SelectItem>
@@ -1349,123 +1333,6 @@ export function StaffScheduleView() {
             </Button>
             <Button variant="destructive" onClick={handleSickCallSubmit}>
               Report Absence
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Message Manager Modal */}
-      <Dialog open={isMessageModalOpen} onOpenChange={setIsMessageModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Message Manager</DialogTitle>
-            <DialogDescription>
-              Send a message to your manager about your schedule or shifts.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Subject</Label>
-              <Input
-                value={messageData.subject}
-                onChange={(e) =>
-                  setMessageData({ ...messageData, subject: e.target.value })
-                }
-                placeholder="e.g., Question about my shift..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Message</Label>
-              <Textarea
-                value={messageData.message}
-                onChange={(e) =>
-                  setMessageData({ ...messageData, message: e.target.value })
-                }
-                placeholder="Type your message here..."
-                rows={6}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsMessageModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleMessageSubmit}>Send Message</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Swap Response Modal */}
-      <Dialog
-        open={isSwapResponseModalOpen}
-        onOpenChange={setIsSwapResponseModalOpen}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Respond to Swap Request</DialogTitle>
-            <DialogDescription>
-              Review the swap request and decide if you can take this shift.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedSwapRequest && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Requested By</Label>
-                <p className="text-sm font-medium">
-                  {selectedSwapRequest.requestingStaffName}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label>Shift Details</Label>
-                <div className="space-y-1 text-sm">
-                  <p>
-                    <strong>Date:</strong>{" "}
-                    {formatDate(selectedSwapRequest.requestingShiftDate)}
-                  </p>
-                  <p>
-                    <strong>Time:</strong>{" "}
-                    {selectedSwapRequest.requestingShiftTime}
-                  </p>
-                  {(() => {
-                    const shift = schedules.find(
-                      (s) => s.id === selectedSwapRequest.requestingShiftId,
-                    );
-                    return shift ? (
-                      <p>
-                        <strong>Role:</strong> {shift.role}
-                      </p>
-                    ) : null;
-                  })()}
-                </div>
-              </div>
-              {selectedSwapRequest.reason && (
-                <div className="space-y-2">
-                  <Label>Reason</Label>
-                  <p className="bg-muted text-muted-foreground rounded-md p-3 text-sm">
-                    {selectedSwapRequest.reason}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsSwapResponseModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => handleSwapResponse(false)}
-            >
-              Decline
-            </Button>
-            <Button onClick={() => handleSwapResponse(true)}>
-              Accept Swap
             </Button>
           </DialogFooter>
         </DialogContent>

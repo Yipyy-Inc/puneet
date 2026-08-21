@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { ownStaffId } from "@/lib/api/own-staff";
 import {
   toSwapRequest,
   type SwapRequest,
@@ -55,6 +56,15 @@ export interface SwapsPayload {
   swaps: SwapRequest[];
   /** False when the caller may only see swaps they are part of. */
   canDecide: boolean;
+  /**
+   * The caller's own staff row, when they have one.
+   *
+   * Only way a personal screen can tell "I offered this" from "somebody offered
+   * this to me" — both sides come back in the same list, and the browser has no
+   * other route from a session to a staff uuid. Not a disclosure: it is their
+   * own id, and every row here already names them.
+   */
+  myStaffId?: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -71,7 +81,8 @@ export async function GET(request: NextRequest) {
   // Narrowed against the enum rather than passed through: an unrecognised
   // status would otherwise reach PostgREST as a filter on a value the column
   // cannot hold, and come back as a 500 rather than an empty list.
-  const asked = new URL(request.url).searchParams.get("status");
+  const params = new URL(request.url).searchParams;
+  const asked = params.get("status");
   const status = STATUSES.find((s) => s === asked);
 
   const supabase = await createServerClient();
@@ -81,6 +92,22 @@ export async function GET(request: NextRequest) {
     .order("requested_at", { ascending: false });
 
   if (status) query = query.eq("status", status);
+
+  // `?mine=1` — swaps I am PART OF, as either side. Not just the ones I raised:
+  // an offer aimed at me is mine to see, and the read policy already says so.
+  let myStaffId: string | undefined;
+  if (params.get("mine") === "1") {
+    myStaffId = await ownStaffId(supabase, viewer, context.facilityId);
+    if (!myStaffId) {
+      return NextResponse.json({
+        swaps: [],
+        canDecide: false,
+      } satisfies SwapsPayload);
+    }
+    query = query.or(
+      `requesting_staff_id.eq.${myStaffId},target_staff_id.eq.${myStaffId}`,
+    );
+  }
 
   const [{ data, error }, permissions] = await Promise.all([
     query,
@@ -104,6 +131,7 @@ export async function GET(request: NextRequest) {
         entry.permission_key === "scheduling_approve_swaps" &&
         entry.scope !== "none",
     ),
+    myStaffId,
   } satisfies SwapsPayload);
 }
 
@@ -144,17 +172,7 @@ export async function POST(request: NextRequest) {
 
   let requestingStaffId = input.requestingStaffId;
   if (!requestingStaffId) {
-    const membership = viewer.memberships.find(
-      (m) => m.facilityId === context.facilityId,
-    );
-    if (membership) {
-      const { data } = await supabase
-        .from("staff")
-        .select("id")
-        .eq("membership_id", membership.membershipId)
-        .maybeSingle();
-      requestingStaffId = (data as { id: string } | null)?.id;
-    }
+    requestingStaffId = await ownStaffId(supabase, viewer, context.facilityId);
   }
 
   if (!requestingStaffId) {

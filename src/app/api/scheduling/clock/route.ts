@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { ownStaffId } from "@/lib/api/own-staff";
 import {
   toClockEntry,
   type ClockEntry,
@@ -106,18 +107,7 @@ export async function GET(request: NextRequest) {
 
   // Which of these is MINE. Resolved server-side so the client never has to
   // know its own staff uuid to answer "am I clocked in".
-  const membership = viewer.memberships.find(
-    (m) => m.facilityId === context.facilityId,
-  );
-  let myStaffId: string | undefined;
-  if (membership) {
-    const { data: mine } = await supabase
-      .from("staff")
-      .select("id")
-      .eq("membership_id", membership.membershipId)
-      .maybeSingle();
-    myStaffId = (mine as { id: string } | null)?.id;
-  }
+  const myStaffId = await ownStaffId(supabase, viewer, context.facilityId);
 
   return NextResponse.json({
     entries,
@@ -164,17 +154,7 @@ export async function POST(request: NextRequest) {
   const stampingForSomebodyElse = Boolean(staffId);
 
   if (!staffId) {
-    const membership = viewer.memberships.find(
-      (m) => m.facilityId === context.facilityId,
-    );
-    if (membership) {
-      const { data } = await supabase
-        .from("staff")
-        .select("id")
-        .eq("membership_id", membership.membershipId)
-        .maybeSingle();
-      staffId = (data as { id: string } | null)?.id;
-    }
+    staffId = await ownStaffId(supabase, viewer, context.facilityId);
   }
 
   if (!staffId) {
@@ -287,16 +267,8 @@ export async function PATCH(request: NextRequest) {
     // The caller's own open entry. Found server-side so a client cannot close
     // somebody else's by guessing an id — and RLS would refuse that anyway,
     // but a route that makes it expressible is a route that invites the try.
-    const membership = viewer.memberships.find(
-      (m) => m.facilityId === context.facilityId,
-    );
-    if (membership) {
-      const { data: mine } = await supabase
-        .from("staff")
-        .select("id")
-        .eq("membership_id", membership.membershipId)
-        .maybeSingle();
-      const staffId = (mine as { id: string } | null)?.id;
+    {
+      const staffId = await ownStaffId(supabase, viewer, context.facilityId);
 
       if (staffId) {
         const { data: open } = await supabase
