@@ -3423,6 +3423,67 @@ row, `transactionType` from the fixture — because the customer wallet still
 passes the old one. The fixture half goes when the wallet does; it is optional
 and documented rather than blessed.
 
+#### ✅ A booking earns its points — 2026-08-21
+
+`POST /api/loyalty/earn`. The rules had been real since that morning and the
+ledger since the same day, and **nothing read one to write the other**: a
+facility could configure "1 point per dollar", a customer could spend $200, and
+their balance did not move. Points arrived only when somebody typed them in.
+
+**A route, not a database trigger.** The rules are a jsonb document interpreted
+by `computeEarnings` — schedule windows, per-service scope, tier multipliers,
+visit milestones, several hundred lines of TypeScript. Restating that in plpgsql
+would be a second implementation of the same rules, and the failure mode of a
+second implementation is that it disagrees with the first about what a customer
+is owed. So the engine stays in one language and runs on the SERVER, where the
+booking and the rules are read under the caller's own RLS. A browser sends a
+booking reference and nothing else.
+
+**A booking earns once, and the database is what says so.** A checkout is
+retried — a missed toast, a refresh, a blip between the charge and the award.
+The route does NOT read "has this earned yet?" and then write; between those two
+lines is exactly where the second caller arrives.
+`loyalty_transactions_one_earn_per_booking` (partial unique on
+`(account_id, source_id) where source = 'booking'`) refuses the duplicate, and a
+`23505` is reported as `alreadyEarned` rather than as an error — the caller
+wanted this booking to have earned, and it has.
+
+**Points follow money that ARRIVED.** The rule is measured against
+`amount_paid`, not `total_cost`: a booking discounted to nothing, or never
+settled, has spent nothing, and awarding against a quote would pay a customer
+for a bill they did not pay.
+
+**An account is opened on first earn.** A running programme should not skip a
+paying customer because nobody pressed a button on their file.
+
+Walked against production: an $85 checkout took a balance from **0 to 85** for a
+customer with no account, wrote
+`"Earned 85 points — WALK 1 point per dollar"` against the booking, and a
+second award came back `alreadyEarned` with the balance unmoved. Covered by
+[loyalty-earning.spec.ts](../../tests/e2e/loyalty-earning.spec.ts) in
+`test:e2e:ci`.
+
+#### 🟠 What earning still does not do
+
+**No tier multiplier.** `computeEarnings` boosts spend/booking/visit rules by
+the customer's tier multiplier, and the route passes **1**. Nothing resolves a
+customer INTO a tier: `current_tier_id` is a column a person sets by hand, and
+the engine that would move it against spend and visits is not built. A first
+draft of the route looked the tier up and passed `tier ? 1 : 1` — which is 1
+either way and reads as though a boost were applied. Deleted before it shipped;
+plainly unbuilt beats looking finished.
+
+**Only `booking_completed` fires it.** A retail sale, a package purchase, a
+review, a birthday and a referral are all trigger types the rules editor offers
+and nothing invokes. A facility can configure a birthday bonus today and no
+birthday will ever award it.
+
+**Badges and tier changes are not evaluated.** The fixture engine
+(`recordLoyaltyEvent`) did all three in one pass; only the earning half has been
+replaced. `useLoyaltyEngine` still exists, still writes to fixtures, and is now
+called from nowhere in the two booking checkouts — the remaining callers are the
+grooming path and the daycare board.
+
 #### 🟠 What the checkout change did NOT cover
 
 **Grooming keeps its own arithmetic.** `grooming/payment-dialog.tsx` gets the
@@ -3440,10 +3501,7 @@ the customer wallet still go through `lib/api/loyalty.ts` to
 `DEFAULT_LOYALTY_FACILITY_ID` is still handed out — as a fixture key, not a
 facility.
 
-**Points EARNING does not exist.** Nothing fires the earn rules on a checkout,
-so an account gains points only by a manual ledger entry. The rules are real
-(`loyalty_config`) and the ledger is real; the thing that reads one and writes
-the other is missing.
+**Points EARNING is real as of 2026-08-21** — see below.
 
 ### 🟡 `payroll_summary` reads a domain that may be absent, and says so
 
