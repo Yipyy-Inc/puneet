@@ -46,14 +46,36 @@ export async function POST(
 
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
-    bookingId?: string;
+    bookingRef?: number | string;
   } | null;
 
   const supabase = await createServerClient();
 
+  // ── WHICH BILL IT WAS SPENT ON ──────────────────────────────────────────
+  //
+  // A `ref`, because that is what the checkout screens hold — the same reason
+  // the accounts route takes a client ref. Resolved here rather than sent as a
+  // uuid, so no screen has to carry an id it never displays.
+  //
+  // Resolution failing is NOT fatal: the reward is still spent, and recording
+  // it against no booking is better than refusing a payment because a lookup
+  // missed. RLS narrows the read to bookings this caller can see anyway.
+  let bookingId: string | undefined;
+  if (body?.bookingRef !== undefined && body.bookingRef !== null) {
+    const n = Number(body.bookingRef);
+    if (Number.isFinite(n)) {
+      const { data: booking } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("ref", n)
+        .maybeSingle();
+      bookingId = (booking as { id: string } | null)?.id ?? undefined;
+    }
+  }
+
   const { data, error } = await supabase.rpc("consume_loyalty_voucher", {
     p_voucher_id: id,
-    p_booking_id: body?.bookingId ?? undefined,
+    p_booking_id: bookingId,
   });
 
   if (error) {

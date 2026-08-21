@@ -6678,6 +6678,23 @@ export type Database = {
         Args: { p_facility_slug: string; p_name: string; p_phone?: string };
         Returns: string;
       };
+      release_loyalty_voucher: {
+        Args: { p_voucher_id: string };
+        Returns: {
+          account_id: string;
+          applies_to_services: string[] | null;
+          expires_at: string | null;
+          facility_id: string;
+          id: string;
+          issued_at: string;
+          points_spent: number;
+          reward_type: string;
+          reward_value: number;
+          status: string;
+          used_at: string | null;
+          used_on_booking_id: string | null;
+        };
+      };
       reset_facility_modules: {
         Args: { p_facility_id: string };
         Returns: number;

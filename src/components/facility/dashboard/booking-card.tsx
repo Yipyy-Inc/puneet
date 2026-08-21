@@ -123,12 +123,15 @@ export function BookingCard({
   const takePayment = useTakeBookingPayment();
   const addLineItems = useAddLineItems();
   const { recordEvent } = useLoyaltyEngine();
-  const { discount: loyaltyDiscount, consume: consumeLoyaltyDiscount } =
-    useActiveLoyaltyDiscount({
-      customerId: booking.ownerId,
-      subtotal: booking.price ?? 0,
-      serviceType: booking.serviceKey,
-    });
+  const {
+    discount: loyaltyDiscount,
+    consume: consumeLoyaltyDiscount,
+    release: releaseLoyaltyDiscount,
+  } = useActiveLoyaltyDiscount({
+    clientRef: booking.ownerId ?? undefined,
+    subtotal: booking.price ?? 0,
+    serviceType: booking.serviceKey,
+  });
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -248,7 +251,9 @@ export function BookingCard({
     setPendingCheckout(null);
     setPendingLateFee(null);
 
-    if (loyaltyDiscount) consumeLoyaltyDiscount();
+    // The reward is NOT spent here any more. It is spent before the charge, so
+    // one that has already gone stops the payment instead of quietly
+    // discounting it — see handlePaymentConfirm.
 
     if (booking.ownerId != null) {
       recordEvent({
@@ -294,7 +299,7 @@ export function BookingCard({
    * covers it. Charging it as a loose extra on the payment row would leave the
    * booking owing a fee the bill has no record of.
    */
-  const handlePaymentConfirm = (payment: {
+  const handlePaymentConfirm = async (payment: {
     method: string;
     amount: number;
     tip: number;
@@ -336,68 +341,120 @@ export function BookingCard({
     }
 
     const lateFee = pendingLateFee;
-    const chargeIt = () => {
-      // ONE FIGURE, used for both the check and the charge. The first draft of
-      // this added the late fee when deciding whether anything was owed and
-      // left it out of the amount charged — taking the money for everything
-      // except the fee that triggered the charge.
-      //
-      // The fee is already on the server's `amount_due` by the time this runs:
-      // the line item is written first, on purpose.
-      const money = {
-        id: ref,
-        totalCost: booking.price ?? 0,
-        amountDue:
-          (booking.amountDue ?? booking.price ?? 0) + (lateFee?.amount ?? 0),
-        amountPaid: booking.amountPaid ?? 0,
-      };
+    const reward = loyaltyDiscount;
 
-      if (balanceOf(money) <= 0) {
-        // Already settled — a deposit that covered it, or a payment taken at
-        // the counter a minute ago. Checking out is still the right thing to do.
-        afterPayment(0);
+    // ── THE REWARD IS SPENT BEFORE THE MONEY MOVES ─────────────────────────
+    //
+    // It used to be spent in `afterPayment`, once the charge had gone through.
+    // Which meant a voucher another till had already taken still came off this
+    // bill: the check happened after the discount had been applied, when there
+    // was nothing left to do about it.
+    //
+    // Spending first turns that into a refusal — the reward is gone, the
+    // payment does not happen, and nobody is charged a discounted total for a
+    // discount they did not get. The cost is a window where the reward is spent
+    // and the charge then fails, and `release` below is what closes it.
+    if (reward) {
+      try {
+        await consumeLoyaltyDiscount(ref);
+      } catch (error) {
+        toast.error("That reward is no longer available", {
+          description:
+            error instanceof Error
+              ? error.message
+              : "It may have been used on another bill.",
+        });
         return;
       }
-      takePayment.mutate(
-        {
-          booking: money,
-          method: tender,
-          tipAmount: payment.tip > 0 ? payment.tip : undefined,
-        },
-        {
-          onSuccess: (charged) => afterPayment(charged),
-          onError: (error) =>
-            toast.error("The payment was not recorded", {
-              description: error.message,
-            }),
-        },
-      );
+    }
+
+    // ── AND IT GOES ON THE BILL, NOT JUST IN THE DIALOG ────────────────────
+    //
+    // The discount used to be a number the checkout dialog subtracted for
+    // display while this handler rebuilt the charge from `booking.amountDue` —
+    // so it was shown and never taken off. A negative line item is the same
+    // mechanism the late fee already uses: `extras_total` moves, `amount_due`
+    // is generated from it, and the receipt says what happened.
+    //
+    // It also has to be a ROW rather than a number because the terminal tender
+    // charges server-side from `amount_due`. A figure living in this browser
+    // was never going to reach that.
+    const items: {
+      kind: "item" | "fee";
+      name: string;
+      unitPrice: number;
+    }[] = [];
+    if (lateFee && lateFee.amount > 0) {
+      items.push({
+        kind: "fee",
+        name: `Late pickup (${lateFee.minutesLate} min)`,
+        unitPrice: lateFee.amount,
+      });
+    }
+    if (reward && reward.amount > 0) {
+      items.push({
+        kind: "item",
+        name: reward.label,
+        unitPrice: -reward.amount,
+      });
+    }
+
+    if (items.length > 0) {
+      try {
+        await addLineItems.mutateAsync({ bookingRef: ref, items });
+      } catch (error) {
+        // Nothing has been charged. Give the reward back before stopping.
+        await releaseLoyaltyDiscount();
+        toast.error("The bill was not updated", {
+          description: error instanceof Error ? error.message : undefined,
+        });
+        return;
+      }
+    }
+
+    // ONE FIGURE, used for both the check and the charge. The first draft of
+    // this added the late fee when deciding whether anything was owed and left
+    // it out of the amount charged — taking the money for everything except the
+    // fee that triggered the charge.
+    //
+    // The fee and the discount are both on the server's `amount_due` by the
+    // time this runs: the line items are written first, on purpose.
+    const money = {
+      id: ref,
+      totalCost: booking.price ?? 0,
+      amountDue: Math.max(
+        0,
+        (booking.amountDue ?? booking.price ?? 0) +
+          (lateFee?.amount ?? 0) -
+          (reward?.amount ?? 0),
+      ),
+      amountPaid: booking.amountPaid ?? 0,
     };
 
-    if (lateFee && lateFee.amount > 0) {
-      addLineItems.mutate(
-        {
-          bookingRef: ref,
-          items: [
-            {
-              kind: "fee",
-              name: `Late pickup (${lateFee.minutesLate} min)`,
-              unitPrice: lateFee.amount,
-            },
-          ],
-        },
-        {
-          onSuccess: chargeIt,
-          onError: (error) =>
-            toast.error("The late fee was not added to the bill", {
-              description: error.message,
-            }),
-        },
-      );
+    if (balanceOf(money) <= 0) {
+      // Already settled — a deposit that covered it, a payment taken at the
+      // counter a minute ago, or a reward that covered the rest. Checking out
+      // is still right, and the voucher stays spent because it is what settled
+      // the bill.
+      afterPayment(0);
       return;
     }
 
-    chargeIt();
+    try {
+      const charged = await takePayment.mutateAsync({
+        booking: money,
+        method: tender,
+        tipAmount: payment.tip > 0 ? payment.tip : undefined,
+      });
+      afterPayment(charged);
+    } catch (error) {
+      // The charge failed and the reward is already spent. Return it, or the
+      // customer retries and pays full price holding a voucher nothing has.
+      await releaseLoyaltyDiscount();
+      toast.error("The payment was not recorded", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   return (

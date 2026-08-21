@@ -272,6 +272,70 @@ test.describe("the loyalty ledger", () => {
     expect((await second.text()).toLowerCase()).toContain("already been used");
   });
 
+  test("a reward comes back when the payment it was spent on fails", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const account = await openAccount(page, clientRef);
+
+    await page.request.post(TRANSACTIONS, {
+      data: {
+        accountId: account.id,
+        points: 200,
+        kind: "earned",
+        source: "manual",
+        description: "E2E release funding",
+      },
+    });
+
+    const issued = await page.request.post(VOUCHERS, {
+      data: {
+        accountId: account.id,
+        rewardType: "discount_fixed",
+        rewardValue: 5,
+        points: 200,
+        description: "E2E $5 off",
+      },
+    });
+    expect(issued.ok(), await issued.text()).toBe(true);
+    const voucher = ((await issued.json()) as { voucher: Voucher }).voucher;
+
+    // Checkout spends the reward BEFORE it charges, so a charge that then
+    // fails leaves it spent for nothing. This is the undo for that window.
+    const spent = await page.request.post(`${VOUCHERS}/${voucher.id}/consume`, {
+      data: {},
+    });
+    expect(spent.ok(), await spent.text()).toBe(true);
+
+    const released = await page.request.post(
+      `${VOUCHERS}/${voucher.id}/release`,
+      { data: {} },
+    );
+    expect(released.ok(), await released.text()).toBe(true);
+    expect(
+      ((await released.json()) as { voucher: { status: string } }).voucher
+        .status,
+    ).toBe("active");
+
+    // And it is spendable again, which is the whole point — a customer whose
+    // card was declined must not lose the reward they were holding.
+    const again = await page.request.post(`${VOUCHERS}/${voucher.id}/consume`, {
+      data: {},
+    });
+    expect(again.ok(), await again.text()).toBe(true);
+
+    // Releasing twice is not an error: the second call finds it already active
+    // and says so rather than failing a cleanup path.
+    await page.request.post(`${VOUCHERS}/${voucher.id}/release`, { data: {} });
+    const twice = await page.request.post(`${VOUCHERS}/${voucher.id}/release`, {
+      data: {},
+    });
+    expect(twice.ok(), await twice.text()).toBe(true);
+
+    // Leave it spent, so it is not offered to any later checkout.
+    await page.request.post(`${VOUCHERS}/${voucher.id}/consume`, { data: {} });
+  });
+
   test("a spendable voucher list excludes one that has been used", async ({
     page,
   }) => {
