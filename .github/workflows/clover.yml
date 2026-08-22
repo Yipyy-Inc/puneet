@@ -33,11 +33,20 @@ name: Clover (manual)
 # Only one of the four is safely repeatable, so a nightly run of all four would
 # be wrong:
 #
-#   clover-pay       REPEATABLE. Uses Clover's documented DECLINE card
-#                    (4264 2815 1111 7771). The charge is genuinely attempted —
-#                    SDK, iframes, tokenisation, /v1/charges — and genuinely
-#                    refused, so nothing is captured and no ledger row is
-#                    written. Its own header: "can run all day".
+#   clover-pay       REPEATABLE, and self-sufficient since 2026-08-22: it
+#                    CREATES its own booking as staff and cancels it in
+#                    afterAll. It uses Clover's documented DECLINE card
+#                    (4264 2815 1111 7771) — the charge is genuinely attempted
+#                    (SDK, iframes, tokenisation, /v1/charges) and genuinely
+#                    refused, so nothing is captured and the balance it sets up
+#                    is the balance it tears down.
+#
+#                    It used to read CLOVER_E2E_BOOKING_REF, a booking made by
+#                    hand that everybody hoped stayed unpaid. The first run
+#                    after the WorkOS migration found it "Paid in full", and no
+#                    booking at that facility had a balance at all — so the
+#                    variable is gone and the spec now needs the STAFF email
+#                    instead, to create what it pays.
 #
 #   clover-platform  Read-only status endpoint. Repeatable, but SPLIT ACROSS
 #                    ENVIRONMENTS — see the caveat below.
@@ -150,7 +159,7 @@ jobs:
           case "$SPECS" in
             clover-pay)
               need CLOVER_E2E_CUSTOMER_EMAIL
-              need CLOVER_E2E_BOOKING_REF
+              need CLOVER_E2E_STAFF_EMAIL
               ;;
             clover-platform)
               need CLOVER_E2E_STAFF_EMAIL
