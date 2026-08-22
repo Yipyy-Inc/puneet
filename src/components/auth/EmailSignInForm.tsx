@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { PasskeyAutofill } from "@/components/auth/PasskeyAutofill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -146,12 +147,27 @@ export function EmailSignInForm() {
 
       {step === "credentials" && (
         <form onSubmit={submitCredentials} className="space-y-4">
+          {/*
+            Renders nothing. Mounted HERE, inside the credentials step, because
+            a conditional WebAuthn request requires the autocomplete="webauthn"
+            input to already exist — on the verify and reset-sent steps that
+            field is gone, and starting the request there would throw.
+          */}
+          <PasskeyAutofill />
+
           <div className="space-y-2">
             <Label htmlFor="identifier">{t("fields.email")}</Label>
             <Input
               id="identifier"
               type="email"
-              autoComplete="email"
+              // "webauthn" IS LOAD-BEARING, not decoration. It is what permits
+              // the browser to list a saved passkey in this field's own
+              // dropdown; without it the conditional request started by
+              // <PasskeyAutofill /> below has no input to attach to and quietly
+              // does nothing. The two halves only work together — see that
+              // component. Removing this token breaks passkey sign-in with no
+              // error anywhere.
+              autoComplete="email webauthn"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}

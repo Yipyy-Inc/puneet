@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { User, KeyRound, Save } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PasskeysCard } from "@/components/auth/PasskeysCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,6 +120,12 @@ export function MyAccountSettings() {
       </Card>
 
       <ChangePasswordCard />
+
+      {/*
+        The real credential surface on this screen. ChangePasswordCard above
+        is still a mock that toasts success with no backend behind it.
+      */}
+      <PasskeysCard />
     </div>
   );
 }

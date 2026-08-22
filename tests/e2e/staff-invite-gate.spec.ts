@@ -64,7 +64,11 @@ test.describe("an invited account is not an admitted one", () => {
     await page.goto("/sign-in");
     await page.fill("#identifier", "invited-nobody@example.invalid");
     await page.fill("#password", PASSWORD);
-    await page.getByRole("button", { name: /sign in/i }).click();
+    // EXACT, not /sign in/i. The sign-in card gained a "Sign in with a passkey"
+    // button on 2026-08-22 and the loose regex matched both, failing the whole
+    // file on a strict-mode violation. `signIn()` in _auth.ts has always used
+    // the exact form; this was the one place that did not.
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await page.waitForTimeout(4000);
 
     expect(new URL(page.url()).pathname).toMatch(/^\/sign-in/);

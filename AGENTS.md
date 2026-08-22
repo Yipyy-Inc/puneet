@@ -28,28 +28,29 @@ Every task follows: **Ground → Plan → Implement → Verify → Encode.**
 
 There **is** a test runner: Playwright, 51 spec files under [tests/e2e/](tests/e2e/), driving a real browser against a real server. It was described here as absent long after it existed. "Green" = the CI gates, the auth & access specs, and a look at the touched journey.
 
-| Command                               | Purpose                                                                                             |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `bun run dev`                         | Dev server (webpack); `bun run dev:turbo` for turbo                                                 |
-| `bun run typecheck`                   | `tsc --noEmit` — the primary gate (also runs on pre-commit & pre-push)                              |
-| `bun run lint`                        | ESLint (cached); `bun run lint:fix` to autofix                                                      |
-| `bun run format:check`                | Prettier check; `bun run format` to write                                                           |
-| `bun run build`                       | `next build` — full production build (CI runs this)                                                 |
-| `bun run prune`                       | Knip — dead-code / unused-export report                                                             |
-| `bun run test:e2e`                    | The whole Playwright suite (62 files, ~45 min, one worker — see the debt map before trusting a run) |
-| `bun run test:e2e:ci`                 | The 30 specs CI runs on every PR — auth & access, daily operations, scheduling, payroll; ~18 min    |
-| `bun run test:sql`                    | The 41 SQL files — RLS, grants, database invariants. Runs in CI. ~90s; needs `SUPABASE_DB_URL`      |
-| `bun run check:pricing`               | Project-specific pricing-consistency script                                                         |
-| `bun run check:settings-wiring`       | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                          |
-| `bun run check:rls-writes`            | Fails if an API update/delete cannot tell an RLS refusal from a no-op                               |
-| `bun run check:grooming-menu`         | Fails if a screen reads the grooming menu from the fixture, not Postgres                            |
-| `bun run check:facility-from-session` | Fails if an API route takes the facility from the request rather than the session or a parent row   |
-| `bun run check:success-claims`        | Fails if a screen claims an action succeeded with nothing that could perform it                     |
-| `bun run check:settings-fixture`      | Fails if a screen reads a facility-owned value (name, hours, rules, tips) from `src/data/settings`  |
+| Command                                | Purpose                                                                                                               |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `bun run dev`                          | Dev server (webpack); `bun run dev:turbo` for turbo                                                                   |
+| `bun run typecheck`                    | `tsc --noEmit` — the primary gate (also runs on pre-commit & pre-push)                                                |
+| `bun run lint`                         | ESLint (cached); `bun run lint:fix` to autofix                                                                        |
+| `bun run format:check`                 | Prettier check; `bun run format` to write                                                                             |
+| `bun run build`                        | `next build` — full production build (CI runs this)                                                                   |
+| `bun run prune`                        | Knip — dead-code / unused-export report                                                                               |
+| `bun run test:e2e`                     | The whole Playwright suite (62 files, ~45 min, one worker — see the debt map before trusting a run)                   |
+| `bun run test:e2e:ci`                  | The 45 specs CI runs on every PR — auth & access, daily operations, scheduling, payroll, loyalty, report cards, tasks |
+| `bun run test:sql`                     | The 41 SQL files — RLS, grants, database invariants. Runs in CI. ~90s; needs `SUPABASE_DB_URL`                        |
+| `bun run check:pricing`                | Project-specific pricing-consistency script                                                                           |
+| `bun run check:settings-wiring`        | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                                            |
+| `bun run check:rls-writes`             | Fails if an API update/delete cannot tell an RLS refusal from a no-op                                                 |
+| `bun run check:grooming-menu`          | Fails if a screen reads the grooming menu from the fixture, not Postgres                                              |
+| `bun run check:facility-from-session`  | Fails if an API route takes the facility from the request rather than the session or a parent row                     |
+| `bun run check:success-claims`         | Fails if a screen claims an action succeeded with nothing that could perform it                                       |
+| `bun run check:settings-fixture`       | Fails if a screen reads a facility-owned value (name, hours, rules, tips) from `src/data/settings`                    |
+| `bun run check:passkey-email-verified` | Fails if the magic-auth bridge escapes its one file, or a passkey verify route drops its `emailVerified` check        |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
 
-**Touching auth, a portal gate, a permission or an identity — or bookings, boarding, daycare, rooms, the care log, the calendar or the roster?** Run `bun run test:e2e:ci` too. It is 30 specs now, not 10: the 10 auth & access ones, the 11 daily-operations ones added on 2026-08-20, and the 9 scheduling & payroll ones added on 2026-08-20/21. Each batch earned its place on its first run — the operations set found a production 500 on booking creation, a checkout that priced with no late fee while settings loaded, and an empty board caused by reading a PostgREST to-one relation as an array; the scheduling set found a UTC window that dropped every night shift out of its own day, a wage that could be read but never written, and a groomer told they could see labour cost.
+**Touching auth, a portal gate, a permission or an identity — or bookings, boarding, daycare, rooms, the care log, the calendar or the roster?** Run `bun run test:e2e:ci` too. It is **45** specs now, not 10 — and the number in this file has been stale twice, so count it (`bun -e 'console.log(require("./package.json").scripts["test:e2e:ci"].split(/\s+/).length-2)'`) rather than trusting the prose. Roughly: 24 auth & access and daily operations, 9 scheduling, 2 payroll, 8 loyalty, 1 report cards, 1 task templates. Each batch earned its place on its first run — the operations set found a production 500 on booking creation, a checkout that priced with no late fee while settings loaded, and an empty board caused by reading a PostgREST to-one relation as an array; the scheduling set found a UTC window that dropped every night shift out of its own day, a wage that could be read but never written, and a groomer told they could see labour cost. `passkey-auth` joined on 2026-08-22 and drives a CDP virtual authenticator, so it is Chromium-only by construction.
 
 CI runs exactly that command, but **the e2e job is not one of the four required status checks** — it reports, it does not gate, and pushes go straight to `main` regardless. Running it locally first is the only thing that actually stops a bad commit. Fastest locally against a built server rather than the dev one:
 

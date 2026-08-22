@@ -10,10 +10,25 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // read from a NON-public env var for the same reason — `NEXT_PUBLIC_` would
 // publish it to every visitor, and this key can read every facility's data.
 //
-// USED FOR EXACTLY ONE THING: creating an auth user for a new hire. That is not
-// something RLS can do — auth.users is GoTrue's table, not ours, and the
-// admin API is the only door. Every other statement in the invite route goes
-// through the ordinary cookie-bound client so RLS still decides.
+// WHEN IT IS LEGITIMATE. This said "USED FOR EXACTLY ONE THING" until
+// 2026-08-22, by which point thirteen files imported it — a count is the wrong
+// thing to write down, because it goes stale silently and reads as permission
+// once it has. The rule instead:
+//
+//   1. THERE IS NO SESSION TO BIND A CLIENT TO. A webhook is called by Clover
+//      or WorkOS, not by a browser; a setup token is redeemed before an account
+//      exists; a passkey is looked up in order to decide who is signing in. An
+//      RLS-bound client would be `anon` and read nothing.
+//   2. THE ACT IS OUTSIDE WHAT A POLICY CAN JUDGE. `user_passkeys` has no
+//      insert policy because no `with check` expression can tell a genuine
+//      WebAuthn attestation from a fabricated one; the verification happens in
+//      the route, and the write follows it.
+//   3. THE ROW BELONGS TO THE SYSTEM, NOT A TENANT — merchant credentials and
+//      vault tokens under lib/clover.
+//
+// Anything else goes through `createWorkosServerClient()` so RLS still decides.
+// If you are reaching for this key because a policy is in your way, the policy
+// is the thing to change.
 //
 // `.env.example` documents this deliberately rather than pretending it does not
 // exist, because a key people add ad-hoc without knowing what it does is worse

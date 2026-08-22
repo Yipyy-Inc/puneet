@@ -4184,6 +4184,32 @@ The transaction pooler (6543) is wrong for a different and equally silent reason
 
 **Do instead:** when a colleague's push is imminent and will run the same job, **let their run be your verification** rather than starting your own — provided their change genuinely cannot affect the result, which is a claim to check rather than assume. On 2026-08-22 the peer's six commits contained no DDL and touched no grants, so the SQL suite could not be affected by them; their run was therefore a clean read on the secret, and re-running would have been a duplicate that cancelled itself. This is a fourth verb for the entry above — add a fifth without renaming it.
 
+### 🔴 The magic-auth bridge marks an email VERIFIED that nobody verified — 2026-08-22
+
+Passkeys sign a user in without WorkOS's hosted UI (which cannot render per-facility branding — [ADR 0004](../architecture/decisions/0004-workos-replaces-clerk-as-identity-provider.md) §4) by verifying WebAuthn ourselves and then minting a real WorkOS session through Magic Auth:
+
+```
+createMagicAuth({ email })        -> { code }   // returned, NOT emailed
+authenticateWithMagicAuth({ code, email, clientId })
+```
+
+**The measurement.** Spiked against staging once `isMagicAuthEnabled` was turned on:
+
+```
+[2] Bridge against a NEW UNVERIFIED account: passkey-spike-1787415937475@yipyy.dev
+   created user_01M0N4NHQ5XNFXMX40KMTB1S5Q emailVerified=false
+   createMagicAuth -> code=PRESENT (6 chars)
+   UNVERIFIED ACCEPTED -> user=user_01M0N4NHQ5XNFXMX40KMTB1S5Q verified=true
+```
+
+It was not refused. It was accepted **and promoted to `emailVerified: true`**. Both environments carry `isEmailVerificationRequired: true`, so this walks through the environment's own policy.
+
+Also measured, same run: the minted token carries `"role": "authenticated"` from the registered issuer, so Supabase RLS cannot tell this session from a password sign-in — which is what makes the bridge viable at all, and what makes this hazard reach every table.
+
+**Why it's risky:** the behaviour is _correct_ for real Magic Auth — holding a code that arrived by email proves control of the mailbox. It is wrong only because we read the code out of the API response and never send the mail, so holding it proves nothing. Nothing in the WorkOS response marks the distinction, nothing fails, and the account looks legitimately verified afterwards. The guard that prevents it also looks redundant from inside either route: at enrolment the user already has a session, at sign-in they already presented a passkey. Both readings are wrong, and both are exactly what a tidy-up concludes before deleting the check.
+
+**Do instead:** refuse unless the WorkOS user has `emailVerified === true`, on **both** `register/verify` and `authenticate/verify` — a credential enrolled under a weaker rule must not become the way around a stronger one. Do not infer it from having a session. This is enforced by `bun run check:passkey-email-verified`, which was written _before_ the routes it guards so they are born inside it; it also confines `createMagicAuth` to the single bridge file, because anything that can call it can become any user by email. The gate strips comments before matching, so writing the word in prose does not satisfy it.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
