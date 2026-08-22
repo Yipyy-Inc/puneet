@@ -5,7 +5,13 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { enrolPasskey, usePasskeySupport } from "@/lib/auth/passkey-client";
+import { useQuery } from "@tanstack/react-query";
+
+import {
+  enrolPasskey,
+  hasPlatformAuthenticator,
+  usePasskeySupport,
+} from "@/lib/auth/passkey-client";
 
 // ============================================================================
 // "Add a passkey so you can skip your password next time."
@@ -35,6 +41,13 @@ import { enrolPasskey, usePasskeySupport } from "@/lib/auth/passkey-client";
 export function PasskeySetupPrompt() {
   const t = useTranslations("auth.passkey");
   const supported = usePasskeySupport();
+  // Enrolment targets this device's own sensor, so with none there is nothing
+  // to offer and the page shows itself out rather than presenting a button
+  // that cannot work.
+  const { data: hasSensor } = useQuery({
+    queryKey: ["passkeys", "platform-authenticator"],
+    queryFn: hasPlatformAuthenticator,
+  });
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -42,8 +55,9 @@ export function PasskeySetupPrompt() {
     // Nothing to offer here — do not make them read a page to dismiss it.
     // Navigating is a genuine side effect, so it belongs in an effect; the
     // capability READ does not, which is why it is not a setState above.
-    if (supported === false) window.location.replace("/");
-  }, [supported]);
+    if (supported === false || hasSensor === false)
+      window.location.replace("/");
+  }, [supported, hasSensor]);
 
   function done() {
     window.location.assign("/");
@@ -65,7 +79,7 @@ export function PasskeySetupPrompt() {
 
   // Until the capability check has run, commit to nothing. `navigator` does not
   // exist during SSR, so a first paint that assumed either way would flicker.
-  if (supported === null) return null;
+  if (supported === null || hasSensor !== true) return null;
 
   return (
     <div className="space-y-4">

@@ -55,6 +55,23 @@ export async function POST() {
       transports: row.transports as AuthenticatorTransport[] | undefined,
     })),
     authenticatorSelection: {
+      // THIS DEVICE'S OWN SENSOR — Face ID, Touch ID, Windows Hello, the
+      // Android fingerprint reader.
+      //
+      // Omitting it is not neutral, which is what the first version of this
+      // route assumed. With no attachment the browser offers every transport it
+      // knows, and both Chrome and Safari lead that chooser with "use a phone
+      // or tablet" — a QR code for the cross-device (hybrid) flow. So a person
+      // who asked for a fingerprint was shown a QR code to scan with a second
+      // device, which is not what was promised and looks like the wrong feature
+      // entirely.
+      //
+      // THE COST, STATED: a phone can no longer be enrolled by scanning a code
+      // from a desktop, and hardware security keys are excluded. Both are
+      // reasonable things to want; neither is what this was built for. Enrol on
+      // each device instead — `excludeCredentials` already stops duplicates,
+      // and PasskeysCard lists them per device.
+      authenticatorAttachment: "platform",
       // The credential must be discoverable, or sign-in would have to ask for
       // an email first — which is the password flow with extra steps, not the
       // "tap and you are in" the whole feature exists for.

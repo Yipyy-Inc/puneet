@@ -18,6 +18,7 @@ import {
   enrolPasskey,
   listPasskeys,
   revokePasskey,
+  hasPlatformAuthenticator,
   usePasskeySupport,
   type StoredPasskey,
 } from "@/lib/auth/passkey-client";
@@ -75,6 +76,13 @@ export function PasskeysCard() {
     queryFn: listPasskeys,
   });
 
+  // Enrolment asks for the device's own sensor, so a machine without one
+  // cannot complete it. Checked before offering, not after failing.
+  const { data: hasSensor } = useQuery({
+    queryKey: ["passkeys", "platform-authenticator"],
+    queryFn: hasPlatformAuthenticator,
+  });
+
   const refresh = () => refetch();
 
   async function add() {
@@ -127,6 +135,14 @@ export function PasskeysCard() {
         {supported === false && (
           <p className="text-muted-foreground text-sm">
             This browser cannot use passkeys.
+          </p>
+        )}
+
+        {supported === true && hasSensor === false && (
+          <p className="text-muted-foreground text-sm">
+            This device has no fingerprint reader, face scanner or PIN set up,
+            so a passkey cannot be added here. Any passkey you already have
+            still works.
           </p>
         )}
 
@@ -189,7 +205,7 @@ export function PasskeysCard() {
           </ul>
         )}
 
-        {supported !== false && (
+        {supported !== false && hasSensor !== false && (
           <Button
             type="button"
             variant="outline"
