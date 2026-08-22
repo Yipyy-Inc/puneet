@@ -9,9 +9,11 @@ import { clientQueries, useClientRecord } from "@/lib/api/client";
 import {
   petPhotos,
   vaccinationRecords,
-  reportCards,
   petRelationships,
 } from "@/data/pet-data";
+import { reportCardQueries } from "@/lib/api/report-cards";
+import { sectionsOf } from "@/lib/report-cards/sections";
+import { usablePhotos } from "@/lib/report-cards/photos";
 import { getFormsByFacility } from "@/data/forms";
 import { getSubmissionsForPet } from "@/data/form-submissions";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
@@ -40,8 +42,6 @@ import {
   CheckCircle,
   AlertCircle,
   Image as ImageIcon,
-  Activity,
-  Utensils,
   Camera,
   Upload,
   Award,
@@ -218,6 +218,13 @@ export default function PetDetailPage({
   const petEvaluations = (pet as { evaluations?: Evaluation[] } | undefined)
     ?.evaluations;
 
+  // This pet's report cards, narrowed server-side by its ref. Declared above
+  // the early return below, because a hook cannot be called conditionally.
+  const { data: petReportCards = [] } = useQuery({
+    ...reportCardQueries.byPet(parseInt(petId)),
+    enabled: Number.isInteger(parseInt(petId)),
+  });
+
   if (!client || !pet) {
     return (
       <div className="flex flex-1 items-center justify-center">
@@ -239,7 +246,7 @@ export default function PetDetailPage({
   const photos = petPhotos.filter((p) => p.petId === pet.id);
   const vaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
   const petBookings = bookings.filter((b) => b.petId === pet.id);
-  const reports = reportCards.filter((r) => r.petId === pet.id);
+  const reports = petReportCards;
   const relationships = petRelationships.filter((r) => r.petId === pet.id);
 
   const FACILITY_ID = 11;
@@ -1269,15 +1276,26 @@ export default function PetDetailPage({
           <TabsContent value="reports" className="space-y-6">
             {reports.length > 0 ? (
               reports
+                .slice()
                 .sort(
                   (a, b) =>
-                    new Date(b.date).getTime() - new Date(a.date).getTime(),
+                    new Date(b.visitDate).getTime() -
+                    new Date(a.visitDate).getTime(),
                 )
                 .map((report) => {
                   const theme =
                     reportCardThemes[report.theme || "everyday"] ??
                     reportCardThemes.everyday;
                   const { DecorativeIcon } = theme;
+                  // The facility's own prose. Replaces `activities`, `meals`
+                  // and `pottyBreaks` — three arrays the report card form has
+                  // never collected, so all three were always empty here.
+                  const sections = sectionsOf(report);
+                  const mood =
+                    typeof report.input.mood === "string"
+                      ? report.input.mood
+                      : "";
+                  const photos = usablePhotos(report.photos);
 
                   return (
                     <div
@@ -1305,19 +1323,23 @@ export default function PetDetailPage({
                           <span className="text-lg">{theme.emoji}</span>
                           <div>
                             <p className="text-sm font-bold">
-                              {formatDate(report.date)}
+                              {formatDate(report.visitDate)}
                             </p>
-                            <p className="text-xs opacity-80">
-                              By: {report.createdBy}
-                            </p>
+                            {report.deliveryStatus !== "sent" && (
+                              <p className="text-xs opacity-80">
+                                Draft — not published yet
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge
-                            className={` ${getMoodColor(report.mood)} text-xs capitalize`}
-                          >
-                            {report.mood}
-                          </Badge>
+                          {mood && (
+                            <Badge
+                              className={` ${getMoodColor(mood)} text-xs capitalize`}
+                            >
+                              {mood}
+                            </Badge>
+                          )}
                           <Badge
                             variant="outline"
                             className="border-white/40 text-xs text-white/90 capitalize"
@@ -1329,124 +1351,66 @@ export default function PetDetailPage({
 
                       {/* Card body */}
                       <div className="relative space-y-4 p-4">
-                        {/* Activities */}
-                        {report.activities.length > 0 && (
-                          <div>
-                            <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                              <Activity className="size-4" />
-                              Activities
+                        {/* What the facility wrote. */}
+                        {sections.map((section) => (
+                          <div key={section.id}>
+                            <h4 className="mb-1 text-sm font-semibold">
+                              {section.label}
                             </h4>
-                            <div className="flex flex-wrap gap-1.5">
-                              {report.activities.map((activity, idx) => (
-                                <Badge
-                                  key={idx}
-                                  variant="secondary"
-                                  className="text-xs"
-                                >
-                                  {activity}
-                                </Badge>
-                              ))}
-                            </div>
+                            <p className="text-muted-foreground text-sm whitespace-pre-line">
+                              {section.body}
+                            </p>
                           </div>
-                        )}
-
-                        {/* Meals */}
-                        {report.meals.length > 0 && (
-                          <div>
-                            <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                              <Utensils className="size-4" />
-                              Meals
-                            </h4>
-                            <div className="space-y-2">
-                              {report.meals.map((meal, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-center justify-between rounded-sm bg-gray-50 p-2"
-                                >
-                                  <div>
-                                    <p className="text-sm font-medium">
-                                      {meal.time} - {meal.food}
-                                    </p>
-                                    <p className="text-muted-foreground text-xs">
-                                      {meal.amount}
-                                    </p>
-                                  </div>
-                                  <Badge
-                                    variant="outline"
-                                    className="capitalize"
-                                  >
-                                    {meal.consumed}
-                                  </Badge>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Potty Breaks */}
-                        {report.pottyBreaks.length > 0 && (
-                          <div>
-                            <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                              <CheckCircle className="size-4" />
-                              Potty Breaks
-                            </h4>
-                            <div className="flex flex-wrap gap-2">
-                              {report.pottyBreaks.map((potty, idx) => (
-                                <Badge
-                                  key={idx}
-                                  variant={
-                                    potty.type === "success"
-                                      ? "secondary"
-                                      : "destructive"
-                                  }
-                                  className="text-xs"
-                                >
-                                  {potty.time} -{" "}
-                                  {potty.type === "success"
-                                    ? "Success"
-                                    : "Accident"}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        ))}
 
                         {/* Photos */}
-                        {report.photos.length > 0 && (
+                        {photos.length > 0 && (
                           <div>
                             <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
                               <Camera className="size-4" />
-                              Photos ({report.photos.length})
+                              Photos ({photos.length})
                             </h4>
                             <div className="grid grid-cols-4 gap-2">
-                              {report.photos.map((photo, idx) => (
+                              {photos.map((photo) => (
                                 <div
-                                  key={idx}
-                                  className="flex aspect-square items-center justify-center rounded-lg bg-gray-100"
+                                  key={photo.id}
+                                  className="relative aspect-square overflow-hidden rounded-lg bg-gray-100"
                                 >
-                                  <ImageIcon className="text-muted-foreground size-8" />
+                                  {/* The picture itself. This drew a
+                                      placeholder icon for every photo, so
+                                      staff could not see what they had sent.
+                                      Signed private URL, so not next/image. */}
+                                  {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
+                                  <img
+                                    src={photo.url}
+                                    alt={photo.caption ?? "Report card photo"}
+                                    className="absolute inset-0 size-full object-cover"
+                                  />
                                 </div>
                               ))}
                             </div>
                           </div>
                         )}
 
-                        {/* Staff Notes */}
-                        {report.staffNotes && (
+                        {report.replyMessage && (
                           <div className="border-t pt-3">
                             <h4 className="mb-1 text-sm font-semibold">
-                              Staff Notes
+                              The owner replied
                             </h4>
                             <p className="text-muted-foreground text-sm">
-                              {report.staffNotes}
+                              {report.replyMessage}
                             </p>
                           </div>
                         )}
 
-                        {report.sentToOwner && report.sentAt && (
+                        {report.deliveryStatus === "sent" && report.sentAt && (
                           <div className="text-muted-foreground flex items-center gap-2 border-t pt-2 text-xs">
                             <CheckCircle className="size-3 text-green-500" />
-                            Sent to owner on {formatDateTime(report.sentAt)}
+                            Published to the owner&apos;s portal on{" "}
+                            {formatDateTime(report.sentAt)}
+                            {report.viewedAt
+                              ? ` · opened ${formatDateTime(report.viewedAt)}`
+                              : " · not opened yet"}
                           </div>
                         )}
                       </div>

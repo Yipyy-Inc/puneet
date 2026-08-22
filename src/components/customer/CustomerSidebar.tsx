@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/generic-sidebar";
 import { petCams, mobileAppSettings } from "@/data/additional-features";
 import { estimates } from "@/data/estimates";
-import { reportCards } from "@/data/pet-data";
+import { reportCardQueries } from "@/lib/api/report-cards";
 import {
   cameraIntegrationConfig,
   petCamAccessConfigs,
@@ -89,13 +89,20 @@ export function CustomerSidebar() {
     [customerId],
   );
 
-  // Unread report cards for this customer's pets (viewedByCustomer === false).
-  const unreadReportCardCount = useMemo(() => {
-    const petIds = new Set((customer?.pets ?? []).map((p) => p.id));
-    return reportCards.filter(
-      (rc) => petIds.has(rc.petId) && rc.viewedByCustomer === false,
-    ).length;
-  }, [customer]);
+  // Unread report cards, from Postgres.
+  //
+  // No pet filtering: `mine()` asks for sent cards, and RLS already scopes the
+  // answer to this person's own. The fixture version had to match pet ids
+  // because it was reading a global array, and matched somebody else's when
+  // the refs happened to line up.
+  const { data: myReportCards = [] } = useQuery({
+    ...reportCardQueries.mine(),
+    enabled: customerId != null,
+  });
+  const unreadReportCardCount = useMemo(
+    () => myReportCards.filter((card) => card.viewedAt == null).length,
+    [myReportCards],
+  );
 
   // Build access context for rule evaluation (only on client after mount)
   const accessContext = useMemo(() => {

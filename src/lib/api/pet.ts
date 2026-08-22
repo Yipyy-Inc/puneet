@@ -2,7 +2,6 @@ import { clients } from "@/data/clients";
 import {
   petPhotos,
   vaccinationRecords,
-  reportCards,
   petRelationships,
   careInstructions,
 } from "@/data/pet-data";
@@ -52,10 +51,9 @@ export const petQueries = {
     queryKey: ["pets", petId, "photos"] as const,
     queryFn: async () => petPhotos.filter((p) => p.petId === petId),
   }),
-  reportCards: (petId: number) => ({
-    queryKey: ["pets", petId, "report-cards"] as const,
-    queryFn: async () => reportCards.filter((r) => r.petId === petId),
-  }),
+  // `reportCards` was here, over the fixture. It had no callers, and report
+  // cards are a real table now — `reportCardQueries.byPet` in
+  // `@/lib/api/report-cards` narrows them server-side.
   relationships: (petId: number) => ({
     queryKey: ["pets", petId, "relationships"] as const,
     queryFn: async () => petRelationships.filter((r) => r.petId === petId),
