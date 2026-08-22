@@ -1,5 +1,23 @@
-// Report-card customer notifications (Table 63/64): email teaser, SMS, and push.
-// Mock-only — template data builders + an in-memory outbox with send helpers.
+// ============================================================================
+// Report-card notification CONTENT: the email teaser, the SMS, the push.
+//
+// Builders only. This file used to also export `sendReportCardEmail`,
+// `sendReportCardSms`, `sendReportCardPush`, `sendReportCardNotifications` and
+// a module-level `outbox` array they pushed onto. Nothing transmitted
+// anything; the callers reported "Delivered via email, SMS" on the strength of
+// the channel names the fake handed back, and `check:success-claims` passed
+// them because a function returning a non-empty list looks like a sender.
+//
+// They are deleted rather than fixed. A send helper that cannot send is not a
+// stub waiting for a transport — it is the thing that makes a missing
+// transport invisible. What survives is the part that was always honest: these
+// builders shape what a message WOULD say, and the settings screen renders
+// them as previews.
+//
+// When report cards get a real transport, it goes behind an API route with the
+// facility's own Twilio subaccount or Resend key, and its outcome is reported
+// from what that call returned.
+// ============================================================================
 
 export interface ReportCardNotificationData {
   reportId: string;
@@ -92,64 +110,4 @@ export function reportCardPushBody(d: ReportCardNotificationData): string {
 
 export function reportCardEmailSubject(d: ReportCardNotificationData): string {
   return `${d.petName}'s ${d.serviceType} report is ready! ${d.moodEmoji}`;
-}
-
-/* ── Mocked outbox ────────────────────────────────────────────────────────── */
-
-export type ReportCardChannel = "email" | "sms" | "push";
-
-export interface SentReportCardNotification {
-  channel: ReportCardChannel;
-  reportId: string;
-  to: string;
-  at: string;
-}
-
-const outbox: SentReportCardNotification[] = [];
-
-export function getReportCardOutbox(): readonly SentReportCardNotification[] {
-  return outbox;
-}
-
-function record(
-  channel: ReportCardChannel,
-  d: ReportCardNotificationData,
-): void {
-  outbox.push({
-    channel,
-    reportId: d.reportId,
-    to: d.ownerName,
-    at: new Date().toISOString(),
-  });
-}
-
-export function sendReportCardEmail(d: ReportCardNotificationData): void {
-  record("email", d);
-}
-export function sendReportCardSms(d: ReportCardNotificationData): void {
-  record("sms", d);
-}
-export function sendReportCardPush(d: ReportCardNotificationData): void {
-  record("push", d);
-}
-
-/** Fires the mocked sends for each enabled channel; returns the human labels. */
-export function sendReportCardNotifications(
-  d: ReportCardNotificationData,
-  channels: { email?: boolean; sms?: boolean; push?: boolean },
-): string[] {
-  const sent: string[] = [];
-  if (channels.email) {
-    sendReportCardEmail(d);
-    sent.push("email");
-  }
-  if (channels.sms) {
-    sendReportCardSms(d);
-    sent.push("SMS");
-  }
-  if (channels.push) {
-    sendReportCardPush(d);
-    sent.push("push");
-  }
-  return sent;
 }
