@@ -18,6 +18,23 @@ const eslintConfig = defineConfig([
     // reference docs, not project source — linting them reports on code we do
     // not own and cannot fix.
     ".agents/**",
+    // Git worktrees. A worktree is a COMPLETE SECOND CHECKOUT of this repo,
+    // node_modules and all, so ESLint walking it lints the whole project twice
+    // and reports every dependency it finds. Measured 2026-08-22: one worktree
+    // took `bun run lint` from clean to 83,080 problems across 35,412 files.
+    //
+    // That is worse than noise. A gate that ALWAYS fails cannot fail
+    // meaningfully — the real errors are indistinguishable from the 83,000, so
+    // the honest reading of a red lint became "check whether a worktree is
+    // open", which is the same as not running it. CI never saw this because no
+    // worktree exists there; it only broke the local run, which is the one that
+    // is supposed to catch things BEFORE they reach production.
+    //
+    // Nothing the project owns lives here: `.claude/` holds settings, skills
+    // and worktrees, and outside `worktrees/` it contains no lintable file at
+    // all. Scoped to `worktrees/` rather than `.claude/**` so that a future
+    // `.claude` script would still be linted.
+    ".claude/worktrees/**",
   ]),
   {
     // SCOPED ON PURPOSE, and it must stay scoped. The `react-hooks` rules below
