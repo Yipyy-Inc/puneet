@@ -75,15 +75,7 @@ export type Database = {
           user_name?: string | null;
           user_role?: string | null;
         };
-        Relationships: [
-          {
-            foreignKeyName: "audit_log_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       boarding_stays: {
         Row: {
@@ -1930,29 +1922,7 @@ export type Database = {
           id?: string;
           kind?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "grooming_appointment_history_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "booking_presence";
-            referencedColumns: ["booking_id"];
-          },
-          {
-            foreignKeyName: "grooming_appointment_history_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "bookings";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "grooming_appointment_history_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       grooming_appointments: {
         Row: {
@@ -6233,6 +6203,93 @@ export type Database = {
         };
         Relationships: [];
       };
+      task_templates: {
+        Row: {
+          assign_to: string | null;
+          auto_create: boolean;
+          category: string;
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          duration_minutes: number | null;
+          facility_id: string;
+          id: string;
+          is_required: boolean;
+          legacy_id: string | null;
+          module_id: string;
+          name: string;
+          recurring_frequency: string | null;
+          recurring_times: string[] | null;
+          required_role: string | null;
+          sort_order: number;
+          timing_custom_time: string | null;
+          timing_offset_minutes: number | null;
+          timing_type: string;
+          updated_at: string;
+        };
+        Insert: {
+          assign_to?: string | null;
+          auto_create?: boolean;
+          category: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          duration_minutes?: number | null;
+          facility_id: string;
+          id?: string;
+          is_required?: boolean;
+          legacy_id?: string | null;
+          module_id: string;
+          name: string;
+          recurring_frequency?: string | null;
+          recurring_times?: string[] | null;
+          required_role?: string | null;
+          sort_order?: number;
+          timing_custom_time?: string | null;
+          timing_offset_minutes?: number | null;
+          timing_type: string;
+          updated_at?: string;
+        };
+        Update: {
+          assign_to?: string | null;
+          auto_create?: boolean;
+          category?: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          duration_minutes?: number | null;
+          facility_id?: string;
+          id?: string;
+          is_required?: boolean;
+          legacy_id?: string | null;
+          module_id?: string;
+          name?: string;
+          recurring_frequency?: string | null;
+          recurring_times?: string[] | null;
+          required_role?: string | null;
+          sort_order?: number;
+          timing_custom_time?: string | null;
+          timing_offset_minutes?: number | null;
+          timing_type?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "task_templates_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "task_templates_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       tier_modules: {
         Row: {
           module_id: string;
@@ -6384,6 +6441,50 @@ export type Database = {
             columns: ["staff_id"];
             isOneToOne: true;
             referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      user_passkeys: {
+        Row: {
+          backed_up: boolean;
+          counter: number;
+          created_at: string;
+          credential_id: string;
+          last_used_at: string | null;
+          nickname: string | null;
+          profile_id: string;
+          public_key: string;
+          transports: string[];
+        };
+        Insert: {
+          backed_up?: boolean;
+          counter?: number;
+          created_at?: string;
+          credential_id: string;
+          last_used_at?: string | null;
+          nickname?: string | null;
+          profile_id: string;
+          public_key: string;
+          transports?: string[];
+        };
+        Update: {
+          backed_up?: boolean;
+          counter?: number;
+          created_at?: string;
+          credential_id?: string;
+          last_used_at?: string | null;
+          nickname?: string | null;
+          profile_id?: string;
+          public_key?: string;
+          transports?: string[];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "user_passkeys_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -6928,6 +7029,7 @@ export type Database = {
         Returns: string;
       };
       purge_e2e_bookings: { Args: never; Returns: number };
+      purge_e2e_report_cards: { Args: never; Returns: number };
       rate_report_card: {
         Args: { p_card_id: string; p_comment?: string; p_stars: number };
         Returns: {
