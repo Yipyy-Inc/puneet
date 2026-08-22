@@ -119,6 +119,61 @@ test.describe("a report card", () => {
     expect(found!.petName).toBeTruthy();
   });
 
+  test("narrows to one pet, and does not relabel the rest", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    // Buddy (ref 1) and Whiskers (ref 2) share an owner, so a filter that
+    // silently does nothing still returns both — which is what makes this pair
+    // the right probe.
+    const buddy = await createCard(page, { petRef: 1 });
+    const whiskers = await createCard(page, { petRef: 2 });
+
+    const res = await page.request.get(`${API}?petRef=2`);
+    expect(res.ok(), await res.text()).toBe(true);
+    const rows = (await res.json()) as Card[];
+
+    expect(rows.some((r) => r.id === whiskers.id)).toBe(true);
+    // The assertion that matters. Through a PLAIN embed this filter narrowed
+    // nothing: PostgREST applied it to the embed and returned every parent row
+    // anyway, with the other pets' `pets` empty — so the pet file showed the
+    // whole facility's cards and, because the name had been stripped, showed
+    // them as if they were all this pet's. Measured 341 rows vs 309 on
+    // 2026-08-22; the fix is the inner join in `reportCardSelect`.
+    expect(
+      rows.some((r) => r.id === buddy.id),
+      "another pet's card came back from a per-pet query",
+    ).toBe(false);
+    for (const row of rows) {
+      expect(row.petRef).toBe(2);
+      expect(row.petName, "the join was dropped, not narrowed").toBeTruthy();
+    }
+  });
+
+  test("gives the client file every pet it owns, and no others", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    // Alice Johnson (client ref 15) owns both; Max belongs to Bob Smith.
+    const buddy = await createCard(page, { petRef: 1 });
+    const whiskers = await createCard(page, { petRef: 2 });
+    const max = await createCard(page, { petRef: 3 });
+
+    const res = await page.request.get(`${API}?clientRef=15`);
+    expect(res.ok(), await res.text()).toBe(true);
+    const rows = (await res.json()) as Card[];
+
+    expect(rows.some((r) => r.id === buddy.id)).toBe(true);
+    expect(rows.some((r) => r.id === whiskers.id)).toBe(true);
+    expect(
+      rows.some((r) => r.id === max.id),
+      "another client's card came back from a per-client query",
+    ).toBe(false);
+    for (const row of rows) expect(row.ownerName).toBe("Alice Johnson");
+  });
+
   test("is not visible to its owner until it is sent", async ({ page }) => {
     await signIn(page, ACCOUNTS.owner);
     const draft = await createCard(page);

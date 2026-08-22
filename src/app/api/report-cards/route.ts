@@ -8,6 +8,7 @@ import {
 } from "@/lib/api/facility-context";
 import {
   REPORT_CARD_SELECT,
+  reportCardSelect,
   photoPathsIn,
   rowToReportCard,
   type ReportCardRow,
@@ -75,13 +76,26 @@ export async function GET(request: NextRequest) {
   const supabase = await createServerClient();
   const { searchParams } = new URL(request.url);
 
+  // Both narrow through an EMBEDDED column, which only works against an inner
+  // join — see `reportCardSelect`. A plain embed would return the facility's
+  // entire list and quietly relabel it as one pet's.
+  const petRef = searchParams.get("petRef");
+  const clientRef = searchParams.get("clientRef");
+
   let query = supabase
     .from("report_cards")
-    .select(REPORT_CARD_SELECT)
+    .select(
+      reportCardSelect({ pet: Boolean(petRef), client: Boolean(clientRef) }),
+    )
     .order("visit_date", { ascending: false });
 
-  const petRef = searchParams.get("petRef");
   if (petRef) query = query.eq("pets.ref", Number(petRef));
+
+  // The client file, which asks for every card across a client's pets. The
+  // `client_id` column is right here, but the screens address a client by
+  // their numeric ref, and resolving it to a uuid would be a second round trip
+  // to learn something the join already knows.
+  if (clientRef) query = query.eq("clients.ref", Number(clientRef));
 
   const status = searchParams.get("status");
   if (status) query = query.eq("delivery_status", status);
