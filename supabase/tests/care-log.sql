@@ -29,6 +29,11 @@ begin;
 set local client_min_messages to warning;
 
 create temp table tap (n int, name text, ok boolean, detail text);
+-- Every other file in this directory grants tap; this one did not, and it
+-- switches to `authenticated` twice below. So the first assertion recorded
+-- after the switch died with "permission denied for table tap" and took the
+-- whole file with it — a harness bug that read as a product failure.
+grant all on tap to authenticated;
 
 create or replace function pg_temp.t(i int, p text, ok boolean, d text default '')
 returns void language sql as $$
