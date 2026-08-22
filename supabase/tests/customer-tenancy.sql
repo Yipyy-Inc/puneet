@@ -38,9 +38,23 @@ $$;
 
 -- ── Two facilities: one open to registration, one closed ───────────────────
 
-insert into public.profiles (id, email, full_name, is_platform_admin) values
-  ('user_ctAdmin0000000000000000000000', 'ctadmin@yipyy.invalid', 'CT Admin', true)
+insert into public.profiles (id, email, full_name) values
+  ('user_ctAdmin0000000000000000000000', 'ctadmin@yipyy.invalid', 'CT Admin')
 on conflict (id) do nothing;
+
+-- ── BECOMING A PLATFORM ADMIN ──────────────────────────────────────────────
+--
+-- Through `platform_memberships`, NOT `profiles.is_platform_admin`.
+--
+-- That column is a MIRROR, maintained by `private.sync_platform_admin_flag`
+-- from this table, and `private.is_platform_admin()` — which every platform
+-- gate actually calls — reads the table. Setting the column by hand produces a
+-- profile that claims to be an admin and is refused by everything, which is
+-- what this file did until 2026-08-22 and why four of its assertions failed
+-- with "Only a platform administrator may create a facility".
+insert into public.platform_memberships (profile_id, role) values
+  ('user_ctAdmin0000000000000000000000', 'superadmin')
+on conflict (profile_id) do nothing;
 
 select set_config('request.jwt.claims',
   json_build_object('sub','user_ctAdmin0000000000000000000000','role','authenticated')::text, true);
@@ -119,6 +133,19 @@ insert into public.profiles (id, email, full_name) values
   ('user_ctStrange00000000000000000000', 'stranger@nowhere.invalid', 'A Stranger'),
   ('user_ctAlphaStaff0000000000000000',  'astaff@alpha.invalid',     'Alpha Staff')
 on conflict (id) do nothing;
+
+-- ── SEEDING IS NOT SOMEBODY'S ACTION ───────────────────────────────────────
+--
+-- `reset role` above restores the ROLE and leaves `request.jwt.claims` exactly
+-- where it was — still Sam, a customer. So this insert ran as Sam, and since
+-- `manager` is an admin-tier job title, `enforce_membership_access_level`
+-- forced access_level to 'admin' and then correctly refused: a customer cannot
+-- grant themselves admin at a facility.
+--
+-- The guard was right and the fixture was wrong. Clearing the claims puts this
+-- back to seeding as nobody, which is the `v_sub is null` branch the trigger
+-- provides for exactly this.
+select set_config('request.jwt.claims', '', true);
 
 insert into public.facility_memberships (profile_id, facility_id, role, is_active)
 select 'user_ctAlphaStaff0000000000000000', id, 'manager', true
