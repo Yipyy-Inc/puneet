@@ -40,8 +40,41 @@ import { ACCOUNTS, signIn } from "./_auth";
 //
 // The tiers this file defines exist only while it runs, so `afterAll` settles
 // the tier away as well as restoring the programme — an account pointing at a
-// tier nobody defines any more is a puzzle rather than a state. The points and
-// any voucher stay: a ledger cannot be un-appended.
+// tier nobody defines any more is a puzzle rather than a state. The points
+// stay: a ledger cannot be un-appended.
+//
+// ── THE VOUCHER MUST NOT ───────────────────────────────────────────────────
+//
+// This comment used to say "and any voucher stay", on the same reasoning. That
+// was wrong, and it cost real money for as long as it stood.
+//
+// A tier reward is a REAL `discount_fixed` voucher for $5 against the demo
+// facility, and this file is in `test:e2e:ci` — so every push to `main` minted
+// another one. By 2026-08-22 there were FIFTEEN, $75 of live discount sitting
+// on two demo customers, waiting to come off somebody's bill. Nothing was
+// wrong with any single run; the arithmetic was just never done.
+//
+// `loyalty-badges.spec.ts` had already reasoned this out one file over — "a
+// stray active discount voucher on a demo account would come off somebody's
+// real bill" — and arranged its probes to be worth nothing. This file did not
+// apply the same thought to itself.
+//
+// The fix is NOT to delete the voucher, and not to weaken the assertion that
+// earns it. `pointsSpent === 0` is this file's actual claim and it stays. The
+// voucher is SPENT in `afterAll`, through the same `consume` route a checkout
+// uses: a forward transition the model already sanctions, which leaves the row
+// exactly where it is and merely stops it being spendable. Un-appending is
+// still impossible, which was the true half of the original reasoning.
+//
+// `beforeAll` records which granted vouchers already existed, and the cleanup
+// skips them. Without that baseline the sweep would spend every zero-point
+// voucher on the facility — which on a demo facility is tidying up, and on a
+// real one is spending a customer's reward for them. The first draft of this
+// fix did exactly that, which is worth admitting: the careless version of a
+// cleanup is a bigger bug than the leak it cleans.
+//
+// The FIFTEEN already out there predate the baseline, so this does not sweep
+// them; they were cleared once, by hand, when this landed.
 // ============================================================================
 
 const SETTINGS = "/api/facility/settings";
@@ -111,6 +144,30 @@ async function readAccounts(page: Page): Promise<Account[]> {
   return ((await res.json()) as { accounts: Account[] }).accounts;
 }
 
+/**
+ * Every spendable voucher the facility GAVE rather than sold.
+ *
+ * `pointsSpent === 0` is the same predicate the tier assertion uses: a tier
+ * reward is given, not bought. A voucher somebody paid points for is never in
+ * this list, so the cleanup cannot reach one.
+ */
+async function grantedVouchers(
+  page: Page,
+): Promise<{ id: string; pointsSpent: number }[]> {
+  const found: { id: string; pointsSpent: number }[] = [];
+  for (const account of await readAccounts(page)) {
+    const res = await page.request.get(
+      `${VOUCHERS}?spendable=1&account=${account.id}`,
+    );
+    if (!res.ok()) continue;
+    const { vouchers } = (await res.json()) as {
+      vouchers: { id: string; pointsSpent: number }[];
+    };
+    found.push(...vouchers.filter((v) => v.pointsSpent === 0));
+  }
+  return found;
+}
+
 async function setProgramme(
   page: Page,
   value: Record<string, unknown>,
@@ -142,6 +199,16 @@ async function nudge(
 
 test.describe("loyalty tiers", () => {
   let saved: Record<string, unknown> | null = null;
+  /**
+   * Granted vouchers that were spendable BEFORE this file ran.
+   *
+   * The cleanup below consumes what the promotions gave away, and this is what
+   * keeps it from consuming anything else. Without it the sweep would spend
+   * every zero-point voucher on the facility — including a reward a real
+   * facility gave a real customer, which is somebody's money and not this
+   * file's to spend. Clean up what you caused, never what you found.
+   */
+  const preExisting = new Set<string>();
 
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext();
@@ -153,6 +220,10 @@ test.describe("loyalty tiers", () => {
         loyalty_config: { value: Record<string, unknown> };
       }
     ).loyalty_config.value;
+
+    for (const voucher of await grantedVouchers(page)) {
+      preExisting.add(voucher.id);
+    }
     await context.close();
   });
 
@@ -177,6 +248,23 @@ test.describe("loyalty tiers", () => {
         await nudge(page, account.id, 1, "E2E cleanup: settle the tier away");
         await nudge(page, account.id, -1, "E2E cleanup: restore the balance");
       }
+    }
+
+    // ── SPEND WHAT THE PROMOTION GAVE AWAY ────────────────────────────
+    //
+    // Every tier crossing above issued a real $5 voucher. Consuming it is the
+    // only sanctioned way to make it unspendable — there is no cancel route,
+    // and `loyalty_vouchers` has no DELETE policy on purpose.
+    //
+    // `preExisting` is the whole safety of this: only vouchers that appeared
+    // WHILE this file ran are spent. Best effort per voucher — one already
+    // used answers with an error, and a cleanup that threw here would mask the
+    // test result that actually matters.
+    for (const voucher of await grantedVouchers(page)) {
+      if (preExisting.has(voucher.id)) continue;
+      await page.request
+        .post(`${VOUCHERS}/${voucher.id}/consume`, { data: {} })
+        .catch(() => {});
     }
 
     await setProgramme(page, { ...saved, enabled: false });
