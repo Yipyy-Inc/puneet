@@ -1,5 +1,9 @@
 import { liveWrite } from "@/lib/api/live-fetch";
-import type { NewReportCard, ReportCard } from "@/types/report-card";
+import type {
+  NewReportCard,
+  ReportCard,
+  ReportCardPhoto,
+} from "@/types/report-card";
 
 // ============================================================================
 // Report cards, from Postgres.
@@ -73,6 +77,50 @@ export async function createReportCard(
   input: NewReportCard,
 ): Promise<ReportCard> {
   return liveWrite<ReportCard>("/api/report-cards", "POST", input);
+}
+
+/**
+ * Publish a card to the owner's portal.
+ *
+ * "Sent" means visible to the owner — the customer's list asks for sent cards.
+ * It does NOT mean an email or SMS went out; nothing sends one for a report
+ * card today, and the code this replaced said otherwise.
+ */
+export async function sendReportCard(cardId: string): Promise<ReportCard> {
+  return liveWrite<ReportCard>(`/api/report-cards/${cardId}/send`, "POST", {});
+}
+
+/**
+ * Attach one photo to an existing card.
+ *
+ * The card must exist first: the storage policy matches the card segment of
+ * the path, so there is no upload without one. FormData rather than JSON
+ * because the bytes are the payload and the route sniffs them.
+ */
+export async function uploadReportCardPhoto(
+  cardId: string,
+  file: File,
+  opts?: { kind?: "moment" | "before" | "after"; sortOrder?: number },
+): Promise<ReportCardPhoto> {
+  const body = new FormData();
+  body.set("file", file);
+  body.set("kind", opts?.kind ?? "moment");
+  body.set("sortOrder", String(opts?.sortOrder ?? 0));
+
+  const response = await fetch(`/api/report-cards/${cardId}/photos`, {
+    method: "POST",
+    body,
+  });
+
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((b: { error?: string }) => b.error)
+      .catch(() => null);
+    throw new Error(detail ?? `That photo could not be uploaded.`);
+  }
+
+  return (await response.json()) as ReportCardPhoto;
 }
 
 // ── The owner's four writes ─────────────────────────────────────────────────

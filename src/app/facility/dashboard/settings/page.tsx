@@ -15,15 +15,11 @@ import type {
   DropOffPickUpOverride,
 } from "@/types/facility";
 import { FacilityCloverCard } from "@/components/integrations/FacilityCloverCard";
-import { toast } from "sonner";
 import { SettingsBlock } from "@/components/ui/settings-block";
 import { ReportCardBrandedHeader } from "@/components/shared/ReportCardBrandedHeader";
 import { ReportCardBrandedFooter } from "@/components/shared/ReportCardBrandedFooter";
 import { ReportCardSmsPreview } from "@/components/facility/report-cards/notifications/ReportCardNotificationPreviews";
-import {
-  buildReportCardNotificationData,
-  sendReportCardNotifications,
-} from "@/lib/report-cards/report-notifications";
+import { buildReportCardNotificationData } from "@/lib/report-cards/report-notifications";
 import {
   getApprovalConfig,
   saveApprovalConfig,
@@ -164,7 +160,6 @@ import {
   Timer,
   Trash2,
   Check,
-  Send,
   ArrowLeft,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -2697,28 +2692,18 @@ function ReportCardSettingsCard() {
                     <ReportCardSmsPreview data={buildSampleNotification()} />
                   )}
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full gap-2"
-                    onClick={() => {
-                      const ch = localConfig.autoSend.channels;
-                      const sent = sendReportCardNotifications(
-                        buildSampleNotification(),
-                        { email: ch.email, sms: ch.sms, push: ch.message },
-                      );
-                      toast.success("Test report sent to you", {
-                        description:
-                          sent.length > 0
-                            ? `Delivered via ${sent.join(", ")}.`
-                            : "Enable a delivery channel to receive it.",
-                      });
-                    }}
-                  >
-                    <Send className="size-4" />
-                    Send test report to myself
-                  </Button>
+                  {/* "Send test report to myself" was REMOVED, not repaired.
+                      It called sendReportCardNotifications — which pushes onto
+                      an in-memory array — and then said "Test report sent to
+                      you. Delivered via email, SMS." No message was ever
+                      addressed, let alone transmitted.
+
+                      A test button whose only effect is to claim success is
+                      worse than no button: it is the control a facility would
+                      use to convince themselves delivery works. The previews
+                      above are the honest version of what it offered — they
+                      show exactly what would be sent. When a real transport
+                      exists, a test send can come back with it. */}
                 </div>
               </div>
 

@@ -5,10 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useAiSummary } from "@/hooks/use-ai-summary";
+import { buildReportCardNotificationData } from "@/lib/report-cards/report-notifications";
 import {
-  buildReportCardNotificationData,
-  sendReportCardNotifications,
-} from "@/lib/report-cards/report-notifications";
+  createReportCard,
+  sendReportCard,
+  uploadReportCardPhoto,
+} from "@/lib/api/report-cards";
 import { ReportCardNotificationPreviews } from "@/components/facility/report-cards/notifications/ReportCardNotificationPreviews";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -367,6 +369,8 @@ export function ReportCardsModule({
   );
   const [input, setInput] = useState<ReportCardInput>(emptyInput);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
   const rcAi = useAiSummary();
 
   const daycareOptions = useMemo(
@@ -566,8 +570,16 @@ export function ReportCardsModule({
 
   const handlePhotoUpload = (files: FileList | null) => {
     if (!files) return;
-    const previews = Array.from(files).map((file) => URL.createObjectURL(file));
-    setPhotoPreviews((prev) => [...prev, ...previews]);
+    const picked = Array.from(files);
+    // The FILES are kept, not just their preview URLs. `createObjectURL` gives
+    // a blob: address scoped to this document — fine to render here, and
+    // meaningless to anyone else — so the bytes are what actually has to be
+    // uploaded once the card exists.
+    setPhotoFiles((prev) => [...prev, ...picked]);
+    setPhotoPreviews((prev) => [
+      ...prev,
+      ...picked.map((file) => URL.createObjectURL(file)),
+    ]);
   };
 
   const canSubmit =
@@ -577,8 +589,8 @@ export function ReportCardsModule({
     (photoPreviews.length > 0 ||
       !getEnabledSections(serviceType).includes("photoShowcase"));
 
-  const handleSubmit = () => {
-    if (!selectedVisit) return;
+  const handleSubmit = async () => {
+    if (!selectedVisit || isSaving) return;
 
     const generated = buildGeneratedSections(input, selectedTheme);
     const now = new Date();
@@ -587,29 +599,96 @@ export function ReportCardsModule({
     const status =
       reportCardConfig.autoSend.mode === "immediate" ? "sent" : "scheduled";
 
-    const newEntry: ReportCardEntry = {
-      id: `rc-${now.getTime()}`,
-      petId: selectedVisit.petId,
-      petName: selectedVisit.petName,
-      ownerName: selectedVisit.ownerName,
-      facilityName,
-      serviceType,
-      visitDate: selectedVisit.visitDate,
-      theme: selectedTheme,
-      photos: photoPreviews,
-      input,
-      generated,
-      delivery:
-        status === "sent"
-          ? { status, sentAt: now.toISOString() }
-          : { status, scheduledFor },
-    };
+    setIsSaving(true);
+    try {
+      // The row first, then its photos — the storage policy matches the card
+      // segment of the path, so a card is a precondition of its pictures.
+      const card = await createReportCard({
+        petRef: selectedVisit.petId,
+        serviceType: serviceType === "hotel" ? "boarding" : serviceType,
+        visitDate: selectedVisit.visitDate,
+        theme: selectedTheme,
+        input: input as unknown as Record<string, unknown>,
+        generated,
+        deliveryStatus: status,
+        scheduledFor: status === "scheduled" ? scheduledFor : null,
+      });
 
-    setReportCards((prev) => [newEntry, ...prev]);
-    setIsModalOpen(false);
-    if (status === "sent") fireNotifications(newEntry);
+      // Uploaded one at a time so a single rejected file does not discard the
+      // rest. A photo that fails is reported and the card still stands: the
+      // write-up is the thing the owner is waiting for.
+      let failedPhotos = 0;
+      for (const [index, file] of photoFiles.entries()) {
+        try {
+          await uploadReportCardPhoto(card.id, file, { sortOrder: index });
+        } catch {
+          failedPhotos += 1;
+        }
+      }
+
+      const entry: ReportCardEntry = {
+        id: card.id,
+        petId: selectedVisit.petId,
+        petName: selectedVisit.petName,
+        ownerName: selectedVisit.ownerName,
+        facilityName,
+        serviceType,
+        visitDate: selectedVisit.visitDate,
+        theme: selectedTheme,
+        photos: photoPreviews,
+        input,
+        generated,
+        delivery:
+          status === "sent"
+            ? { status, sentAt: card.sentAt ?? now.toISOString() }
+            : { status, scheduledFor },
+      };
+
+      setReportCards((prev) => [entry, ...prev]);
+      setIsModalOpen(false);
+      setPhotoFiles([]);
+      setPhotoPreviews([]);
+
+      if (failedPhotos > 0) {
+        toast.warning(
+          `Report card saved, but ${failedPhotos} photo${
+            failedPhotos === 1 ? "" : "s"
+          } could not be uploaded.`,
+        );
+      } else if (status === "sent") {
+        announcePublished(entry.ownerName);
+      } else {
+        toast.success(`Report card saved for ${entry.petName}`, {
+          description: `Scheduled to publish at ${sendTime}.`,
+        });
+      }
+    } catch (err) {
+      // The card is NOT added to the list on failure. Previously this function
+      // could not fail, because it only wrote to component state.
+      toast.error("That report card could not be saved.", {
+        description:
+          err instanceof Error ? err.message : "Please try again in a moment.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
+  // ── WHAT THE FACILITY IS TOLD, AND WHY IT CHANGED ────────────────────────
+  //
+  // This used to call `sendReportCardNotifications`, which pushed onto an
+  // in-memory array in src/lib/report-cards/report-notifications.ts and
+  // returned the channel names it had been asked for. The screen then reported
+  // "Delivered via email, SMS". Nothing left the browser. `check:success-claims`
+  // did not object, because a function that returns a non-empty list of
+  // channels LOOKS like something that could perform the act.
+  //
+  // What is true is that the card becomes visible in the owner's portal, which
+  // is what the customer's list actually reads. So that is what is said. When
+  // an email or SMS transport is wired for report cards, this message changes
+  // because the outcome changes — not before.
+  // Feeds the channel PREVIEWS in the detail pane. A pure shape-builder: it
+  // renders what an email or SMS would look like, and sends nothing.
   const toNotificationData = (rc: ReportCardEntry) =>
     buildReportCardNotificationData({
       reportId: rc.id,
@@ -622,33 +701,38 @@ export function ReportCardsModule({
       summaryText: rc.generated.todaysVibe,
     });
 
-  const fireNotifications = (
-    rc: ReportCardEntry,
-    options?: { silent?: boolean },
-  ) => {
-    const ch = reportCardConfig.autoSend.channels;
-    const sent = sendReportCardNotifications(toNotificationData(rc), {
-      email: ch.email,
-      sms: ch.sms,
-      push: ch.message,
+  const announcePublished = (ownerName: string) => {
+    toast.success(`Report card published for ${ownerName}`, {
+      description: "It is now visible in their Yipyy portal.",
     });
-    if (!options?.silent && sent.length > 0) {
-      toast.success(`Report card sent to ${rc.ownerName}`, {
-        description: `Delivered via ${sent.join(", ")}.`,
-      });
-    }
-    return sent.length;
   };
 
-  const handleSendNow = (cardId: string) => {
-    const sentAt = new Date().toISOString();
+  const handleSendNow = async (cardId: string) => {
     const card = reportCards.find((rc) => rc.id === cardId);
-    setReportCards((prev) =>
-      prev.map((rc) =>
-        rc.id === cardId ? { ...rc, delivery: { status: "sent", sentAt } } : rc,
-      ),
-    );
-    if (card) fireNotifications(card);
+    try {
+      const sent = await sendReportCard(cardId);
+      setReportCards((prev) =>
+        prev.map((rc) =>
+          rc.id === cardId
+            ? {
+                ...rc,
+                delivery: {
+                  status: "sent",
+                  sentAt: sent.sentAt ?? new Date().toISOString(),
+                },
+              }
+            : rc,
+        ),
+      );
+      announcePublished(card?.ownerName ?? "the owner");
+    } catch (err) {
+      // The row is what decides. The list is not updated on failure, so the
+      // card does not read as sent when it is not.
+      toast.error("That report card could not be sent.", {
+        description:
+          err instanceof Error ? err.message : "Please try again in a moment.",
+      });
+    }
   };
 
   // Bulk send (Daily Care flow, Table 74): send every completed-but-unsent
@@ -656,7 +740,7 @@ export function ReportCardsModule({
   const isDailyCareService = (s: ServiceType) =>
     s === "daycare" || s === "hotel";
 
-  const handleBulkSendDailyCare = () => {
+  const handleBulkSendDailyCare = async () => {
     const targets = reportCards.filter(
       (rc) =>
         rc.visitDate === today &&
@@ -667,20 +751,44 @@ export function ReportCardsModule({
       toast.info("No completed boarding or daycare reports to send today.");
       return;
     }
-    const sentAt = new Date().toISOString();
-    const ids = new Set(targets.map((t) => t.id));
-    setReportCards((prev) =>
-      prev.map((rc) =>
-        ids.has(rc.id) ? { ...rc, delivery: { status: "sent", sentAt } } : rc,
+    // Each is a separate write, and the count reported is the number that
+    // actually succeeded. The previous version marked every target sent in
+    // component state and then claimed all of them, which could not be wrong
+    // because nothing was being asked.
+    const results = await Promise.allSettled(
+      targets.map((rc) => sendReportCard(rc.id)),
+    );
+
+    const sentIds = new Set(
+      results.flatMap((r, i) =>
+        r.status === "fulfilled" ? [targets[i].id] : [],
       ),
     );
-    targets.forEach((rc) => fireNotifications(rc, { silent: true }));
-    toast.success(
-      `Sent ${targets.length} report card${
-        targets.length === 1 ? "" : "s"
-      } to owners`,
-      { description: "All completed boarding & daycare reports for today." },
-    );
+    const failed = results.length - sentIds.size;
+
+    if (sentIds.size > 0) {
+      const sentAt = new Date().toISOString();
+      setReportCards((prev) =>
+        prev.map((rc) =>
+          sentIds.has(rc.id)
+            ? { ...rc, delivery: { status: "sent", sentAt } }
+            : rc,
+        ),
+      );
+      toast.success(
+        `Published ${sentIds.size} report card${
+          sentIds.size === 1 ? "" : "s"
+        } to owners`,
+        {
+          description:
+            failed > 0
+              ? `${failed} could not be sent.`
+              : "They are now visible in their Yipyy portals.",
+        },
+      );
+    } else {
+      toast.error("No report cards could be sent.");
+    }
   };
 
   const columns: ColumnDef<ReportCardEntry>[] = [
@@ -1928,8 +2036,13 @@ export function ReportCardsModule({
               </div>
 
               <div className="border-t pt-4">
+                {/* Headed as a PREVIEW, because that is what it is. It read
+                    "How {pet}'s owner is notified", which described a delivery
+                    this product does not perform — the card reaches the owner
+                    through their portal, and no email or SMS is sent for it. */}
                 <div className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
-                  How {viewingCard.petName}&apos;s owner is notified
+                  Message preview — not yet sent to {viewingCard.petName}&apos;s
+                  owner
                 </div>
                 <ReportCardNotificationPreviews
                   data={toNotificationData(viewingCard)}
