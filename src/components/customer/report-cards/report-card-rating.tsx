@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { ReportCard } from "@/types/pet";
-import { setReportCardCustomerRating } from "@/data/pet-data";
+import type { ReportCard } from "@/types/report-card";
+import { rateReportCard } from "@/lib/api/report-cards";
 import { reputationSettings } from "@/data/reputation";
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -40,26 +40,38 @@ export function ReportCardRating({
   petName: string;
   facilityName: string;
 }) {
-  const existing = reportCard.customerRating;
-  const [stars, setStars] = useState(existing?.stars ?? 0);
+  // Already rated is a fact of the ROW, not of this browser. `rate_report_card`
+  // refuses a second rating, so a card that arrives with a timestamp is closed.
+  const alreadyRated = reportCard.ratingSubmittedAt != null;
+  const [stars, setStars] = useState(reportCard.ratingStars ?? 0);
   const [hover, setHover] = useState(0);
-  const [comment, setComment] = useState(existing?.comment ?? "");
-  const [submitted, setSubmitted] = useState(Boolean(existing));
+  const [comment, setComment] = useState(reportCard.ratingComment ?? "");
+  const [submitted, setSubmitted] = useState(alreadyRated);
+  const [saving, setSaving] = useState(false);
 
   const shareTarget = topSharePlatform();
 
-  const handleSubmit = () => {
-    if (stars < 1) return;
-    // Save to the card (F1) + notify the facility.
-    setReportCardCustomerRating(reportCard.id, {
-      stars,
-      comment: comment.trim() || undefined,
-      submittedAt: new Date().toISOString(),
-    });
-    setSubmitted(true);
-    toast.success("Thanks for your rating!", {
-      description: `Sent to ${facilityName}.`,
-    });
+  const handleSubmit = async () => {
+    if (stars < 1 || saving) return;
+    setSaving(true);
+    try {
+      // The database records it, and only then is the owner told it was sent.
+      // This previously called a fixture helper that pushed into an in-memory
+      // module and toasted "Sent to {facility}" — the facility never received
+      // anything, and a refresh lost the rating.
+      await rateReportCard(reportCard.id, stars, comment.trim() || undefined);
+      setSubmitted(true);
+      toast.success("Thanks for your rating!", {
+        description: `Sent to ${facilityName}.`,
+      });
+    } catch (err) {
+      toast.error("That rating could not be saved.", {
+        description:
+          err instanceof Error ? err.message : "Please try again in a moment.",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const display = hover || stars;
@@ -101,8 +113,8 @@ export function ReportCardRating({
             rows={3}
             placeholder={`Tell ${facilityName} more about ${petName}'s visit (optional)…`}
           />
-          <Button size="sm" onClick={handleSubmit}>
-            Submit rating
+          <Button size="sm" onClick={handleSubmit} disabled={saving}>
+            {saving ? "Sending…" : "Submit rating"}
           </Button>
         </div>
       )}

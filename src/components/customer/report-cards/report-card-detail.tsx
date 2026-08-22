@@ -7,8 +7,6 @@ import {
   Calendar,
   Dog,
   Clock,
-  Utensils,
-  Droplets,
   ClipboardCheck,
   Stethoscope,
   Heart,
@@ -27,64 +25,12 @@ import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import {
   type ReportCardTimelineItem,
-  buildDailySummary,
-  buildSummaryExcerpt,
+  summaryExcerpt,
   themeStyles,
   formatReportDate,
   formatReportTime,
 } from "./report-card-shared";
 import { ReportCardShare } from "./report-card-share";
-
-/** Time-of-day bucket for a meal, derived from its "H:MM AM/PM" (or 24h) time. */
-function mealPeriodLabel(time: string): string {
-  const m = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-  let hour = 0;
-  if (m) {
-    hour = parseInt(m[1], 10);
-    const ap = m[3]?.toUpperCase();
-    if (ap === "PM" && hour !== 12) hour += 12;
-    if (ap === "AM" && hour === 12) hour = 0;
-  }
-  if (hour < 12) return "Morning Meal";
-  if (hour < 17) return "Midday Meal";
-  return "Evening Meal";
-}
-
-/** Potty-outcome chip label + colour — abnormal outcomes read as amber/red. */
-function pottyChip(outcome: string): { label: string; className: string } {
-  switch (outcome) {
-    case "soft_stool":
-      return {
-        label: "Soft stool",
-        className:
-          "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300",
-      };
-    case "diarrhea":
-      return {
-        label: "Diarrhea",
-        className:
-          "border-red-300 bg-red-100 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300",
-      };
-    case "vomit":
-      return {
-        label: "Vomit",
-        className:
-          "border-red-300 bg-red-100 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300",
-      };
-    case "accident":
-      return {
-        label: "Accident",
-        className:
-          "border-red-300 bg-red-100 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300",
-      };
-    default:
-      return {
-        label: "Success",
-        className:
-          "border-teal-300 bg-teal-100 text-teal-800 dark:border-teal-900 dark:bg-teal-950/40 dark:text-teal-300",
-      };
-  }
-}
 
 /** Full, expanded report-card content — shown in the detail slide-over. */
 export function ReportCardDetail({
@@ -102,6 +48,20 @@ export function ReportCardDetail({
   const ts = themeStyles[item.theme || "everyday"] ?? themeStyles.everyday;
   const { DecorativeIcon } = ts;
 
+  // Only photos that signed. The bucket is private, so an unsigned path would
+  // render as a broken image — worse for the owner than no picture at all.
+  const usable = item.photos.filter((p) => p.url);
+  const galleryUrls = usable
+    .filter((p) => p.kind === "moment")
+    .map((p) => p.url as string);
+
+  const befores = usable.filter((p) => p.kind === "before");
+  const afters = usable.filter((p) => p.kind === "after");
+  const beforeAfterPairs = befores.flatMap((before, idx) => {
+    const after = afters[idx];
+    return after ? [{ before, after }] : [];
+  });
+
   const { selectedFacility } = useCustomerFacility();
   const { openBookingModal } = useBookingModal();
 
@@ -113,7 +73,7 @@ export function ReportCardDetail({
       facilityId: selectedFacility.id,
       facilityName: selectedFacility.name,
       preSelectedClientId: customer.id,
-      preSelectedPetId: item.reportCard.petId,
+      preSelectedPetId: item.card.petRef,
       preSelectedService: item.serviceType,
       lockService: true,
       isCustomerMode: true,
@@ -195,40 +155,55 @@ export function ReportCardDetail({
 
       {/* Card body */}
       <div className="relative space-y-4 p-4">
-        {/* AI daily summary */}
-        <div className="rounded-lg bg-slate-50 px-4 py-3">
-          <p className="text-sm/relaxed text-slate-600">
-            {buildDailySummary(item)}
-          </p>
-          <p className="mt-1.5 text-[11px] text-gray-400 italic">
-            AI-generated summary
-          </p>
-        </div>
-
-        {/* Grooming before/after (Table 47) */}
-        {item.serviceType === "grooming" &&
-          item.reportCard.photoPairs &&
-          item.reportCard.photoPairs.length > 0 && (
-            <div className="space-y-2">
-              <p className="flex items-center gap-2 text-sm font-medium">
-                <Scissors className="size-4" /> Before &amp; After
-              </p>
-              <div className="space-y-3">
-                {item.reportCard.photoPairs.map((pair, idx) => (
-                  <BeforeAfterSlider
-                    key={`${item.id}-pair-${idx}`}
-                    before={pair.before}
-                    after={pair.after}
-                    alt={`${item.petName} grooming`}
-                  />
-                ))}
+        {/* What the facility wrote. Previously this was one paragraph
+            assembled in the browser from a mood key and a meal count, over the
+            caption "AI-generated summary" — neither the facility's words nor,
+            in fact, the AI's. These are the sections the facility composed. */}
+        {item.sections.length > 0 && (
+          <div className="space-y-3">
+            {item.sections.map((section) => (
+              <div
+                key={`${item.id}-${section.id}`}
+                className="rounded-lg bg-slate-50 px-4 py-3"
+              >
+                <p className="text-[11px] font-semibold tracking-widest text-slate-500 uppercase">
+                  {section.label}
+                </p>
+                <p className="mt-1 text-sm/relaxed whitespace-pre-line text-slate-700">
+                  {section.body}
+                </p>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
+        )}
 
-        {item.photos.length > 0 && (
+        {/* Grooming before/after.
+            Paired from the photos' own `kind` rather than a `photoPairs`
+            array: the pairing is a property of the pictures, and one list
+            with a kind on each row cannot disagree with itself the way a
+            second parallel array can. Zipped in order, so a before with no
+            after simply does not render a slider. */}
+        {item.serviceType === "grooming" && beforeAfterPairs.length > 0 && (
+          <div className="space-y-2">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <Scissors className="size-4" /> Before &amp; After
+            </p>
+            <div className="space-y-3">
+              {beforeAfterPairs.map((pair) => (
+                <BeforeAfterSlider
+                  key={`${item.id}-pair-${pair.before.id}`}
+                  before={pair.before.url as string}
+                  after={pair.after.url as string}
+                  alt={`${item.petName} grooming`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {galleryUrls.length > 0 && (
           <ReportCardPhotoGallery
-            photos={item.photos}
+            photos={galleryUrls}
             petName={item.petName}
             reportCardId={item.id}
             serviceType={item.serviceType}
@@ -236,73 +211,18 @@ export function ReportCardDetail({
           />
         )}
 
-        {item.meals && item.meals.length > 0 && (
-          <div className="space-y-2">
-            <p className="flex items-center gap-2 text-sm font-medium">
-              <Utensils className="size-4" /> Meals
-            </p>
-            <div className="text-muted-foreground space-y-1 text-xs md:text-sm">
-              {item.meals.map((meal, idx) => {
-                const label = mealPeriodLabel(meal.time);
-                const prevLabel =
-                  idx > 0 ? mealPeriodLabel(item.meals[idx - 1].time) : null;
-                const showDivider = label !== prevLabel;
-                return (
-                  <div key={`${item.id}-meal-${idx}`}>
-                    {showDivider && (
-                      <p className="text-muted-foreground/60 mt-2 mb-1 text-[10px] font-semibold tracking-widest uppercase first:mt-0">
-                        {label}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-medium">{meal.time}</span>
-                      <span className="min-w-35 flex-1">{meal.food}</span>
-                      <span>{meal.amount}</span>
-                      <span className="rounded-full bg-white px-2 py-0.5 text-[0.7rem] capitalize">
-                        Ate {meal.consumed}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* The per-meal table, the potty-break chips and the highlights list
+            were removed rather than reshaped. They rendered `meals`,
+            `pottyBreaks` and `activities` — arrays no part of this product has
+            ever written, so these blocks have never appeared for anybody.
+            What the facility records about food, toileting and medication is
+            the `careMetrics` section above, in its own words.
 
-        {item.pottyBreaks && item.pottyBreaks.length > 0 && (
-          <div className="space-y-2">
-            <p className="flex items-center gap-2 text-sm font-medium">
-              <Droplets className="size-4" /> Potty breaks
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {item.pottyBreaks.map((pb, idx) => {
-                const chip = pottyChip(pb.outcome ?? pb.type);
-                return (
-                  <Badge
-                    key={`${item.id}-potty-${idx}`}
-                    variant="outline"
-                    className={cn("text-xs", chip.className)}
-                  >
-                    {pb.time} • {chip.label}
-                  </Badge>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {item.activities.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Highlights from the day</p>
-            <div className="flex flex-wrap gap-2">
-              {item.activities.map((activity, idx) => (
-                <Badge key={`${item.id}-activity-${idx}`} variant="secondary">
-                  {activity}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
+            The structured version of this belongs to `care_log_entries` and
+            `daycare_attendance`, which are real tables that already hold the
+            day's feedings and potty breaks. When the owner's portal shows
+            those, it should read them from there rather than have the report
+            card form collect the same day twice. */}
 
         {item.overallFeedback && (
           <div className="space-y-2">
@@ -348,7 +268,7 @@ export function ReportCardDetail({
 
         {/* Star rating (F1) */}
         <ReportCardRating
-          reportCard={item.reportCard}
+          reportCard={item.card}
           petName={item.petName}
           facilityName={item.facilityName}
         />
@@ -388,8 +308,8 @@ export function ReportCardDetail({
           petName={item.petName}
           serviceType={item.serviceType}
           facilityName={item.facilityName}
-          photos={item.photos}
-          summary={buildSummaryExcerpt(item)}
+          photos={galleryUrls}
+          summary={summaryExcerpt(item)}
         />
       </div>
     </div>

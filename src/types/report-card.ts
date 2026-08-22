@@ -70,6 +70,14 @@ export const reportCardPhotoSchema = z.object({
   sortOrder: z.number(),
   /** Path in the private `report-card-photos` bucket, not a URL. */
   storagePath: z.string(),
+  /**
+   * A short-lived signed URL for that path, minted by the route.
+   *
+   * The bucket is private, so the path alone renders nothing — an owner
+   * given `<img src={storagePath}>` sees a broken image. Null when signing
+   * failed, which the UI must treat as "no photo" rather than a broken one.
+   */
+  url: z.string().nullable(),
   contentType: z.string(),
   sizeBytes: z.number(),
 });
@@ -111,6 +119,12 @@ export const reportCardSchema = z.object({
   // Joined for display. Not columns — a card does not own the pet's name.
   petName: z.string().optional(),
   ownerName: z.string().optional(),
+  /**
+   * The app's numeric refs, joined for the screens that still act in them —
+   * rebooking from a card takes the pet's ref, not its uuid.
+   */
+  petRef: z.number().optional(),
+  clientRef: z.number().optional(),
 });
 export type ReportCard = z.infer<typeof reportCardSchema>;
 

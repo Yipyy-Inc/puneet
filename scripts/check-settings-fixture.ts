@@ -124,7 +124,6 @@ const BASELINE = new Set<string>([
   "src/components/estimates/EstimatePdfDownload.tsx",
   "src/components/evaluations/EvaluationResultCard.tsx",
   "src/components/evaluations/StaffEvaluationFormModal.tsx",
-  "src/components/facility/ReportCardsModule.tsx",
   "src/components/facility/staff-hr/onboarding-invite-email.tsx",
   "src/components/marketing/ReputationMessageBuilder.tsx",
 ]);

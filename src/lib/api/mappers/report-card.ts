@@ -24,8 +24,8 @@ export const REPORT_CARD_SELECT = `
   viewed_at, favourite, reply_message, replied_at,
   rating_stars, rating_comment, rating_submitted_at,
   created_by, created_at, updated_at,
-  pets ( name ),
-  clients ( name ),
+  pets ( ref, name ),
+  clients ( ref, name ),
   report_card_photos ( id, kind, caption, sort_order, storage_path, content_type, size_bytes )
 `;
 
@@ -66,8 +66,11 @@ export interface ReportCardRow {
   // PostgREST returns a to-one relation as an OBJECT, not a one-element array.
   // Reading it as an array is what emptied the kennel board on 2026-08-20, so
   // both shapes are accepted here rather than assumed.
-  pets?: { name: string } | { name: string }[] | null;
-  clients?: { name: string } | { name: string }[] | null;
+  pets?: { ref: number; name: string } | { ref: number; name: string }[] | null;
+  clients?:
+    | { ref: number; name: string }
+    | { ref: number; name: string }[]
+    | null;
   report_card_photos?: PhotoRow[] | null;
 }
 
@@ -91,7 +94,17 @@ function toGenerated(raw: unknown): ReportCardGenerated {
     : { todaysVibe: "", friendsAndFun: "", careMetrics: "", closingNote: "" };
 }
 
-export function rowToReportCard(row: ReportCardRow): ReportCard {
+/** Every storage path a batch of rows refers to, for one signing round trip. */
+export function photoPathsIn(rows: ReportCardRow[]): string[] {
+  return rows.flatMap((r) =>
+    (r.report_card_photos ?? []).map((p) => p.storage_path),
+  );
+}
+
+export function rowToReportCard(
+  row: ReportCardRow,
+  signedUrls?: Map<string, string>,
+): ReportCard {
   const pet = one(row.pets);
   const client = one(row.clients);
   const ownerName = client?.name?.trim() ?? "";
@@ -133,12 +146,20 @@ export function rowToReportCard(row: ReportCardRow): ReportCard {
         caption: p.caption,
         sortOrder: p.sort_order,
         storagePath: p.storage_path,
+        // Filled in by the route, which is the only place with a client that
+        // can sign. Null here rather than absent so the shape is the same
+        // whether signing ran or not.
+        url: signedUrls?.get(p.storage_path) ?? null,
         contentType: p.content_type,
         sizeBytes: p.size_bytes,
       }))
       .sort((a, b) => a.sortOrder - b.sortOrder),
 
     petName: pet?.name ?? undefined,
+    // The app's numeric refs, which is what every screen-level action still
+    // takes — rebooking from a card needs the pet's ref, not its uuid.
+    petRef: pet?.ref,
+    clientRef: client?.ref,
     ownerName: ownerName || undefined,
   };
 }

@@ -4,10 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useSearchParams } from "next/navigation";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { clients } from "@/data/clients";
-import { reportCards, markReportCardViewed } from "@/data/pet-data";
-import { bookings } from "@/data/bookings";
-import { facilities } from "@/data/facilities";
+import { useQuery } from "@tanstack/react-query";
+import {
+  reportCardQueries,
+  markReportCardViewed,
+  setReportCardFavourite,
+} from "@/lib/api/report-cards";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,7 +32,11 @@ import {
 } from "lucide-react";
 import { ReportCardSummary } from "@/components/customer/report-cards/report-card-summary";
 import { ReportCardDetail } from "@/components/customer/report-cards/report-card-detail";
-import type { ReportCardTimelineItem } from "@/components/customer/report-cards/report-card-shared";
+import {
+  buildTimelineItem,
+  type ReportCardTimelineItem,
+} from "@/components/customer/report-cards/report-card-shared";
+import { toast } from "sonner";
 
 // Service-type filter chips — value matches ReportCard.serviceType.
 const SERVICE_FILTERS = [
@@ -41,7 +47,10 @@ const SERVICE_FILTERS = [
   { value: "training", label: "Training" },
 ] as const;
 
-type Client = (typeof clients)[number];
+/** The signed-in customer's own pet shape, from the live record. */
+type CustomerPet = NonNullable<
+  ReturnType<typeof useCurrentCustomer>["client"]
+>["pets"][number];
 
 export default function CustomerReportCardsPage() {
   const { client: customer } = useCurrentCustomer();
@@ -56,27 +65,39 @@ export default function CustomerReportCardsPage() {
   const [sortBy, setSortBy] = useState<"date-desc" | "date-asc">("date-desc");
   const [openId, setOpenId] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
-  const [favIds, setFavIds] = useState<Set<string>>(
-    () => new Set(reportCards.filter((c) => c.favourite).map((c) => c.id)),
-  );
 
-  const customerPetIds = useMemo(
-    () => customer?.pets.map((p) => p.id) ?? [],
-    [customer],
-  );
+  // ── The cards, from Postgres ────────────────────────────────────────────
+  //
+  // `mine()` asks for SENT cards only. No filtering by pet ownership happens
+  // here and none should: RLS admits a client to their own cards and to
+  // nobody else's, so the previous `customerPetIds.includes(...)` pass was
+  // doing in the browser what the database already guarantees — and doing it
+  // against a fixture that contained other people's dogs.
+  const {
+    data: cards = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery(reportCardQueries.mine());
 
-  const customerReportCards = useMemo(() => {
-    if (!customer) return [] as typeof reportCards;
-    // Show all report cards for this customer's pets, regardless of facility.
-    return reportCards.filter((card) => customerPetIds.includes(card.petId));
-  }, [customer, customerPetIds]);
+  // Favourites live on the row. Seeded from the server and updated optimistically
+  // so the heart responds immediately; the write is what makes it true.
+  const favIds = useMemo(
+    () => new Set(cards.filter((c) => c.favourite).map((c) => c.id)),
+    [cards],
+  );
+  const [pendingFav, setPendingFav] = useState<Map<string, boolean>>(new Map());
+  const isFavourite = (id: string) => pendingFav.get(id) ?? favIds.has(id);
+
+  const customerReportCards = cards;
 
   const facilityName = selectedFacility
     ? selectedFacility.name
     : (customer?.facility ?? "Your Facility");
 
   const petById = useMemo(() => {
-    const map = new Map<number, Client["pets"][number]>();
+    const map = new Map<number, CustomerPet>();
     customer?.pets.forEach((pet) => map.set(pet.id, pet));
     return map;
   }, [customer]);
@@ -87,7 +108,7 @@ export default function CustomerReportCardsPage() {
 
     if (selectedPetId !== "all") {
       filtered = filtered.filter(
-        (card) => card.petId === parseInt(selectedPetId),
+        (card) => card.petRef === parseInt(selectedPetId),
       );
     }
 
@@ -99,74 +120,57 @@ export default function CustomerReportCardsPage() {
 
     // Favourites only — reflects the live (heart-toggled) favourite state.
     if (favOnly) {
-      filtered = filtered.filter((card) => favIds.has(card.id));
+      filtered = filtered.filter((card) => isFavourite(card.id));
     }
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
+      // Searches what the facility WROTE. The old version searched
+      // `staffNotes` and an `activities` array that no card has ever carried,
+      // so the only field that could ever match was the service type.
       filtered = filtered.filter((card) => {
-        const pet = petById.get(card.petId);
-        const petName = pet?.name?.toLowerCase() || "";
-        const staffNotes = card.staffNotes?.toLowerCase() || "";
-        const activities = card.activities.join(" ").toLowerCase();
-        const serviceType = card.serviceType.toLowerCase();
-
-        return (
-          petName.includes(query) ||
-          staffNotes.includes(query) ||
-          activities.includes(query) ||
-          serviceType.includes(query)
-        );
+        const haystack = [
+          card.petName ?? "",
+          card.serviceType,
+          Object.values(card.generated).filter(Boolean).join(" "),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query);
       });
     }
 
     filtered.sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
+      const dateA = new Date(a.visitDate).getTime();
+      const dateB = new Date(b.visitDate).getTime();
       return sortBy === "date-desc" ? dateB - dateA : dateA - dateB;
     });
 
     return filtered;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     customerReportCards,
     selectedPetId,
     selectedService,
     favOnly,
     favIds,
+    pendingFav,
     searchQuery,
     sortBy,
-    petById,
   ]);
 
-  const timelineItems = useMemo<ReportCardTimelineItem[]>(() => {
-    return filteredAndSortedCards.map((card) => {
-      const pet = petById.get(card.petId);
-      const booking = bookings.find((b) => b.id === card.bookingId);
-      const facility = booking
-        ? facilities.find((f) => f.id === booking.facilityId)
-        : null;
-
-      return {
-        id: card.id,
-        date: card.date,
-        petName: pet?.name ?? "Your pet",
-        petImage: pet?.imageUrl,
-        serviceType: card.serviceType,
-        mood: card.mood,
-        photos: card.photos,
-        meals: card.meals,
-        pottyBreaks: card.pottyBreaks,
-        staffNotes: card.staffNotes,
-        activities: card.activities,
-        facilityName: facility?.name ?? facilityName,
-        timeLabel: card.sentAt ?? card.date,
-        theme: card.theme,
-        overallFeedback: card.overallFeedback,
-        petConditions: card.petConditions,
-        reportCard: card,
-      };
-    });
-  }, [filteredAndSortedCards, petById, facilityName]);
+  const timelineItems = useMemo<ReportCardTimelineItem[]>(
+    () =>
+      filteredAndSortedCards.map((card) =>
+        buildTimelineItem(card, {
+          facilityName,
+          petImage: card.petRef
+            ? petById.get(card.petRef)?.imageUrl
+            : undefined,
+        }),
+      ),
+    [filteredAndSortedCards, petById, facilityName],
+  );
 
   const openItem = useMemo(
     () => timelineItems.find((i) => i.id === openId) ?? null,
@@ -176,7 +180,9 @@ export default function CustomerReportCardsPage() {
   const openDetail = (id: string) => {
     setOpenId(id);
     // Persist "viewed" (F1) so dashboard/sidebar notifications auto-dismiss.
-    markReportCardViewed(id);
+    // Fire and forget: "the owner opened it" is worth recording but not worth
+    // interrupting them over, and the function coalesces so a repeat is a no-op.
+    void markReportCardViewed(id).catch(() => {});
     setReadIds((prev) => {
       const next = new Set(prev);
       next.add(id);
@@ -192,21 +198,30 @@ export default function CustomerReportCardsPage() {
     if (!customerReportCards.some((c) => c.id === deepLinkId)) return;
     appliedDeepLink.current = true;
     setOpenId(deepLinkId);
-    markReportCardViewed(deepLinkId);
+    void markReportCardViewed(deepLinkId).catch(() => {});
     setReadIds((prev) => new Set(prev).add(deepLinkId));
   }, [deepLinkId, customerReportCards]);
 
-  const toggleFavourite = (id: string) => {
-    const nowFavourite = !favIds.has(id);
-    // Persist to the report card (F1) so it survives navigation, mock-store style.
-    const card = reportCards.find((c) => c.id === id);
-    if (card) card.favourite = nowFavourite;
-    setFavIds((prev) => {
-      const next = new Set(prev);
-      if (nowFavourite) next.add(id);
-      else next.delete(id);
-      return next;
-    });
+  const toggleFavourite = async (id: string) => {
+    const nowFavourite = !isFavourite(id);
+
+    // Optimistic, then reconciled. Previously this MUTATED the fixture row in
+    // place — `card.favourite = nowFavourite` on an imported module — which
+    // survived navigation only because the module did, and was gone on reload.
+    setPendingFav((prev) => new Map(prev).set(id, nowFavourite));
+    try {
+      await setReportCardFavourite(id, nowFavourite);
+      await refetch();
+    } catch {
+      // Put it back. A heart that stays filled after the write was refused is
+      // the same lie in miniature as a delivery that never happened.
+      setPendingFav((prev) => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
+      toast.error("That could not be saved.");
+    }
   };
 
   const hasActiveFilters =
@@ -354,7 +369,43 @@ export default function CustomerReportCardsPage() {
           )}
         </div>
 
-        {timelineItems.length === 0 ? (
+        {/* Loading and failure are DISTINCT from empty, and all three are
+            distinct from "here are somebody else's cards". This page no longer
+            falls back to a fixture, so a failed load says so. */}
+        {isLoading ? (
+          <Card>
+            <CardContent className="space-y-3 py-12 text-center">
+              <div
+                data-slot="skeleton"
+                className="bg-muted mx-auto h-12 w-12 animate-pulse rounded-full"
+              />
+              <p className="text-muted-foreground text-sm">
+                Loading your report cards…
+              </p>
+            </CardContent>
+          </Card>
+        ) : isError ? (
+          <Card>
+            <CardContent className="space-y-3 py-12 text-center">
+              <FileText className="mx-auto size-12 text-red-500 opacity-70" />
+              <p className="font-semibold">
+                Your report cards could not be loaded
+              </p>
+              <p className="text-muted-foreground text-sm">
+                {error instanceof Error
+                  ? error.message
+                  : "Something went wrong."}
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => void refetch()}
+              >
+                Try again
+              </Button>
+            </CardContent>
+          </Card>
+        ) : timelineItems.length === 0 ? (
           <Card>
             <CardContent className="space-y-3 py-12 text-center">
               <FileText className="text-muted-foreground mx-auto size-12 opacity-50" />
@@ -385,11 +436,11 @@ export default function CustomerReportCardsPage() {
               <ReportCardSummary
                 key={item.id}
                 item={item}
-                favourite={favIds.has(item.id)}
-                unread={
-                  item.reportCard.viewedByCustomer === false &&
-                  !readIds.has(item.id)
-                }
+                favourite={isFavourite(item.id)}
+                // Unread is "the row has never been viewed", which the database
+                // now answers directly. `viewedByCustomer === false` could only
+                // ever be true of a fixture that set the flag explicitly.
+                unread={item.card.viewedAt == null && !readIds.has(item.id)}
                 onToggleFavourite={() => toggleFavourite(item.id)}
                 onOpen={() => openDetail(item.id)}
               />

@@ -8,9 +8,11 @@ import {
 } from "@/lib/api/facility-context";
 import {
   REPORT_CARD_SELECT,
+  photoPathsIn,
   rowToReportCard,
   type ReportCardRow,
 } from "@/lib/api/mappers/report-card";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { newReportCardSchema } from "@/types/report-card";
 import type { Json } from "@/types/database";
 
@@ -26,6 +28,41 @@ import type { Json } from "@/types/database";
 // ============================================================================
 
 export const dynamic = "force-dynamic";
+
+/** An hour: long enough to read a card, short enough that a leaked link dies. */
+const PHOTO_URL_TTL_SECONDS = 3600;
+
+/**
+ * Sign every photo path in one round trip.
+ *
+ * The bucket is private, so a path is not something a browser can render.
+ * Signing is done HERE rather than in the mapper because only the route has a
+ * Supabase client, and per-photo signing would be one network call per picture
+ * on a page that shows many.
+ *
+ * A failure to sign yields no entry, so the photo arrives with `url: null` and
+ * the card still renders — a missing picture must not take the day's write-up
+ * down with it.
+ */
+async function signPhotoUrls(
+  supabase: SupabaseClient,
+  paths: string[],
+): Promise<Map<string, string>> {
+  const urls = new Map<string, string>();
+  if (paths.length === 0) return urls;
+
+  const unique = [...new Set(paths)];
+  const { data, error } = await supabase.storage
+    .from("report-card-photos")
+    .createSignedUrls(unique, PHOTO_URL_TTL_SECONDS);
+
+  if (error || !data) return urls;
+
+  for (const entry of data) {
+    if (entry.signedUrl && entry.path) urls.set(entry.path, entry.signedUrl);
+  }
+  return urls;
+}
 
 export async function GET(request: NextRequest) {
   // 401 rather than an empty list — an unauthenticated caller getting `[]` is
@@ -61,9 +98,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(
-    ((data ?? []) as unknown as ReportCardRow[]).map(rowToReportCard),
-  );
+  const rows = (data ?? []) as unknown as ReportCardRow[];
+  const signed = await signPhotoUrls(supabase, photoPathsIn(rows));
+
+  return NextResponse.json(rows.map((row) => rowToReportCard(row, signed)));
 }
 
 export async function POST(request: NextRequest) {
