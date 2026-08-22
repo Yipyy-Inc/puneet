@@ -74,3 +74,41 @@ export async function createReportCard(
 ): Promise<ReportCard> {
   return liveWrite<ReportCard>("/api/report-cards", "POST", input);
 }
+
+// ── The owner's four writes ─────────────────────────────────────────────────
+//
+// Each goes through the SECURITY DEFINER function of the same name. They throw
+// on refusal rather than resolving quietly, so a caller cannot report success
+// for something the database declined — which is what the fixture versions of
+// these did.
+
+type OwnerAction =
+  | { action: "viewed" }
+  | { action: "favourite"; favourite: boolean }
+  | { action: "reply"; message: string }
+  | { action: "rate"; stars: number; comment?: string };
+
+async function ownerAction(cardId: string, body: OwnerAction): Promise<void> {
+  await liveWrite<{ ok: true }>(
+    `/api/report-cards/${cardId}`,
+    "PATCH",
+    body as unknown,
+  );
+}
+
+/** First view only — the function coalesces, so calling twice is harmless. */
+export const markReportCardViewed = (cardId: string) =>
+  ownerAction(cardId, { action: "viewed" });
+
+export const setReportCardFavourite = (cardId: string, favourite: boolean) =>
+  ownerAction(cardId, { action: "favourite", favourite });
+
+export const replyToReportCard = (cardId: string, message: string) =>
+  ownerAction(cardId, { action: "reply", message });
+
+/** Rated once. A second attempt is refused by the database, not by the screen. */
+export const rateReportCard = (
+  cardId: string,
+  stars: number,
+  comment?: string,
+) => ownerAction(cardId, { action: "rate", stars, comment });

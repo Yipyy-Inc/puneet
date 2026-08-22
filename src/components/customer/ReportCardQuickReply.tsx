@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Heart, MessageCircle, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { replyToReportCard } from "@/lib/api/report-cards";
 
 interface ReportCardQuickReplyProps {
   reportCardId: string;
@@ -40,7 +41,7 @@ const QUICK_REPLIES = [
 ];
 
 export function ReportCardQuickReply({
-  reportCardId: _reportCardId,
+  reportCardId,
   petName,
   serviceType,
   date,
@@ -59,8 +60,11 @@ export function ReportCardQuickReply({
     setSelectedQuickReply(replyId);
 
     try {
-      // TODO: API call to send reply
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Recorded on the card, through `reply_to_report_card`. This was
+      // `await new Promise(r => setTimeout(r, 500))` — a delay impersonating a
+      // network call — followed by "Reply sent!". Nothing was sent, and the
+      // card id was named `_reportCardId` to mark it deliberately unused.
+      await replyToReportCard(reportCardId, message);
 
       toast.success("Reply sent!");
       onReplySent?.(message);

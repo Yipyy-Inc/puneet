@@ -5,38 +5,57 @@ import { Heart, ImageIcon, ArrowRight, Dog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type ReportCardTimelineItem,
-  buildSummaryExcerpt,
+  summaryExcerpt,
   formatReportDate,
   serviceHeaderColor,
   moodEmoji,
 } from "./report-card-shared";
 
-/** Compact quick-stat chips derived from the report card (max 4). */
+// The values the facility's form actually records. Previously these chips were
+// counted off `meals` and `pottyBreaks` arrays that nothing has ever written,
+// so every card showed none of them.
+const APPETITE_CHIP: Record<string, string> = {
+  "ate-all": "Ate everything 🍽",
+  "ate-most": "Ate most 🍽",
+  "ate-some": "Ate a little 🍽",
+  refused: "Didn't eat 🍽",
+};
+
+const POTTY_CHIP: Record<string, string> = {
+  normal: "Potty normal ✓",
+  irregular: "Potty irregular",
+  accident: "Had an accident",
+};
+
+// `not-needed` is deliberately absent: "no medication was due" is not news to
+// the owner, and a chip for it would crowd out one that is.
+const MEDS_CHIP: Record<string, string> = {
+  given: "Meds given 💊",
+  missed: "Meds missed",
+};
+
+const ENERGY_CHIP: Record<string, string> = {
+  high: "High energy ⚡",
+  medium: "Steady energy",
+  low: "Restful day 😴",
+};
+
+/** Compact quick-stat chips, from what the facility actually recorded (max 4). */
 function buildQuickStats(item: ReportCardTimelineItem): string[] {
-  const chips: string[] = [];
+  const input = item.card.input as Record<string, unknown>;
+  const pick = (map: Record<string, string>, key: unknown) =>
+    typeof key === "string" ? map[key] : undefined;
 
-  if (item.meals && item.meals.length > 0) {
-    const allAte = item.meals.every((m) => m.consumed === "all");
-    const anyAte = item.meals.some(
-      (m) => m.consumed === "all" || m.consumed === "most",
-    );
-    if (allAte) chips.push("Ate all 🍽");
-    else if (anyAte) chips.push("Ate most 🍽");
-    else chips.push("Light appetite 🍽");
-  }
-
-  if (item.pottyBreaks && item.pottyBreaks.length > 0) {
-    const n = item.pottyBreaks.length;
-    chips.push(`${n} potty break${n === 1 ? "" : "s"} ✓`);
-  }
-
-  if (item.overallFeedback) {
-    chips.push(`${item.overallFeedback} ⭐`);
-  }
-
-  if (chips.length < 4 && item.activities.length > 0) {
-    chips.push(`${item.activities.length} highlights ✨`);
-  }
+  const chips = [
+    pick(APPETITE_CHIP, input.appetite),
+    pick(POTTY_CHIP, input.potty),
+    pick(MEDS_CHIP, input.meds),
+    item.overallFeedback ? `${item.overallFeedback} ⭐` : undefined,
+    pick(ENERGY_CHIP, input.energy),
+    item.photos.length > 0
+      ? `${item.photos.length} photo${item.photos.length === 1 ? "" : "s"} 📷`
+      : undefined,
+  ].filter((c): c is string => Boolean(c));
 
   return chips.slice(0, 4);
 }
@@ -56,8 +75,10 @@ export function ReportCardSummary({
 }) {
   const headerBg = serviceHeaderColor[item.serviceType] ?? "bg-slate-600";
   const emoji = moodEmoji[item.mood] ?? "🐾";
-  const excerpt = buildSummaryExcerpt(item);
-  const photos = item.photos.slice(0, 3);
+  const excerpt = summaryExcerpt(item);
+  // Only photos that actually signed. A private-bucket path that failed to
+  // sign would render as a broken image, which reads worse than no photo.
+  const photos = item.photos.filter((p) => p.url).slice(0, 3);
   const stats = buildQuickStats(item);
 
   return (
@@ -124,14 +145,14 @@ export function ReportCardSummary({
         {/* 3-photo strip */}
         <div className="grid grid-cols-3 gap-2">
           {photos.length > 0
-            ? photos.map((src, idx) => (
+            ? photos.map((photo, idx) => (
                 <div
-                  key={`${item.id}-photo-${idx}`}
+                  key={photo.id}
                   className="bg-muted relative aspect-square overflow-hidden rounded-lg"
                 >
                   <Image
-                    src={src}
-                    alt={`${item.petName} photo ${idx + 1}`}
+                    src={photo.url as string}
+                    alt={photo.caption ?? `${item.petName} photo ${idx + 1}`}
                     fill
                     sizes="(max-width: 768px) 30vw, 160px"
                     className="object-cover"

@@ -1,8 +1,46 @@
 import type { ComponentType } from "react";
 import { Star, Bell, Ghost, Egg, PartyPopper, Heart } from "lucide-react";
-import type { ReportCard } from "@/types/pet";
+import { reportCardSectionMeta } from "@/data/settings";
+import type { ReportCard, ReportCardPhoto } from "@/types/report-card";
 
-/** One entry in the customer report-cards feed (a report card + resolved pet/facility). */
+// ============================================================================
+// The owner's view of a report card.
+//
+// WHAT CHANGED, AND WHY IT HAD TO
+//
+// This file used to describe a card as `meals`, `pottyBreaks` and
+// `activities` — arrays that NOTHING in the product has ever produced. The
+// facility's form collects mood, energy, appetite and a closing comment, and
+// turns them into prose sections using the facility's own templates. So the
+// owner's page was shaped for data that was never going to arrive, and the
+// prose the facility actually writes had nowhere to go.
+//
+// `buildDailySummary` went with them. It ASSEMBLED a summary in the browser
+// —  "Buddy was in wonderful spirits today!" — from a mood key and a meal
+// count, and showed it to the owner as though the facility had written it.
+// The facility does write one; it is in `generated`, and that is what an owner
+// should be reading. Fabricating a cheerful sentence from an enum is the same
+// class of thing as the in-memory outbox that reported deliveries that never
+// happened.
+// ============================================================================
+
+/** One prose section of a card, ready to render. */
+export type ReportCardSection = {
+  id: string;
+  label: string;
+  body: string;
+};
+
+/** The canonical order. A facility's enabled set is a subset of this. */
+const SECTION_ORDER = [
+  "todaysVibe",
+  "friendsAndFun",
+  "careMetrics",
+  "holidaySparkle",
+  "closingNote",
+] as const;
+
+/** One entry in the customer report-cards feed. */
 export type ReportCardTimelineItem = {
   id: string;
   date: string;
@@ -10,62 +48,73 @@ export type ReportCardTimelineItem = {
   petImage?: string;
   serviceType: string;
   mood: string;
-  photos: string[];
-  meals: ReportCard["meals"];
-  pottyBreaks: ReportCard["pottyBreaks"];
-  staffNotes: string;
-  activities: string[];
+  photos: ReportCardPhoto[];
+  /** The facility's own words. Empty sections are dropped, not rendered blank. */
+  sections: ReportCardSection[];
   facilityName: string;
   timeLabel: string;
   theme?: string;
   overallFeedback?: string;
   petConditions?: Record<string, string>;
-  reportCard: ReportCard;
+  card: ReportCard;
 };
 
-/* ── Daily summary builder ────────────────────────────────────────── */
-export function buildDailySummary(item: {
-  petName: string;
-  mood: string;
-  activities: string[];
-  meals: Array<{ consumed: string }>;
-  staffNotes?: string;
-  serviceType: string;
-}): string {
-  const { petName, mood, activities, meals, staffNotes } = item;
-  const moodMap: Record<string, string> = {
-    happy: "in wonderful spirits",
-    excited: "full of excitement",
-    calm: "calm and relaxed",
-    anxious: "a little nervous at first but settled in well",
-    tired: "on the mellow side",
-    playful: "super playful all day",
-    energetic: "full of energy",
-  };
-  const moodText = moodMap[mood] || "in good spirits";
-  const actText =
-    activities.length > 0
-      ? ` Highlights included ${activities.slice(0, 3).join(", ")}.`
-      : "";
-  const mealCount = meals.filter(
-    (m) => m.consumed === "all" || m.consumed === "most",
-  ).length;
-  const mealText =
-    mealCount > 0
-      ? ` ${petName} had a healthy appetite and enjoyed ${mealCount === 1 ? "a meal" : `${mealCount} meals`}.`
-      : "";
-  const noteText = staffNotes ? ` ${staffNotes}` : "";
-  return `${petName} was ${moodText} today!${actText}${mealText}${noteText}`;
+/**
+ * Which sections this card actually has.
+ *
+ * Driven by content rather than by the facility's config, deliberately: the
+ * owner's portal cannot see `facility_settings`, and a section the facility
+ * turned off simply arrives empty. Dropping empties gets the same answer
+ * without the customer needing to read a facility's configuration.
+ */
+export function sectionsOf(card: ReportCard): ReportCardSection[] {
+  const generated = card.generated as unknown as Record<string, unknown>;
+  return SECTION_ORDER.flatMap((id) => {
+    const body = typeof generated[id] === "string" ? String(generated[id]) : "";
+    if (!body.trim()) return [];
+    return [{ id, label: reportCardSectionMeta[id]?.label ?? id, body }];
+  });
 }
 
-/** Opening sentence of the AI summary, truncated to ~120 chars with an ellipsis. */
-export function buildSummaryExcerpt(
-  item: Parameters<typeof buildDailySummary>[0],
+export function buildTimelineItem(
+  card: ReportCard,
+  opts: { facilityName: string; petImage?: string },
+): ReportCardTimelineItem {
+  const input = card.input as Record<string, unknown>;
+  const asText = (v: unknown) => (typeof v === "string" ? v : "");
+
+  return {
+    id: card.id,
+    date: card.visitDate,
+    petName: card.petName ?? "Your pet",
+    petImage: opts.petImage,
+    serviceType: card.serviceType,
+    mood: asText(input.mood),
+    photos: card.photos,
+    sections: sectionsOf(card),
+    facilityName: opts.facilityName,
+    timeLabel: card.sentAt ? formatReportTime(card.sentAt) : "",
+    theme: card.theme ?? undefined,
+    overallFeedback: asText(input.overallFeedback) || undefined,
+    petConditions: (input.petConditions as Record<string, string>) ?? undefined,
+    card,
+  };
+}
+
+/**
+ * The opening of what the facility wrote, for a collapsed card.
+ *
+ * Reads the first section that has words in it rather than assembling one, so
+ * the excerpt is always a real sentence somebody chose to send.
+ */
+export function summaryExcerpt(
+  item: ReportCardTimelineItem,
   maxLen = 120,
 ): string {
-  const summary = buildDailySummary(item);
-  const endIdx = summary.search(/[.!?]\s/);
-  const firstSentence = endIdx >= 0 ? summary.slice(0, endIdx + 1) : summary;
+  const body = item.sections[0]?.body?.trim() ?? "";
+  if (!body) return "";
+  const endIdx = body.search(/[.!?]\s/);
+  const firstSentence = endIdx >= 0 ? body.slice(0, endIdx + 1) : body;
   if (firstSentence.length <= maxLen) return firstSentence;
   return `${firstSentence.slice(0, maxLen - 1).trimEnd()}…`;
 }
@@ -188,11 +237,17 @@ export const serviceHeaderColor: Record<string, string> = {
 };
 
 export const moodEmoji: Record<string, string> = {
+  // The four the facility's form actually records (MoodValue in
+  // ReportCardsModule). `content` and `shy` were missing, so two of the four
+  // moods a facility can choose fell through to the generic paw.
   happy: "😊",
+  content: "😌",
+  shy: "🙈",
+  tired: "😴",
+  // Retained: the fixture's wider set, still referenced by unconverted screens.
   excited: "🤩",
   calm: "😌",
   anxious: "😟",
-  tired: "😴",
   playful: "😃",
   energetic: "⚡",
 };
