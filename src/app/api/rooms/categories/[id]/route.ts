@@ -72,6 +72,8 @@ export async function PATCH(
   }
   if (input.imageUrl !== undefined) patch.image_url = input.imageUrl ?? null;
   if (input.rules !== undefined) patch.rules = input.rules;
+  // Closing a daycare play area for the season. Boarding never sends it.
+  if (input.active !== undefined) patch.active = input.active;
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 422 });

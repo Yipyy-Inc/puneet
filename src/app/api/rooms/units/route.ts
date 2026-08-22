@@ -89,6 +89,13 @@ export async function POST(request: NextRequest) {
       staff_notes: input.staffNotes ?? null,
       image_url: input.imageUrl ?? null,
       sort_order: (count ?? 0) + 1,
+      // A daycare SECTION carries its own description, swatch and eligibility
+      // rules — two sections of one yard admit different dogs. A boarding room
+      // sends none of these and keeps the column defaults, because for
+      // boarding all three live on the category.
+      description: input.description ?? null,
+      color: input.color ?? null,
+      rules: input.rules ?? [],
     } as never)
     .select("legacy_id")
     .single();

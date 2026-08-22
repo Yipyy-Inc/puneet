@@ -93,6 +93,9 @@ export async function POST(request: NextRequest) {
       sort_order: (count ?? 0) + 1,
       default_capacity: input.defaultCapacity ?? 1,
       default_base_price: input.defaultBasePrice ?? null,
+      // A daycare play area closes for the season; a boarding category never
+      // has, so this defaults to true and boarding never sends it.
+      active: input.active ?? true,
       visible_to_clients: input.visibleToClients ?? true,
       image_url: input.imageUrl ?? null,
       rules: input.rules ?? [],
