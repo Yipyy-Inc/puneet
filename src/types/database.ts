@@ -2996,6 +2996,58 @@ export type Database = {
           },
         ];
       };
+      loyalty_badge_awards: {
+        Row: {
+          account_id: string;
+          badge_id: string;
+          earned_at: string;
+          facility_id: string;
+          id: string;
+          points_awarded: number;
+          voucher_id: string | null;
+        };
+        Insert: {
+          account_id: string;
+          badge_id: string;
+          earned_at?: string;
+          facility_id: string;
+          id?: string;
+          points_awarded?: number;
+          voucher_id?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          badge_id?: string;
+          earned_at?: string;
+          facility_id?: string;
+          id?: string;
+          points_awarded?: number;
+          voucher_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_badge_awards_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "loyalty_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_badge_awards_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_badge_awards_voucher_id_fkey";
+            columns: ["voucher_id"];
+            isOneToOne: false;
+            referencedRelation: "loyalty_vouchers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       loyalty_transactions: {
         Row: {
           account_id: string;
@@ -6367,6 +6419,26 @@ export type Database = {
           p_room_id?: string;
         };
         Returns: string;
+      };
+      award_loyalty_badge: {
+        Args: {
+          p_account_id: string;
+          p_applies_to?: string[];
+          p_badge_id: string;
+          p_description?: string;
+          p_points?: number;
+          p_reward_type?: string;
+          p_reward_value?: number;
+        };
+        Returns: {
+          account_id: string;
+          badge_id: string;
+          earned_at: string;
+          facility_id: string;
+          id: string;
+          points_awarded: number;
+          voucher_id: string | null;
+        };
       };
       close_payment_intent: {
         Args: {

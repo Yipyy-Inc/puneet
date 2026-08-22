@@ -10,7 +10,6 @@ import type {
   ReferralEvent,
   RedemptionRecord,
   CustomerLoyaltyAccount,
-  CustomerBadge,
   LoyaltyTransaction,
 } from "@/types/loyalty";
 
@@ -30,16 +29,6 @@ import {
   getLoyaltyAccountsByFacility,
   getLoyaltyAccount,
 } from "@/data/loyalty-accounts";
-
-import {
-  getSpendEventsByFacility,
-  type LoyaltySpendEvent,
-} from "@/data/loyalty-spend-events";
-
-import {
-  getCustomerBadges,
-  getCustomerBadgesByFacility,
-} from "@/data/loyalty-badges";
 
 import {
   loyaltySettings,
@@ -151,17 +140,8 @@ export const loyaltyQueries = {
       loyaltyTransactions.filter((t) => t.facilityId === facilityId),
   }),
 
-  customerBadges: (facilityId: number, customerId?: number) => ({
-    queryKey: ["loyalty", "customerBadges", facilityId, customerId] as const,
-    queryFn: async (): Promise<CustomerBadge[]> =>
-      customerId != null
-        ? getCustomerBadges(facilityId, customerId)
-        : getCustomerBadgesByFacility(facilityId),
-  }),
-
-  spendEvents: (facilityId: number) => ({
-    queryKey: ["loyalty", "spendEvents", facilityId] as const,
-    queryFn: async (): Promise<LoyaltySpendEvent[]> =>
-      getSpendEventsByFacility(facilityId),
-  }),
+  // `customerBadges` and `spendEvents` lived here until 2026-08-22. Badges are
+  // awarded by the server now — `loyalty_badge_awards` — and the report reads
+  // them, and the earners' real payments, through
+  // `loyaltyLedgerQueries.badgeAwards()`. Nothing consumes the fixtures.
 };

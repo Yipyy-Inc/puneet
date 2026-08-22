@@ -3547,21 +3547,83 @@ Covered by
 in `test:e2e:ci`, signed in AS the customer — testing the payload through a staff
 session would have missed the only thing that could go wrong.
 
-#### 🟠 What the wallet still shows from fixtures
+#### ✅ A badge is awarded, once — 2026-08-22
 
-**Badges.** The gallery, the criteria and the earned records are all fixtures,
-because nothing awards a badge — the fixture engine that would has never been
-converted. They are evaluated against the FIXTURE tier ladder on purpose:
-scoring them against the facility's real tiers would dress a fixture up as live
-data. `currentTier` is passed as null there for the same reason.
+`loyalty_badge_awards` (20260822200000), one row per (account, badge), created
+the first time an account meets the condition. The definitions were already
+real; nothing had ever AWARDED one. The earned records were eleven hand-authored
+rows for `facilityId: 1`, and the only code that created another pushed onto an
+in-memory array inside a fixture engine no server has ever run — so a customer
+completed their fiftieth booking against a "Complete 10 bookings" badge, earned
+nothing, and was shown somebody else's eleven.
 
-**Referral and review counts** are hardcoded to zero in the badge stats, because
-neither is recorded against an account anywhere. A badge needing them does not
-unlock, which is the honest outcome.
+**`award_loyalty_badge` moves the record and the reward together.** A badge
+reward is money — points, credit, a discount off a real bill — so a badge
+awarded twice pays twice. The unique index is the guarantee, and because the
+award row is inserted LAST inside the function, a second caller's 23505 rolls
+its reward back with it. Proved on production: two concurrent awards, one row,
+one voucher.
+
+**Append-only with no trigger, deliberately.** No UPDATE policy and no DELETE
+policy, so PostgREST refuses both. NOT an update-refusing trigger: `voucher_id`
+is `on delete set null`, an UPDATE run by the system, and a trigger would refuse
+it and make a voucher undeletable. That is the ledger's removed DELETE-trigger
+trap arriving from the other direction.
+
+**Four of the seven conditions can fire.** `bookings_count`, `total_spent`,
+`first_booking` and `reached_tier` are measurable here. `referrals` and
+`reviews` are not — no referral is recorded against an account anywhere and
+there is no reviews table — and `consecutive_months` never was. All three report
+ZERO rather than an estimate, so the badge shows honest progress and does not
+unlock. A guess would award real money for something nobody can show happened.
+
+**A gift-card reward records the badge and issues nothing.** The badges wizard
+offers `gift_card` and there is no gift-card table in this database at all — the
+whole feature is still fixtures. `plannedBadgeReward` maps it to nothing, and
+the customer's card shows no reward chip rather than "$50 gift card" for
+something they will never receive. The FACILITY's report still prints what they
+configured, which is right — but nothing warns them at configuration time that
+it cannot be issued. That warning belongs in the wizard and is not written.
+
+**A staff adjustment settles badges too**, for the reason the tier already did:
+a badge that depended on how the points arrived would be one two customers in
+the same position could not both have.
+
+**Settling happens on a TRANSACTION, not on a schedule.** A facility that adds a
+badge promotes nobody until each customer next transacts. The wallet says so
+rather than hiding it — a met-but-unawarded badge sits in "In progress" at full
+progress reading "Unlocked — yours at your next visit", because calling it
+earned before the reward exists would be a promise the account cannot honour.
+
+Covered by [loyalty-badges.spec.ts](../../tests/e2e/loyalty-badges.spec.ts) in
+`test:e2e:ci`. It leaves its award rows behind and cannot do otherwise — there
+is no DELETE policy — which is why every probe badge there is worth nothing
+except one, and that one pays POINTS rather than a voucher: a stray active
+discount voucher on a demo account would come off somebody's real bill later.
+
+**The facility's Badge Achievement report reads real awards and real spend**
+(`/api/loyalty/badges`). Its spend input was `src/data/loyalty-spend-events`, a
+GENERATED monthly series with a revenue uplift written into it — so the report
+told every facility their badges worked, because the file was authored to.
+
+#### 🟠 What badges still do not do
+
+**A badge icon is a KEY, and only the customer's wallet maps it.** The wizard
+writes `"star"`; `badgeGlyph` turns that into ⭐ for the wallet and the earned
+email, and the facility report maps the same key to a Lucide icon. Anything else
+rendering `badge.icon` directly prints the word.
+
+**Nobody is TOLD they earned one, except the counter.** The checkout toasts
+name each new badge, and `BadgeCelebration` fires on the customer's first load
+after an award (a localStorage set of ids). The badge-earned EMAIL
+(`buildBadgeEarnedEmail`) and the portal notification (`badgeEarnedTitle` /
+`badgeEarnedPortalBody`) are written and reached only from the FIXTURE engine —
+`src/data/loyalty-engine.ts` and `src/lib/loyalty/engine.ts` — which no server
+runs. `settleBadges` sends nothing.
 
 **Referral codes** still come from `src/data/referral-tracking`, and
 `loyalty_accounts.referral_code` — a real column with a unique index — is never
-populated.
+populated. Which is also why a referral badge cannot unlock.
 
 #### 🟠 What earning still does not do
 
@@ -3570,11 +3632,11 @@ review, a birthday and a referral are all trigger types the rules editor offers
 and nothing invokes. A facility can configure a birthday bonus today and no
 birthday will ever award it.
 
-**Badges and tier changes are not evaluated.** The fixture engine
-(`recordLoyaltyEvent`) did all three in one pass; only the earning half has been
-replaced. `useLoyaltyEngine` still exists, still writes to fixtures, and is now
-called from nowhere in the two booking checkouts — the remaining callers are the
-grooming path and the daycare board.
+**Tier changes were added on 2026-08-22, and badges the same day** — both
+settle after an earn and after a staff adjustment; see the entries above.
+`useLoyaltyEngine` still exists, still writes to fixtures, and is called from
+nowhere in the two booking checkouts — the remaining callers are the grooming
+path and the daycare board, and what it does for them is still fixture-only.
 
 #### 🟠 What the checkout change did NOT cover
 

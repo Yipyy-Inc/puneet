@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import type { BadgeAwardsPayload } from "@/app/api/loyalty/badges/route";
 import type { LoyaltyAccountRow } from "@/app/api/loyalty/accounts/route";
 import type { LoyaltyTransactionRow } from "@/app/api/loyalty/transactions/route";
 import type { LoyaltyVoucherRow } from "@/app/api/loyalty/vouchers/route";
@@ -88,6 +89,17 @@ export const loyaltyLedgerQueries = {
       );
       return accounts[0] ?? null;
     },
+  }),
+
+  /**
+   * Every badge earned at this facility, plus the earners' payment history.
+   *
+   * Both halves in one request because the report needs them together — a badge
+   * with no spend around it answers neither of the two questions it asks.
+   */
+  badgeAwards: () => ({
+    queryKey: ["loyalty-ledger", "badge-awards"] as const,
+    queryFn: async () => await get<BadgeAwardsPayload>("/api/loyalty/badges"),
   }),
 
   transactions: (accountId: string | undefined) => ({

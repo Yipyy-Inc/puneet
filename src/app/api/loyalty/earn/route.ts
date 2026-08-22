@@ -5,6 +5,7 @@ import { getViewer } from "@/lib/auth/viewer";
 import { computeEarnings } from "@/lib/loyalty/engine-earn";
 import { getActiveEarnRules } from "@/lib/loyalty/earn-rule-versioning";
 import { NO_LOYALTY_PROGRAM } from "@/lib/settings/loyalty";
+import { settleBadges } from "@/lib/api/loyalty-badges";
 import {
   heldTierMultiplier,
   readTierFacts,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/api/loyalty-tier";
 import { createServerClient } from "@/lib/supabase/server";
 import type { LoyaltyEvent } from "@/lib/loyalty/engine";
+import type { EarnedBadge } from "@/lib/api/loyalty-badges";
 import type { FacilityLoyaltyConfig } from "@/types/loyalty";
 
 // ============================================================================
@@ -66,6 +68,8 @@ export interface EarnResult {
     /** True when reaching it also issued a one-time reward voucher. */
     rewarded: boolean;
   };
+  /** Badges this booking unlocked. Empty is the common case. */
+  badges: EarnedBadge[];
 }
 
 interface BookingRow {
@@ -143,6 +147,7 @@ export async function POST(request: NextRequest) {
       alreadyEarned: false,
       points: 0,
       reasons: [],
+      badges: [],
     } satisfies EarnResult);
   }
 
@@ -236,6 +241,7 @@ export async function POST(request: NextRequest) {
       alreadyEarned: false,
       points: 0,
       reasons: outcomes.map((o) => o.description),
+      badges: [],
     } satisfies EarnResult);
   }
 
@@ -262,6 +268,7 @@ export async function POST(request: NextRequest) {
         alreadyEarned: true,
         points: 0,
         reasons: [],
+        badges: [],
       } satisfies EarnResult);
     }
     const denied = error.message.includes("permission");
@@ -279,6 +286,22 @@ export async function POST(request: NextRequest) {
   // and neither should be undone because a tier did not move.
   const settlement = await settleTier(supabase, config, accountId);
 
+  // ── AND THEN THE BADGES ──────────────────────────────────────────────────
+  //
+  // After the tier, because `reached_tier` is one of the seven conditions and
+  // evaluating it against the tier the customer held a moment ago would make a
+  // "Reached Gold" badge arrive one booking late.
+  //
+  // Failures are swallowed inside, for the same reason the tier's are: the
+  // money is taken and the points are awarded, and neither may be undone
+  // because a badge did not record.
+  const badges = await settleBadges(
+    supabase,
+    config,
+    accountId,
+    settlement.tier,
+  );
+
   const tierUp =
     settlement.upgraded && settlement.tier
       ? {
@@ -293,6 +316,7 @@ export async function POST(request: NextRequest) {
     alreadyEarned: false,
     points,
     reasons: outcomes.map((o) => o.description),
+    badges,
     ...(tierUp ? { tierUp } : {}),
   } satisfies EarnResult);
 }

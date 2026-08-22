@@ -48,9 +48,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  loyaltySettings,
   referralCodes,
-  badges,
   loyaltyRewards,
   type LoyaltyReward,
 } from "@/data/marketing";
@@ -64,16 +62,8 @@ import {
   type WalletReward,
 } from "@/lib/loyalty/rewards-wallet";
 import Link from "next/link";
-import { payments } from "@/data/payments";
 import { useQuery } from "@tanstack/react-query";
-import { loyaltyQueries } from "@/lib/api/loyalty";
 import { customerLoyaltyQueries } from "@/lib/api/loyalty-ledger";
-import {
-  badgeConditionText,
-  badgeRewardText,
-} from "@/lib/loyalty/badge-summary";
-import { badgeCriteriaMet, type BadgeStats } from "@/lib/loyalty/engine-badges";
-import { badgeProgress } from "@/lib/loyalty/badge-progress";
 import { RedeemPointsDialog } from "@/components/customer/RedeemPointsDialog";
 import { LoyaltyTransactionHistory } from "@/components/loyalty/LoyaltyTransactionHistory";
 import { BadgeCelebration } from "@/components/customer/BadgeCelebration";
@@ -239,96 +229,46 @@ export default function CustomerRewardsPage() {
     return referralCodes.filter((ref) => ref.referrerId === customerId);
   }, [customerId]);
 
-  // Get customer payments to calculate total spent
-  const customerPayments = useMemo(() => {
-    if (!selectedFacility) return [];
-    return payments.filter(
-      (p) =>
-        p.clientId === customerId &&
-        p.facilityId === selectedFacility.id &&
-        p.status === "completed",
-    );
-  }, [customerId, selectedFacility]);
+  // What they have PAID this facility, derived from bookings by
+  // `loyalty_account_overview`. It summed `src/data/payments` until 2026-08-22
+  // and read $0.00 for every real customer — sitting one card above a badge
+  // saying "$14,108.75 of $100,000 spent", from the same account, on the same
+  // screen.
+  const totalSpent = loyaltyAccount?.totalSpend ?? 0;
 
-  const totalSpent = useMemo(() => {
-    return customerPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-  }, [customerPayments]);
-
-  // Earned (CustomerBadge records) + in-progress badges, evaluated against the
-  // canonical loyalty account stats via the same engine criteria the automation
-  // uses. Earned = has a record OR currently meets the criteria.
-  const { data: customerBadges = [] } = useQuery({
-    ...loyaltyQueries.customerBadges(loyaltyFacilityId, customerId),
-    enabled: !!selectedFacility,
-  });
-
+  // ── BADGES, FROM THE SERVER THAT AWARDS THEM ──────────────────────────
+  //
+  // Each badge arrives with this customer's own standing already worked out —
+  // the condition phrased, the reward phrased, `earnedAt` when they hold it,
+  // and progress measured on the criterion's own dimension. Evaluated in the
+  // route against exactly the facts `settleBadges` awards from, so the gallery
+  // cannot congratulate somebody on a condition the server would decline.
+  //
+  // EARNED means there is an award row, and nothing else. A badge whose
+  // condition is met but which has not been awarded yet sits in the second
+  // list at full progress and says so — the award happens on their next visit,
+  // and calling it earned before the reward exists would be a promise the
+  // account cannot yet honour.
+  //
+  // Until 2026-08-22 this read eleven hand-authored rows for `facilityId: 1`
+  // and re-derived "earned" in the browser, so a customer saw somebody else's
+  // badges and could be told they had earned one nothing would ever give them.
   const badgeView = useMemo(() => {
-    const facilityBadges =
-      // STILL A FIXTURE. Badges are not awarded by anything — the engine that
-      // would unlock them was never converted — so the gallery below describes
-      // a scheme nobody runs. Left as it was rather than dressed up; it is in
-      // the debt map with the rest of the badge work.
-      badges.length > 0 ? badges : badges;
-    // The FIXTURE ladder, deliberately. Badges are not awarded by anything
-    // real — see the note above — so evaluating them against the facility's
-    // actual tiers would dress a fixture up as live data. When badges become
-    // real they get the real tiers with everything else.
-    const tiers = loyaltySettings.tiers as unknown as Parameters<
-      typeof badgeCriteriaMet
-    >[2];
-    const stats: BadgeStats = {
-      bookingsCount: loyaltyAccount?.totalVisits ?? 0,
-      totalSpent: loyaltyAccount?.totalSpend ?? 0,
-      // Neither is counted anywhere real yet: a referral is not recorded
-      // against an account and a review is not either. Zero is the honest
-      // answer, and a badge that needs them simply does not unlock.
-      referrals: 0,
-      reviews: 0,
-      // Null while badges are fixture-backed: the customer's REAL tier is not
-      // in the fixture ladder these criteria are written against, and matching
-      // an id across the two would be a coincidence rather than a lookup.
-      currentTier: null,
-    };
-    const earnedAtById = new Map(
-      customerBadges.map((cb) => [cb.badgeId, cb.earnedAt]),
-    );
-
-    const earned: {
-      badge: (typeof facilityBadges)[number];
-      earnedAt: string | null;
-    }[] = [];
-    const inProgress: {
-      badge: (typeof facilityBadges)[number];
-      progress: ReturnType<typeof badgeProgress>;
-    }[] = [];
-
-    for (const badge of facilityBadges) {
-      if (badge.enabled === false) continue;
-      const earnedAt = earnedAtById.get(badge.id) ?? null;
-      const isEarned =
-        earnedAt != null || badgeCriteriaMet(badge, stats, tiers);
-      if (isEarned) {
-        earned.push({ badge, earnedAt });
-      } else {
-        inProgress.push({
-          badge,
-          progress: badgeProgress(badge, stats, tiers),
-        });
-      }
-    }
-
-    earned.sort(
-      (a, b) => (a.earnedAt ?? "").localeCompare(b.earnedAt ?? "") * -1,
-    );
-    inProgress.sort((a, b) => b.progress.ratio - a.progress.ratio);
+    const all = wallet?.badges ?? [];
+    const earned = all
+      .filter((b) => b.earnedAt !== null)
+      .sort((a, b) => (b.earnedAt ?? "").localeCompare(a.earnedAt ?? ""));
+    const inProgress = all
+      .filter((b) => b.earnedAt === null)
+      .sort((a, b) => b.progress.ratio - a.progress.ratio);
     return { earned, inProgress };
-  }, [wallet, loyaltyAccount, customerBadges]);
+  }, [wallet]);
 
   // Celebrate badges earned since the customer last visited (tracked in
   // localStorage). The celebration is shown by id; the badge is looked up at
   // render so the effect only manages a string + persistence.
   const earnedKey = useMemo(
-    () => badgeView.earned.map((e) => e.badge.id).join(","),
+    () => badgeView.earned.map((b) => b.id).join(","),
     [badgeView],
   );
   const [celebrateId, setCelebrateId] = useState<string | null>(null);
@@ -355,9 +295,7 @@ export default function CustomerRewardsPage() {
     return () => clearTimeout(t);
   }, [isMounted, earnedKey, loyaltyFacilityId]);
 
-  const celebrateBadge = badgeView.earned.find(
-    (e) => e.badge.id === celebrateId,
-  )?.badge;
+  const celebrateBadge = badgeView.earned.find((b) => b.id === celebrateId);
 
   const formatEarnedDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-US", {
@@ -379,7 +317,28 @@ export default function CustomerRewardsPage() {
     return loyaltyData.points / redemptionRate;
   }, [loyaltyData, redemptionRate]);
 
-  if (!loyaltySettings.enabled) {
+  // ── IS THERE A PROGRAMME AT ALL ────────────────────────────────────────
+  //
+  // The customer's OWN facility, not `loyaltySettings.enabled` — one global
+  // fixture that read `true` for everybody. A facility running no loyalty
+  // programme still showed its customers this whole screen.
+  //
+  // Behind `walletPending`, because the answer is not known until the request
+  // resolves and "not available" is the wrong thing to flash at somebody who
+  // has a programme. Same shape as the settings latch: an unanswered question
+  // is not a "no".
+  if (walletPending) {
+    return (
+      <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
+        <div className="mx-auto max-w-4xl space-y-4">
+          <div className="bg-muted/40 h-32 animate-pulse rounded-xl" />
+          <div className="bg-muted/40 h-64 animate-pulse rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!wallet?.enabled) {
     return (
       <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
         <div className="mx-auto max-w-4xl">
@@ -534,7 +493,10 @@ export default function CustomerRewardsPage() {
           />
           <KpiTile
             label="Total Spent"
-            value={`$${totalSpent.toFixed(2)}`}
+            value={`$${totalSpent.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`}
             icon={DollarSign}
             tone="emerald"
           />
@@ -1144,7 +1106,7 @@ export default function CustomerRewardsPage() {
               <CardContent>
                 {badgeView.earned.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {badgeView.earned.map(({ badge, earnedAt }) => (
+                    {badgeView.earned.map((badge) => (
                       <Card
                         key={badge.id}
                         className="border-primary/30 bg-primary/5"
@@ -1157,20 +1119,20 @@ export default function CustomerRewardsPage() {
                                 {badge.name}
                               </div>
                               <div className="text-muted-foreground mb-2 text-sm">
-                                {badgeConditionText(badge)}
+                                {badge.conditionText}
                               </div>
                               <div className="flex flex-wrap items-center gap-2">
-                                {badge.reward && (
+                                {badge.rewardText && (
                                   <Badge
                                     variant="secondary"
                                     className="text-xs"
                                   >
-                                    Reward: {badgeRewardText(badge.reward)}
+                                    Reward: {badge.rewardText}
                                   </Badge>
                                 )}
-                                {isMounted && earnedAt && (
+                                {isMounted && badge.earnedAt && (
                                   <span className="text-muted-foreground text-xs">
-                                    Earned {formatEarnedDate(earnedAt)}
+                                    Earned {formatEarnedDate(badge.earnedAt)}
                                   </span>
                                 )}
                               </div>
@@ -1207,7 +1169,7 @@ export default function CustomerRewardsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {badgeView.inProgress.map(({ badge, progress }) => (
+                    {badgeView.inProgress.map((badge) => (
                       <Card key={badge.id} className="bg-muted/30">
                         <CardContent className="space-y-3 p-4">
                           <div className="flex items-start gap-3">
@@ -1219,30 +1181,38 @@ export default function CustomerRewardsPage() {
                                 {badge.name}
                               </div>
                               <div className="text-muted-foreground text-sm">
-                                {badgeConditionText(badge)}
+                                {badge.conditionText}
                               </div>
-                              {badge.reward && (
+                              {badge.rewardText && (
                                 <Badge
                                   variant="outline"
                                   className="mt-2 text-xs"
                                 >
-                                  Reward: {badgeRewardText(badge.reward)}
+                                  Reward: {badge.rewardText}
                                 </Badge>
                               )}
                             </div>
                             <Lock className="text-muted-foreground size-4 shrink-0" />
                           </div>
-                          {progress.measurable && (
+                          {badge.progress.measurable && (
                             <div className="space-y-1">
-                              <Progress value={progress.ratio * 100} />
+                              <Progress value={badge.progress.ratio * 100} />
                               <div className="text-muted-foreground text-xs">
-                                {progress.label}
+                                {badge.progress.label}
                               </div>
                             </div>
                           )}
-                          {!progress.measurable && (
+                          {!badge.progress.measurable && (
                             <div className="text-muted-foreground text-xs">
-                              {progress.label}
+                              {badge.progress.label}
+                            </div>
+                          )}
+                          {/* Met, but not yet awarded. The server awards on a
+                              transaction, so saying "earned" here would promise
+                              a reward the account does not hold yet. */}
+                          {badge.progress.met && (
+                            <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                              Unlocked — yours at your next visit
                             </div>
                           )}
                         </CardContent>

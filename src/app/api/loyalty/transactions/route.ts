@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { settleBadges } from "@/lib/api/loyalty-badges";
 import { settleTier } from "@/lib/api/loyalty-tier";
 import { ownStaffId } from "@/lib/api/own-staff";
 import { NO_LOYALTY_PROGRAM } from "@/lib/settings/loyalty";
@@ -279,7 +280,13 @@ export async function POST(request: NextRequest) {
   } as unknown as FacilityLoyaltyConfig;
 
   if (config.enabled) {
-    await settleTier(supabase, config, body.accountId);
+    const settlement = await settleTier(supabase, config, body.accountId);
+    // And the badges, for the same reason and after the tier: a badge condition
+    // measured on spend or on `reached_tier` is crossed by a staff award just
+    // as it is by a booking, and a badge that depended on how the points
+    // arrived would be a badge two customers in the same position could not
+    // both have.
+    await settleBadges(supabase, config, body.accountId, settlement.tier);
   }
 
   return NextResponse.json(

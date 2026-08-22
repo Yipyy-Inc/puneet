@@ -1,4 +1,4 @@
-import type { Badge, CustomerBadge } from "@/types/loyalty";
+import type { Badge } from "@/types/loyalty";
 import { badgeConditionText, badgeRewardText } from "./badge-summary";
 
 /**
@@ -9,13 +9,31 @@ import { badgeConditionText, badgeRewardText } from "./badge-summary";
  *
  * A customer's first-booking date is the earliest spend event we hold for them.
  * `now` is injected for determinism.
+ *
+ * ── IT ASKS FOR THE LEAST IT NEEDS ────────────────────────────────────────
+ *
+ * `BadgeEarnInput` and `SpendEventInput` name three fields each rather than
+ * importing row types. Until 2026-08-22 the first parameter was the fixture
+ * `CustomerBadge`, whose `customerId` is a NUMBER — the mock's customer key.
+ * Real awards are keyed by a loyalty account uuid, and widening the key here
+ * was the whole change; nothing else in the arithmetic cares what shape it is,
+ * only that two rows for the same member carry the same one.
  */
 
 const DAY_MS = 86_400_000;
 const MONTH_MS = 30.44 * DAY_MS;
 
+/** One member's badge, earned. */
+export interface BadgeEarnInput {
+  /** Any stable per-member key; the two inputs must agree on it. */
+  memberId: string;
+  badgeId: string;
+  earnedAt: string;
+}
+
+/** One payment a member made. */
 export interface SpendEventInput {
-  customerId: number;
+  memberId: string;
   date: string;
   amount: number;
 }
@@ -51,7 +69,7 @@ function round2(n: number): number {
 
 export function computeBadgeAchievement(input: {
   badges: Badge[];
-  customerBadges: CustomerBadge[];
+  earns: BadgeEarnInput[];
   spendEvents: SpendEventInput[];
   now: string;
   tierName?: (tierId: string) => string | undefined;
@@ -59,27 +77,27 @@ export function computeBadgeAchievement(input: {
   const nowMs = new Date(input.now).getTime();
 
   // Index spend events by customer, ascending by date.
-  const eventsByCustomer = new Map<number, { ms: number; amount: number }[]>();
+  const eventsByCustomer = new Map<string, { ms: number; amount: number }[]>();
   for (const e of input.spendEvents) {
     const ms = new Date(e.date).getTime();
     if (!Number.isFinite(ms)) continue;
-    const list = eventsByCustomer.get(e.customerId) ?? [];
+    const list = eventsByCustomer.get(e.memberId) ?? [];
     list.push({ ms, amount: e.amount });
-    eventsByCustomer.set(e.customerId, list);
+    eventsByCustomer.set(e.memberId, list);
   }
   for (const list of eventsByCustomer.values()) {
     list.sort((a, b) => a.ms - b.ms);
   }
 
   const rows = input.badges.map((badge): BadgeAchievementRow => {
-    const earners = input.customerBadges.filter((c) => c.badgeId === badge.id);
+    const earners = input.earns.filter((c) => c.badgeId === badge.id);
 
     const daysToEarn: number[] = [];
     const beforeRates: number[] = [];
     const afterRates: number[] = [];
 
     for (const earn of earners) {
-      const events = eventsByCustomer.get(earn.customerId);
+      const events = eventsByCustomer.get(earn.memberId);
       const earnedMs = new Date(earn.earnedAt).getTime();
       if (!events || events.length === 0 || !Number.isFinite(earnedMs))
         continue;
