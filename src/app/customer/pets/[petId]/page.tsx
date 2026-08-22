@@ -9,7 +9,11 @@ import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { bookings } from "@/data/bookings";
 import { getFormsByFacility } from "@/data/forms";
 import { getSubmissionsForPet } from "@/data/form-submissions";
-import { petPhotos, vaccinationRecords, reportCards } from "@/data/pet-data";
+import { petPhotos, vaccinationRecords } from "@/data/pet-data";
+import { useQuery } from "@tanstack/react-query";
+import { reportCardQueries } from "@/lib/api/report-cards";
+import { sectionsOf } from "@/lib/report-cards/sections";
+import { usablePhotos } from "@/lib/report-cards/photos";
 import { TagList } from "@/components/shared/TagList";
 import { NotesList } from "@/components/shared/NotesList";
 import {
@@ -90,6 +94,14 @@ export default function CustomerPetDetailPage({
   const pet = customer?.pets.find((p) => p.id === parseInt(petId));
 
   const [editedPet, setEditedPet] = useState<Pet | null>(pet || null);
+
+  // This pet's report cards, from Postgres. Narrowed server-side by the pet's
+  // ref — see `reportCardSelect` for why that needs an inner join. Declared
+  // here rather than beside its use below, which sits after an early return.
+  const { data: petReportCards = [] } = useQuery({
+    ...reportCardQueries.byPet(parseInt(petId)),
+    enabled: Number.isInteger(parseInt(petId)),
+  });
 
   const facilityId = selectedFacility?.id ?? 11;
   const allFacilityForms = useMemo(
@@ -226,7 +238,10 @@ export default function CustomerPetDetailPage({
   const petBookings = bookings.filter(
     (b) => b.petId === pet.id && b.facilityId === selectedFacility?.id,
   );
-  const reports = reportCards.filter((r) => r.petId === pet.id);
+  // Only cards the owner has actually been sent. RLS admits them to a draft
+  // the moment it exists, because the card is theirs, so "not yet sent" has to
+  // be applied here.
+  const reports = petReportCards.filter((r) => r.deliveryStatus === "sent");
 
   const expiredVaccinations = vaccinations.filter(
     (v) => new Date(v.expiryDate) < new Date(),
@@ -1549,65 +1564,79 @@ export default function CustomerPetDetailPage({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {reports.map((report) => (
-                      <Card key={report.id}>
-                        <CardHeader>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <CardTitle className="text-base">
-                                {report.serviceType} Report Card
-                              </CardTitle>
-                              <CardDescription>
-                                {formatDate(report.date)}
-                              </CardDescription>
-                            </div>
-                            <Badge variant="outline" className="capitalize">
-                              {report.mood}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {report.photos.length > 0 && (
-                            <div>
-                              <p className="mb-2 text-sm font-medium">Photos</p>
-                              <div className="grid grid-cols-4 gap-2">
-                                {report.photos.map((photo, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="bg-muted aspect-square overflow-hidden rounded-lg"
-                                  >
-                                    <Image
-                                      src={photo}
-                                      alt={`Photo ${idx + 1}`}
-                                      width={200}
-                                      height={200}
-                                      className="size-full object-cover"
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                    {reports.map((report) => {
+                      // The facility's own words, not an `activities` array —
+                      // nothing has ever collected one.
+                      const sections = sectionsOf(report);
+                      const mood =
+                        typeof report.input.mood === "string"
+                          ? report.input.mood
+                          : "";
+                      const photos = usablePhotos(report.photos);
 
-                          {report.activities.length > 0 && (
-                            <div>
-                              <p className="mb-2 text-sm font-medium">
-                                Activities
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                {report.activities.map((activity, idx) => (
-                                  <Badge key={idx} variant="secondary">
-                                    {activity}
-                                  </Badge>
-                                ))}
+                      return (
+                        <Card key={report.id}>
+                          <CardHeader>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <CardTitle className="text-base capitalize">
+                                  {report.serviceType} Report Card
+                                </CardTitle>
+                                <CardDescription>
+                                  {formatDate(report.visitDate)}
+                                </CardDescription>
                               </div>
+                              {mood && (
+                                <Badge variant="outline" className="capitalize">
+                                  {mood}
+                                </Badge>
+                              )}
                             </div>
-                          )}
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            {photos.length > 0 && (
+                              <div>
+                                <p className="mb-2 text-sm font-medium">
+                                  Photos
+                                </p>
+                                <div className="grid grid-cols-4 gap-2">
+                                  {photos.map((photo) => (
+                                    <div
+                                      key={photo.id}
+                                      className="bg-muted relative aspect-square overflow-hidden rounded-lg"
+                                    >
+                                      {/* Signed private-bucket URL, which
+                                          next/image is configured to refuse. */}
+                                      {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
+                                      <img
+                                        src={photo.url}
+                                        alt={photo.caption ?? "Report photo"}
+                                        className="absolute inset-0 size-full object-cover"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
-                          {/* Do not display internal staff notes in the customer view */}
-                        </CardContent>
-                      </Card>
-                    ))}
+                            {sections.map((section) => (
+                              <div key={section.id}>
+                                <p className="mb-1 text-sm font-medium">
+                                  {section.label}
+                                </p>
+                                <p className="text-muted-foreground text-sm whitespace-pre-line">
+                                  {section.body}
+                                </p>
+                              </div>
+                            ))}
+
+                            {/* Staff notes stay out of the customer view — they
+                                are not part of `generated`, so there is nothing
+                                here that was not written to be read. */}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

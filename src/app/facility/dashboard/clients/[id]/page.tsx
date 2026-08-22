@@ -12,12 +12,11 @@ import {
   getAlertStatusVariant,
   formatAlertChannel,
 } from "@/data/marketing";
-import {
-  petPhotos,
-  vaccinationRecords,
-  reportCards,
-  banRecords,
-} from "@/data/pet-data";
+import { petPhotos, vaccinationRecords, banRecords } from "@/data/pet-data";
+import { reportCardQueries } from "@/lib/api/report-cards";
+import { sectionsOf } from "@/lib/report-cards/sections";
+import { usablePhotos } from "@/lib/report-cards/photos";
+import type { ReportCard } from "@/types/report-card";
 import { getTagsForEntity } from "@/data/tags-notes";
 import { TagList } from "@/components/shared/TagList";
 import { NotesList } from "@/components/shared/NotesList";
@@ -90,8 +89,6 @@ import {
   Cat,
   Syringe,
   Image as ImageIcon,
-  Activity,
-  Utensils,
   Camera,
   Upload,
   Award,
@@ -222,6 +219,14 @@ export default function ClientDetailPage({
   });
   const { data: clientPayments = [] } = useQuery({
     ...paymentQueries.byClient(client?.id ?? 0),
+    enabled: Boolean(client),
+  });
+
+  // Every report card across this client's pets, narrowed server-side. Fetched
+  // once for the whole file rather than per pet: `getPetData` below is a plain
+  // function called inside a render, and a hook cannot go there.
+  const { data: clientReportCards = [] } = useQuery({
+    ...reportCardQueries.byClient(client?.id ?? 0),
     enabled: Boolean(client),
   });
 
@@ -450,7 +455,7 @@ export default function ClientDetailPage({
     const photos = petPhotos.filter((p) => p.petId === pet.id);
     const vaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
     const petBookingsList = clientBookings.filter((b) => b.petId === pet.id);
-    const reports = reportCards.filter((r) => r.petId === pet.id);
+    const reports = clientReportCards.filter((r) => r.petRef === pet.id);
     const totalStays = petBookingsList.filter(
       (b) => b.status === "completed",
     ).length;
@@ -2976,7 +2981,7 @@ function PetDetailContent({
     photos: typeof petPhotos;
     vaccinations: typeof vaccinationRecords;
     petBookings: Booking[];
-    reports: typeof reportCards;
+    reports: ReportCard[];
     totalStays: number;
     expiredVaccinations: typeof vaccinationRecords;
     upcomingVaccinations: typeof vaccinationRecords;
@@ -3432,141 +3437,112 @@ function PetDetailContent({
         <TabsContent value="reports" className="space-y-4">
           {reports.length > 0 ? (
             reports
+              .slice()
               .sort(
                 (a, b) =>
-                  new Date(b.date).getTime() - new Date(a.date).getTime(),
+                  new Date(b.visitDate).getTime() -
+                  new Date(a.visitDate).getTime(),
               )
-              .map((report) => (
-                <Card key={report.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-base capitalize">
-                          {report.serviceType} Report
-                        </CardTitle>
-                        <p className="text-muted-foreground mt-1 text-sm">
-                          {formatDate(report.date)} • By {report.createdBy}
-                        </p>
-                      </div>
-                      <Badge className={getMoodColor(report.mood)}>
-                        {report.mood}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Activities */}
-                    {report.activities.length > 0 && (
-                      <div>
-                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                          <Activity className="size-4" />
-                          Activities
-                        </h4>
-                        <ul className="space-y-1">
-                          {report.activities.map((activity, idx) => (
-                            <li
-                              key={idx}
-                              className="text-muted-foreground flex items-start gap-2 text-sm"
-                            >
-                              <span className="text-primary mt-1">•</span>
-                              {activity}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+              .map((report) => {
+                // What the facility actually wrote. This tab used to render
+                // `activities`, `meals` and `pottyBreaks` — arrays the report
+                // card form has never collected, so all three were empty and
+                // the card showed a header and nothing else. That day's real
+                // feeding and potty record is in the care log, not here.
+                const sections = sectionsOf(report);
+                const mood =
+                  typeof report.input.mood === "string"
+                    ? report.input.mood
+                    : "";
+                const photos = usablePhotos(report.photos);
 
-                    {/* Meals */}
-                    {report.meals.length > 0 && (
-                      <div>
-                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                          <Utensils className="size-4" />
-                          Meals
-                        </h4>
-                        <div className="space-y-2">
-                          {report.meals.map((meal, idx) => (
-                            <div
-                              key={idx}
-                              className="bg-muted/50 flex items-center justify-between rounded-sm p-2"
-                            >
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {meal.time} - {meal.food}
-                                </p>
-                                <p className="text-muted-foreground text-xs">
-                                  {meal.amount}
-                                </p>
+                return (
+                  <Card key={report.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-base capitalize">
+                            {report.serviceType} Report
+                          </CardTitle>
+                          <p className="text-muted-foreground mt-1 text-sm">
+                            {formatDate(report.visitDate)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {report.deliveryStatus !== "sent" && (
+                            <Badge variant="secondary">Draft</Badge>
+                          )}
+                          {mood && (
+                            <Badge className={getMoodColor(mood)}>{mood}</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {sections.map((section) => (
+                        <div key={section.id}>
+                          <h4 className="mb-1 text-sm font-semibold">
+                            {section.label}
+                          </h4>
+                          <p className="text-muted-foreground text-sm whitespace-pre-line">
+                            {section.body}
+                          </p>
+                        </div>
+                      ))}
+
+                      {photos.length > 0 && (
+                        <div>
+                          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                            <Camera className="size-4" />
+                            Photos ({photos.length})
+                          </h4>
+                          <div className="grid grid-cols-4 gap-2">
+                            {photos.map((photo) => (
+                              <div
+                                key={photo.id}
+                                className="bg-muted relative aspect-square overflow-hidden rounded-lg"
+                              >
+                                {/* The photo itself. This drew a placeholder
+                                    icon for every picture, so a facility could
+                                    never see what it had sent. A signed
+                                    private URL, so not next/image. */}
+                                {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
+                                <img
+                                  src={photo.url}
+                                  alt={photo.caption ?? "Report card photo"}
+                                  className="absolute inset-0 size-full object-cover"
+                                />
                               </div>
-                              <Badge variant="outline" className="capitalize">
-                                {meal.consumed}
-                              </Badge>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Potty Breaks */}
-                    {report.pottyBreaks.length > 0 && (
-                      <div>
-                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                          <CheckCircle className="size-4" />
-                          Potty Breaks
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {report.pottyBreaks.map((potty, idx) => (
-                            <Badge
-                              key={idx}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {potty.time} - {potty.type}
-                            </Badge>
-                          ))}
+                      {report.replyMessage && (
+                        <div className="border-t pt-3">
+                          <h4 className="mb-1 text-sm font-semibold">
+                            The owner replied
+                          </h4>
+                          <p className="text-muted-foreground text-sm">
+                            {report.replyMessage}
+                          </p>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Photos */}
-                    {report.photos.length > 0 && (
-                      <div>
-                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                          <Camera className="size-4" />
-                          Photos ({report.photos.length})
-                        </h4>
-                        <div className="grid grid-cols-4 gap-2">
-                          {report.photos.map((photo, idx) => (
-                            <div
-                              key={idx}
-                              className="bg-muted flex aspect-square items-center justify-center rounded-lg"
-                            >
-                              <ImageIcon className="text-muted-foreground size-8" />
-                            </div>
-                          ))}
+                      {report.deliveryStatus === "sent" && report.sentAt && (
+                        <div className="text-muted-foreground flex items-center gap-2 border-t pt-2 text-xs">
+                          <CheckCircle className="size-3" />
+                          Published to the owner&apos;s portal on{" "}
+                          {formatDateTime(report.sentAt)}
+                          {report.viewedAt
+                            ? ` · opened ${formatDateTime(report.viewedAt)}`
+                            : " · not opened yet"}
                         </div>
-                      </div>
-                    )}
-
-                    {/* Staff Notes */}
-                    {report.staffNotes && (
-                      <div className="border-t pt-3">
-                        <h4 className="mb-1 text-sm font-semibold">
-                          Staff Notes
-                        </h4>
-                        <p className="text-muted-foreground text-sm">
-                          {report.staffNotes}
-                        </p>
-                      </div>
-                    )}
-
-                    {report.sentToOwner && report.sentAt && (
-                      <div className="text-muted-foreground flex items-center gap-2 border-t pt-2 text-xs">
-                        <CheckCircle className="size-3" />
-                        Sent to owner on {formatDateTime(report.sentAt)}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })
           ) : (
             <Card>
               <CardContent className="py-8 text-center">

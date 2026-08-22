@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useState } from "react";
 import {
   Card,
@@ -19,7 +18,8 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
-import type { PetPhoto, ReportCard } from "@/data/pet-data";
+import type { PetPhoto } from "@/data/pet-data";
+import type { ReportCard } from "@/types/report-card";
 import type { Booking } from "@/types/booking";
 
 interface UnifiedPhoto {
@@ -76,19 +76,33 @@ export function PhotoAlbums({
       });
     });
 
-    // Add report card photos
+    // Add report card photos.
+    //
+    // `photos` is now a list of records in a PRIVATE bucket, not a list of URL
+    // strings, so a photo that failed to sign is skipped rather than pushed as
+    // a broken image.
     reportCards.forEach((report) => {
-      report.photos.forEach((photoUrl, index) => {
-        // Try to find matching booking for this report card
+      report.photos.forEach((photo) => {
+        if (!photo.url) return;
         unified.push({
-          id: `report-${report.id}-photo-${index}`,
-          url: photoUrl,
-          thumbnail: photoUrl,
-          caption: `${report.serviceType} report card - ${formatDate(report.date)}`,
-          uploadedBy: report.createdBy,
-          uploadedAt: report.sentAt || report.date,
+          id: `report-${report.id}-photo-${photo.id}`,
+          url: photo.url,
+          thumbnail: photo.url,
+          caption:
+            photo.caption ??
+            `${report.serviceType} report card - ${formatDate(report.visitDate)}`,
+          // Deliberately absent. `created_by` is the staff member's profile id,
+          // and this renders as "Uploaded by {x}" — an owner should not be
+          // shown a uuid, and the card does not join the name.
+          uploadedBy: undefined,
+          uploadedAt: report.sentAt ?? report.visitDate,
           source: "report_card",
-          bookingId: report.bookingId,
+          // Also deliberately absent: a card's booking is a uuid and these
+          // bookings are keyed by number, so the comparison below can only
+          // ever be false — and a false match OVERWRITES the album's
+          // date-matched booking with nothing. Date matching is the path that
+          // works, and it is the one direct uploads already take.
+          bookingId: undefined,
           reportCardId: report.id,
         });
       });
@@ -196,11 +210,11 @@ export function PhotoAlbums({
               className="group bg-muted relative aspect-square cursor-pointer overflow-hidden rounded-lg transition-opacity hover:opacity-80"
               onClick={() => setSelectedPhoto(photo)}
             >
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element -- may be a signed private-bucket URL, which next/image is configured to refuse */}
+              <img
                 src={photo.thumbnail || photo.url}
                 alt={photo.caption || "Pet photo"}
-                fill
-                className="object-cover"
+                className="absolute inset-0 size-full object-cover"
               />
               {photo.caption && (
                 <div className="absolute inset-0 flex items-end bg-black/0 transition-colors group-hover:bg-black/40">
@@ -250,11 +264,11 @@ export function PhotoAlbums({
                   </Button>
                 )}
                 <div className="bg-muted relative flex aspect-video items-center justify-center">
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element -- may be a signed private-bucket URL */}
+                  <img
                     src={selectedPhoto.url}
                     alt={selectedPhoto.caption || "Pet photo"}
-                    fill
-                    className="object-contain"
+                    className="absolute inset-0 size-full object-contain"
                   />
                 </div>
                 <div className="border-t p-4">
@@ -328,11 +342,11 @@ export function PhotoAlbums({
                     className="group bg-muted relative aspect-square cursor-pointer overflow-hidden rounded-lg transition-opacity hover:opacity-80"
                     onClick={() => setSelectedPhoto(photo)}
                   >
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element -- may be a signed private-bucket URL */}
+                    <img
                       src={photo.thumbnail || photo.url}
                       alt={photo.caption || "Pet photo"}
-                      fill
-                      className="object-cover"
+                      className="absolute inset-0 size-full object-cover"
                     />
                     {photo.caption && (
                       <div className="absolute inset-0 flex items-end bg-black/0 transition-colors group-hover:bg-black/40">
@@ -386,11 +400,11 @@ export function PhotoAlbums({
                 </Button>
               )}
               <div className="bg-muted relative flex aspect-video items-center justify-center">
-                <Image
+                {/* eslint-disable-next-line @next/next/no-img-element -- may be a signed private-bucket URL */}
+                <img
                   src={selectedPhoto.url}
                   alt={selectedPhoto.caption || "Pet photo"}
-                  fill
-                  className="object-contain"
+                  className="absolute inset-0 size-full object-contain"
                 />
               </div>
               <div className="border-t p-4">

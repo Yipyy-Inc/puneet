@@ -47,8 +47,8 @@ import { facilityConfig } from "@/data/facility-config";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
 import { clientCommunications } from "@/data/communications";
-import { reportCards } from "@/data/pet-data";
 import { useQuery } from "@tanstack/react-query";
+import { reportCardQueries } from "@/lib/api/report-cards";
 import { groomingQueries } from "@/lib/api/grooming";
 import { bookingQueries } from "@/lib/api/booking";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
@@ -178,23 +178,30 @@ export default function CustomerDashboardPage() {
     };
   }, [customerId, selectedFacility]);
 
-  // Get report cards count
+  // The caller's report cards, from Postgres.
+  //
+  // `mine()` asks for SENT cards and RLS scopes them to this person, so there
+  // is no id matching left to get wrong — the fixture version had to join
+  // through bookings precisely because it was filtering a global array.
+  //
+  // Deliberately NOT narrowed to `selectedFacility`: that selector still
+  // carries a fixture facility id, and a card carries the real uuid, so any
+  // comparison between them is decorative. Counting every real card the person
+  // has is honest; counting zero because two id spaces disagree is not.
+  const { data: myReportCards = [] } = useQuery({
+    ...reportCardQueries.mine(),
+    enabled: customerId != null,
+  });
+
   const reportCardsData = useMemo(() => {
-    // Matched against the caller's REAL bookings. Report cards are still a
-    // fixture, so this is a fixture joined to live rows — but the join key is
-    // now the signed-in person's, so somebody else's cards cannot appear.
-    const customerReportCards = reportCards.filter((rc) => {
-      const booking = allCustomerBookings.find((b) => b.id === rc.bookingId);
-      return booking != null && booking.facilityId === selectedFacility?.id;
-    });
-    const latestReportCard = customerReportCards.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    )[0];
+    const latest = myReportCards
+      .map((card) => card.sentAt ?? card.visitDate)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
     return {
-      total: customerReportCards.length,
-      latest: latestReportCard ? new Date(latestReportCard.date) : null,
+      total: myReportCards.length,
+      latest: latest ? new Date(latest) : null,
     };
-  }, [allCustomerBookings, selectedFacility]);
+  }, [myReportCards]);
 
   // Get loyalty data
   const loyaltyData = useMemo(() => {
@@ -252,23 +259,33 @@ export default function CustomerDashboardPage() {
     [nowMs, ownedPackages],
   );
 
-  // Newest unread report card for this customer's pets (viewedByCustomer=false).
+  // Newest report card the owner has not opened yet.
+  //
+  // `viewedAt` is stamped by `mark_report_card_viewed` when they actually open
+  // it, so this banner now disappears because they read it. It used to key off
+  // a fixture flag that no read could ever change, which meant a customer who
+  // had read everything was still told there was something new.
   const newReportCard = useMemo(() => {
-    const petIds = new Set(customerPets.map((p) => p.id));
-    const card = reportCards
-      .filter((rc) => petIds.has(rc.petId) && rc.viewedByCustomer === false)
+    const card = myReportCards
+      .filter((c) => c.viewedAt == null)
       .sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        (a, b) =>
+          new Date(b.sentAt ?? b.visitDate).getTime() -
+          new Date(a.sentAt ?? a.visitDate).getTime(),
       )[0];
     if (!card) return null;
-    const pet = customerPets.find((p) => p.id === card.petId);
+
+    const pet = customerPets.find((p) => p.id === card.petRef);
+    const mood = typeof card.input.mood === "string" ? card.input.mood : "";
     return {
-      petName: pet?.name ?? "Your pet",
+      petName: card.petName ?? pet?.name ?? "Your pet",
       petImage: pet?.imageUrl,
-      photo: card.photos[0],
-      mood: card.mood,
+      // The signed URL, or nothing. A private-bucket path that failed to sign
+      // renders as a broken image.
+      photo: card.photos.find((p) => p.url)?.url ?? null,
+      mood,
     };
-  }, [customerPets]);
+  }, [customerPets, myReportCards]);
 
   // Get unfinished bookings for this customer + facility
   const unfinishedBookings = useMemo(() => {
@@ -766,9 +783,22 @@ export default function CustomerDashboardPage() {
                       : businessProfile.businessName}
                   </span>{" "}
                   —{" "}
-                  <span className="font-semibold">{newReportCard.petName}</span>{" "}
-                  had a <span className="capitalize">{newReportCard.mood}</span>{" "}
-                  day! 🐶
+                  <span className="font-semibold">{newReportCard.petName}</span>
+                  {/* Mood is one of the facility's optional questions. When it
+                      was not answered the sentence closes without it, rather
+                      than reading "had a  day!". */}
+                  {newReportCard.mood ? (
+                    <>
+                      {" "}
+                      had a{" "}
+                      <span className="capitalize">
+                        {newReportCard.mood}
+                      </span>{" "}
+                      day! 🐶
+                    </>
+                  ) : (
+                    <> has a new report! 🐶</>
+                  )}
                 </p>
                 <span className="text-primary mt-0.5 inline-flex items-center gap-1 text-xs font-medium group-hover:underline">
                   View {newReportCard.petName}&apos;s Report
@@ -779,12 +809,15 @@ export default function CustomerDashboardPage() {
               {/* One photo thumbnail */}
               {newReportCard.photo && (
                 <div className="relative hidden size-12 shrink-0 overflow-hidden rounded-lg sm:block">
-                  <Image
+                  {/* A signed private-bucket URL. next/image is configured to
+                      admit this host only for the PUBLIC path, so an optimised
+                      request would 400 and draw a broken image. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
+                  <img
                     src={newReportCard.photo}
                     alt=""
-                    fill
                     sizes="48px"
-                    className="object-cover"
+                    className="absolute inset-0 size-full object-cover"
                   />
                 </div>
               )}
