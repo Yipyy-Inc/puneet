@@ -11,11 +11,10 @@ import {
   ArrowUpRight,
   type LucideIcon,
 } from "lucide-react";
-import { loyaltyQueries } from "@/lib/api/loyalty";
-import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
+import { loyaltyLedgerQueries } from "@/lib/api/loyalty-ledger";
+import { bookingQueries } from "@/lib/api/booking";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { bookings } from "@/data/bookings";
-import { computeProgramPerformance } from "@/lib/loyalty/program-metrics";
+import { computeProgramPerformanceFromLedger } from "@/lib/loyalty/program-metrics";
 
 // Captured once at module load; the banner only renders after hydration so SSR
 // and the first client render match.
@@ -39,27 +38,35 @@ const TONE: Record<string, { text: string; bg: string }> = {
 
 export function LoyaltyPerformanceBanner() {
   const hydrated = useHydrated();
-  const { facilityId } = useLoyaltyProgram();
-  const { data: accounts = [] } = useQuery(loyaltyQueries.accounts(facilityId));
-  const { data: redemptions = [] } = useQuery(
-    loyaltyQueries.redemptions(facilityId),
-  );
+  // The LEDGER, not `@/lib/api/loyalty` — that module is the fixture one, and
+  // this banner quoted a dollar figure out of it. `@/data/bookings` is gone for
+  // the same reason: retention was being measured against invented history.
+  const accountsQ = useQuery(loyaltyLedgerQueries.accounts());
+  const vouchersQ = useQuery(loyaltyLedgerQueries.allVouchers());
+  const bookingsQ = useQuery(bookingQueries.all());
+  const accounts = accountsQ.data ?? [];
+  const vouchers = vouchersQ.data ?? [];
+  const bookings = bookingsQ.data ?? [];
+  // Every default above is EMPTY, and an empty ledger computes to $0, 0%,
+  // "0 of 0 members" — which is not "loading", it is a claim, and a wrong one.
+  // Measured on the demo facility: the first paint said $0 and 0 of 0 while the
+  // truth was 3 of 4 members and real money off real bills. A zero that arrives
+  // before the data is the same lie as an invented constant, told faster.
+  const loading =
+    accountsQ.isPending || vouchersQ.isPending || bookingsQ.isPending;
 
   const perf = useMemo(
     () =>
-      computeProgramPerformance({
+      computeProgramPerformanceFromLedger({
         accounts,
-        redemptions,
-        bookings: bookings.map((b) => ({
-          clientId: b.clientId,
-          startDate: b.startDate,
-        })),
+        vouchers,
+        bookings,
         now: NOW_ISO,
       }),
-    [accounts, redemptions],
+    [accounts, vouchers, bookings],
   );
 
-  if (!hydrated) {
+  if (!hydrated || loading) {
     return <div className="bg-muted/30 h-28 animate-pulse rounded-xl border" />;
   }
 
@@ -79,7 +86,14 @@ export function LoyaltyPerformanceBanner() {
       key: "revenue",
       label: "Revenue retained",
       value: `$${perf.revenueRetained.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-      hint: "Reward value applied this month",
+      // The unpriceable rewards are DISCLOSED rather than folded in at an
+      // assumed value. A free service stores no amount, so its cash worth is
+      // not knowable from the ledger — and a total that quietly included a
+      // guess would be worse than one that admits its edge.
+      hint:
+        perf.unvaluedRewards > 0
+          ? `Off real bills this month · ${perf.unvaluedRewards} reward${perf.unvaluedRewards === 1 ? "" : "s"} not priceable`
+          : "Taken off real bills this month",
       icon: DollarSign,
       tone: "emerald",
     },
