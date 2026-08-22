@@ -198,3 +198,178 @@ export function pointsActivityByMonth(
     };
   });
 }
+
+// ─── The same three numbers, from the ledger instead of an assumption ────────
+//
+// Everything above this line is fixture-backed and estimates money. It survives
+// only for `/marketing/loyalty-reports`, which has not been converted yet.
+//
+// ── WHAT WAS WRONG WITH ESTIMATING ────────────────────────────────────────
+//
+// `redemptionDollarValue` turns a 10% reward into dollars by multiplying it by
+// AVG_ORDER_VALUE — a constant, 75, that nobody measured. FREE_SERVICE_VALUE is
+// the same thing at 45. Those two numbers are then summed and shown to a
+// facility owner as "Revenue retained", in dollars, with a currency sign, as if
+// it were their money.
+//
+// It is not an estimate a business could act on: it is the same answer whatever
+// their prices are, and it moves when somebody edits a constant in a TypeScript
+// file. A number on an owner's dashboard has to come from what happened.
+//
+// ── WHAT HAPPENED IS RECORDED ─────────────────────────────────────────────
+//
+// A spent voucher carries `usedOnBookingRef`, so the bill it came off is
+// knowable. That makes the actual saving computable rather than assumed:
+//
+//   discount_fixed   the amount, which is already dollars
+//   discount_pct     the percentage OF THE BOOKING IT WAS SPENT ON
+//
+// ── AND WHAT IS NOT RECORDED IS NOT INVENTED ──────────────────────────────
+//
+// A `free_service` reward names no price anywhere — the voucher stores a
+// service, not an amount — so its cash value cannot be sourced. It is COUNTED
+// and reported separately as `unvaluedRewards` rather than folded in at a made
+// up 45. The screen can then say "plus N rewards we cannot price", which is
+// true, instead of a total that is confidently wrong.
+//
+// Same for a percentage voucher whose booking cannot be resolved: no bill, no
+// number, counted as unvalued.
+
+/** A voucher as `/api/loyalty/vouchers` returns it — only the fields used here. */
+export interface LedgerVoucherLite {
+  rewardType: string;
+  rewardValue: number;
+  effectiveStatus: string;
+  usedAt: string | null;
+  usedOnBookingRef: number | null;
+  clientRef: number | null;
+}
+
+/** A booking as `/api/bookings` returns it — only the fields used here. */
+export interface BookingMoneyLite {
+  id: number;
+  clientId: number;
+  startDate?: string;
+  date?: string;
+  totalCost?: number;
+}
+
+export interface LedgerProgramPerformance extends ProgramPerformance {
+  /**
+   * Rewards spent this month whose cash value cannot be sourced.
+   *
+   * Reported so the screen can disclose the gap. Folding these in at an assumed
+   * price is the bug this function exists to remove.
+   */
+  unvaluedRewards: number;
+}
+
+/**
+ * The dollars a spent voucher actually took off a bill, or `null` when that
+ * cannot be known. `null` is a real answer and must not be coerced to 0 — a
+ * reward worth something unknown is not a reward worth nothing.
+ */
+export function voucherDollarValue(
+  v: LedgerVoucherLite,
+  bookingTotalByRef: Map<number, number>,
+): number | null {
+  if (!Number.isFinite(v.rewardValue)) return null;
+  switch (v.rewardType) {
+    case "discount_fixed":
+      return v.rewardValue;
+    case "discount_pct": {
+      if (v.usedOnBookingRef === null) return null;
+      const total = bookingTotalByRef.get(v.usedOnBookingRef);
+      if (total === undefined) return null;
+      return Math.round(total * v.rewardValue) / 100;
+    }
+    default:
+      // free_service, and anything added later. No price is stored, so there is
+      // nothing to read. Deliberately not a guess.
+      return null;
+  }
+}
+
+export function computeProgramPerformanceFromLedger(input: {
+  accounts: { clientRef: number }[];
+  vouchers: LedgerVoucherLite[];
+  bookings: BookingMoneyLite[];
+  now: string;
+}): LedgerProgramPerformance {
+  const now = new Date(input.now);
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+
+  const bookingTotalByRef = new Map<number, number>();
+  for (const b of input.bookings) {
+    if (typeof b.totalCost === "number" && Number.isFinite(b.totalCost)) {
+      bookingTotalByRef.set(b.id, b.totalCost);
+    }
+  }
+
+  // SPENT this month. `effectiveStatus`, not `status`: nothing flips a row to
+  // expired, so the stored column disagrees with reality on exactly the rows a
+  // money figure must not get wrong.
+  const spentThisMonth = input.vouchers.filter(
+    (v) =>
+      v.effectiveStatus === "used" &&
+      v.usedAt !== null &&
+      isSameMonth(v.usedAt, year, month),
+  );
+
+  let revenueRetained = 0;
+  let unvaluedRewards = 0;
+  for (const v of spentThisMonth) {
+    const dollars = voucherDollarValue(v, bookingTotalByRef);
+    if (dollars === null) unvaluedRewards += 1;
+    else revenueRetained += dollars;
+  }
+  revenueRetained = Math.round(revenueRetained * 100) / 100;
+
+  const totalMembers = input.accounts.length;
+  const redeemedRefs = new Set(
+    spentThisMonth
+      .map((v) => v.clientRef)
+      .filter((r): r is number => r !== null),
+  );
+  const membersRedeemed = input.accounts.filter((a) =>
+    redeemedRefs.has(a.clientRef),
+  ).length;
+
+  // --- Retention: members vs non-members, from real bookings ---------------
+  const memberRefs = new Set(input.accounts.map((a) => a.clientRef));
+  const bookingsByClient = new Map<number, number[]>();
+  for (const b of input.bookings) {
+    const iso = b.startDate ?? b.date;
+    if (!iso) continue;
+    const ms = new Date(iso).getTime();
+    if (!Number.isFinite(ms)) continue;
+    const arr = bookingsByClient.get(b.clientId);
+    if (arr) arr.push(ms);
+    else bookingsByClient.set(b.clientId, [ms]);
+  }
+
+  const memberIds: number[] = [];
+  const nonMemberIds: number[] = [];
+  for (const clientId of bookingsByClient.keys()) {
+    if (memberRefs.has(clientId)) memberIds.push(clientId);
+    else nonMemberIds.push(clientId);
+  }
+  const retainedShare = (ids: number[]): number => {
+    if (ids.length === 0) return 0;
+    return (
+      ids.filter((id) => rebookedWithinWindow(bookingsByClient.get(id) ?? []))
+        .length / ids.length
+    );
+  };
+
+  return {
+    revenueRetained,
+    redemptionRate: totalMembers > 0 ? membersRedeemed / totalMembers : 0,
+    membersRedeemed,
+    totalMembers,
+    memberRetention: retainedShare(memberIds),
+    nonMemberRetention: retainedShare(nonMemberIds),
+    unvaluedRewards,
+  };
+}
