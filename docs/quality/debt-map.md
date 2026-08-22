@@ -4054,6 +4054,50 @@ no fixture photo was ever in a private bucket — so every photo path in the
 converted report-card screens was written against a URL shape that had never
 been rendered.
 
+### 🟠 `bun run e2e:purge` is a SHARED script with a per-owner name — 2026-08-22
+
+Running it to clean up your own rows is never a purely local act.
+`purge_e2e_report_cards()` takes no argument and matches only its own
+`generated->>'todaysVibe' like 'E2E: %'` prefix, so it can only ever reach
+cards this suite wrote. `purge_e2e_bookings` in the same script does not: it
+matches a prefix that belongs to nobody in particular, across one shared
+Postgres. One session purging 3 of its own report cards also removed **32
+bookings** it had never created.
+
+**Why it's risky:** it is the same class of hazard as cancelling an e2e run
+mid-flight, with a different verb. The action is correct in isolation and
+destructive only because somebody else is between their setup and their
+assertions — so it is invisible to the person doing it, and to the person it
+happens to it looks like a flaky test or an application bug. Nothing in the
+output distinguishes "cleaned up after myself" from "cleaned up after you".
+
+**Do instead:** before running the shared purge, establish that no other
+session has a run in flight — ask, the way you would before pushing. Prefer a
+purge that cannot reach another session's rows: take no argument, match a
+prefix the application cannot produce, and refuse anything a real user has
+touched. That is why `purge_e2e_report_cards` is shaped the way it is, and the
+shape is the point rather than the caution.
+
+### 🟡 A test run proves nothing until you know which server answered — 2026-08-22
+
+`next start` **exits** when it cannot bind rather than refusing to serve, and
+the only trace is an `errno: -4091` at the tail of its log. A session started a
+server on an already-bound port, missed the failure, pointed Playwright at that
+port, and got two red tests — from somebody else's build. The same trap has a
+second door: finding a port already answering and pointing `E2E_BASE_URL` at it
+without asking whose build it is.
+
+Both directions produce a confident result about code that was never executed.
+Red is the lucky outcome; green is the one that ships.
+
+**Do instead:** after starting a server, check it actually bound — and prefer a
+port nothing else uses (`netstat -ano | grep LISTENING`). When a run
+contradicts what you just changed, suspect the target before the change: the
+cheapest discriminator is whether the behaviour differs from the build you
+believe is running. A verification that rests on a **database read taken
+afterwards** rather than on a green tick survives this trap, and is worth
+preferring for that reason alone.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
