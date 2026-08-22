@@ -1,0 +1,53 @@
+-- ============================================================================
+-- Close the anon EXECUTE grant on `award_loyalty_badge`.
+--
+-- ── THE SAME TRAP, A FOURTH TIME — AND THIS ONE IS A REGRESSION ───────────
+--
+-- Supabase ships `alter default privileges in schema public grant execute on
+-- functions to anon, authenticated, service_role`, so EVERY function born in
+-- `public` carries an explicit `anon=X` ACL entry. `revoke ... from public` is
+-- a DIFFERENT grant and leaves `anon=X` standing. Only a revoke naming `anon`
+-- removes it. All of that is already written down, in
+-- 20260805210403_revoke_anon_execute_on_public_functions.sql.
+--
+-- What makes this one worse than forgetting a rule nobody had met: the three
+-- loyalty functions written the day before — `redeem_loyalty_points`,
+-- `consume_loyalty_voucher`, `release_loyalty_voucher` — all say
+-- `from public, anon`. `award_loyalty_badge` dropped the `, anon` a day later,
+-- in the same module, by the same hand. The pattern was there to copy.
+--
+-- ── WHAT WAS ACTUALLY REACHABLE ───────────────────────────────────────────
+--
+-- Not an award. `private.has_permission()` returns false with no subject, so an
+-- unauthenticated caller is refused at the permission check and nothing is
+-- written.
+--
+-- What WAS reachable is an existence oracle. The function resolves the account
+-- BEFORE it checks permission — it has to, because the facility it checks
+-- against comes from that row — and the two failures are distinguishable:
+--
+--     'That loyalty account does not exist.'  P0002
+--     'You do not have permission ...'        42501
+--
+-- Under SECURITY DEFINER that lookup bypasses RLS, so anyone holding the
+-- publishable key could tell a real `loyalty_accounts.id` from a made-up one.
+-- That is the exact pattern the rpc-session-required sweep was written to
+-- eliminate, and the exact shape of the two functions 20260805210403 fixed.
+--
+-- Mitigating, and only mitigating: the id is a random uuid, so there is nothing
+-- practical to enumerate. That is an argument about difficulty, not about the
+-- door being shut.
+--
+-- ── WHY REVOKE RATHER THAN REORDER ────────────────────────────────────────
+--
+-- Making the two errors indistinguishable would close the oracle too, and was
+-- rejected: a legitimate caller who mistypes an account id would then be told
+-- they lack permission, which sends them to look at roles instead of at their
+-- argument. The house answer is to take anon off the function entirely — the
+-- oracle needs an unauthenticated caller, and after this there is none.
+-- ============================================================================
+
+revoke execute on function public.award_loyalty_badge(uuid, text, text, text, numeric, text[], integer) from anon;
+
+comment on function public.award_loyalty_badge(uuid, text, text, text, numeric, text[], integer) is
+  'Record a badge as earned and issue its reward in one transaction. Raises 23505 when the account already holds it, which rolls the reward back — so a retried checkout cannot award twice. Requires marketing_manage_loyalty on the account''s own facility; anon holds no EXECUTE grant — see rpc-session-required.sql for why that must be revoked explicitly rather than via `from public`.';
