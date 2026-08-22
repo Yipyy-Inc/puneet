@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { Button } from "@/components/ui/button";
@@ -32,8 +32,12 @@ import { customServiceCheckIns } from "@/data/custom-service-checkins";
 import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 import { COLOR_HEX_MAP } from "@/data/custom-services";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { daycarePlayAreas, daycareSections } from "@/data/daycare-areas";
-import type { RoomCategory } from "@/types/rooms";
+import { useDaycareAreas } from "@/hooks/use-daycare-areas";
+import type {
+  RoomCategory,
+  DaycarePlayArea,
+  DaycareSection,
+} from "@/types/rooms";
 import type { OccupancyKennel } from "./_lib/calendar-types";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 
@@ -120,23 +124,33 @@ function buildKennels({
     });
 }
 
-// Daycare uses Play Areas → Sections from the modules data. We adapt them into
-// the same RoomCategory / OccupancyKennel shapes the calendar already understands.
-const daycareCategories: RoomCategory[] = daycarePlayAreas
-  .filter((a) => a.isActive)
-  .map((a) => ({
-    id: a.id,
-    facilityId: a.facilityId,
-    service: "daycare",
-    name: a.name,
-    description: a.description,
-    color: "amber",
-    sortOrder: a.sortOrder,
-    rules: [],
-    defaultCapacity: 0,
-    visibleToClients: true,
-    imageUrl: a.imageUrl,
-  }));
+// Daycare uses Play Areas → Sections. We adapt them into the same
+// RoomCategory / OccupancyKennel shapes the calendar already understands.
+//
+// Derived from the hook rather than computed at module scope, because the
+// areas are `room_categories` rows now (20260822800000) and arrive
+// asynchronously. As a module constant this was evaluated once, at import,
+// against a fixture — which is exactly why editing a yard never changed this
+// board.
+function toDaycareCategories(areas: DaycarePlayArea[]): RoomCategory[] {
+  return areas
+    .filter((a) => a.isActive)
+    .map((a) => ({
+      id: a.id,
+      facilityId: a.facilityId,
+      service: "daycare" as const,
+      name: a.name,
+      description: a.description,
+      color: "amber" as const,
+      sortOrder: a.sortOrder,
+      rules: [],
+      defaultCapacity: 0,
+      visibleToClients: true,
+      imageUrl: a.imageUrl,
+      // Everything reaching here passed the `isActive` filter above.
+      active: true,
+    }));
+}
 
 // Mock daycare reservations (1-day each) keyed by section id.
 const mockDaycareOverlays: Record<
@@ -203,7 +217,14 @@ const mockDaycareOverlays: Record<
   },
 };
 
-function buildInitialDaycareKennels(): Kennel[] {
+// The SECTIONS are real now — `facility_rooms` inside a daycare category. The
+// OCCUPANCY on this half still is not: `mockDaycareOverlays` above invents who
+// is in them. The boarding half gets its occupancy from /api/boarding/rooms,
+// which joins the stays; daycare has no equivalent yet, and inventing one here
+// would be the same mistake in a new place.
+function buildInitialDaycareKennels(
+  daycareSections: DaycareSection[],
+): Kennel[] {
   return daycareSections
     .filter((s) => s.isActive)
     .map((section) => {
@@ -231,8 +252,6 @@ function buildInitialDaycareKennels(): Kennel[] {
       };
     });
 }
-
-const initialDaycareKennels: Kennel[] = buildInitialDaycareKennels();
 
 type ServiceType = "boarding" | "daycare" | "both";
 
@@ -286,9 +305,20 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
     (c) => c.service === "boarding",
   );
   const [kennels, setKennels] = useState<Kennel[]>(() => buildKennels(rooms));
-  const [daycareKennels, setDaycareKennels] = useState<Kennel[]>(
-    initialDaycareKennels,
+
+  // The facility's real play areas and sections.
+  const { areas: daycareAreas, sections: daycareSections } = useDaycareAreas();
+  const daycareCategories = useMemo(
+    () => toDaycareCategories(daycareAreas),
+    [daycareAreas],
   );
+  const [daycareKennels, setDaycareKennels] = useState<Kennel[]>([]);
+  // Rebuilt whenever the sections change — they arrive asynchronously, and the
+  // board carries local status edits on top, so it stays state rather than a
+  // memo.
+  useEffect(() => {
+    setDaycareKennels(buildInitialDaycareKennels(daycareSections));
+  }, [daycareSections]);
   const [filterStatus, setFilterStatus] = useState<KennelStatus | "all">("all");
   const [daycareFilterStatus, setDaycareFilterStatus] = useState<
     KennelStatus | "all"

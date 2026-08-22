@@ -24,6 +24,7 @@ function blank(categoryId: string, facilityId: number): FacilityRoom {
     name: "",
     active: true,
     capacity: undefined,
+    rules: [],
     staffNotes: "",
   };
 }
