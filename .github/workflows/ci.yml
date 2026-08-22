@@ -66,6 +66,91 @@ jobs:
 
       - run: bun run build
 
+  # ── THE DATABASE TESTS ────────────────────────────────────────────────────
+  #
+  # 41 files in supabase/tests/, and until 2026-08-22 NOTHING ran any of them —
+  # not CI, not a package script, not a hook. They were hand-run, and evidently
+  # had not been for weeks. On their first automated run: 368 passed, 23 failed,
+  # 7 could not run at all.
+  #
+  # That is not a tidiness problem. `rpc-session-required.sql` contains V7, a
+  # sweep written SPECIFICALLY so that a new SECURITY DEFINER function which
+  # forgets to revoke `anon` fails a test rather than reaching production. It
+  # had been failing, unread, naming eleven functions — three of them existence
+  # oracles and one with no permission check at all. A rule this repo has
+  # written down in three places was broken a fifth time while the test that
+  # catches it sat green-in-nobody's-eyes on disk.
+  #
+  # A test nobody runs is worse than no test: it is the APPEARANCE of a gate.
+  # This job is the difference.
+  #
+  # ── THESE RUN AGAINST THE REAL DATABASE, AND ROLL BACK ────────────────────
+  #
+  # There is one Postgres and this points at it. Every file seeds real rows into
+  # real tables — facilities, memberships, staff, bookings — because that is the
+  # only way to test RLS, which is the authorisation boundary this product rests
+  # on. What makes it safe is that scripts/run-sql-tests.ts owns the transaction
+  # rather than trusting the file: it STRIPS each file's own `begin`/`rollback`,
+  # wraps the body in its own transaction, and aborts it unconditionally. A file
+  # that forgot its rollback still cannot commit, and one whose shape it does
+  # not recognise is refused rather than run.
+  #
+  # `cancel-in-progress` above is therefore safe here in a way it is not for the
+  # browser tests: a cancelled connection aborts its transaction, so a killed
+  # SQL run leaves nothing behind. It has no `afterAll` to skip.
+  #
+  # ── WHY IT IS CHEAP ───────────────────────────────────────────────────────
+  #
+  # No build, no browser, no server. Install and connect. The whole suite is
+  # ~90 seconds, against ~18 minutes for the browser job — which is the argument
+  # for it gating rather than reporting.
+  sql:
+    name: sql (RLS, grants & database invariants)
+    runs-on: ubuntu-latest
+    # Secrets are not available to forked pull requests, so the job would fail
+    # for a reason that has nothing to do with the change.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      # Fail here, in one line, rather than 41 identical connection errors.
+      # Same rule as the e2e preflight below.
+      - name: Check the connection string is configured
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Missing repository secret: SUPABASE_DB_URL"
+            echo "Add it under Settings -> Secrets and variables -> Actions."
+            echo "It is the Postgres connection string from Supabase under"
+            echo "Project Settings -> Database -> Connection string. Use the"
+            echo "SESSION pooler or the direct connection - both port 5432."
+            echo "The publishable and service-role keys will NOT do: they reach"
+            echo "PostgREST, which cannot hold a session open across begin and"
+            echo "rollback, and that rollback is the only reason these tests are"
+            echo "safe to run against a real database."
+            exit 1
+          fi
+          case "$SUPABASE_DB_URL" in
+            *:6543/*|*:6543)
+              echo "::error::That is the TRANSACTION pooler (port 6543)."
+              echo "It hands out a different backend per statement, which breaks"
+              echo "both prepared statements and the session-level transaction"
+              echo "these tests depend on. Use the SESSION pooler or the direct"
+              echo "connection - both are port 5432."
+              exit 1 ;;
+          esac
+          echo "Connection string present, and not the transaction pooler."
+
+      - run: bun install --frozen-lockfile
+
+      - name: Run the SQL tests
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: bun run test:sql
+
   # ── THE BROWSER TESTS ──────────────────────────────────────────────────────
   #
   # Everything above proves the code COMPILES, is formatted and has no type
