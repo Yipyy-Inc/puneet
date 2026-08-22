@@ -7,7 +7,6 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { users } from "@/data/users";
 import { defaultServiceAddOns } from "@/data/service-addons";
 import { daycareRates } from "@/data/daycare";
-import { boardingRates } from "@/data/boarding";
 // `groomingPackages` is gone from this import: the menu arrives on
 // BuildUnifiedEventsInput, because this module cannot fetch it itself.
 import type { GroomingPackage } from "@/types/grooming";
@@ -864,7 +863,12 @@ function getRateColor(
       }
     };
     add("daycare", daycareRates as RateEntry[]);
-    add("boarding", boardingRates as RateEntry[]);
+    // Boarding is absent on purpose. Its colours moved onto the kennel class
+    // (`room_categories.color`) when the rate-card fixture went, and this
+    // module cannot fetch — which is exactly why `groomingMenu` is a
+    // parameter. Threading the classes through `buildUnifiedEvents` the same
+    // way is the fix; until then a boarding event takes the default colour
+    // rather than one looked up from a list that no longer exists.
     add("grooming", groomingMenu as RateEntry[]);
     add("training", trainingPackages as RateEntry[]);
   }
