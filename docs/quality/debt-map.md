@@ -4158,6 +4158,32 @@ is the wrong gate for those four, because it conflates "has real credentials"
 with "is not localhost". Until somebody answers that, do not describe the
 payment integration as covered by the suite. It is covered by a file.
 
+## Snapshot (2026-08-22, wiring a gate to CI)
+
+### 🔴 Supabase's DIRECT connection string is IPv6-only, and GitHub runners have no IPv6
+
+Setting up the `sql` CI job needs a `SUPABASE_DB_URL` secret. The Supabase dashboard offers three connection strings and the most obvious one is wrong for CI:
+
+| Tab in the dashboard  | Host                                      | Works from GitHub Actions? |
+| --------------------- | ----------------------------------------- | -------------------------- |
+| **Direct connection** | `db.<ref>.supabase.co:5432`               | **NO** — IPv6-only         |
+| **Session pooler**    | `aws-0-<region>.pooler.supabase.com:5432` | **YES** — IPv4             |
+| Transaction pooler    | `…pooler.supabase.com:6543`               | No — see below             |
+
+**Why it's risky:** the failure is a **connection timeout**, which reads exactly like a wrong password or a firewall rule. Nothing in the message says "your runner has no route to this address", so the obvious next move is to re-copy the credential — which is the one thing that cannot help. Supabase moved direct connections to IPv6 and GitHub-hosted runners still have no IPv6 route; the pooler is dual-stack.
+
+The transaction pooler (6543) is wrong for a different and equally silent reason: it hands out a different backend **per statement**, so prepared statements vanish between calls and a session-level transaction cannot be held. Since `scripts/run-sql-tests.ts` depends entirely on `begin`/`rollback` spanning statements, that is fatal — and it reports as `prepared statement "…" does not exist`, which names nothing relevant. The runner and the CI preflight both refuse port 6543 **by name** for this reason.
+
+**Do instead:** use the **Session pooler** string, port 5432. Its username carries the project ref (`postgres.<project-ref>`), which is the quickest way to tell the two apart without revealing the password. Verified 2026-08-22: the secret set from the pooler string produced a green `sql` job on run 32584736000 in ~90 seconds.
+
+### 🟡 A re-run started to check something can be cancelled by the push it was checking for
+
+`ci.yml` sets `concurrency: cancel-in-progress: true`, grouped per ref. So re-running a single failed job on `main` to verify a fix, while somebody else is about to push to `main`, means **their push cancels your re-run**. You block them, and you get no answer — the check destroys itself.
+
+**Why it's risky:** this is not the ordinary two-writers-collide hazard listed in the shared-database entry above, and it does not look like a hazard at all. It looks like diligence. The whole point of the re-run is to avoid asserting something unverified, and the mechanism silently converts it into a cancelled run whose absence is easy to read as "nothing happened".
+
+**Do instead:** when a colleague's push is imminent and will run the same job, **let their run be your verification** rather than starting your own — provided their change genuinely cannot affect the result, which is a claim to check rather than assume. On 2026-08-22 the peer's six commits contained no DDL and touched no grants, so the SQL suite could not be affected by them; their run was therefore a clean read on the secret, and re-running would have been a duplicate that cancelled itself. This is a fourth verb for the entry above — add a fifth without renaming it.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
