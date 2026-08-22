@@ -6,6 +6,7 @@ import type { LoyaltyAccountRow } from "@/app/api/loyalty/accounts/route";
 import type { LoyaltyTransactionRow } from "@/app/api/loyalty/transactions/route";
 import type { LoyaltyVoucherRow } from "@/app/api/loyalty/vouchers/route";
 import type { EarnResult } from "@/app/api/loyalty/earn/route";
+import type { CustomerLoyaltyPayload } from "@/app/api/customer/loyalty/route";
 
 // ============================================================================
 // The loyalty ledger, from the browser.
@@ -34,6 +35,7 @@ export type {
   LoyaltyTransactionRow,
   LoyaltyVoucherRow,
   EarnResult,
+  CustomerLoyaltyPayload,
 };
 
 async function get<T>(url: string): Promise<T> {
@@ -265,3 +267,20 @@ export function useEarnLoyaltyPoints() {
     onSuccess: () => invalidateLedger(queryClient),
   });
 }
+
+/**
+ * A CUSTOMER's own loyalty standing — balance, tier, history, rewards, and the
+ * shape of the programme they are in.
+ *
+ * A different route from the facility one on purpose. `/api/loyalty/accounts`
+ * resolves the facility from the caller's MEMBERSHIP and falls back to the demo
+ * facility for a caller with none — which every customer is. This one resolves
+ * through their client row, so a pet owner sees their own business or nothing.
+ */
+export const customerLoyaltyQueries = {
+  mine: () => ({
+    queryKey: ["customer", "loyalty"] as const,
+    queryFn: async () =>
+      await get<CustomerLoyaltyPayload>("/api/customer/loyalty"),
+  }),
+};

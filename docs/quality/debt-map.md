@@ -3510,6 +3510,59 @@ two accounts naming tiers no facility defined. The test agreed with the code and
 both were wrong. Worth remembering: a cleanup that quietly no-ops is a second
 assertion nobody reads.
 
+#### ✅ The customer wallet is REAL — 2026-08-22
+
+`/api/customer/loyalty` — balance, tier, history, the rewards they hold, and the
+programme itself, in one request.
+
+**Its own route, and that is the whole point.** `/api/loyalty/accounts` resolves
+the facility from the caller's MEMBERSHIP and falls back to the DEMO facility for
+a caller with none — which every customer is. Pointing the wallet at it would
+have shown a pet owner a balance from a business they have never been to. This
+resolves through their CLIENT ROW, exactly as `/api/customer/facility` does. That
+is the same reasoning written down twice now, which makes it the rule rather than
+a special case.
+
+**The tier is COMPUTED, not read.** `current_tier_id` only moves when something
+moves the points, so a facility that adds a tier promotes nobody until each
+customer next transacts — and the wallet would have told somebody holding fifteen
+thousand lifetime points that they were in no tier at all. The route returns the
+tier they QUALIFY for; the stored column is what the earn multiplier reads and
+catches up on their next transaction. Found by walking it, not by reasoning about
+it.
+
+**Progress is measured on the right dimension.** The old arithmetic assumed
+points for every tier because the fixture ladder only had points; a real tier can
+be measured on spend or visits, and "200 points away" from a tier that wants
+twenty visits is worse than saying nothing.
+
+**`loyalty_config` joined `private.customer_visible_setting_domains()`**
+(20260822100000) on the reasoning `tax_config` used: a loyalty programme is
+advertised, and a customer who cannot see the tiers cannot judge whether it is
+worth anything. No balances live in that domain — those are in
+`loyalty_accounts`, which admits a client to their own row alone.
+
+Covered by
+[loyalty-customer-wallet.spec.ts](../../tests/e2e/loyalty-customer-wallet.spec.ts)
+in `test:e2e:ci`, signed in AS the customer — testing the payload through a staff
+session would have missed the only thing that could go wrong.
+
+#### 🟠 What the wallet still shows from fixtures
+
+**Badges.** The gallery, the criteria and the earned records are all fixtures,
+because nothing awards a badge — the fixture engine that would has never been
+converted. They are evaluated against the FIXTURE tier ladder on purpose:
+scoring them against the facility's real tiers would dress a fixture up as live
+data. `currentTier` is passed as null there for the same reason.
+
+**Referral and review counts** are hardcoded to zero in the badge stats, because
+neither is recorded against an account anywhere. A badge needing them does not
+unlock, which is the honest outcome.
+
+**Referral codes** still come from `src/data/referral-tracking`, and
+`loyalty_accounts.referral_code` — a real column with a unique index — is never
+populated.
+
 #### 🟠 What earning still does not do
 
 **Only `booking_completed` fires it.** A retail sale, a package purchase, a
@@ -3534,8 +3587,8 @@ fails**. Changing a second money path blind would have been worse than leaving
 it; it needs its own pass.
 
 **Some SCREENS still read fixtures.** The members screen, its three modals and
-the client loyalty tab were converted on 2026-08-21 — see below. Redemptions and
-the customer wallet still go through `lib/api/loyalty.ts` to
+the client loyalty tab were converted on 2026-08-21 — see below. The customer wallet followed on 2026-08-22 — see below. The
+REDEMPTIONS screen still goes through `lib/api/loyalty.ts` to
 `src/data/loyalty-*`, which is why that module keeps its name and why
 `DEFAULT_LOYALTY_FACILITY_ID` is still handed out — as a fixture key, not a
 facility.
