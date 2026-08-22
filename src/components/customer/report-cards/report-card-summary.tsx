@@ -9,6 +9,7 @@ import {
   formatReportDate,
   serviceHeaderColor,
   moodEmoji,
+  usablePhotos,
 } from "./report-card-shared";
 
 // The values the facility's form actually records. Previously these chips were
@@ -78,7 +79,7 @@ export function ReportCardSummary({
   const excerpt = summaryExcerpt(item);
   // Only photos that actually signed. A private-bucket path that failed to
   // sign would render as a broken image, which reads worse than no photo.
-  const photos = item.photos.filter((p) => p.url).slice(0, 3);
+  const photos = usablePhotos(item.photos).slice(0, 3);
   const stats = buildQuickStats(item);
 
   return (
@@ -150,12 +151,15 @@ export function ReportCardSummary({
                   key={photo.id}
                   className="bg-muted relative aspect-square overflow-hidden rounded-lg"
                 >
-                  <Image
-                    src={photo.url as string}
+                  {/* A signed private URL, so not next/image — the optimiser
+                      refuses these. See `GalleryImage` in
+                      ReportCardPhotoGallery for the whole reason. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
+                  <img
+                    src={photo.url}
                     alt={photo.caption ?? `${item.petName} photo ${idx + 1}`}
-                    fill
                     sizes="(max-width: 768px) 30vw, 160px"
-                    className="object-cover"
+                    className="absolute inset-0 size-full object-cover"
                   />
                 </div>
               ))

@@ -29,6 +29,7 @@ import {
   themeStyles,
   formatReportDate,
   formatReportTime,
+  usablePhotos,
 } from "./report-card-shared";
 import { ReportCardShare } from "./report-card-share";
 
@@ -50,10 +51,10 @@ export function ReportCardDetail({
 
   // Only photos that signed. The bucket is private, so an unsigned path would
   // render as a broken image — worse for the owner than no picture at all.
-  const usable = item.photos.filter((p) => p.url);
+  const usable = usablePhotos(item.photos);
   const galleryUrls = usable
     .filter((p) => p.kind === "moment")
-    .map((p) => p.url as string);
+    .map((p) => p.url);
 
   const befores = usable.filter((p) => p.kind === "before");
   const afters = usable.filter((p) => p.kind === "after");
@@ -192,8 +193,8 @@ export function ReportCardDetail({
               {beforeAfterPairs.map((pair) => (
                 <BeforeAfterSlider
                   key={`${item.id}-pair-${pair.before.id}`}
-                  before={pair.before.url as string}
-                  after={pair.after.url as string}
+                  before={pair.before.url}
+                  after={pair.after.url}
                   alt={`${item.petName} grooming`}
                 />
               ))}

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dialog,
@@ -29,7 +28,28 @@ interface ReportCardPhotoGalleryProps {
   date: string;
 }
 
-/** next/image with a pulsing skeleton until it loads. Requires a positioned parent. */
+/**
+ * A report-card photo, with a pulsing skeleton until it loads. Requires a
+ * positioned parent.
+ *
+ * ── WHY THIS IS NOT next/image ────────────────────────────────────────────
+ *
+ * These live in the PRIVATE `report-card-photos` bucket and arrive as
+ * short-lived signed URLs. `next.config.ts` admits this Supabase host to the
+ * optimiser for `/storage/v1/object/public/**` ONLY, and says why: a signed
+ * path has no business being cached by the image proxy, which would keep an
+ * optimised copy — reachable from our own origin, with no signature — after
+ * the URL it came from had expired.
+ *
+ * So the optimiser refuses these, and the refusal is a broken image rather
+ * than an error. Measured against production on 2026-08-22: the same real file
+ * on the same host returned 200 fetched directly and 400 through
+ * `/_next/image`, differing only in `/sign/` vs `/public/` in the path.
+ *
+ * A plain <img> is therefore the correct element here, not a shortcut — the
+ * bytes must come from Supabase to the browser without passing through a cache
+ * that outlives their authorisation.
+ */
 function GalleryImage({
   src,
   alt,
@@ -52,15 +72,16 @@ function GalleryImage({
           aria-hidden="true"
         />
       )}
-      <Image
+      {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL; see above */}
+      <img
         src={src}
         alt={alt}
-        fill
         sizes={sizes}
-        priority={priority}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
         onLoad={() => setLoaded(true)}
         className={cn(
-          "transition-opacity duration-300",
+          "absolute inset-0 size-full object-cover transition-opacity duration-300",
           loaded ? "opacity-100" : "opacity-0",
           className,
         )}
