@@ -133,11 +133,18 @@ begin
                     v_ok, v_msg);
 
   -- ── P9: an expired invitation is not claimable ──────────────────────────
+  --
+  -- Reset FIRST. This insert is fixture setup, not an action under test, and it
+  -- was running while `set local role authenticated` from P8 was still in
+  -- force — where `platform_invitations` admits nothing written directly,
+  -- because the only sanctioned route in is `invite_platform_admin`. The RLS
+  -- refusal was correct; seeding through it was not.
+  execute 'reset role';
+  perform set_config('request.jwt.claims', '', true);
+
   insert into public.platform_invitations (email, full_name, role, token_hash, expires_at)
   values ('plat.expired@yipyy.invalid', 'Expired', 'superadmin',
           decode(repeat('01', 32), 'hex'), now() - interval '1 minute');
-  execute 'reset role';
-  perform set_config('request.jwt.claims', '', true);
 
   insert into public.profiles (id, email, full_name)
   values ('user_platExpired00000000000000000', 'plat.expired@yipyy.invalid', 'Expired');
