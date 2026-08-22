@@ -3029,6 +3029,13 @@ export type Database = {
             foreignKeyName: "loyalty_badge_awards_account_id_fkey";
             columns: ["account_id"];
             isOneToOne: false;
+            referencedRelation: "loyalty_account_overview";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_badge_awards_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
             referencedRelation: "loyalty_accounts";
             referencedColumns: ["id"];
           },
@@ -3096,8 +3103,22 @@ export type Database = {
             foreignKeyName: "loyalty_transactions_account_id_fkey";
             columns: ["account_id"];
             isOneToOne: false;
+            referencedRelation: "loyalty_account_overview";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_transactions_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
             referencedRelation: "loyalty_accounts";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_transactions_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
           },
           {
             foreignKeyName: "loyalty_transactions_booking_id_fkey";
@@ -3112,6 +3133,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "facilities";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_transactions_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
           },
           {
             foreignKeyName: "loyalty_transactions_staff_id_fkey";
@@ -3170,6 +3198,13 @@ export type Database = {
             foreignKeyName: "loyalty_vouchers_account_id_fkey";
             columns: ["account_id"];
             isOneToOne: false;
+            referencedRelation: "loyalty_account_overview";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_vouchers_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
             referencedRelation: "loyalty_accounts";
             referencedColumns: ["id"];
           },
@@ -3179,6 +3214,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "facilities";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_vouchers_used_on_booking_id_fkey";
+            columns: ["used_on_booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
           },
           {
             foreignKeyName: "loyalty_vouchers_used_on_booking_id_fkey";
@@ -4837,6 +4879,181 @@ export type Database = {
           },
         ];
       };
+      report_card_photos: {
+        Row: {
+          caption: string | null;
+          content_type: string;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          kind: string;
+          report_card_id: string;
+          size_bytes: number;
+          sort_order: number;
+          storage_path: string;
+        };
+        Insert: {
+          caption?: string | null;
+          content_type: string;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          kind?: string;
+          report_card_id: string;
+          size_bytes: number;
+          sort_order?: number;
+          storage_path: string;
+        };
+        Update: {
+          caption?: string | null;
+          content_type?: string;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          report_card_id?: string;
+          size_bytes?: number;
+          sort_order?: number;
+          storage_path?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "report_card_photos_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "report_card_photos_report_card_id_fkey";
+            columns: ["report_card_id"];
+            isOneToOne: false;
+            referencedRelation: "report_cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      report_cards: {
+        Row: {
+          booking_id: string | null;
+          client_id: string;
+          created_at: string;
+          created_by: string | null;
+          delivery_status: string;
+          facility_id: string;
+          favourite: boolean;
+          generated: Json;
+          id: string;
+          input: Json;
+          pet_id: string;
+          rating_comment: string | null;
+          rating_stars: number | null;
+          rating_submitted_at: string | null;
+          replied_at: string | null;
+          reply_message: string | null;
+          scheduled_for: string | null;
+          sent_at: string | null;
+          service_type: string;
+          theme: string | null;
+          updated_at: string;
+          viewed_at: string | null;
+          visit_date: string;
+        };
+        Insert: {
+          booking_id?: string | null;
+          client_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          delivery_status?: string;
+          facility_id: string;
+          favourite?: boolean;
+          generated?: Json;
+          id?: string;
+          input?: Json;
+          pet_id: string;
+          rating_comment?: string | null;
+          rating_stars?: number | null;
+          rating_submitted_at?: string | null;
+          replied_at?: string | null;
+          reply_message?: string | null;
+          scheduled_for?: string | null;
+          sent_at?: string | null;
+          service_type: string;
+          theme?: string | null;
+          updated_at?: string;
+          viewed_at?: string | null;
+          visit_date: string;
+        };
+        Update: {
+          booking_id?: string | null;
+          client_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          delivery_status?: string;
+          facility_id?: string;
+          favourite?: boolean;
+          generated?: Json;
+          id?: string;
+          input?: Json;
+          pet_id?: string;
+          rating_comment?: string | null;
+          rating_stars?: number | null;
+          rating_submitted_at?: string | null;
+          replied_at?: string | null;
+          reply_message?: string | null;
+          scheduled_for?: string | null;
+          sent_at?: string | null;
+          service_type?: string;
+          theme?: string | null;
+          updated_at?: string;
+          viewed_at?: string | null;
+          visit_date?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "report_cards_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "report_cards_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "report_cards_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "report_cards_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "report_cards_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "report_cards_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       role_preset_permissions: {
         Row: {
           permission_key: string;
@@ -6439,6 +6656,12 @@ export type Database = {
           points_awarded: number;
           voucher_id: string | null;
         };
+        SetofOptions: {
+          from: "*";
+          to: "loyalty_badge_awards";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       close_payment_intent: {
         Args: {
@@ -6476,6 +6699,12 @@ export type Database = {
           status: string;
           used_at: string | null;
           used_on_booking_id: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "loyalty_vouchers";
+          isOneToOne: true;
+          isSetofReturn: false;
         };
       };
       create_booking: {
@@ -6571,6 +6800,40 @@ export type Database = {
         Args: { p_profile_id: string; p_staff_legacy_id: string };
         Returns: Json;
       };
+      mark_report_card_viewed: {
+        Args: { p_card_id: string };
+        Returns: {
+          booking_id: string | null;
+          client_id: string;
+          created_at: string;
+          created_by: string | null;
+          delivery_status: string;
+          facility_id: string;
+          favourite: boolean;
+          generated: Json;
+          id: string;
+          input: Json;
+          pet_id: string;
+          rating_comment: string | null;
+          rating_stars: number | null;
+          rating_submitted_at: string | null;
+          replied_at: string | null;
+          reply_message: string | null;
+          scheduled_for: string | null;
+          sent_at: string | null;
+          service_type: string;
+          theme: string | null;
+          updated_at: string;
+          viewed_at: string | null;
+          visit_date: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "report_cards";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       migrate_profile_subject: {
         Args: { p_new_id: string; p_old_id: string };
         Returns: undefined;
@@ -6665,6 +6928,40 @@ export type Database = {
         Returns: string;
       };
       purge_e2e_bookings: { Args: never; Returns: number };
+      rate_report_card: {
+        Args: { p_card_id: string; p_comment?: string; p_stars: number };
+        Returns: {
+          booking_id: string | null;
+          client_id: string;
+          created_at: string;
+          created_by: string | null;
+          delivery_status: string;
+          facility_id: string;
+          favourite: boolean;
+          generated: Json;
+          id: string;
+          input: Json;
+          pet_id: string;
+          rating_comment: string | null;
+          rating_stars: number | null;
+          rating_submitted_at: string | null;
+          replied_at: string | null;
+          reply_message: string | null;
+          scheduled_for: string | null;
+          sent_at: string | null;
+          service_type: string;
+          theme: string | null;
+          updated_at: string;
+          viewed_at: string | null;
+          visit_date: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "report_cards";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       record_boarding_arrival: {
         Args: { p_action: string; p_booking_ref: number };
         Returns: string;
@@ -6772,6 +7069,12 @@ export type Database = {
           used_at: string | null;
           used_on_booking_id: string | null;
         };
+        SetofOptions: {
+          from: "*";
+          to: "loyalty_vouchers";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       redeem_package_pass: {
         Args: {
@@ -6803,6 +7106,46 @@ export type Database = {
           status: string;
           used_at: string | null;
           used_on_booking_id: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "loyalty_vouchers";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      reply_to_report_card: {
+        Args: { p_card_id: string; p_message: string };
+        Returns: {
+          booking_id: string | null;
+          client_id: string;
+          created_at: string;
+          created_by: string | null;
+          delivery_status: string;
+          facility_id: string;
+          favourite: boolean;
+          generated: Json;
+          id: string;
+          input: Json;
+          pet_id: string;
+          rating_comment: string | null;
+          rating_stars: number | null;
+          rating_submitted_at: string | null;
+          replied_at: string | null;
+          reply_message: string | null;
+          scheduled_for: string | null;
+          sent_at: string | null;
+          service_type: string;
+          theme: string | null;
+          updated_at: string;
+          viewed_at: string | null;
+          visit_date: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "report_cards";
+          isOneToOne: true;
+          isSetofReturn: false;
         };
       };
       reset_facility_modules: {
@@ -6862,6 +7205,40 @@ export type Database = {
       set_onboarding_account_complete: {
         Args: { p_token: string };
         Returns: boolean;
+      };
+      set_report_card_favourite: {
+        Args: { p_card_id: string; p_favourite: boolean };
+        Returns: {
+          booking_id: string | null;
+          client_id: string;
+          created_at: string;
+          created_by: string | null;
+          delivery_status: string;
+          facility_id: string;
+          favourite: boolean;
+          generated: Json;
+          id: string;
+          input: Json;
+          pet_id: string;
+          rating_comment: string | null;
+          rating_stars: number | null;
+          rating_submitted_at: string | null;
+          replied_at: string | null;
+          reply_message: string | null;
+          scheduled_for: string | null;
+          sent_at: string | null;
+          service_type: string;
+          theme: string | null;
+          updated_at: string;
+          viewed_at: string | null;
+          visit_date: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "report_cards";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       set_subscription_status: {
         Args: {
