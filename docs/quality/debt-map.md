@@ -3547,6 +3547,34 @@ Covered by
 in `test:e2e:ci`, signed in AS the customer — testing the payload through a staff
 session would have missed the only thing that could go wrong.
 
+### 🔴 Cancelling an e2e run LEAKS rows into the production database
+
+Pushing to `main` while a CI e2e run is in flight cancels it — GitHub's
+concurrency group kills the older run — and a cancelled Playwright run does not
+execute `afterAll`. Every spec that was mid-flight leaves its rows behind, in
+the ONE Postgres every run shares.
+
+Observed on 2026-08-22, and it is not theoretical. Run 32567689850 was cancelled
+at 10:44:20; its last line is `scheduling-calendar-writes.spec.ts:202` passing at
+10:44:14, and that file's cleanup line — `cleanup: N shift(s), position removed,
+department removed` — never printed. The next run failed with
+
+    That person is already on a shift that overlaps this one.
+
+on the very shift test 202 creates, and `scheduling-calendar-screen` failed
+alongside it looking for a department that was already there. Both looked like
+application bugs. Neither was: 233 passed, 1 failed, 1 flaky, and the single
+failure was a row nobody deleted.
+
+**The rule: do not push while an e2e run you care about is in flight.** A
+one-line chore commit is enough to do this. If a run IS cancelled, assume it
+left state and check before trusting the next one — the specs' own cleanup logs
+are the evidence, because a cancelled run's tail shows exactly which `afterAll`
+never printed.
+
+Worse with two sessions on the repo: they share this database even when their
+code is isolated in a worktree.
+
 #### ✅ A badge is awarded, once — 2026-08-22
 
 `loyalty_badge_awards` (20260822200000), one row per (account, badge), created
@@ -3563,6 +3591,17 @@ awarded twice pays twice. The unique index is the guarantee, and because the
 award row is inserted LAST inside the function, a second caller's 23505 rolls
 its reward back with it. Proved on production: two concurrent awards, one row,
 one voucher.
+
+**It shipped anon-callable, and that was a regression.** `revoke all ... from
+public` does NOT remove `anon`: Supabase's default privileges give every
+function born in `public` an explicit `anon=X` ACL entry, and only a revoke
+NAMING anon removes it. All of that was already written down in 20260805210403. The three loyalty functions written the day before all say
+`from public, anon`; this one dropped the `, anon`, in the same module, by the
+same hand. Fixed in 20260822400000 and verified on production. Nothing could be
+AWARDED — `has_permission` is false without a subject — but the account lookup
+happens before the permission check and the two errors are distinguishable, so
+the publishable key bought an existence oracle on `loyalty_accounts.id`. Found
+by a second session sweeping its own migrations, not by this one.
 
 **Append-only with no trigger, deliberately.** No UPDATE policy and no DELETE
 policy, so PostgREST refuses both. NOT an update-refusing trigger: `voucher_id`
