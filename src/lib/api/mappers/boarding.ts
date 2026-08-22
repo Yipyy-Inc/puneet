@@ -19,10 +19,10 @@ import type {
 // ============================================================================
 
 export const ROOM_CATEGORY_SELECT =
-  "id, legacy_id, service, name, description, color, sort_order, default_capacity, default_base_price, visible_to_clients, image_url, rules";
+  "id, legacy_id, service, name, description, color, sort_order, default_capacity, default_base_price, visible_to_clients, image_url, rules, active";
 
 export const FACILITY_ROOM_SELECT =
-  "id, legacy_id, category_id, name, active, capacity, staff_notes, image_url, sort_order";
+  "id, legacy_id, category_id, name, active, capacity, staff_notes, image_url, sort_order, description, color, rules";
 
 export interface RoomCategoryRow {
   id: string;
@@ -37,6 +37,7 @@ export interface RoomCategoryRow {
   visible_to_clients: boolean;
   image_url: string | null;
   rules: RoomRule[] | null;
+  active: boolean;
 }
 
 export interface FacilityRoomRow {
@@ -49,6 +50,9 @@ export interface FacilityRoomRow {
   staff_notes: string | null;
   image_url: string | null;
   sort_order: number;
+  description: string | null;
+  color: string | null;
+  rules: RoomRule[] | null;
 }
 
 export interface BoardingStayRow {
@@ -96,6 +100,7 @@ export function rowToRoomCategory(
         : Number(row.default_base_price),
     visibleToClients: row.visible_to_clients,
     imageUrl: row.image_url ?? undefined,
+    active: row.active,
   };
 }
 
@@ -116,6 +121,11 @@ export function rowToFacilityRoom(
     capacity: row.capacity === null ? undefined : row.capacity,
     staffNotes: row.staff_notes ?? undefined,
     imageUrl: row.image_url ?? undefined,
+    description: row.description ?? undefined,
+    color: (row.color ?? undefined) as FacilityRoom["color"],
+    // `[]`, never undefined: a room with no rules admits everything, and the
+    // callers iterate this without checking.
+    rules: row.rules ?? [],
   };
 }
 

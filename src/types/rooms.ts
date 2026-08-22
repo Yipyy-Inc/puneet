@@ -48,6 +48,13 @@ export interface RoomCategory {
   visibleToClients: boolean;
   /** Cover photo shown to clients in booking flow */
   imageUrl?: string;
+  /**
+   * Whether the category is currently offered.
+   *
+   * Added for daycare play areas, which close seasonally. Boarding categories
+   * are all active and nothing turns one off today.
+   */
+  active: boolean;
 }
 
 export interface FacilityRoom {
@@ -62,6 +69,17 @@ export interface FacilityRoom {
   staffNotes?: string;
   /** Photo of this specific room unit */
   imageUrl?: string;
+  /** Customer-facing description. Distinct from `staffNotes`, which is not. */
+  description?: string;
+  /**
+   * Eligibility rules for this specific room.
+   *
+   * For BOARDING these live on the category and this stays empty. For DAYCARE
+   * two sections of one yard admit different weights, so they belong here.
+   */
+  rules: RoomRule[];
+  /** Swatch, for the sections of a daycare yard. */
+  color?: RoomCategoryColor;
 }
 
 // ── Daycare Play Areas & Sections ─────────────────────────────────────────────

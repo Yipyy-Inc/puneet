@@ -66,6 +66,12 @@ export async function PATCH(
   if (input.staffNotes !== undefined)
     patch.staff_notes = input.staffNotes ?? null;
   if (input.imageUrl !== undefined) patch.image_url = input.imageUrl ?? null;
+  if (input.description !== undefined)
+    patch.description = input.description ?? null;
+  if (input.color !== undefined) patch.color = input.color ?? null;
+  // `[]` clears the rules and admits everything, which is a real edit — so an
+  // absent key is the only thing that leaves them alone.
+  if (input.rules !== undefined) patch.rules = input.rules ?? [];
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 422 });
