@@ -107,7 +107,13 @@ do $$
 declare c integer;
 begin
   perform set_config('request.jwt.claims', '', true);
-  select count(*) into c from public.grooming_services;
+  -- Scoped to the fixture's OWN two facilities. It counted the whole table,
+  -- which was 3 when this database was nearly empty and is 7 now that the demo
+  -- facility has a real grooming menu. A test that asserts over a whole table
+  -- only holds while nothing else uses it.
+  select count(*) into c from public.grooming_services
+   where facility_id in ('00000000-0000-0000-0000-0000000f0020',
+                         '00000000-0000-0000-0000-0000000f0021');
   perform pg_temp.t('T0  fixture: 3 services across 2 facilities', c = 3,
     format('services=%s', c));
 end $$;
@@ -190,8 +196,12 @@ begin
           '00000000-0000-0000-0000-0000000f0021',   -- a lie
           'large', 95);
   reset role;
+  -- By the fixture's own SERVICE, not by size label. 'large' is a size every
+  -- real salon uses, so an unscoped lookup found a production row and reported
+  -- the demo facility's id as though the trigger had misfiled it.
   select facility_id into got from public.grooming_service_size_prices
-   where size_label = 'large';
+   where service_id = '00000000-0000-0000-0000-0000000f0050'
+     and size_label = 'large';
   perform pg_temp.t('T5  a size price cannot be filed under another facility',
     got = '00000000-0000-0000-0000-0000000f0020',
     format('stored=%s (caller sent Salon B)', got));

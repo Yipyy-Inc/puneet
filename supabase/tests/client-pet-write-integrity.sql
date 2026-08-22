@@ -81,6 +81,28 @@ values
      'packages',    '[]'::jsonb,
      'additionalContacts', '[]'::jsonb));
 
+-- ── THE BALANCE HAS TO BE REAL ─────────────────────────────────────────────
+--
+-- `outstanding_balance` is DERIVED. `private.derive_client_balance` overwrites
+-- it on every write from `sum(amount_due - amount_paid)` over the client's
+-- ready/completed bookings, so the 480.00 seeded above is discarded and the
+-- row reads 0.00 — which is how T0, T1 and T14 came to fail while asserting
+-- nothing was wrong with the product.
+--
+-- So the debt is given something to be. One completed booking, unpaid, for the
+-- exact amount the assertions already expect. The client is then touched so the
+-- BEFORE trigger recomputes: it ran at INSERT time, when this booking did not
+-- yet exist.
+insert into public.bookings
+  (id, facility_id, client_id, service, status, start_at, end_at, total_cost, amount_paid)
+values
+  ('00000000-0000-0000-0000-000000000f0b', '00000000-0000-0000-0000-0000000000fa',
+   '00000000-0000-0000-0000-000000000f01', 'Grooming', 'completed',
+   '2026-06-01T14:00:00Z', '2026-06-01T16:00:00Z', 480.00, 0);
+
+update public.clients set updated_at = now()
+ where id = '00000000-0000-0000-0000-000000000f01';
+
 insert into public.pets
   (id, client_id, facility_id, name, species, breed, weight, status, details)
 values
@@ -250,8 +272,18 @@ begin
    where id = '00000000-0000-0000-0000-000000000f01';
   reset role;
   select * into r from public.clients where id = '00000000-0000-0000-0000-000000000f01';
-  perform pg_temp.t('T7  staff with edit_clients may unblock and issue credit',
-    not r.is_blocked and r.outstanding_balance = 0
+  -- The balance stays 480 and that is the POINT. Staff sent
+  -- `outstanding_balance = 0` in the same statement that unblocked the client
+  -- and issued credit; the unblock and the credit took, and the balance did
+  -- not, because it is derived from the bookings and this client still has an
+  -- unpaid one.
+  --
+  -- Nobody can type a debt away — not a customer (T1), and not staff either.
+  -- Clearing it means taking the payment. This test asserted the opposite until
+  -- 2026-08-22, when the balance was a number a person set.
+  perform pg_temp.t(
+    'T7  staff may unblock and issue credit — but not type the balance away',
+    not r.is_blocked and r.outstanding_balance = 480.00
       and (r.details->'storeCredit'->>'balance')::numeric = 25,
     format('blocked=%s balance=%s credit=%s',
            r.is_blocked, r.outstanding_balance, r.details->'storeCredit'->>'balance'));
@@ -389,8 +421,16 @@ begin
           'Seeded', 'cp-test-seed@example.invalid', true, 99.00,
           jsonb_build_object('storeCredit', jsonb_build_object('balance', 5)))
   returning * into r;
-  perform pg_temp.t('T14 seeds keep everything they are given',
-    r.is_blocked and r.outstanding_balance = 99.00
+  -- The name was 'seeds keep everything they are given', and that stopped being
+  -- true on purpose: `outstanding_balance` is DERIVED from bookings now, so a
+  -- seeded figure is discarded rather than honoured. This client has no
+  -- bookings, so 0.00 is the correct answer and 99.00 would be the bug — a
+  -- balance nobody owes, standing in a column somebody typed.
+  --
+  -- Everything a seed genuinely OWNS still survives, which is what the rest of
+  -- the assertion checks.
+  perform pg_temp.t('T14 a seed keeps what it owns; the balance is derived',
+    r.is_blocked and r.outstanding_balance = 0.00
       and (r.details->'storeCredit'->>'balance')::numeric = 5,
     format('blocked=%s balance=%s credit=%s',
            r.is_blocked, r.outstanding_balance, r.details->'storeCredit'->>'balance'));
