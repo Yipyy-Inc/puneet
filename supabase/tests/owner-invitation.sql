@@ -38,9 +38,23 @@ $$;
 
 -- ── A platform admin, and a facility they provisioned ──────────────────────
 
-insert into public.profiles (id, email, full_name, is_platform_admin) values
-  ('user_inviteAdmin00000000000000000', 'admin@yipyy.invalid', 'Platform Admin', true)
+insert into public.profiles (id, email, full_name) values
+  ('user_inviteAdmin00000000000000000', 'admin@yipyy.invalid', 'Platform Admin')
 on conflict (id) do nothing;
+
+-- ── BECOMING A PLATFORM ADMIN ──────────────────────────────────────────────
+--
+-- Through `platform_memberships`, NOT `profiles.is_platform_admin`.
+--
+-- That column is a MIRROR, maintained by `private.sync_platform_admin_flag`
+-- from this table, and `private.is_platform_admin()` — which every platform
+-- gate actually calls — reads the table. Setting the column by hand produces a
+-- profile that claims to be an admin and is refused by everything, which is
+-- what this file did until 2026-08-22 and why four of its assertions failed
+-- with "Only a platform administrator may create a facility".
+insert into public.platform_memberships (profile_id, role) values
+  ('user_inviteAdmin00000000000000000', 'superadmin')
+on conflict (profile_id) do nothing;
 
 select set_config('request.jwt.claims',
   json_build_object('sub','user_inviteAdmin00000000000000000','role','authenticated')::text, true);
@@ -129,9 +143,13 @@ end $$;
 -- claim_grants_for filters on `expires_at > now()`. An invitation that outlived
 -- its expiry would be a permanent, forgotten route into a business.
 
-insert into public.profiles (id, email, full_name, is_platform_admin) values
-  ('user_inviteAdmin20000000000000000', 'admin2@yipyy.invalid', 'Platform Admin 2', true)
+insert into public.profiles (id, email, full_name) values
+  ('user_inviteAdmin20000000000000000', 'admin2@yipyy.invalid', 'Platform Admin 2')
 on conflict (id) do nothing;
+
+insert into public.platform_memberships (profile_id, role) values
+  ('user_inviteAdmin20000000000000000', 'superadmin')
+on conflict (profile_id) do nothing;
 
 select set_config('request.jwt.claims',
   json_build_object('sub','user_inviteAdmin20000000000000000','role','authenticated')::text, true);

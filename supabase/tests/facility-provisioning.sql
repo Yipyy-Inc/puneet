@@ -36,10 +36,35 @@ $$;
 
 -- ── Two identities: one who may create facilities, one who may not ─────────
 
-insert into public.profiles (id, email, full_name, is_platform_admin) values
-  ('user_provAdmin000000000000000000', 'admin@yipyy.invalid',  'Platform Admin', true),
-  ('user_provOwner000000000000000000', 'owner@tenant.invalid', 'Tenant Owner',   false)
+insert into public.profiles (id, email, full_name) values
+  ('user_provAdmin000000000000000000', 'admin@yipyy.invalid',  'Platform Admin'),
+  ('user_provOwner000000000000000000', 'owner@tenant.invalid', 'Tenant Owner')
 on conflict (id) do nothing;
+
+-- ── THE SLUGS ARE NAMESPACED, AND HAVE TO BE ───────────────────────────────
+--
+-- `fp-probe`, not `pawradise`. This file provisions a facility and then counts
+-- rows matching its slug — and there is a REAL Pawradise in production, so the
+-- insert collided on `orgs_slug_key` and the count assertions would have read 2
+-- where they expect 1.
+--
+-- Written when this database was nearly empty. A test that asserts over a whole
+-- table has to own the rows it counts, and the cheapest way to own them is a
+-- prefix nothing real will ever use.
+
+-- ── BECOMING A PLATFORM ADMIN ──────────────────────────────────────────────
+--
+-- Through `platform_memberships`, NOT `profiles.is_platform_admin`.
+--
+-- That column is a MIRROR, maintained by `private.sync_platform_admin_flag`
+-- from this table, and `private.is_platform_admin()` — which every platform
+-- gate actually calls — reads the table. Setting the column by hand produces a
+-- profile that claims to be an admin and is refused by everything, which is
+-- what this file did until 2026-08-22 and why four of its assertions failed
+-- with "Only a platform administrator may create a facility".
+insert into public.platform_memberships (profile_id, role) values
+  ('user_provAdmin000000000000000000', 'superadmin')
+on conflict (profile_id) do nothing;
 
 -- The owner is a real owner SOMEWHERE — the point of P2 is that owning a
 -- facility does not let you create another one.
@@ -59,9 +84,9 @@ declare r jsonb;
 begin
   r := public.provision_facility(
     '0000000a-0000-4000-8000-000000000001'::uuid,
-    'Pawradise Resort', 'pawradise', 'America/Toronto',
-    'Dana Okonkwo', 'dana@pawradise.invalid', '+1 555 0100',
-    'hello@pawradise.invalid', '+1 555 0101', 'https://pawradise.invalid',
+    'FP Probe Resort', 'fp-probe', 'America/Toronto',
+    'Dana Okonkwo', 'dana@fp-probe.invalid', '+1 555 0100',
+    'hello@fp-probe.invalid', '+1 555 0101', 'https://fp-probe.invalid',
     '[{"name":"Downtown"},{"name":"Riverside"}]'::jsonb);
 
   perform pg_temp.t(1, 'P1 a platform admin provisions a facility',
@@ -71,21 +96,21 @@ begin
   -- Every row the wizard promises, asserted individually rather than trusting
   -- the return value — the function could report success and write nothing.
   perform pg_temp.t(2, 'P1b org, facility, 2 locations, owner staff and grant all exist',
-    (select count(*) from public.orgs       where slug = 'pawradise') = 1
-    and (select count(*) from public.facilities where slug = 'pawradise') = 1
+    (select count(*) from public.orgs       where slug = 'fp-probe') = 1
+    and (select count(*) from public.facilities where slug = 'fp-probe') = 1
     and (select count(*) from public.locations  l
           join public.facilities f on f.id = l.facility_id
-         where f.slug = 'pawradise') = 2
+         where f.slug = 'fp-probe') = 2
     and (select count(*) from public.locations l
           join public.facilities f on f.id = l.facility_id
-         where f.slug = 'pawradise' and l.is_primary) = 1
+         where f.slug = 'fp-probe' and l.is_primary) = 1
     and (select count(*) from public.staff s
           join public.facilities f on f.id = s.facility_id
-         where f.slug = 'pawradise' and s.primary_role = 'owner') = 1
+         where f.slug = 'fp-probe' and s.primary_role = 'owner') = 1
     and (select count(*) from public.facility_membership_grants g
           join public.facilities f on f.id = g.facility_id
-         where f.slug = 'pawradise'
-           and g.email = 'dana@pawradise.invalid') = 1);
+         where f.slug = 'fp-probe'
+           and g.email = 'dana@fp-probe.invalid') = 1);
 exception when others then
   perform pg_temp.t(1, 'P1 a platform admin provisions a facility', false,
     sqlstate || ' ' || sqlerrm);
@@ -157,11 +182,11 @@ declare r jsonb;
 begin
   r := public.provision_facility(
     '0000000a-0000-4000-8000-000000000001'::uuid,
-    'Pawradise Resort', 'pawradise-again', 'America/Toronto',
-    'Dana Okonkwo', 'dana@pawradise.invalid');
+    'FP Probe Resort', 'fp-probe-again', 'America/Toronto',
+    'Dana Okonkwo', 'dana@fp-probe.invalid');
 
   perform pg_temp.t(7, 'P4 replaying a request id returns the FIRST answer',
-    (r->>'replayed')::boolean = true and (r->>'slug') = 'pawradise',
+    (r->>'replayed')::boolean = true and (r->>'slug') = 'fp-probe',
     'slug=' || coalesce(r->>'slug','null') || ' replayed=' || coalesce(r->>'replayed','null'));
 exception when others then
   perform pg_temp.t(7, 'P4 replaying a request id returns the FIRST answer', false,
@@ -169,7 +194,7 @@ exception when others then
 end $$;
 
 select pg_temp.t(8, 'P4b the replay created no second facility',
-  (select count(*) from public.facilities where slug = 'pawradise-again') = 0);
+  (select count(*) from public.facilities where slug = 'fp-probe-again') = 0);
 
 -- ── P5: a failure leaves NOTHING — not even the org it got as far as ───────
 --
