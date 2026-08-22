@@ -264,6 +264,42 @@ end $$;
 -- The two holes were found by an advisor sweep, not by reading the code, so the
 -- sweep itself becomes the test. A new SECURITY DEFINER function that forgets
 -- `revoke ... from anon` fails HERE rather than in production.
+--
+-- ── THE ALLOWLIST IS THE POINT, NOT AN ESCAPE HATCH ────────────────────────
+--
+-- Every function in `public` is born anon-callable: Supabase ships
+-- `alter default privileges ... grant execute on functions to anon`, and
+-- `revoke ... from public` does not undo it because that is a different grant.
+-- So the DEFAULT is exposure and the revoke is the decision. This list is where
+-- the opposite decision gets recorded.
+--
+-- Adding a name here is therefore a real change and should be argued for in the
+-- pull request that does it. The bar: a signed-out visitor must NEED it, and it
+-- must be shaped so that being called by anybody is safe — an exact-key lookup
+-- rather than a listing, returning only what the signed-out page renders.
+--
+-- The five that qualify:
+--
+--   onboarding_by_token, save_onboarding_section, submit_onboarding,
+--   set_onboarding_account_complete
+--       Reached from /onboarding/<token> by somebody who has no account yet —
+--       creating one is the thing they are there to do. Each takes an opaque
+--       32-byte token and is worthless without it.
+--
+--   facility_branding_by_slug
+--       Renders a facility's branded sign-in page. The visitor is by definition
+--       not signed in — that is the page they are signing in ON — so
+--       src/lib/api/facility-branding.ts calls it with the publishable key and
+--       no session. Revoking it blanks the logo, wordmark, colours and tagline
+--       on every facility's front door and hides the sign-up option with them.
+--       Safe by construction: an EXACT slug answers about ONE facility, so it
+--       is a lookup and not a directory (anon reads zero rows from `facilities`
+--       — measured in facility-branding.sql), and it omits support_email and
+--       support_phone so the contact details cannot be harvested.
+--
+-- Everything else was revoked by 20260822600000, which records what each one
+-- had actually exposed. Three were existence oracles; one had no permission
+-- check at all; the rest were grants nobody had asked for.
 do $$
 declare unexpected text;
 begin
@@ -272,9 +308,26 @@ begin
    where n.nspname = 'public' and p.prokind = 'f'
      and has_function_privilege('anon', p.oid, 'execute')
      and p.proname not in ('onboarding_by_token', 'save_onboarding_section',
-                           'submit_onboarding', 'set_onboarding_account_complete');
+                           'submit_onboarding', 'set_onboarding_account_complete',
+                           'facility_branding_by_slug');
   perform pg_temp.t('V7 no unexpected anon-callable function in public',
     unexpected is null, coalesce('anon can call: ' || unexpected, 'none'));
+end $$;
+
+-- ── V8: and the one that is allowlisted is STILL THERE ─────────────────────
+--
+-- V7 can only ever complain about a function that gained the grant. It says
+-- nothing about one that lost it, and a revoke sweep written slightly too wide
+-- would take the branded sign-in page down while turning this file GREEN. So
+-- the allowlist is asserted from the other side too.
+do $$
+declare callable boolean;
+begin
+  select has_function_privilege('anon', p.oid, 'execute') into callable
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'facility_branding_by_slug';
+  perform pg_temp.t('V8 facility_branding_by_slug is STILL anon-callable (branded sign-in)',
+    coalesce(callable, false), 'callable=' || coalesce(callable::text, 'MISSING'));
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
