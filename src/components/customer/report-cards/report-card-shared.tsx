@@ -1,6 +1,10 @@
 import type { ComponentType } from "react";
 import { Star, Bell, Ghost, Egg, PartyPopper, Heart } from "lucide-react";
-import { reportCardSectionMeta } from "@/data/settings";
+import {
+  sectionsOf,
+  type ReportCardSection,
+} from "@/lib/report-cards/sections";
+import { usablePhotos, type UsablePhoto } from "@/lib/report-cards/photos";
 import type { ReportCard, ReportCardPhoto } from "@/types/report-card";
 
 // ============================================================================
@@ -24,21 +28,12 @@ import type { ReportCard, ReportCardPhoto } from "@/types/report-card";
 // happened.
 // ============================================================================
 
-/** One prose section of a card, ready to render. */
-export type ReportCardSection = {
-  id: string;
-  label: string;
-  body: string;
-};
-
-/** The canonical order. A facility's enabled set is a subset of this. */
-const SECTION_ORDER = [
-  "todaysVibe",
-  "friendsAndFun",
-  "careMetrics",
-  "holidaySparkle",
-  "closingNote",
-] as const;
+// The prose sections moved to `@/lib/report-cards/sections` so the facility's
+// client file can render the same thing without importing a customer
+// component. Re-exported here because this file is the owner side's entry
+// point and every call site already reaches for it.
+export { sectionsOf, type ReportCardSection };
+export { usablePhotos, type UsablePhoto };
 
 /** One entry in the customer report-cards feed. */
 export type ReportCardTimelineItem = {
@@ -58,23 +53,6 @@ export type ReportCardTimelineItem = {
   petConditions?: Record<string, string>;
   card: ReportCard;
 };
-
-/**
- * Which sections this card actually has.
- *
- * Driven by content rather than by the facility's config, deliberately: the
- * owner's portal cannot see `facility_settings`, and a section the facility
- * turned off simply arrives empty. Dropping empties gets the same answer
- * without the customer needing to read a facility's configuration.
- */
-export function sectionsOf(card: ReportCard): ReportCardSection[] {
-  const generated = card.generated as unknown as Record<string, unknown>;
-  return SECTION_ORDER.flatMap((id) => {
-    const body = typeof generated[id] === "string" ? String(generated[id]) : "";
-    if (!body.trim()) return [];
-    return [{ id, label: reportCardSectionMeta[id]?.label ?? id, body }];
-  });
-}
 
 export function buildTimelineItem(
   card: ReportCard,

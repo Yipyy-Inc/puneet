@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useRef, useState } from "react";
 import { MoveHorizontal } from "lucide-react";
 
@@ -57,13 +56,15 @@ export function BeforeAfterSlider({
         else if (e.key === "ArrowRight") setPos((p) => Math.min(100, p + 4));
       }}
     >
-      {/* Before (full frame) */}
-      <Image
+      {/* Before (full frame) — a signed private URL, so not next/image; the
+          optimiser is configured to refuse these and would draw a broken
+          image. See the note on `GalleryImage` in ReportCardPhotoGallery. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
+      <img
         src={before}
         alt={`${alt} — before`}
-        fill
         sizes="(max-width: 640px) 92vw, 480px"
-        className="object-cover"
+        className="absolute inset-0 size-full object-cover"
       />
 
       {/* After (revealed from the left up to `pos`) */}
@@ -71,12 +72,12 @@ export function BeforeAfterSlider({
         className="absolute inset-0"
         style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
       >
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
+        <img
           src={after}
           alt={`${alt} — after`}
-          fill
           sizes="(max-width: 640px) 92vw, 480px"
-          className="object-cover"
+          className="absolute inset-0 size-full object-cover"
         />
       </div>
 
