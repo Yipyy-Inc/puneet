@@ -23,22 +23,52 @@
 --
 -- ── THE SWEEP HAS ROTTED, AND THAT IS A SEPARATE PROBLEM ──────────────────
 --
--- Running V7's own query after this fix still names thirteen functions:
+-- V7 does not currently pass, and has not for some time — the sweep was
+-- written to fail when someone forgot, and then nothing ran it. After this
+-- migration and 20260822400000 (which closed the same hole on
+-- `award_loyalty_badge`), its query still names TWELVE functions:
 --
---   approve_availability_request, approve_shift_swap, award_loyalty_badge,
---   facility_branding_by_slug, facility_has_module,
---   facility_module_entitlements, facility_report,
---   prevent_audit_log_mutation, record_facility_export,
---   reset_facility_modules, set_default_terminal, set_facility_module,
---   time_off_shift_conflicts
+--   approve_availability_request, approve_shift_swap, facility_branding_by_slug,
+--   facility_has_module, facility_module_entitlements, facility_report,
+--   prevent_audit_log_mutation, record_facility_export, reset_facility_modules,
+--   set_default_terminal, set_facility_module, time_off_shift_conflicts
 --
--- So V7 does not currently pass, and has not for some time — the sweep was
--- written to fail when someone forgot, and then nothing ran it. Those thirteen
--- are NOT fixed here: they belong to scheduling, facility modules, loyalty and
--- reporting, and a migration that reaches across four domains to change their
--- privileges is not one anybody can review. They are recorded here so the next
--- person finds the list rather than rediscovering it, and so the fix is a
--- deliberate change per domain instead of a silent sweep.
+-- NOT a to-do list, and reading it as one would break production. Every entry
+-- classified against pg_proc rather than assumed:
+--
+--   6 — SECURITY DEFINER, write, and they check the caller first:
+--       approve_availability_request, approve_shift_swap,
+--       record_facility_export, reset_facility_modules, set_facility_module,
+--       time_off_shift_conflicts
+--       anon is refused. Residual exposure is an existence oracle, the same
+--       shape as the one this migration fixes.
+--
+--   2 — SECURITY DEFINER, read-only, NO caller check:
+--       facility_branding_by_slug — INTENTIONAL. Must stay anon-callable: anon
+--         reads zero rows from `facilities`, so this projection is the only way
+--         a signed-out visitor's subdomain resolves to a logo and colours (see
+--         the header of src/lib/api/facility-branding.ts). Revoking it breaks
+--         every facility's branded sign-in page. It needs an ALLOWLIST ENTRY in
+--         V7 — the grant is right and the TEST is what is stale.
+--       facility_has_module — a minor metadata leak at worst.
+--
+--   3 — SECURITY INVOKER, so RLS applies and anon reaches nothing new:
+--       facility_module_entitlements, facility_report, set_default_terminal
+--
+--   1 — returns `trigger`, so PostgREST will not route to it at all:
+--       prevent_audit_log_mutation
+--
+-- 6 + 2 + 3 + 1 = 12. No unauthenticated WRITE is reachable anywhere in that
+-- list.
+--
+-- Which is the whole argument for leaving them: each needs a judgement — revoke,
+-- allowlist, or reorder its checks — and one migration reaching across
+-- scheduling, facility modules and reporting to change privileges is not one
+-- anybody can review. Recorded so the next person finds the list rather than
+-- rediscovering it.
+--
+-- (Denominator note: V7's raw query returns 17; four are already exempted by
+-- its allowlist as the onboarding token RPCs, and one was fixed alongside this.)
 -- ============================================================================
 
 revoke execute on function public.mark_report_card_viewed(uuid)            from anon;
