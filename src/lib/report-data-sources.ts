@@ -14,7 +14,6 @@ import {
   getCurrentGuests,
 } from "@/data/boarding";
 import { daycareCheckIns, daycareRates } from "@/data/daycare";
-import { getTotalDaycareCapacity } from "@/data/daycare-areas";
 import { clients } from "@/data/clients";
 import { hoursByEmployee } from "@/lib/scheduling-reports";
 import type {
@@ -66,6 +65,17 @@ import type {
   ClientBase,
   RetentionCurvePoint,
 } from "@/types/facility-analytics";
+
+/**
+ * Total daycare capacity, as the fixture describes it: 20 + 30 + 50 + 25 + 10.
+ *
+ * The facility's real sections are rows now — `facility_rooms` inside a
+ * daycare category (20260822800000) — and this deliberately does NOT read
+ * them. The check-ins it is divided into are still hand-authored, so a real
+ * denominator under an invented numerator would produce an occupancy rate that
+ * is neither true nor obviously false. Both halves move together or not at all.
+ */
+const FIXTURE_DAYCARE_CAPACITY = 135;
 
 // The data + engine for the custom Report Builder. Six REAL list-shaped data
 // sources from the data layer, each flattened to primitive fields so the engine
@@ -1586,7 +1596,14 @@ export function daycareAnalytics(): DaycareAnalytics {
       0,
     );
 
-    const capacity = getTotalDaycareCapacity();
+    // A FIXTURE number, deliberately, and it belongs beside the fixture it is
+    // divided into. `daycareCheckIns` above is hand-authored, so pairing it
+    // with the facility's real section capacities — which are rows now, in
+    // `facility_rooms` (20260822800000) — would divide invented occupancy by a
+    // true denominator and produce a rate that is neither. 135 is the sum the
+    // deleted `getTotalDaycareCapacity()` returned: 20 + 30 + 50 + 25 + 10.
+    // It goes when this whole daycare selector reads the database.
+    const capacity = FIXTURE_DAYCARE_CAPACITY;
     return {
       currentCount,
       checkedOutToday,

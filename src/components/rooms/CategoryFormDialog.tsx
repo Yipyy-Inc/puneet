@@ -110,6 +110,7 @@ function blankCategory(facilityId: number): RoomCategory {
     description: "",
     color: "blue",
     sortOrder: 99,
+    active: true,
     rules: [],
     defaultCapacity: 1,
     defaultBasePrice: undefined,

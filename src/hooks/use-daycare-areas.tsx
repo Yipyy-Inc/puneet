@@ -3,191 +3,219 @@
 import {
   createContext,
   useContext,
-  useState,
   useCallback,
   useMemo,
   type ReactNode,
 } from "react";
-import type { DaycarePlayArea, DaycareSection } from "@/types/rooms";
-import {
-  daycarePlayAreas as defaultPlayAreas,
-  daycareSections as defaultSections,
-} from "@/data/daycare-areas";
+import type {
+  DaycarePlayArea,
+  DaycareSection,
+  FacilityRoom,
+  RoomCategory,
+} from "@/types/rooms";
+import { useRooms } from "@/hooks/use-rooms";
+
+// ============================================================================
+// A facility's daycare yards.
+//
+// ── WHAT THIS USED TO BE ──────────────────────────────────────────────────
+//
+// Two localStorage keys — `daycare-play-areas` and `daycare-sections` — seeded
+// from a fixture. That would be poor for configuration; it was worse than that
+// here, because the BOOKING FLOW reads this hook. `BookingModal` and
+// `DaycareDetails` both call it, and `getDaycareAvailabilitySummary` decides
+// whether a day has room from these sections.
+//
+// So a section's CAPACITY lived in one browser. Two people on two terminals
+// could hold different numbers for the same yard, each be told the day was
+// fine, and each create a real booking in Postgres.
+//
+// ── WHY THIS IS NOW AN ADAPTER AND NOT A STORE ────────────────────────────
+//
+// A play area IS a `room_categories` row with `service = 'daycare'`, and a
+// section IS a `facility_rooms` row inside it (20260822800000). Both already
+// have a full CRUD API and a provider — `useRooms` — so this hook holds no
+// state of its own any more. It translates vocabulary and delegates.
+//
+// The alternative was a second endpoint over the same two tables, which is how
+// a codebase ends up with two answers to "what spaces does this facility have".
+// ============================================================================
 
 interface DaycareAreasContextValue {
   areas: DaycarePlayArea[];
   sections: DaycareSection[];
 
-  // Area CRUD
   addArea: (area: DaycarePlayArea) => void;
   updateArea: (area: DaycarePlayArea) => void;
   deleteArea: (id: string) => void;
   toggleArea: (id: string) => void;
 
-  // Section CRUD
   addSection: (section: DaycareSection) => void;
   updateSection: (section: DaycareSection) => void;
   deleteSection: (id: string) => void;
   toggleSection: (id: string) => void;
 
-  // Queries
   getSectionsByArea: (areaId: string) => DaycareSection[];
-
-  // Reset
-  resetDaycareAreas: () => void;
 }
 
 const DaycareAreasContext = createContext<DaycareAreasContextValue | null>(
   null,
 );
 
-const AREAS_KEY = "daycare-play-areas";
-const SECTIONS_KEY = "daycare-sections";
-
-function loadStored<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const stored = localStorage.getItem(key);
-    if (stored) return JSON.parse(stored) as T;
-  } catch {
-    // ignore parse errors
-  }
-  return fallback;
+/** A daycare category, read as a play area. */
+function categoryToArea(c: RoomCategory): DaycarePlayArea {
+  return {
+    id: c.id,
+    facilityId: c.facilityId,
+    name: c.name,
+    description: c.description,
+    imageUrl: c.imageUrl,
+    isActive: c.active,
+    sortOrder: c.sortOrder,
+  };
 }
 
-/** Backfill imageUrl from defaults for areas matching by id. */
-function backfillAreaImages(stored: DaycarePlayArea[]): DaycarePlayArea[] {
-  const defaultsById = new Map(defaultPlayAreas.map((a) => [a.id, a] as const));
-  return stored.map((a) => {
-    if (a.imageUrl) return a;
-    const def = defaultsById.get(a.id);
-    if (def?.imageUrl) return { ...a, imageUrl: def.imageUrl };
-    return a;
-  });
+/** A room in a daycare category, read as a section. */
+function roomToSection(r: FacilityRoom, sortOrder: number): DaycareSection {
+  return {
+    id: r.id,
+    playAreaId: r.categoryId,
+    facilityId: r.facilityId,
+    name: r.name,
+    // A section without an explicit capacity admits nobody rather than
+    // everybody. The old fixture always carried one; a row created without one
+    // must not read as unlimited.
+    capacity: r.capacity ?? 0,
+    description: r.description,
+    imageUrl: r.imageUrl,
+    isActive: r.active,
+    sortOrder,
+    rules: r.rules,
+    color: r.color ?? "slate",
+  };
 }
 
 export function DaycareAreasProvider({ children }: { children: ReactNode }) {
-  const [areas, setAreas] = useState<DaycarePlayArea[]>(() =>
-    backfillAreaImages(loadStored(AREAS_KEY, defaultPlayAreas)),
-  );
-  const [sections, setSections] = useState<DaycareSection[]>(() =>
-    loadStored(SECTIONS_KEY, defaultSections),
+  const {
+    categories,
+    rooms,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addRoom,
+    updateRoom,
+    deleteRoom,
+  } = useRooms();
+
+  const areas = useMemo(
+    () => categories.filter((c) => c.service === "daycare").map(categoryToArea),
+    [categories],
   );
 
-  const persistAreas = useCallback(
-    (updater: (prev: DaycarePlayArea[]) => DaycarePlayArea[]) => {
-      setAreas((prev) => {
-        const updated = updater(prev);
-        queueMicrotask(() =>
-          localStorage.setItem(AREAS_KEY, JSON.stringify(updated)),
-        );
-        return updated;
-      });
-    },
+  const areaIds = useMemo(() => new Set(areas.map((a) => a.id)), [areas]);
+
+  const sections = useMemo(
+    () =>
+      rooms
+        .filter((r) => areaIds.has(r.categoryId))
+        .map((r, i) => roomToSection(r, i + 1)),
+    [rooms, areaIds],
+  );
+
+  /** A play area, written back as a daycare category. */
+  const areaToCategory = useCallback(
+    (a: DaycarePlayArea): RoomCategory => ({
+      id: a.id,
+      facilityId: a.facilityId,
+      service: "daycare",
+      name: a.name,
+      description: a.description,
+      color: "slate",
+      sortOrder: a.sortOrder,
+      rules: [],
+      // The capacity of a yard is the sum of its sections', which the sections
+      // carry themselves — so this fallback is never consulted. 1 rather than
+      // 0 because the column refuses 0, and it errs toward under-booking.
+      defaultCapacity: 1,
+      visibleToClients: true,
+      imageUrl: a.imageUrl,
+      active: a.isActive,
+    }),
     [],
   );
 
-  const persistSections = useCallback(
-    (updater: (prev: DaycareSection[]) => DaycareSection[]) => {
-      setSections((prev) => {
-        const updated = updater(prev);
-        queueMicrotask(() =>
-          localStorage.setItem(SECTIONS_KEY, JSON.stringify(updated)),
-        );
-        return updated;
-      });
-    },
+  /** A section, written back as a room in its area. */
+  const sectionToRoom = useCallback(
+    (s: DaycareSection): FacilityRoom => ({
+      id: s.id,
+      categoryId: s.playAreaId,
+      facilityId: s.facilityId,
+      name: s.name,
+      active: s.isActive,
+      capacity: s.capacity,
+      imageUrl: s.imageUrl,
+      description: s.description,
+      rules: s.rules,
+      color: s.color,
+    }),
     [],
   );
-
-  // --- Area CRUD ---
 
   const addArea = useCallback(
-    (area: DaycarePlayArea) => {
-      persistAreas((prev) => {
-        const exists = prev.find((a) => a.id === area.id);
-        if (exists) return prev.map((a) => (a.id === area.id ? area : a));
-        return [...prev, area];
-      });
-    },
-    [persistAreas],
+    (area: DaycarePlayArea) => addCategory(areaToCategory(area), 0),
+    [addCategory, areaToCategory],
   );
 
   const updateArea = useCallback(
-    (area: DaycarePlayArea) => {
-      persistAreas((prev) => prev.map((a) => (a.id === area.id ? area : a)));
-    },
-    [persistAreas],
+    (area: DaycarePlayArea) => updateCategory(areaToCategory(area)),
+    [updateCategory, areaToCategory],
   );
 
+  // Deleting the area deletes its sections with it — `facility_rooms.category_id`
+  // cascades, so this does not walk them by hand the way the localStorage
+  // version had to.
   const deleteArea = useCallback(
-    (id: string) => {
-      persistAreas((prev) => prev.filter((a) => a.id !== id));
-      persistSections((prev) => prev.filter((s) => s.playAreaId !== id));
-    },
-    [persistAreas, persistSections],
+    (id: string) => deleteCategory(id),
+    [deleteCategory],
   );
 
   const toggleArea = useCallback(
     (id: string) => {
-      persistAreas((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, isActive: !a.isActive } : a)),
-      );
+      const area = areas.find((a) => a.id === id);
+      if (!area) return;
+      updateCategory(areaToCategory({ ...area, isActive: !area.isActive }));
     },
-    [persistAreas],
+    [areas, updateCategory, areaToCategory],
   );
 
-  // --- Section CRUD ---
-
   const addSection = useCallback(
-    (section: DaycareSection) => {
-      persistSections((prev) => {
-        const exists = prev.find((s) => s.id === section.id);
-        if (exists) return prev.map((s) => (s.id === section.id ? section : s));
-        return [...prev, section];
-      });
-    },
-    [persistSections],
+    (section: DaycareSection) => addRoom(sectionToRoom(section)),
+    [addRoom, sectionToRoom],
   );
 
   const updateSection = useCallback(
-    (section: DaycareSection) => {
-      persistSections((prev) =>
-        prev.map((s) => (s.id === section.id ? section : s)),
-      );
-    },
-    [persistSections],
+    (section: DaycareSection) => updateRoom(sectionToRoom(section)),
+    [updateRoom, sectionToRoom],
   );
 
   const deleteSection = useCallback(
-    (id: string) => {
-      persistSections((prev) => prev.filter((s) => s.id !== id));
-    },
-    [persistSections],
+    (id: string) => deleteRoom(id),
+    [deleteRoom],
   );
 
   const toggleSection = useCallback(
     (id: string) => {
-      persistSections((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, isActive: !s.isActive } : s)),
-      );
+      const section = sections.find((s) => s.id === id);
+      if (!section) return;
+      updateRoom(sectionToRoom({ ...section, isActive: !section.isActive }));
     },
-    [persistSections],
+    [sections, updateRoom, sectionToRoom],
   );
-
-  // --- Queries ---
 
   const getSectionsByArea = useCallback(
     (areaId: string) => sections.filter((s) => s.playAreaId === areaId),
     [sections],
   );
-
-  // --- Reset ---
-
-  const resetDaycareAreas = useCallback(() => {
-    persistAreas(() => defaultPlayAreas);
-    persistSections(() => defaultSections);
-  }, [persistAreas, persistSections]);
 
   const value = useMemo<DaycareAreasContextValue>(
     () => ({
@@ -202,7 +230,6 @@ export function DaycareAreasProvider({ children }: { children: ReactNode }) {
       deleteSection,
       toggleSection,
       getSectionsByArea,
-      resetDaycareAreas,
     }),
     [
       areas,
@@ -216,7 +243,6 @@ export function DaycareAreasProvider({ children }: { children: ReactNode }) {
       deleteSection,
       toggleSection,
       getSectionsByArea,
-      resetDaycareAreas,
     ],
   );
 

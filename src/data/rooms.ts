@@ -18,6 +18,7 @@ export const roomCategories: RoomCategory[] = [
     defaultCapacity: 2,
     defaultBasePrice: 125,
     visibleToClients: true,
+    active: true,
     imageUrl: "/rooms/room-3.jpg",
     rules: [
       {
@@ -49,6 +50,7 @@ export const roomCategories: RoomCategory[] = [
     defaultCapacity: 2,
     defaultBasePrice: 85,
     visibleToClients: true,
+    active: true,
     imageUrl: "/rooms/room-2.jpg",
     rules: [
       {
@@ -81,6 +83,7 @@ export const roomCategories: RoomCategory[] = [
     defaultCapacity: 1,
     defaultBasePrice: 55,
     visibleToClients: true,
+    active: true,
     imageUrl: "/rooms/room-1.jpg",
     rules: [
       {
@@ -113,6 +116,7 @@ export const roomCategories: RoomCategory[] = [
     defaultCapacity: 1,
     defaultBasePrice: 38,
     visibleToClients: true,
+    active: true,
     imageUrl:
       "https://images.unsplash.com/photo-1583511655826-05700d52f4d9?w=800&h=480&fit=crop",
     rules: [
@@ -147,6 +151,7 @@ export const facilityRooms: FacilityRoom[] = [
     facilityId: FACILITY_ID,
     name: "Private Care 01",
     active: true,
+    rules: [],
   },
 
   // Deluxe Suites (5 units)
@@ -156,6 +161,7 @@ export const facilityRooms: FacilityRoom[] = [
     facilityId: FACILITY_ID,
     name: "Deluxe 01",
     active: true,
+    rules: [],
   },
   {
     id: "room-ds-02",
@@ -163,6 +169,7 @@ export const facilityRooms: FacilityRoom[] = [
     facilityId: FACILITY_ID,
     name: "Deluxe 02",
     active: true,
+    rules: [],
   },
   {
     id: "room-ds-03",
@@ -170,6 +177,7 @@ export const facilityRooms: FacilityRoom[] = [
     facilityId: FACILITY_ID,
     name: "Deluxe 03",
     active: true,
+    rules: [],
   },
   {
     id: "room-ds-04",
@@ -177,6 +185,7 @@ export const facilityRooms: FacilityRoom[] = [
     facilityId: FACILITY_ID,
     name: "Deluxe 04",
     active: true,
+    rules: [],
   },
   {
     id: "room-ds-05",
@@ -184,6 +193,7 @@ export const facilityRooms: FacilityRoom[] = [
     facilityId: FACILITY_ID,
     name: "Deluxe 05",
     active: false,
+    rules: [],
     staffNotes: "Under renovation until May 2026",
   },
 
@@ -194,6 +204,7 @@ export const facilityRooms: FacilityRoom[] = [
     facilityId: FACILITY_ID,
     name: `Suite ${String(i + 1).padStart(2, "0")}`,
     active: true,
+    rules: [],
   })),
 
   // Condominiums (15 units, last 2 inactive)
@@ -203,6 +214,7 @@ export const facilityRooms: FacilityRoom[] = [
     facilityId: FACILITY_ID,
     name: `Condo ${String(i + 1).padStart(2, "0")}`,
     active: i < 13,
+    rules: [],
     ...(i >= 13 ? { staffNotes: "Pending deep clean & inspection" } : {}),
   })),
 ];
