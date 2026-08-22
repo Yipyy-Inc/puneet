@@ -3547,6 +3547,70 @@ Covered by
 in `test:e2e:ci`, signed in AS the customer — testing the payload through a staff
 session would have missed the only thing that could go wrong.
 
+### 🔴 The 41 SQL tests were never run, and 15 of them do not pass
+
+`bun run test:sql` (scripts/run-sql-tests.ts, 2026-08-22). Before it, NOTHING
+ran `supabase/tests/` — not CI, not a package script, not a hook. 41 files,
+hand-run, and evidently not for weeks.
+
+**That is how the anon trap shipped a fourth time.** `rpc-session-required.sql`
+holds V7, a sweep written so a function that forgets `revoke ... from anon`
+fails a TEST rather than production. `award_loyalty_badge` shipped with exactly
+that hole on 2026-08-22 and V7 would have caught it — had anything run V7.
+
+**First full run: 368 passed, 23 failed, 7 files could not run at all.**
+
+Do NOT read that as 30 regressions. It is at least four different problems, and
+each file needs reading before it is believed:
+
+1. **A real hole.** V7 — twelve anon-callable functions in `public`. One of them
+   (`facility_branding_by_slug`) is anon-callable BY DESIGN and needs an
+   allowlist entry, not a revoke. See the entry above for the full severity
+   breakdown; no unauthenticated WRITE is reachable.
+
+2. **Tests that assume an empty database.** `grooming-catalogue-rls` asserts
+   "3 services across 2 facilities" and production now holds 7. Written when
+   this database was nearly empty; they count rows across a whole table rather
+   than their own fixture.
+
+3. **Tests whose platform admin stopped working** — `facility-provisioning` (4),
+   `customer-tenancy` and `owner-invitation` all fail with the same 42501,
+   "Only a platform administrator may create a facility". One root cause across
+   three files: `profiles.is_platform_admin` is now DERIVED by trigger from
+   `platform_memberships`, so a test that sets the column directly no longer
+   becomes an admin.
+
+4. **Tests broken by constraints added after them** — `platform-roles` (audit_log
+   is append-only), `grooming-history-immutability` T7 and `payments-store-credit`
+   (foreign keys that now refuse a delete/truncate), `platform-invitation` (RLS),
+   `prepaid-packages` (a grooming pass must name a real service),
+   `customer-record-claim` (calls `public.link_client_record()`, which no longer
+   exists). `care-log` fails in its own harness: "permission denied for table
+   tap", because it switches role and the temp table is not granted to it.
+
+**It is NOT in CI yet, deliberately.** Wiring a suite that is 15 files red into
+a gate teaches everyone to ignore it. Triage first, per domain; gate once green,
+reporting-only first — the path e2e took.
+
+**Running it needs `SUPABASE_DB_URL`** — the SESSION pooler or direct connection
+(port 5432). NOT the transaction pooler (6543): it hands out a different backend
+per statement, which breaks both prepared statements and the session-level
+transaction the whole design rests on. The runner refuses 6543 by name.
+
+**The runner owns the transaction, not the file.** Every test seeds real rows
+into real tables — orgs, facilities, memberships, staff — and against production
+that is only safe because of the trailing `rollback;`. So the runner strips the
+file's own `begin`/`rollback`, wraps the body in its own transaction and aborts
+it unconditionally; a file that forgot its rollback, or grew a `commit;`, still
+cannot commit, and a file whose shape it does not recognise is refused rather
+than run. Verified after a full run: zero test rows survived.
+
+**Each file runs in its own PROCESS.** Bun 1.3.11's Postgres client segfaults
+nondeterministically on Windows, inside its own connection handling, with a
+stack no JavaScript can catch — twice during this suite, at different points. A
+crash in-process takes the exit code with it, and a gate whose exit code is
+sometimes 3 for reasons unrelated to the assertions is not a gate.
+
 ### 🔴 Cancelling an e2e run LEAKS rows into the production database
 
 Pushing to `main` while a CI e2e run is in flight cancels it — GitHub's

@@ -28,6 +28,7 @@
     "check:dialog-widths": "bun scripts/check-dialog-widths.ts",
     "check:nav-parity": "bun scripts/check-nav-parity.ts",
     "db:seed:generate": "bun scripts/generate-supabase-seed.ts",
+    "test:sql": "bun scripts/run-sql-tests.ts",
     "test:e2e": "playwright test",
     "test:e2e:ci": "playwright test admin-portal-enforced facility-access-level facility-identity employee-identity staff-invite-gate server-permissions staff-field-exposure role-editor-writes facility-shell staff-portal-nav rooms-admin booking-write-integrity booking-presence boarding-arrival boarding-kennel-board boarding-occupancy daycare-attendance dashboard-live-board occupancy-calendar daily-care-board operations-calendar scheduling-roster scheduling-time-off-and-swaps scheduling-calendar-writes scheduling-calendar-screen scheduling-availability scheduling-time-clock scheduling-attendance scheduling-org-chart payroll payroll-overtime employee-self-service scheduling-reports-screen tax-settings-screen loyalty-program loyalty-ledger loyalty-members-screen loyalty-earning loyalty-tiers loyalty-customer-wallet loyalty-badges loyalty-redemptions",
     "test:e2e:ui": "playwright test --ui",
@@ -111,6 +112,7 @@
   "devDependencies": {
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.1.17",
+    "@types/bun": "^1.4.0",
     "@types/node": "^20.19.25",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
