@@ -4101,3 +4101,7 @@ preferring for that reason alone.
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
+
+And where the entry rests on a claim about how the system behaves, **include the measurement that established it** — the row counts, the status codes, the query you ran. Two entries in this file were acted on for the first time on 2026-08-22 and both turned out to be wrong: the facility-delete advice would have erased which facility each audit entry concerned, and the anon-exposure sweep (`proacl::text like '%anon=X%'`) finds none of the eleven functions that were actually exposed, because their ACLs name an empty grantee — PUBLIC — and `anon` is a member of PUBLIC. Neither was careless; both were sound-looking inferences that had never been executed.
+
+That is the failure mode to design against. A recommendation can only be believed, and ages into folklore; a measurement can be re-run and disagreed with, and ages into a test. If you cannot produce one, say so in the entry — "not verified" is a fact about the advice, and the next person is entitled to it.
