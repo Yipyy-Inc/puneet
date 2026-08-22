@@ -2198,6 +2198,18 @@ export default function ClientBookingDetailPage({
                         },
                       );
                     }
+                    // News about the CUSTOMER, not about this bill — said
+                    // separately so the person at the counter can pass it on.
+                    if (result.tierUp) {
+                      toast.success(
+                        `${result.tierUp.icon} Reached ${result.tierUp.name}`,
+                        {
+                          description: result.tierUp.rewarded
+                            ? "A tier reward has been added to their account."
+                            : undefined,
+                        },
+                      );
+                    }
                   })
                   .catch((error: unknown) => {
                     toast.error(

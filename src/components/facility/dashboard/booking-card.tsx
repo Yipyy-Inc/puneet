@@ -278,6 +278,19 @@ export function BookingCard({
               description: result.reasons.join(" · ") || undefined,
             });
           }
+          // Said separately, and after, because it is news about the CUSTOMER
+          // rather than about this bill — the person at the counter is the one
+          // who gets to tell them.
+          if (result.tierUp) {
+            toast.success(
+              `${result.tierUp.icon} Reached ${result.tierUp.name}`,
+              {
+                description: result.tierUp.rewarded
+                  ? "A tier reward has been added to their account."
+                  : undefined,
+              },
+            );
+          }
         })
         .catch((error: unknown) => {
           toast.error("The points for this booking were not awarded", {

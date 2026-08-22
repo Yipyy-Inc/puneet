@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { settleTier } from "@/lib/api/loyalty-tier";
 import { ownStaffId } from "@/lib/api/own-staff";
+import { NO_LOYALTY_PROGRAM } from "@/lib/settings/loyalty";
+import type { FacilityLoyaltyConfig } from "@/types/loyalty";
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -249,6 +252,34 @@ export async function POST(request: NextRequest) {
       { error: error.message },
       { status: denied ? 403 : 400 },
     );
+  }
+
+  // ── A TIER FOLLOWS THE POINTS ────────────────────────────────────────────
+  //
+  // `lifetimePointsEarned` is one of the three dimensions a tier threshold can
+  // be measured against, and a staff award moves it — so a manual adjustment
+  // large enough to cross a threshold should promote the customer, exactly as a
+  // booking would. Doing it only on the earning path would mean a tier that
+  // depended on how the points arrived.
+  //
+  // Awaited but not fatal: `settleTier` swallows its own failures, and the
+  // ledger entry is already posted either way.
+  const { data: settingRow } = await supabase
+    .from("facility_settings")
+    .select("value")
+    .eq("facility_id", context.facilityId)
+    .eq("domain", "loyalty_config")
+    .maybeSingle();
+
+  const config = {
+    ...NO_LOYALTY_PROGRAM,
+    ...((settingRow as { value?: Record<string, unknown> } | null)?.value ??
+      {}),
+    facilityId: 0,
+  } as unknown as FacilityLoyaltyConfig;
+
+  if (config.enabled) {
+    await settleTier(supabase, config, body.accountId);
   }
 
   return NextResponse.json(
