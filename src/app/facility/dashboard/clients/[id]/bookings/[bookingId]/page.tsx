@@ -2210,6 +2210,16 @@ export default function ClientBookingDetailPage({
                         },
                       );
                     }
+                    // Named one at a time. A badge is a thing with a name, and
+                    // "2 badges earned" is not something the counter can pass
+                    // on to the customer standing in front of them.
+                    for (const badge of result.badges) {
+                      toast.success(`${badge.icon} ${badge.name}`, {
+                        description: badge.rewardText
+                          ? `Badge earned — reward: ${badge.rewardText}`
+                          : "Badge earned",
+                      });
+                    }
                   })
                   .catch((error: unknown) => {
                     toast.error(

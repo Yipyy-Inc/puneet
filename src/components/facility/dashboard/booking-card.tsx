@@ -291,6 +291,16 @@ export function BookingCard({
               },
             );
           }
+          // One toast per badge rather than a count: a badge is a thing with a
+          // name, and "2 badges earned" is not something the counter can pass
+          // on. Rarely more than one.
+          for (const badge of result.badges) {
+            toast.success(`${badge.icon} ${badge.name}`, {
+              description: badge.rewardText
+                ? `Badge earned — reward: ${badge.rewardText}`
+                : "Badge earned",
+            });
+          }
         })
         .catch((error: unknown) => {
           toast.error("The points for this booking were not awarded", {

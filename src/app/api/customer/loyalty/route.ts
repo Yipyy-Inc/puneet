@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { badgeStatsFor, plannedBadgeReward } from "@/lib/api/loyalty-badges";
 import { qualifyingTier } from "@/lib/api/loyalty-tier";
+import { badgeProgress } from "@/lib/loyalty/badge-progress";
+import { badgeGlyph } from "@/lib/loyalty/badge-notification";
+import {
+  badgeConditionText,
+  badgeRewardText,
+} from "@/lib/loyalty/badge-summary";
 import { getActiveEarnRules } from "@/lib/loyalty/earn-rule-versioning";
 import { tierBenefitList } from "@/lib/loyalty/tier-notification";
 import { NO_LOYALTY_PROGRAM } from "@/lib/settings/loyalty";
@@ -103,6 +110,43 @@ export interface CustomerLoyaltyPayload {
     description: string;
     createdAt: string;
     kind: string;
+  }[];
+  /**
+   * The facility's badges, each with where this customer stands.
+   *
+   * Evaluated on the SERVER, against the same facts the awarding does — so the
+   * gallery cannot tell somebody they have met a condition the server would not
+   * award them for. It read a hand-authored fixture until 2026-08-22.
+   */
+  badges: {
+    id: string;
+    name: string;
+    description: string;
+    /**
+     * An EMOJI, not the stored key.
+     *
+     * A badge's icon is written as `"star"` or `"gem"` by the wizard, and the
+     * customer's gallery renders it as text — so a real badge showed the word
+     * "star" in 30px type where its picture should be. `badgeGlyph` is the map
+     * the badge-earned email already uses; an icon that is already an emoji
+     * passes through it unchanged.
+     */
+    icon: string;
+    /** "Completed 10 bookings" — phrased once, in `badgeConditionText`. */
+    conditionText: string;
+    /** Null when the badge carries no reward, or one that cannot be issued. */
+    rewardText: string | null;
+    /** Null when they have not earned it. */
+    earnedAt: string | null;
+    progress: {
+      current: number;
+      threshold: number;
+      ratio: number;
+      met: boolean;
+      /** False when the criterion cannot be measured at all — see below. */
+      measurable: boolean;
+      label: string;
+    };
   }[];
   /** Rewards they hold and can still spend. */
   rewards: {
@@ -216,9 +260,10 @@ export async function GET() {
   // be two requests guaranteed to come back empty.
   let transactions: CustomerLoyaltyPayload["transactions"] = [];
   let rewards: CustomerLoyaltyPayload["rewards"] = [];
+  let earnedBadgeAt = new Map<string, string>();
 
   if (account) {
-    const [txnResult, voucherResult] = await Promise.all([
+    const [txnResult, voucherResult, awardResult] = await Promise.all([
       supabase
         .from("loyalty_transactions")
         .select("id, points, description, created_at, kind")
@@ -236,7 +281,17 @@ export async function GET() {
         // a reward is still good is not evidence that it is.
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .order("issued_at", { ascending: false }),
+      supabase
+        .from("loyalty_badge_awards")
+        .select("badge_id, earned_at")
+        .eq("account_id", account.id),
     ]);
+
+    earnedBadgeAt = new Map(
+      (
+        (awardResult.data ?? []) as { badge_id: string; earned_at: string }[]
+      ).map((a) => [a.badge_id, a.earned_at]),
+    );
 
     transactions = (
       (txnResult.data ?? []) as {
@@ -271,12 +326,65 @@ export async function GET() {
     }));
   }
 
-  const tiers =
-    config.tiersEnabled === false
-      ? []
-      : [...(config.tierDefinitions ?? [])]
-          .sort((a, b) => a.sortOrder - b.sortOrder)
-          .map(toCustomerTier);
+  const tierDefs =
+    config.tiersEnabled === false ? [] : (config.tierDefinitions ?? []);
+
+  const tiers = [...tierDefs]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map(toCustomerTier);
+
+  // ── THE BADGES, WITH WHERE THIS CUSTOMER STANDS ──────────────────────────
+  //
+  // The stats are the SAME ones `settleBadges` awards from — one function,
+  // `badgeStatsFor`, so the gallery cannot congratulate somebody on a condition
+  // the server would decline to award. `referrals` and `reviews` are zero in
+  // both, because nothing records either; a badge needing them shows honest
+  // zero progress rather than an invented figure.
+  //
+  // A badge the account has already EARNED is shown as earned whatever the
+  // stats now say. Badges are permanent — a spend threshold met last year is
+  // not un-met — and `earned_at` is the record of it.
+  const heldTier = account
+    ? (tierDefs.find((t) => t.id === account.currentTierId) ?? null)
+    : null;
+
+  const badgeStats = badgeStatsFor(
+    {
+      id: account?.id ?? "",
+      facilityId: client.facility_id,
+      currentTierId: account?.currentTierId ?? null,
+      tierJoinedAt: null,
+      lifetimePointsEarned: account?.lifetimePointsEarned ?? 0,
+      totalSpend: account?.totalSpend ?? 0,
+      totalVisits: account?.totalVisits ?? 0,
+    },
+    heldTier,
+  );
+
+  const badges = (config.badges ?? [])
+    .filter((b) => b.enabled !== false)
+    .map((badge) => {
+      const earnedAt = earnedBadgeAt.get(badge.id) ?? null;
+      const progress = badgeProgress(badge, badgeStats, tierDefs);
+      const plan = plannedBadgeReward(badge);
+      const issuable = plan.rewardType !== null || plan.points > 0;
+      return {
+        id: badge.id,
+        name: badge.name,
+        description: badge.description,
+        icon: badgeGlyph(badge.icon),
+        conditionText: badgeConditionText(
+          badge,
+          badge.criteria.tierId
+            ? tierDefs.find((t) => t.id === badge.criteria.tierId)?.name
+            : undefined,
+        ),
+        rewardText:
+          issuable && badge.reward ? badgeRewardText(badge.reward) : null,
+        earnedAt,
+        progress: earnedAt ? { ...progress, met: true, ratio: 1 } : progress,
+      };
+    });
 
   return NextResponse.json({
     enabled: config.enabled === true,
@@ -288,6 +396,7 @@ export async function GET() {
     tiers,
     earnRules: getActiveEarnRules(config.earnRules ?? []),
     transactions,
+    badges,
     rewards,
   } satisfies CustomerLoyaltyPayload);
 }

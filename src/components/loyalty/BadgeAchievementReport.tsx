@@ -22,7 +22,7 @@ import {
   CalendarClock,
   type LucideIcon,
 } from "lucide-react";
-import { loyaltyQueries } from "@/lib/api/loyalty";
+import { loyaltyLedgerQueries } from "@/lib/api/loyalty-ledger";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import { useHydrated } from "@/hooks/use-hydrated";
 import {
@@ -49,29 +49,32 @@ function currency(n: number): string {
 
 export function BadgeAchievementReport() {
   const hydrated = useHydrated();
-  const { config, facilityId } = useLoyaltyProgram();
+  const { config } = useLoyaltyProgram();
   const badges = useMemo(() => config.badges ?? [], [config.badges]);
   const tierDefs = useMemo(
     () => config.tierDefinitions ?? [],
     [config.tierDefinitions],
   );
-  const { data: customerBadges = [] } = useQuery(
-    loyaltyQueries.customerBadges(facilityId),
-  );
-  const { data: spendEvents = [] } = useQuery(
-    loyaltyQueries.spendEvents(facilityId),
-  );
+
+  // ── REAL AWARDS, REAL SPEND ─────────────────────────────────────────────
+  //
+  // Both halves in one request, from `loyalty_badge_awards` and the earners'
+  // paid bookings. They were two fixture queries keyed by a numeric facility
+  // id until 2026-08-22 — and the spend one was GENERATED with a revenue bump
+  // written into it, so this report showed every badge working because the
+  // file said so.
+  const { data: awardData } = useQuery(loyaltyLedgerQueries.badgeAwards());
 
   const rows = useMemo(
     () =>
       computeBadgeAchievement({
         badges,
-        customerBadges,
-        spendEvents,
+        earns: awardData?.awards ?? [],
+        spendEvents: awardData?.spend ?? [],
         now: NOW_ISO,
         tierName: (id) => tierDefs.find((t) => t.id === id)?.name,
       }),
-    [badges, customerBadges, spendEvents, tierDefs],
+    [badges, awardData, tierDefs],
   );
 
   const summary = useMemo(() => {
