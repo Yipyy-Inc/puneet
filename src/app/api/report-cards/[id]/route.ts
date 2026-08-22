@@ -92,3 +92,48 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true, card: data });
 }
+
+/**
+ * Discard a draft.
+ *
+ * Authorised by `report_cards_delete` (20260822340000), which refuses a card
+ * that has been SENT — that one is something the owner received, and it
+ * carries their reply and rating. Nothing is checked here.
+ *
+ * `.select()` on the delete so a refusal is distinguishable from a card that
+ * was already gone: both remove zero rows, and only one of them is a success.
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const supabase = await createServerClient();
+
+  const { data, error } = await supabase
+    .from("report_cards")
+    .delete()
+    .eq("id", id)
+    .select("id");
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!data || data.length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "That report card could not be discarded — a card that has been sent cannot be, and it may not be yours.",
+      },
+      { status: 403 },
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}
