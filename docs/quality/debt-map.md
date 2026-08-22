@@ -2624,28 +2624,53 @@ NOT raise. Asserting "the row still exists afterwards" proves nothing — the
 first draft of `supabase/tests/facility-account-rls.sql` did exactly that and
 passed while measuring nothing. Use `GET DIAGNOSTICS ... row_count`.
 
-### 🟡 A facility cannot be deleted at all
+### ✅ A facility could not be deleted at all — fixed 2026-08-22
 
-Found while testing the cascade carve-out in
-`private.protect_last_facility_admin`. `audit_log.facility_id` is
-`ON DELETE SET NULL`, and that SET NULL is an UPDATE — which the append-only
-trigger on `audit_log` refuses:
+`audit_log.facility_id` was `ON DELETE SET NULL`, and a SET NULL is an UPDATE,
+which the append-only trigger refuses without exception:
 
 ```
 delete from public.facilities where id = ...
   => audit_log is append-only: UPDATE is not permitted on an audit entry
 ```
 
-Pre-dates the access-level work and is unrelated to it, but it means
-`facilities_delete` (superadmin-only, ADR-backed) cannot succeed, and the
-"the whole facility is going away" branch of the last-admin guard is currently
-unreachable.
+So `facilities_delete` (superadmin-only, ADR-backed) could not succeed and the
+"the whole facility is going away" branch of `private.protect_last_facility_admin`
+was unreachable.
 
-**Do instead:** don't assume facility deletion works. Fixing it is a choice
-between `ON DELETE CASCADE` on the audit rows (destroys the record of what
-happened) and letting the trigger allow the facility_id null-out specifically —
-the second is almost certainly right, but it is a change to an immutability
-guarantee and deserves its own ADR.
+**This entry previously proposed letting the trigger allow the facility_id
+null-out specifically, and called that "almost certainly right". It was wrong,
+and the reasoning is worth keeping.** That fix succeeds and then ERASES which
+facility each entry concerned — silent data loss inside the one table whose
+entire purpose is not losing things. The append-only rule was never the problem.
+
+The foreign key was. `audit_log` already carries `facility_name` beside
+`facility_id`, denormalised so an entry stays readable when the facility is
+gone, and `audit_log_read` gates on `private.is_platform_admin()` rather than on
+the facility — so the column is DESCRIPTIVE, not referential. Migration
+20260822500000 drops the constraint and leaves the value populated forever.
+
+The same mistake was on `grooming_appointment_history`, which had gained TWO
+`ON DELETE RESTRICT` keys — to `bookings` and to `facilities` — against a table
+whose own test comment reads "No FK, so deleting the booking cannot cascade the
+history away, which is what makes it an audit trail rather than a detail-page
+field." A groomed booking was undeletable and the salon was hostage to it. Both
+dropped; `grooming_history_read` gates on a facility_id VALUE and needs no
+referenced row.
+
+**The rule, stated once: an audit trail must not hold a foreign key to the thing
+it audits.** It has to outlive it.
+
+**What deliberately did NOT change.** A facility with payments, store credit or
+daycare attendance is still undeletable, and a booking with payments, store
+credit or a package pass still is too. Those RESTRICTs are correct — a booking
+with money against it must not be deletable, and bookings are cancelled rather
+than deleted. This was not "make things deletable"; it removed two constraints
+that contradicted the tables they sat on.
+
+Both failing tests now pass: `platform-roles.sql` went from running ZERO
+assertions to 13, and `grooming-history-immutability.sql` to 7/7. Immutability
+re-verified afterwards: UPDATE and DELETE on `audit_log` are both still refused.
 
 ## Snapshot (2026-08-18, walking the journey found the harness first)
 
