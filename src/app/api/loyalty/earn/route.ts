@@ -5,6 +5,11 @@ import { getViewer } from "@/lib/auth/viewer";
 import { computeEarnings } from "@/lib/loyalty/engine-earn";
 import { getActiveEarnRules } from "@/lib/loyalty/earn-rule-versioning";
 import { NO_LOYALTY_PROGRAM } from "@/lib/settings/loyalty";
+import {
+  heldTierMultiplier,
+  readTierFacts,
+  settleTier,
+} from "@/lib/api/loyalty-tier";
 import { createServerClient } from "@/lib/supabase/server";
 import type { LoyaltyEvent } from "@/lib/loyalty/engine";
 import type { FacilityLoyaltyConfig } from "@/types/loyalty";
@@ -54,6 +59,13 @@ export interface EarnResult {
   points: number;
   /** One line per rule that fired, for the staff toast. */
   reasons: string[];
+  /** Set when this booking moved the customer UP a tier. */
+  tierUp?: {
+    name: string;
+    icon: string;
+    /** True when reaching it also issued a one-time reward voucher. */
+    rewarded: boolean;
+  };
 }
 
 interface BookingRow {
@@ -193,23 +205,26 @@ export async function POST(request: NextRequest) {
     isFirstBooking: visitNumber <= 1,
   };
 
+  // ── THE TIER THEY HELD WHEN THEY SPENT ─────────────────────────────────
+  //
+  // Read BEFORE the award, and deliberately so. A customer earns at the tier
+  // they were in when they paid, not at the one this very payment pushes them
+  // into — paying the new tier's bonus on the transaction that unlocked it
+  // would hand it over one purchase earlier than they were ever promised.
+  //
+  // This was hardcoded to 1 until tier resolution existed, so every customer
+  // earned the base rate whatever the screen said their tier was.
+  const factsBefore = await readTierFacts(supabase, accountId);
+  const tierMultiplier = factsBefore
+    ? heldTierMultiplier(config, factsBefore)
+    : 1;
+
   const outcomes = computeEarnings(
     getActiveEarnRules(config.earnRules ?? []),
     event,
     config,
     {
-      // ── NO TIER BOOST YET, AND SAYING SO ──────────────────────────────
-      //
-      // `computeEarnings` multiplies spend/booking/visit rules by the
-      // customer's tier multiplier. Nothing resolves a customer INTO a tier
-      // yet — `current_tier_id` is a column a person sets by hand, and the
-      // engine that would move it against spend and visits is not built.
-      //
-      // So this is 1: every customer earns the base rate. A first draft looked
-      // the tier up and passed `tier ? 1 : 1`, which is 1 either way and reads
-      // as though a boost were being applied. Better to be plainly unbuilt than
-      // to look finished. Recorded in the debt map.
-      tierMultiplier: 1,
+      tierMultiplier,
       visitNumber,
     },
   );
@@ -256,10 +271,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── AND THEN THE TIER MOVES ──────────────────────────────────────────────
+  //
+  // After the award, because the points just posted are one of the three
+  // dimensions a threshold can be measured against. Failures here are
+  // swallowed by `settleTier`: the money is taken and the points are awarded,
+  // and neither should be undone because a tier did not move.
+  const settlement = await settleTier(supabase, config, accountId);
+
+  const tierUp =
+    settlement.upgraded && settlement.tier
+      ? {
+          name: settlement.tier.name,
+          icon: settlement.tier.icon,
+          rewarded: settlement.rewarded,
+        }
+      : undefined;
+
   return NextResponse.json({
     awarded: true,
     alreadyEarned: false,
     points,
     reasons: outcomes.map((o) => o.description),
+    ...(tierUp ? { tierUp } : {}),
   } satisfies EarnResult);
 }

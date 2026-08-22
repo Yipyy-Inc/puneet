@@ -3463,15 +3463,54 @@ second award came back `alreadyEarned` with the balance unmoved. Covered by
 [loyalty-earning.spec.ts](../../tests/e2e/loyalty-earning.spec.ts) in
 `test:e2e:ci`.
 
-#### 🟠 What earning still does not do
+#### ✅ Tiers resolve themselves — 2026-08-21
 
-**No tier multiplier.** `computeEarnings` boosts spend/booking/visit rules by
-the customer's tier multiplier, and the route passes **1**. Nothing resolves a
-customer INTO a tier: `current_tier_id` is a column a person sets by hand, and
-the engine that would move it against spend and visits is not built. A first
-draft of the route looked the tier up and passed `tier ? 1 : 1` — which is 1
-either way and reads as though a boost were applied. Deleted before it shipped;
-plainly unbuilt beats looking finished.
+`current_tier_id` was a column somebody set by hand. A facility could define
+Bronze/Silver/Gold with thresholds, a customer could sail past every one, and
+nothing moved them — and because nothing did, the earn route passed a tier
+multiplier of **1**, so every customer earned the base rate whatever the screen
+said their tier was.
+
+`src/lib/api/loyalty-tier.ts` resolves and persists it, called from the earn
+route and from the manual-adjustment route. Promotion does not depend on how the
+points arrived: a staff award that crosses a threshold promotes exactly as a
+booking does.
+
+**The decision is `recalculateTier`, not a second copy of it.** The rule has real
+edges — the highest QUALIFYING tier across three threshold dimensions, and a
+downgrade suppressed unless the facility opted in. What is dropped is that
+function's OUTPUT side: it also builds a fixture `RedemptionRecord` and a
+notification for the fixture bell. The tier-up reward is issued through
+`redeem_loyalty_points` at `points: 0` instead — given, not bought.
+
+**The multiplier is read BEFORE the award**, deliberately. A customer earns at
+the tier they held when they paid, not the one that payment pushes them into;
+paying the new tier's bonus on the transaction that unlocked it hands it over a
+purchase early.
+
+Walked against production: a staff adjustment crossing the threshold promoted
+`null → Silver` and issued a $5 voucher at zero points, and the next $40 booking
+awarded **80 points** at Silver's 2× — the number that had been hardcoded.
+Covered by [loyalty-tiers.spec.ts](../../tests/e2e/loyalty-tiers.spec.ts) in
+`test:e2e:ci`.
+
+**One divergence from the pure function, on purpose.** `recalculateTier` returns
+UNCHANGED when there are no tiers to resolve against, so a facility switching
+tiers off left every customer pointing at an id nothing defined — the row said
+"Silver" while every screen rendered "—", because they look the id up in the
+facility's definitions and miss. `settleTier` clears it. Nothing is lost: the
+threshold dimensions only increase, so turning tiers back on restores the same
+tier on the next settle. It lives in `settleTier` rather than in
+`recalculateTier` because that function is shared with the fixture engine.
+
+**Found by the cleanup, not by the test.** The spec's `afterAll` was written on
+the belief that a nudge with tiers off would settle the tier away; the test
+asserting the same belief PASSED, and the cleanup silently did nothing, leaving
+two accounts naming tiers no facility defined. The test agreed with the code and
+both were wrong. Worth remembering: a cleanup that quietly no-ops is a second
+assertion nobody reads.
+
+#### 🟠 What earning still does not do
 
 **Only `booking_completed` fires it.** A retail sale, a package purchase, a
 review, a birthday and a referral are all trigger types the rules editor offers
