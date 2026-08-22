@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useAiSummary } from "@/hooks/use-ai-summary";
-import { businessProfile } from "@/data/settings";
 import {
   buildReportCardNotificationData,
   sendReportCardNotifications,
@@ -1477,8 +1476,22 @@ export function ReportCardsModule({
                           onClick={() => {
                             rcAi.generate("/api/ai/report-card-summary", {
                               petName: selectedVisit?.petName ?? "Pet",
-                              facilityName: businessProfile.businessName,
-                              serviceType: "daycare",
+                              // The facility's OWN name, from settings — not
+                              // `businessProfile` out of src/data/settings,
+                              // which named a fixture business in a prompt the
+                              // owner then reads.
+                              facilityName,
+                              // The card's own service. This was the literal
+                              // "daycare", so a boarding, grooming or training
+                              // card asked for prose about a daycare day — and
+                              // the call is billed either way. Normalised the
+                              // way getEnabledSections does it, because the
+                              // prompt is read by a person and the rest of the
+                              // system calls it boarding.
+                              serviceType:
+                                serviceType === "hotel"
+                                  ? "boarding"
+                                  : serviceType,
                               date: new Date().toISOString(),
                               mood: input.mood,
                               energy: input.energy,
