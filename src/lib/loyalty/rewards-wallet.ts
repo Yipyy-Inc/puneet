@@ -1,4 +1,19 @@
-import type { RedemptionRecord } from "@/types/loyalty";
+/**
+ * What a wallet card needs from a reward, and nothing else.
+ *
+ * Named here rather than importing a row type: this module is pure formatting,
+ * and the fields below are the ones a card actually shows. It took the fixture
+ * `RedemptionRecord` until 2026-08-22, whose `appliesToServiceTypes` is the
+ * same idea as a real voucher's `appliesToServices` under a different name.
+ */
+export interface WalletRewardSource {
+  id: string;
+  rewardType: string;
+  rewardValue: number | string;
+  expiresAt?: string | null;
+  /** Null or empty means every service. */
+  appliesToServices?: string[] | null;
+}
 
 /**
  * Customer "rewards wallet" view model: turns active RewardRedemptions into
@@ -52,9 +67,9 @@ function singleService(services: string[] | null | undefined): string | null {
   return services && services.length === 1 ? services[0] : null;
 }
 
-function titleFor(record: RedemptionRecord): string {
+function titleFor(record: WalletRewardSource): string {
   const v = record.rewardValue;
-  const svc = singleService(record.appliesToServiceTypes);
+  const svc = singleService(record.appliesToServices);
   const target = svc ? svc : "visit";
   switch (record.rewardType) {
     case "credit":
@@ -74,7 +89,7 @@ function titleFor(record: RedemptionRecord): string {
   }
 }
 
-function valueChipFor(record: RedemptionRecord): string {
+function valueChipFor(record: WalletRewardSource): string {
   const v = record.rewardValue;
   switch (record.rewardType) {
     case "credit":
@@ -99,7 +114,7 @@ function servicesTextFor(services: string[] | null | undefined): string {
 
 /** Build a single wallet card view from a redemption record. */
 export function toWalletReward(
-  record: RedemptionRecord,
+  record: WalletRewardSource,
   nowMs: number,
 ): WalletReward {
   const expiresAt = record.expiresAt ?? null;
@@ -111,7 +126,7 @@ export function toWalletReward(
     icon: iconFor(record.rewardType),
     title: titleFor(record),
     valueChip: valueChipFor(record),
-    servicesText: servicesTextFor(record.appliesToServiceTypes),
+    servicesText: servicesTextFor(record.appliesToServices),
     expiresAt,
     expiresInDays,
     isExpiringSoon:
@@ -124,7 +139,7 @@ export function toWalletReward(
  * (never-expiring rewards last).
  */
 export function buildRewardsWallet(
-  records: RedemptionRecord[],
+  records: WalletRewardSource[],
   nowMs: number,
 ): WalletReward[] {
   return records

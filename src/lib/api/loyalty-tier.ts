@@ -146,6 +146,29 @@ export function heldTier(
   return tiers.find((t) => t.id === facts.currentTierId) ?? null;
 }
 
+/**
+ * The tier the account QUALIFIES for right now, computed rather than stored.
+ *
+ * Not the same question as {@link heldTier}. The stored `current_tier_id` only
+ * moves when something moves the points — an earn or an adjustment — so a
+ * facility that adds a tier, or a customer who has not transacted since one was
+ * added, has a stored tier that lags what they have plainly earned.
+ *
+ * The customer's own wallet shows THIS one: being told you are in no tier while
+ * holding fifteen thousand lifetime points is not a state anybody would accept
+ * as an explanation. The stored column is what the earn multiplier reads, and
+ * it catches up on their next transaction.
+ */
+export function qualifyingTier(
+  config: FacilityLoyaltyConfig,
+  facts: TierFacts,
+): Tier | null {
+  if (config.tiersEnabled === false) return null;
+  const tiers = config.tierDefinitions ?? [];
+  if (tiers.length === 0) return null;
+  return resolveTier(tiers, asAccount(facts));
+}
+
 /** The points multiplier the held tier grants (1 when there is none). */
 export function heldTierMultiplier(
   config: FacilityLoyaltyConfig,

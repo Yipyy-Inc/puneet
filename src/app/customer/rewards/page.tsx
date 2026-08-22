@@ -48,14 +48,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  customerLoyaltyData,
   loyaltySettings,
   referralCodes,
   badges,
   loyaltyRewards,
   type LoyaltyReward,
 } from "@/data/marketing";
-import { buildDefaultEarnRules } from "@/data/facility-loyalty-config";
 import {
   earnRuleCustomerSummary,
   activeCustomerEarnRules,
@@ -69,6 +67,7 @@ import Link from "next/link";
 import { payments } from "@/data/payments";
 import { useQuery } from "@tanstack/react-query";
 import { loyaltyQueries } from "@/lib/api/loyalty";
+import { customerLoyaltyQueries } from "@/lib/api/loyalty-ledger";
 import {
   badgeConditionText,
   badgeRewardText,
@@ -89,6 +88,25 @@ const WALLET_ICONS: Record<WalletIcon, LucideIcon> = {
   gift_card: CreditCard,
   freebie: Gift,
 };
+
+/**
+ * What a tier threshold is counted in.
+ *
+ * The progress copy used to say "points" for every tier, because the fixture
+ * ladder only had points. A real tier can be measured on spend or visits, and
+ * telling somebody they are "200 points away" from a tier that wants twenty
+ * visits is worse than saying nothing.
+ */
+function unitFor(thresholdType: "points" | "spend" | "visits"): string {
+  switch (thresholdType) {
+    case "spend":
+      return "dollars spent";
+    case "visits":
+      return "visits";
+    default:
+      return "points";
+  }
+}
 
 export default function CustomerRewardsPage() {
   const { client: customer } = useCurrentCustomer();
@@ -111,95 +129,110 @@ export default function CustomerRewardsPage() {
     setIsMounted(true);
   }, []);
 
-  // Live loyalty account (the engine model) — authoritative for points, credit,
-  // and tier. Falls back to the legacy display model until it loads.
+  // ── FROM POSTGRES ──────────────────────────────────────────────────────
+  //
+  // One request for the whole wallet: balance, tier, history, the rewards they
+  // hold, and the programme itself. It reads through the customer's CLIENT ROW,
+  // not through a membership they do not have — `/api/loyalty/accounts` falls
+  // back to the demo facility for a caller with no membership, which would have
+  // shown a pet owner a balance from a business they have never been to.
+  //
+  // Four of these used to be separate fixture queries keyed by a numeric
+  // facility id, so a customer read points, rewards and earn rules that no
+  // facility had ever configured.
   const loyaltyFacilityId = selectedFacility?.id ?? 0;
-  const { data: loyaltyAccount } = useQuery({
-    ...loyaltyQueries.account(loyaltyFacilityId, customerId ?? 0),
-    enabled: !!selectedFacility,
-  });
-  const { data: facilityLoyaltyConfig } = useQuery({
-    ...loyaltyQueries.facilityConfig(loyaltyFacilityId),
-    enabled: !!selectedFacility,
-  });
-  const redemptionRate = facilityLoyaltyConfig?.redemptionRate ?? 100;
-  const minimumRedemptionPoints =
-    facilityLoyaltyConfig?.settings?.minimumRedemptionPoints ?? 100;
+  const { data: wallet, isPending: walletPending } = useQuery(
+    customerLoyaltyQueries.mine(),
+  );
 
-  // Active earn rules drive the dynamic "How Points Are Earned" list so it always
-  // mirrors the facility's current EarnRule config. Falls back to the defaults
-  // when a facility hasn't customised its rules yet.
-  const earnRules = useMemo(() => {
-    const rules =
-      facilityLoyaltyConfig?.earnRules &&
-      facilityLoyaltyConfig.earnRules.length > 0
-        ? facilityLoyaltyConfig.earnRules
-        : buildDefaultEarnRules(loyaltyFacilityId);
-    return activeCustomerEarnRules(rules);
-  }, [facilityLoyaltyConfig, loyaltyFacilityId]);
+  const loyaltyAccount = wallet?.account ?? null;
+  const redemptionRate = wallet?.redemptionRate ?? 100;
+  const minimumRedemptionPoints = wallet?.minimumRedemptionPoints ?? 100;
 
-  // Rewards wallet — the customer's active, unused RewardRedemptions. Keyed under
-  // ["loyalty"] so redeeming points (which creates a record) refreshes it.
-  const { data: activeRewards = [] } = useQuery({
-    ...loyaltyQueries.customerRewards(loyaltyFacilityId, customerId ?? 0),
-    enabled: !!selectedFacility,
-  });
+  // How points are earned HERE. The list a customer reads is now the list the
+  // server awards by; it used to fall back to `buildDefaultEarnRules`, which
+  // described a programme nobody was running.
+  const earnRules = useMemo(
+    () => activeCustomerEarnRules(wallet?.earnRules ?? []),
+    [wallet],
+  );
+
+  // The rewards they hold and can still spend. Expiry is decided by the
+  // DATABASE clock in the route, not by this device.
+  const activeRewards = useMemo(() => wallet?.rewards ?? [], [wallet]);
   const walletRewards = useMemo(
     () => buildRewardsWallet(activeRewards, NOW_MS),
     [activeRewards],
   );
 
-  // Full points-transaction history (canonical LoyaltyTransactions) for the
-  // "My History" tab — earned / redeemed / adjusted / expired with running balance.
-  const { data: pointTransactions = [] } = useQuery({
-    ...loyaltyQueries.transactions(loyaltyFacilityId, customerId ?? 0),
-    enabled: !!selectedFacility,
-  });
+  // The real ledger, newest first.
+  const pointTransactions = useMemo(() => wallet?.transactions ?? [], [wallet]);
 
-  // Lifetime points = cumulative total of ALL points ever earned (positive
-  // ledger entries), not net of redemptions.
-  const lifetimePoints = useMemo(
-    () =>
-      pointTransactions
-        .filter((t) => t.points > 0)
-        .reduce((sum, t) => sum + t.points, 0),
-    [pointTransactions],
-  );
+  // Lifetime points comes from the ACCOUNT, not from summing the page's copy of
+  // the history. The ledger is capped at the most recent hundred entries for
+  // display, and adding those up would quietly under-report a long-standing
+  // customer — the account's own total is maintained from every entry there has
+  // ever been.
+  const lifetimePoints = loyaltyAccount?.lifetimePointsEarned ?? 0;
 
-  // Get loyalty data
+  // ── THE LADDER, AS THIS FACILITY DEFINES IT ────────────────────────────
+  //
+  // Built from the facility's own tiers. It used to read `loyaltySettings.tiers`
+  // — one global fixture — so every customer on the platform was shown the same
+  // ladder regardless of what their facility had configured, and the whole
+  // screen was gated behind a `customerLoyaltyData` row that a real customer
+  // would never have.
+  //
+  // A threshold is measured on its OWN dimension: points, spend, or visits. The
+  // old arithmetic assumed points for every tier, which would have told a
+  // customer they were "200 points away" from a tier that actually wanted
+  // twenty visits.
   const loyaltyData = useMemo(() => {
-    const customerLoyalty = customerLoyaltyData.find(
-      (l) => l.clientId === customerId,
-    );
-    if (!customerLoyalty) return null;
+    if (!wallet?.enabled) return null;
 
-    // Prefer the live engine account (points / tier / credit are kept in sync by
-    // the automation engine); the tier ids match loyaltySettings.tiers.
-    const points = loyaltyAccount?.pointsBalance ?? customerLoyalty.points;
-    const tierId = loyaltyAccount?.currentTierId ?? customerLoyalty.tier;
+    const points = loyaltyAccount?.pointsBalance ?? 0;
     const creditBalance = loyaltyAccount?.creditBalance ?? 0;
+    const tiers = wallet.tiers;
 
-    const currentTier = loyaltySettings.tiers.find((t) => t.id === tierId);
-    const nextTier = loyaltySettings.tiers.find((t) => t.minPoints > points);
-    const pointsToNextTier = nextTier ? nextTier.minPoints - points : 0;
-    const currentTierMaxPoints = nextTier ? nextTier.minPoints : Infinity;
-    const currentTierMinPoints = currentTier?.minPoints || 0;
-    const progressInTier = points - currentTierMinPoints;
-    const tierRange = currentTierMaxPoints - currentTierMinPoints;
-    const progressPercentage =
-      tierRange > 0 ? (progressInTier / tierRange) * 100 : 0;
+    const reached = (tier: (typeof tiers)[number]): number => {
+      switch (tier.thresholdType) {
+        case "spend":
+          return loyaltyAccount?.totalSpend ?? 0;
+        case "visits":
+          return loyaltyAccount?.totalVisits ?? 0;
+        default:
+          return loyaltyAccount?.lifetimePointsEarned ?? 0;
+      }
+    };
+
+    const currentTier =
+      tiers.find((t) => t.id === loyaltyAccount?.currentTierId) ?? null;
+    // The first tier they do not yet meet. Tiers arrive lowest-first.
+    const nextTier = tiers.find((t) => reached(t) < t.thresholdValue) ?? null;
+
+    const have = nextTier ? reached(nextTier) : 0;
+    const need = nextTier?.thresholdValue ?? 0;
+    const floor =
+      currentTier &&
+      nextTier &&
+      currentTier.thresholdType === nextTier.thresholdType
+        ? currentTier.thresholdValue
+        : 0;
+    const span = need - floor;
+    const progressPercentage = span > 0 ? ((have - floor) / span) * 100 : 0;
 
     return {
-      ...customerLoyalty,
       points,
-      tier: tierId,
       creditBalance,
       currentTier,
       nextTier,
-      pointsToNextTier,
+      /** How much more, on the NEXT tier's own dimension. */
+      toNextTier: nextTier ? Math.max(0, need - have) : 0,
+      /** What they have on that dimension, for the "x / y" line. */
+      towardNextTier: have,
       progressPercentage: Math.min(100, Math.max(0, progressPercentage)),
     };
-  }, [customerId, loyaltyAccount]);
+  }, [wallet, loyaltyAccount]);
 
   // Get referral codes for this customer
   const customerReferralCodes = useMemo(() => {
@@ -231,17 +264,30 @@ export default function CustomerRewardsPage() {
 
   const badgeView = useMemo(() => {
     const facilityBadges =
-      facilityLoyaltyConfig?.badges && facilityLoyaltyConfig.badges.length > 0
-        ? facilityLoyaltyConfig.badges
-        : badges;
-    const tiers = facilityLoyaltyConfig?.tierDefinitions ?? [];
+      // STILL A FIXTURE. Badges are not awarded by anything — the engine that
+      // would unlock them was never converted — so the gallery below describes
+      // a scheme nobody runs. Left as it was rather than dressed up; it is in
+      // the debt map with the rest of the badge work.
+      badges.length > 0 ? badges : badges;
+    // The FIXTURE ladder, deliberately. Badges are not awarded by anything
+    // real — see the note above — so evaluating them against the facility's
+    // actual tiers would dress a fixture up as live data. When badges become
+    // real they get the real tiers with everything else.
+    const tiers = loyaltySettings.tiers as unknown as Parameters<
+      typeof badgeCriteriaMet
+    >[2];
     const stats: BadgeStats = {
       bookingsCount: loyaltyAccount?.totalVisits ?? 0,
       totalSpent: loyaltyAccount?.totalSpend ?? 0,
-      referrals: loyaltyAccount?.referralCount ?? 0,
-      reviews: loyaltyAccount?.reviewCount ?? 0,
-      currentTier:
-        tiers.find((t) => t.id === loyaltyAccount?.currentTierId) ?? null,
+      // Neither is counted anywhere real yet: a referral is not recorded
+      // against an account and a review is not either. Zero is the honest
+      // answer, and a badge that needs them simply does not unlock.
+      referrals: 0,
+      reviews: 0,
+      // Null while badges are fixture-backed: the customer's REAL tier is not
+      // in the fixture ladder these criteria are written against, and matching
+      // an id across the two would be a coincidence rather than a lookup.
+      currentTier: null,
     };
     const earnedAtById = new Map(
       customerBadges.map((cb) => [cb.badgeId, cb.earnedAt]),
@@ -276,7 +322,7 @@ export default function CustomerRewardsPage() {
     );
     inProgress.sort((a, b) => b.progress.ratio - a.progress.ratio);
     return { earned, inProgress };
-  }, [facilityLoyaltyConfig, loyaltyAccount, customerBadges]);
+  }, [wallet, loyaltyAccount, customerBadges]);
 
   // Celebrate badges earned since the customer last visited (tracked in
   // localStorage). The celebration is shown by id; the badge is looked up at
@@ -358,7 +404,13 @@ export default function CustomerRewardsPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold">Loyalty & Rewards</h1>
+          {/* The facility's OWN name for its programme when it has given one.
+              A customer reads what their business calls it, not a platform
+              label — the name has been configurable since the programme moved
+              into `facility_settings` and nothing had shown it. */}
+          <h1 className="text-3xl font-bold">
+            {wallet?.programName ?? "Loyalty & Rewards"}
+          </h1>
           <p className="text-muted-foreground mt-1">
             Earn points, unlock rewards, and refer friends to earn more
           </p>
@@ -428,8 +480,9 @@ export default function CustomerRewardsPage() {
                       </div>
                       {loyaltyData.nextTier && (
                         <div className="text-muted-foreground text-sm font-medium">
-                          {loyaltyData.pointsToNextTier.toLocaleString()} points
-                          away from {loyaltyData.nextTier.name} Tier
+                          {loyaltyData.toNextTier.toLocaleString()}{" "}
+                          {unitFor(loyaltyData.nextTier.thresholdType)} away
+                          from {loyaltyData.nextTier.name} Tier
                         </div>
                       )}
                       {!loyaltyData.nextTier && (
@@ -447,9 +500,9 @@ export default function CustomerRewardsPage() {
                         />
                         <div className="text-muted-foreground flex items-center justify-between text-xs">
                           <span>
-                            {loyaltyData.points.toLocaleString()} /{" "}
-                            {loyaltyData.nextTier.minPoints.toLocaleString()}{" "}
-                            points
+                            {loyaltyData.towardNextTier.toLocaleString()} /{" "}
+                            {loyaltyData.nextTier.thresholdValue.toLocaleString()}{" "}
+                            {unitFor(loyaltyData.nextTier.thresholdType)}
                           </span>
                           <span>
                             {Math.round(loyaltyData.progressPercentage)}% to{" "}
@@ -660,15 +713,6 @@ export default function CustomerRewardsPage() {
                     </span>
                   </div>
                   <ul className="space-y-2">
-                    {loyaltyData.currentTier.discountPercentage > 0 && (
-                      <li className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-sm">
-                          {loyaltyData.currentTier.discountPercentage}% discount
-                          on all services
-                        </span>
-                      </li>
-                    )}
                     {loyaltyData.currentTier.benefits.map((benefit, index) => (
                       <li key={index} className="flex items-start gap-2">
                         <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -689,21 +733,11 @@ export default function CustomerRewardsPage() {
                         </span>
                       </div>
                       <p className="text-primary mt-1 text-xs font-semibold">
-                        {loyaltyData.pointsToNextTier.toLocaleString()} more
-                        points to go
+                        {loyaltyData.toNextTier.toLocaleString()} more{" "}
+                        {unitFor(loyaltyData.nextTier.thresholdType)} to go
                       </p>
                     </div>
                     <ul className="space-y-2">
-                      {loyaltyData.nextTier.discountPercentage >
-                        loyaltyData.currentTier.discountPercentage && (
-                        <li className="text-muted-foreground flex items-start gap-2">
-                          <Lock className="mt-0.5 size-4 shrink-0" />
-                          <span className="text-sm">
-                            {loyaltyData.nextTier.discountPercentage}% discount
-                            on all services
-                          </span>
-                        </li>
-                      )}
                       {loyaltyData.nextTier.benefits.map((benefit, index) => (
                         <li
                           key={index}
