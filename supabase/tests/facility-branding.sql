@@ -153,9 +153,19 @@ do $$
 declare state text;
 begin
   begin
+    -- UPSERT, because the fixture above already gave this facility a branding
+    -- row for B1-B8 to read, and a plain INSERT collided with it on the primary
+    -- key — 23505, reported as "an owner cannot write their own branding" when
+    -- the owner was never the problem.
+    --
+    -- It is also what the screen does: `facility_branding` is one row per
+    -- facility, so saving branding is always an upsert, never an insert.
     insert into public.facility_branding (facility_id, primary_color, tagline)
     values ((select id from public.facilities where legacy_id = '11'),
-            '#7C3AED', 'Set by the owner');
+            '#7C3AED', 'Set by the owner')
+    on conflict (facility_id) do update
+      set primary_color = excluded.primary_color,
+          tagline       = excluded.tagline;
     state := 'ALLOWED';
   exception when others then state := sqlstate || ' ' || sqlerrm;
   end;

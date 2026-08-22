@@ -128,7 +128,11 @@ begin
           '00000000-0000-0000-0000-00000000a061', 'De-shed', 20, 20, false);
   reset role;
 
-  select facility_id into got from public.grooming_appointments;
+  -- Scoped to the fixture's own booking. Read after `reset role`, so RLS is
+  -- not filtering and the query saw every appointment in the database — the
+  -- demo facility's included, which is the id it reported.
+  select facility_id into got from public.grooming_appointments
+   where booking_id = '00000000-0000-0000-0000-00000000a070';
   perform pg_temp.t('T1  facility_id derived from the BOOKING, not the payload',
     got = '00000000-0000-0000-0000-00000000a020', format('stored=%s', got));
 exception when others then
@@ -167,7 +171,9 @@ begin
   update public.bookings set status = 'checked_in'
    where id = '00000000-0000-0000-0000-00000000a070';
   reset role;
-  select check_in_at, estimated_ready_at into ci, eta from public.grooming_appointments;
+  select check_in_at, estimated_ready_at into ci, eta
+    from public.grooming_appointments
+   where booking_id = '00000000-0000-0000-0000-00000000a070';
   mins := extract(epoch from (eta - ci)) / 60;
   perform pg_temp.t('T3  check-in stamps the clock and derives ETA (90+10+20=120m)',
     ci is not null and mins = 120,
@@ -201,7 +207,8 @@ begin
   set local role authenticated;
   update public.bookings set status = 'completed' where id = '00000000-0000-0000-0000-00000000a070';
   reset role;
-  select check_out_at into co from public.grooming_appointments;
+  select check_out_at into co from public.grooming_appointments
+   where booking_id = '00000000-0000-0000-0000-00000000a070';
   perform pg_temp.t('T5  completing stamps check-out', co is not null,
     format('check_out=%s', co is not null));
 exception when others then
@@ -218,7 +225,9 @@ begin
   set local role authenticated;
   update public.bookings set status = 'in_progress' where id = '00000000-0000-0000-0000-00000000a070';
   reset role;
-  select check_out_at, check_in_at into co, ci from public.grooming_appointments;
+  select check_out_at, check_in_at into co, ci
+    from public.grooming_appointments
+   where booking_id = '00000000-0000-0000-0000-00000000a070';
   perform pg_temp.t('T6  reopening clears check-out but KEEPS the arrival',
     co is null and ci is not null,
     format('check_out=%s check_in=%s', coalesce(co::text, '<null>'), ci is not null));
@@ -241,7 +250,8 @@ begin
   reset role;
 
   select service_name, service_price, service_id into nm, pr, sid
-    from public.grooming_appointments;
+    from public.grooming_appointments
+   where booking_id = '00000000-0000-0000-0000-00000000a070';
   perform pg_temp.t('T7  renaming AND deleting the service does not rewrite the sale',
     nm = 'Full Groom' and pr = 80 and sid is null,
     format('name=%s price=%s service_id=%s', nm, pr, coalesce(sid::text, '<null>')));
@@ -334,9 +344,14 @@ begin
   insert into public.grooming_price_adjustments
     (booking_id, facility_id, reason, amount, note, created_by)
   values ('00000000-0000-0000-0000-00000000a070', '00000000-0000-0000-0000-00000000a020',
-          'matting', 25, '', '00000000-0000-0000-0000-00000000a003');
+          -- 'matting-fee', not 'matting'. The reason vocabulary was closed by a
+          -- CHECK constraint after this file was written, and the rejected
+          -- insert reported itself as "the adjustment actor is wrong" when the
+          -- actor was never reached.
+          'matting-fee', 25, '', '00000000-0000-0000-0000-00000000a003');
   reset role;
-  select created_by into who from public.grooming_price_adjustments;
+  select created_by into who from public.grooming_price_adjustments
+   where booking_id = '00000000-0000-0000-0000-00000000a070';
   perform pg_temp.t('T12 the adjustment actor is the SESSION, not the payload',
     who = '00000000-0000-0000-0000-00000000a001', format('created_by=%s', who));
 exception when others then
