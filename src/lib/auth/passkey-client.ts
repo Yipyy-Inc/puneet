@@ -1,6 +1,7 @@
 import {
   browserSupportsWebAuthn,
   browserSupportsWebAuthnAutofill,
+  platformAuthenticatorIsAvailable,
   startAuthentication,
   startRegistration,
 } from "@simplewebauthn/browser";
@@ -63,6 +64,22 @@ export function usePasskeySupport(): boolean | null {
 /** Can the browser offer a passkey from inside the email field? */
 export function supportsPasskeyAutofill(): Promise<boolean> {
   return browserSupportsWebAuthnAutofill();
+}
+
+/**
+ * Does this device have a built-in sensor — Face ID, Touch ID, Windows Hello?
+ *
+ * Enrolment asks for `authenticatorAttachment: "platform"`, so on a machine
+ * with no such sensor the browser has nothing to offer and the attempt fails.
+ * Checking first is the difference between not showing a button and showing one
+ * that errors when pressed.
+ *
+ * Separate from `usePasskeySupport`, and deliberately: WebAuthn being available
+ * and a fingerprint reader being present are different facts. A desktop Chrome
+ * with no Hello configured answers true to the first and false to this.
+ */
+export function hasPlatformAuthenticator(): Promise<boolean> {
+  return platformAuthenticatorIsAvailable();
 }
 
 /**
