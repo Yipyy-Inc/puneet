@@ -30,7 +30,7 @@
     "db:seed:generate": "bun scripts/generate-supabase-seed.ts",
     "test:sql": "bun scripts/run-sql-tests.ts",
     "test:e2e": "playwright test",
-    "test:e2e:ci": "playwright test admin-portal-enforced facility-access-level facility-identity employee-identity staff-invite-gate server-permissions staff-field-exposure role-editor-writes facility-shell staff-portal-nav rooms-admin booking-write-integrity booking-presence boarding-arrival boarding-kennel-board boarding-occupancy daycare-attendance dashboard-live-board occupancy-calendar daily-care-board operations-calendar scheduling-roster scheduling-time-off-and-swaps scheduling-calendar-writes scheduling-calendar-screen scheduling-availability scheduling-time-clock scheduling-attendance scheduling-org-chart payroll payroll-overtime employee-self-service scheduling-reports-screen tax-settings-screen loyalty-program loyalty-ledger loyalty-members-screen loyalty-earning loyalty-tiers loyalty-customer-wallet loyalty-badges loyalty-redemptions report-cards task-templates",
+    "test:e2e:ci": "playwright test admin-portal-enforced facility-access-level facility-identity employee-identity staff-invite-gate server-permissions staff-field-exposure role-editor-writes facility-shell staff-portal-nav passkey-auth rooms-admin booking-write-integrity booking-presence boarding-arrival boarding-kennel-board boarding-occupancy daycare-attendance dashboard-live-board occupancy-calendar daily-care-board operations-calendar scheduling-roster scheduling-time-off-and-swaps scheduling-calendar-writes scheduling-calendar-screen scheduling-availability scheduling-time-clock scheduling-attendance scheduling-org-chart payroll payroll-overtime employee-self-service scheduling-reports-screen tax-settings-screen loyalty-program loyalty-ledger loyalty-members-screen loyalty-earning loyalty-tiers loyalty-customer-wallet loyalty-badges loyalty-redemptions report-cards task-templates",
     "test:e2e:ui": "playwright test --ui",
     "prepare": "husky",
     "db:seed:apply": "bun scripts/apply-operational-seed.ts",
@@ -38,7 +38,8 @@
     "check:customer-identity": "bun scripts/check-customer-identity.ts",
     "check:facility-from-session": "bun scripts/check-facility-from-session.ts",
     "check:link-origin": "bun scripts/check-link-origin.ts",
-    "check:success-claims": "bun scripts/check-success-claims.ts"
+    "check:success-claims": "bun scripts/check-success-claims.ts",
+    "check:passkey-email-verified": "bun scripts/check-passkey-email-verified.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.91.1",
@@ -66,6 +67,8 @@
     "@radix-ui/react-toggle": "^1.1.14",
     "@radix-ui/react-toggle-group": "^1.1.15",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.8",
     "@tanstack/react-form": "^1.28.5",

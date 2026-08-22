@@ -80,6 +80,16 @@
       "missing_code": "La connexion ne s'est pas terminée. Veuillez réessayer.",
       "exchange": "Nous n'avons pas pu terminer votre connexion. Veuillez réessayer.",
       "provider": "Cette connexion a été annulée."
+    },
+    "passkey": {
+      "signIn": "Se connecter avec une clé d’accès",
+      "signingIn": "En attente de votre appareil…",
+      "setupTitle": "Ajouter une clé d’accès",
+      "setupDescription": "À votre prochaine connexion, utilisez votre empreinte, votre visage ou le NIP de votre appareil au lieu de saisir votre mot de passe.",
+      "setupWhy": "Votre clé d’accès reste sur cet appareil et ne peut pas être hameçonnée. Vous pouvez toujours utiliser votre mot de passe au besoin.",
+      "add": "Ajouter une clé d’accès",
+      "adding": "En attente de votre appareil…",
+      "notNow": "Plus tard"
     }
   },
   "common": {

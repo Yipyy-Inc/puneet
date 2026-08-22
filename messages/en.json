@@ -80,6 +80,16 @@
       "missing_code": "The sign-in did not complete. Please try again.",
       "exchange": "We could not finish signing you in. Please try again.",
       "provider": "That sign-in was cancelled."
+    },
+    "passkey": {
+      "signIn": "Sign in with a passkey",
+      "signingIn": "Waiting for your device…",
+      "setupTitle": "Add a passkey",
+      "setupDescription": "Next time you sign in, use your fingerprint, face or device PIN instead of typing your password.",
+      "setupWhy": "Your passkey stays on this device and cannot be phished. You can still use your password whenever you need to.",
+      "add": "Add a passkey",
+      "adding": "Waiting for your device…",
+      "notNow": "Not now"
     }
   },
   "common": {

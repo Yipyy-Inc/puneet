@@ -7,6 +7,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { EmailSignInForm } from "@/components/auth/EmailSignInForm";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
+import { PasskeySignInButton } from "@/components/auth/PasskeySignInButton";
 import { FacilityAuthBrand } from "@/components/auth/FacilityAuthBrand";
 import { getBrandingBySlug } from "@/lib/api/facility-branding";
 
@@ -95,6 +96,16 @@ export default async function SignInPage() {
 
       <GoogleSignInButton />
       <AppleSignInButton />
+
+      {/*
+        Renders nothing where WebAuthn is unavailable, so browsers that cannot
+        do this see the page exactly as before. On browsers that CAN, most
+        people will never press it -- the passkey is already offered inside the
+        email field above (PasskeyAutofill). This is the fallback for the ones
+        without conditional UI, and the visible affordance for people who do
+        not know to look in the dropdown.
+      */}
+      <PasskeySignInButton />
     </AuthCard>
   );
 }

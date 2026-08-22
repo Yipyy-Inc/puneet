@@ -11,6 +11,7 @@ import { PaymentPreferencesCard } from "./_components/PaymentPreferencesCard";
 import { InstantBookingCard } from "./_components/InstantBookingCard";
 import { NotificationPreferencesCard } from "./_components/NotificationPreferencesCard";
 import { LoginSecurityCard } from "./_components/LoginSecurityCard";
+import { PasskeysCard } from "@/components/auth/PasskeysCard";
 import { PrivacyConsentCard } from "./_components/PrivacyConsentCard";
 
 export default function CustomerSettingsPage() {
@@ -76,6 +77,15 @@ export default function CustomerSettingsPage() {
           email={form.profileData.email}
           phone={form.profileData.phone}
         />
+
+        {/*
+          Directly beneath LoginSecurityCard because it belongs to the same
+          question -- how you get into this account. Note the neighbour's
+          password/2FA/session controls are still mocks that toast success
+          against no backend; this card is real, so do not fold the two
+          together until the other one is.
+        */}
+        <PasskeysCard />
 
         <PaymentPreferencesCard
           paymentPreferences={form.paymentPreferences}

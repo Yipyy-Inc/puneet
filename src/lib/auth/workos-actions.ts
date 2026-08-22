@@ -186,7 +186,13 @@ export async function verifyEmailCode(
   } catch (error) {
     return { error: readableError(error, "That code was not accepted.") };
   }
-  redirect("/");
+  // NOT "/" — every new account passes through here, because both environments
+  // require a verified address, so this is the one moment a person has just
+  // proved who they are and is holding the device. /passkey-setup makes the
+  // offer and sends them on; it skips itself for anyone who already has a
+  // passkey or whose browser cannot make one, so the returning-but-unverified
+  // user does not meet it twice.
+  redirect("/passkey-setup");
 }
 
 const PENDING_TOKEN_COOKIE = "workos-pending-auth";
