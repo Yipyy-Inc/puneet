@@ -75,6 +75,7 @@ import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { useRooms } from "@/hooks/use-rooms";
+import { boardingBasePrice } from "@/lib/boarding-pricing";
 import {
   autoAssignDaycareSection,
   autoAssignBoardingUnit,
@@ -1393,7 +1394,17 @@ export function BookingModal({
         serviceType === "half_day" ? daycare.basePrice / 2 : daycare.basePrice;
       basePrice = pricePerDay * daycareSelectedDates.length;
     } else if (selectedService === "boarding") {
-      basePrice = boarding.basePrice * Math.max(boardingNights, 1);
+      // Priced by the KENNEL CLASS the pet is assigned to, not one flat rate.
+      // The arithmetic and the reasoning live in `@/lib/boarding-pricing`,
+      // because a calculation that decides a charge should be readable without
+      // opening this file.
+      basePrice = boardingBasePrice({
+        categories: roomCategories,
+        rooms: facilityRooms,
+        roomAssignments,
+        nights: boardingNights,
+        fallbackNightlyRate: boarding.basePrice,
+      });
     } else if (selectedService === "grooming") {
       // Run each selected pet through the shared rate engine so Confirm
       // matches the service-card "Price $X" and the at-pickup PaymentDialog
@@ -1774,6 +1785,10 @@ export function BookingModal({
     checkInTime,
     checkOutTime,
     boarding.basePrice,
+    // The kennel class is now part of the price, so the categories and rooms
+    // it is read from have to be able to move it.
+    roomCategories,
+    facilityRooms,
     daycare.basePrice,
     grooming.basePrice,
     training.basePrice,
