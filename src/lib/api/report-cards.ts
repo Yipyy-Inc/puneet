@@ -16,11 +16,14 @@ import type {
 
 async function fetchReportCards(params?: {
   petRef?: number;
+  clientRef?: number;
   status?: string;
   sentOnly?: boolean;
 }): Promise<ReportCard[]> {
   const search = new URLSearchParams();
   if (params?.petRef != null) search.set("petRef", String(params.petRef));
+  if (params?.clientRef != null)
+    search.set("clientRef", String(params.clientRef));
   if (params?.status) search.set("status", params.status);
   if (params?.sentOnly) search.set("sentOnly", "true");
 
@@ -47,9 +50,20 @@ export const reportCardQueries = {
     queryFn: () => fetchReportCards(),
   }),
 
+  /**
+   * One pet's cards. Narrowed server-side through an inner join, NOT by
+   * filtering the full list in the browser — the pet file of a busy facility
+   * would otherwise download every card it ever wrote.
+   */
   byPet: (petRef: number) => ({
     queryKey: ["report-cards", "pet", petRef] as const,
     queryFn: () => fetchReportCards({ petRef }),
+  }),
+
+  /** Every card across one client's pets — the client file's tab. */
+  byClient: (clientRef: number) => ({
+    queryKey: ["report-cards", "client", clientRef] as const,
+    queryFn: () => fetchReportCards({ clientRef }),
   }),
 
   /**

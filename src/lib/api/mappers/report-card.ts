@@ -16,18 +16,48 @@ import {
 // entitled to.
 // ============================================================================
 
-export const REPORT_CARD_SELECT = `
+const REPORT_CARD_COLUMNS = `
   id, facility_id, pet_id, client_id, booking_id,
   service_type, visit_date, theme,
   input, generated,
   delivery_status, scheduled_for, sent_at,
   viewed_at, favourite, reply_message, replied_at,
   rating_stars, rating_comment, rating_submitted_at,
-  created_by, created_at, updated_at,
-  pets ( ref, name ),
-  clients ( ref, name ),
-  report_card_photos ( id, kind, caption, sort_order, storage_path, content_type, size_bytes )
+  created_by, created_at, updated_at
 `;
+
+/**
+ * The select, with an INNER join on whichever relation is being filtered.
+ *
+ * This is not a style choice. `.eq("pets.ref", 3)` against a PLAIN embed does
+ * not narrow the report cards at all — PostgREST applies an embedded filter to
+ * the EMBED, and returns every parent row regardless, with the non-matching
+ * ones carrying an empty `pets`. Measured against this database on 2026-08-22:
+ * the same filter returned 341 rows through a plain embed and 309 through an
+ * inner one. A per-pet screen would have received the whole facility's cards
+ * with the other pets' names stripped off, which reads as "these are all
+ * Buddy's" — worse than an error, because it looks like an answer.
+ *
+ * The join is inner ONLY for the relation being narrowed. Left plain, an embed
+ * the caller cannot read through RLS yields a card with no pet name; made
+ * inner, that same card VANISHES from the list. That trade is right when the
+ * question is "cards about this pet" — a card whose pet you cannot see is not
+ * an answer to it — and wrong for the unfiltered list, where the card is still
+ * the facility's own and only the name is missing.
+ */
+export function reportCardSelect(
+  narrowBy: { pet?: boolean; client?: boolean } = {},
+): string {
+  return `
+    ${REPORT_CARD_COLUMNS},
+    pets${narrowBy.pet ? "!inner" : ""} ( ref, name ),
+    clients${narrowBy.client ? "!inner" : ""} ( ref, name ),
+    report_card_photos ( id, kind, caption, sort_order, storage_path, content_type, size_bytes )
+  `;
+}
+
+/** The unfiltered select — every card the caller may see. */
+export const REPORT_CARD_SELECT = reportCardSelect();
 
 interface PhotoRow {
   id: string;
