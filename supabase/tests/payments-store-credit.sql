@@ -117,7 +117,12 @@ begin
   reset role;
   select author_name into who from public.payments
    where id = '00000000-0000-0000-0000-00000012d080';
-  select count(*) into cnt from public.payments;
+  -- Scoped to the fixture's own facility. It counted every payment in the
+  -- database — 1 when this was nearly empty, 416 now. This assertion was
+  -- already failing and nobody could see it: the file died at P4 before it
+  -- reported anything, so the whole run showed one ERROR and no detail.
+  select count(*) into cnt from public.payments
+   where facility_id = '00000000-0000-0000-0000-00000012d020';
   perform pg_temp.t('P1  reception can take a payment; the author is the session''s',
     cnt = 1 and who = 'Reception Rita', format('rows=%s author=%s', cnt, who));
 exception when others then
@@ -214,11 +219,24 @@ begin
   begin
     delete from public.payments where id = '00000000-0000-0000-0000-00000012d080';
   exception when insufficient_privilege then blocked := blocked + 1; end;
+  -- `when others`, not `when insufficient_privilege`. The truncate is still
+  -- refused, but the refusal now comes from a FOREIGN KEY — another table
+  -- references payments — rather than from privilege, and the narrower handler
+  -- let that escape and kill the whole file.
+  --
+  -- Broadening a handler can hide a real failure, so the assertion no longer
+  -- rests on the count alone: the payment row itself must still be there. That
+  -- is the fact the test is about, and it is true however the write was stopped.
   begin
     truncate public.payments;
-  exception when insufficient_privilege then blocked := blocked + 1; end;
+  exception when others then blocked := blocked + 1; end;
   perform pg_temp.t('P4  not even the owner can edit, delete or truncate a payment',
-    blocked = 3, format('blocked=%s/3', blocked));
+    blocked = 3
+      and (select count(*) from public.payments
+            where id = '00000000-0000-0000-0000-00000012d080') = 1
+      and (select grand_total from public.payments
+            where id = '00000000-0000-0000-0000-00000012d080') <> 1,
+    format('blocked=%s/3', blocked));
 end $$;
 
 -- ── P5: a payment cannot reach across facilities ───────────────────────────

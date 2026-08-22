@@ -112,6 +112,22 @@ values
   ('00000000-0000-0000-0000-000000160051', '00000000-0000-0000-0000-000000160020',
    'Empty Pack', 'Nothing in it', 100, 90, 'active');
 
+-- ── THE GROOMING SERVICES THE PASSES NAME ──────────────────────────────────
+--
+-- `private.grooming_line_names_a_grooming_service` (20260806580000) refuses a
+-- grooming line whose `service_id` is not the `legacy_id` of a real grooming
+-- service AT THE PACKAGE'S FACILITY. It arrived after this file was written, so
+-- 'svc-groom' and 'svc-bath' — invented strings — stopped being acceptable and
+-- the whole file died on the first line insert.
+--
+-- The guard is right: a pass that names nothing sells sessions of a service the
+-- salon does not offer. So the fixture provides what it claims to sell.
+insert into public.grooming_services
+  (facility_id, legacy_id, name, duration_min, base_price)
+values
+  ('00000000-0000-0000-0000-000000160020', 'svc-groom', 'Full Groom', 90, 65),
+  ('00000000-0000-0000-0000-000000160020', 'svc-bath',  'Basic Bath', 45, 35);
+
 insert into public.prepaid_package_lines
   (package_id, service_id, service_name, quantity, price_per_session, module)
 values
