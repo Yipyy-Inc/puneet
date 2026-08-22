@@ -48,7 +48,22 @@ export interface LoyaltyVoucherRow {
   rewardType: RewardType;
   /** A percentage for `discount_pct` (10 = 10%), an amount for the rest. */
   rewardValue: number;
+  /** The STORED status. See `effectiveStatus` before rendering it. */
   status: "active" | "used" | "expired" | "cancelled";
+  /**
+   * What the voucher actually IS right now.
+   *
+   * Nothing flips a row to `expired` — there is no scheduler here — so a
+   * voucher whose `expires_at` has passed still reads `active` in the column
+   * while `consume_loyalty_voucher` refuses it. Two answers to one question,
+   * and the screen was showing the wrong one: an "Expired" tile that could only
+   * ever read zero, next to dead rewards counted as live.
+   *
+   * Derived here rather than by a job, against the DATABASE's clock — the same
+   * reasoning `?spendable=1` already uses. A browser clock is not evidence
+   * about whether a reward is still good.
+   */
+  effectiveStatus: "active" | "used" | "expired" | "cancelled";
   /** Null means every service. */
   appliesToServices: string[] | null;
   pointsSpent: number;
@@ -56,6 +71,11 @@ export interface LoyaltyVoucherRow {
   expiresAt: string | null;
   usedAt: string | null;
   usedOnBookingId: string | null;
+  /** Only with `?withCustomer=1`. Null when the lookup was not asked for. */
+  clientRef: number | null;
+  clientName: string | null;
+  /** The booking's own number, for a reference a person can act on. */
+  usedOnBookingRef: number | null;
 }
 
 interface Row {
@@ -76,19 +96,35 @@ const SELECT =
   "id, account_id, reward_type, reward_value, status, applies_to_services, " +
   "points_spent, issued_at, expires_at, used_at, used_on_booking_id";
 
-function toRow(row: Row): LoyaltyVoucherRow {
+/** What the row is now, expiry included. See the field's own note. */
+function effectiveStatusOf(
+  row: Row,
+  nowMs: number,
+): LoyaltyVoucherRow["status"] {
+  if (row.status !== "active") return row.status;
+  if (row.expires_at && new Date(row.expires_at).getTime() <= nowMs) {
+    return "expired";
+  }
+  return "active";
+}
+
+function toRow(row: Row, nowMs: number): LoyaltyVoucherRow {
   return {
     id: row.id,
     accountId: row.account_id,
     rewardType: row.reward_type,
     rewardValue: Number(row.reward_value),
     status: row.status,
+    effectiveStatus: effectiveStatusOf(row, nowMs),
     appliesToServices: row.applies_to_services,
     pointsSpent: row.points_spent,
     issuedAt: row.issued_at,
     expiresAt: row.expires_at,
     usedAt: row.used_at,
     usedOnBookingId: row.used_on_booking_id,
+    clientRef: null,
+    clientName: null,
+    usedOnBookingRef: null,
   };
 }
 
@@ -130,9 +166,68 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({
-    vouchers: ((data ?? []) as unknown as Row[]).map(toRow),
-  });
+  const nowMs = Date.now();
+  const vouchers = ((data ?? []) as unknown as Row[]).map((r) =>
+    toRow(r, nowMs),
+  );
+
+  // ── WHO IT BELONGS TO, ON REQUEST ────────────────────────────────────────
+  //
+  // Opt-in because the CHECKOUT calls this route on every render of a booking
+  // it might discount, and it needs none of this — it has the customer in
+  // front of it. The redemption LOG needs a name and a booking number, because
+  // "Client #14" and a uuid are not something a person can act on.
+  //
+  // Two follow-up queries rather than a PostgREST embed: a to-one relation
+  // comes back shaped differently depending on how the join is written, and
+  // reading one as an array has already emptied a board in this codebase once.
+  if (params.get("withCustomer") === "1" && vouchers.length > 0) {
+    const accountIds = [...new Set(vouchers.map((v) => v.accountId))];
+    const bookingIds = [
+      ...new Set(
+        vouchers
+          .map((v) => v.usedOnBookingId)
+          .filter((id): id is string => id !== null),
+      ),
+    ];
+
+    const [accountResult, bookingResult] = await Promise.all([
+      supabase
+        .from("loyalty_account_overview")
+        .select("id, client_ref, client_name")
+        .in("id", accountIds),
+      bookingIds.length > 0
+        ? supabase.from("bookings").select("id, ref").in("id", bookingIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const byAccount = new Map(
+      (
+        (accountResult.data ?? []) as {
+          id: string;
+          client_ref: number;
+          client_name: string;
+        }[]
+      ).map((a) => [a.id, a]),
+    );
+    const bookingRefById = new Map(
+      ((bookingResult.data ?? []) as { id: string; ref: number }[]).map((b) => [
+        b.id,
+        b.ref,
+      ]),
+    );
+
+    for (const voucher of vouchers) {
+      const account = byAccount.get(voucher.accountId);
+      voucher.clientRef = account?.client_ref ?? null;
+      voucher.clientName = account?.client_name ?? null;
+      voucher.usedOnBookingRef = voucher.usedOnBookingId
+        ? (bookingRefById.get(voucher.usedOnBookingId) ?? null)
+        : null;
+    }
+  }
+
+  return NextResponse.json({ vouchers });
 }
 
 /** Spend points on a reward. Ledger entry and voucher, together or neither. */
@@ -210,7 +305,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(
-    { voucher: toRow(data as unknown as Row) },
+    { voucher: toRow(data as unknown as Row, Date.now()) },
     { status: 201 },
   );
 }

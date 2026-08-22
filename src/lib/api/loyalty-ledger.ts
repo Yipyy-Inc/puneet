@@ -141,6 +141,23 @@ export const loyaltyLedgerQueries = {
         )
       ).vouchers,
   }),
+
+  /**
+   * Every reward this facility has issued — the redemption log.
+   *
+   * `withCustomer=1` because a log naming account uuids is a log nobody can
+   * act on. The checkout deliberately does NOT ask for it: it has the customer
+   * in front of it and would pay for two lookups per render.
+   */
+  allVouchers: () => ({
+    queryKey: ["loyalty-ledger", "vouchers", "all"] as const,
+    queryFn: async () =>
+      (
+        await get<{ vouchers: LoyaltyVoucherRow[] }>(
+          "/api/loyalty/vouchers?withCustomer=1",
+        )
+      ).vouchers,
+  }),
 };
 
 /** Everything the ledger touches, after anything that moves points. */

@@ -3606,6 +3606,57 @@ discount voucher on a demo account would come off somebody's real bill later.
 GENERATED monthly series with a revenue uplift written into it — so the report
 told every facility their badges worked, because the file was authored to.
 
+#### ✅ The redemption log is the facility's own rewards — 2026-08-22
+
+`/facility/dashboard/loyalty/redemptions` reads `loyalty_vouchers` through
+`/api/loyalty/vouchers?withCustomer=1`. It read `src/data/loyalty-redemptions`,
+keyed by `facilityId: 1` — every facility on the platform saw the same log, none
+of it had happened, and a voucher a facility really issued appeared nowhere.
+
+**`effectiveStatus`, and why it had to exist.** Nothing flips a voucher to
+`expired` — there is no scheduler here — so a reward past its `expires_at` sits
+at `active` while `consume_loyalty_voucher` refuses to spend it. Two answers to
+one question, and the screen showed the wrong one: its Expired tile could only
+ever read zero, and dead rewards counted as outstanding liability. Derived at
+read time against the DATABASE's clock, the same reasoning `?spendable=1`
+already used.
+
+**Two columns were removed rather than defaulted.** The fixture's `redeemMethod`
+(portal / staff / auto / checkout) is recorded nowhere — no column, no argument,
+no caller — so any value shown would have been invented. And the header's dollar
+total summed `rewardValue` across every row, adding a 10 (ten PER CENT) to a 25
+(twenty-five DOLLARS) and calling the answer money; it counts POINTS SPENT now,
+which is exact and on the row.
+
+**The customer lookup is opt-in** (`withCustomer=1`). The checkout calls this
+route on every render of a booking it might discount and has the customer in
+front of it; two extra queries per call for a name nobody reads is the cost that
+guards. Two follow-up queries rather than a PostgREST embed, because reading a
+to-one relation as an array has already emptied a board in this codebase.
+
+Covered by
+[loyalty-redemptions.spec.ts](../../tests/e2e/loyalty-redemptions.spec.ts) in
+`test:e2e:ci`. It leaves one voucher behind and cannot do otherwise — there is
+no way to delete one through the API and there should not be. Safe only because
+it is issued already-expired at zero points: a test must never leave a LIVE
+discount on a demo account.
+
+#### 🟠 The three loyalty-REPORT widgets are still fixtures
+
+`LoyaltyPerformanceBanner`, `MemberLifecycleFunnel` and `RewardTypeBreakdown` on
+`/facility/dashboard/marketing/loyalty-reports` still read
+`loyaltyQueries.redemptions` AND `loyaltyQueries.accounts` — and the banner also
+reads the fixture `bookings`. That is why `lib/api/loyalty.ts` and
+`DEFAULT_LOYALTY_FACILITY_ID` survive.
+
+Left with the log rather than folded into it, deliberately: they need a decision
+the log did not. `program-metrics.ts` prices a percentage discount at
+`AVG_ORDER_VALUE = 75` — an assumption baked into a "Revenue Retained" figure a
+facility reads as dollars. With real vouchers that assumption is replaceable:
+a spent voucher names `used_on_booking_id`, and the checkout writes what it
+actually took off as a negative `booking_line_items` row. Doing that is the
+next change, not a footnote to this one.
+
 #### 🟠 What badges still do not do
 
 **A badge icon is a KEY, and only the customer's wallet maps it.** The wizard
@@ -3648,12 +3699,11 @@ there is no negative line item there and **no release if that recording then
 fails**. Changing a second money path blind would have been worse than leaving
 it; it needs its own pass.
 
-**Some SCREENS still read fixtures.** The members screen, its three modals and
-the client loyalty tab were converted on 2026-08-21 — see below. The customer wallet followed on 2026-08-22 — see below. The
-REDEMPTIONS screen still goes through `lib/api/loyalty.ts` to
-`src/data/loyalty-*`, which is why that module keeps its name and why
-`DEFAULT_LOYALTY_FACILITY_ID` is still handed out — as a fixture key, not a
-facility.
+**Every loyalty SCREEN is real now.** Members, its three modals and the client
+loyalty tab on 2026-08-21; the customer wallet, badges and the REDEMPTION LOG on
+2026-08-22 — each has its own entry below. `lib/api/loyalty.ts` keeps its name
+and still hands out `DEFAULT_LOYALTY_FACILITY_ID` as a fixture key, because the
+three loyalty-REPORT widgets still read it — see below.
 
 **Points EARNING is real as of 2026-08-21** — see below.
 
