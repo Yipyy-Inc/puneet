@@ -91,6 +91,22 @@ export async function sendReportCard(cardId: string): Promise<ReportCard> {
 }
 
 /**
+ * Discard a draft. Refused by the database once a card has been sent.
+ */
+export async function discardReportCard(cardId: string): Promise<void> {
+  const response = await fetch(`/api/report-cards/${cardId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((b: { error?: string }) => b.error)
+      .catch(() => null);
+    throw new Error(detail ?? "That report card could not be discarded.");
+  }
+}
+
+/**
  * Attach one photo to an existing card.
  *
  * The card must exist first: the storage policy matches the card segment of

@@ -6,11 +6,14 @@ import { toast } from "sonner";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useAiSummary } from "@/hooks/use-ai-summary";
 import { buildReportCardNotificationData } from "@/lib/report-cards/report-notifications";
+import { useQuery } from "@tanstack/react-query";
 import {
   createReportCard,
+  reportCardQueries,
   sendReportCard,
   uploadReportCardPhoto,
 } from "@/lib/api/report-cards";
+import type { ReportCard as PersistedReportCard } from "@/types/report-card";
 import { ReportCardNotificationPreviews } from "@/components/facility/report-cards/notifications/ReportCardNotificationPreviews";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -122,6 +125,53 @@ interface ReportCardEntry {
     status: "pending" | "scheduled" | "sent";
     scheduledFor?: string;
     sentAt?: string;
+  };
+}
+
+/**
+ * A stored card, in the shape this screen's table and modals already speak.
+ *
+ * The two differ in three ways, all of them this module's local dialect:
+ * boarding is called "hotel" here, the pet is the numeric ref rather than the
+ * uuid, and photos are bare URL strings rather than rows. The database's names
+ * are the canonical ones (20260822300000); this converts at the edge instead of
+ * renaming a 2,000-line component.
+ */
+function entryFromCard(
+  card: PersistedReportCard,
+  facilityName: string,
+): ReportCardEntry {
+  return {
+    id: card.id,
+    petId: card.petRef ?? 0,
+    petName: card.petName ?? "—",
+    ownerName: card.ownerName ?? "—",
+    facilityName,
+    serviceType:
+      card.serviceType === "boarding"
+        ? "hotel"
+        : (card.serviceType as ServiceType),
+    visitDate: card.visitDate,
+    theme: card.theme ?? "everyday",
+    // Only photos that signed. An unsigned path renders as a broken image.
+    photos: card.photos.filter((p) => p.url).map((p) => p.url as string),
+    input: { ...emptyInput, ...(card.input as Partial<ReportCardInput>) },
+    generated: {
+      todaysVibe: card.generated.todaysVibe,
+      friendsAndFun: card.generated.friendsAndFun,
+      careMetrics: card.generated.careMetrics,
+      holidaySparkle: card.generated.holidaySparkle,
+      closingNote: card.generated.closingNote,
+    },
+    delivery:
+      card.deliveryStatus === "sent"
+        ? { status: "sent", sentAt: card.sentAt ?? undefined }
+        : card.deliveryStatus === "scheduled"
+          ? {
+              status: "scheduled",
+              scheduledFor: card.scheduledFor ?? undefined,
+            }
+          : { status: "pending" },
   };
 }
 
@@ -356,7 +406,50 @@ export function ReportCardsModule({
     categories: [],
   };
 
-  const [reportCards, setReportCards] = useState<ReportCardEntry[]>([]);
+  // ── The facility's own cards, from Postgres ──────────────────────────────
+  //
+  // This list used to start empty and only ever gain what the current session
+  // created, so a member of staff wrote a card, watched it appear, refreshed,
+  // and found nothing — while the row existed and the owner could see it. The
+  // screen was write-only.
+  //
+  // Server state is the source; `localCards` holds only what this session has
+  // added or changed since the last fetch, so the table responds immediately
+  // without waiting for a round trip. A refetch supersedes it.
+  const { data: serverCards = [], refetch: refetchCards } = useQuery(
+    reportCardQueries.all(),
+  );
+  const [localCards, setLocalCards] = useState<ReportCardEntry[]>([]);
+
+  const reportCards = useMemo(() => {
+    const local = new Map(localCards.map((c) => [c.id, c]));
+    const fromServer = serverCards.map(
+      (card) => local.get(card.id) ?? entryFromCard(card, facilityName),
+    );
+    const seen = new Set(fromServer.map((c) => c.id));
+    // Anything this session created that the server has not returned yet —
+    // a card written moments ago, before the refetch lands.
+    return [...localCards.filter((c) => !seen.has(c.id)), ...fromServer];
+  }, [serverCards, localCards, facilityName]);
+
+  /** Replaces the old `setReportCards`: records a session-local change. */
+  const setReportCards = (
+    update: (prev: ReportCardEntry[]) => ReportCardEntry[],
+  ) => setLocalCards((prev) => update(reportCards.length ? reportCards : prev));
+
+  /**
+   * Re-read, then drop the local overlay.
+   *
+   * Clearing is the point: without it the optimistic copies keep winning the
+   * merge forever, and the screen would go on showing this session's idea of a
+   * card after the server had answered with the real one — including blob:
+   * photo previews in place of signed URLs.
+   */
+  const syncFromServer = async () => {
+    await refetchCards();
+    setLocalCards([]);
+  };
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingCard, setViewingCard] = useState<ReportCardEntry | null>(null);
@@ -648,6 +741,9 @@ export function ReportCardsModule({
       setIsModalOpen(false);
       setPhotoFiles([]);
       setPhotoPreviews([]);
+      // The row, with its signed photo URLs, supersedes the local entry — the
+      // previews are blob: addresses that die with this document.
+      void syncFromServer();
 
       if (failedPhotos > 0) {
         toast.warning(

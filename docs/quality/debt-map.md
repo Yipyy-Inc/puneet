@@ -3887,6 +3887,41 @@ missing from `SETTINGS_SECTION_KEYS` is permitted. So adding a sidebar entry
 with a `permKey` and forgetting the map entry hides the link from someone who
 may still deep-link straight to it. `payroll-rules` was added to both.
 
+### 🔴 A Playwright filter matches the WORKTREE's name, and fails open — 2026-08-22
+
+`bunx playwright test report-cards` ran **394 tests in 75 files** instead of the
+six in `report-cards.spec.ts`. Not bun, not argument forwarding, not `--`, and
+not `playwright.config.ts`: the session was working in
+`.claude/worktrees/report-cards-backend/`, and Playwright matches a bare
+positional argument as a **regex against the full file path**. Every spec in the
+repo lives under `…/report-cards-backend/…`, so the filter matched all of them.
+
+Isolated with `--list`, which is the cheap way to check any filter:
+
+```
+bunx playwright test zzz-nonexistent      --list  ->   0 tests in  0 files
+bunx playwright test scheduling-availability --list ->   5 tests in  1 file
+bunx playwright test report-cards         --list  -> 394 tests in 75 files
+bunx playwright test report-cards-backend --list  -> 394 tests in 75 files
+```
+
+**Why it's risky:** it fails **open**. You get more than you asked for, and
+nothing in the output names the cause — the only symptoms are a run that takes
+45 minutes and artifacts from specs you never chose. It cost a full-suite run
+against the shared Postgres, and then killing that run skipped an `afterAll` and
+leaked rows (see the note on cancelled runs). `bun run test:e2e:ci` is exposed
+the same way from such a worktree, because its spec list is bare names too — in
+CI the checkout path contains none of them, so it is correct there and wrong
+locally.
+
+**Do instead:** pass an explicit path — `bunx playwright test
+tests/e2e/<file>.spec.ts` — and **read the `Total: N tests in M files` header
+before trusting the run**; `M` is the check. And do not name a worktree after
+the feature whose specs you are about to filter by. `bun run test:sql <filter>`
+is immune for a reason worth preserving: it filters over `readdir()` basenames,
+which never see a path, so it cannot match the directory it lives in. If that is
+ever changed to walk paths, the immunity goes with it.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

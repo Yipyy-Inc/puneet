@@ -64,3 +64,30 @@ console.log(
     ? "Nothing to purge: no cancelled, money-free e2e bookings left."
     : `Purged ${deleted} e2e booking(s).`,
 );
+
+// ── Report cards ────────────────────────────────────────────────────────────
+//
+// Here rather than in a second script because this is the command CI already
+// runs after the e2e job with `if: always()`, and a cleanup nobody runs is not
+// one. Same shape: the function takes no argument and carries its own safety.
+//
+// The report-card spec removes its own DRAFTS. What it cannot remove is the one
+// card it SENDS per run — a sent card has no DELETE policy, deliberately,
+// because the owner received it and their reply and rating live on that row.
+// Left alone that is one permanent card per CI run on a demo client.
+const { data: cardData, error: cardError } = await db.rpc(
+  "purge_e2e_report_cards",
+);
+
+if (cardError) {
+  console.error(`Could not purge report cards: ${cardError.message}`);
+  process.exit(1);
+}
+
+const cardsDeleted = typeof cardData === "number" ? cardData : 0;
+
+console.log(
+  cardsDeleted === 0
+    ? "Nothing to purge: no e2e report cards left."
+    : `Purged ${cardsDeleted} e2e report card(s).`,
+);
