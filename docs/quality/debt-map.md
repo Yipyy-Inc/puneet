@@ -3974,6 +3974,86 @@ is immune for a reason worth preserving: it filters over `readdir()` basenames,
 which never see a path, so it cannot match the directory it lives in. If that is
 ever changed to walk paths, the immunity goes with it.
 
+### 🔴 A PostgREST filter on an EMBEDDED column narrows nothing without `!inner` — 2026-08-22
+
+`reportCardQueries.byPet(3)` was written to fetch one pet's report cards:
+
+```ts
+supabase
+  .from("report_cards")
+  .select("… pets ( ref, name ) …")
+  .eq("pets.ref", 3);
+```
+
+It returns **every report card the caller can see**. PostgREST applies a filter
+on an embedded column to the EMBED, not to the parent rows: non-matching parents
+still come back, carrying an empty `pets`. Measured against this database:
+
+```
+bookings?select=id,pets(ref,name)&pets.ref=eq.1        -> 341 rows (32 with no pet)
+bookings?select=id,pets!inner(ref,name)&pets.ref=eq.1  -> 309 rows (0  with no pet)
+```
+
+341 is the whole table.
+
+**Why it's worse than an error:** the mapper reads the pet's name off that
+embed, so the rows that should have been excluded arrive with `petName`
+undefined — and a per-pet screen renders them under the heading of the pet you
+asked for. The screen shows a full list, confidently, and every row on it is a
+claim about the wrong animal. Nothing throws, nothing logs, and a green
+typecheck says the query is fine.
+
+**Do instead:** make the join `!inner` for the relation you are filtering, and
+only that one — see `reportCardSelect` in
+[src/lib/api/mappers/report-card.ts](../../src/lib/api/mappers/report-card.ts).
+Left plain, an embed the caller cannot read through RLS yields a row with a
+missing name; made inner, that row disappears. That is right for "cards about
+this pet" and wrong for an unfiltered list, so it is applied per query rather
+than baked into the select.
+
+**How to catch it:** a test that creates rows under **two** parents and asserts
+the other one is ABSENT. A test with a single parent passes either way, which is
+why this shipped — the spec covered `petRef` in the POST body and never as a
+query filter. See "narrows to one pet, and does not relabel the rest" in
+[tests/e2e/report-cards.spec.ts](../../tests/e2e/report-cards.spec.ts).
+
+### 🔴 `next/image` refuses a SIGNED storage URL, and the refusal is a broken image — 2026-08-22
+
+`next.config.ts` admits the Supabase host to the image optimiser for
+`/storage/v1/object/public/**` **only**, deliberately: a signed URL's authority
+expires, and the optimiser would keep a cached optimised copy reachable from our
+own origin after it had. Anything in a **private** bucket — report-card photos,
+grooming photos, staff documents — arrives as `/storage/v1/object/sign/…` and is
+therefore rejected.
+
+Measured against production, same host, same real file, differing only in the
+path segment:
+
+```
+signed URL fetched directly from Supabase   -> 200
+same URL through /_next/image               -> 400
+```
+
+For reference, `/_next/image` answers **400** for a src it will not accept and
+**404** for one it accepts but cannot fetch — so a 400 here means "not
+allowlisted", not "missing file". Do not read a 400 on a nonexistent object as
+proof the pattern is broken: a missing object in an ALLOWED public bucket also
+returns 400, which briefly looked like the 2026-08-19 logo fix having never
+deployed. It had; a real public logo returns 200.
+
+**Do instead:** render private-bucket photos with a plain `<img>` and the
+house-style `{/* eslint-disable-next-line @next/next/no-img-element -- signed
+private URL */}`. Do not "fix" it by adding `/object/sign/**` to
+`remotePatterns` — that hands the private bucket to a public cache, which is the
+thing the config is preventing. The long note on `GalleryImage` in
+[src/components/customer/ReportCardPhotoGallery.tsx](../../src/components/customer/ReportCardPhotoGallery.tsx)
+is the canonical explanation.
+
+**Why it survived review:** the e2e spec exercises the API, not the render, and
+no fixture photo was ever in a private bucket — so every photo path in the
+converted report-card screens was written against a URL shape that had never
+been rendered.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
