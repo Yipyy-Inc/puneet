@@ -1,6 +1,5 @@
 import type { GeneratedTask, TaskTemplate } from "@/types/task";
 import type { Booking } from "@/types/booking";
-import { getTemplatesForModule } from "@/data/task-templates";
 import { clients } from "@/data/clients";
 
 // ============================================================================
@@ -82,9 +81,21 @@ function nightsBetween(start: string, end: string): number {
   return Math.max(0, Math.round(ms / (1000 * 60 * 60 * 24)));
 }
 
-export function generateTasksForBooking(booking: Booking): GeneratedTask[] {
+/**
+ * `moduleTemplates` is passed in rather than looked up.
+ *
+ * This used to call `getTemplatesForModule(moduleId)`, which was possible only
+ * while the routine was a hardcoded array. A facility's task templates are now
+ * rows read through RLS, so the caller supplies them.
+ */
+export function generateTasksForBooking(
+  booking: Booking,
+  moduleTemplates: TaskTemplate[],
+): GeneratedTask[] {
   const moduleId = booking.service?.toLowerCase() ?? "daycare";
-  const templates = getTemplatesForModule(moduleId).filter((t) => t.autoCreate);
+  const templates = moduleTemplates.filter(
+    (t) => t.autoCreate && t.moduleId === moduleId,
+  );
 
   const client = clients.find((c) => c.id === booking.clientId);
   const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;

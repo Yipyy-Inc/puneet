@@ -18,7 +18,6 @@ import type {
 } from "@/types/service-module";
 import { builtInModules } from "@/data/service-modules";
 import { defaultCustomServiceModules } from "@/data/custom-services";
-import { getTemplatesForModule } from "@/data/task-templates";
 
 // ============================================================================
 // Convert legacy CustomServiceModule → ServiceModule
@@ -116,10 +115,10 @@ function convertCustomModule(
 
     tasks: {
       autoGenerate: csm.staffAssignment.taskGeneration.length > 0,
-      templates: getTemplatesForModule(csm.slug).map((t) => ({
-        ...t,
-        timing: { ...t.timing },
-      })),
+      // Empty, for the same reason as the built-in modules: a module
+      // DEFINITION cannot carry a task list once the routine belongs to the
+      // facility. Read it with `taskTemplateQueries.byModule(csm.slug)`.
+      templates: [],
     },
 
     reporting: {

@@ -1,4 +1,4 @@
-import type { GeneratedTask } from "@/types/task";
+import type { GeneratedTask, TaskTemplate } from "@/types/task";
 import type { Booking } from "@/types/booking";
 import { generateTasksForBooking } from "@/lib/task-generator";
 import { bookings } from "@/data/bookings";
@@ -32,7 +32,16 @@ function saveTasks(tasks: GeneratedTask[]) {
 // Query functions
 // ============================================================================
 
-export function getTasksForBooking(bookingId: number): GeneratedTask[] {
+/**
+ * `templates` is supplied by the caller — the facility's own rows, from
+ * `taskTemplateQueries.all()`. Passing every module's is fine: the generator
+ * filters to the booking's own service. Before 20260822700000 this file
+ * reached for a hardcoded array itself, which is what made that possible.
+ */
+export function getTasksForBooking(
+  bookingId: number,
+  templates: TaskTemplate[],
+): GeneratedTask[] {
   const stored = loadTasks().filter((t) => t.bookingId === bookingId);
   if (stored.length > 0) return stored;
 
@@ -41,7 +50,7 @@ export function getTasksForBooking(bookingId: number): GeneratedTask[] {
   if (!booking) return [];
   if (booking.status === "cancelled") return [];
 
-  const generated = generateTasksForBooking(booking);
+  const generated = generateTasksForBooking(booking, templates);
   // Persist
   const all = loadTasks();
   all.push(...generated);
@@ -101,8 +110,11 @@ export function addCustomTask(task: GeneratedTask) {
   saveTasks(all);
 }
 
-export function generateAndStoreTasks(booking: Booking): GeneratedTask[] {
-  const generated = generateTasksForBooking(booking);
+export function generateAndStoreTasks(
+  booking: Booking,
+  templates: TaskTemplate[],
+): GeneratedTask[] {
+  const generated = generateTasksForBooking(booking, templates);
   const all = loadTasks().filter((t) => t.bookingId !== booking.id);
   all.push(...generated);
   saveTasks(all);

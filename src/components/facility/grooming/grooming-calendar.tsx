@@ -49,7 +49,8 @@ import { WaitlistPanel } from "./waitlist-panel";
 import { PrintableDaySheet } from "./printable-day-sheet";
 import { PrintableAppointmentCards } from "./printable-appointment-cards";
 import { BulkActionsDialog, type BulkActionMode } from "./bulk-actions-dialog";
-import { getMissedTaskCountForModule } from "@/lib/today-tasks";
+import { getMissedTaskCount } from "@/lib/today-tasks";
+import { taskTemplateQueries } from "@/lib/api/task-templates";
 import { useSettings } from "@/hooks/use-settings";
 import { computeSupplyAlerts } from "@/lib/grooming-supply-alerts";
 import {
@@ -387,17 +388,21 @@ function GroomingSidebar({
     };
   }, [todayAppointments]);
 
-  // Missed tasks count — derived from the same source the Tasks tab uses.
-  // Gated by mount so SSR/CSR match (calc depends on current time).
+  // Missed tasks count — derived from the same source the Tasks tab uses,
+  // which is now the facility's own task_templates rows. Gated by mount so
+  // SSR/CSR match (the calculation depends on the current time).
+  const { data: groomingTaskTemplates = [] } = useQuery(
+    taskTemplateQueries.byModule("grooming"),
+  );
   const [missedTaskCount, setMissedTaskCount] = useState(0);
   useEffect(() => {
     function refresh() {
-      setMissedTaskCount(getMissedTaskCountForModule("grooming"));
+      setMissedTaskCount(getMissedTaskCount(groomingTaskTemplates));
     }
     refresh();
     const id = setInterval(refresh, 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [groomingTaskTemplates]);
 
   const upcomingToday = useMemo(() => {
     const nowMin =
