@@ -305,6 +305,31 @@ A fourth entry for the parallel-model list at the top of this file, and the one 
 
 **Do instead:** before modelling a domain, find the SCREEN that edits it and read the type that screen imports. Grep the component, not the types directory. If two types share a name-stem, assume they are different concepts until proven otherwise — that is what the rest of this section has been recording since June.
 
+## Snapshot (2026-08-22, the other half of the anon rule)
+
+### 🔴 `revoke ... from anon` does NOT remove `PUBLIC` — the same fact, from the side nobody wrote down
+
+This repo has recorded twice that **`revoke ... from public` does not remove `anon`** (both entries above). Acting on that rule on 2026-08-22 produced the mirror-image bug: a migration revoking EXECUTE `from anon` on eleven functions, applied to production, that **changed nothing at all**. V7 failed straight afterwards naming the same eleven.
+
+```
+approve_shift_swap  {=X/postgres, postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres}
+                     ^^ an EMPTY grantee is PUBLIC — and there is no `anon=X` to remove
+```
+
+Both halves are one fact: **`public` and `anon` are separate ACL entries, and a revoke removes only the entry it names.** Written down only forwards, it reads as a rule about `anon` being sneaky. It is not. It is a rule about revokes being literal.
+
+Why the half-rule survived so long: the working migrations all say `from public, anon`, which looks like belt-and-braces rather than two necessary halves — so it is invisible as a lesson right up until somebody writes only one of them. `award_loyalty_badge` (20260822400000) came out correct **by luck**: its original migration had already said `from public`, so the fix completed a pair rather than starting one. Reading that fix as the pattern reproduces half of it, which is exactly what happened.
+
+**The real lesson is not about grantees.** A revoke that names a privilege the role does not hold **succeeds silently** and is indistinguishable from one that worked. So:
+
+**Do instead:** never treat a `revoke` as done because the statement ran. Assert it afterwards against `has_function_privilege('anon', p.oid, 'execute')` — the question you actually mean — not against the text of `proacl` and not against the migration having applied. Fixed in 20260822610000; asserted by V7 in `supabase/tests/rpc-session-required.sql`, which caught it within a minute of the first attempt.
+
+### 🟡 An allowlist needs an assertion pointing the other way
+
+V7 sweeps for functions that **gained** an anon grant. It is silent about one that **loses** it — so a revoke written slightly too wide could take every facility's branded sign-in page down while turning the test file green. `facility_branding_by_slug` must stay anon-callable: `src/lib/api/facility-branding.ts` calls it with the publishable key and no session, because the visitor is by definition not signed in yet.
+
+**Do instead:** every allowlist entry gets a matching positive assertion. V8 now asserts `facility_branding_by_slug` is **still** anon-callable. A one-sided sweep only tests the direction you were worried about when you wrote it.
+
 ## Snapshot (2026-08-06, selling and spending packages)
 
 ### 🔴 `revoke ... from public` does NOT revoke from `anon` — for the second time
@@ -322,7 +347,9 @@ It was not exploitable — `purchase_package` is SECURITY INVOKER and every poli
 
 **This is the same finding as the storage-policy entry above.** Twice in one schema means it is not a slip, it is a missing habit.
 
-**Do instead:** every `create function` that is not meant for the public gets `revoke execute ... from anon` **by name**, and the ACL is read back with `select proacl from pg_proc` before the migration is called done. Sweeping for the shape is cheap: `where p.proacl::text like '%anon=X%'`. The only legitimate hits today are the four staff-onboarding token functions (anonymous execution IS the design there) and two trigger functions, which raise if called directly. Fixed in 20260806400000; asserted by P10 in `supabase/tests/prepaid-packages.sql`.
+**Do instead:** every `create function` that is not meant for the public gets `revoke execute ... from public, anon` — **both grantees**, see the correction below — and the ACL is read back with `select proacl from pg_proc` before the migration is called done. Fixed in 20260806400000; asserted by P10 in `supabase/tests/prepaid-packages.sql`.
+
+> **⚠️ CORRECTED 2026-08-22.** This entry used to end: _"Sweeping for the shape is cheap: `where p.proacl::text like '%anon=X%'`."_ **That sweep is wrong and finds only half the exposed functions.** It missed all eleven found on 2026-08-22, because their ACLs read `{=X/postgres, ...}` — an EMPTY grantee, which is `PUBLIC` — with no `anon=X` entry at all. `anon` is a member of `PUBLIC`, so `has_function_privilege('anon', …)` was true the whole time. The correct sweep asks the question directly rather than pattern-matching the ACL text: `where has_function_privilege('anon', p.oid, 'execute')`. That is what V7 in `rpc-session-required.sql` does, and it is why V7 caught what this recommendation could not.
 
 ### 🔴 A test file that cannot compile against its own schema reads as coverage
 
