@@ -1,7 +1,6 @@
 // Boarding module mock data
 import type {
   BoardingGuest,
-  BoardingRate,
   BoardingAddOn,
   MultiNightDiscount,
   PeakSurcharge,
@@ -65,52 +64,6 @@ export const facilityFeedingConfig: FacilityFeedingConfig = {
   showMedicationsInChecklist: true,
   matchWindowMinutes: 90,
 };
-
-// Mock boarding rates
-export const boardingRates: BoardingRate[] = [
-  {
-    id: "rate-001",
-    name: "Standard Kennel",
-    description:
-      "Comfortable private kennel with bedding, 2 meals daily, and outdoor time.",
-    basePrice: 45,
-    isActive: true,
-    sizePricing: {
-      small: 35,
-      medium: 45,
-      large: 55,
-      giant: 65,
-    },
-  },
-  {
-    id: "rate-002",
-    name: "Premium Suite",
-    description:
-      "Spacious suite with elevated bed, 3 meals daily, extra playtime, and webcam access.",
-    basePrice: 65,
-    isActive: true,
-    sizePricing: {
-      small: 55,
-      medium: 65,
-      large: 75,
-      giant: 85,
-    },
-  },
-  {
-    id: "rate-003",
-    name: "Luxury Suite",
-    description:
-      "Our best accommodation with private play area, gourmet meals, and 24/7 webcam.",
-    basePrice: 95,
-    isActive: true,
-    sizePricing: {
-      small: 85,
-      medium: 95,
-      large: 110,
-      giant: 125,
-    },
-  },
-];
 
 export const boardingAddOns: BoardingAddOn[] = [
   {

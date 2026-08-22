@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Button } from "@/components/ui/button";
 import { Check, PawPrint, Bed, X, AlertCircle, Gift, Lock } from "lucide-react";
@@ -20,7 +20,6 @@ import { getBoardingCategoryAvailability } from "@/lib/capacity-engine";
 import { bookings as allBookings } from "@/data/bookings";
 import { useRooms } from "@/hooks/use-rooms";
 import type { ServiceAddOn } from "@/types/facility";
-import { boardingRates } from "@/data/boarding";
 
 function getAddonPriceLabel(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
@@ -808,39 +807,19 @@ function BoardingAddOnsSubStep({
   selectedPets: Pet[];
   serviceType: string;
 }) {
-  // Auto-inject included add-ons from the selected boarding rate on first render
-  const injectedRef = useRef(false);
-  useEffect(() => {
-    if (
-      injectedRef.current ||
-      !isStepAccessible(2) ||
-      selectedPets.length === 0
-    )
-      return;
-    injectedRef.current = true;
-
-    // Match the rate by category keyword in name (standard/deluxe/vip/premium/luxury)
-    const needle = serviceType.toLowerCase();
-    const matchingRate =
-      boardingRates.find(
-        (r) => r.isActive && r.name.toLowerCase().includes(needle),
-      ) ?? boardingRates.find((r) => r.isActive);
-
-    const includedIds: string[] = matchingRate?.includedAddOnIds ?? [];
-    if (includedIds.length === 0) return;
-
-    const toInject = selectedPets.flatMap((pet) =>
-      includedIds.map((id) => ({ serviceId: id, quantity: 0, petId: pet.id })),
-    );
-    const existing = new Set(
-      extraServices.map((es) => `${es.serviceId}:${es.petId}`),
-    );
-    const novel = toInject.filter(
-      (e) => !existing.has(`${e.serviceId}:${e.petId}`),
-    );
-    if (novel.length > 0) setExtraServices([...extraServices, ...novel]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStepAccessible, selectedPets.length]);
+  // ── THE "INCLUDED ADD-ONS" INJECTION WAS REMOVED ─────────────────────────
+  //
+  // A block here matched the `boardingRates` fixture by keyword in its name
+  // and pre-filled the add-on list with that tier's `includedAddOnIds`. It
+  // never ran: `includedAddOnIds` appeared ZERO times in the fixture, so the
+  // list was always empty and the effect returned on the next line. Even
+  // populated it injected at `quantity: 0` — a pre-fill, never a discount,
+  // despite the "Free Add-Ons" column that used to advertise it.
+  //
+  // The fixture it read is gone (boarding rates are `room_categories` now). If
+  // a facility should get add-ons bundled with a kennel class, that is a real
+  // feature — a column on the class and a price effect — not a keyword match
+  // against a rate name.
 
   const boardingAddOns = getStoredAddOns().filter((a) => {
     if (!a.isActive || !a.applicableServices.includes("boarding")) return false;

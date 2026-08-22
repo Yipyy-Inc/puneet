@@ -2,7 +2,6 @@
 // kennels and their occupancy come from /api/boarding/rooms.
 import {
   boardingGuests,
-  boardingRates,
   multiNightDiscounts,
   peakSurcharges,
   dailyCareSheets,
@@ -27,10 +26,9 @@ export const boardingQueries = {
     queryFn: async () =>
       boardingGuests.filter((g) => g.status === "checked-in"),
   }),
-  rates: () => ({
-    queryKey: ["boarding", "rates"] as const,
-    queryFn: async () => boardingRates,
-  }),
+  // `rates` was here, over the `boardingRates` fixture. It had no callers, and
+  // a boarding rate is the nightly price of a kennel class now — read the
+  // classes through `useRooms()` and take `defaultBasePrice`.
   discounts: () => ({
     queryKey: ["boarding", "discounts"] as const,
     queryFn: async () => multiNightDiscounts,

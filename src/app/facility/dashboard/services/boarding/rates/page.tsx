@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,13 +18,53 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
-import { DollarSign, Plus, Edit, Trash2, Sparkles, Gift } from "lucide-react";
-import { boardingRates, BoardingRate } from "@/data/boarding";
-import { RateColorPicker } from "@/components/facility/RateColorPicker";
-import { IncludedAddOnsPicker } from "@/components/facility/add-ons/IncludedAddOnsPicker";
+import {
+  DollarSign,
+  Plus,
+  Edit,
+  Trash2,
+  Sparkles,
+  BedDouble,
+} from "lucide-react";
+import Link from "next/link";
+import { useRooms } from "@/hooks/use-rooms";
+import type { RoomCategory, RoomCategoryColor } from "@/types/rooms";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
 import type { ServiceAddOn } from "@/types/facility";
 import { defaultServiceAddOns } from "@/data/service-addons";
+
+// ============================================================================
+// Boarding rates.
+//
+// ── WHAT A RATE IS HERE ───────────────────────────────────────────────────
+//
+// The nightly price of a KENNEL CLASS — `room_categories.default_base_price`.
+// That is the number the kennel board displays, and since the boarding pricing
+// fix it is the number a stay in that kennel is charged.
+//
+// This page used to hold a separate rate card in `useState` over
+// `src/data/boarding.ts`: four tiers with their own prices, per-size grids and
+// "free add-ons". None of it persisted — not even to localStorage — and none
+// of it priced anything. A facility set "Premium Suite $65", refreshed, and
+// got the fixture back; meanwhile every stay was charged the flat
+// `boarding_config.basePrice` of $45 regardless of the kennel.
+//
+// So this is the same page, against the numbers that are real.
+//
+// ── WHAT WAS REMOVED, AND WHY IT IS NOT A LOSS ────────────────────────────
+//
+// PER-SIZE PRICING (small/medium/large/giant). Nothing has ever read it for
+// boarding — no booking, no invoice, no report. An input that accepts a number
+// and discards it is worse than no input. If a facility should charge more to
+// board a mastiff than a chihuahua, that is a feature with schema and a
+// resolver behind it, the way grooming already has one — not four boxes.
+//
+// FREE ADD-ONS. `includedAddOnIds` appeared ZERO times in the fixture, so the
+// block in `BoardingDetails` that reads it never ran. Even populated it
+// injected add-ons at `quantity: 0` — a pre-fill, never a discount.
+//
+// Add-ons themselves are untouched and still live on the second tab.
+// ============================================================================
 
 function loadBoardingAddOns(): ServiceAddOn[] {
   if (typeof window === "undefined") return defaultServiceAddOns;
@@ -41,20 +81,48 @@ function loadBoardingAddOns(): ServiceAddOn[] {
   }
 }
 
+/** Swatches, matching the ones the Rooms page offers for the same field. */
+const COLOR_DOT: Record<RoomCategoryColor, string> = {
+  amber: "bg-amber-400",
+  violet: "bg-violet-400",
+  blue: "bg-blue-400",
+  emerald: "bg-emerald-400",
+  rose: "bg-rose-400",
+  orange: "bg-orange-400",
+  indigo: "bg-indigo-400",
+  slate: "bg-slate-400",
+};
+
 const EMPTY_RATE = {
   name: "",
   description: "",
   basePrice: 0,
   isActive: true,
-  color: "#8b5cf6",
-  sizePricing: { small: 0, medium: 0, large: 0, giant: 0 },
-  includedAddOnIds: [] as string[],
 };
 
 export default function BoardingRatesPage() {
-  const [rates, setRates] = useState<BoardingRate[]>(boardingRates);
-  const [boardingAddOns, setBoardingAddOns] = useState<ServiceAddOn[]>([]);
+  const { categories, rooms, addCategory, updateCategory, deleteCategory } =
+    useRooms();
 
+  // The kennel classes, which ARE the rates. Filtered by service the way every
+  // other boarding consumer does — the catalogue is shared with daycare.
+  const rates = useMemo(
+    () => categories.filter((c) => c.service === "boarding"),
+    [categories],
+  );
+
+  // How many kennels each class holds. A class with none is a price nobody can
+  // book, and the table says so rather than leaving it to be discovered.
+  const roomCountByCategory = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const room of rooms) {
+      if (!room.active) continue;
+      counts.set(room.categoryId, (counts.get(room.categoryId) ?? 0) + 1);
+    }
+    return counts;
+  }, [rooms]);
+
+  const [boardingAddOns, setBoardingAddOns] = useState<ServiceAddOn[]>([]);
   useEffect(() => {
     const sync = () => setBoardingAddOns(loadBoardingAddOns());
     sync();
@@ -62,11 +130,10 @@ export default function BoardingRatesPage() {
     return () => window.removeEventListener("storage", sync);
   }, []);
 
-  // Rate modal state
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
-  const [editingRate, setEditingRate] = useState<BoardingRate | null>(null);
+  const [editingRate, setEditingRate] = useState<RoomCategory | null>(null);
   const [rateForm, setRateForm] = useState(EMPTY_RATE);
-  const [deletingRate, setDeletingRate] = useState<BoardingRate | null>(null);
+  const [deletingRate, setDeletingRate] = useState<RoomCategory | null>(null);
 
   // ── Rate handlers ──────────────────────────────────────────────────────────
   const handleAddRate = () => {
@@ -75,46 +142,64 @@ export default function BoardingRatesPage() {
     setIsRateModalOpen(true);
   };
 
-  const handleEditRate = (rate: BoardingRate) => {
+  const handleEditRate = (rate: RoomCategory) => {
     setEditingRate(rate);
     setRateForm({
       name: rate.name,
-      description: rate.description,
-      basePrice: rate.basePrice,
-      isActive: rate.isActive,
-      color: rate.color ?? "#8b5cf6",
-      sizePricing: { ...rate.sizePricing },
-      includedAddOnIds: rate.includedAddOnIds ?? [],
+      description: rate.description ?? "",
+      basePrice: rate.defaultBasePrice ?? 0,
+      isActive: rate.active,
     });
     setIsRateModalOpen(true);
   };
 
   const handleSaveRate = () => {
     if (editingRate) {
-      setRates(
-        rates.map((r) => (r.id === editingRate.id ? { ...r, ...rateForm } : r)),
-      );
+      updateCategory({
+        ...editingRate,
+        name: rateForm.name,
+        description: rateForm.description,
+        defaultBasePrice: rateForm.basePrice,
+        active: rateForm.isActive,
+      });
     } else {
-      setRates([...rates, { id: `rate-${Date.now()}`, ...rateForm }]);
+      // A new rate is a new kennel class, created with no units — the Rooms
+      // page is where kennels are added to it, and the table below flags a
+      // class that has none.
+      addCategory(
+        {
+          id: `cat-${Date.now()}`,
+          facilityId: rates[0]?.facilityId ?? 0,
+          service: "boarding",
+          name: rateForm.name,
+          description: rateForm.description,
+          color: "slate",
+          sortOrder: rates.length + 1,
+          rules: [],
+          defaultCapacity: 1,
+          defaultBasePrice: rateForm.basePrice,
+          visibleToClients: true,
+          active: rateForm.isActive,
+        },
+        0,
+      );
     }
     setIsRateModalOpen(false);
   };
 
+  // The server refuses a class that still holds kennels, which is the correct
+  // answer — the price is what would vanish, and the rooms would be orphaned.
   const handleDeleteRate = () => {
-    if (deletingRate) setRates(rates.filter((r) => r.id !== deletingRate.id));
+    if (deletingRate) deleteCategory(deletingRate.id);
     setDeletingRate(null);
   };
 
-  const handleToggleRate = (rate: BoardingRate) => {
-    setRates(
-      rates.map((r) =>
-        r.id === rate.id ? { ...r, isActive: !r.isActive } : r,
-      ),
-    );
+  const handleToggleRate = (rate: RoomCategory) => {
+    updateCategory({ ...rate, active: !rate.active });
   };
 
   // ── Columns ────────────────────────────────────────────────────────────────
-  const rateColumns: ColumnDef<BoardingRate>[] = [
+  const rateColumns: ColumnDef<RoomCategory>[] = [
     {
       key: "name",
       label: "Rate Name",
@@ -122,8 +207,9 @@ export default function BoardingRatesPage() {
       render: (rate) => (
         <div className="flex items-center gap-2">
           <span
-            className="size-3 shrink-0 rounded-full ring-1 ring-black/10"
-            style={{ backgroundColor: rate.color ?? "#8b5cf6" }}
+            className={`size-3 shrink-0 rounded-full ring-1 ring-black/10 ${
+              COLOR_DOT[rate.color] ?? "bg-slate-400"
+            }`}
           />
           <div>
             <p className="font-medium">{rate.name}</p>
@@ -135,59 +221,44 @@ export default function BoardingRatesPage() {
       ),
     },
     {
-      key: "basePrice",
+      key: "defaultBasePrice",
       label: "Base Price",
       icon: DollarSign,
       defaultVisible: true,
-      render: (rate) => (
-        <span className="font-medium">${rate.basePrice}/night</span>
-      ),
+      render: (rate) =>
+        rate.defaultBasePrice == null ? (
+          // Not "$0". A class with no rate falls back to the flat service
+          // price at checkout, and saying so is the only way anyone finds out.
+          <span className="text-destructive text-xs font-medium">
+            No rate set
+          </span>
+        ) : (
+          <span className="font-medium">${rate.defaultBasePrice}/night</span>
+        ),
     },
     {
-      key: "sizePricing",
-      label: "Size Pricing",
-      defaultVisible: true,
-      render: (rate) => (
-        <div className="flex flex-wrap gap-1">
-          <Badge variant="outline" className="text-xs">
-            S: ${rate.sizePricing.small}
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            M: ${rate.sizePricing.medium}
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            L: ${rate.sizePricing.large}
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            XL: ${rate.sizePricing.giant}
-          </Badge>
-        </div>
-      ),
-    },
-    {
-      key: "includedAddOns",
-      label: "Free Add-Ons",
-      icon: Gift,
+      key: "kennels",
+      label: "Kennels",
+      icon: BedDouble,
       defaultVisible: true,
       render: (rate) => {
-        const ids = rate.includedAddOnIds ?? [];
-        if (ids.length === 0)
-          return <span className="text-muted-foreground text-xs">—</span>;
-        return (
-          <Badge variant="secondary" className="gap-1 text-xs">
-            <Gift className="size-2.5 text-emerald-600" />
-            {ids.length} included
+        const count = roomCountByCategory.get(rate.id) ?? 0;
+        return count === 0 ? (
+          <Badge variant="outline" className="text-muted-foreground text-xs">
+            none yet
           </Badge>
+        ) : (
+          <span className="text-sm tabular-nums">{count}</span>
         );
       },
     },
     {
-      key: "isActive",
+      key: "active",
       label: "Status",
       defaultVisible: true,
       render: (rate) => (
         <Switch
-          checked={rate.isActive}
+          checked={rate.active}
           onCheckedChange={() => handleToggleRate(rate)}
         />
       ),
@@ -195,17 +266,25 @@ export default function BoardingRatesPage() {
   ];
 
   const activeAddons = boardingAddOns.filter((a) => a.isActive).length;
+  const priced = rates.filter((r) => r.defaultBasePrice != null);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
         <h2 className="text-lg font-bold tracking-tight text-slate-800">
-          Boarding Rates & Pricing
+          Boarding Rates &amp; Pricing
         </h2>
         <p className="text-muted-foreground mt-0.5 text-sm">
-          Manage nightly rates and add-ons. Discounts, surcharges, and fee rules
-          are configured in Settings.
+          The nightly price of each kennel class — what the board shows and what
+          a stay is charged. Kennels themselves are managed in{" "}
+          <Link
+            href="/facility/dashboard/services/boarding/rooms"
+            className="underline underline-offset-2"
+          >
+            Rooms &amp; Suites
+          </Link>
+          . Discounts, surcharges and fee rules are in Settings.
         </p>
       </div>
 
@@ -219,7 +298,7 @@ export default function BoardingRatesPage() {
                   Active Rates
                 </p>
                 <p className="mt-1.5 text-3xl font-bold tabular-nums">
-                  {rates.filter((r) => r.isActive).length}
+                  {rates.filter((r) => r.active).length}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   of {rates.length} total
@@ -240,15 +319,20 @@ export default function BoardingRatesPage() {
                 </p>
                 <p className="mt-1.5 text-3xl font-bold tabular-nums">
                   $
-                  {rates.length > 0
+                  {priced.length > 0
                     ? Math.round(
-                        rates.reduce((t, r) => t + r.basePrice, 0) /
-                          rates.length,
+                        priced.reduce(
+                          (t, r) => t + (r.defaultBasePrice ?? 0),
+                          0,
+                        ) / priced.length,
                       )
                     : 0}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  based on {rates.length} rates
+                  {/* Averaged over the classes that HAVE a rate. Counting the
+                      unpriced ones as zero would quietly drag it down. */}
+                  based on {priced.length} priced{" "}
+                  {priced.length === 1 ? "class" : "classes"}
                 </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-2xl bg-blue-50">
@@ -290,7 +374,7 @@ export default function BoardingRatesPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ── Services Tab ── */}
+        {/* ── Rates Tab ── */}
         <TabsContent value="services" className="mt-0 space-y-4">
           <Card className="scroll-mt-20 overflow-hidden transition-shadow hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
@@ -311,6 +395,12 @@ export default function BoardingRatesPage() {
                 columns={rateColumns}
                 searchKey="name"
                 searchPlaceholder="Search rates..."
+                emptyState={{
+                  icon: DollarSign,
+                  title: "No kennel classes yet",
+                  description:
+                    "A rate is the nightly price of a kennel class. Add one here, then add kennels to it in Rooms & Suites.",
+                }}
                 actions={(rate) => (
                   <div className="flex items-center gap-2">
                     <Button
@@ -341,35 +431,14 @@ export default function BoardingRatesPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Pricing rules link */}
-      <Card>
-        <CardContent className="flex items-center justify-between py-4">
-          <div>
-            <p className="text-sm font-semibold">Pricing Rules</p>
-            <p className="text-muted-foreground text-xs">
-              Multi-pet discounts, multi-night discounts, peak surcharges, late
-              fees, and custom fees are managed in Settings.
-            </p>
-          </div>
-          <a
-            href="/facility/dashboard/settings?section=pricing-rules"
-            className="text-primary text-sm font-medium hover:underline"
-          >
-            Go to Pricing Rules →
-          </a>
-        </CardContent>
-      </Card>
-
-      {/* ── Rate Add/Edit Modal ── */}
+      {/* ── Rate Modal ── */}
       <Dialog open={isRateModalOpen} onOpenChange={setIsRateModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>
-              {editingRate ? "Edit Rate" : "Add New Rate"}
-            </DialogTitle>
+            <DialogTitle>{editingRate ? "Edit Rate" : "Add Rate"}</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh] pr-1">
-            <div className="space-y-4 pb-2">
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Rate Name</Label>
                 <Input
@@ -390,14 +459,12 @@ export default function BoardingRatesPage() {
                   placeholder="Describe what's included..."
                 />
               </div>
-              <RateColorPicker
-                value={rateForm.color}
-                onChange={(hex) => setRateForm({ ...rateForm, color: hex })}
-              />
               <div className="space-y-2">
                 <Label>Base Price (per night)</Label>
                 <Input
                   type="number"
+                  min={0}
+                  step={0.5}
                   value={rateForm.basePrice}
                   onChange={(e) =>
                     setRateForm({
@@ -406,41 +473,10 @@ export default function BoardingRatesPage() {
                     })
                   }
                 />
+                <p className="text-muted-foreground text-xs">
+                  Charged per night for every kennel in this class.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label>Size-Based Pricing</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {(["small", "medium", "large", "giant"] as const).map(
-                    (size) => (
-                      <div key={size}>
-                        <Label className="text-muted-foreground text-xs capitalize">
-                          {size}
-                        </Label>
-                        <Input
-                          type="number"
-                          value={rateForm.sizePricing[size]}
-                          onChange={(e) =>
-                            setRateForm({
-                              ...rateForm,
-                              sizePricing: {
-                                ...rateForm.sizePricing,
-                                [size]: parseFloat(e.target.value) || 0,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                    ),
-                  )}
-                </div>
-              </div>
-              <IncludedAddOnsPicker
-                serviceFilter="boarding"
-                selectedIds={rateForm.includedAddOnIds}
-                onChange={(ids) =>
-                  setRateForm({ ...rateForm, includedAddOnIds: ids })
-                }
-              />
               <div className="flex items-center justify-between">
                 <Label>Active</Label>
                 <Switch
@@ -472,8 +508,9 @@ export default function BoardingRatesPage() {
             </DialogTitle>
           </DialogHeader>
           <p className="text-muted-foreground text-sm">
-            Are you sure you want to delete this rate? This action cannot be
-            undone.
+            Delete <span className="font-medium">{deletingRate?.name}</span> and
+            the nightly rate it carries? A class that still holds kennels cannot
+            be deleted — move or remove them in Rooms &amp; Suites first.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingRate(null)}>
