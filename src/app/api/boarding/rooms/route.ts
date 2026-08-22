@@ -64,9 +64,18 @@ export async function GET(request: NextRequest) {
   const from = url.searchParams.get("from") ?? new Date().toISOString();
   const to = url.searchParams.get("to") ?? from;
 
+  // ── BOARDING, AND ONLY BOARDING ────────────────────────────────────────
+  //
+  // `room_categories.service` has always distinguished boarding from daycare,
+  // grooming and training, and `/api/rooms/categories` accepts any of the four
+  // — but this read took every row. It happened to be correct only because
+  // every row in the table was boarding. A facility that created a daycare
+  // category through the existing API would have found a play area sitting on
+  // its kennel board, listed as a room a dog could be assigned to.
   const { data: categoryRows, error: categoryError } = await supabase
     .from("room_categories")
     .select(ROOM_CATEGORY_SELECT)
+    .eq("service", "boarding")
     .order("sort_order", { ascending: true });
 
   if (categoryError) {
@@ -79,9 +88,15 @@ export async function GET(request: NextRequest) {
     catRows.map((row) => [row.id, row.legacy_id ?? row.id]),
   );
 
+  // Narrowed by the categories just read, rather than by a filter on an
+  // embedded `room_categories.service`. An embedded filter needs an inner join
+  // to narrow the parent at all — without one PostgREST returns every room and
+  // empties the embed, which is the trap documented in the debt map today.
+  // `.in()` has no such subtlety, and the ids are already in hand.
   const { data: roomRows, error: roomError } = await supabase
     .from("facility_rooms")
     .select(FACILITY_ROOM_SELECT)
+    .in("category_id", [...categoryIdByUuid.keys()])
     .order("sort_order", { ascending: true });
 
   if (roomError) {
