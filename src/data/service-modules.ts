@@ -6,7 +6,6 @@
  */
 
 import type { ServiceModule } from "@/types/service-module";
-import { getTemplatesForModule } from "@/data/task-templates";
 
 // ============================================================================
 // Built-in Modules
@@ -68,10 +67,11 @@ export const builtInModules: ServiceModule[] = [
     },
     tasks: {
       autoGenerate: true,
-      templates: getTemplatesForModule("boarding").map((t) => ({
-        ...t,
-        timing: { ...t.timing },
-      })),
+      // Empty: a module DEFINITION no longer carries a task list. The routine
+      // belongs to the facility, in `task_templates`, and differs per tenant —
+      // so a shared built-in definition cannot state it. Read it with
+      // `taskTemplateQueries.byModule(moduleId)`.
+      templates: [],
     },
     reporting: {
       trackRevenue: true,
@@ -137,10 +137,11 @@ export const builtInModules: ServiceModule[] = [
     },
     tasks: {
       autoGenerate: true,
-      templates: getTemplatesForModule("daycare").map((t) => ({
-        ...t,
-        timing: { ...t.timing },
-      })),
+      // Empty: a module DEFINITION no longer carries a task list. The routine
+      // belongs to the facility, in `task_templates`, and differs per tenant —
+      // so a shared built-in definition cannot state it. Read it with
+      // `taskTemplateQueries.byModule(moduleId)`.
+      templates: [],
     },
     reporting: {
       trackRevenue: true,
@@ -206,10 +207,11 @@ export const builtInModules: ServiceModule[] = [
     },
     tasks: {
       autoGenerate: true,
-      templates: getTemplatesForModule("grooming").map((t) => ({
-        ...t,
-        timing: { ...t.timing },
-      })),
+      // Empty: a module DEFINITION no longer carries a task list. The routine
+      // belongs to the facility, in `task_templates`, and differs per tenant —
+      // so a shared built-in definition cannot state it. Read it with
+      // `taskTemplateQueries.byModule(moduleId)`.
+      templates: [],
     },
     reporting: {
       trackRevenue: true,
@@ -269,10 +271,11 @@ export const builtInModules: ServiceModule[] = [
     },
     tasks: {
       autoGenerate: true,
-      templates: getTemplatesForModule("training").map((t) => ({
-        ...t,
-        timing: { ...t.timing },
-      })),
+      // Empty: a module DEFINITION no longer carries a task list. The routine
+      // belongs to the facility, in `task_templates`, and differs per tenant —
+      // so a shared built-in definition cannot state it. Read it with
+      // `taskTemplateQueries.byModule(moduleId)`.
+      templates: [],
     },
     reporting: {
       trackRevenue: true,

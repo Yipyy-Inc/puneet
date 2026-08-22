@@ -1,4 +1,3 @@
-import { getTemplatesForModule } from "@/data/task-templates";
 import type { TaskTemplate } from "@/types/task";
 
 export type TodayTaskStatus =
@@ -95,11 +94,19 @@ export function isTaskPastDue(
  * missed when it was auto-created, has not been completed/started, and its
  * scheduled time is in the past.
  */
-export function getMissedTaskCountForModule(
-  moduleId: string,
+/**
+ * Takes the templates rather than fetching them.
+ *
+ * It used to call `getTemplatesForModule(moduleId)` itself, which worked only
+ * while the routine was a hardcoded array. It is now a facility's own rows,
+ * read through a query — so the caller, which is a component with a
+ * `useQuery`, is the only thing that can have them.
+ */
+export function getMissedTaskCount(
+  templates: TaskTemplate[],
   now: Date = new Date(),
 ): number {
-  const tasks = buildTodayTasks(getTemplatesForModule(moduleId));
+  const tasks = buildTodayTasks(templates);
   return tasks.filter(
     (t) => t.status === "pending" && isTaskPastDue(t.scheduledAt, now),
   ).length;

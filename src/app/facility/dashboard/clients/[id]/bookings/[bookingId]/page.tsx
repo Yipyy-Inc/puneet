@@ -139,6 +139,7 @@ import {
   completeTask,
   startTask,
 } from "@/data/generated-tasks";
+import { taskTemplateQueries } from "@/lib/api/task-templates";
 
 // ========================================
 // Helpers
@@ -606,10 +607,15 @@ export default function ClientBookingDetailPage({
   });
   const bookingLineItems = bookingLineItemsData ?? [];
 
+  // The facility's task routine, which the generator needs to build this
+  // booking's task list. Every module's, because the booking's service decides
+  // which apply and the generator filters on it.
+  const { data: allTaskTemplates = [] } = useQuery(taskTemplateQueries.all());
+
   const [tasks, setTasks] = useState<GeneratedTask[]>([]);
   useEffect(() => {
-    setTasks(getTasksForBooking(bookingId));
-  }, [bookingId]);
+    setTasks(getTasksForBooking(bookingId, allTaskTemplates));
+  }, [bookingId, allTaskTemplates]);
 
   // "Not found" is a conclusion, and it needs both answers back before it can
   // be drawn. Rendering it while either request is open told staff a booking
@@ -1624,7 +1630,9 @@ export default function ClientBookingDetailPage({
                             if (task.status === "pending") startTask(task.id);
                             else if (task.status === "in_progress")
                               completeTask(task.id, "You");
-                            setTasks(getTasksForBooking(bookingId));
+                            setTasks(
+                              getTasksForBooking(bookingId, allTaskTemplates),
+                            );
                           }}
                           disabled={
                             task.status === "completed" ||
@@ -1672,7 +1680,9 @@ export default function ClientBookingDetailPage({
                             className="h-6 text-[10px] opacity-0 group-hover:opacity-100"
                             onClick={() => {
                               completeTask(task.id, "You");
-                              setTasks(getTasksForBooking(bookingId));
+                              setTasks(
+                                getTasksForBooking(bookingId, allTaskTemplates),
+                              );
                               toast.success("Task completed");
                             }}
                           >

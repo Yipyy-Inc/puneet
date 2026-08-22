@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { buildTodayTasks } from "@/lib/today-tasks";
-import { getTemplatesForModule } from "@/data/task-templates";
+import { taskTemplateQueries } from "@/lib/api/task-templates";
 import type { TrainingSession } from "@/types/training";
 import { DAY_INITIALS, formatISODate } from "./training-calendar-utils";
 
@@ -143,18 +143,24 @@ export function TrainingCalendarSidebar({
   }, [homework]);
 
   // Pending tasks come from the auto-create task templates registered for the
-  // training module. Refresh once a minute so a tile that says "3 pending" at
-  // 9am rolls over correctly as the morning progresses.
-  const [pendingTasks, setPendingTasks] = useState(0);
+  // training module — now the facility's own rows rather than a hardcoded
+  // list. Recomputed once a minute so a tile that says "3 pending" at 9am
+  // rolls over correctly as the morning progresses; `tick` is what makes the
+  // memo re-run, since the templates themselves have not changed.
+  const { data: trainingTemplates = [] } = useQuery(
+    taskTemplateQueries.byModule("training"),
+  );
+  const [tick, setTick] = useState(0);
   useEffect(() => {
-    function refresh() {
-      const tasks = buildTodayTasks(getTemplatesForModule("training"));
-      setPendingTasks(tasks.filter((t) => t.status === "pending").length);
-    }
-    refresh();
-    const id = setInterval(refresh, 60_000);
+    const id = setInterval(() => setTick((n) => n + 1), 60_000);
     return () => clearInterval(id);
   }, []);
+  const pendingTasks = useMemo(() => {
+    void tick;
+    return buildTodayTasks(trainingTemplates).filter(
+      (t) => t.status === "pending",
+    ).length;
+  }, [trainingTemplates, tick]);
 
   const monthLabel = displayMonth.toLocaleDateString("en-US", {
     month: "long",

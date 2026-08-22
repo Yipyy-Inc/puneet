@@ -44,12 +44,13 @@ import {
   Camera,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  getTemplatesForModule,
-  addTemplate,
-  updateTemplate,
-  removeTemplate,
-} from "@/data/task-templates";
+  taskTemplateQueries,
+  createTaskTemplate,
+  updateTaskTemplate,
+  deleteTaskTemplate,
+} from "@/lib/api/task-templates";
 import type { TaskTemplate } from "@/types/task";
 import {
   buildTodayTasks,
@@ -444,19 +445,18 @@ function TaskFormModal({
 // Template row
 // ─────────────────────────────────────────────
 
+// `isDefault` is gone. It marked the 34 templates that shipped hardcoded, and
+// it hid the delete button on them — because deleting one would silently have
+// done nothing. Every template is now a row the facility owns, so there is no
+// such class any more, and a facility that does not walk dogs can finally
+// remove "Daily walk".
 interface TemplateRowProps {
   template: TaskTemplate;
-  isDefault: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-function TemplateRow({
-  template,
-  isDefault,
-  onEdit,
-  onDelete,
-}: TemplateRowProps) {
+function TemplateRow({ template, onEdit, onDelete }: TemplateRowProps) {
   const meta = CATEGORY_META[template.category] ?? CATEGORY_META.custom;
   const Icon = meta.icon;
 
@@ -500,14 +500,6 @@ function TemplateRow({
                     : "Per medication"}
               </Badge>
             )}
-            {isDefault && (
-              <Badge
-                variant="outline"
-                className="text-muted-foreground text-xs"
-              >
-                Default
-              </Badge>
-            )}
           </div>
           {template.description && (
             <p className="text-muted-foreground mt-0.5 text-xs">
@@ -544,16 +536,14 @@ function TemplateRow({
         <Button size="icon" variant="ghost" className="size-8" onClick={onEdit}>
           <Pencil className="size-3.5" />
         </Button>
-        {!isDefault && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="text-destructive hover:text-destructive size-8"
-            onClick={onDelete}
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
-        )}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-destructive hover:text-destructive size-8"
+          onClick={onDelete}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
       </div>
     </div>
   );
@@ -1027,14 +1017,24 @@ export function ModuleTasksPage({
   moduleName,
   allowAddTemplates = true,
 }: ModuleTasksPageProps) {
-  const [templates, setTemplates] = useState<TaskTemplate[]>(() =>
-    getTemplatesForModule(moduleId),
-  );
+  const queryClient = useQueryClient();
+
+  // The facility's routine, from Postgres. This was `useState(() =>
+  // getTemplatesForModule(...))` over a hardcoded array plus localStorage, so
+  // a manager's edits reached exactly one browser.
+  const {
+    data: templates = [],
+    isPending: templatesPending,
+    error: templatesError,
+  } = useQuery(taskTemplateQueries.byModule(moduleId));
+
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<TaskTemplate | undefined>();
-  const [todayTasks, setTodayTasks] = useState<TodayTask[]>(() =>
-    buildTodayTasks(getTemplatesForModule(moduleId)),
-  );
+  const [saving, setSaving] = useState(false);
+  // Today's board is derived from the templates but then MUTATED locally as
+  // staff work through it, so it stays state rather than a memo — and is
+  // rebuilt whenever the templates it came from change.
+  const [todayTasks, setTodayTasks] = useState<TodayTask[]>([]);
   const [groomerFilter, setGroomerFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [bookingFilter, setBookingFilter] = useState<string>("all");
@@ -1063,20 +1063,14 @@ export function ModuleTasksPage({
     return () => clearInterval(id);
   }, []);
 
-  // Which templates are default (ship with the app)
-  const defaultIds = new Set(
-    templates
-      .filter(
-        (t) => t.id.startsWith(moduleId + "-") && !t.id.includes("custom"),
-      )
-      .map((t) => t.id),
-  );
+  // Rebuild today's board whenever the routine changes. Templates now arrive
+  // asynchronously, so the board cannot be seeded once at mount.
+  useEffect(() => {
+    setTodayTasks(buildTodayTasks(templates));
+  }, [templates]);
 
-  function refreshTemplates() {
-    const updated = getTemplatesForModule(moduleId);
-    setTemplates(updated);
-    setTodayTasks(buildTodayTasks(updated));
-  }
+  const invalidateTemplates = () =>
+    queryClient.invalidateQueries({ queryKey: ["task-templates"] });
 
   function handleAdd() {
     setEditing(undefined);
@@ -1088,18 +1082,38 @@ export function ModuleTasksPage({
     setFormOpen(true);
   }
 
-  function handleSave(t: TaskTemplate) {
-    if (editing) {
-      updateTemplate(t.id, t);
-    } else {
-      addTemplate(t);
+  // Both writes go to Postgres and both can be REFUSED — `ops_manage_checklists`
+  // is not held by every role that can open this screen. So the failure is
+  // surfaced rather than swallowed: the old fixture reported success for an
+  // edit that silently duplicated a template and for a delete it never made.
+  async function handleSave(t: TaskTemplate) {
+    setSaving(true);
+    try {
+      const { id: _id, moduleId: _module, ...fields } = t;
+      if (editing) {
+        await updateTaskTemplate(editing.id, fields);
+      } else {
+        await createTaskTemplate({ ...fields, moduleId });
+      }
+      await invalidateTemplates();
+      toast.success(editing ? "Task updated" : "Task added");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "That could not be saved.");
+    } finally {
+      setSaving(false);
     }
-    refreshTemplates();
   }
 
-  function handleDelete(id: string) {
-    removeTemplate(id);
-    refreshTemplates();
+  async function handleDelete(id: string) {
+    try {
+      await deleteTaskTemplate(id);
+      await invalidateTemplates();
+      toast.success("Task removed");
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "That could not be removed.",
+      );
+    }
   }
 
   function handleComplete(taskId: string) {
@@ -1288,7 +1302,6 @@ export function ModuleTasksPage({
                       <TemplateRow
                         key={t.id}
                         template={t}
-                        isDefault={defaultIds.has(t.id)}
                         onEdit={() => handleEdit(t)}
                         onDelete={() => handleDelete(t.id)}
                       />
