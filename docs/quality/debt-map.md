@@ -4609,6 +4609,64 @@ Stage by explicit path, never `git add -A`, so at least the _contents_ of a
 commit stay yours. And treat a running Playwright suite as an exclusive lock —
 announce before, not after.
 
+### 🔴 A domain word that is already taken is not available, and typecheck cannot tell you — 2026-08-23
+
+`boarding` means **dogs** in this repo. `src/lib/api/boarding.ts` is the kennels
+and occupancy module; `src/app/api/boarding/` holds `rooms`, `stays` and
+`attendance`.
+
+Merchant onboarding is also called "boarding" — it is the acquirer's own word
+for it. So the merchant-application work was written as `boarding`, which
+**overwrote `src/lib/api/boarding.ts` outright** and dropped five merchant
+routes in among the kennel ones.
+
+**The measurement is the important part: `bun run typecheck` stayed green
+through all of it.** Nothing currently imports the exports that were clobbered
+— `boardingQueries.guests`, `.careSheets`, `.roomTypes` and the rest are read
+by screens that import the fixtures directly — so the compiler had no opinion,
+`bun run lint` had no opinion, and `bun run build` succeeded. The only artefact
+that noticed was stale `.next/types` holding route paths that no longer
+existed, which is a nuisance ninety-nine times and a smoke alarm the hundredth.
+
+A second copy survived the first fix: `boardingQueries` was exported from
+**two** files in `src/lib/api` for several hours — `boarding.ts` (dogs) and
+`merchant-application.ts` (merchants) — with nothing anywhere complaining.
+
+**Do instead:** before naming a module, a route folder or an exported symbol
+after a domain word, grep for the word first — `grep -rn "boarding" src/lib/api
+src/app/api --include=*.ts -l`. If it comes back with anything, the word is
+taken; qualify yours (`merchant-application`, `MerchantBoardingSubmitter`) and
+leave the bare word to whoever had it. Restore with `git checkout HEAD --
+<path>` and confirm with an empty `git diff`, not by reading the file back.
+
+And do not treat a green typecheck as evidence that a file is unused or that a
+rename is safe. In a half-converted codebase, "nothing imports it" is the
+normal state of code that is very much alive.
+
+### 🟡 `check:settings-fixture` guards a DIRECTORY, not a class of facts — 2026-08-23
+
+The gate fails a screen that reads a facility-owned value from
+`@/data/settings`. It matches on the **import path**.
+
+Measured 2026-08-23 while grounding the scheduling cluster:
+`services/scheduling/company` (454 lines) renders company details and business
+hours, and `services/scheduling/notifications` (693 lines) renders quiet hours
+and event triggers. Both are facility-owned values that already exist as
+`SETTING_DOMAINS` entries in `facility_settings` (`business_hours`,
+`notification_toggles`) plus real profile columns. Both read
+`@/data/scheduling`. **Both pass the gate.**
+
+So the gate's name promises more than it enforces: a screen reaches the same
+facts through a differently-named fixture and is invisible to it.
+
+**Do instead:** do not read the gate as "no screen reads a facility value from
+a fixture". It says "no screen reads one from `src/data/settings`". If it is
+ever widened, widen it by **value name** (`businessHours`, `quietHours`,
+`taxRates`, …) rather than by import path — a path list has to be extended
+every time somebody invents a fixture name, and nobody will remember to. Not
+attempted here; the two screens above are a product decision (retire or
+convert), not a passing cleanup.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
