@@ -1684,6 +1684,124 @@ export type Database = {
           },
         ];
       };
+      facility_tasks: {
+        Row: {
+          assigned_to: string | null;
+          category: string;
+          completed_at: string | null;
+          completed_by: string | null;
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          due_at: string | null;
+          estimated_minutes: number | null;
+          facility_id: string;
+          id: string;
+          metadata: Json;
+          notes: string | null;
+          priority: string;
+          requires_photo: boolean;
+          requires_signoff: boolean;
+          source: string;
+          source_ref: string | null;
+          status: string;
+          template_id: string | null;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          assigned_to?: string | null;
+          category?: string;
+          completed_at?: string | null;
+          completed_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          due_at?: string | null;
+          estimated_minutes?: number | null;
+          facility_id: string;
+          id?: string;
+          metadata?: Json;
+          notes?: string | null;
+          priority?: string;
+          requires_photo?: boolean;
+          requires_signoff?: boolean;
+          source?: string;
+          source_ref?: string | null;
+          status?: string;
+          template_id?: string | null;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          assigned_to?: string | null;
+          category?: string;
+          completed_at?: string | null;
+          completed_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          due_at?: string | null;
+          estimated_minutes?: number | null;
+          facility_id?: string;
+          id?: string;
+          metadata?: Json;
+          notes?: string | null;
+          priority?: string;
+          requires_photo?: boolean;
+          requires_signoff?: boolean;
+          source?: string;
+          source_ref?: string | null;
+          status?: string;
+          template_id?: string | null;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_tasks_assigned_to_fkey";
+            columns: ["assigned_to"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "facility_tasks_assigned_to_fkey";
+            columns: ["assigned_to"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_tasks_completed_by_fkey";
+            columns: ["completed_by"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "facility_tasks_completed_by_fkey";
+            columns: ["completed_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_tasks_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_tasks_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "task_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       facility_terminals: {
         Row: {
           created_at: string;
