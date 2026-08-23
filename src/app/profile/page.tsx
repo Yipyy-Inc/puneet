@@ -143,7 +143,6 @@ export default function ProfilePage() {
   });
 
   const [security, setSecurity] = useState({
-    twoFactorEnabled: false,
     sessionTimeout: "30",
     loginAlerts: true,
   });
@@ -753,38 +752,6 @@ export default function ProfilePage() {
                   <Button variant="outline" className="shadow-sm">
                     Change Password
                   </Button>
-                </div>
-
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-1">
-                    <p className="font-medium">Two-Factor Authentication</p>
-                    <p className="text-muted-foreground text-sm">
-                      Add an extra layer of security with 2FA
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge
-                      variant={
-                        security.twoFactorEnabled ? "default" : "secondary"
-                      }
-                    >
-                      {security.twoFactorEnabled ? "Enabled" : "Disabled"}
-                    </Badge>
-                    <Button
-                      variant={
-                        security.twoFactorEnabled ? "destructive" : "default"
-                      }
-                      onClick={() =>
-                        handleSecurityChange(
-                          "twoFactorEnabled",
-                          !security.twoFactorEnabled,
-                        )
-                      }
-                      className="shadow-sm"
-                    >
-                      {security.twoFactorEnabled ? "Disable" : "Enable"} 2FA
-                    </Button>
-                  </div>
                 </div>
 
                 <div className="space-y-4">
