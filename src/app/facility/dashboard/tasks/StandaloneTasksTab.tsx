@@ -220,7 +220,13 @@ function CompleteDialog({
 export function StandaloneTasksTab() {
   const [newOpen, setNewOpen] = useState(false);
   const [completing, setCompleting] = useState<TaskRow | null>(null);
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
+  // OPEN WORK BY DEFAULT, not everything ever. `cancelled` and `completed`
+  // accumulate forever by design — a task somebody abandoned is a record — so a
+  // board that shows all of them buries today's work behind months of history.
+  // The stat cards below reach the closed states.
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | "all" | "open">(
+    "open",
+  );
 
   const { data, isPending, isError, error } = useQuery(taskQueries.all());
   const update = useUpdateTask();
@@ -234,13 +240,15 @@ export function StandaloneTasksTab() {
   ).length;
   const completedCount = tasks.filter((t) => t.status === "completed").length;
 
-  const visible = useMemo(
-    () =>
-      statusFilter === "all"
-        ? tasks
-        : tasks.filter((t) => t.status === statusFilter),
-    [tasks, statusFilter],
-  );
+  const visible = useMemo(() => {
+    if (statusFilter === "all") return tasks;
+    if (statusFilter === "open") {
+      return tasks.filter(
+        (t) => t.status === "pending" || t.status === "in_progress",
+      );
+    }
+    return tasks.filter((t) => t.status === statusFilter);
+  }, [tasks, statusFilter]);
 
   const move = (task: TaskRow, status: TaskStatus, said: string) =>
     update.mutate(
@@ -420,14 +428,24 @@ export function StandaloneTasksTab() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-sm">
           One-off work, assigned to somebody or left for the shift to pick up.
         </p>
-        <Button onClick={() => setNewOpen(true)} className="gap-2">
-          <Plus className="size-4" />
-          New Task
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() =>
+              setStatusFilter((s) => (s === "all" ? "open" : "all"))
+            }
+          >
+            {statusFilter === "all" ? "Open work only" : "Show everything"}
+          </Button>
+          <Button onClick={() => setNewOpen(true)} className="gap-2">
+            <Plus className="size-4" />
+            New Task
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -436,8 +454,8 @@ export function StandaloneTasksTab() {
           value={overdueCount}
           subtitle="Past their due time"
           icon={Clock}
-          onClick={() => setStatusFilter("all")}
-          isActive={false}
+          onClick={() => setStatusFilter("open")}
+          isActive={statusFilter === "open"}
           valueClassName={overdueCount > 0 ? "text-red-600" : undefined}
         />
         <ClickableStatCard
@@ -446,7 +464,7 @@ export function StandaloneTasksTab() {
           subtitle="Not yet started"
           icon={Circle}
           onClick={() =>
-            setStatusFilter((s) => (s === "pending" ? "all" : "pending"))
+            setStatusFilter((s) => (s === "pending" ? "open" : "pending"))
           }
           isActive={statusFilter === "pending"}
         />
@@ -468,7 +486,7 @@ export function StandaloneTasksTab() {
           subtitle="Finished"
           icon={CheckCircle2}
           onClick={() =>
-            setStatusFilter((s) => (s === "completed" ? "all" : "completed"))
+            setStatusFilter((s) => (s === "completed" ? "open" : "completed"))
           }
           isActive={statusFilter === "completed"}
           valueClassName="text-emerald-600"
@@ -508,9 +526,11 @@ export function StandaloneTasksTab() {
             icon: ClipboardList,
             title: "No tasks here",
             description:
-              statusFilter === "all"
-                ? "Nothing has been written down yet."
-                : "Nothing in that state right now.",
+              statusFilter === "open"
+                ? "No open work. Everything written down has been finished or cancelled."
+                : statusFilter === "all"
+                  ? "Nothing has been written down yet."
+                  : "Nothing in that state right now.",
           }}
           actions={(row) => {
             const task = row as TaskRow;

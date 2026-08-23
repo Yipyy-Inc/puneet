@@ -234,11 +234,51 @@ test.describe("facility tasks", () => {
       page.getByRole("heading", { name: "Task Management" }),
     ).toBeVisible();
 
+    // SEARCH FOR IT rather than trusting it onto the first page. This test
+    // passed locally against a near-empty table and failed in CI once the
+    // table had a day of rows in it: the board pages at 10, and a task with no
+    // due date sorted behind every other undated task. The route now breaks
+    // that tie by newest-first and the board defaults to open work, but a
+    // screen test that depends on either is a test that goes red the week
+    // somebody writes eleven tasks.
+    await page.getByPlaceholder("Search tasks…").fill(title.slice(0, 24));
+
     // The row the API created. What this replaced read a module-level array,
     // so this assertion could not have passed against it.
     await expect(page.getByText(title).first()).toBeVisible({
       timeout: 15_000,
     });
+  });
+
+  test("a new task is not buried behind finished ones", async ({ page }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const title = freshTitle("not buried");
+    await createTask(page, { title });
+
+    // No due date, which is the case that broke: undated tasks sort last, and
+    // every cancelled task in the facility's history was on the page ahead of
+    // it. The board shows OPEN work by default now — a cancelled task is a
+    // record worth keeping and not worth reading every morning.
+    const res = await page.request.get(`${TASKS}?status=pending`);
+    expect(res.ok(), await res.text()).toBe(true);
+    const { tasks } = (await res.json()) as {
+      tasks: Task[];
+      truncated: boolean;
+    };
+
+    const mine = tasks.findIndex((t) => t.title === title);
+    expect(mine, "the new task is in the pending list").toBeGreaterThanOrEqual(
+      0,
+    );
+
+    // Among the undated, newest first. Anything ahead of it must be dated.
+    for (const earlier of tasks.slice(0, mine)) {
+      expect(
+        earlier.dueAt,
+        `"${earlier.title}" sorts ahead of a newer undated task`,
+      ).not.toBeNull();
+    }
   });
 
   test("a task written for the shift shows as unassigned, not as a gap", async ({
