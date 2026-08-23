@@ -29,6 +29,9 @@ import { createServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+/** Newest-first page size. Reported back as `truncated` when it bites. */
+const PAGE = 500;
+
 const KINDS = [
   "earned",
   "redeemed",
@@ -123,18 +126,67 @@ export async function GET(request: NextRequest) {
     .select(SELECT)
     .eq("facility_id", context.facilityId)
     .order("created_at", { ascending: false })
-    .limit(500);
+    // ── THE CAP IS REAL, AND IT SILENTLY HID A ROW ────────────────────────
+    //
+    // Newest 500. On 2026-08-23 a demo account reached 685 entries and an
+    // assertion in `loyalty-badges.spec.ts` started failing on every run: the
+    // ledger row it looks for had become row 536 and fell off the page by 36.
+    // Nothing was wrong with the data — the award and its entry were both
+    // there — and nothing said the answer had been cut.
+    //
+    // That is not only a test problem. A customer with a long history has it
+    // truncated here with no indication either, and the accounts these specs
+    // use can only GROW: `loyalty_transactions` is append-only by design, so
+    // every run adds and none removes.
+    //
+    // `since` is the narrow fix: it filters BEFORE the cap, so a caller that
+    // knows when the entry it wants was written can ask for a window small
+    // enough to contain it. Raising the number would only move the day this
+    // recurs — so the cap stays and the response now says when it bit.
+    .limit(PAGE);
 
   const account = params.get("account");
   if (account) query = query.eq("account_id", account);
+
+  // ── A WINDOW, BOTH ENDS ──────────────────────────────────────────────
+  //
+  // `since` ALONE is not enough, and finding that out is the whole lesson. The
+  // first version of this fix set only a lower bound anchored a second before
+  // the entry it wanted — and the entry stayed invisible, because 535 newer
+  // rows had accumulated since, so the newest-500 cut still fell above it. A
+  // lower bound cannot help when the volume is on the recent side of it.
+  //
+  // With both ends a caller can ask for a span narrow enough that the cap
+  // cannot bite, whatever has piled up since.
+  //
+  // Both are ISO instants and inclusive. An unparseable value is IGNORED rather
+  // than treated as the epoch or as an error: a bad filter that quietly returns
+  // everything is at worst noisy, while one that quietly returns nothing reads
+  // as "this customer has no history".
+  const since = params.get("since");
+  if (since && !Number.isNaN(Date.parse(since))) {
+    query = query.gte("created_at", new Date(since).toISOString());
+  }
+
+  const until = params.get("until");
+  if (until && !Number.isNaN(Date.parse(until))) {
+    query = query.lte("created_at", new Date(until).toISOString());
+  }
 
   const { data, error } = await query;
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  const rows = (data ?? []) as unknown as Row[];
+
+  // Say so when the answer was cut. A ledger is MONEY, and one that stops at an
+  // arbitrary row with nothing indicating it invites somebody to conclude the
+  // earlier entries never happened. A full page is the only signal PostgREST
+  // gives here, so it is reported as one rather than inferred by the caller.
   return NextResponse.json({
-    transactions: ((data ?? []) as unknown as Row[]).map(toRow),
+    transactions: rows.map(toRow),
+    truncated: rows.length === PAGE,
   });
 }
 

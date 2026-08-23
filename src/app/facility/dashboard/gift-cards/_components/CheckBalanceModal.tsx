@@ -25,9 +25,10 @@ import {
   ScanLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { giftCards, physicalCardBatches } from "@/data/gift-cards";
-import { clients } from "@/data/clients";
+import { physicalCardBatches } from "@/data/gift-cards";
 import type { GiftCard } from "@/types/payments";
+import { toLegacyGiftCard } from "../_lib/to-legacy-card";
+import type { GiftCardWithLedger } from "@/lib/api/gift-cards";
 
 const CameraScanner = dynamic(
   () =>
@@ -46,7 +47,9 @@ type LookupState =
   | "searching"
   | "found"
   | "not_found"
-  | "inactive_blank";
+  | "inactive_blank"
+  /** The lookup itself failed. Deliberately NOT folded into "not found". */
+  | "error";
 
 const STATUS_META: Record<
   GiftCard["status"],
@@ -77,45 +80,63 @@ export function CheckBalanceModal({
   const [foundCard, setFoundCard] = useState<GiftCard | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
 
+  /**
+   * Look the card up in POSTGRES.
+   *
+   * What this replaced searched `src/data/gift-cards` after a 600ms pause, so
+   * it answered about cards nobody had sold and knew nothing about cards that
+   * had been. A counter reading a balance off it was reading a fixture.
+   *
+   * The lookup is exact and facility-scoped by the SESSION. A code belonging to
+   * another business comes back as "not found" — the same answer as a code
+   * nobody has — because a gift card code is a bearer instrument and an answer
+   * that separates the two is a way to search for real ones.
+   */
   const handleSearch = async () => {
-    if (!cardCode.trim()) return;
+    const q = cardCode.trim();
+    if (!q) return;
     setLookupState("searching");
-    await new Promise((r) => setTimeout(r, 600));
-    const q = cardCode.trim().toLowerCase();
 
-    // 1. Direct gift-card match by code or POS card number.
-    let card =
-      giftCards.find(
-        (gc) =>
-          gc.facilityId === facilityId &&
-          (gc.code.toLowerCase() === q || gc.cardNumber?.toLowerCase() === q),
-      ) ?? null;
+    let card: GiftCard | null = null;
+    try {
+      const response = await fetch(
+        `/api/gift-cards?withLedger=1&code=${encodeURIComponent(q)}`,
+      );
+      if (!response.ok) throw new Error(String(response.status));
+      const { cards } = (await response.json()) as {
+        cards: GiftCardWithLedger[];
+      };
+      card = cards[0] ? toLegacyGiftCard(cards[0]) : null;
+    } catch {
+      // A failed request is NOT "no such card". Saying "not found" over a
+      // network error is how somebody concludes a customer's card is worthless.
+      setFoundCard(null);
+      setLookupState("error");
+      return;
+    }
 
-    // 2. Otherwise match a printed physical card number / barcode in inventory,
-    //    then resolve the linked gift card if the card has been activated.
+    // A printed card that has never been sold is still in the batch inventory
+    // and has no gift card behind it yet. That inventory is still a fixture, so
+    // this branch only ever explains blank stock - it never reports a balance.
     if (!card) {
-      const physical = physicalCardBatches
+      const blank = physicalCardBatches
         .filter((b) => b.facilityId === facilityId)
         .flatMap((b) => b.cards)
         .find(
           (c) =>
-            c.cardNumber.toLowerCase() === q || c.barcode.toLowerCase() === q,
+            c.cardNumber.toLowerCase() === q.toLowerCase() ||
+            c.barcode.toLowerCase() === q.toLowerCase(),
         );
-      if (physical?.giftCardId) {
-        card = giftCards.find((gc) => gc.id === physical.giftCardId) ?? null;
-      } else if (physical) {
-        // Blank stock that hasn't been sold/activated — no balance to show.
+      if (blank && !blank.giftCardId) {
         setFoundCard(null);
         setLookupState("inactive_blank");
         return;
       }
-    }
-
-    if (!card) {
       setFoundCard(null);
       setLookupState("not_found");
       return;
     }
+
     setFoundCard(card);
     setLookupState("found");
   };
@@ -132,8 +153,11 @@ export function CheckBalanceModal({
     onOpenChange(false);
   };
 
-  const owner = foundCard?.purchasedByClientId
-    ? clients.find((c) => c.id === foundCard.purchasedByClientId)
+  // The purchaser's name travels WITH the card now (resolved server-side from
+  // the row's own foreign key), so there is no second list to look them up in
+  // and no way for the two to disagree about who bought it.
+  const owner = foundCard?.purchasedBy
+    ? { id: foundCard.purchasedByClientId, name: foundCard.purchasedBy }
     : null;
   const isActive = foundCard?.status === "active";
 
@@ -201,6 +225,16 @@ export function CheckBalanceModal({
               <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
                 <AlertCircle className="size-4 shrink-0" />
                 No gift card found with that code. Please check and try again.
+              </div>
+            )}
+
+            {/* The lookup failed. Said as itself, because "no such card" over a
+                dropped request is how a real card gets turned away. */}
+            {lookupState === "error" && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                <AlertCircle className="size-4 shrink-0" />
+                The balance could not be checked just now. This does not mean
+                the card is invalid — try again.
               </div>
             )}
 

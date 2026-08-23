@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { ledgersForFacility } from "@/lib/api/gift-card-ledger";
 import { getViewer } from "@/lib/auth/viewer";
 import {
   CARD_SELECT,
@@ -96,11 +97,29 @@ export async function GET(request: NextRequest) {
   }
 
   const now = Date.now();
-  return NextResponse.json({
-    cards: ((data ?? []) as unknown as CardRecord[]).map((row) =>
-      toCardRow(row, now),
-    ),
-  });
+  const cards = ((data ?? []) as unknown as CardRecord[]).map((row) =>
+    toCardRow(row, now),
+  );
+
+  // `withLedger=1` attaches each card's movements — two extra queries for the
+  // whole facility, not two per card.
+  //
+  // Opt-in rather than always, because the two callers want different things:
+  // the gift-cards screen shows a card's history inline and sums across all of
+  // them in its reports tab, while a checkout looking a code up needs the
+  // balance and nothing else. Sending the history to the till would be paying
+  // for a statement to answer "how much is on this?".
+  if (params.get("withLedger") === "1") {
+    const ledgers = await ledgersForFacility(supabase, context.facilityId);
+    return NextResponse.json({
+      cards: cards.map((card) => ({
+        ...card,
+        transactions: ledgers.get(card.id) ?? [],
+      })),
+    });
+  }
+
+  return NextResponse.json({ cards });
 }
 
 /**

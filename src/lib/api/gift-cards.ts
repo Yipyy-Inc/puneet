@@ -3,11 +3,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { GiftCardRow } from "@/lib/api/mappers/gift-card";
-import type {
-  GiftCardDetailPayload,
-  GiftCardTransactionRow,
-} from "@/app/api/gift-cards/[id]/route";
+import type { GiftCardDetailPayload } from "@/app/api/gift-cards/[id]/route";
+import type { GiftCardTransactionRow } from "@/lib/api/gift-card-ledger";
 import type { RedeemResult } from "@/app/api/gift-cards/redeem/route";
+import type { AdjustResult } from "@/app/api/gift-cards/[id]/adjust/route";
 
 // ============================================================================
 // Gift cards, from the browser.
@@ -29,6 +28,11 @@ import type { RedeemResult } from "@/app/api/gift-cards/redeem/route";
 // ============================================================================
 
 export type { GiftCardRow, GiftCardTransactionRow, GiftCardDetailPayload };
+
+/** A card with its movements, as `allWithLedger` returns it. */
+export interface GiftCardWithLedger extends GiftCardRow {
+  transactions: GiftCardTransactionRow[];
+}
 
 async function get<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -66,6 +70,23 @@ export const giftCardQueries = {
     queryKey: ["gift-cards", "list"] as const,
     queryFn: async () =>
       (await get<{ cards: GiftCardRow[] }>("/api/gift-cards")).cards,
+  }),
+
+  /**
+   * Every card WITH its movements attached.
+   *
+   * What the gift-cards screen reads: it shows a card's history inline and its
+   * reports tab sums across all of them, so fetching the ledger per card would
+   * be one request per row. Two queries for the whole facility instead.
+   */
+  allWithLedger: () => ({
+    queryKey: ["gift-cards", "list", "with-ledger"] as const,
+    queryFn: async () =>
+      (
+        await get<{ cards: GiftCardWithLedger[] }>(
+          "/api/gift-cards?withLedger=1",
+        )
+      ).cards,
   }),
 
   /**
@@ -153,6 +174,28 @@ export function useRedeemGiftCard() {
       bookingRef?: number;
       note?: string;
     }) => await send<RedeemResult>("/api/gift-cards/redeem", input),
+    onSuccess: () => invalidateGiftCards(queryClient),
+  });
+}
+
+/**
+ * Correct a balance by appending to the ledger.
+ *
+ * `amount` is SIGNED: positive puts money back on, negative takes it off. A
+ * reason is required — an adjustment is the one entry with no document behind
+ * it, so the sentence explaining it is the only audit there will be.
+ *
+ * Separate from `useUpdateGiftCard` on purpose. That one edits a card and
+ * touches no money; this one moves it, and the two must not share a form.
+ */
+export function useAdjustGiftCard() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; amount: number; reason: string }) =>
+      await send<AdjustResult>(
+        `/api/gift-cards/${encodeURIComponent(input.id)}/adjust`,
+        { amount: input.amount, reason: input.reason },
+      ),
     onSuccess: () => invalidateGiftCards(queryClient),
   });
 }

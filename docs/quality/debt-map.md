@@ -4210,6 +4210,133 @@ Also measured, same run: the minted token carries `"role": "authenticated"` from
 
 **Do instead:** refuse unless the WorkOS user has `emailVerified === true`, on **both** `register/verify` and `authenticate/verify` — a credential enrolled under a weaker rule must not become the way around a stronger one. Do not infer it from having a session. This is enforced by `bun run check:passkey-email-verified`, which was written _before_ the routes it guards so they are born inside it; it also confines `createMagicAuth` to the single bridge file, because anything that can call it can become any user by email. The gate strips comments before matching, so writing the word in prose does not satisfy it.
 
+## Snapshot (2026-08-23, gift cards)
+
+### 🔴 Making one end of a value transfer real, while the other stays a fixture, DESTROYS money
+
+`/facility/dashboard/gift-cards` has a "Redeem to Wallet" button. It moves value
+off a gift card and onto a customer wallet.
+
+As of 2026-08-23 the **card** is a real row (`gift_cards`, with a trigger-maintained
+balance over an append-only ledger). The **wallet** is not: there is no wallet
+table at all, and `customerWallets` in `src/data/gift-cards.ts` is hand-authored.
+
+Wiring that button up in the conversion would have taken a real balance off a
+real card and credited React state — money gone, with a success toast over it.
+That is strictly WORSE than the all-fixture version it replaced, where nothing
+was real and nothing could be lost. The button is disabled and its callback
+writes nothing; both, because either alone is one edit away from paying out into
+a void.
+
+**Why it's risky:** the pull to "finish the screen" is strongest exactly here,
+and the change looks like the ones either side of it — the same modal, the same
+mutation shape, one more `useMutation`. Nothing fails. The card's ledger even
+looks correct afterwards: it records a redemption that genuinely happened. Only
+the destination is missing, and no test that reads the card can see that.
+
+**Do instead:** when converting a screen that MOVES value, list both ends first
+and convert them together or neither. If one end cannot be built in the same
+change, turn the transfer off in the UI **and** in the handler, and say why in
+both places.
+
+For this one specifically: the likeliest right answer is that a customer wallet
+IS `loyalty_accounts.credit_balance`, which already exists, is guarded by the
+same trigger pattern, and is already the customer's store credit. It would need
+one function moving both ledgers in a single transaction, the way
+`issue_gift_card` moves the card and its opening entry. Note before building it
+that **nothing spends `credit_balance` down yet** — it is only ever added to — so
+that gap is the real decision, not the plumbing.
+
+### 🟡 The three CUSTOMER gift-card screens are still wholly fixture, and that is the safe half
+
+`/customer/gift-cards`, `/customer/gift-cards/my-cards` and
+`/customer/gift-cards/redeem` all read `src/data/gift-cards`. Both ends of what
+they do are fake, so nothing there can lose money — that is the reason they were
+left alone rather than an oversight.
+
+**Why it's risky:** they are now inconsistent with the facility screen in a way
+that looks like a bug and is not. A card a facility genuinely issues does NOT
+appear in the recipient's list, because that list is a hand-written array. The
+tempting fix — point the customer list at `/api/gift-cards` — would be half
+right: RLS shows a customer the cards they BOUGHT (`purchased_by_client_id`),
+never ones bought FOR them, because the recipient is an email on a row rather
+than an identity and matching on it would let anyone who guessed an address read
+a balance.
+
+**Do instead:** convert the customer side as its own change, and decide first how
+a recipient is IDENTIFIED — a claim step that binds the card to a signed-in
+account is the shape that does not leak. Do not widen `gift_cards_read` to match
+on `recipient_email`.
+
+### 🟡 A legacy numeric `facilityId` on a converted row must be a sentinel, never 11
+
+`src/app/facility/dashboard/gift-cards/_lib/to-legacy-card.ts` maps a Postgres
+card into the `GiftCard` shape the 2,099-line screen and its ~3,900 lines of
+components already speak. That type carries `facilityId: number`; Postgres
+carries a uuid.
+
+It is set to `0`. Setting it to `11` — the demo facility's legacy id, and the
+value 97 other client-side occurrences use — would make a Pawradise card claim to
+be a Doggieville one and silently pass every `=== FACILITY_ID` filter it met.
+
+**Why it's risky:** `0` is the safe choice but not a free one. Any surviving
+filter on that field now matches nothing, so a feature can turn itself off
+QUIETLY rather than loudly — which is exactly what happened to the detail
+sheet's "Extend Expiry", gated on
+`giftCardSettings.find(s => s.facilityId === card.facilityId)?.expiryEnabled`.
+It resolved to `undefined`, defaulted to `false`, and the button vanished with
+no error anywhere.
+
+**Do instead:** when a shim cannot carry a field honestly, use a sentinel that
+matches nothing AND grep every reader of that field in the same change. Anything
+that needs the facility takes it as a prop from the page, which knows — see
+`expiryEnabled` on `GiftCardDetailSheet`. Better still, retype the components off
+the legacy shape and delete the shim; it exists so the data move and the UI
+rewrite are two diffs rather than one unattributable one.
+
+### 🔴 An append-only ledger + a newest-N cap = a test that breaks on a day nobody touched it — 2026-08-23
+
+`loyalty-badges.spec.ts` "a badge that pays points actually pays them" went red
+on main with **nothing in the application changed**. Two commits in a row failed
+CI on it and it looked like a regression from whichever landed last.
+
+It was neither. Measured against production:
+
+- The award row existed (`points_awarded: 5`) and so did its ledger entry.
+- The account had **685** `loyalty_transactions`.
+- `/api/loyalty/transactions` ordered newest-first and took **500**.
+- The entry was row **536**. It fell off the page by 36 rows.
+
+`loyalty_transactions` is append-only on purpose, and the loyalty specs post to
+the SAME demo account every run. So that account can only grow, and the day it
+crossed 500 this assertion began failing forever — with no commit to blame and a
+message ("expected 1, received 0") that reads exactly like the feature broke.
+
+**Why it's risky:** every signal points at the wrong place. The failing test names
+a feature that works. `git bisect` lands on an innocent commit or on none. And the
+same shape is waiting in every other spec that reads a capped list of rows it also
+appends to — `loyalty-earning`, `loyalty-ledger`, the care log.
+
+**Do instead:** when a spec asserts on one row in a list that a cap could truncate,
+ask for a WINDOW containing it rather than scanning the page. The route now takes
+`?since=` and `?until=`, both filtering before the cap.
+
+**Both ends.** The first fix set only `since`, anchored a second before the entry —
+and it still failed, because the cut is on the NEWEST rows and 535 of them had
+piled up after that point. A lower bound cannot help when the volume is on the
+recent side of it. That one costs a full build-and-run to discover, so it is
+written down here rather than rediscovered.
+
+**And the screen has the same hole.** The cap is not only a test problem: a customer
+with 600 entries silently loses 100, and a truncated MONEY history invites somebody
+to conclude the earlier entries never happened. The response now carries
+`truncated: true` when the cap bites — **no screen reads it yet**. That is the
+remaining half.
+
+The structural fix, not done: these specs should mint a fresh account per run
+instead of piling onto one shared row. The entries stay append-only, they just
+stop accumulating in the same place. Its own change.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

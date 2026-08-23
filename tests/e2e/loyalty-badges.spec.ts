@@ -264,16 +264,41 @@ test.describe("a badge is earned once, and kept", () => {
 
     await nudge(page, account.id);
 
-    const held = (await awards(page)).awards
-      .filter((a) => a.memberId === account.id)
-      .map((a) => a.badgeId);
+    const mine = (await awards(page)).awards.filter(
+      (a) => a.memberId === account.id,
+    );
+    const held = mine.map((a) => a.badgeId);
 
     // The award row is the record; the ledger entry is the money. Both, or the
     // badge is a picture of a reward.
     expect(held).toContain(PAYING.id);
 
+    // ── ASK FOR THE WINDOW THE ENTRY IS IN ──────────────────────────────
+    //
+    // `?account=` alone returns the newest 500. These accounts only GROW —
+    // `loyalty_transactions` is append-only, so every run of the ledger and
+    // earning specs adds rows and none can be removed — and on 2026-08-23 this
+    // assertion started failing on every run because the entry it looks for had
+    // become row 536 of 685 and fell off the page by 36.
+    //
+    // The award knows when it was granted, so the window is anchored to that
+    // rather than to a bigger number, which would only move the day this
+    // recurs.
+    //
+    // BOTH ends. A lower bound alone does not work here and it is worth saying
+    // why: the cut is on the NEWEST 500, and 535 rows had accumulated after this
+    // award, so anchoring only the start still left the entry below the cap. A
+    // few seconds of slack either side because the award row and the ledger
+    // entry are written in the same breath but not at the same instant.
+    const grantedAt = mine.find((a) => a.badgeId === PAYING.id)?.earnedAt;
+    expect(grantedAt, "the paying badge names when it was earned").toBeTruthy();
+    const granted = new Date(grantedAt as string).getTime();
+    const since = new Date(granted - 5000).toISOString();
+    const until = new Date(granted + 5000).toISOString();
+
     const txns = await page.request.get(
-      `${TRANSACTIONS}?account=${encodeURIComponent(account.id)}`,
+      `${TRANSACTIONS}?account=${encodeURIComponent(account.id)}` +
+        `&since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`,
     );
     expect(txns.ok(), await txns.text()).toBe(true);
     const { transactions } = (await txns.json()) as {

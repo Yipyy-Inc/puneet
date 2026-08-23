@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -57,7 +58,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { GiftCard, GiftCardTransaction } from "@/types/payments";
 import { clients } from "@/data/clients";
-import { giftCardSettings, giftCardAuditLogs } from "@/data/gift-cards";
+import { giftCardAuditLogs } from "@/data/gift-cards";
+import { useAdjustGiftCard, useUpdateGiftCard } from "@/lib/api/gift-cards";
 
 // Acting staff member (mock — no auth context yet; matches the gift card audit log staff).
 const CURRENT_STAFF = "Sarah Johnson";
@@ -202,6 +204,8 @@ interface GiftCardDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onVoid?: (card: GiftCard, options: VoidOptions) => void;
+  /** Whether the facility's programme sets an expiry — see `expiryEnabled`. */
+  expiryEnabled?: boolean;
 }
 
 export function GiftCardDetailSheet({
@@ -209,6 +213,7 @@ export function GiftCardDetailSheet({
   open,
   onOpenChange,
   onVoid,
+  expiryEnabled: expiryEnabledProp = false,
 }: GiftCardDetailSheetProps) {
   // Which card's full number is revealed (null = masked). Deriving `revealed`
   // from this means switching cards re-masks automatically.
@@ -242,13 +247,19 @@ export function GiftCardDetailSheet({
   );
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
-  // Local session overrides so Extend/Adjust update the drawer live (no backend).
-  const [overrides, setOverrides] = useState<
-    Record<
-      string,
-      Partial<Pick<GiftCard, "currentBalance" | "expiryDate" | "neverExpires">>
-    >
-  >({});
+  // ── EXTEND AND ADJUST WRITE TO POSTGRES ────────────────────────────────
+  //
+  // What these replaced kept an `overrides` map so the drawer LOOKED updated
+  // and showed an alert saying it had been. Nothing was written; closing the
+  // drawer discarded it. With the card now real that was worse than dead - it
+  // reported a correction the ledger never received.
+  //
+  // Extending an expiry is a PATCH (it moves no money). Adjusting a balance is
+  // an append to the ledger, which is why it is a different call: the balance
+  // column is trigger-maintained and refuses to be written directly.
+  const updateCard = useUpdateGiftCard();
+  const adjustCard = useAdjustGiftCard();
+  const [writeError, setWriteError] = useState<string | null>(null);
 
   // Auto-hide the full code 5 seconds after it's revealed.
   useEffect(() => {
@@ -294,16 +305,20 @@ export function GiftCardDetailSheet({
       name
     );
 
-  // Effective values reflect any session adjustments made in this drawer.
-  const ov = overrides[card.id] ?? {};
-  const balance = ov.currentBalance ?? card.currentBalance;
-  const expiryDate = ov.expiryDate ?? card.expiryDate;
-  const neverExpires = ov.neverExpires ?? card.neverExpires;
+  // Straight off the card. There is no local override to fall back to any
+  // more, so what this shows is what the database holds - and a failed write
+  // leaves the old number on screen instead of the one that did not land.
+  const balance = card.currentBalance;
+  const expiryDate = card.expiryDate;
+  const neverExpires = card.neverExpires;
 
   // Extend Expiry is only available when the facility has expiry enabled.
-  const expiryEnabled =
-    giftCardSettings.find((s) => s.facilityId === card.facilityId)
-      ?.expiryEnabled ?? false;
+  //
+  // Passed in rather than looked up by `card.facilityId`: a Postgres card
+  // carries a uuid facility and the shim sets that legacy number to a sentinel,
+  // so a lookup here would silently resolve to nothing and quietly disable the
+  // button. The page knows which facility it is showing.
+  const expiryEnabled = expiryEnabledProp;
 
   const usedAmount = card.initialAmount - balance;
   const remainingPct =
@@ -363,8 +378,13 @@ export function GiftCardDetailSheet({
 
   const handleResend = () => {
     const to = card.recipientEmail ?? card.recipientName ?? "the recipient";
-    logEvent("resend", `Sent to ${to}`);
-    alert(`Gift card ${card.code} email resent to ${to}.`);
+    logEvent("resend", `Requested for ${to}`);
+    // Nothing sends gift card email yet. Saying "resent" over a mailer that
+    // does not exist is the failure `check:success-claims` was written for, so
+    // this says what actually happened: the code is on screen, hand it over.
+    toast.info("No gift card email is sent yet.", {
+      description: `Give ${card.code} to ${to} directly.`,
+    });
   };
 
   // Presets extend from whichever is later: the current expiry or today,
@@ -382,20 +402,25 @@ export function GiftCardDetailSheet({
     setExtendOpen(true);
   };
 
-  const handleExtendConfirm = () => {
+  const handleExtendConfirm = async () => {
     if (!extendDate) return;
     const formatted = fmtDay(new Date(`${extendDate}T00:00:00`));
-    setOverrides((prev) => ({
-      ...prev,
-      [card.id]: {
-        ...prev[card.id],
-        expiryDate: extendDate,
-        neverExpires: false,
-      },
-    }));
+    setWriteError(null);
+    try {
+      await updateCard.mutateAsync({
+        id: card.id,
+        // Midnight local, as an instant. The database compares expiry against
+        // its own clock, so the value it stores has to be a real point in time
+        // rather than a date string somebody has to interpret.
+        expiresAt: new Date(`${extendDate}T00:00:00`).toISOString(),
+      });
+    } catch (error) {
+      setWriteError((error as Error).message);
+      return;
+    }
     logEvent("extend_expiry", `New expiry: ${formatted}`);
     setExtendOpen(false);
-    alert(`Expiry for ${card.code} extended to ${formatted}.`);
+    toast.success(`Expiry for ${card.code} extended to ${formatted}.`);
   };
 
   const openAdjust = () => {
@@ -411,20 +436,34 @@ export function GiftCardDetailSheet({
   const adjustValid =
     adjustValue > 0 && adjustNewBalance >= 0 && adjustReason.trim() !== "";
 
-  const handleAdjustConfirm = () => {
+  const handleAdjustConfirm = async () => {
     if (!adjustValid) return;
     const sign = adjustSigned >= 0 ? "+" : "−";
-    const detail = `${sign}$${Math.abs(adjustSigned).toFixed(2)}${
-      adjustReason ? ` — ${adjustReason}` : ""
-    } (new balance $${adjustNewBalance.toFixed(2)})`;
-    setOverrides((prev) => ({
-      ...prev,
-      [card.id]: { ...prev[card.id], currentBalance: adjustNewBalance },
-    }));
+    setWriteError(null);
+
+    let applied;
+    try {
+      applied = await adjustCard.mutateAsync({
+        id: card.id,
+        // SIGNED. The direction lives in the number that reaches the ledger,
+        // not in which button was pressed.
+        amount: adjustSigned,
+        reason: adjustReason.trim(),
+      });
+    } catch (error) {
+      setWriteError((error as Error).message);
+      return;
+    }
+
+    // The NEW BALANCE is read back from the row the database returned, not from
+    // the arithmetic done above. Those agree today; if they ever stop, the row
+    // is the one that is right.
+    const detail = `${sign}$${Math.abs(adjustSigned).toFixed(2)} — ${adjustReason.trim()} (new balance $${applied.card.balance.toFixed(2)})`;
     logEvent("adjust_balance", detail);
     setAdjustOpen(false);
-    alert(
-      `Balance for ${card.code} adjusted ${sign}$${Math.abs(adjustSigned).toFixed(2)}. New balance: $${adjustNewBalance.toFixed(2)}.`,
+    toast.success(
+      `Balance for ${card.code} adjusted ${sign}$${Math.abs(adjustSigned).toFixed(2)}.`,
+      { description: `New balance: $${applied.card.balance.toFixed(2)}.` },
     );
   };
 

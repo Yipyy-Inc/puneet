@@ -201,6 +201,72 @@ begin
     'balance=' || v_card.balance || ' status=' || v_card.status);
 end $$;
 
+-- ── Correcting a mistake is another entry ─────────────────────────────────
+--
+-- The card is at zero after G7, so putting money BACK on it is the natural
+-- shape of the correction this exists for: a till that charged the whole card
+-- when it should have charged part of it.
+
+do $$
+declare v_card public.gift_cards%rowtype; v_entries int;
+begin
+  v_card := public.adjust_gift_card(
+    (select id from public.gift_cards where code = 'GCTEST0001'),
+    25.00, 'Overcharged at the till');
+  select count(*) into v_entries
+    from public.gift_card_transactions
+   where gift_card_id = v_card.id and kind = 'adjusted';
+  perform pg_temp.t('G14 an adjustment puts money back and reads as active',
+    v_card.balance = 25.00 and v_card.status = 'active' and v_entries = 1,
+    'balance=' || v_card.balance || ' status=' || v_card.status
+      || ' adjustments=' || v_entries);
+end $$;
+
+do $$
+declare state text; v_balance numeric;
+begin
+  begin
+    perform public.adjust_gift_card(
+      (select id from public.gift_cards where code = 'GCTEST0001'), -500.00, 'Too much');
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+  select balance into v_balance from public.gift_cards where code = 'GCTEST0001';
+  -- Refused BY THE TRIGGER, and the balance is verified unmoved. An adjustment
+  -- that reported an error after debiting would be the worst version of this.
+  perform pg_temp.t('G15 an adjustment cannot overdraw, and takes nothing',
+    state = '23514' and v_balance = 25.00,
+    'state=' || state || ' balance=' || v_balance);
+end $$;
+
+do $$
+declare state text;
+begin
+  begin
+    perform public.adjust_gift_card(
+      (select id from public.gift_cards where code = 'GCTEST0001'), 10.00, '   ');
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+  -- A blank reason is refused rather than stored. It is the only record of why
+  -- the balance changed, so an adjustment without one is unauditable.
+  perform pg_temp.t('G16 an adjustment without a reason is refused',
+    state = '22023', 'state=' || state);
+end $$;
+
+do $$
+declare state text;
+begin
+  begin
+    perform public.adjust_gift_card(
+      (select id from public.gift_cards where code = 'GCTEST0001'), 0, 'Nothing');
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+  perform pg_temp.t('G17 a zero adjustment is refused',
+    state = '22023', 'state=' || state);
+end $$;
+
 -- ── A decision beats arithmetic ───────────────────────────────────────────
 
 do $$
@@ -215,6 +281,21 @@ begin
   exception when others then state := sqlstate;
   end;
   perform pg_temp.t('G8 a cancelled card is unspendable even with a balance',
+    state = '42501', 'state=' || state);
+end $$;
+
+do $$
+declare state text;
+begin
+  begin
+    perform public.adjust_gift_card(
+      (select id from public.gift_cards where code = 'GCCANCEL01'), 10.00, 'Put it back');
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+  -- Cancelling is a DECISION. Money does not go on or off a card somebody
+  -- wrote off; reinstate it first, deliberately, or issue a new one.
+  perform pg_temp.t('G18 a cancelled card cannot be adjusted either',
     state = '42501', 'state=' || state);
 end $$;
 
@@ -273,6 +354,28 @@ begin
   end;
   perform pg_temp.t('G11 a stranger cannot issue against somebody else''s facility',
     state = '42501', 'state=' || state);
+end $$;
+
+do $$
+declare real_card text; fake_card text;
+begin
+  begin
+    perform public.adjust_gift_card(
+      (select id from public.gift_cards where code = 'GCTEST0001'), 10.00, 'Not mine');
+    real_card := 'ALLOWED';
+  exception when others then real_card := sqlstate || ':' || sqlerrm;
+  end;
+  begin
+    perform public.adjust_gift_card(
+      '00000000-0000-0000-0000-0000000cafe1'::uuid, 10.00, 'Not real');
+    fake_card := 'ALLOWED';
+  exception when others then fake_card := sqlstate || ':' || sqlerrm;
+  end;
+  -- Same shape as G10. A card that exists somewhere else answers exactly as a
+  -- card that does not exist, so this cannot be used to discover either.
+  perform pg_temp.t('G19 adjusting a card you cannot reach is INDISTINGUISHABLE from adjusting one that does not exist',
+    real_card = fake_card and real_card like '42501%',
+    'real=' || real_card || ' fake=' || fake_card);
 end $$;
 
 -- ── Who can read one ──────────────────────────────────────────────────────
