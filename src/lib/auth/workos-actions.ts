@@ -478,3 +478,59 @@ export async function revokeMyOtherSessions(): Promise<{
   }
   return { ended: others.length };
 }
+
+// ── Email verification ──────────────────────────────────────────────────────
+
+/**
+ * Whether the signed-in user's address is actually verified.
+ *
+ * The customer security card took `emailVerified` as a PROP and nothing ever
+ * passed it, so it was permanently undefined and every user — verified or not —
+ * was shown "Unverified" beside a button offering to fix it. Both environments
+ * set `isEmailVerificationRequired: true`, so in practice everyone who can sign
+ * in at all is already verified, and the screen was telling all of them
+ * otherwise.
+ *
+ * Asked of WorkOS rather than threaded through props, so there is one answer and
+ * no caller can forget to supply it.
+ */
+export async function myEmailStatus(): Promise<{
+  email: string | null;
+  emailVerified: boolean;
+}> {
+  const { user } = await withAuth();
+  if (!user) return { email: null, emailVerified: false };
+  return { email: user.email, emailVerified: user.emailVerified };
+}
+
+/**
+ * Send the verification email again.
+ *
+ * REPLACES A TOAST. The button called a handler that only rendered
+ * `Verification link sent to …` — no call to anything. WorkOS has always been
+ * able to do this (`sendVerificationEmail`), and the environment's email is
+ * live: `isEmailVerificationEmailEnabled` is true and delivery runs through
+ * Resend, which is why sign-up verification has always genuinely arrived. Only
+ * this button was inert.
+ *
+ * The user id comes from the session, never an argument — otherwise this would
+ * be an open relay for sending mail to any account by id.
+ */
+export async function sendMyVerificationEmail(): Promise<{ error?: string }> {
+  const { user } = await withAuth();
+  if (!user) return { error: "You are not signed in." };
+
+  if (user.emailVerified) {
+    return { error: "That address is already verified." };
+  }
+
+  try {
+    await getWorkOS().userManagement.sendVerificationEmail({ userId: user.id });
+  } catch (error) {
+    // Rate limiting is the expected failure — WorkOS answers 429 for repeated
+    // sends, and its own wording says how long to wait, which is more useful
+    // than a generic retry message.
+    return { error: readableError(error, "Could not send that email.") };
+  }
+  return {};
+}
