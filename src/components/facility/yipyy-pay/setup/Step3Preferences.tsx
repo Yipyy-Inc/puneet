@@ -292,50 +292,24 @@ export function Step3Preferences({
             title="We absorb it"
             body="Your customer pays the price on the invoice and nothing more. The fee comes out of your takings."
           />
+          {/* Disabled, not hidden. A facility comparing Yipyy against a
+              competitor that offers this should see that it is understood and
+              coming, rather than wonder whether anyone thought about it. */}
           <Choice
-            selected={form.feePayer === "client"}
-            onSelect={() => patch({ feePayer: "client" })}
+            selected={false}
+            disabled
+            onSelect={() => undefined}
             title="Add it to the invoice"
-            body="The fee appears as its own line, named and visible, before the customer pays."
+            body="Not available yet — see below."
+            badge="Coming"
           />
         </div>
-        {form.feePayer === "client" && (
-          <div className="space-y-3 rounded-lg border p-4">
-            <div className="max-w-sm space-y-1.5">
-              <Label htmlFor="yipyy-pay-fee-label" className="text-sm">
-                What to call it on the invoice
-              </Label>
-              <Input
-                id="yipyy-pay-fee-label"
-                value={form.feeLabel}
-                maxLength={40}
-                onChange={(event) => patch({ feeLabel: event.target.value })}
-              />
-            </div>
-            <label className="flex items-start gap-2.5">
-              <Checkbox
-                checked={form.feeExcludeDebit}
-                onCheckedChange={(checked) =>
-                  patch({ feeExcludeDebit: checked === true })
-                }
-                className="mt-0.5"
-              />
-              <span className="text-sm/relaxed">
-                Do not add it to debit cards
-                <span className="text-muted-foreground block text-xs/relaxed">
-                  Several card networks forbid surcharging a debit transaction.
-                  Leave this on unless you have checked otherwise.
-                </span>
-              </span>
-            </label>
-            <p className="text-muted-foreground text-xs/relaxed">
-              Passing the fee on is regulated, and the rules differ by country
-              and by state. Check what applies where you trade — Yipyy shows the
-              fee clearly to the customer, but the decision to charge it is
-              yours.
-            </p>
-          </div>
-        )}
+        <p className="text-muted-foreground text-xs/relaxed">
+          Passing the fee on to customers is not switched on yet. It changes
+          what a customer is charged, so it needs the invoice, the receipt and
+          the refund to agree about it — and the rules differ by country and by
+          state. For now Yipyy Pay absorbs it into your takings.
+        </p>
       </section>
 
       {multiLocation && (

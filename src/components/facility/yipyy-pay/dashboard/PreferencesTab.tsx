@@ -10,19 +10,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -93,23 +82,27 @@ function Choice({
   onSelect,
   title,
   body,
+  disabled,
 }: {
   selected: boolean;
   onSelect: () => void;
   title: string;
   body: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       role="radio"
       aria-checked={selected}
+      disabled={disabled}
       onClick={onSelect}
       className={cn(
         "flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-colors",
         selected
           ? "border-sky-500 bg-sky-500/5 ring-1 ring-sky-500/30"
           : "hover:bg-muted/50",
+        disabled && "cursor-not-allowed opacity-60",
       )}
     >
       <span
@@ -144,7 +137,6 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
   const patch = (changes: Partial<YipyyPayConfig>) =>
     setDraft((prev) => ({ ...(prev ?? saved), ...changes }));
 
-  const [confirmingFee, setConfirmingFee] = useState(false);
   const [descriptorSaved, setDescriptorSaved] = useState(false);
 
   const dirty = draft !== null;
@@ -200,55 +192,31 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
       >
         <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
           <Choice
-            selected={form.feePayer === "business"}
-            onSelect={() => patch({ feePayer: "business" })}
+            selected
+            onSelect={() => undefined}
             title="We absorb it"
             body="Your customer pays the invoice and nothing more."
           />
           <Choice
-            selected={form.feePayer === "client"}
-            onSelect={() => {
-              // Asked before the radio moves, not after: this changes what
-              // every customer is charged from the next invoice onward.
-              if (saved.feePayer !== "client") setConfirmingFee(true);
-              else patch({ feePayer: "client" });
-            }}
+            selected={false}
+            disabled
+            onSelect={() => undefined}
             title="Add it to the invoice"
-            body="A named line, visible before the customer pays."
+            body="Not available yet."
           />
         </div>
-
-        {form.feePayer === "client" && (
-          <div className="space-y-3 rounded-lg border p-4">
-            <div className="max-w-sm space-y-1.5">
-              <Label htmlFor="fee-label" className="text-sm">
-                What to call it on the invoice
-              </Label>
-              <Input
-                id="fee-label"
-                value={form.feeLabel}
-                maxLength={40}
-                onChange={(event) => patch({ feeLabel: event.target.value })}
-              />
-            </div>
-            <label className="flex items-start gap-2.5">
-              <Checkbox
-                checked={form.feeExcludeDebit}
-                onCheckedChange={(checked) =>
-                  patch({ feeExcludeDebit: checked === true })
-                }
-                className="mt-0.5"
-              />
-              <span className="text-sm/relaxed">
-                Do not add it to debit cards
-                <span className="text-muted-foreground block text-xs/relaxed">
-                  Several card networks forbid surcharging debit. Leave this on
-                  unless you have checked otherwise where you trade.
-                </span>
-              </span>
-            </label>
-          </div>
-        )}
+        <div className="text-muted-foreground flex items-start gap-2.5 rounded-lg border border-dashed p-3 text-xs/relaxed">
+          <ShieldOff className="mt-0.5 size-3.5 shrink-0" />
+          <p>
+            <span className="text-foreground font-medium">
+              Passing the fee on is not switched on yet.
+            </span>{" "}
+            It changes what a customer is charged, so the invoice, the receipt
+            and the refund all have to agree about it — and whether it is
+            allowed at all differs by country and by state. Yipyy Pay absorbs it
+            into your takings until then.
+          </p>
+        </div>
       </Section>
 
       {/* ── Payouts ───────────────────────────────────────────────────── */}
@@ -378,39 +346,6 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
           </Button>
         </div>
       )}
-
-      <AlertDialog open={confirmingFee} onOpenChange={setConfirmingFee}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Add the card fee to your customers&rsquo; invoices?
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3 text-sm/relaxed">
-                <p>
-                  From your next invoice, every card payment will carry a
-                  separate line named &ldquo;{form.feeLabel}&rdquo;. The
-                  customer sees it before they pay.
-                </p>
-                <p>
-                  Passing the fee on is regulated and the rules differ by
-                  country and by state — some forbid it outright, and most
-                  forbid it on debit cards. Check what applies where you trade.
-                </p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep absorbing it</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => patch({ feePayer: "client" })}
-            >
-              Add it to invoices
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

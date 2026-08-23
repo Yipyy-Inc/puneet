@@ -32,8 +32,7 @@ import { z } from "zod";
 //   receiptDescriptor  what YIPYY prints on its own receipts, invoices and
 //                      emails. The bank-statement line is Clover's and is shown
 //                      read-only beside it.
-//   feePayer           who absorbs the card fee. This one is not decorative:
-//                      "client" adds a disclosed line item at checkout.
+//   feePayer           who absorbs the card fee. See the note on the field.
 //
 // ── THE FALLBACK IS OFF, AND THAT IS THE POINT ────────────────────────────
 //
@@ -87,7 +86,26 @@ export const yipyyPayConfigSchema = z.object({
    */
   receiptDescriptor: z.string().max(22).default(""),
 
-  /** Who absorbs the card fee. "client" adds a disclosed line at checkout. */
+  /**
+   * Who absorbs the card fee.
+   *
+   * ── "client" CANNOT BE SELECTED YET, AND THE SCREEN SAYS SO ────────────
+   *
+   * Passing the fee on means adding a line to what the customer is charged,
+   * and there is nowhere to put it. `public.payments` constrains
+   * `grand_total = subtotal + tax + tip` — an append-only ledger with no
+   * surcharge column — and both charge routes derive the amount server-side
+   * from the booking rather than taking it from the browser, deliberately.
+   *
+   * So making this real is a migration that alters a CHECK on a money table,
+   * both charge paths, the refund path (is the fee returned?), and a tax
+   * question with a different answer per jurisdiction. That is its own change
+   * with its own review, not a settings toggle.
+   *
+   * Until then the option is rendered disabled with the reason. Storing
+   * "client" while charging the business would be a setting that lies, which
+   * is the exact failure this whole feature was built to remove.
+   */
   feePayer: z.enum(["business", "client"]).default("business"),
   /** What the client sees the fee called on their invoice. */
   feeLabel: z.string().max(40).default("Card processing fee"),
@@ -135,7 +153,7 @@ export const NO_YIPYY_PAY: YipyyPayConfig = {
 };
 
 /** The prefix the card networks put in front of the facility's descriptor. */
-export const DESCRIPTOR_PREFIX = "YIPYYPAY*";
+const DESCRIPTOR_PREFIX = "YIPYYPAY*";
 /** The card networks' budget for the facility's own portion. */
 export const DESCRIPTOR_MAX = 22;
 
@@ -151,28 +169,6 @@ export function descriptorPreview(descriptor: string, fallback: string) {
     .slice(0, DESCRIPTOR_MAX)
     .toUpperCase();
   return own ? `${DESCRIPTOR_PREFIX} ${own}` : DESCRIPTOR_PREFIX;
-}
-
-/**
- * The card fee on a sale, when the CLIENT is the one paying it.
- *
- * @param baseCents what the client owes before the fee — subtotal plus tax.
- *   The tip is excluded by the caller and must stay excluded: a tip is the
- *   staff's money, and charging a processing fee on top of a customer's own
- *   generosity is the kind of line that ends up in a chargeback.
- *
- * Returns 0 when the facility absorbs the fee, which is the default, so a
- * caller that forgets to check `feePayer` cannot accidentally bill anyone.
- */
-export function clientProcessingFeeCents(
-  baseCents: number,
-  config: YipyyPayConfig,
-  entry: "card_present" | "card_not_present",
-): number {
-  if (config.feePayer !== "client" || baseCents <= 0) return 0;
-  const rate =
-    entry === "card_present" ? config.feeCardPresent : config.feeCardNotPresent;
-  return Math.round(baseCents * rate.percent) + rate.fixedCents;
 }
 
 /** "2.9% + 50c", for the copy that has to quote a rate back to a facility. */
