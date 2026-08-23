@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,9 +22,9 @@ import { TaskWizard } from "./TaskWizard";
 import {
   shiftTaskGroups,
   positionTaskGroups,
-  standaloneTasks,
   workTaskLibrary,
 } from "@/data/work-tasks";
+import { taskQueries } from "@/lib/api/facility-tasks";
 import { getOffboardingInstances } from "@/data/staff-onboarding";
 
 const ShiftTasksTab = dynamic(
@@ -50,26 +51,28 @@ const OffboardingTasksTab = dynamic(
 // ── Overview stat cards ───────────────────────────────────────────────────────
 
 function OverviewStats() {
-  const today = new Date().toISOString().slice(0, 10);
+  // The two group counts are still fixtures — the shift and position tabs have
+  // no table yet. The standalone half is real, and `overdue` comes from the
+  // SERVER's clock rather than this browser's.
+  const { data } = useQuery(taskQueries.all());
+  const tasks = data?.tasks ?? [];
 
   const activeShiftGroups = shiftTaskGroups.filter((g) => g.isActive).length;
   const activePositionGroups = positionTaskGroups.filter(
     (g) => g.isActive,
   ).length;
 
-  const pendingStandalone = standaloneTasks.filter(
+  const pendingStandalone = tasks.filter(
     (t) => t.status === "pending" || t.status === "in_progress",
   ).length;
 
-  const overdueStandalone = standaloneTasks.filter((t) => {
-    if (t.status === "completed" || t.status === "cancelled") return false;
-    const due = new Date(`${t.dueDate}T${t.dueTime ?? "23:59"}`);
-    return due < new Date();
-  }).length;
+  const overdueStandalone = tasks.filter((t) => t.overdue).length;
 
-  const dueTodayStandalone = standaloneTasks.filter(
+  const today = new Date().toDateString();
+  const dueTodayStandalone = tasks.filter(
     (t) =>
-      t.dueDate === today &&
+      t.dueAt !== null &&
+      new Date(t.dueAt).toDateString() === today &&
       t.status !== "completed" &&
       t.status !== "cancelled",
   ).length;
@@ -160,12 +163,11 @@ export default function TaskManagementPage() {
   const defaultTab = searchParams?.get("tab") ?? "shift";
   const [wizardOpen, setWizardOpen] = useState(false);
 
-  const overdueCount = standaloneTasks.filter((t) => {
-    if (t.status === "completed" || t.status === "cancelled") return false;
-    return new Date(`${t.dueDate}T${t.dueTime ?? "23:59"}`) < new Date();
-  }).length;
+  const { data: taskPayload } = useQuery(taskQueries.all());
+  const liveTasks = taskPayload?.tasks ?? [];
 
-  const pendingStandalone = standaloneTasks.filter(
+  const overdueCount = liveTasks.filter((t) => t.overdue).length;
+  const pendingStandalone = liveTasks.filter(
     (t) => t.status === "pending" || t.status === "in_progress",
   ).length;
 

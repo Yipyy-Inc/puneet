@@ -1138,7 +1138,12 @@ export default function CallingPage() {
     if (!staff) return;
     if (reassignTaskForCallLog(call.id, staff.id, staff.name)) {
       toast.success(`Reassigned to ${staff.name}`, {
-        description: "Follow-up task updated in the Tasks module.",
+        // NOT "in the Tasks module" any more. That board reads
+        // `facility_tasks` in Postgres as of 20260823600000; these follow-ups
+        // are still built from `src/data/work-tasks` because the CALL LOGS
+        // they are built from are a fixture too. Creating real rows out of
+        // fixture calls would put work nobody owes into a production table.
+        description: "Follow-up reassigned on this call.",
       });
     } else {
       const summary = aiCallSummaries.find((s) => s.callId === call.id);
@@ -1149,7 +1154,7 @@ export default function CallingPage() {
       });
       addStandaloneTask(task);
       toast.success(`Assigned to ${staff.name}`, {
-        description: `Task created: "${task.title}" · due ${task.dueDate} ${task.dueTime}`,
+        description: `Follow-up noted: "${task.title}" · due ${task.dueDate} ${task.dueTime}`,
       });
     }
   };
@@ -1168,8 +1173,8 @@ export default function CallingPage() {
       if (call) {
         const task = ensureFollowUpTask({ ...call, followUpStatus: "pending" });
         if (task) {
-          toast.success("Follow-up task created", {
-            description: `"${task.title}" added to the Tasks module.`,
+          toast.success("Follow-up noted", {
+            description: `"${task.title}" is on this call.`,
           });
         }
       }
