@@ -309,6 +309,25 @@ test.describe("forms", () => {
     expect(after.answers.f1).toBe("yes");
   });
 
+  test("the screen shows the forms the database holds", async ({ page }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const name = freshName("screen");
+    const form = await createForm(page, name);
+    // The list buckets by category, and a new form is `custom` — put it in the
+    // tab the screen opens on so this asserts rendering rather than filtering.
+    await patchForm(page, form.id, { type: "intake" });
+
+    await page.goto("/facility/dashboard/forms");
+    await expect(
+      page.getByRole("heading", { name: "Intake Forms" }),
+    ).toBeVisible();
+
+    // The row the API created. What this replaced read a module-level array,
+    // so this assertion could not have passed against it.
+    await expect(page.getByText(name).first()).toBeVisible({ timeout: 15_000 });
+  });
+
   test("a groomer cannot author a form", async ({ page }) => {
     await signIn(page, ACCOUNTS.groomer);
 
