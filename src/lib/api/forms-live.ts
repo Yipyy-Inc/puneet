@@ -92,12 +92,19 @@ export const liveFormQueries = {
    * screen can render the questions as they were ASKED rather than as they are
    * now. `truncated` says when the page cap bit.
    */
-  submissions: (filters?: { formId?: string; status?: string }) => ({
+  submissions: (filters?: {
+    formId?: string;
+    status?: string;
+    since?: string;
+    until?: string;
+  }) => ({
     queryKey: ["forms-live", "submissions", filters ?? null] as const,
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters?.formId) params.set("formId", filters.formId);
       if (filters?.status) params.set("status", filters.status);
+      if (filters?.since) params.set("since", filters.since);
+      if (filters?.until) params.set("until", filters.until);
       const query = params.toString();
       return await get<SubmissionsPayload>(
         `/api/forms/submissions${query ? `?${query}` : ""}`,
@@ -231,10 +238,14 @@ export function useSubmitForm() {
 }
 
 /**
- * Review a submission — status and score only.
+ * Review a submission — status, score, and filing it under a customer.
  *
  * There is no `answers` here and there could not be a working one: what
  * somebody said is refused any edit by trigger.
+ *
+ * `clientRef` is one-way. A submission captured at the counter arrives with no
+ * customer and can be given one; once it has one it cannot be moved to another,
+ * so a screen must not offer to re-file an attached submission.
  */
 export function useReviewSubmission() {
   const queryClient = useQueryClient();
@@ -247,6 +258,8 @@ export function useReviewSubmission() {
       status?: "submitted" | "reviewed" | "flagged" | "archived";
       score?: number | null;
       scoreOutcome?: string | null;
+      /** Only ever accepted on a submission that has no customer yet. */
+      clientRef?: number;
     }) =>
       (
         await send<{ submission: SubmissionRow }>(

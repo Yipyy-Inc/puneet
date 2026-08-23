@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,76 +14,66 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { liveFormQueries } from "@/lib/api/forms-live";
+import type { SubmissionRow, SubmissionStatus } from "@/lib/api/mappers/form";
+import { submissionFlags } from "@/components/forms/submission-shape";
 import {
-  getSubmissionsWithRecords,
-  submissionHasFiles,
-  type SubmissionStatus,
-  type SubmissionListFilters,
-} from "@/data/form-submissions";
-import {
-  getFormById,
-  getFormsByFacility,
-  evaluateLogicRules,
-} from "@/data/forms";
-import { facilities } from "@/data/facilities";
-import { clients } from "@/data/clients";
-import {
+  AlertCircle,
+  AlertTriangle,
   FileText,
   Inbox,
   Search,
-  AlertTriangle,
-  AlertCircle,
 } from "lucide-react";
 
-const FACILITY_ID = 11;
+// ============================================================================
+// The submissions inbox, from Postgres.
+//
+// ── THE STATUSES ARE THE DATABASE'S, NOT THE FIXTURE'S ────────────────────
+//
+// The fixture tracked unread/read/processed in a second "record" object beside
+// the submission that only this screen knew about — so a form was "read" here
+// and untouched everywhere else, and none of it survived a refresh.
+// `form_submissions.status` is one column: submitted, reviewed, flagged,
+// archived. Nothing marks a submission read merely by opening it, because
+// nothing records who opened it.
+//
+// ── AND THE FLAGS COME FROM THE FROZEN VERSION ────────────────────────────
+//
+// `submissionFlags` reads the schema each row carries. The fixture computed the
+// same flags against the form's CURRENT questions, so making a question
+// required today retroactively marked every past submission incomplete.
+// ============================================================================
 
 const STATUS_OPTIONS: { value: SubmissionStatus | "all"; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "unread", label: "Unread" },
-  { value: "read", label: "Read" },
-  { value: "processed", label: "Processed" },
+  { value: "submitted", label: "Awaiting review" },
+  { value: "reviewed", label: "Reviewed" },
+  { value: "flagged", label: "Flagged" },
   { value: "archived", label: "Archived" },
 ];
 
-function getCustomerName(customerId?: number): string {
-  if (customerId == null) return "—";
-  const c = clients.find((x) => x.id === customerId);
-  return c?.name ?? "—";
-}
-
-function getPetNames(petIds?: number[]): string {
-  if (!petIds?.length) return "—";
-  const names = petIds.map((id) => {
-    const pet = clients.flatMap((c) => c.pets ?? []).find((p) => p.id === id);
-    return pet?.name ?? `Pet #${id}`;
-  });
-  return names.join(", ");
-}
-
-/** Format date for display without locale so server and client match (avoids hydration error) */
+/** Format without a locale so server and client agree (avoids a hydration error). */
 function formatSubmissionDate(iso: string): string {
   const d = new Date(iso);
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const h = String(d.getUTCHours()).padStart(2, "0");
-  const min = String(d.getUTCMinutes()).padStart(2, "0");
-  const s = String(d.getUTCSeconds()).padStart(2, "0");
-  return `${y}-${m}-${day} ${h}:${min}:${s}`;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ` +
+    `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`
+  );
 }
 
-/** Get status badge styles (flat/pastel, no gradients) */
-function statusBadgeProps(status: string): {
+function statusBadgeProps(status: SubmissionStatus): {
   className?: string;
   variant?: "outline" | "default" | "secondary" | "destructive";
 } {
   switch (status) {
-    case "unread":
-      return { className: "bg-blue-100 text-blue-800 border-0" };
-    case "read":
-      return { variant: "outline" };
-    case "processed":
-      return { className: "bg-green-100 text-green-800 border-0" };
+    case "submitted":
+      return { className: "border-0 bg-blue-100 text-blue-800" };
+    case "reviewed":
+      return { className: "border-0 bg-green-100 text-green-800" };
+    case "flagged":
+      return { className: "border-0 bg-red-100 text-red-800" };
     case "archived":
       return { className: "bg-muted text-muted-foreground" };
     default:
@@ -98,70 +89,32 @@ export default function SubmissionsInboxPage() {
   const [formIdFilter, setFormIdFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [locationFilter, setLocationFilter] = useState<string>("all");
 
-  const facility = facilities.find((f) => f.id === FACILITY_ID);
-  const locations = facility?.locationsList ?? [];
+  const { data: forms } = useQuery(liveFormQueries.all());
 
-  const filters: SubmissionListFilters = useMemo(
-    () => ({
-      status: statusFilter,
+  const { data, isPending, isError, error } = useQuery(
+    liveFormQueries.submissions({
+      status: statusFilter === "all" ? undefined : statusFilter,
       formId: formIdFilter === "all" ? undefined : formIdFilter,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
-      locationId: locationFilter === "all" ? undefined : locationFilter,
+      since: dateFrom || undefined,
+      // A date with no time means the whole of that day.
+      until: dateTo ? `${dateTo}T23:59:59.999Z` : undefined,
     }),
-    [statusFilter, formIdFilter, dateFrom, dateTo, locationFilter],
   );
 
-  const list = useMemo(
-    () => getSubmissionsWithRecords(FACILITY_ID, filters),
-    [filters],
+  const list = useMemo<SubmissionRow[]>(
+    () => data?.submissions ?? [],
+    [data?.submissions],
   );
 
-  const forms = useMemo(() => getFormsByFacility(FACILITY_ID), []);
+  const flags = useMemo(
+    () => new Map(list.map((row) => [row.id, submissionFlags(row)])),
+    [list],
+  );
 
-  // Pre-compute flags for each submission
-  const submissionFlags = useMemo(() => {
-    const flagMap = new Map<
-      string,
-      { alertFlag: boolean; missingCount: number }
-    >();
-    for (const { submission } of list) {
-      const form = getFormById(submission.formId);
-      let alertFlag = false;
-      let missingCount = 0;
-
-      // Red-alert flag detection via logic rules
-      if (form?.logicRules?.length) {
-        const effects = evaluateLogicRules(form.logicRules, submission.answers);
-        alertFlag = effects.alertFlag;
-      }
-
-      // Missing required fields detection
-      if (form?.questions) {
-        const answers = submission.answers ?? {};
-        const missingRequired = form.questions.filter(
-          (q) =>
-            q.required && (answers[q.id] === undefined || answers[q.id] === ""),
-        );
-        missingCount = missingRequired.length;
-      }
-
-      flagMap.set(submission.id, { alertFlag, missingCount });
-    }
-    return flagMap;
-  }, [list]);
-
-  // Summary stats
-  const totalCount = list.length;
-  const unreadCount = list.filter(
-    ({ record }) => record.status === "unread",
-  ).length;
-  const processedCount = list.filter(
-    ({ record }) => record.status === "processed",
-  ).length;
-  const alertCount = Array.from(submissionFlags.values()).filter(
+  const awaitingCount = list.filter((r) => r.status === "submitted").length;
+  const reviewedCount = list.filter((r) => r.status === "reviewed").length;
+  const alertCount = Array.from(flags.values()).filter(
     (f) => f.alertFlag,
   ).length;
 
@@ -170,28 +123,26 @@ export default function SubmissionsInboxPage() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Submissions Inbox</h2>
         <p className="text-muted-foreground">
-          Process form submissions, match to customers and pets, or create new
-          profiles.
+          Read what people answered, and file it under the right customer.
         </p>
       </div>
 
-      {/* Summary Stats */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
           <span className="text-muted-foreground">Total</span>
-          <Badge variant="secondary">{totalCount}</Badge>
+          <Badge variant="secondary">{list.length}</Badge>
         </div>
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
           <span className="size-2 rounded-full bg-blue-500" />
-          <span className="text-muted-foreground">Unread</span>
+          <span className="text-muted-foreground">Awaiting review</span>
           <Badge className="border-0 bg-blue-100 text-blue-800">
-            {unreadCount}
+            {awaitingCount}
           </Badge>
         </div>
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-          <span className="text-muted-foreground">Processed</span>
+          <span className="text-muted-foreground">Reviewed</span>
           <Badge className="border-0 bg-green-100 text-green-800">
-            {processedCount}
+            {reviewedCount}
           </Badge>
         </div>
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
@@ -203,7 +154,6 @@ export default function SubmissionsInboxPage() {
         </div>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Filters</CardTitle>
@@ -217,16 +167,13 @@ export default function SubmissionsInboxPage() {
                 setStatusFilter(v as SubmissionStatus | "all")
               }
             >
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[170px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {STATUS_OPTIONS.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
-                    {o.value === "unread" && unreadCount > 0
-                      ? ` (${unreadCount})`
-                      : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -240,7 +187,7 @@ export default function SubmissionsInboxPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All forms</SelectItem>
-                {forms.map((f) => (
+                {(forms ?? []).map((f) => (
                   <SelectItem key={f.id} value={f.id}>
                     {f.name}
                   </SelectItem>
@@ -249,43 +196,28 @@ export default function SubmissionsInboxPage() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>From date</Label>
+            <Label htmlFor="submitted-from">From date</Label>
             <Input
+              id="submitted-from"
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-[140px]"
+              className="w-[150px]"
             />
           </div>
           <div className="space-y-2">
-            <Label>To date</Label>
+            <Label htmlFor="submitted-to">To date</Label>
             <Input
+              id="submitted-to"
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-[140px]"
+              className="w-[150px]"
             />
-          </div>
-          <div className="space-y-2">
-            <Label>Location</Label>
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All locations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All locations</SelectItem>
-                {locations.map((loc) => (
-                  <SelectItem key={loc.name} value={loc.name}>
-                    {loc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* List */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -294,12 +226,37 @@ export default function SubmissionsInboxPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {list.length === 0 ? (
+          {data?.truncated && (
+            <p className="mb-3 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <AlertCircle className="size-4 shrink-0" />
+              {/* Said out loud rather than left to be inferred: a list cut at an
+                  arbitrary row invites the reader to conclude the rest do not
+                  exist. */}
+              Showing the most recent {list.length}. Narrow the date range to
+              see earlier submissions.
+            </p>
+          )}
+
+          {isPending ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-11 w-full" />
+              ))}
+            </div>
+          ) : isError ? (
+            <div className="text-muted-foreground flex flex-col items-center justify-center py-12 text-center">
+              <AlertTriangle className="mb-4 size-10 text-red-500 opacity-70" />
+              <p>Could not load submissions.</p>
+              <p className="mt-1 text-sm">
+                {error instanceof Error ? error.message : "Please try again."}
+              </p>
+            </div>
+          ) : list.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center justify-center py-12 text-center">
               <Search className="mb-4 size-10 opacity-50" />
               <p>No submissions match your filters.</p>
               <p className="mt-1 text-sm">
-                Submissions appear when forms are filled via shareable links.
+                Submissions appear when a published form is filled in.
               </p>
             </div>
           ) : (
@@ -314,77 +271,75 @@ export default function SubmissionsInboxPage() {
                     <th className="px-2 py-3 text-left font-medium">
                       Customer
                     </th>
-                    <th className="px-2 py-3 text-left font-medium">Pet(s)</th>
+                    <th className="px-2 py-3 text-left font-medium">Pet</th>
                     <th className="px-2 py-3 text-left font-medium">Status</th>
                     <th className="px-2 py-3 text-left font-medium">Flags</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map(({ submission, record }) => {
-                    const form = getFormById(submission.formId);
-                    const hasFiles = submissionHasFiles(submission.id);
-                    const flags = submissionFlags.get(submission.id);
-                    const isUnread = record.status === "unread";
-                    const badgeProps = statusBadgeProps(record.status);
+                  {list.map((row) => {
+                    const flag = flags.get(row.id);
+                    const awaiting = row.status === "submitted";
+                    const badgeProps = statusBadgeProps(row.status);
                     return (
                       <tr
-                        key={submission.id}
-                        className={`hover:bg-muted/50 cursor-pointer border-b ${isUnread ? `border-l-primary border-l-2 font-medium` : ""} `}
+                        key={row.id}
+                        className={`hover:bg-muted/50 cursor-pointer border-b ${awaiting ? "border-l-primary border-l-2 font-medium" : ""}`}
                         onClick={() =>
                           router.push(
-                            `/facility/dashboard/forms/submissions/${submission.id}`,
+                            `/facility/dashboard/forms/submissions/${row.id}`,
                           )
                         }
                       >
                         <td className="px-2 py-3 whitespace-nowrap">
-                          {formatSubmissionDate(submission.createdAt)}
+                          {formatSubmissionDate(row.submittedAt)}
                         </td>
                         <td className="px-2 py-3">
-                          {form?.name ?? submission.formId}
-                        </td>
-                        <td className="px-2 py-3">
-                          {getCustomerName(
-                            submission.customerId ?? record.relatedCustomerId,
+                          {row.formName ?? "—"}
+                          {row.versionNumber !== null && (
+                            <span className="text-muted-foreground ml-1.5 text-xs">
+                              v{row.versionNumber}
+                            </span>
                           )}
                         </td>
                         <td className="px-2 py-3">
-                          {getPetNames(
-                            submission.petIds ??
-                              (record.relatedPetId
-                                ? [record.relatedPetId]
-                                : undefined),
+                          {row.clientName ?? (
+                            <span className="text-muted-foreground italic">
+                              Not filed
+                            </span>
                           )}
                         </td>
+                        <td className="px-2 py-3">{row.petName ?? "—"}</td>
                         <td className="px-2 py-3">
                           <Badge
                             variant={badgeProps.variant}
                             className={badgeProps.className}
                           >
-                            {record.status}
+                            {row.status}
                           </Badge>
                         </td>
                         <td className="px-2 py-3">
                           <div className="flex items-center gap-1.5">
-                            {hasFiles && (
+                            {flag?.hasFiles && (
                               <span
                                 className="text-muted-foreground inline-flex items-center gap-0.5"
-                                title="Has file upload"
+                                title="Has a file upload"
                               >
                                 <FileText className="size-3.5" />
                               </span>
                             )}
-                            {flags?.alertFlag && (
+                            {flag?.alertFlag && (
                               <span
                                 className="inline-flex items-center text-red-600"
-                                title="Red alert"
+                                title="A logic rule flagged these answers"
                               >
                                 <AlertTriangle className="size-3.5" />
                               </span>
                             )}
-                            {(flags?.missingCount ?? 0) > 0 && (
+                            {(flag?.missingCount ?? 0) > 0 && (
                               <span
                                 className="inline-flex items-center text-amber-600"
-                                title={`${flags!.missingCount} required field(s) missing`}
+                                title={`${flag!.missingCount} required question(s) unanswered`}
                               >
                                 <AlertCircle className="size-3.5" />
                               </span>

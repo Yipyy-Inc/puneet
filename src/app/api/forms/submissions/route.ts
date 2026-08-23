@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { resolvePetNames } from "@/lib/api/form-pets";
 import { getViewer } from "@/lib/auth/viewer";
 import {
   SUBMISSION_SELECT,
@@ -63,6 +64,19 @@ export async function GET(request: NextRequest) {
   const status = params.get("status");
   if (status && status !== "all") query = query.eq("status", status);
 
+  // Both ends, not just `since`. The loyalty ledger had a lower bound alone and
+  // it could not help: the newest-N cut still sliced the row being looked for
+  // whenever enough had accumulated on the recent side of it.
+  const since = params.get("since");
+  if (since && !Number.isNaN(Date.parse(since))) {
+    query = query.gte("submitted_at", new Date(since).toISOString());
+  }
+
+  const until = params.get("until");
+  if (until && !Number.isNaN(Date.parse(until))) {
+    query = query.lte("submitted_at", new Date(until).toISOString());
+  }
+
   const clientRef = params.get("clientRef");
   if (clientRef && context) {
     const { data: client } = await supabase
@@ -85,11 +99,15 @@ export async function GET(request: NextRequest) {
 
   const rows = (data ?? []) as unknown as SubmissionRecord[];
 
+  // A second query rather than an embed: `pet_id` carries no FK on purpose, and
+  // asking PostgREST to embed it fails the whole select.
+  const petNames = await resolvePetNames(supabase, rows);
+
   // Reported rather than left to be inferred. A list silently cut at an
   // arbitrary row invites somebody to conclude the earlier ones do not exist —
   // the same defect the loyalty ledger had until 2026-08-23.
   const payload: SubmissionsPayload = {
-    submissions: rows.map(toSubmissionRow),
+    submissions: rows.map((row) => toSubmissionRow(row, petNames)),
     truncated: rows.length === PAGE,
   };
 

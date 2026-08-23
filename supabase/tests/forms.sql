@@ -43,7 +43,8 @@ insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000001b0002', 'fm-recep@example.invalid'),
   ('00000000-0000-0000-0000-0000001b0003', 'fm-caretaker@example.invalid'),
   ('00000000-0000-0000-0000-0000001b0004', 'fm-customer@example.invalid'),
-  ('00000000-0000-0000-0000-0000001b0005', 'fm-rival@example.invalid')
+  ('00000000-0000-0000-0000-0000001b0005', 'fm-rival@example.invalid'),
+  ('00000000-0000-0000-0000-0000001b0006', 'fm-groomer@example.invalid')
 on conflict (id) do nothing;
 
 insert into public.profiles (id, email, full_name) values
@@ -51,7 +52,8 @@ insert into public.profiles (id, email, full_name) values
   ('00000000-0000-0000-0000-0000001b0002', 'fm-recep@example.invalid', 'FM Reception'),
   ('00000000-0000-0000-0000-0000001b0003', 'fm-caretaker@example.invalid', 'FM Caretaker'),
   ('00000000-0000-0000-0000-0000001b0004', 'fm-customer@example.invalid', 'FM Customer'),
-  ('00000000-0000-0000-0000-0000001b0005', 'fm-rival@example.invalid', 'FM Rival')
+  ('00000000-0000-0000-0000-0000001b0005', 'fm-rival@example.invalid', 'FM Rival'),
+  ('00000000-0000-0000-0000-0000001b0006', 'fm-groomer@example.invalid', 'FM Groomer')
 on conflict (id) do update set full_name = excluded.full_name;
 
 insert into public.orgs (id, name, slug) values
@@ -74,7 +76,11 @@ insert into public.facility_memberships (id, facility_id, profile_id, role, is_a
   ('00000000-0000-0000-0000-0000001b0032', '00000000-0000-0000-0000-0000001b0020',
    '00000000-0000-0000-0000-0000001b0003', 'caretaker', true),
   ('00000000-0000-0000-0000-0000001b0033', '00000000-0000-0000-0000-0000001b0021',
-   '00000000-0000-0000-0000-0000001b0005', 'owner', true)
+   '00000000-0000-0000-0000-0000001b0005', 'owner', true),
+  -- A groomer holds `view_client_documents` but NOT `edit_clients`, which is
+  -- the only combination that can reach the trigger's own refusal in F20.
+  ('00000000-0000-0000-0000-0000001b0034', '00000000-0000-0000-0000-0000001b0020',
+   '00000000-0000-0000-0000-0000001b0006', 'groomer', true)
 on conflict (id) do nothing;
 
 insert into public.clients (id, facility_id, name, email, profile_id) values
@@ -362,6 +368,155 @@ select pg_temp.t('F14 another facility sees none of it',
   'forms=' || (select count(*) from public.forms
                 where id = '00000000-0000-0000-0000-0000001b0050')
   || ' subs=' || (select count(*) from public.form_submissions));
+
+-- ── Filing an unattached submission under a customer (20260823500000) ──
+
+-- Staff capture a form at the counter before the person has a record, so a
+-- submission can arrive with no `client_id`. The original trigger froze that
+-- column outright, which meant those answers could never be filed under
+-- anybody — unusable rather than safe. The transition is now allowed exactly
+-- once, one way.
+
+reset role;
+
+insert into public.clients (id, facility_id, name, email) values
+  ('00000000-0000-0000-0000-0000001b0041', '00000000-0000-0000-0000-0000001b0020',
+   'FM Walk-in', 'fm-walkin@example.invalid'),
+  ('00000000-0000-0000-0000-0000001b0042', '00000000-0000-0000-0000-0000001b0021',
+   'FM Rival Client', 'fm-rival-client@example.invalid')
+on conflict (id) do nothing;
+
+select set_config('request.jwt.claims',
+  json_build_object('sub','00000000-0000-0000-0000-0000001b0001','role','authenticated')::text, true);
+set local role authenticated;
+
+do $$
+declare state text; v_client uuid;
+begin
+  insert into public.form_submissions
+    (id, facility_id, form_version_id, form_id, client_id, answers, status)
+  values
+    ('00000000-0000-0000-0000-0000001b0071',
+     '00000000-0000-0000-0000-0000001b0020',
+     '00000000-0000-0000-0000-0000001b0060',
+     '00000000-0000-0000-0000-0000001b0050',
+     null, '{"f1":"yes"}'::jsonb, 'submitted');
+
+  begin
+    update public.form_submissions
+       set client_id = '00000000-0000-0000-0000-0000001b0041'
+     where id = '00000000-0000-0000-0000-0000001b0071';
+    state := 'ALLOWED';
+  exception when others then state := sqlstate || ': ' || sqlerrm;
+  end;
+
+  select client_id into v_client from public.form_submissions
+   where id = '00000000-0000-0000-0000-0000001b0071';
+
+  -- Read back rather than trusting the write: an RLS-refused UPDATE touches
+  -- zero rows and raises nothing at all.
+  perform pg_temp.t('F16 an unattached submission can be filed under a customer',
+    state = 'ALLOWED' and v_client = '00000000-0000-0000-0000-0000001b0041',
+    'state=' || state || ' client=' || coalesce(v_client::text, 'null'));
+end $$;
+
+do $$
+declare state text; v_client uuid;
+begin
+  begin
+    update public.form_submissions
+       set client_id = '00000000-0000-0000-0000-0000001b0040'
+     where id = '00000000-0000-0000-0000-0000001b0071';
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+
+  select client_id into v_client from public.form_submissions
+   where id = '00000000-0000-0000-0000-0000001b0071';
+
+  -- THE POINT. One transition, not a mutable pointer: "mark as reviewed" must
+  -- not be a way to move somebody's answers onto a different customer.
+  perform pg_temp.t('F17 filed answers cannot be moved to another customer',
+    state = '42501' and v_client = '00000000-0000-0000-0000-0000001b0041',
+    'state=' || state || ' client=' || coalesce(v_client::text, 'null'));
+end $$;
+
+do $$
+declare state text; v_client uuid;
+begin
+  begin
+    update public.form_submissions set client_id = null
+     where id = '00000000-0000-0000-0000-0000001b0071';
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+
+  select client_id into v_client from public.form_submissions
+   where id = '00000000-0000-0000-0000-0000001b0071';
+
+  -- Un-filing would make the move in F17 a two-step operation.
+  perform pg_temp.t('F18 filed answers cannot be un-filed',
+    state = '42501' and v_client = '00000000-0000-0000-0000-0000001b0041',
+    'state=' || state || ' client=' || coalesce(v_client::text, 'null'));
+end $$;
+
+do $$
+declare state text;
+begin
+  insert into public.form_submissions
+    (id, facility_id, form_version_id, form_id, client_id, answers, status)
+  values
+    ('00000000-0000-0000-0000-0000001b0072',
+     '00000000-0000-0000-0000-0000001b0020',
+     '00000000-0000-0000-0000-0000001b0060',
+     '00000000-0000-0000-0000-0000001b0050',
+     null, '{"f1":"no"}'::jsonb, 'submitted');
+
+  begin
+    update public.form_submissions
+       set client_id = '00000000-0000-0000-0000-0000001b0042'
+     where id = '00000000-0000-0000-0000-0000001b0072';
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+
+  -- Otherwise `edit_clients` at one facility files answers into another's
+  -- client record.
+  perform pg_temp.t('F19 a customer at another facility cannot be named',
+    state = '42501',
+    'state=' || state);
+end $$;
+
+reset role;
+select set_config('request.jwt.claims',
+  json_build_object('sub','00000000-0000-0000-0000-0000001b0006','role','authenticated')::text, true);
+set local role authenticated;
+
+do $$
+declare state text; v_rows int; v_client uuid;
+begin
+  begin
+    update public.form_submissions
+       set client_id = '00000000-0000-0000-0000-0000001b0041'
+     where id = '00000000-0000-0000-0000-0000001b0072';
+    get diagnostics v_rows = row_count;
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+
+  select client_id into v_client from public.form_submissions
+   where id = '00000000-0000-0000-0000-0000001b0072';
+
+  -- A groomer passes `form_submissions_review` — they hold
+  -- `view_client_documents`, so they can mark a form read — and is refused by
+  -- the TRIGGER, which is the arm under test. A caretaker would prove nothing
+  -- here: RLS hides the row from them, the UPDATE touches zero rows and raises
+  -- nothing, and "no exception" would read as permission granted.
+  perform pg_temp.t('F20 a groomer can mark a form read but not file it under a customer',
+    state = '42501' and v_client is null,
+    'state=' || state || ' rows=' || coalesce(v_rows::text, '-')
+      || ' client=' || coalesce(v_client::text, 'null'));
+end $$;
 
 -- ── An erasure request has to be able to complete ─────────────────────────
 
