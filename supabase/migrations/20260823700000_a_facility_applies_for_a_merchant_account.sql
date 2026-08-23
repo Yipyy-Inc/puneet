@@ -662,3 +662,37 @@ revoke all on function private.purge_boarding_evidence(uuid) from public;
 revoke all on function private.purge_boarding_evidence(uuid) from anon;
 revoke all on function private.purge_boarding_evidence(uuid) from authenticated;
 grant execute on function private.purge_boarding_evidence(uuid) to service_role;
+
+-- ── One correction, made the same day this file landed ──────────────────────
+--
+-- DELETE was revoked from `authenticated` on all three tables above, to close
+-- the default-privilege trap where a `grant select, insert, update` leaves
+-- DELETE in place anyway. Right for two of them and wrong for the third.
+--
+--   merchant_applications           withdraw it; the record of the attempt stays
+--   merchant_application_documents  supersede by uploading — an applicant
+--                                   quietly removing what they submitted is
+--                                   exactly what staff_documents refuses
+--   merchant_application_principals ...but somebody who typed a co-owner in
+--                                   twice, or listed a person who turns out to
+--                                   hold 5%, has to be able to take the row out
+--
+-- An application that cannot be corrected is one somebody abandons and restarts,
+-- losing every document already uploaded. So DELETE comes back HERE ONLY, under
+-- the same predicate the write policy already uses: the submitter, on their own
+-- application, while it is still editable.
+
+grant delete on public.merchant_application_principals to authenticated;
+
+drop policy if exists merchant_principals_delete on public.merchant_application_principals;
+create policy merchant_principals_delete on public.merchant_application_principals
+  for delete to authenticated
+  using (
+    private.is_platform_admin()
+    or exists (
+      select 1 from public.merchant_applications a
+       where a.id = application_id
+         and a.created_by = (select auth.jwt()->>'sub')
+         and a.status in ('draft', 'more_info_needed')
+    )
+  );
