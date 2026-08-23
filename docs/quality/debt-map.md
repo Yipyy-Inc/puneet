@@ -4689,6 +4689,66 @@ every time somebody invents a fixture name, and nobody will remember to. Not
 attempted here; the two screens above are a product decision (retire or
 convert), not a passing cleanup.
 
+### 🔴 The review queue can DECIDE an application but cannot complete the boarding — 2026-08-23
+
+`read_boarding_secret(uuid, text, uuid)` is `security definer` with **no
+permission check inside it**. That is the correct shape — the file says so
+itself, "the grants, which are the actual boundary for the definer functions" —
+and the grants are:
+
+```
+revoke all ... from public;  revoke all ... from anon;  revoke all ... from authenticated;
+grant execute on function public.read_boarding_secret(uuid, text, uuid) to service_role;
+```
+
+`service_role` alone. Measured: **nothing in `src/` calls it.** So a Yipyy
+platform administrator working the review queue can read the business, the
+owners, the documents and the last four digits of every number — and cannot
+obtain the national identity numbers or the bank account number to type into an
+acquirer's form. The workflow stops one step short of done.
+
+This is a gap, not a policy. It is stated on the review screen
+(`SecretsNotice`) rather than hidden, because a reviewer who discovers it at the
+moment they need the numbers concludes the screen is broken.
+
+**Do instead:** if you build the way through, build it as its own change, not a
+line added to the detail route. It needs, at minimum: `POST` (never `GET`, so it
+cannot be prefetched or linked), a platform-admin check BEFORE the admin client
+is constructed, one value per call, and **a record of who read what and when**.
+That last one is the hard part and the reason it was not built here — this
+repo's `audit_log` is written **only** by triggers via `private.record_audit`,
+and an app-side append is explicitly forbidden. So the read has to leave a mark
+on a row a trigger watches, which means a migration, which means it is a change
+with a design rather than a convenience.
+
+Do not reach for `service_role` in the review routes for anything else in the
+meantime. Everything the queue does today goes through the caller's own session
+and RLS decides — `merchant_applications_read` already admits
+`private.is_platform_admin()`. That is what makes the queue's authorisation
+reviewable in one place instead of two.
+
+### 🟡 `ColumnDef` here is NOT TanStack Table's, and the name is the trap — 2026-08-23
+
+`src/components/ui/DataTable.tsx` exports its own `ColumnDef<T>`. The column
+title field is **`label`**, not `header`.
+
+Written as `header` on 2026-08-23; `tsc` caught it (`TS2353: 'header' does not
+exist in type 'ColumnDef<ReviewListItem>'`), so this one is cheap — but it is
+the same shape as the two entries above and worth naming as a family:
+
+- `boarding` — a domain word already meaning dogs
+- `boardingQueries` — a symbol already exported from the same directory
+- `ColumnDef` — a type name already meaning something in a well-known library
+
+In all three the name looked available because it was familiar. Only the third
+was caught by a compiler, and only because the two shapes happen to differ.
+
+**Do instead:** read the interface in `src/components/ui/DataTable.tsx` before
+writing columns — it also offers `align`, `sortable`, `sortValue`, `icon` and
+`defaultVisible`, which are easy to miss if you assume the library's API. And
+treat a familiar type name imported from `@/components` as a local type that
+merely shares a name, until you have read it.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
