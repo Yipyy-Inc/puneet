@@ -292,3 +292,89 @@ test.describe("Yipyy Pay — the merchant application", () => {
     }
   });
 });
+
+// ============================================================================
+// The review queue: a Yipyy-staff screen over other businesses' private data.
+//
+// This queue holds every applicant's owners — their dates of birth, their home
+// addresses, and the last four of their identity numbers. The gate on it is not
+// "an administrator"; it is "a Yipyy platform administrator", and the two are
+// easy to confuse in a codebase where `owner@yipyy.dev` is called an owner and
+// holds `settings_billing`.
+//
+// So the owner test below is the one that matters. A facility owner reading
+// their OWN application is correct and covered above; a facility owner reading
+// the QUEUE would be one business reading another's. `admin@yipyy.dev` is the
+// positive control — without it, four passing refusals would be indis-
+// tinguishable from a route that refuses everybody.
+//
+// Reads and refusals only. Nothing here writes.
+// ============================================================================
+
+const QUEUE = "/api/admin/merchant-applications";
+
+test.describe("Yipyy Pay — the review queue", () => {
+  test("refuses anyone who is not signed in", async ({ page }) => {
+    const response = await page.request.get(QUEUE);
+    expect(response.status()).toBeGreaterThanOrEqual(401);
+    expect(response.status()).toBeLessThan(500);
+  });
+
+  test("refuses a groomer", async ({ page }) => {
+    await signIn(page, ACCOUNTS.groomer);
+    const response = await page.request.get(QUEUE);
+    expect(response.status()).toBe(403);
+  });
+
+  test("refuses a facility owner — this queue is not theirs", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const response = await page.request.get(QUEUE);
+    // An owner administers their own facility and may read their own
+    // application. The queue spans every facility, so holding the highest role
+    // in one business must not open it.
+    expect(response.status()).toBe(403);
+  });
+
+  test("refuses an owner's decision before it looks the application up", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const response = await page.request.patch(
+      `${QUEUE}/00000000-0000-0000-0000-000000000000`,
+      { data: { status: "approved" } },
+    );
+    // 403 and not 404: the gate is checked before the row is read, so a caller
+    // who may not review cannot use the difference between the two answers to
+    // learn whether an application id exists.
+    expect(response.status()).toBe(403);
+  });
+
+  test("admits a platform administrator, and answers with a list", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.admin);
+    const response = await page.request.get(QUEUE);
+    expect(response.status()).toBe(200);
+
+    const body = (await response.json()) as {
+      scope: string;
+      counts: { open: number; closed: number };
+      applications: { id: string; status: string }[];
+    };
+
+    // The positive control. An empty list is a legitimate answer — the shared
+    // facility may have no application — so the assertion is on the SHAPE,
+    // which a refusal could not produce.
+    expect(body.scope).toBe("open");
+    expect(Array.isArray(body.applications)).toBe(true);
+    expect(typeof body.counts.open).toBe("number");
+
+    // A draft belongs to the facility and is nobody's work. It must never reach
+    // the queue, whatever the scope.
+    for (const row of body.applications) {
+      expect(row.status).not.toBe("draft");
+    }
+  });
+});

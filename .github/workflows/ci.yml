@@ -48,6 +48,78 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run format:check
 
+  # ── THE PROJECT'S OWN RULES ────────────────────────────────────────────────
+  #
+  # Fourteen `check:*` scripts live in package.json. Each one exists because a
+  # specific mistake was made and cost something: a route that took its facility
+  # from the request body, an update that could not tell an RLS refusal from a
+  # no-op, a screen that said "Saved" with nothing behind it, a dialog with a
+  # 1024px floor on a 390px phone, a doc quoting a spec count that went stale
+  # four times.
+  #
+  # Until now NONE of them ran anywhere but on a developer's machine, by hand,
+  # when that developer remembered. Which is the same shape as the SQL tests
+  # before 2026-08-22: the appearance of a gate. Every rule this repo has
+  # written down three times and broken a fifth was catchable by one of these
+  # and caught by none of them.
+  #
+  # ── WHY ONE JOB AND NOT FOURTEEN ──────────────────────────────────────────
+  #
+  # They are static analysis over `src/` — no build, no browser, no database, no
+  # secrets. The whole set is seconds. Fourteen jobs would be fourteen installs
+  # to save nothing, and fourteen entries to add to branch protection instead of
+  # one.
+  #
+  # ── AND WHY IT RUNS ALL OF THEM BEFORE FAILING ────────────────────────────
+  #
+  # `set -e` would stop at the first, so a change that broke three rules would
+  # take three pushes to discover. Each script's own output is printed as it
+  # runs, failures are collected, and the job reports every one of them at the
+  # end. `::error::` puts each on the summary page rather than only in the log.
+  checks:
+    name: checks (the project's own rules)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      - name: Run every check:* script
+        run: |
+          failed=""
+          for script in \
+            pricing \
+            rls-writes \
+            grooming-menu \
+            settings-wiring \
+            settings-fixture \
+            quickbooks \
+            dialog-widths \
+            nav-parity \
+            customer-identity \
+            facility-from-session \
+            link-origin \
+            success-claims \
+            passkey-email-verified \
+            doc-counts
+          do
+            echo "::group::check:$script"
+            if bun run "check:$script"; then
+              echo "::endgroup::"
+            else
+              echo "::endgroup::"
+              echo "::error::check:$script failed"
+              failed="$failed $script"
+            fi
+          done
+          if [ -n "$failed" ]; then
+            echo ""
+            echo "Failed:$failed"
+            echo "Each of these runs locally with: bun run check:<name>"
+            exit 1
+          fi
+          echo "All 14 checks passed."
+
   build:
     runs-on: ubuntu-latest
     needs: typecheck

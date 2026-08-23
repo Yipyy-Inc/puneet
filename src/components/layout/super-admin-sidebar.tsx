@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   BarChart2,
   BellRing,
+  ClipboardCheck,
   BookOpen,
   Building,
   Building2,
@@ -133,6 +134,15 @@ export function AppSidebar() {
           title: "Dunning",
           url: "/dashboard/commercial/dunning",
           icon: BellRing,
+          disabled: false,
+        },
+        {
+          // Facilities applying for a Yipyy Pay merchant account. It sits under
+          // Commercial rather than Platform Control because it is somebody's
+          // daily work with a queue and a wait time, not a switch.
+          title: "Merchant Applications",
+          url: "/dashboard/commercial/merchant-applications",
+          icon: ClipboardCheck,
           disabled: false,
         },
       ],
