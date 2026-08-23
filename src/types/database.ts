@@ -1735,6 +1735,198 @@ export type Database = {
           },
         ];
       };
+      form_submissions: {
+        Row: {
+          answers: Json;
+          booking_id: string | null;
+          client_id: string | null;
+          created_at: string;
+          facility_id: string;
+          form_id: string | null;
+          form_version_id: string;
+          id: string;
+          pet_id: string | null;
+          score: number | null;
+          score_details: Json | null;
+          score_outcome: string | null;
+          staff_assistant_id: string | null;
+          staff_assisted: boolean;
+          status: string;
+          submitted_at: string;
+          submitted_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          answers?: Json;
+          booking_id?: string | null;
+          client_id?: string | null;
+          created_at?: string;
+          facility_id: string;
+          form_id?: string | null;
+          form_version_id: string;
+          id?: string;
+          pet_id?: string | null;
+          score?: number | null;
+          score_details?: Json | null;
+          score_outcome?: string | null;
+          staff_assistant_id?: string | null;
+          staff_assisted?: boolean;
+          status?: string;
+          submitted_at?: string;
+          submitted_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          answers?: Json;
+          booking_id?: string | null;
+          client_id?: string | null;
+          created_at?: string;
+          facility_id?: string;
+          form_id?: string | null;
+          form_version_id?: string;
+          id?: string;
+          pet_id?: string | null;
+          score?: number | null;
+          score_details?: Json | null;
+          score_outcome?: string | null;
+          staff_assistant_id?: string | null;
+          staff_assisted?: boolean;
+          status?: string;
+          submitted_at?: string;
+          submitted_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "form_submissions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "form_submissions_form_version_id_fkey";
+            columns: ["form_version_id"];
+            isOneToOne: false;
+            referencedRelation: "form_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      form_versions: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          form_id: string;
+          id: string;
+          published_at: string | null;
+          schema: Json;
+          version_number: number;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          form_id: string;
+          id?: string;
+          published_at?: string | null;
+          schema?: Json;
+          version_number: number;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          form_id?: string;
+          id?: string;
+          published_at?: string | null;
+          schema?: Json;
+          version_number?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "form_versions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "form_versions_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      forms: {
+        Row: {
+          applies_to: Json;
+          audience: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          name: string;
+          repeat_per_pet: boolean;
+          require_auth: boolean;
+          settings: Json;
+          slug: string;
+          status: string;
+          type: string;
+          updated_at: string;
+        };
+        Insert: {
+          applies_to?: Json;
+          audience?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          name: string;
+          repeat_per_pet?: boolean;
+          require_auth?: boolean;
+          settings?: Json;
+          slug: string;
+          status?: string;
+          type?: string;
+          updated_at?: string;
+        };
+        Update: {
+          applies_to?: Json;
+          audience?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          name?: string;
+          repeat_per_pet?: boolean;
+          require_auth?: boolean;
+          settings?: Json;
+          slug?: string;
+          status?: string;
+          type?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "forms_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       gift_card_transactions: {
         Row: {
           amount: number;
