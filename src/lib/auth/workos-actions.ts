@@ -1,6 +1,6 @@
 "use server";
 
-import { getWorkOS, saveSession } from "@workos-inc/authkit-nextjs";
+import { getWorkOS, saveSession, withAuth } from "@workos-inc/authkit-nextjs";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -306,4 +306,175 @@ export async function signOutAction(): Promise<void> {
 async function signOutFromWorkos() {
   const { signOut } = await import("@workos-inc/authkit-nextjs");
   await signOut({ returnTo: `${await requestOrigin()}/sign-in` });
+}
+
+// ── Password change, and the sessions it should end ─────────────────────────
+
+/**
+ * Change the signed-in user's password.
+ *
+ * REPLACES A LIE. Both screens that offered this were mocks: the staff card
+ * called `toast.success("Password changed")` and nothing else, and the customer
+ * card awaited an 800 ms `setTimeout` first so it would feel real. A user who
+ * believed either one might discard a password that still works — and
+ * `check:success-claims` does not catch this shape, because a simulated action
+ * looks exactly like a real one to a static check.
+ *
+ * WHY THE CURRENT PASSWORD IS RE-AUTHENTICATED RATHER THAN TRUSTED. WorkOS has
+ * no "verify this password" endpoint, and `updateUser` will happily set a new
+ * one without proving the caller knew the old one. A session alone is not
+ * enough: a borrowed laptop, a stolen cookie or an unlocked screen would be a
+ * password takeover. So the old password is checked the only way available —
+ * by authenticating with it.
+ *
+ * That check has a SIDE EFFECT worth knowing about: it mints a session, which
+ * appears in the list below. It is discarded rather than saved, and the
+ * alternative is not checking at all.
+ */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ error?: string }> {
+  const { user } = await withAuth();
+  if (!user) return { error: "You are not signed in." };
+
+  try {
+    await getWorkOS().userManagement.authenticateWithPassword({
+      clientId,
+      email: user.email,
+      password: currentPassword,
+    });
+  } catch {
+    // Deliberately not `readableError`. WorkOS's message here describes the
+    // sign-in it thinks it refused, which reads oddly on a change-password
+    // form, and the only thing the user needs to know is which field is wrong.
+    return { error: "That is not your current password." };
+  }
+
+  try {
+    await getWorkOS().userManagement.updateUser({
+      userId: user.id,
+      password: newPassword,
+    });
+  } catch (error) {
+    // This one IS surfaced verbatim: WorkOS enforces the password policy here
+    // (minimum length, and `isPasswordPwnedRequired` is on), so "this password
+    // appeared in a data breach" is the vendor's wording and far more useful
+    // than anything generic we could substitute.
+    return { error: readableError(error, "Could not change that password.") };
+  }
+
+  return {};
+}
+
+// ── Sessions ────────────────────────────────────────────────────────────────
+
+export type ActiveSession = {
+  id: string;
+  /** True for the session making this request — it must not offer to end itself. */
+  current: boolean;
+  ipAddress: string | null;
+  userAgent: string | null;
+  authMethod: string | null;
+  expiresAt: string;
+};
+
+/**
+ * The caller's own sessions. Never anybody else's — the user id comes from the
+ * session, not from an argument, so there is no id to tamper with.
+ */
+export async function listMySessions(): Promise<ActiveSession[]> {
+  const { user, sessionId } = await withAuth();
+  if (!user) return [];
+
+  try {
+    const page = await getWorkOS().userManagement.listSessions(user.id);
+    return page.data
+      .filter((session) => session.status === "active")
+      .map((session) => ({
+        id: session.id,
+        current: session.id === sessionId,
+        ipAddress: session.ipAddress ?? null,
+        userAgent: session.userAgent ?? null,
+        authMethod: session.authMethod ?? null,
+        expiresAt: session.expiresAt,
+      }));
+  } catch {
+    // An empty list is honest here: the screen renders "no other devices"
+    // rather than inventing rows, and revocation below re-checks ownership
+    // anyway, so a stale list cannot be used to reach somebody else's session.
+    return [];
+  }
+}
+
+/**
+ * End one session.
+ *
+ * OWNERSHIP IS CHECKED AGAINST WORKOS, NOT ASSUMED FROM THE ARGUMENT. A session
+ * id is the only input, and `revokeSession` does not care whose it is — so
+ * without this lookup any signed-in user could sign out any other user by
+ * guessing or replaying an id. The list above is not the guard; this is.
+ */
+export async function revokeMySession(
+  sessionId: string,
+): Promise<{ error?: string }> {
+  const { user, sessionId: current } = await withAuth();
+  if (!user) return { error: "You are not signed in." };
+
+  // Ending your own session from a list of "other devices" would sign you out
+  // mid-click and look like a crash. Sign out is the button for that.
+  if (sessionId === current) {
+    return { error: "That is this device. Use sign out instead." };
+  }
+
+  const mine = await getWorkOS()
+    .userManagement.listSessions(user.id)
+    .then((page) => page.data.some((s) => s.id === sessionId))
+    .catch(() => false);
+
+  if (!mine) return { error: "That session could not be found." };
+
+  try {
+    await getWorkOS().userManagement.revokeSession({ sessionId });
+  } catch (error) {
+    return { error: readableError(error, "Could not end that session.") };
+  }
+  return {};
+}
+
+/**
+ * End every session except this one — the "lost my phone" button.
+ *
+ * Failures are counted rather than swallowed. Reporting success while three of
+ * five devices are still signed in is the exact failure this whole change
+ * exists to remove.
+ */
+export async function revokeMyOtherSessions(): Promise<{
+  error?: string;
+  ended?: number;
+}> {
+  const { user, sessionId: current } = await withAuth();
+  if (!user) return { error: "You are not signed in." };
+
+  let others;
+  try {
+    const page = await getWorkOS().userManagement.listSessions(user.id);
+    others = page.data.filter((s) => s.id !== current && s.status === "active");
+  } catch (error) {
+    return { error: readableError(error, "Could not read your sessions.") };
+  }
+
+  const results = await Promise.allSettled(
+    others.map((s) =>
+      getWorkOS().userManagement.revokeSession({ sessionId: s.id }),
+    ),
+  );
+  const failed = results.filter((r) => r.status === "rejected").length;
+
+  if (failed > 0) {
+    return {
+      error: `${others.length - failed} of ${others.length} devices were signed out. Try again.`,
+    };
+  }
+  return { ended: others.length };
 }

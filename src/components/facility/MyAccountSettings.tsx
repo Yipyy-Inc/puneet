@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { User, KeyRound, Save } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasskeysCard } from "@/components/auth/PasskeysCard";
+import { changePassword } from "@/lib/auth/workos-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -134,11 +135,25 @@ function ChangePasswordCard() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [pending, setPending] = useState(false);
 
   const canSubmit = current && next.length >= 8 && next === confirm;
 
-  const submit = () => {
-    // Mock — no backend. Real implementation posts to an auth endpoint.
+  // WAS A MOCK. It cleared the fields and toasted "Password changed" against no
+  // backend at all, so anyone who trusted it might discard a password that still
+  // worked. `changePassword` re-authenticates the current password before
+  // setting the new one -- a session alone is not proof, or a borrowed laptop
+  // would be a password takeover.
+  const submit = async () => {
+    setPending(true);
+    const result = await changePassword(current, next);
+    setPending(false);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
     setCurrent("");
     setNext("");
     setConfirm("");
@@ -186,8 +201,8 @@ function ChangePasswordCard() {
           </div>
         </div>
         <div className="flex justify-end">
-          <Button onClick={submit} disabled={!canSubmit}>
-            Update password
+          <Button onClick={submit} disabled={!canSubmit || pending}>
+            {pending ? "Changing…" : "Update password"}
           </Button>
         </div>
       </CardContent>
