@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
@@ -22,14 +23,13 @@ import {
 } from "@/components/ui/dialog";
 import { CreateFormModal } from "@/components/forms/CreateFormModal";
 import { FormTemplatesSection } from "@/components/forms/FormTemplatesSection";
+import { type Form, type FormType } from "@/data/forms";
 import {
-  getFormsByFacility,
-  duplicateForm,
-  archiveForm,
-  deleteForm,
-  type Form,
-  type FormType,
-} from "@/data/forms";
+  liveFormQueries,
+  useCreateForm,
+  useUpdateForm,
+} from "@/lib/api/forms-live";
+import { schemaFromFlatForm, toFlatForm } from "@/components/forms/live-shape";
 import { triggerFormEvent } from "@/lib/form-automation-events";
 import {
   Plus,
@@ -41,7 +41,6 @@ import {
   Code,
   PenLine,
   Archive,
-  Trash2,
   MoreVertical,
   Shield,
   Sparkles,
@@ -58,18 +57,34 @@ const FORM_CATEGORIES: { value: FormType; label: string }[] = [
   { value: "internal", label: "Internal Forms" },
 ];
 
+// Only `FormTemplatesSection` still needs this. The FORMS on this page come
+// from Postgres, scoped by the session — templates have no table yet and stay
+// fixture-backed, the same line drawn on the waivers screen: a template is a
+// starting point somebody re-types, a form is what a customer answered.
 const FACILITY_ID = 11;
 
 export default function IntakeFormsPage() {
   const [category, setCategory] = useState<CategoryTab>("intake");
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
   const router = useRouter();
-  const allForms = getFormsByFacility(FACILITY_ID);
+
+  // ── THE FORMS ARE REAL ─────────────────────────────────────────────────
+  //
+  // `forms` in Postgres, scoped to this facility by the SESSION. What this
+  // replaced called `getFormsByFacility(11)` — a module-level array the
+  // handlers mutated in place, with a `refreshKey` counter bumped afterwards
+  // to force React to notice. The counter is gone: the query is the source of
+  // truth and every mutation invalidates it.
+  const formsQuery = useQuery(liveFormQueries.all());
+  const allForms = useMemo(
+    () => (formsQuery.data ?? []).map((row) => toFlatForm(row)),
+    [formsQuery.data],
+  );
   const formsInCategory =
     category === "templates" ? [] : allForms.filter((f) => f.type === category);
 
-  const _refresh = refreshKey; // force re-render on state change
+  const createForm = useCreateForm();
+  const updateForm = useUpdateForm();
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
@@ -95,7 +110,6 @@ export default function IntakeFormsPage() {
         <CreateFormModal
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
-          facilityId={FACILITY_ID}
           defaultCategory={category === "templates" ? "intake" : category}
         />
       </div>
@@ -156,9 +170,47 @@ export default function IntakeFormsPage() {
                   <FormCard
                     key={form.id}
                     form={form}
-                    facilityId={FACILITY_ID}
                     router={router}
-                    onRefresh={() => setRefreshKey((k) => k + 1)}
+                    onArchive={async (target) => {
+                      try {
+                        await updateForm.mutateAsync({
+                          id: target.id,
+                          status: "archived",
+                        });
+                      } catch (error) {
+                        toast.error(`"${target.name}" was not archived.`, {
+                          description: (error as Error).message,
+                        });
+                        return;
+                      }
+                      toast.success(`"${target.name}" archived`, {
+                        description:
+                          "It stays on record and can no longer be answered.",
+                      });
+                    }}
+                    onDuplicate={async (target) => {
+                      // A copy is a NEW form with the same questions, opened as
+                      // a draft. It cannot be a clone of a published version -
+                      // those are frozen, and a second row pointing at one
+                      // would be two forms sharing a history.
+                      try {
+                        const copy = await createForm.mutateAsync({
+                          name: `${target.name} (copy)`,
+                          type: target.type,
+                          audience: target.audience ?? "customer",
+                          schema: schemaFromFlatForm(target),
+                          requireAuth: target.requireAuth,
+                          repeatPerPet: target.repeatPerPet,
+                        });
+                        router.push(
+                          `/facility/dashboard/forms/builder?id=${copy.id}`,
+                        );
+                      } catch (error) {
+                        toast.error("That form was not duplicated.", {
+                          description: (error as Error).message,
+                        });
+                      }
+                    }}
                   />
                 ))}
               </div>
@@ -195,14 +247,14 @@ function statusBadge(status?: string) {
 
 function FormCard({
   form,
-  facilityId,
   router,
-  onRefresh,
+  onArchive,
+  onDuplicate,
 }: {
   form: Form;
-  facilityId: number;
   router: ReturnType<typeof useRouter>;
-  onRefresh: () => void;
+  onArchive: (form: Form) => void;
+  onDuplicate: (form: Form) => void;
 }) {
   const sharePath = `/forms/${form.slug}`;
   const [embedOpen, setEmbedOpen] = useState(false);
@@ -232,18 +284,7 @@ function FormCard({
     toast.success("Embed code copied to clipboard");
   };
 
-  const handleArchive = () => {
-    archiveForm(form.id);
-    toast.success("Form archived");
-    onRefresh();
-  };
-
-  const handleDelete = () => {
-    if (!confirm(`Delete "${form.name}"? This cannot be undone.`)) return;
-    deleteForm(form.id);
-    toast.success("Form deleted");
-    onRefresh();
-  };
+  const handleArchive = () => onArchive(form);
 
   return (
     <>
@@ -282,15 +323,7 @@ function FormCard({
                 <Pencil className="mr-2 size-3.5" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  const copy = duplicateForm(form.id, facilityId);
-                  if (copy)
-                    router.push(
-                      `/facility/dashboard/forms/builder?id=${copy.id}`,
-                    );
-                }}
-              >
+              <DropdownMenuItem onClick={() => onDuplicate(form)}>
                 <Copy className="mr-2 size-3.5" />
                 Duplicate
               </DropdownMenuItem>
@@ -300,13 +333,10 @@ function FormCard({
                   Archive
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem
-                onClick={handleDelete}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 size-3.5" />
-                Delete
-              </DropdownMenuItem>
+              {/* No Delete. There is no delete route and no policy behind one:
+                  a version somebody has answered cannot be removed at all
+                  (`on delete restrict`), because their answers would stop being
+                  readable. Archive is the honest action and it is above. */}
             </DropdownMenuContent>
           </DropdownMenu>
         </CardHeader>

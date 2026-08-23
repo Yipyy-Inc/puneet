@@ -20,11 +20,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  createForm,
   type FormType,
   type FormAppliesTo,
   type FormSettings,
 } from "@/data/forms";
+import { useCreateForm } from "@/lib/api/forms-live";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const FORM_TYPES: { value: FormType; label: string }[] = [
@@ -48,7 +48,6 @@ const THEME_COLORS = [
 export interface CreateFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  facilityId: number;
   /** Pre-select form category (from active tab) */
   defaultCategory?: FormType;
 }
@@ -56,7 +55,6 @@ export interface CreateFormModalProps {
 export function CreateFormModal({
   open,
   onOpenChange,
-  facilityId,
   defaultCategory = "intake",
 }: CreateFormModalProps) {
   const router = useRouter();
@@ -66,6 +64,9 @@ export function CreateFormModal({
     setFormType(defaultCategory);
   }, [defaultCategory]);
   const [name, setName] = useState("");
+  const createForm = useCreateForm();
+  /** Shown beside the button that tried, not as a toast over a closed dialog. */
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [themeColor, setThemeColor] = useState("");
   const [petTypes, setPetTypes] = useState<string[]>([]);
@@ -83,7 +84,14 @@ export function CreateFormModal({
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  /**
+   * Create the form — for real.
+   *
+   * It arrives as a DRAFT with an empty first version, which is why the next
+   * step is the builder: a form with no questions is not something anybody can
+   * answer, and publishing is a separate, deliberate act.
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     const settings: FormSettings = {};
@@ -96,19 +104,29 @@ export function CreateFormModal({
       appliesTo.serviceTypes = serviceTypes.map((s) => s.toLowerCase());
     if (locationIds.length) appliesTo.locationIds = locationIds;
 
-    const form = createForm({
-      facilityId,
-      name: name.trim(),
-      slug: "",
-      type: formType,
-      internal: formType === "internal",
-      audience: formType === "internal" ? "staff" : "customer",
-      status: "draft",
-      questions: [],
-      fieldMapping: [],
-      appliesTo: Object.keys(appliesTo).length ? appliesTo : undefined,
-      settings: Object.keys(settings).length ? settings : undefined,
-    });
+    let form;
+    try {
+      form = await createForm.mutateAsync({
+        name: name.trim(),
+        type: formType,
+        audience: formType === "internal" ? "staff" : "customer",
+        // The definition starts empty and the builder fills it in. The slug is
+        // derived on the server from the name, so two tabs cannot mint the same
+        // one and the per-facility unique constraint is the arbiter.
+        schema: {
+          questions: [],
+          sections: [],
+          logicRules: [],
+          fieldMapping: [],
+        },
+      });
+    } catch (error) {
+      setSubmitError((error as Error).message);
+      return;
+    }
+
+    // Only after it exists. Navigating first would open the builder on an id
+    // nothing had created.
     onOpenChange(false);
     router.push(`/facility/dashboard/forms/builder?id=${form.id}`);
   };
@@ -210,6 +228,13 @@ export function CreateFormModal({
               ))}
             </div>
           </div>
+          {submitError && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+              <p className="font-medium">This form was not created.</p>
+              <p className="text-xs">{submitError}</p>
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               type="button"
