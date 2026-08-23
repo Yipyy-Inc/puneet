@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ import {
   Eye,
   Edit,
   Trash2,
+  Archive,
   Pen,
   FolderOpen,
   Layers,
@@ -47,7 +49,6 @@ import {
   Globe,
 } from "lucide-react";
 import {
-  digitalWaivers,
   waiverTemplates as seedTemplates,
   customWaiverCategories as seedCustomCategories,
   type DigitalWaiver,
@@ -58,6 +59,12 @@ import {
 import { brandingSettings } from "@/data/global-settings";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { toast } from "sonner";
+import {
+  waiverQueries,
+  usePublishWaiver,
+  useUpdateWaiver,
+} from "@/lib/api/waivers";
+import { fromLegacyWaiver, toLegacyWaiver } from "./waivers/legacy-shape";
 import { WaiverEditorDialog } from "./waivers/WaiverEditorDialog";
 import { TemplateEditorDialog } from "./waivers/TemplateEditorDialog";
 import { CategoryManagerDialog } from "./waivers/CategoryManagerDialog";
@@ -103,7 +110,22 @@ export function DigitalWaiversManager() {
   const facilityServices = useFacilityServices();
   const facilityName = brandingSettings.platformName;
 
-  const [waivers, setWaivers] = useState<DigitalWaiver[]>(digitalWaivers);
+  // ── THE WAIVERS ARE REAL ───────────────────────────────────────────────
+  //
+  // `waivers` in Postgres, scoped to this facility by the SESSION. `all=1`
+  // asks for the retired ones too; a caller without `view_waivers` gets only
+  // the active ones regardless, because RLS decides that rather than this line.
+  //
+  // What this replaced seeded `useState` from a fixture, so every waiver the
+  // business published survived exactly as long as the tab did.
+  const waiversQuery = useQuery(waiverQueries.all());
+  const waivers = useMemo(
+    () => (waiversQuery.data ?? []).map(toLegacyWaiver),
+    [waiversQuery.data],
+  );
+
+  const publishWaiver = usePublishWaiver();
+  const updateWaiver = useUpdateWaiver();
   const [templates, setTemplates] = useState<WaiverTemplate[]>(seedTemplates);
   const [customCategories, setCustomCategories] =
     useState<WaiverCategory[]>(seedCustomCategories);
@@ -182,29 +204,86 @@ export function DigitalWaiversManager() {
     setWaiverEditorOpen(true);
   };
 
-  const handleSaveWaiver = (next: DigitalWaiver) => {
-    setWaivers((prev) => {
-      const idx = prev.findIndex((w) => w.id === next.id);
-      if (idx === -1) return [next, ...prev];
-      const copy = prev.slice();
-      copy[idx] = next;
-      return copy;
-    });
+  /**
+   * Publish or rewrite a waiver — for real.
+   *
+   * Editing the text changes what the NEXT person signs and nothing about what
+   * previous people agreed to: every signature carries its own copy and a hash
+   * of it. That is what makes this edit safe to offer at all.
+   */
+  const handleSaveWaiver = async (next: DigitalWaiver) => {
+    const editing = Boolean(waiverEditorTarget);
+    try {
+      if (editing) {
+        await updateWaiver.mutateAsync({
+          id: next.id,
+          ...fromLegacyWaiver(next),
+          active: next.isActive,
+        });
+      } else {
+        await publishWaiver.mutateAsync(fromLegacyWaiver(next));
+      }
+    } catch (error) {
+      // Reported as a failure rather than as a success somewhere else. What
+      // this replaced spliced an array and could not fail.
+      toast.error(
+        editing
+          ? `"${next.name}" was not updated.`
+          : `"${next.name}" was not created.`,
+        { description: (error as Error).message },
+      );
+      return;
+    }
     toast.success(
-      waiverEditorTarget
+      editing
         ? `Waiver "${next.name}" updated`
         : `Waiver "${next.name}" created`,
     );
   };
 
+  // ── TEMPLATES AND CATEGORIES ARE STILL SESSION-ONLY ────────────────────
+  //
+  // The WAIVERS above are rows now. Templates and custom categories have no
+  // table yet, and they keep the `useState` behaviour they had.
+  //
+  // That is a deliberate line rather than an oversight: a template is a
+  // starting point for authoring, so losing one costs somebody re-typing. A
+  // waiver is the record of what a customer agreed to, so losing one costs the
+  // business its defence. Only the second was worth a migration today.
+  //
+  // What DID have to change is the wording. "Saved" over something that does
+  // not outlive the tab is the shape `check:success-claims` exists to catch,
+  // and this screen is not on its baseline.
   const handleSaveAsTemplate = (next: WaiverTemplate) => {
     setTemplates((prev) => [next, ...prev]);
-    toast.success(`Template "${next.name}" saved`);
+    toast.success(`Template "${next.name}" ready to use`, {
+      description:
+        "Templates are not stored yet — this one lasts until reload.",
+    });
   };
 
-  const handleDeleteWaiver = (w: DigitalWaiver) => {
-    setWaivers((prev) => prev.filter((x) => x.id !== w.id));
-    toast.success(`Waiver "${w.name}" deleted`);
+  /**
+   * RETIRE, not delete.
+   *
+   * There is no delete route and no delete policy behind one. Removing the row
+   * would destroy the only readable statement of what the business used to ask
+   * people to agree to — and signatures name a waiver by an id with no foreign
+   * key, so they would survive pointing at nothing.
+   *
+   * `active: false` takes it out of use and leaves the record.
+   */
+  const handleDeleteWaiver = async (w: DigitalWaiver) => {
+    try {
+      await updateWaiver.mutateAsync({ id: w.id, active: false });
+    } catch (error) {
+      toast.error(`"${w.name}" was not retired.`, {
+        description: (error as Error).message,
+      });
+      return;
+    }
+    toast.success(`Waiver "${w.name}" retired`, {
+      description: "It stays on record and can no longer be signed.",
+    });
     setDeleteWaiver(null);
   };
 
@@ -237,12 +316,17 @@ export function DigitalWaiversManager() {
       templateEditorTarget
         ? `Template "${next.name}" updated`
         : `Template "${next.name}" created`,
+      {
+        description: "Templates are not stored yet — this lasts until reload.",
+      },
     );
   };
 
   const handleDeleteTemplate = (t: WaiverTemplate) => {
     setTemplates((prev) => prev.filter((x) => x.id !== t.id));
-    toast.success(`Template "${t.name}" deleted`);
+    toast.success(`Template "${t.name}" removed`, {
+      description: "Templates are not stored yet — this lasts until reload.",
+    });
     setDeleteTemplate(null);
   };
 
@@ -544,17 +628,21 @@ export function DigitalWaiversManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete waiver */}
+      {/* Retire waiver. The copy already said signatures stay on record — that
+          is now literally true rather than aspirational, and the title and
+          button say "retire" so they match what happens. */}
       <AlertDialog
         open={!!deleteWaiver}
         onOpenChange={(open) => !open && setDeleteWaiver(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this waiver?</AlertDialogTitle>
+            <AlertDialogTitle>Retire this waiver?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteWaiver?.name} will be removed. Existing signatures stay on
-              record but the waiver won&apos;t be available for new bookings.
+              {deleteWaiver?.name} will be taken out of use and can no longer be
+              signed. It stays on record, and so does every signature already
+              given against it — including the exact wording each person agreed
+              to.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -563,7 +651,7 @@ export function DigitalWaiversManager() {
               onClick={() => deleteWaiver && handleDeleteWaiver(deleteWaiver)}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete
+              Retire
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -723,11 +811,11 @@ function WaiverRows({
                   <Button
                     variant="ghost"
                     size="sm"
-                    title="Delete"
+                    title="Retire"
                     className="text-red-600 hover:bg-red-50 hover:text-red-700"
                     onClick={() => onDelete(waiver)}
                   >
-                    <Trash2 className="size-3" />
+                    <Archive className="size-3" />
                   </Button>
                 </div>
               </TableCell>
