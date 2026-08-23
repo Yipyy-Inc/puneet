@@ -17,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { cn } from "@/lib/utils";
 import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
-import { useYipyyPayNav } from "../YipyyPaySection";
+import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 
 // ============================================================================
 // Is my money moving, and where is it?

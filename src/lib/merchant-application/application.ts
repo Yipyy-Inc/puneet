@@ -171,29 +171,49 @@ export const BENEFICIAL_OWNER_THRESHOLD = 25;
 /**
  * What is wrong with a set of principals, in the words a person needs.
  *
- * Returned as a list rather than thrown, because the step should show every
+ * Returned as lists rather than thrown, because the step should show every
  * problem at once — a form that reveals its objections one at a time is a form
  * somebody submits four times.
+ *
+ * `blocking` and `notes` are separate because they are answered differently. A
+ * blocker stops the step; a note is a remark that should not be rendered in red
+ * next to real errors, where it reads as one more thing to fix.
  */
-export function principalProblems(principals: Principal[]): string[] {
-  const problems: string[] = [];
+export interface PrincipalProblems {
+  blocking: string[];
+  notes: string[];
+}
+
+export function principalProblems(principals: Principal[]): PrincipalProblems {
+  const blocking: string[] = [];
+  const notes: string[] = [];
+
   if (principals.length === 0) {
-    problems.push("Add at least one owner.");
-    return problems;
+    blocking.push("Add at least one owner.");
+    return { blocking, notes };
   }
 
   const total = principals.reduce((sum, p) => sum + p.ownershipPercent, 0);
   if (total > 100) {
-    problems.push(
+    blocking.push(
       `Ownership adds up to ${total}%. It cannot be more than 100%.`,
     );
   }
 
   const controllers = principals.filter((p) => p.isControlPerson);
   if (controllers.length === 0) {
-    problems.push("Mark one person as the one who controls the business.");
+    blocking.push("Mark one person as the one who controls the business.");
   } else if (controllers.length > 1) {
-    problems.push("Only one person can be the control person.");
+    blocking.push("Only one person can be the control person.");
+  }
+
+  const missingId = principals.filter((p) => !p.nationalIdLast4);
+  if (missingId.length > 0) {
+    blocking.push(
+      missingId.length === 1
+        ? `${missingId[0]?.fullName} still needs an identity number.`
+        : `${missingId.length} owners still need an identity number.`,
+    );
   }
 
   const undeclared = principals.some(
@@ -204,12 +224,18 @@ export function principalProblems(principals: Principal[]): string[] {
     // Not an error. Somebody below the threshold is allowed to be listed; they
     // are simply not required, and saying so stops a facility deleting a row
     // they were right to add.
-    problems.push(
+    notes.push(
       `Owners below ${BENEFICIAL_OWNER_THRESHOLD}% do not have to be listed, but listing them is fine.`,
     );
   }
 
-  return problems;
+  if (total < 100) {
+    notes.push(
+      `Ownership listed so far adds up to ${total}%. That is fine if the rest is held by people under ${BENEFICIAL_OWNER_THRESHOLD}%.`,
+    );
+  }
+
+  return { blocking, notes };
 }
 
 /** True when the list has a real blocker, as opposed to a note. */
@@ -254,6 +280,23 @@ export type BankingStep = z.infer<typeof bankingStepSchema>;
  * into underwriting.
  */
 export const CNP_QUESTIONNAIRE_THRESHOLD = 30;
+
+/**
+ * What the person actually agreed to.
+ *
+ * A constant rather than a row, and copied onto the application at signing, so
+ * that editing this file later cannot change what somebody is recorded as
+ * having accepted.
+ *
+ * It lives here rather than in the route because the review screen has to show
+ * the person the same words the row will record. Two copies would diverge, and
+ * the copy that mattered would be the one nobody read.
+ */
+export const ATTESTATION_TEXT = [
+  "I confirm that the information in this application is true and complete, and that I am authorised to submit it on behalf of the business named.",
+  "I understand that Yipyy will pass this information, including identity documents, to the payment provider that will open and hold the merchant account, and that the provider will decide whether to approve it.",
+  "I understand that Yipyy stores this information only until the account is open, and deletes the identity documents and identity numbers once it is.",
+].join("\n\n");
 
 // ── Step 5: the attestation ─────────────────────────────────────────────────
 

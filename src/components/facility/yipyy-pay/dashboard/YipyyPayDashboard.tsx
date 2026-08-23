@@ -14,7 +14,7 @@ import {
   YipyyPayHero,
   YipyyPayWordmark,
 } from "../YipyyPayBrand";
-import { useYipyyPayNav } from "../YipyyPaySection";
+import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 import { OverviewTab } from "./OverviewTab";
 
 // The devices tab makes a slow, optional call and the preferences tab carries a

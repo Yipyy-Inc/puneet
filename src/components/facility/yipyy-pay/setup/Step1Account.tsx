@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
 import { PoweredByClover } from "../YipyyPayBrand";
 import { ConnectIllustration } from "../illustrations";
-import { useYipyyPayNav } from "../YipyyPaySection";
+import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 
 // ============================================================================
 // Step 1 — connecting the account the money lands in.
@@ -117,8 +117,11 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
         <div className="text-muted-foreground flex items-start gap-2 border-t pt-3 text-xs/relaxed">
           <Lock className="mt-0.5 size-3.5 shrink-0" />
           <p>
-            Yipyy never sees your merchant password, your identity documents or
-            your bank details. They go straight to Clover.
+            {/* Accurate for THIS path only. A facility who applies through
+                Yipyy instead does hand us their documents — that screen says
+                so in its own words, and this one must not be copied there. */}
+            Yipyy never sees your merchant password. You are signing in to an
+            account you already hold, and nothing about it is typed here.
           </p>
         </div>
       </div>
