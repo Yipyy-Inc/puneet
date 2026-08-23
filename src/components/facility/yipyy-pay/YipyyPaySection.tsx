@@ -1,22 +1,21 @@
 "use client";
 
-import { useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useRouter, useSearchParams } from "next/navigation";
 import { ExternalLink, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   useYipyyPayOverview,
   type YipyyPayOverview,
 } from "@/lib/api/yipyy-pay";
-import { YipyyPayLanding } from "./YipyyPayLanding";
+import { SectionSkeleton } from "./SectionSkeleton";
+import { YipyyPayPreConnection } from "./PreConnection";
+import { useYipyyPayNav } from "./use-yipyy-pay-nav";
 
-// The wizard and the dashboard are never on screen together, and a facility
-// sees one of them for five minutes and the other for years. Split so the
-// visitor pays for the one they are looking at.
+// The connect wizard and the dashboard are never on screen together, and a
+// facility sees one of them for five minutes and the other for years. Split so
+// the visitor pays for the one they are looking at.
 const YipyyPaySetupWizard = dynamic(
   () =>
     import("./setup/YipyyPaySetupWizard").then((m) => m.YipyyPaySetupWizard),
@@ -29,77 +28,29 @@ const YipyyPayDashboard = dynamic(
 );
 
 // ============================================================================
-// Which of the three Yipyy Pay screens a facility is looking at.
+// Which Yipyy Pay screen a facility is looking at.
 //
 // ── THE STATE IS DERIVED, NEVER ASSERTED ──────────────────────────────────
 //
-//   not connected            -> the landing page (or "resume setup")
-//   connected, not finished  -> the wizard, at the first incomplete step
-//   connected and finished   -> the dashboard, forever
+//   setup finished                -> the dashboard, forever
+//   &step= in the address         -> the connect-an-existing-account wizard
+//   anything else                 -> PreConnection, which picks from the
+//                                    merchant application's own status
 //
-// The first two facts come from `payment_connections` on every load, not from
-// the stored `setupStep`. That matters: a facility can uninstall Yipyy from
-// their own Clover dashboard at any time, and Clover publishes no way for us to
-// be told — the connection simply stops working. If the wizard trusted its own
-// jsonb column, that facility would come back to three green ticks and a
-// dashboard reporting an account that no longer exists.
-//
-// Only step 3 is stored, because only step 3 is ours: it is a set of
-// preferences with no counterpart at Clover to read back.
+// "Finished" comes from `setupCompletedAt`; everything before it comes from
+// rows that describe reality — a connection Clover still honours, an
+// application status a human actually set. That matters: a facility can
+// uninstall Yipyy from their own Clover dashboard at any time, and Clover
+// publishes no way for us to be told. If this trusted a stored step, that
+// facility would come back to green ticks and a dashboard reporting an account
+// that no longer exists.
 //
 // ── AND THE URL IS A VIEW, NOT THE STATE ──────────────────────────────────
 //
-// `&step=` and `&tab=` are honoured so a facility can bookmark or refresh, but
-// they cannot promote anyone: asking for step 3 without a connection still
-// lands on step 1, because the step it renders is `min(asked, first incomplete)`.
+// `&apply=`, `&step=` and `&tab=` are honoured so a facility can bookmark or
+// refresh, but they promote nobody: each wizard clamps what it is asked for
+// against what is genuinely finished. See `use-yipyy-pay-nav`.
 // ============================================================================
-
-function SectionSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-56 w-full rounded-2xl" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-36 w-full" />
-        ))}
-      </div>
-      <Skeleton className="h-44 w-full" />
-    </div>
-  );
-}
-
-/** Read and write `&step=` / `&tab=` without losing `?section=`. */
-export function useYipyyPayNav() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const go = useCallback(
-    (patch: { step?: number | null; tab?: string | null }) => {
-      const next = new URLSearchParams(searchParams.toString());
-      next.set("section", "yipyy-pay");
-      for (const [key, value] of Object.entries(patch)) {
-        if (value === null || value === undefined) next.delete(key);
-        else next.set(key, String(value));
-      }
-      // `replace`, not `push`: the wizard advances by itself after a redirect
-      // back from Clover, and a history entry per step means Back walks a
-      // facility through screens they already completed.
-      router.replace(`/facility/dashboard/settings?${next.toString()}`, {
-        scroll: false,
-      });
-    },
-    [router, searchParams],
-  );
-
-  const stepParam = Number(searchParams.get("step"));
-  return {
-    go,
-    requestedStep: Number.isInteger(stepParam) ? stepParam : null,
-    requestedTab: searchParams.get("tab"),
-    /** The landing page links here to begin. */
-    inWizard: searchParams.get("step") !== null,
-  };
-}
 
 export function YipyyPaySection() {
   const nav = useYipyyPayNav();
@@ -152,33 +103,30 @@ export function YipyyPaySection() {
   const overview: YipyyPayOverview = data;
   const finished = Boolean(overview.config.setupCompletedAt);
 
-  // Setup finished: the landing page is never shown to this facility again.
+  // Setup finished: no marketing page and no application screen is shown to
+  // this facility again.
   //
   // Keyed on `setupCompletedAt` alone, NOT on the connection. A facility that
   // finished and later had the app removed at Clover still gets the dashboard —
   // which is where the "card payments are not working" banner and the reconnect
-  // link live. Sending them back to a marketing page for a product they already
-  // bought would hide the one control that fixes it.
+  // link live. Sending them back to a landing page for a product they already
+  // have would hide the one control that fixes it.
   if (finished && !nav.inWizard) {
     return <YipyyPayDashboard overview={overview} />;
   }
 
-  // Only `&step=` opens the wizard.
+  // Only `&step=` opens the connect wizard.
   //
   // This used to also trigger on `connection.connected`, so a facility that
   // connected and then left mid-setup came back straight into step 2 — and the
   // wizard's own "Back to Yipyy Pay" link then rendered the wizard again,
   // because leaving it did not change the condition that put them there. A
   // control that visibly does nothing.
-  //
-  // Now a bare URL lands on the landing page, which is where the spec asks for
-  // "Setup in progress — step N of 3" and a Continue button. That banner was
-  // otherwise unreachable code.
   if (nav.inWizard) {
     return <YipyyPaySetupWizard overview={overview} />;
   }
 
-  return <YipyyPayLanding overview={overview} />;
+  return <YipyyPayPreConnection overview={overview} />;
 }
 
 /**

@@ -196,3 +196,99 @@ test.describe("Yipyy Pay — naming a terminal", () => {
     expect(response.status()).toBe(422);
   });
 });
+
+// ============================================================================
+// The merchant application: who may reach it, and what it refuses to hand back.
+//
+// Every assertion below is a read or a refusal. The refusals are answered
+// before a statement reaches Postgres, and the one authenticated read is a GET
+// — so this block writes nothing and has nothing to clean up.
+//
+// The last test is the one that matters. A national identity number and a bank
+// account number go into Vault and only four digits ever come out. That is a
+// property of the route, invisible on screen, and exactly the kind of thing a
+// refactor breaks silently — so it is asserted against the response body rather
+// than trusted to a code comment.
+// ============================================================================
+
+const APPLICATION = "/api/merchant-application/application";
+const SECRET = "/api/merchant-application/secret";
+
+test.describe("Yipyy Pay — the merchant application", () => {
+  test("refuses anyone who is not signed in", async ({ page }) => {
+    const response = await page.request.get(APPLICATION);
+    expect(response.status()).toBeGreaterThanOrEqual(401);
+    expect(response.status()).toBeLessThan(500);
+  });
+
+  test("refuses a groomer, who may not read the owners' identity details", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.groomer);
+    const response = await page.request.get(APPLICATION);
+    expect(response.status()).toBe(403);
+  });
+
+  test("refuses a groomer starting one", async ({ page }) => {
+    await signIn(page, ACCOUNTS.groomer);
+    const response = await page.request.post(APPLICATION);
+    // Refused by `activeAdminFacility()` before any row is written, which is
+    // why this test leaves nothing behind for an `afterAll` to remove.
+    expect(response.status()).toBe(403);
+  });
+
+  test("refuses a groomer storing a number, and never echoes it", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.groomer);
+    const response = await page.request.post(SECRET, {
+      data: { kind: "bank", value: "000123456789" },
+    });
+    expect(response.status()).toBe(403);
+    // A refusal that quoted the value back would put it in a log, a proxy and
+    // a browser devtools pane. The route authorises against the session BEFORE
+    // it touches the admin client, and says nothing about what it was sent.
+    expect(await response.text()).not.toContain("000123456789");
+  });
+
+  test("hands an owner four digits and never a whole number", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const response = await page.request.get(APPLICATION);
+    expect(response.status()).toBe(200);
+
+    const body = (await response.json()) as {
+      application: {
+        banking?: { bankLast4?: string | null };
+        principals?: { nationalIdLast4?: string | null }[];
+      } | null;
+    };
+
+    // No application yet on this facility is a legitimate answer, and asserting
+    // one exists would make this test depend on whatever the last run left.
+    if (!body.application) return;
+
+    const raw = JSON.stringify(body);
+    // Nothing named like the secret itself may appear at all. These are the
+    // names the columns would have if somebody ever added them to the row.
+    for (const forbidden of [
+      "national_id",
+      "nationalId",
+      "accountNumber",
+      "account_number",
+      "bank_account_number",
+    ]) {
+      expect(raw).not.toContain(forbidden);
+    }
+
+    const last4s = [
+      body.application.banking?.bankLast4,
+      ...(body.application.principals ?? []).map((p) => p.nationalIdLast4),
+    ].filter((value): value is string => typeof value === "string");
+
+    for (const last4 of last4s) {
+      expect(last4).toMatch(/^[0-9]{4}$/);
+    }
+  });
+});

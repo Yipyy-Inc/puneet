@@ -43,7 +43,7 @@ export interface BoardingDecision {
   detail: string | null;
 }
 
-export interface BoardingSubmitter {
+export interface MerchantBoardingSubmitter {
   /**
    * A name for the destination, shown to a platform admin and written into the
    * audit note. "Where did this go" should never require reading the code.
@@ -78,7 +78,7 @@ export interface BoardingSubmitter {
  * requires, and records the outcome — which moves the status through the same
  * machine an API would have moved it through.
  */
-export const manualQueueSubmitter: BoardingSubmitter = {
+export const manualQueueSubmitter: MerchantBoardingSubmitter = {
   name: "Yipyy review queue",
 
   async submit(applicationId: string): Promise<BoardingDecision> {
@@ -114,6 +114,6 @@ export const manualQueueSubmitter: BoardingSubmitter = {
  * choose on configuration — the same shape `cloverConfig()` uses to pick an
  * estate — without every caller learning about the choice.
  */
-export function boardingSubmitter(): BoardingSubmitter {
+export function merchantBoardingSubmitter(): MerchantBoardingSubmitter {
   return manualQueueSubmitter;
 }

@@ -4,8 +4,9 @@ import { activeAdminFacility } from "@/lib/api/facility-context";
 import { createServerClient } from "@/lib/supabase/server";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { getViewer } from "@/lib/auth/viewer";
-import { boardingSubmitter } from "@/lib/merchant-application/submitter";
+import { merchantBoardingSubmitter } from "@/lib/merchant-application/submitter";
 import {
+  ATTESTATION_TEXT,
   attestationSchema,
   isEditable,
   REQUIRED_DOCUMENT_TYPES,
@@ -219,14 +220,14 @@ export async function POST(request: NextRequest) {
       {
         status: "submitted",
         detail: "This application has already been submitted.",
-        destination: boardingSubmitter().name,
+        destination: merchantBoardingSubmitter().name,
       },
       { status: 200 },
     );
   }
 
   // ── Hand over ───────────────────────────────────────────────────────────
-  const submitter = boardingSubmitter();
+  const submitter = merchantBoardingSubmitter();
   try {
     const decision = await submitter.submit(application.id);
 
@@ -275,16 +276,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-/**
- * What the person actually agreed to.
- *
- * A constant rather than a row, and copied onto the application at signing, so
- * that editing this file later cannot change what somebody is recorded as
- * having accepted.
- */
-const ATTESTATION_TEXT = [
-  "I confirm that the information in this application is true and complete, and that I am authorised to submit it on behalf of the business named.",
-  "I understand that Yipyy will pass this information, including identity documents, to the payment provider that will open and hold the merchant account, and that the provider will decide whether to approve it.",
-  "I understand that Yipyy stores this information only until the account is open, and deletes the identity documents and identity numbers once it is.",
-].join("\n\n");

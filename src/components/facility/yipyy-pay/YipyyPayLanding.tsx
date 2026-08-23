@@ -2,11 +2,12 @@
 
 import {
   ArrowRight,
-  Building2,
   CircleDashed,
   CreditCard,
   ExternalLink,
+  IdCard,
   Landmark,
+  Loader2,
   Lock,
   ClipboardList,
   ShieldCheck,
@@ -15,16 +16,24 @@ import {
   TriangleAlert,
   Wallet,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
+import { useStartApplication } from "@/lib/api/merchant-application";
+import type { MerchantApplication } from "@/lib/merchant-application/application";
+import {
+  APPLY_STEP_COUNT,
+  completedStepCount,
+  firstIncompleteStep,
+} from "./apply/steps";
 import {
   PoweredByClover,
   YipyyPayHero,
   YipyyPayWordmark,
 } from "./YipyyPayBrand";
-import { useYipyyPayNav } from "./YipyyPaySection";
+import { useYipyyPayNav } from "./use-yipyy-pay-nav";
 
 // ============================================================================
 // The screen a facility sees before they have set anything up.
@@ -43,11 +52,20 @@ import { useYipyyPayNav } from "./YipyyPaySection";
 //
 // ── THE CHECKLIST IS THE MOST VALUABLE PART ───────────────────────────────
 //
-// MoeGo's own help centre names the single biggest cause of a stalled setup: a
-// legal business name that does not match the tax authority's records
+// Every acquirer's own guidance names the same biggest cause of a stalled
+// setup: a legal business name that does not match the tax authority's records
 // character for character. That is worth more to a facility than any of the
 // marketing above it, so it is stated before they begin rather than discovered
 // in a rejection three days later.
+//
+// ── AND THE PRIVACY NOTE SAYS WHAT IS TRUE NOW, NOT WHAT WAS ──────────────
+//
+// This page used to say the documents "go straight to Clover" and that "Yipyy
+// never sees them". That was true of the connect-your-own-account flow it was
+// written for. It is not true of the application: Yipyy collects the documents,
+// holds them in private storage, passes them on, and deletes them. The sentence
+// below says exactly that, and it changed in the same release that shipped the
+// screens which collect them — not afterwards.
 // ============================================================================
 
 const VALUE_PROPS = [
@@ -69,48 +87,73 @@ const VALUE_PROPS = [
   {
     icon: ShieldCheck,
     title: "Your account, your money",
-    body: "Payouts go straight to your own bank. Yipyy never holds your funds and never sees a card number.",
+    body: "The merchant account is in your business name and payouts go straight to your own bank. Yipyy never holds your funds and never sees a card number.",
   },
 ] as const;
 
 const CHECKLIST = [
   {
-    icon: Building2,
-    label: "A Clover merchant account",
+    icon: ClipboardList,
+    label: "Your legal business name and tax number",
     detail:
-      "If you do not have one yet, you can open one when you start — it is the account your payouts come from.",
+      "Exactly as your tax records show them — capitalisation, punctuation and any Inc., Ltd. or LLC included.",
   },
   {
-    icon: ClipboardList,
-    label: "Your legal business name, exactly as your tax records show it",
+    icon: IdCard,
+    label: "Photo ID for everyone who owns 25% or more",
     detail:
-      "Capitalisation, punctuation and any suffix such as Inc., Ltd. or LLC.",
+      "Passport, driving licence or national ID card, plus their date of birth, home address and identity number.",
   },
   {
     icon: Landmark,
     label: "The bank account your payouts should reach",
     detail:
-      "You give these to Clover directly when you open or verify the merchant account. Yipyy never sees them.",
+      "In the business name, not a personal account, with a void cheque or bank letter to prove it.",
   },
   {
     icon: CreditCard,
     label: "Your card terminal, if you have one",
     detail:
-      "A Clover Flex, Mini or Compact. You can finish setup without one and add it later.",
+      "A Clover Flex, Mini or Compact. You can apply without one and add it later.",
   },
 ] as const;
 
-export function YipyyPayLanding({ overview }: { overview: YipyyPayOverview }) {
+export function YipyyPayLanding({
+  overview,
+  application,
+}: {
+  overview: YipyyPayOverview;
+  /** A started-but-unsubmitted application, if there is one. */
+  application: MerchantApplication | null;
+}) {
   const nav = useYipyyPayNav();
-  // Connected but never finished — they left mid-flow. The page says so rather
-  // than offering "Get Started" to somebody who already did.
-  const resuming =
-    overview.connection.connected && !overview.config.setupCompletedAt;
+  const start = useStartApplication();
 
-  // Where "Continue" should drop them. The stored step is only a hint — the
-  // wizard clamps it down to the first step that is genuinely incomplete — so
-  // an optimistic 3 lands on 2 rather than skipping anything.
-  const startAt = resuming ? overview.config.setupStep : 1;
+  // Somebody who used the connect-an-existing-account path and left mid-flow.
+  const resumingSetup =
+    overview.connection.connected && !overview.config.setupCompletedAt;
+  const resumingApplication = application !== null;
+
+  function begin() {
+    if (application) {
+      nav.go({ apply: firstIncompleteStep(application) });
+      return;
+    }
+    start.mutate(undefined, {
+      onSuccess: () => nav.go({ apply: 1 }),
+      onError: (error: Error) => toast.error(error.message),
+    });
+  }
+
+  const primaryLabel = resumingSetup
+    ? "Continue setup"
+    : resumingApplication
+      ? "Continue my application"
+      : "Get started";
+
+  const primaryAction = resumingSetup
+    ? () => nav.go({ step: overview.config.setupStep })
+    : begin;
 
   return (
     <div className="space-y-6">
@@ -131,9 +174,11 @@ export function YipyyPayLanding({ overview }: { overview: YipyyPayOverview }) {
             <Button
               size="lg"
               className="bg-white text-sky-700 hover:bg-white/90"
-              onClick={() => nav.go({ step: startAt })}
+              disabled={start.isPending}
+              onClick={primaryAction}
             >
-              {resuming ? "Continue setup" : "Get started"}
+              {start.isPending && <Loader2 className="size-4 animate-spin" />}
+              {primaryLabel}
               <ArrowRight className="size-4" />
             </Button>
             <Button
@@ -161,7 +206,10 @@ export function YipyyPayLanding({ overview }: { overview: YipyyPayOverview }) {
         </div>
       </YipyyPayHero>
 
-      {resuming && <ResumeNotice step={overview.config.setupStep} />}
+      {resumingSetup && <SetupResumeNotice step={overview.config.setupStep} />}
+      {!resumingSetup && application && (
+        <ApplicationResumeNotice application={application} onResume={begin} />
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {VALUE_PROPS.map(({ icon: Icon, title, body }) => (
@@ -183,14 +231,17 @@ export function YipyyPayLanding({ overview }: { overview: YipyyPayOverview }) {
       </div>
 
       <BeforeYouStart
-        onStart={() => nav.go({ step: startAt })}
-        resuming={resuming}
+        onStart={primaryAction}
+        starting={start.isPending}
+        label={primaryLabel}
       />
+
+      <AlreadyHaveOne onConnect={() => nav.go({ step: 1 })} />
     </div>
   );
 }
 
-function ResumeNotice({ step }: { step: number }) {
+function SetupResumeNotice({ step }: { step: number }) {
   return (
     <Card className="border-sky-200 bg-sky-50/60 dark:border-sky-900/50 dark:bg-sky-950/20">
       <CardContent className="flex flex-wrap items-center gap-3 p-4">
@@ -204,12 +255,40 @@ function ResumeNotice({ step }: { step: number }) {
   );
 }
 
+function ApplicationResumeNotice({
+  application,
+  onResume,
+}: {
+  application: MerchantApplication;
+  onResume: () => void;
+}) {
+  const completed = completedStepCount(application);
+  return (
+    <Card className="border-sky-200 bg-sky-50/60 dark:border-sky-900/50 dark:bg-sky-950/20">
+      <CardContent className="flex flex-wrap items-center gap-3 p-4">
+        <CircleDashed className="size-5 shrink-0 text-sky-600 dark:text-sky-400" />
+        <p className="min-w-0 flex-1 text-sm/relaxed">
+          <span className="font-semibold">Application in progress</span> —{" "}
+          {completed} of {APPLY_STEP_COUNT - 1} sections finished. Nothing you
+          have entered is lost.
+        </p>
+        <Button size="sm" onClick={onResume}>
+          Continue
+          <ArrowRight className="size-4" />
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function BeforeYouStart({
   onStart,
-  resuming,
+  starting,
+  label,
 }: {
   onStart: () => void;
-  resuming: boolean;
+  starting: boolean;
+  label: string;
 }) {
   return (
     <Card>
@@ -217,18 +296,19 @@ function BeforeYouStart({
         <div className="space-y-1">
           <p className="text-lg font-semibold">Before you start</p>
           <p className="text-muted-foreground text-sm/relaxed">
-            Setup takes about five minutes. Have these to hand.
+            Applying takes about fifteen minutes if you have these to hand. You
+            can save and come back at any point.
           </p>
         </div>
 
         <ul className="space-y-3.5">
-          {CHECKLIST.map(({ icon: Icon, label, detail }) => (
-            <li key={label} className="flex gap-3">
+          {CHECKLIST.map(({ icon: Icon, label: item, detail }) => (
+            <li key={item} className="flex gap-3">
               <span className="bg-muted text-muted-foreground mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full">
                 <Icon className="size-3.5" />
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-medium">{label}</span>
+                <span className="block text-sm font-medium">{item}</span>
                 <span className="text-muted-foreground block text-sm/relaxed">
                   {detail}
                 </span>
@@ -238,8 +318,7 @@ function BeforeYouStart({
         </ul>
 
         {/* The one thing on this page most likely to save a facility three
-            days. MoeGo's help centre names it as the most common cause of a
-            stalled application, and it is a trivially avoidable one. */}
+            days, and a trivially avoidable one. */}
         <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <p className="leading-relaxed">
@@ -252,23 +331,57 @@ function BeforeYouStart({
           </p>
         </div>
 
+        {/* Says what Yipyy actually does with this material. It is collected
+            here, held here, and deleted here — see the banner above. */}
         <div className="flex items-start gap-2.5 rounded-lg border p-3 text-sm">
           <Lock className="text-muted-foreground mt-0.5 size-4 shrink-0" />
           <p className="text-muted-foreground leading-relaxed">
-            Your identity documents, tax number and bank details go straight to
-            Clover, who hold your merchant account. Yipyy never sees them and
-            never stores them.
+            Yipyy collects your identity documents, identity numbers and bank
+            account number, encrypts them, and passes them to the provider who
+            opens your merchant account. Only you and the Yipyy administrator
+            handling your application can open them, and they are deleted once
+            the account is open. Only the last four digits of any number are
+            ever shown back to you.
           </p>
         </div>
 
         <div className="flex justify-start">
-          <Button size="lg" onClick={onStart}>
-            <Wallet className="size-4" />
-            {resuming ? "Continue setup" : "Get started with Yipyy Pay"}
+          <Button size="lg" onClick={onStart} disabled={starting}>
+            {starting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Wallet className="size-4" />
+            )}
+            {label}
             <ArrowRight className="size-4" />
           </Button>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * The other way in, for the facility that already processes cards.
+ *
+ * Deliberately quiet and at the bottom. Almost nobody arrives already holding a
+ * Clover merchant account, and giving that path equal weight at the top would
+ * send the majority down a route that asks them to sign in somewhere they have
+ * never been. It stays because for the few it fits, it is one click instead of
+ * a fifteen-minute application.
+ */
+function AlreadyHaveOne({ onConnect }: { onConnect: () => void }) {
+  return (
+    <p className="text-muted-foreground text-center text-sm">
+      Already take card payments through a Clover merchant account?{" "}
+      <button
+        type="button"
+        onClick={onConnect}
+        className="text-foreground font-medium underline underline-offset-4"
+      >
+        Link the one you have instead
+      </button>
+      .
+    </p>
   );
 }

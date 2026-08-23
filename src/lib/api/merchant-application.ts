@@ -27,7 +27,7 @@ import type {
 // the value is passed and dropped rather than held in component state.
 // ============================================================================
 
-const KEY = ["boarding", "application"] as const;
+const KEY = ["merchant-application"] as const;
 
 async function readJson<T>(response: Response, fallback: string): Promise<T> {
   const body = (await response.json().catch(() => null)) as
@@ -39,7 +39,7 @@ async function readJson<T>(response: Response, fallback: string): Promise<T> {
   return body as T;
 }
 
-export const boardingQueries = {
+export const merchantApplicationQueries = {
   application: () => ({
     queryKey: KEY,
     queryFn: async (): Promise<MerchantApplication | null> => {
@@ -53,8 +53,8 @@ export const boardingQueries = {
   }),
 };
 
-export function useBoardingApplication() {
-  return useQuery(boardingQueries.application());
+export function useMerchantApplication() {
+  return useQuery(merchantApplicationQueries.application());
 }
 
 /** Start one. Safe to call twice — the route hands back the existing one. */

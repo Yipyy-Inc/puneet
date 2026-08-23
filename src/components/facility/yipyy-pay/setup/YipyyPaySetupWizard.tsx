@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
 import { YipyyPayWordmark } from "../YipyyPayBrand";
-import { useYipyyPayNav } from "../YipyyPaySection";
+import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 import { SetupStepper, type StepState } from "./SetupStepper";
 import { Step1Account } from "./Step1Account";
 import { Step2Business } from "./Step2Business";
