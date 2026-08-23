@@ -53,9 +53,38 @@ declare
 begin
   select profile_id into v_super
     from public.platform_memberships where role = 'superadmin' limit 1;
+  -- ── PICK SOMEBODY WHO ACTUALLY LACKS PLATFORM AUTHORITY ─────────────────
+  --
+  -- This borrowed an arbitrary row: `access_level = 'admin' and profile_id <>
+  -- v_super`, LIMIT 1, no ORDER BY. Two things were wrong with it and both bit
+  -- on 2026-08-22.
+  --
+  -- 1. Excluding `v_super` excludes ONE superadmin — whichever `limit 1` found
+  --    first. There are three. The unordered pick returned admin@yipyy.com, who
+  --    is a facility admin AND a superadmin, so `invite_platform_admin`
+  --    correctly ALLOWED it and P1 failed. The guard was right; the fixture
+  --    handed it the wrong person. Exclude everyone on the platform team, not
+  --    one of them.
+  --
+  -- 2. With no ORDER BY the row is whatever the heap yields, so this passed for
+  --    weeks and then stopped without anything about the product changing.
+  --
+  -- And if there is no such person at all, `v_facowner` is null, the claims are
+  -- set with a null `sub`, and `invite_platform_admin` raises for having no
+  -- session — which sets v_ok and PASSES P1 for entirely the wrong reason. A
+  -- test that passes when its fixture is missing is worse than one that fails.
   select m.profile_id into v_facowner
     from public.facility_memberships m
-   where m.access_level = 'admin' and m.profile_id <> v_super limit 1;
+   where m.access_level = 'admin'
+     and not exists (select 1 from public.platform_memberships pm
+                      where pm.profile_id = m.profile_id)
+   order by m.profile_id
+   limit 1;
+
+  if v_facowner is null then
+    raise exception
+      'No facility admin exists who is not also on the platform team; P1 cannot be tested and must not report a pass.';
+  end if;
 
   insert into public.profiles (id, email, full_name)
   values (v_other, 'plat.other@yipyy.invalid', 'Plat Other')
