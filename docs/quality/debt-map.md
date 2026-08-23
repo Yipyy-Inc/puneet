@@ -4402,6 +4402,97 @@ total liability changes. If it does not, it is a transfer, and reusing the
 reason on the ledger too — `gift_card` rather than `added` — or an auditor reads
 it as the business having given the customer money.
 
+## Snapshot (2026-08-23, Yipyy Pay)
+
+### 🔴 Clover is an acquirer, not a platform — four capabilities do NOT exist and were looked for — 2026-08-23
+
+The Yipyy Pay specification models Clover as Stripe Connect: an ID scan, an EIN
+and a social security number collected in-app, an IRS letter uploaded to unstick
+a new tax number, a payout schedule and a statement descriptor set from the
+integration. **None of that is reachable from an OAuth application.** Established
+by reading Clover's own API reference; recorded here so the next person does not
+spend an afternoon finding the same four absences.
+
+- **No partner-driven KYC.** Clover collects identity, tax number and bank
+  details directly from the merchant when the account is opened. There is no
+  endpoint to submit or amend them on the merchant's behalf.
+- **No payout or settlement endpoint.** Deposits are visible in the merchant's
+  own Clover dashboard and nowhere else.
+- **No statement descriptor or payout schedule control.** Both belong to the
+  merchant account.
+- **No revoke** — already recorded above, and the same shape of absence.
+
+**Do instead:** build the screen and point the control at something real. The
+wizard's step 2 _reads the merchant back_ for the facility to confirm; the
+payout figures are derived from `public.payments` and say **estimated** on the
+screen; the payout schedule is stored as a facility declaration used only for
+arrival-date arithmetic. A verification screen that verifies nothing is worse
+than no verification screen — it tells a facility their business has been
+checked when nobody checked anything.
+
+### 🔴 `payments` has no column for a surcharge, so "client pays the card fee" is not a settings toggle — 2026-08-23
+
+Yipyy Pay ships the fee-payer choice with **"add it to the invoice" disabled and
+the reason stated**, which looks like an unfinished feature and is not. Measured
+against the schema: `public.payments` carries
+`constraint payments_total_is_its_parts check (grand_total = subtotal + tax + tip)`
+(20260806220000) on an append-only ledger with UPDATE, DELETE and TRUNCATE
+blocked for every role including `service_role`. There is nowhere to record a
+processing fee. Both charge paths also derive the amount server-side —
+`/api/payments/clover/charge` from `amount_due - amount_paid`, the terminal route
+from `booking_line_items` plus tax config — deliberately, so a browser cannot
+name a price.
+
+So passing the fee on means: a migration altering a CHECK on a money table, both
+charge routes, the refund path (is the fee returned with the sale?), and a tax
+question whose answer differs by jurisdiction. That is its own change with its
+own review.
+
+**Do instead:** do not store `feePayer: "client"` until the ledger can hold the
+result. A setting that is saved and not honoured is the exact failure this
+feature was built to remove — and it would be invisible, because the invoice
+would simply not have the line. The schema field and the published rates
+(2.9% + 50¢ card-present, 3.4% + 30¢ card-not-present) are already in
+`src/lib/settings/yipyy-pay.ts` for whoever picks it up.
+
+### 🟡 Device status cannot be a page load, and the spec asks for one — 2026-08-23
+
+The specification calls for a live online/offline dot on every device card,
+"pulled from the Clover API on page load. Not cached." `deviceState()` is a round
+trip to physical hardware: a healthy device answers in about 8 seconds, one with
+Cloud Pay Display closed costs Clover's own 15-second device timeout before the
+504, and the measured allowance in `src/lib/clover/terminal.ts` is 40 seconds
+(set down from an earlier 25 that reported an awake terminal as unreachable).
+
+Three readers on one page is therefore up to two minutes of loading for an answer
+that is stale by the time somebody walks to the counter.
+
+**Do instead:** the Devices tab lists what the merchant owns immediately and each
+card has a **Check** button hitting
+`POST /api/payments/clover/terminals/status` (`maxDuration = 60`, one device per
+request). A card that has not been checked says "Status not checked" rather than
+showing a hopeful green dot. If this is ever revisited, the fix is a background
+job writing last-seen to a column — not a fan-out on render.
+
+### 🟡 `/facility/dashboard/billing/payment-settings` is a fixture screen called "Yipyy Pay" — 2026-08-23
+
+2,035 lines, last touched 2026-03-26, reading `getYipyyPayConfig` and
+`getFiservConfig` from `src/data/`. It contains a card titled **"Yipyy Pay / Tap
+to Pay Configuration"** whose switches save to nothing, and a Fiserv block for a
+processor this product does not use.
+
+It now collides by name with the real payment product at
+`?section=yipyy-pay`. A facility searching for "Yipyy Pay" can find the fixture
+first and conclude the settings do not stick.
+
+**Do instead:** left alone by the Yipyy Pay change on purpose — deleting a
+2,000-line page is its own scoped task, not a drive-by. When somebody takes it:
+redirect the route to `?section=yipyy-pay`, and check what else imports
+`src/lib/yipyy-pay-service.ts` and `src/lib/fiserv-payment-service.ts` before
+removing either. Related and still true: `TakePaymentModal` offers a
+`clover_terminal` method and shows "Waiting for terminal…" while contacting
+nothing.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
