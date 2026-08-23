@@ -7393,6 +7393,15 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      redeem_gift_card_to_credit: {
+        Args: {
+          p_amount: number;
+          p_client_ref: number;
+          p_code: string;
+          p_note?: string;
+        };
+        Returns: number;
+      };
       redeem_loyalty_points: {
         Args: {
           p_account_id: string;

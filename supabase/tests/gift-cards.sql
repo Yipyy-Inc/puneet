@@ -57,14 +57,16 @@ insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-000000190001', 'gc-owner@example.invalid'),
   ('00000000-0000-0000-0000-000000190002', 'gc-groom@example.invalid'),
   ('00000000-0000-0000-0000-000000190003', 'gc-rival@example.invalid'),
-  ('00000000-0000-0000-0000-000000190004', 'gc-buyer@example.invalid')
+  ('00000000-0000-0000-0000-000000190004', 'gc-buyer@example.invalid'),
+  ('00000000-0000-0000-0000-000000190005', 'gc-recep@example.invalid')
 on conflict (id) do nothing;
 
 insert into public.profiles (id, email, full_name) values
   ('00000000-0000-0000-0000-000000190001', 'gc-owner@example.invalid', 'GC Owner'),
   ('00000000-0000-0000-0000-000000190002', 'gc-groom@example.invalid', 'GC Groomer'),
   ('00000000-0000-0000-0000-000000190003', 'gc-rival@example.invalid', 'GC Rival'),
-  ('00000000-0000-0000-0000-000000190004', 'gc-buyer@example.invalid', 'GC Buyer')
+  ('00000000-0000-0000-0000-000000190004', 'gc-buyer@example.invalid', 'GC Buyer'),
+  ('00000000-0000-0000-0000-000000190005', 'gc-recep@example.invalid', 'GC Reception')
 on conflict (id) do update set full_name = excluded.full_name;
 
 insert into public.orgs (id, name, slug) values
@@ -79,21 +81,27 @@ insert into public.facilities (id, org_id, name, slug, legacy_id) values
    'GC Rival Salon', 'gc-rival-salon', 'gc-rival-salon')
 on conflict (id) do nothing;
 
--- owner holds financial_manage_gift_cards; groomer does not.
+-- owner holds financial_manage_gift_cards; groomer does not. RECEPTION holds it
+-- and does NOT hold process_refund - the split the card-to-credit transfer is
+-- built around, so it is in the fixture rather than assumed.
 insert into public.facility_memberships (id, facility_id, profile_id, role, is_active) values
   ('00000000-0000-0000-0000-000000190030', '00000000-0000-0000-0000-000000190020',
    '00000000-0000-0000-0000-000000190001', 'owner', true),
   ('00000000-0000-0000-0000-000000190031', '00000000-0000-0000-0000-000000190020',
    '00000000-0000-0000-0000-000000190002', 'groomer', true),
   ('00000000-0000-0000-0000-000000190032', '00000000-0000-0000-0000-000000190021',
-   '00000000-0000-0000-0000-000000190003', 'owner', true)
+   '00000000-0000-0000-0000-000000190003', 'owner', true),
+  ('00000000-0000-0000-0000-000000190033', '00000000-0000-0000-0000-000000190020',
+   '00000000-0000-0000-0000-000000190005', 'reception', true)
 on conflict (id) do nothing;
 
 insert into public.clients (id, facility_id, name, email, profile_id) values
   ('00000000-0000-0000-0000-000000190040', '00000000-0000-0000-0000-000000190020',
    'GC Buyer', 'gc-buyer@example.invalid', '00000000-0000-0000-0000-000000190004'),
   ('00000000-0000-0000-0000-000000190041', '00000000-0000-0000-0000-000000190020',
-   'GC Someone Else', 'gc-else@example.invalid', null)
+   'GC Someone Else', 'gc-else@example.invalid', null),
+  ('00000000-0000-0000-0000-000000190042', '00000000-0000-0000-0000-000000190021',
+   'GC Rival Client', 'gc-rival-client@example.invalid', null)
 on conflict (id) do nothing;
 
 -- ── As the owner ──────────────────────────────────────────────────────────
@@ -376,6 +384,128 @@ begin
   perform pg_temp.t('G19 adjusting a card you cannot reach is INDISTINGUISHABLE from adjusting one that does not exist',
     real_card = fake_card and real_card like '42501%',
     'real=' || real_card || ' fake=' || fake_card);
+end $$;
+
+-- ── A card handed in becomes account credit ───────────────────────────────
+--
+-- The transfer is the reason `store_credit_entries` gained a `gift_card`
+-- reason. What these check is that BOTH ledgers move together and that the
+-- business ends up owing exactly what it owed before.
+
+reset role;
+select set_config('request.jwt.claims',
+  json_build_object('sub','00000000-0000-0000-0000-000000190005','role','authenticated')::text, true);
+set local role authenticated;
+
+do $$
+declare
+  v_ref     bigint;
+  v_credit  numeric;
+  v_left    numeric;
+  v_refund  boolean;
+begin
+  v_ref := (select ref from public.clients
+             where id = '00000000-0000-0000-0000-000000190040');
+
+  -- RECEPTION, and this is the whole point. It holds
+  -- financial_manage_gift_cards and NOT process_refund - and process_refund is
+  -- what the store-credit policy demands of any other positive entry. A
+  -- transfer is not a grant, and the person at the counter has to be able to
+  -- take a card.
+  v_refund := private.has_permission(
+    '00000000-0000-0000-0000-000000190020'::uuid, 'process_refund');
+
+  perform public.issue_gift_card(
+    '00000000-0000-0000-0000-000000190020'::uuid, 80.00, 'online', 'GCXFER0001');
+
+  v_credit := public.redeem_gift_card_to_credit('GCXFER0001', 30.00, v_ref, null);
+  v_left := (select balance from public.gift_cards where code = 'GCXFER0001');
+
+  perform pg_temp.t('G20 reception can hand a card in WITHOUT process_refund',
+    v_refund = false and v_credit = 30.00 and v_left = 50.00,
+    'process_refund=' || v_refund || ' credit=' || v_credit || ' card=' || v_left);
+
+  -- The invariant that makes the permission call defensible: the business owed
+  -- 80 on the card and now owes 50 on the card plus 30 on the account. Nothing
+  -- was created, so this cannot be used to mint credit.
+  perform pg_temp.t('G21 the liability moved and did not change',
+    v_left + v_credit = 80.00,
+    'card=' || v_left || ' credit=' || v_credit);
+end $$;
+
+do $$
+declare v_entries int;
+begin
+  select count(*) into v_entries
+    from public.store_credit_entries
+   where facility_id = '00000000-0000-0000-0000-000000190020'
+     and reason = 'gift_card' and amount = 30.00;
+  -- Recorded AS a gift card, not as `added`. `added` would tell whoever
+  -- reconciles the books that the business gave this customer money.
+  perform pg_temp.t('G22 the credit entry says where it came from',
+    v_entries = 1, 'entries=' || v_entries);
+end $$;
+
+do $$
+declare v_ref bigint; state text; v_left numeric; v_credit numeric;
+begin
+  v_ref := (select ref from public.clients
+             where id = '00000000-0000-0000-0000-000000190040');
+  begin
+    perform public.redeem_gift_card_to_credit('GCXFER0001', 999.00, v_ref, null);
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+  v_left := (select balance from public.gift_cards where code = 'GCXFER0001');
+  v_credit := (select coalesce(sum(amount), 0) from public.store_credit_entries
+                where facility_id = '00000000-0000-0000-0000-000000190020'
+                  and reason = 'gift_card');
+  -- Refused, and NEITHER ledger moved. A transfer that debited the card and
+  -- then failed to credit - or credited without debiting - is the failure this
+  -- being one transaction exists to prevent.
+  perform pg_temp.t('G23 an overdrawing transfer is refused and moves NEITHER ledger',
+    state = '23514' and v_left = 50.00 and v_credit = 30.00,
+    'state=' || state || ' card=' || v_left || ' credit=' || v_credit);
+end $$;
+
+do $$
+declare v_rival_ref bigint; state text;
+begin
+  v_rival_ref := (select ref from public.clients
+                   where id = '00000000-0000-0000-0000-000000190042');
+  begin
+    perform public.redeem_gift_card_to_credit('GCXFER0001', 5.00, v_rival_ref, null);
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+  -- `ref` is per-facility, so the same small number names a different person at
+  -- every business. Crediting by ref without checking the facility is how a
+  -- card is spent onto a stranger's account.
+  perform pg_temp.t('G24 a customer at another facility cannot be credited',
+    state = '42501', 'state=' || state);
+end $$;
+
+reset role;
+select set_config('request.jwt.claims',
+  json_build_object('sub','00000000-0000-0000-0000-000000190002','role','authenticated')::text, true);
+set local role authenticated;
+
+do $$
+declare v_ref bigint; state text;
+begin
+  v_ref := (select ref from public.clients
+             where id = '00000000-0000-0000-0000-000000190040');
+  begin
+    perform public.redeem_gift_card_to_credit('GCXFER0001', 5.00, v_ref, null);
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+  -- The groomer holds no financial permission at all. This is the assertion
+  -- that matters most in this block: the function is SECURITY DEFINER, so it
+  -- BYPASSES the store-credit insert policy entirely - measured, not assumed -
+  -- and its own explicit check is the only thing standing here.
+  perform pg_temp.t('G25 a groomer cannot move a card onto an account',
+    state = '42501', 'state=' || state);
 end $$;
 
 -- ── Who can read one ──────────────────────────────────────────────────────

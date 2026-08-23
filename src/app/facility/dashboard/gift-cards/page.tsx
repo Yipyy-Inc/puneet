@@ -980,22 +980,14 @@ export default function FacilityGiftCardsPage() {
             <Search className="size-4" />
             Check Balance
           </Button>
-          {/* Off until a wallet is a row. See the modal below for why. */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex">
-                <Button variant="outline" className="gap-1.5" disabled>
-                  <Wallet className="size-4" />
-                  Redeem to Wallet
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              Customer wallets are not stored yet. Redeeming into one would take
-              the balance off a real card and put it nowhere, so this is off
-              until a wallet is a row.
-            </TooltipContent>
-          </Tooltip>
+          <Button
+            variant="outline"
+            onClick={() => setShowRedeem(true)}
+            className="gap-1.5"
+          >
+            <Wallet className="size-4" />
+            Redeem to Credit
+          </Button>
           <Button
             onClick={() => setSellMode("physical")}
             className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
@@ -1910,33 +1902,20 @@ export default function FacilityGiftCardsPage() {
         }}
       />
 
-      {/* ── HELD: REDEEM TO WALLET ──────────────────────────────────────
-          The cards above are real rows now. Customer wallets are NOT - there
-          is no wallet table, and `customerWallets` is still a fixture.
-
-          So this flow cannot be wired up as it stands. It moves value from the
-          card to the wallet, and with only one end real that is a redemption
-          that takes money OFF a customer's card and puts it nowhere. That is
-          strictly worse than the fixture version, where nothing was real and
-          nothing was lost.
-
-          The trigger is disabled above and this callback deliberately performs
-          no write. Both, because either alone is one edit away from paying out
-          into nothing. What it needs is a decision about what a wallet IS -
-          most likely `loyalty_accounts.credit_balance`, which already exists,
-          is guarded the same way and is already the customer's store credit -
-          and then one function that moves the two ledgers in one transaction.
-          Until that exists the honest state of this button is "off". */}
+      {/* The card is debited and the customer's store credit is raised in ONE
+          database transaction. This was HELD on 2026-08-23 because the wallet
+          looked missing; it was not. It is `store_credit_entries` - the same
+          ledger `record_payment` spends from at checkout - and the fixture
+          `customerWallets` was a duplicate of it. Money that lands here is
+          money the customer can actually spend. */}
       <RedeemGiftCardModal
         open={showRedeem}
         onOpenChange={setShowRedeem}
         facilityId={FACILITY_ID}
         cards={facilityCards}
-        onSuccess={() => {
-          setShowRedeem(false);
-          toast.error("Redeeming to a wallet is not available yet.", {
-            description:
-              "Customer wallets are not stored yet, so this would take the balance off the card and put it nowhere. Nothing was changed.",
+        onSuccess={(r) => {
+          toast.success(`$${r.amount.toFixed(2)} moved off ${r.cardCode}.`, {
+            description: `Account credit is now $${r.creditBalance.toFixed(2)}.`,
           });
         }}
       />
