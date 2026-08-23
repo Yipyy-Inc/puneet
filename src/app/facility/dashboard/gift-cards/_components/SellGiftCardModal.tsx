@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -47,12 +48,9 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import type { GiftCard, PhysicalCardBatch } from "@/types/payments";
-import { clients } from "@/data/clients";
-import {
-  physicalCardBatches,
-  giftCardSettings,
-  giftCards,
-} from "@/data/gift-cards";
+import { physicalCardBatches, giftCardSettings } from "@/data/gift-cards";
+import { clientQueries } from "@/lib/api/client";
+import { useIssueGiftCard, type GiftCardRow } from "@/lib/api/gift-cards";
 
 const CameraScanner = dynamic(
   () =>
@@ -175,11 +173,13 @@ interface SellGiftCardModalProps {
   onOpenChange: (open: boolean) => void;
   facilityId: number;
   mode: "digital" | "physical";
-  onSuccess?: (card: Partial<GiftCard>) => void;
+  onSuccess?: (card: GiftCardRow) => void;
   /** Pre-fill the amount (e.g. when issuing a replacement for a voided card). */
   prefillAmount?: number;
   /** Batches used to resolve a scanned physical card's fixed denomination. */
   physicalBatches?: PhysicalCardBatch[];
+  /** Cards this facility has already issued, for the "already activated" hint. */
+  issuedCards?: GiftCard[];
   /** Whether a POS cart is open; defaults payment to "POS Transaction". */
   hasActivePosSession?: boolean;
 }
@@ -192,8 +192,13 @@ export function SellGiftCardModal({
   onSuccess,
   prefillAmount,
   physicalBatches = physicalCardBatches,
+  issuedCards = [],
   hasActivePosSession = true,
 }: SellGiftCardModalProps) {
+  const issueCard = useIssueGiftCard();
+  const [issueError, setIssueError] = useState<string | null>(null);
+  /** The card the database actually created — the source of the code shown. */
+  const [issuedCard, setIssuedCard] = useState<GiftCardRow | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [amount, setAmount] = useState<number | "">(
     prefillAmount != null && PRESET_AMOUNTS.includes(prefillAmount)
@@ -225,7 +230,15 @@ export function SellGiftCardModal({
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
-  const facilityClients = clients.filter((c) => c.id >= 15);
+  // ── THE PURCHASER MUST BE A REAL CLIENT ─────────────────────────────────
+  //
+  // `issue_gift_card` resolves the buyer by `clients.ref` against Postgres, so
+  // a picker offering `src/data/clients` would send a ref that either does not
+  // exist (a 404 the seller cannot act on) or, worse, belongs to a DIFFERENT
+  // person who happens to hold that number. The list has to come from the same
+  // place the write is checked against.
+  const clientsQuery = useQuery(clientQueries.all());
+  const facilityClients = clientsQuery.data ?? [];
   const resolvedAmount = amount !== "" ? amount : parseFloat(customAmount) || 0;
 
   // Customer search (Step 2) — match the facility's clients by name or email.
@@ -298,10 +311,25 @@ export function SellGiftCardModal({
           : "Charge the customer's saved card on file (select a purchaser above)."
         : "Collect cash payment at the counter.";
 
-  // Built-in designs plus the facility's one optional uploaded design.
-  const customCardDesign = giftCardSettings.find(
+  const programSettings = giftCardSettings.find(
     (s) => s.facilityId === facilityId,
-  )?.customCardDesign;
+  );
+
+  // ── ONE EXPIRY, USED BY BOTH THE REVIEW LINE AND THE ROW ────────────────
+  //
+  // The review step used to render `Date.now() + 365 days` as a literal while
+  // the card it created carried no expiry at all, so the screen promised a date
+  // nothing recorded. Both now read this.
+  //
+  // The programme's own `expiryDays` wins when it sets one; 365 is the figure
+  // the review step has always shown, kept so this change does not quietly
+  // relabel existing behaviour as well as making it real.
+  const expiryDays = programSettings?.expiryDays ?? 365;
+  const expiresAtIso = () =>
+    new Date(Date.now() + expiryDays * 86400000).toISOString();
+
+  // Built-in designs plus the facility's one optional uploaded design.
+  const customCardDesign = programSettings?.customCardDesign;
   const designs: CardDesign[] = customCardDesign
     ? [
         ...CARD_DESIGNS,
@@ -333,8 +361,12 @@ export function SellGiftCardModal({
   const alreadyActivated = matchedCard
     ? matchedCard.status !== "inactive"
     : false;
+  // Resolved against the cards this facility has actually ISSUED, not the
+  // fixture. The batches above are still hand-authored, so a fixture batch
+  // pointing at `gc-001` now resolves to nothing and the sentence below simply
+  // drops its balance clause — which is right: there is no such card.
   const activatedGiftCard = matchedCard?.giftCardId
-    ? giftCards.find((g) => g.id === matchedCard.giftCardId)
+    ? issuedCards.find((g) => g.id === matchedCard.giftCardId)
     : undefined;
   const activatedDate = matchedCard?.activatedAt ?? matchedCard?.soldAt;
   const activatedDateLabel = activatedDate
@@ -347,13 +379,10 @@ export function SellGiftCardModal({
   const lockedDenomination = matchedBatch?.denomination ?? null;
   const effectiveAmount = lockedDenomination ?? resolvedAmount;
 
-  const generateCode = () => {
-    const ts = Date.now().toString(36).toUpperCase().slice(-4);
-    const rnd = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return mode === "digital"
-      ? `GIFT-${new Date().getFullYear()}-${ts}${rnd}`
-      : `PHYS-${ts}-${rnd}-X`;
-  };
+  // The card code used to be minted HERE, from `Date.now()` and `Math.random()`.
+  // It is generated by `issue_gift_card` now — in the database, under the
+  // per-facility unique constraint — so two tills cannot mint the same one and
+  // the constraint is the arbiter rather than luck.
 
   // Reset all per-card state back to a fresh Step 1 (without closing).
   const resetState = () => {
@@ -375,6 +404,8 @@ export function SellGiftCardModal({
     setPhysicalCardNumber("");
     setCameraOpen(false);
     setPaymentMethod(hasActivePosSession ? "pos" : "cash");
+    setIssueError(null);
+    setIssuedCard(null);
     setDone(false);
   };
 
@@ -384,39 +415,55 @@ export function SellGiftCardModal({
     onOpenChange(false);
   };
 
+  /**
+   * Sell the card — for real.
+   *
+   * What this replaced waited 1,400ms, built a `Partial<GiftCard>` in memory and
+   * showed the success screen. It could not fail, and nothing it created
+   * survived the tab. A facility could take a customer's money, hand over a
+   * card, and hold no record of the liability.
+   *
+   * The card and its opening balance are now ONE transaction in the database,
+   * so there is no state in which a card exists worth nothing.
+   *
+   * A DIGITAL card sends no code of its own: `issue_gift_card` generates one,
+   * so two tills cannot mint the same one and the uniqueness constraint is the
+   * arbiter either way. A PHYSICAL card keeps the number printed on it, which
+   * is the whole point of scanning it.
+   */
   const handleConfirm = async () => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    const card: Partial<GiftCard> = {
-      id: `gc-${Date.now()}`,
-      facilityId,
-      code:
-        mode === "physical" && physicalCardNumber
-          ? physicalCardNumber
-          : generateCode(),
-      type: mode === "digital" ? "online" : "physical",
-      initialAmount: effectiveAmount,
-      currentBalance: effectiveAmount,
-      currency: "USD",
-      status: "active",
-      purchasedBy: purchaserClientId
-        ? facilityClients.find((c) => c.id === parseInt(purchaserClientId))
-            ?.name
-        : undefined,
-      purchasedByClientId: purchaserClientId
-        ? parseInt(purchaserClientId)
-        : undefined,
-      purchaseDate: new Date().toISOString().split("T")[0],
-      recipientName: recipientName || undefined,
-      recipientEmail: recipientEmail || undefined,
-      message: message || undefined,
-      neverExpires,
-      createdAt: new Date().toISOString(),
-      transactionHistory: [],
-    };
-    onSuccess?.(card);
-    setLoading(false);
-    setDone(true);
+    setIssueError(null);
+    try {
+      const card = await issueCard.mutateAsync({
+        amount: effectiveAmount,
+        kind: mode === "digital" ? "online" : "physical",
+        code:
+          mode === "physical" && physicalCardNumber
+            ? physicalCardNumber
+            : undefined,
+        recipientName: recipientName || undefined,
+        recipientEmail: recipientEmail || undefined,
+        message: message || undefined,
+        // `neverExpires` leaves `expiresAt` off entirely, and the column stays
+        // null. "No expiry" is a decision somebody made, not a far-future date
+        // picked to stand in for one.
+        expiresAt: neverExpires ? undefined : expiresAtIso(),
+        purchasedByClientRef: purchaserClientId
+          ? parseInt(purchaserClientId)
+          : undefined,
+      });
+      setIssuedCard(card);
+      onSuccess?.(card);
+      setDone(true);
+    } catch (error) {
+      // Stay on the review step with the reason showing. The alternative —
+      // advancing to "Card issued!" and reporting the failure elsewhere — is
+      // how somebody hands over a card that was never created.
+      setIssueError((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Step gating differs by mode. Physical: Scan → Set Amount → Review.
@@ -458,13 +505,29 @@ export function SellGiftCardModal({
                 {mode === "digital" ? "Gift card issued!" : "Card activated!"}
               </p>
               <p className="text-muted-foreground mt-1 text-sm">
-                {mode === "digital"
-                  ? `A confirmation email has been sent to ${recipientEmail || "the recipient"}.`
-                  : matchedCustomerName && recipientEmail
-                    ? `Confirmation email sent to ${recipientEmail}.`
-                    : "The physical card is now active and ready to use."}
+                {issuedCard
+                  ? `$${issuedCard.balance.toFixed(2)} is now on the card and recorded against this facility.`
+                  : "The card is now active and ready to use."}
               </p>
             </div>
+
+            {/* The code is GENERATED BY THE DATABASE for a digital card, so this
+                is the only place the counter can read it. It used to be minted
+                in the browser and shown nowhere, because nothing needed it —
+                nothing was recorded. */}
+            {issuedCard && (
+              <div className="bg-muted w-full rounded-md p-3">
+                <p className="text-muted-foreground text-xs">Card number</p>
+                <p className="font-mono text-lg font-semibold tracking-wider">
+                  {issuedCard.code}
+                </p>
+                {recipientEmail && (
+                  <p className="text-muted-foreground mt-2 text-xs">
+                    Give this to {recipientEmail} — no email is sent yet.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="flex w-full flex-col gap-2">
               {mode === "physical" && (
                 <Button
@@ -1131,7 +1194,7 @@ export function SellGiftCardModal({
                     <span className="font-medium">
                       {neverExpires
                         ? "Never expires"
-                        : `Expires ${new Date(Date.now() + 365 * 86400000).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`}
+                        : `Expires ${new Date(expiresAtIso()).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`}
                     </span>
                   </div>
                   <div className="flex justify-between border-t pt-2">
@@ -1192,6 +1255,18 @@ export function SellGiftCardModal({
               </div>
             )}
           </div>
+
+          {/* The card was NOT created. Said here, beside the button that tried,
+              rather than as a toast over a success screen. */}
+          {issueError && (
+            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+              <X className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <p className="font-medium">This card was not issued.</p>
+                <p className="text-xs">{issueError}</p>
+              </div>
+            </div>
+          )}
 
           <DialogFooter className="flex justify-between sm:justify-between">
             <div>

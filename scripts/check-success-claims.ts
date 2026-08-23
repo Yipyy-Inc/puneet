@@ -64,7 +64,6 @@ const BASELINE = new Set<string>([
   "src/app/customer/estimates/[token]/setup/page.tsx",
   "src/app/dashboard/facilities/requests/_components/facility-requests-client.tsx",
   "src/app/dashboard/support/email-templates/_components/template-panel.tsx",
-  "src/app/facility/dashboard/gift-cards/_components/SellGiftCardModal.tsx",
   "src/app/facility/dashboard/services/training/students/_components/training-profile-quick-actions.tsx",
   "src/app/facility/dashboard/staff/_components/staff-audit-trail.tsx",
   "src/app/facility/dashboard/staff/_components/staff-form-dialog.tsx",

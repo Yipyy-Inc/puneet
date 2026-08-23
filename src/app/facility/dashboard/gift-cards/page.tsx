@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -85,13 +87,14 @@ import {
   List,
 } from "lucide-react";
 import {
-  giftCards,
   customerWallets,
   physicalCardBatches,
   giftCardAuditLogs,
   giftCardSettings,
 } from "@/data/gift-cards";
 import { clients } from "@/data/clients";
+import { giftCardQueries, useUpdateGiftCard } from "@/lib/api/gift-cards";
+import { toLegacyGiftCard } from "./_lib/to-legacy-card";
 import { SellGiftCardModal } from "./_components/SellGiftCardModal";
 import { RedeemGiftCardModal } from "./_components/RedeemGiftCardModal";
 import { GiftCardDetailSheet } from "./_components/GiftCardDetailSheet";
@@ -114,7 +117,6 @@ import {
 import type {
   GiftCard,
   GiftCardAuditLog,
-  GiftCardTransaction,
   CustomerWallet,
   WalletTransaction,
   PhysicalCardBatch,
@@ -202,11 +204,6 @@ export default function FacilityGiftCardsPage() {
   const [walletAdjustments, setWalletAdjustments] = useState<
     Record<string, WalletTransaction[]>
   >({});
-  // Session balance overrides + synthetic transactions from wallet redemptions.
-  const [cardBalances, setCardBalances] = useState<Record<string, number>>({});
-  const [cardExtraTx, setCardExtraTx] = useState<
-    Record<string, GiftCardTransaction[]>
-  >({});
   // Wallets created on the fly when redeeming to a customer who had none.
   const [sessionWallets, setSessionWallets] = useState<CustomerWallet[]>([]);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string | number>>(
@@ -239,24 +236,23 @@ export default function FacilityGiftCardsPage() {
   // Date range for the KPI row — defaults to the current month.
   const [range, setRange] = useState<DateRange>(() => presetRange("month"));
 
+  // ── THE CARDS ARE REAL ────────────────────────────────────────────────
+  //
+  // `gift_cards` + `gift_card_transactions`, scoped to this facility by the
+  // SESSION rather than by a `facilityId === 11` filter — the route never sees
+  // a facility from the caller. Every card carries its ledger, so the balance
+  // and the history explaining it come from one read and cannot disagree.
+  //
+  // What this replaced kept a session `cardBalances` override map beside the
+  // fixture, which is how the number on screen and the transactions under it
+  // were maintained separately in the first place.
+  const cardsQuery = useQuery(giftCardQueries.allWithLedger());
   const facilityCards = useMemo(
-    () =>
-      giftCards
-        .filter((gc) => gc.facilityId === FACILITY_ID)
-        .map((gc) => {
-          const balanceOverride = cardBalances[gc.id];
-          const extra = cardExtraTx[gc.id];
-          if (balanceOverride == null && !extra) return gc;
-          return {
-            ...gc,
-            currentBalance: balanceOverride ?? gc.currentBalance,
-            transactionHistory: extra
-              ? [...gc.transactionHistory, ...extra]
-              : gc.transactionHistory,
-          };
-        }),
-    [cardBalances, cardExtraTx],
+    () => (cardsQuery.data ?? []).map(toLegacyGiftCard),
+    [cardsQuery.data],
   );
+
+  const updateCard = useUpdateGiftCard();
 
   const facilityWallets = useMemo(
     () => [
@@ -342,10 +338,16 @@ export default function FacilityGiftCardsPage() {
 
   const batchName = (b: PhysicalCardBatch) => batchNames[b.id] ?? b.name;
 
-  // Low-stock threshold for the Physical Cards tile (configurable in Settings).
-  const lowStockThreshold =
-    giftCardSettings.find((s) => s.facilityId === FACILITY_ID)
-      ?.lowStockThreshold ?? 50;
+  // Programme settings are still a FIXTURE - the settings tab has not been
+  // converted. Read here, where the facility is known, rather than in the
+  // components: a Postgres card has a uuid facility and the shim sets the
+  // legacy number to a sentinel, so a lookup by `card.facilityId` further down
+  // would resolve to nothing and quietly turn features off.
+  const programSettings = giftCardSettings.find(
+    (s) => s.facilityId === FACILITY_ID,
+  );
+  const lowStockThreshold = programSettings?.lowStockThreshold ?? 50;
+  const expiryEnabled = programSettings?.expiryEnabled ?? false;
 
   type AuditTarget =
     | { kind: "card"; id: string; label: string }
@@ -897,18 +899,66 @@ export default function FacilityGiftCardsPage() {
     );
   };
 
-  const handleVoidConfirm = () => {
+  /**
+   * Void the selected cards, for real.
+   *
+   * What this replaced was an `alert()` and nothing else: the confirmation said
+   * the cards had been voided, the row kept its balance, and a refresh brought
+   * them back. Now each one is a PATCH the database can refuse — and a refusal
+   * is reported rather than counted as a success, because an UPDATE that RLS
+   * declines affects zero rows without raising.
+   *
+   * Cancelling does NOT zero the balance. That is the point: the money stays on
+   * the row, unspendable, so a business reconciling its books can see what it
+   * wrote off.
+   */
+  const handleVoidConfirm = async () => {
     if (!voidTargets) return;
-    const count = voidTargets.length;
-    const ids = new Set(voidTargets.map((c) => c.id));
-    // Drop any voided cards from the bulk selection.
+    const targets = voidTargets;
+    setVoidTargets(null);
+
+    const results = await Promise.allSettled(
+      targets.map((card) =>
+        updateCard.mutateAsync({ id: card.id, status: "cancelled" }),
+      ),
+    );
+
+    const voided = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.length - voided;
+
+    // Only the cards that actually moved leave the selection. One that was
+    // refused stays selected, so a retry does not need finding it again.
+    const succeededIds = new Set(
+      targets
+        .filter((_, i) => results[i].status === "fulfilled")
+        .map((c) => c.id),
+    );
     setSelectedCardIds((prev) => {
       const next = new Set(prev);
-      ids.forEach((id) => next.delete(id));
+      succeededIds.forEach((id) => next.delete(id));
       return next;
     });
-    setVoidTargets(null);
-    alert(`${count} gift card${count === 1 ? "" : "s"} have been voided.`);
+
+    if (voided > 0) {
+      toast.success(
+        `${voided} gift card${voided === 1 ? "" : "s"} voided.`,
+        voided === 1
+          ? { description: "Any remaining balance stays on the record." }
+          : undefined,
+      );
+    }
+    if (failed > 0) {
+      const first = results.find((r) => r.status === "rejected");
+      toast.error(
+        `${failed} card${failed === 1 ? "" : "s"} could not be voided.`,
+        {
+          description:
+            first?.status === "rejected"
+              ? String((first.reason as Error)?.message ?? "")
+              : undefined,
+        },
+      );
+    }
   };
 
   return (
@@ -930,14 +980,22 @@ export default function FacilityGiftCardsPage() {
             <Search className="size-4" />
             Check Balance
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowRedeem(true)}
-            className="gap-1.5"
-          >
-            <Wallet className="size-4" />
-            Redeem to Wallet
-          </Button>
+          {/* Off until a wallet is a row. See the modal below for why. */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex">
+                <Button variant="outline" className="gap-1.5" disabled>
+                  <Wallet className="size-4" />
+                  Redeem to Wallet
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              Customer wallets are not stored yet. Redeeming into one would take
+              the balance off a real card and put it nowhere, so this is off
+              until a wallet is a row.
+            </TooltipContent>
+          </Tooltip>
           <Button
             onClick={() => setSellMode("physical")}
             className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
@@ -1844,85 +1902,41 @@ export default function FacilityGiftCardsPage() {
         mode={sellMode ?? "digital"}
         prefillAmount={replacementAmount ?? undefined}
         physicalBatches={allBatches}
+        issuedCards={facilityCards}
         onSuccess={(card) => {
-          console.log("Gift card issued:", card);
+          toast.success(`Gift card ${card.code} issued.`, {
+            description: `$${card.balance.toFixed(2)} is now recorded against this facility.`,
+          });
         }}
       />
 
+      {/* ── HELD: REDEEM TO WALLET ──────────────────────────────────────
+          The cards above are real rows now. Customer wallets are NOT - there
+          is no wallet table, and `customerWallets` is still a fixture.
+
+          So this flow cannot be wired up as it stands. It moves value from the
+          card to the wallet, and with only one end real that is a redemption
+          that takes money OFF a customer's card and puts it nowhere. That is
+          strictly worse than the fixture version, where nothing was real and
+          nothing was lost.
+
+          The trigger is disabled above and this callback deliberately performs
+          no write. Both, because either alone is one edit away from paying out
+          into nothing. What it needs is a decision about what a wallet IS -
+          most likely `loyalty_accounts.credit_balance`, which already exists,
+          is guarded the same way and is already the customer's store credit -
+          and then one function that moves the two ledgers in one transaction.
+          Until that exists the honest state of this button is "off". */}
       <RedeemGiftCardModal
         open={showRedeem}
         onOpenChange={setShowRedeem}
         facilityId={FACILITY_ID}
         cards={facilityCards}
-        onSuccess={(r) => {
-          // Resolve the destination wallet; create one for customers who have
-          // none so the redeemed funds always land somewhere (never lost).
-          const walletId =
-            r.walletId ??
-            facilityWallets.find((w) => w.clientId === r.clientId)?.id ??
-            `wallet-c${r.clientId}`;
-          if (!facilityWallets.some((w) => w.id === walletId)) {
-            const now = new Date().toISOString();
-            setSessionWallets((prev) =>
-              prev.some((w) => w.id === walletId)
-                ? prev
-                : [
-                    ...prev,
-                    {
-                      id: walletId,
-                      facilityId: FACILITY_ID,
-                      clientId: r.clientId,
-                      balance: 0,
-                      currency: "USD",
-                      createdAt: now,
-                      updatedAt: now,
-                      transactions: [],
-                    },
-                  ],
-            );
-          }
-          // Customer wallet: bump balance + append a redemption transaction.
-          const wallet = facilityWallets.find((w) => w.id === walletId);
-          const current = walletBalances[walletId] ?? wallet?.balance ?? 0;
-          const newBalance = current + r.amount;
-          setWalletBalances((prev) => ({ ...prev, [walletId]: newBalance }));
-          setWalletAdjustments((prev) => {
-            const existing = prev[walletId] ?? [];
-            const tx: WalletTransaction = {
-              id: `wt-redeem-${walletId}-${existing.length + 1}`,
-              walletId,
-              facilityId: FACILITY_ID,
-              clientId: r.clientId,
-              type: "gift_card_redeem",
-              amount: r.amount,
-              balanceAfter: newBalance,
-              description: `Redeemed gift card ${r.cardCode} ($${r.amount.toFixed(2)})`,
-              referenceId: r.cardId,
-              referenceType: "gift_card",
-              performedBy: "Sarah Johnson",
-              createdAt: new Date().toISOString(),
-            };
-            return { ...prev, [walletId]: [...existing, tx] };
-          });
-          // Gift card: draw down balance + append a redemption transaction.
-          const card = facilityCards.find((c) => c.id === r.cardId);
-          const cardNewBalance = Math.max(
-            0,
-            (card?.currentBalance ?? 0) - r.amount,
-          );
-          setCardBalances((prev) => ({ ...prev, [r.cardId]: cardNewBalance }));
-          setCardExtraTx((prev) => {
-            const existing = prev[r.cardId] ?? [];
-            const tx: GiftCardTransaction = {
-              id: `gct-redeem-${r.cardId}-${existing.length + 1}`,
-              giftCardId: r.cardId,
-              type: "redemption",
-              amount: r.amount,
-              balanceAfter: cardNewBalance,
-              timestamp: new Date().toISOString(),
-              notes: "Redeemed to customer wallet",
-            };
-            return { ...prev, [r.cardId]: [...existing, tx] };
+        onSuccess={() => {
+          setShowRedeem(false);
+          toast.error("Redeeming to a wallet is not available yet.", {
+            description:
+              "Customer wallets are not stored yet, so this would take the balance off the card and put it nowhere. Nothing was changed.",
           });
         }}
       />
@@ -2044,18 +2058,25 @@ export default function FacilityGiftCardsPage() {
         card={selectedCard}
         open={!!selectedCard}
         onOpenChange={(v) => !v && setSelectedCard(null)}
-        onVoid={(card, options) => {
+        expiryEnabled={expiryEnabled}
+        onVoid={async (card, options) => {
           setSelectedCard(null);
+          try {
+            await updateCard.mutateAsync({ id: card.id, status: "cancelled" });
+          } catch (error) {
+            toast.error(`${card.code} could not be voided.`, {
+              description: (error as Error).message,
+            });
+            return;
+          }
+          toast.success(`Gift card ${card.code} voided (${options.reason}).`);
+          // The replacement is opened only AFTER the void actually landed. The
+          // other order offers to issue a new card against one that may still
+          // be live, which is how a facility ends up owing both.
           if (options.issueReplacement) {
             setReplacementAmount(options.replacementValue);
             setSellMode("digital");
           }
-          alert(
-            `Gift card ${card.code} voided (${options.reason}).` +
-              (options.issueReplacement
-                ? ` Issuing a $${options.replacementValue.toFixed(2)} replacement…`
-                : ""),
-          );
         }}
       />
 

@@ -6858,6 +6858,35 @@ export type Database = {
         Args: { p_profile_id: string; p_token_hash: string };
         Returns: Json;
       };
+      adjust_gift_card: {
+        Args: { p_amount: number; p_gift_card_id: string; p_reason: string };
+        Returns: {
+          balance: number;
+          code: string;
+          created_at: string;
+          currency: string;
+          expires_at: string | null;
+          facility_id: string;
+          id: string;
+          initial_amount: number;
+          issued_at: string;
+          issued_by: string | null;
+          kind: string;
+          last_used_at: string | null;
+          message: string | null;
+          purchased_by_client_id: string | null;
+          recipient_email: string | null;
+          recipient_name: string | null;
+          status: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "gift_cards";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       approve_availability_request: {
         Args: { p_notes?: string; p_request_id: string };
         Returns: {

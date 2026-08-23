@@ -9,6 +9,10 @@ import {
   type CardRecord,
   type GiftCardRow,
 } from "@/lib/api/mappers/gift-card";
+import {
+  ledgerForCard,
+  type GiftCardTransactionRow,
+} from "@/lib/api/gift-card-ledger";
 import { createServerClient } from "@/lib/supabase/server";
 import type { TablesUpdate } from "@/types/database";
 
@@ -33,70 +37,9 @@ import type { TablesUpdate } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
-export interface GiftCardTransactionRow {
-  id: string;
-  giftCardId: string;
-  kind: "issued" | "redeemed" | "refunded" | "adjusted";
-  /** SIGNED. Positive puts money on the card, negative takes it off. */
-  amount: number;
-  balanceAfter: number;
-  bookingId: string | null;
-  /** Resolved for display — see `refsForBookings`. Null when unknown. */
-  bookingRef: number | null;
-  note: string | null;
-  createdBy: string | null;
-  createdAt: string;
-}
-
 export interface GiftCardDetailPayload {
   card: GiftCardRow;
   transactions: GiftCardTransactionRow[];
-}
-
-interface LedgerRecord {
-  id: string;
-  gift_card_id: string;
-  kind: string;
-  amount: string | number;
-  balance_after: string | number;
-  booking_id: string | null;
-  note: string | null;
-  created_by: string | null;
-  created_at: string;
-}
-
-const LEDGER_SELECT =
-  "id, gift_card_id, kind, amount, balance_after, booking_id, note, created_by, created_at";
-
-/**
- * `bookings.id` -> `bookings.ref`, for the entries that name one.
- *
- * A separate query rather than a PostgREST embed because
- * `gift_card_transactions.booking_id` carries NO foreign key — deliberately, so
- * an append-only row can outlive the booking it paid for (an `on delete set
- * null` is an UPDATE, and the append-only guard refuses it; that is exactly how
- * `audit_log` made every facility undeletable). No constraint means no
- * relationship for PostgREST to traverse.
- *
- * So a booking that has since been deleted resolves to null, which is the
- * honest answer and the reason the column was written this way.
- */
-async function refsForBookings(
-  supabase: Awaited<ReturnType<typeof createServerClient>>,
-  ids: string[],
-): Promise<Map<string, number>> {
-  const found = new Map<string, number>();
-  if (ids.length === 0) return found;
-
-  const { data } = await supabase
-    .from("bookings")
-    .select("id, ref")
-    .in("id", ids);
-
-  for (const row of (data ?? []) as { id: string; ref: number }[]) {
-    found.set(row.id, row.ref);
-  }
-  return found;
 }
 
 async function loadCard(
@@ -141,32 +84,9 @@ export async function GET(
     return NextResponse.json({ error: "No such gift card." }, { status: 404 });
   }
 
-  const { data: ledger } = await supabase
-    .from("gift_card_transactions")
-    .select(LEDGER_SELECT)
-    .eq("gift_card_id", id)
-    .order("created_at", { ascending: true });
-
-  const rows = (ledger ?? []) as unknown as LedgerRecord[];
-  const refs = await refsForBookings(
-    supabase,
-    rows.map((row) => row.booking_id).filter((v): v is string => Boolean(v)),
-  );
-
   const payload: GiftCardDetailPayload = {
     card: toCardRow(card as unknown as CardRecord, Date.now()),
-    transactions: rows.map((row) => ({
-      id: row.id,
-      giftCardId: row.gift_card_id,
-      kind: row.kind as GiftCardTransactionRow["kind"],
-      amount: Number(row.amount),
-      balanceAfter: Number(row.balance_after),
-      bookingId: row.booking_id,
-      bookingRef: row.booking_id ? (refs.get(row.booking_id) ?? null) : null,
-      note: row.note,
-      createdBy: row.created_by,
-      createdAt: row.created_at,
-    })),
+    transactions: await ledgerForCard(supabase, id),
   };
 
   return NextResponse.json(payload);
