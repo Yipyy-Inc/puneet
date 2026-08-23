@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   changePassword,
   listMySessions,
+  myEmailStatus,
+  sendMyVerificationEmail,
   revokeMySession,
   revokeMyOtherSessions,
 } from "@/lib/auth/workos-actions";
@@ -83,14 +85,12 @@ interface LoginSecurityCardProps {
   email: string;
   phone: string;
   emailVerified?: boolean;
-  phoneVerified?: boolean;
 }
 
 export function LoginSecurityCard({
   email,
   phone,
   emailVerified = true,
-  phoneVerified = false,
 }: LoginSecurityCardProps) {
   // Password change form
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -103,7 +103,17 @@ export function LoginSecurityCard({
   // 2FA
 
   // Sessions
+  const [sendingVerification, setSendingVerification] = useState(false);
   const [busySession, setBusySession] = useState<string | null>(null);
+
+  // The REAL verification state. `emailVerified` arrives as a prop that nothing
+  // ever passes, so it was permanently undefined and every user was shown
+  // "Unverified" beside a button offering to fix something that was not wrong.
+  const { data: emailStatus, refetch: refetchEmailStatus } = useQuery({
+    queryKey: ["my-email-status"],
+    queryFn: myEmailStatus,
+  });
+  const isEmailVerified = emailStatus?.emailVerified ?? emailVerified ?? false;
   const [signingOutOthers, setSigningOutOthers] = useState(false);
 
   // Real sessions from WorkOS. The mock array this replaces invented a device,
@@ -151,14 +161,18 @@ export function LoginSecurityCard({
     }
   };
 
-  // Also still a mock: no email or SMS is sent. Same reasoning as the 2FA
-  // toggle below — it now sits among working controls.
-  const handleResendVerification = (channel: "email" | "phone") => {
-    toast.success(
-      channel === "email"
-        ? `Verification link sent to ${email}.`
-        : `Verification code sent to ${phone}.`,
-    );
+  // WAS A TOAST AND NOTHING ELSE. WorkOS has always been able to do this and the
+  // environment's email is live — verification mail at sign-up genuinely
+  // arrives, through Resend — so only this button was inert.
+  const handleResendVerification = async () => {
+    setSendingVerification(true);
+    const result = await sendMyVerificationEmail();
+    setSendingVerification(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`Verification link sent to ${emailStatus?.email ?? email}.`);
   };
 
   const handleRevokeSession = async (id: string) => {
@@ -218,7 +232,7 @@ export function LoginSecurityCard({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {emailVerified ? (
+                {isEmailVerified ? (
                   <Badge
                     variant="outline"
                     className="h-6 gap-1 border-emerald-300 bg-emerald-50 px-2 text-emerald-700"
@@ -234,9 +248,13 @@ export function LoginSecurityCard({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleResendVerification("email")}
+                      onClick={async () => {
+                        await handleResendVerification();
+                        await refetchEmailStatus();
+                      }}
+                      disabled={sendingVerification}
                     >
-                      Send link
+                      {sendingVerification ? "Sending…" : "Send link"}
                     </Button>
                   </>
                 )}
@@ -255,31 +273,13 @@ export function LoginSecurityCard({
                   <p className="text-muted-foreground text-xs">Phone number</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {phoneVerified ? (
-                  <Badge
-                    variant="outline"
-                    className="h-6 gap-1 border-emerald-300 bg-emerald-50 px-2 text-emerald-700"
-                  >
-                    <CheckCircle2 className="size-3" />
-                    Verified
-                  </Badge>
-                ) : (
-                  <>
-                    <Badge variant="secondary" className="h-6 px-2">
-                      Unverified
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={!phone}
-                      onClick={() => handleResendVerification("phone")}
-                    >
-                      Send code
-                    </Button>
-                  </>
-                )}
-              </div>
+              {/*
+                NO VERIFY CONTROL. There is no phone verification in this
+                product — nothing sends an SMS code and nothing checks one, so
+                the "Send code" button here did nothing and the "Unverified"
+                badge implied a state the user could change and could not. The
+                number is still worth showing; the promise was not.
+              */}
             </div>
           </div>
         </div>
