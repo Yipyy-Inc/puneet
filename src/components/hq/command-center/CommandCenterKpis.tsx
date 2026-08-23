@@ -131,9 +131,13 @@ export function CommandCenterKpis({ locations }: Props) {
             label="Outstanding Payments"
             value={`$${kpis.outstanding.total.toLocaleString()}`}
             sublabel={`${kpis.outstanding.invoiceCount} open invoices · manage`}
-            onClick={() =>
-              router.push("/facility/dashboard/settings?section=financial")
-            }
+            // Billing & Payments, which lists the outstanding invoices this
+            // tile counts. It used to point at ?section=financial — a settings
+            // screen holding tip tiers and a fixture list of payment gateways,
+            // with nothing to chase an invoice with. That section has since
+            // become Yipyy Pay, so the wrong destination would now be a
+            // differently wrong one.
+            onClick={() => router.push("/facility/dashboard/billing")}
           />
         )}
       </div>
