@@ -6633,6 +6633,161 @@ export type Database = {
           },
         ];
       };
+      waiver_signatures: {
+        Row: {
+          client_id: string;
+          created_at: string;
+          expires_at: string | null;
+          facility_id: string;
+          id: string;
+          ip_address: string | null;
+          pet_id: string | null;
+          revoked_at: string | null;
+          revoked_by: string | null;
+          revoked_reason: string | null;
+          signature_data: string | null;
+          signature_name: string;
+          signed_at: string;
+          signed_by: string | null;
+          user_agent: string | null;
+          waiver_hash: string;
+          waiver_id: string | null;
+          waiver_name: string;
+          waiver_text: string;
+          waiver_version: string;
+          witness_name: string | null;
+          witness_signature_data: string | null;
+        };
+        Insert: {
+          client_id: string;
+          created_at?: string;
+          expires_at?: string | null;
+          facility_id: string;
+          id?: string;
+          ip_address?: string | null;
+          pet_id?: string | null;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          revoked_reason?: string | null;
+          signature_data?: string | null;
+          signature_name: string;
+          signed_at?: string;
+          signed_by?: string | null;
+          user_agent?: string | null;
+          waiver_hash: string;
+          waiver_id?: string | null;
+          waiver_name: string;
+          waiver_text: string;
+          waiver_version: string;
+          witness_name?: string | null;
+          witness_signature_data?: string | null;
+        };
+        Update: {
+          client_id?: string;
+          created_at?: string;
+          expires_at?: string | null;
+          facility_id?: string;
+          id?: string;
+          ip_address?: string | null;
+          pet_id?: string | null;
+          revoked_at?: string | null;
+          revoked_by?: string | null;
+          revoked_reason?: string | null;
+          signature_data?: string | null;
+          signature_name?: string;
+          signed_at?: string;
+          signed_by?: string | null;
+          user_agent?: string | null;
+          waiver_hash?: string;
+          waiver_id?: string | null;
+          waiver_name?: string;
+          waiver_text?: string;
+          waiver_version?: string;
+          witness_name?: string | null;
+          witness_signature_data?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "waiver_signatures_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "waiver_signatures_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      waivers: {
+        Row: {
+          active: boolean;
+          blocks: Json;
+          body: string;
+          category: string | null;
+          created_at: string;
+          created_by: string | null;
+          expiry_days: number | null;
+          facility_id: string;
+          id: string;
+          name: string;
+          requires_digital_signature: boolean;
+          requires_signature: boolean;
+          requires_witness: boolean;
+          services: string[];
+          updated_at: string;
+          version: string;
+        };
+        Insert: {
+          active?: boolean;
+          blocks?: Json;
+          body: string;
+          category?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          expiry_days?: number | null;
+          facility_id: string;
+          id?: string;
+          name: string;
+          requires_digital_signature?: boolean;
+          requires_signature?: boolean;
+          requires_witness?: boolean;
+          services?: string[];
+          updated_at?: string;
+          version?: string;
+        };
+        Update: {
+          active?: boolean;
+          blocks?: Json;
+          body?: string;
+          category?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          expiry_days?: number | null;
+          facility_id?: string;
+          id?: string;
+          name?: string;
+          requires_digital_signature?: boolean;
+          requires_signature?: boolean;
+          requires_witness?: boolean;
+          services?: string[];
+          updated_at?: string;
+          version?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "waivers_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       booking_presence: {
