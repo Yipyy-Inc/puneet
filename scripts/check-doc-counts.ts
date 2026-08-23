@@ -31,6 +31,20 @@
  * locally needs to know the scale. A number that is guaranteed correct is more
  * useful than no number and far more useful than a stale one.
  *
+ * ── IT COUNTS FILES ON DISK, INCLUDING UNCOMMITTED ONES ───────────────────
+ *
+ * Deliberate, and it surprised its own author within the hour: this repo is
+ * sometimes worked by two sessions in one tree, and the gate went red on a
+ * colleague's machine because of a test file THEY had not committed yet. That
+ * is the correct answer — the count really was 46 on that disk — and the fix is
+ * always "commit the file", never "edit the number down" and never "ignore
+ * untracked files".
+ *
+ * Ignoring them would defeat the point twice over: the number would be right
+ * about the repository and wrong about the working tree the reader is looking
+ * at, and somebody adding a spec would see green until the moment they
+ * committed, which is the least useful moment to be told.
+ *
  * ── WHAT IT DOES NOT CHECK ────────────────────────────────────────────────
  *
  * Only these three counts, and only where they are written in the form the
