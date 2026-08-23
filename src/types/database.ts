@@ -1515,12 +1515,15 @@ export type Database = {
           active: boolean;
           capacity: number | null;
           category_id: string;
+          color: string | null;
           created_at: string;
+          description: string | null;
           facility_id: string;
           id: string;
           image_url: string | null;
           legacy_id: string;
           name: string;
+          rules: Json;
           sort_order: number;
           staff_notes: string | null;
           updated_at: string;
@@ -1529,12 +1532,15 @@ export type Database = {
           active?: boolean;
           capacity?: number | null;
           category_id: string;
+          color?: string | null;
           created_at?: string;
+          description?: string | null;
           facility_id: string;
           id?: string;
           image_url?: string | null;
           legacy_id: string;
           name: string;
+          rules?: Json;
           sort_order?: number;
           staff_notes?: string | null;
           updated_at?: string;
@@ -1543,12 +1549,15 @@ export type Database = {
           active?: boolean;
           capacity?: number | null;
           category_id?: string;
+          color?: string | null;
           created_at?: string;
+          description?: string | null;
           facility_id?: string;
           id?: string;
           image_url?: string | null;
           legacy_id?: string;
           name?: string;
+          rules?: Json;
           sort_order?: number;
           staff_notes?: string | null;
           updated_at?: string;
@@ -1722,6 +1731,138 @@ export type Database = {
             columns: ["location_id"];
             isOneToOne: false;
             referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      gift_card_transactions: {
+        Row: {
+          amount: number;
+          balance_after: number;
+          booking_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          gift_card_id: string;
+          id: string;
+          kind: string;
+          note: string | null;
+        };
+        Insert: {
+          amount: number;
+          balance_after: number;
+          booking_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          gift_card_id: string;
+          id?: string;
+          kind: string;
+          note?: string | null;
+        };
+        Update: {
+          amount?: number;
+          balance_after?: number;
+          booking_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          gift_card_id?: string;
+          id?: string;
+          kind?: string;
+          note?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "gift_card_transactions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "gift_card_transactions_gift_card_id_fkey";
+            columns: ["gift_card_id"];
+            isOneToOne: false;
+            referencedRelation: "gift_cards";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      gift_cards: {
+        Row: {
+          balance: number;
+          code: string;
+          created_at: string;
+          currency: string;
+          expires_at: string | null;
+          facility_id: string;
+          id: string;
+          initial_amount: number;
+          issued_at: string;
+          issued_by: string | null;
+          kind: string;
+          last_used_at: string | null;
+          message: string | null;
+          purchased_by_client_id: string | null;
+          recipient_email: string | null;
+          recipient_name: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          balance?: number;
+          code: string;
+          created_at?: string;
+          currency?: string;
+          expires_at?: string | null;
+          facility_id: string;
+          id?: string;
+          initial_amount: number;
+          issued_at?: string;
+          issued_by?: string | null;
+          kind?: string;
+          last_used_at?: string | null;
+          message?: string | null;
+          purchased_by_client_id?: string | null;
+          recipient_email?: string | null;
+          recipient_name?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          balance?: number;
+          code?: string;
+          created_at?: string;
+          currency?: string;
+          expires_at?: string | null;
+          facility_id?: string;
+          id?: string;
+          initial_amount?: number;
+          issued_at?: string;
+          issued_by?: string | null;
+          kind?: string;
+          last_used_at?: string | null;
+          message?: string | null;
+          purchased_by_client_id?: string | null;
+          recipient_email?: string | null;
+          recipient_name?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "gift_cards_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "gift_cards_purchased_by_client_id_fkey";
+            columns: ["purchased_by_client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
             referencedColumns: ["id"];
           },
         ];
@@ -5052,6 +5193,7 @@ export type Database = {
       };
       room_categories: {
         Row: {
+          active: boolean;
           color: string;
           created_at: string;
           default_base_price: number | null;
@@ -5069,6 +5211,7 @@ export type Database = {
           visible_to_clients: boolean;
         };
         Insert: {
+          active?: boolean;
           color?: string;
           created_at?: string;
           default_base_price?: number | null;
@@ -5086,6 +5229,7 @@ export type Database = {
           visible_to_clients?: boolean;
         };
         Update: {
+          active?: boolean;
           color?: string;
           created_at?: string;
           default_base_price?: number | null;
@@ -6893,6 +7037,45 @@ export type Database = {
         };
         Returns: Json;
       };
+      issue_gift_card: {
+        Args: {
+          p_amount: number;
+          p_code?: string;
+          p_expires_at?: string;
+          p_facility_id: string;
+          p_kind?: string;
+          p_message?: string;
+          p_purchased_by_client_id?: string;
+          p_recipient_email?: string;
+          p_recipient_name?: string;
+        };
+        Returns: {
+          balance: number;
+          code: string;
+          created_at: string;
+          currency: string;
+          expires_at: string | null;
+          facility_id: string;
+          id: string;
+          initial_amount: number;
+          issued_at: string;
+          issued_by: string | null;
+          kind: string;
+          last_used_at: string | null;
+          message: string | null;
+          purchased_by_client_id: string | null;
+          recipient_email: string | null;
+          recipient_name: string | null;
+          status: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "gift_cards";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       link_client_record: {
         Args: { p_facility_slug: string };
         Returns: string;
@@ -7146,6 +7329,40 @@ export type Database = {
           event_id: string;
           is_new: boolean;
         }[];
+      };
+      redeem_gift_card: {
+        Args: {
+          p_amount: number;
+          p_booking_id?: string;
+          p_code: string;
+          p_note?: string;
+        };
+        Returns: {
+          balance: number;
+          code: string;
+          created_at: string;
+          currency: string;
+          expires_at: string | null;
+          facility_id: string;
+          id: string;
+          initial_amount: number;
+          issued_at: string;
+          issued_by: string | null;
+          kind: string;
+          last_used_at: string | null;
+          message: string | null;
+          purchased_by_client_id: string | null;
+          recipient_email: string | null;
+          recipient_name: string | null;
+          status: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "gift_cards";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       redeem_loyalty_points: {
         Args: {
