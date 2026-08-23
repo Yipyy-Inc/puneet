@@ -4493,6 +4493,71 @@ removing either. Related and still true: `TakePaymentModal` offers a
 `clover_terminal` method and shows "Waiting for terminal…" while contacting
 nothing.
 
+### 🔴 A killed e2e run leaves an elevated groomer that four specs report and nobody can find — 2026-08-23
+
+`role-editor-writes.spec.ts` carries a long banner about its teardown being
+mandatory. The teardown was real and it was **incomplete**: it cleared
+`facility_role_permissions` and nothing else, while the test
+_a custom role grants through the cascade_ created `Senior Groomer (e2e)` with
+`manage_staff = operating_hours`, assigned it to `fs-dev-groomer`, and then
+unassigned and deleted it **inline, at the end of its own body** — the part that
+does not run when a run is killed or an earlier assertion throws.
+
+**What it cost, measured.** CI run 32647919681 failed exactly five specs and
+nothing else, all of them the same fact from different angles:
+`role-editor-writes › owner's edit…` (at `expect(before.manage_staff).toBe("none")`,
+read at the START of the test, so the elevation was already live),
+`scheduling-org-chart` ×2, `staff-field-exposure › a groomer cannot read a
+colleague's pay, code, notes or grants` — which failed with a groomer reading
+`"Overnight boarding — anytime access for medication and midnight checks."` —
+and `staff-invite-gate`. Forms, waivers and gift cards were green in the same
+run.
+
+**Why it was so hard to find, and this is the transferable part.** Two sessions
+independently checked `facility_role_permissions`, `membership_permissions`,
+`staff_permissions` and the memberships row. All four were empty or correct.
+`GET /api/roles/overrides` returned `{}` for both override layers. Every one of
+those readings was TRUE — they were answers to a narrower question than the one
+being asked. The grant was in the fourth branch of the cascade,
+`staff_custom_roles` → `facility_custom_role_permissions`, which that endpoint
+does not report.
+
+Worse, the partial cleanup makes it look **self-healing**: `afterAll` repairs its
+own layer on the way out, so a later re-run can pass while the custom-role grant
+is still sitting there.
+
+**Fixed** by moving the unassign-and-delete into the `afterAll` alongside the
+override reset. **Do instead:** if you add a test here that grants through a NEW
+branch of the cascade, clean it up in the teardown, never at the end of the body.
+And when a permission reading looks clean, check which branches your query
+actually covers before concluding the data is fine.
+
+### 🟡 `staff-invite-gate` leaves one onboarding instance per staff member, for ever — 2026-08-23
+
+Its `afterAll` restores `staff.status = 'active'` and stops there. The
+`onboarding_instances` row the invite created stays, because there is no DELETE
+verb on `/api/staff-onboarding/instances/[staffId]` for a teardown to call —
+only GET and PATCH, though the table does carry a delete policy gated on
+`manage_staff`.
+
+**It is bounded, not unbounded**, and that is why no endpoint was added for it:
+`/api/staff/[id]/invite` upserts with `onConflict: "staff_id"`, so re-running the
+spec replaces the same row rather than adding one. The cost is a single extra
+row per staff member a test has ever invited.
+
+The real damage was second-order. `supabase/tests/onboarding-instances-rls.sql`
+T0 counted `public.onboarding_instances` with **no filter at all, as superuser** —
+an assertion that the database contains nothing else, which nothing on a shared
+Postgres is entitled to assume. One leaked row turned a required check red for a
+reason unrelated to the code under test. T0 is now scoped to the fixture's own
+facility.
+
+**Do instead:** never let a SQL assertion rest on a global count of a table other
+people write to. Scope it to the fixture's own rows. The failure otherwise lands
+on a day nobody touched the code, and the cost is not the red run — it is that
+people learn to skip a red suite. Same shape as the loyalty-ledger newest-N cap
+above.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

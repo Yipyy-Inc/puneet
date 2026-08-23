@@ -30,6 +30,16 @@ import { signIn } from "./_auth";
 // The direction that matters is the other one: had the leftovers been a REVOKE
 // rather than a grant, those same specs would have gone quietly green while
 // proving nothing. So the teardown below runs regardless of outcome.
+//
+// AND IT HAS TO COVER EVERY BRANCH OF THE CASCADE, NOT JUST THE OVERRIDES.
+//
+// That lesson was learned twice. The teardown originally cleared only
+// `facility_role_permissions`, while the custom-role test cleaned up inside its
+// own body — so a killed run left an assigned custom role granting
+// `manage_staff`, and `GET /api/roles/overrides` reported {} the whole time
+// because the grant lived somewhere that endpoint does not look. If you add a
+// test here that grants through a NEW branch, clean it up in the teardown, not
+// at the end of the body: the body is the part that does not run.
 // ============================================================================
 
 type PermissionMap = Record<string, string>;
@@ -66,6 +76,31 @@ test.describe("role editor writes", () => {
           scope: null,
         });
       }
+
+      // ── THE CUSTOM ROLE HAS TO COME OFF HERE TOO ────────────────────────
+      //
+      // "a custom role grants through the cascade" unassigned and deleted this
+      // inline, at the end of its own body — so a run killed between the
+      // assertion and the unassign left `Senior Groomer (e2e)` ASSIGNED to the
+      // groomer, granting manage_staff = operating_hours. That is a fourth
+      // branch of the cascade, and it is invisible from the obvious place:
+      // GET /api/roles/overrides answers {} for both override layers while the
+      // grant is live in staff_custom_roles.
+      //
+      // Measured 2026-08-23 after a cancelled run: staff-field-exposure failed
+      // with a groomer reading a colleague's HR notes — "Overnight boarding —
+      // anytime access for medication and midnight checks." A true report about
+      // a database this file left elevated, which is exactly what the banner
+      // above warns about and exactly what its teardown did not cover.
+      //
+      // Both halves, and in this order: unassigning is what removes the grant,
+      // deleting only removes the definition.
+      await page.request.put("/api/roles/custom", {
+        data: { kind: "assignments", staffId: "fs-dev-groomer", roleIds: [] },
+      });
+      await page.request.put("/api/roles/custom", {
+        data: { kind: "delete", id: "custom-e2e-senior-groomer" },
+      });
     } catch {
       // Teardown must not turn a green run red. If the server is already gone
       // there is nothing to clean up through it — the next run's opening clear
