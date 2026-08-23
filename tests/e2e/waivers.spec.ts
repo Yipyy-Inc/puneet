@@ -304,6 +304,29 @@ test.describe("waivers", () => {
     expect(after?.revokedReason).toContain("E2E");
   });
 
+  test("the screen shows the waivers the database holds", async ({ page }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const name = freshName("screen");
+    await publish(page, {
+      name,
+      body: "Shown on the management screen.",
+      services: ["boarding"],
+    });
+
+    await page.goto("/facility/dashboard/waivers");
+    await expect(
+      page.getByRole("heading", { name: "Digital Waivers" }),
+    ).toBeVisible();
+
+    // The waiver itself, not a fixture that happens to be nearby. What this
+    // replaced seeded useState from src/data/additional-features, so this
+    // assertion could not have passed against a row the API created.
+    await expect(page.getByText(name).first()).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
   test("a groomer cannot publish a waiver or record a signature", async ({
     page,
   }) => {
