@@ -10,17 +10,38 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PoweredByClover } from "@/components/facility/yipyy-pay/YipyyPayBrand";
 
 // ============================================================================
-// What the merchant sees when they come back from Clover.
+// What the facility sees when they come back from the consent screen.
 //
 // Five outcomes, and they are deliberately not collapsed into "worked" and
 // "didn't". Each one has a different next action, and a page that says "an
 // error occurred" for all four failures makes the person guess which.
 //
+// ── IT SAYS YIPYY PAY, BECAUSE THAT IS WHAT THEY BOUGHT ───────────────────
+//
+// This is the last screen of step 1 of the Yipyy Pay setup wizard — the
+// facility pressed a Yipyy button, was handed to a processor for ninety
+// seconds, and lands back here. Greeting them with the processor's name would
+// leave them wondering which product they just finished setting up. The
+// attribution stays; the headline is ours.
+//
+// ── AND EVERY WAY OUT GOES BACK TO THE WIZARD ─────────────────────────────
+//
+// The failure branch used to offer /facility/dashboard/billing/payment-settings
+// — a fixture screen that reads mock Tap-to-Pay config and can do nothing about
+// any of this. Somebody whose connection just failed was sent to a page with no
+// way to retry.
+//
 // A server component: there is nothing interactive here, and the connection has
 // already happened by the time this renders.
 // ============================================================================
+
+/** Back into the wizard, on the step that follows a successful connection. */
+const SETUP_HREF = "/facility/dashboard/settings?section=yipyy-pay&step=2";
+/** Back to step 1, for somebody who has to try again. */
+const RETRY_HREF = "/facility/dashboard/settings?section=yipyy-pay&step=1";
 
 export type CloverOutcome =
   | { kind: "connected"; merchantId: string; environment: string }
@@ -68,8 +89,8 @@ export function CloverResult({ outcome }: { outcome: CloverOutcome }) {
       <Shell
         icon={<CheckCircle2 className="size-5 text-white" />}
         tone="bg-emerald-600"
-        title="Clover is connected"
-        description="Card payments for this facility will go through this merchant account."
+        title="Yipyy Pay is connected"
+        description="Card payments for this facility will go through your merchant account."
       >
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
@@ -92,11 +113,15 @@ export function CloverResult({ outcome }: { outcome: CloverOutcome }) {
         </div>
         {outcome.environment === "sandbox" && (
           <p className="text-muted-foreground text-xs">
-            This is a sandbox merchant. Cards are simulated and no money moves.
+            This is a test account. Cards are simulated and no money moves.
           </p>
         )}
+        {/* The attribution belongs at the redirect boundary, which is what this
+            page is — they were on the processor's own site a moment ago, and
+            the merchant id above is theirs. */}
+        <PoweredByClover />
         <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
-          <Link href="/facility/dashboard">Back to your dashboard</Link>
+          <Link href={SETUP_HREF}>Continue setting up Yipyy Pay</Link>
         </Button>
 
         {/* ── A CONNECTED FACILITY COULD NOT CHANGE ITS MERCHANT ────────────
@@ -126,8 +151,8 @@ export function CloverResult({ outcome }: { outcome: CloverOutcome }) {
       <Shell
         icon={<Plug className="size-5 text-white" />}
         tone="bg-slate-600"
-        title="No Clover account connected"
-        description="Connect a Clover merchant account to take card payments through Yipyy."
+        title="Yipyy Pay is not set up yet"
+        description="Connect a merchant account to start taking card payments through Yipyy."
       >
         {outcome.lastError && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300">
@@ -135,7 +160,7 @@ export function CloverResult({ outcome }: { outcome: CloverOutcome }) {
           </p>
         )}
         <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
-          <Link href="/api/payments/clover/connect">Connect Clover</Link>
+          <Link href={RETRY_HREF}>Set up Yipyy Pay</Link>
         </Button>
       </Shell>
     );
@@ -161,8 +186,8 @@ export function CloverResult({ outcome }: { outcome: CloverOutcome }) {
       <Shell
         icon={<AlertTriangle className="size-5 text-white" />}
         tone="bg-slate-600"
-        title="Payments are not set up on this deployment"
-        description="Yipyy has no Clover credentials configured, so no facility can connect an account here. Nothing is wrong with your merchant."
+        title="Yipyy Pay is not available here"
+        description="Card payments have not been switched on for this Yipyy installation, so no facility can connect an account. Nothing is wrong with your business — contact Yipyy support."
       />
     );
   }
@@ -174,10 +199,10 @@ export function CloverResult({ outcome }: { outcome: CloverOutcome }) {
       title={outcome.title}
       description={outcome.detail}
     >
+      {/* Back to step 1, where the button that failed lives — not to a
+          settings page with no way to retry. */}
       <Button asChild variant="outline" className="w-full">
-        <Link href="/facility/dashboard/billing/payment-settings">
-          Back to payment settings
-        </Link>
+        <Link href={RETRY_HREF}>Try again</Link>
       </Button>
     </Shell>
   );

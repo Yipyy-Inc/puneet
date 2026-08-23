@@ -30,6 +30,76 @@ import { cloverGet } from "./request";
 // an enrichment lookup timed out.
 // ============================================================================
 
+/**
+ * Who the merchant account says it is.
+ *
+ * Separate from MerchantProfile because it answers a different question and has
+ * a different consumer. The profile below is the CHARGE path's business — the
+ * three facts a payment cannot be taken without. This is the SETUP screen's
+ * business: the name and address a facility should recognise as their own, so
+ * "verify your business" can show them what Clover holds rather than asking
+ * them to retype it into a form Yipyy cannot submit anywhere.
+ *
+ * Every field is nullable and nothing is defaulted. A blank line on the screen
+ * is the honest rendering of "Clover did not say" — inventing a placeholder on
+ * a verification screen would be inventing the verification.
+ */
+export interface MerchantSummary {
+  name: string | null;
+  addressLine: string | null;
+  city: string | null;
+  region: string | null;
+  postcode: string | null;
+  country: string | null;
+}
+
+/**
+ * The merchant's own record, for the setup screen to read back.
+ *
+ * One call, and it tolerates failure: this decorates a screen, it does not gate
+ * a payment, so a 429 here should leave a field blank rather than tell a
+ * connected facility they are not connected.
+ *
+ * `?expand=address` is load-bearing for the same reason as in the profile
+ * lookup — without it Clover returns `address` as an href stub and every part
+ * of it silently reads undefined.
+ */
+export async function fetchMerchantSummary(
+  accessToken: string,
+  merchantId: string,
+  environment: CloverEnvironment,
+): Promise<MerchantSummary | null> {
+  const config = cloverConfig(environment);
+  if (!config) return null;
+
+  const merchant = await get<{
+    name?: string;
+    address?: {
+      address1?: string;
+      city?: string;
+      state?: string;
+      zip?: string;
+      country?: string;
+    };
+  }>(
+    config.apiOrigin,
+    `/v3/merchants/${merchantId}?expand=address`,
+    accessToken,
+    merchantId,
+  );
+  if (!merchant) return null;
+
+  const address = merchant.address ?? {};
+  return {
+    name: merchant.name ?? null,
+    addressLine: address.address1 ?? null,
+    city: address.city ?? null,
+    region: address.state ?? null,
+    postcode: address.zip ?? null,
+    country: address.country ?? null,
+  };
+}
+
 export interface MerchantProfile {
   /** ISO-4217. NULL when Clover would not say — never defaulted. */
   currency: string | null;

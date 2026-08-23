@@ -9,6 +9,7 @@ import {
 
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
 import { NO_TAX, taxConfigSchema } from "@/lib/settings/tax";
+import { NO_YIPYY_PAY, yipyyPayConfigSchema } from "@/lib/settings/yipyy-pay";
 
 import {
   bookingRulesSchema,
@@ -157,6 +158,22 @@ export const SETTING_DOMAINS = {
   // taking money from customers on a number a seed file invented. See the
   // banner in lib/settings/pricing.ts.
   pricing_rules: { schema: pricingRulesSchema, fallback: NO_PRICING_RULES },
+  // ── YIPYY PAY ──────────────────────────────────────────────────────────
+  //
+  // The facility's payment preferences: which payout schedule their Clover
+  // account is on, what Yipyy prints on a receipt, and — the one that touches
+  // a customer's total — whether the card processing fee is absorbed by the
+  // business or added to the invoice as a disclosed line.
+  //
+  // No credential lives here. The Clover tokens are in Vault behind
+  // `private.payment_credentials`, and `facility_settings` is readable by every
+  // member of the facility, so this row holds preferences only. See the
+  // "deliberately not here" note at the foot of this file.
+  //
+  // The fallback absorbs the fee (`feePayer: "business"`), so a facility that
+  // never opens the screen cannot be surcharging its customers on a default
+  // nobody chose — the same rule as NO_TAX and NO_PRICING_RULES.
+  yipyy_pay_config: { schema: yipyyPayConfigSchema, fallback: NO_YIPYY_PAY },
 
   // ── WHAT A CUSTOMER MAY BOOK ───────────────────────────────────────────
   //

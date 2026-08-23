@@ -35,6 +35,7 @@ import {
   UserCog,
   UserX,
   UtensilsCrossed,
+  Wallet,
 } from "lucide-react";
 import { UserCircle } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
@@ -58,6 +59,19 @@ export interface SettingsSection {
    * (personal always, admin sections per key) — "same component, filtered".
    */
   permKey?: PermissionKey;
+  /**
+   * A section that is a heading for others rather than a screen of its own.
+   *
+   * Added for Payments & Billing, which gathers the three screens that decide
+   * what a customer is charged — Yipyy Pay, tips and pricing rules. They were
+   * scattered across the Financial list beside estimate defaults and invoice
+   * templates, so "where do I change the card fee" had no obvious answer.
+   *
+   * A parent is NOT clickable: it has no `activeSection` of its own, so
+   * pressing it would either navigate nowhere or hijack one of its children.
+   * It expands. Every leaf still has its own id and its own deep link.
+   */
+  children?: SettingsSection[];
 }
 
 /** The controlling permission for each facility-admin settings section. The
@@ -96,6 +110,16 @@ export const SETTINGS_SECTION_KEYS: Record<string, PermissionKey> = {
   "estimate-settings": "manage_rates",
   "deposit-rules": "manage_rates",
   "invoice-template": "manage_facility_settings",
+  // Payments & Billing. `yipyy-pay` decides where a business's revenue lands
+  // and whether a customer is charged a card fee; `tips` decides what they are
+  // asked to add.
+  //
+  // `financial` was the id both used to live behind. The settings page rewrites
+  // it to `yipyy-pay` before this map is consulted, so it should never be asked
+  // about — it stays listed so that if that alias is ever dropped, a stale
+  // bookmark meets a permission check rather than an unguarded section.
+  "yipyy-pay": "settings_billing",
+  tips: "settings_billing",
   financial: "settings_billing",
   taxes: "settings_manage_taxes",
   subscription: "settings_subscription",
@@ -211,7 +235,31 @@ const STATIC_GROUPS: SettingsGroup[] = [
   {
     label: "Financial",
     sections: [
-      { id: "pricing-rules", label: "Pricing Rules", icon: Receipt },
+      // The three screens that decide what a customer is charged, gathered
+      // under one heading. `financial` used to be a leaf called "Payments &
+      // Billing" holding tip tiers next to four fixture cards that saved
+      // nowhere; it is now the heading, and the real screens are its children.
+      {
+        id: "payments-billing",
+        label: "Payments & Billing",
+        icon: CreditCard,
+        permKey: "settings_billing",
+        children: [
+          {
+            id: "yipyy-pay",
+            label: "Yipyy Pay",
+            icon: Wallet,
+            permKey: "settings_billing",
+          },
+          {
+            id: "tips",
+            label: "Tip Settings",
+            icon: Sparkles,
+            permKey: "settings_billing",
+          },
+          { id: "pricing-rules", label: "Pricing Rules", icon: Receipt },
+        ],
+      },
       {
         id: "estimate-settings",
         label: "Estimate Settings",
@@ -219,7 +267,6 @@ const STATIC_GROUPS: SettingsGroup[] = [
       },
       { id: "deposit-rules", label: "Deposit Rules", icon: DollarSign },
       { id: "invoice-template", label: "Invoice Template", icon: FileText },
-      { id: "financial", label: "Payments & Billing", icon: DollarSign },
       { id: "taxes", label: "Taxes", icon: DollarSign },
       // Gated on `view_payroll` rather than a settings key: the people who
       // decide what overtime costs are the ones who see the wage bill, and the
@@ -309,32 +356,48 @@ export function SettingsSidebar({
   const permissions = useEffectivePermissions();
   const activeModules = modules.filter((m) => m.status === "active");
 
+  /** Both gates, because the map and the `permKey` are allowed to disagree
+   *  and the file's own comment says an unmapped id is permitted. */
+  const visible = (section: SettingsSection) =>
+    canAccessSettingsSection(section.id, permissions) &&
+    (!section.permKey || permissions[section.permKey] !== false);
+
   // Build groups with dynamic custom modules, then filter each section by the
   // acting viewer's permissions: personal sections always show; facility-admin
   // sections show only when granted. Custom module config follows manage_services.
   const groups: SettingsGroup[] = STATIC_GROUPS.map((group) => {
-    const base =
+    const base: SettingsGroup =
       group.label === "Services" && activeModules.length > 0
         ? {
             ...group,
+            // Annotated, not inferred: without it TypeScript widens the array
+            // to a union of the literal shapes, and `section.children` — which
+            // only some members declare — stops existing on the whole.
             sections: [
               ...group.sections,
-              ...activeModules.map((m) => ({
-                id: `custom-${m.slug}`,
-                label: m.name,
-                icon: Puzzle,
-                permKey: "manage_services" as PermissionKey,
-              })),
+              ...activeModules.map(
+                (m): SettingsSection => ({
+                  id: `custom-${m.slug}`,
+                  label: m.name,
+                  icon: Puzzle,
+                  permKey: "manage_services" as PermissionKey,
+                }),
+              ),
             ],
           }
         : group;
     return {
       ...base,
-      sections: base.sections.filter(
-        (s) =>
-          canAccessSettingsSection(s.id, permissions) &&
-          (!s.permKey || permissions[s.permKey] !== false),
-      ),
+      sections: base.sections
+        .map((section) =>
+          section.children
+            ? { ...section, children: section.children.filter(visible) }
+            : section,
+        )
+        // A parent whose every child was filtered away is a heading for
+        // nothing, so it goes with them — otherwise a groomer would see
+        // "Payments & Billing" expand into an empty list.
+        .filter((s) => visible(s) && (!s.children || s.children.length > 0)),
     };
   }).filter((group) => group.sections.length > 0);
 
@@ -348,29 +411,120 @@ export function SettingsSidebar({
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="space-y-0.5">
-              {group.sections.map((section) => {
-                const Icon = section.icon;
-                const isActive = activeSection === section.id;
-                return (
-                  <button
+              {group.sections.map((section) =>
+                section.children ? (
+                  <ParentSection
                     key={section.id}
-                    onClick={() => onSectionChange(section.id)}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-                      isActive
-                        ? "bg-primary/10 text-primary font-medium"
-                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                    )}
-                  >
-                    <Icon className="size-4" />
-                    {t(section.label)}
-                  </button>
-                );
-              })}
+                    section={section}
+                    activeSection={activeSection}
+                    onSectionChange={onSectionChange}
+                    t={t}
+                  />
+                ) : (
+                  <SectionButton
+                    key={section.id}
+                    section={section}
+                    isActive={activeSection === section.id}
+                    onSelect={() => onSectionChange(section.id)}
+                    label={t(section.label)}
+                  />
+                ),
+              )}
             </div>
           </CollapsibleContent>
         </Collapsible>
       ))}
     </nav>
+  );
+}
+
+/** One leaf: an icon, a label, and the active treatment. */
+function SectionButton({
+  section,
+  isActive,
+  onSelect,
+  label,
+  nested,
+}: {
+  section: SettingsSection;
+  isActive: boolean;
+  onSelect: () => void;
+  label: string;
+  nested?: boolean;
+}) {
+  const Icon = section.icon;
+  return (
+    <button
+      onClick={onSelect}
+      className={cn(
+        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+        nested && "pl-8",
+        isActive
+          ? "bg-primary/10 text-primary font-medium"
+          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+      )}
+    >
+      <Icon className="size-4" />
+      {label}
+    </button>
+  );
+}
+
+/**
+ * A heading that expands, for a section holding others.
+ *
+ * Open by default, like the groups around it — a settings list that hides three
+ * of its entries behind a closed twisty is a settings list where people cannot
+ * find things. `defaultOpen` rather than a controlled `open`: a facility who
+ * collapses it should stay collapsed while they work, and re-opening it on
+ * every render would fight them.
+ */
+function ParentSection({
+  section,
+  activeSection,
+  onSectionChange,
+  t,
+}: {
+  section: SettingsSection;
+  activeSection: string;
+  onSectionChange: (section: string) => void;
+  t: (key: string) => string;
+}) {
+  const Icon = section.icon;
+  const holdsActive = (section.children ?? []).some(
+    (child) => child.id === activeSection,
+  );
+
+  return (
+    <Collapsible defaultOpen>
+      <CollapsibleTrigger
+        className={cn(
+          "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+          "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+          // The heading itself is never "active" — it has no screen. When a
+          // child is selected the heading only reads as its parent, which is
+          // why it takes a weight change and not the accent background.
+          holdsActive && "text-foreground font-medium",
+        )}
+      >
+        <Icon className="size-4" />
+        {t(section.label)}
+        <ChevronDown className="ml-auto size-3" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="space-y-0.5">
+          {(section.children ?? []).map((child) => (
+            <SectionButton
+              key={child.id}
+              section={child}
+              nested
+              isActive={activeSection === child.id}
+              onSelect={() => onSectionChange(child.id)}
+              label={t(child.label)}
+            />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
