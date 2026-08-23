@@ -1,6 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import {
+  changePassword,
+  listMySessions,
+  revokeMySession,
+  revokeMyOtherSessions,
+} from "@/lib/auth/workos-actions";
 import { toast } from "sonner";
 import {
   CheckCircle2,
@@ -13,7 +21,6 @@ import {
   Monitor,
   Phone,
   ShieldCheck,
-  Smartphone,
 } from "lucide-react";
 import {
   Card,
@@ -37,46 +44,47 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-interface ActiveSession {
-  id: string;
-  device: string;
-  browser: string;
-  location: string;
-  lastActive: string;
-  isCurrent: boolean;
-  icon: typeof Monitor;
-}
+/**
+ * A readable name for a session, from its user agent.
+ *
+ * DERIVED, NOT INVENTED. The mock this replaces listed "Windows 11 · Chrome
+ * 132" in "Montreal, QC", none of which came from anywhere. WorkOS records the
+ * user agent and the IP and no location at all, so this reduces the former to
+ * something a person can recognise and shows the latter as-is. Where the string
+ * is unrecognised it says so rather than guessing.
+ */
+function describeUserAgent(userAgent: string | null): string {
+  if (!userAgent) return "Unknown device";
 
-// Mock sessions — replace with real session API.
-const MOCK_SESSIONS: ActiveSession[] = [
-  {
-    id: "current",
-    device: "Windows 11",
-    browser: "Chrome 132",
-    location: "Montreal, QC",
-    lastActive: "Active now",
-    isCurrent: true,
-    icon: Monitor,
-  },
-  {
-    id: "phone",
-    device: "iPhone 15",
-    browser: "Safari",
-    location: "Montreal, QC",
-    lastActive: "2 hours ago",
-    isCurrent: false,
-    icon: Smartphone,
-  },
-  {
-    id: "laptop",
-    device: "MacBook Pro",
-    browser: "Firefox",
-    location: "Toronto, ON",
-    lastActive: "3 days ago",
-    isCurrent: false,
-    icon: Monitor,
-  },
-];
+  const os = /Windows/i.test(userAgent)
+    ? "Windows"
+    : /iPhone|iPad/i.test(userAgent)
+      ? "iOS"
+      : /Android/i.test(userAgent)
+        ? "Android"
+        : /Mac OS X|Macintosh/i.test(userAgent)
+          ? "macOS"
+          : /Linux/i.test(userAgent)
+            ? "Linux"
+            : null;
+
+  // Order matters: Edge and Chrome both say "Chrome", Safari says "Safari" only
+  // when Chrome does not.
+  const browser = /Edg\//i.test(userAgent)
+    ? "Edge"
+    : /OPR\//i.test(userAgent)
+      ? "Opera"
+      : /Chrome\//i.test(userAgent)
+        ? "Chrome"
+        : /Firefox\//i.test(userAgent)
+          ? "Firefox"
+          : /Safari\//i.test(userAgent)
+            ? "Safari"
+            : null;
+
+  const parts = [os, browser].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "Unknown device";
+}
 
 interface LoginSecurityCardProps {
   email: string;
@@ -106,7 +114,17 @@ export function LoginSecurityCard({
   >("authenticator");
 
   // Sessions
-  const [sessions, setSessions] = useState<ActiveSession[]>(MOCK_SESSIONS);
+  const [busySession, setBusySession] = useState<string | null>(null);
+  const [signingOutOthers, setSigningOutOthers] = useState(false);
+
+  // Real sessions from WorkOS. The mock array this replaces invented a device,
+  // a browser, a city and a "last active" time; WorkOS knows the IP, the user
+  // agent and how the person signed in, so that is what is shown. Inventing a
+  // location again would be the same bug in a new coat.
+  const { data: sessions = [], refetch: refetchSessions } = useQuery({
+    queryKey: ["my-sessions"],
+    queryFn: listMySessions,
+  });
 
   const passwordTooShort = newPassword.length > 0 && newPassword.length < 8;
   const passwordsMismatch =
@@ -128,17 +146,24 @@ export function LoginSecurityCard({
     if (!canSubmitPassword) return;
     setIsUpdatingPassword(true);
     try {
-      // TODO: Replace with real password change API
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // WAS A MOCK: an 800 ms setTimeout, then a success toast, against no
+      // backend. Someone who believed it might discard a password that still
+      // worked. changePassword re-authenticates the current one before setting
+      // the new one -- holding a session is not proof of knowing the password.
+      const result = await changePassword(currentPassword, newPassword);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Password updated. You'll stay signed in on this device.");
       resetPasswordForm();
-    } catch {
-      toast.error("Could not update password. Please try again.");
     } finally {
       setIsUpdatingPassword(false);
     }
   };
 
+  // Also still a mock: no email or SMS is sent. Same reasoning as the 2FA
+  // toggle below — it now sits among working controls.
   const handleResendVerification = (channel: "email" | "phone") => {
     toast.success(
       channel === "email"
@@ -147,6 +172,20 @@ export function LoginSecurityCard({
     );
   };
 
+  // ── STILL A MOCK. NOT WIRED TO ANYTHING. ──────────────────────────────
+  //
+  // Flagged explicitly because the password and session controls in this file
+  // became real on 2026-08-23, and a lone fake among working ones is far more
+  // convincing than it was when everything here was fake.
+  //
+  // This toggle enrols nobody in anything: `mfaEnabled` is "Off" on both WorkOS
+  // environments, so there is no second factor to turn on. A user who flips it
+  // believes their account is protected by 2FA and it is not — which is worse
+  // than not offering it.
+  //
+  // Either delete the control or implement it with
+  // `userManagement.enrollAuthFactor` and flip the environment setting. Do not
+  // leave it looking finished.
   const handleToggle2FA = (enabled: boolean) => {
     setTwoFactorEnabled(enabled);
     toast.success(
@@ -156,14 +195,36 @@ export function LoginSecurityCard({
     );
   };
 
-  const handleRevokeSession = (id: string) => {
-    setSessions((prev) => prev.filter((s) => s.id !== id));
+  // BOTH WERE MOCKS, and these were the dangerous ones: they filtered a local
+  // array and claimed the device had been signed out. Someone ending a session
+  // they did not recognise -- the whole reason this control exists -- was told
+  // the intruder was gone while the session stayed live.
+  const handleRevokeSession = async (id: string) => {
+    setBusySession(id);
+    const result = await revokeMySession(id);
+    setBusySession(null);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
     toast.success("Session signed out.");
+    await refetchSessions();
   };
 
-  const handleSignOutAllOthers = () => {
-    setSessions((prev) => prev.filter((s) => s.isCurrent));
-    toast.success("Signed out of all other devices.");
+  const handleSignOutAllOthers = async () => {
+    setSigningOutOthers(true);
+    const result = await revokeMyOtherSessions();
+    setSigningOutOthers(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(
+      result.ended === 1
+        ? "Signed out of 1 other device."
+        : `Signed out of ${result.ended ?? 0} other devices.`,
+    );
+    await refetchSessions();
   };
 
   return (
@@ -439,67 +500,73 @@ export function LoginSecurityCard({
                 Devices currently signed in to your account.
               </p>
             </div>
-            {sessions.some((s) => !s.isCurrent) && (
+            {sessions.some((s) => !s.current) && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSignOutAllOthers}
+                disabled={signingOutOthers}
               >
                 <LogOut className="mr-2 size-4" />
-                Sign out all others
+                {signingOutOthers ? "Signing out…" : "Sign out all others"}
               </Button>
             )}
           </div>
           <div className="divide-border/70 divide-y overflow-hidden rounded-lg border">
-            {sessions.map((session) => {
-              const Icon = session.icon;
-              return (
-                <div
-                  key={session.id}
-                  className="flex items-center justify-between gap-3 px-4 py-3"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                        session.isCurrent
-                          ? "bg-emerald-50 text-emerald-600"
-                          : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      <Icon className="size-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-medium">
-                          {session.device} · {session.browser}
-                        </p>
-                        {session.isCurrent && (
-                          <Badge
-                            variant="outline"
-                            className="h-5 border-emerald-300 bg-emerald-50 px-1.5 text-[10px] text-emerald-700"
-                          >
-                            This device
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-muted-foreground truncate text-xs">
-                        {session.location} · {session.lastActive}
+            {sessions.length === 0 && (
+              <p className="text-muted-foreground px-4 py-3 text-sm">
+                No active sessions to show.
+              </p>
+            )}
+            {sessions.map((session) => (
+              <div
+                key={session.id}
+                className="flex items-center justify-between gap-3 px-4 py-3"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className={cn(
+                      "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                      session.current
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    <Monitor className="size-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-medium">
+                        {describeUserAgent(session.userAgent)}
                       </p>
+                      {session.current && (
+                        <Badge
+                          variant="outline"
+                          className="h-5 border-emerald-300 bg-emerald-50 px-1.5 text-[10px] text-emerald-700"
+                        >
+                          This device
+                        </Badge>
+                      )}
                     </div>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {[session.ipAddress, session.authMethod]
+                        .filter(Boolean)
+                        .join(" · ") || "No details recorded"}
+                    </p>
                   </div>
-                  {!session.isCurrent && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRevokeSession(session.id)}
-                    >
-                      Sign out
-                    </Button>
-                  )}
                 </div>
-              );
-            })}
+                {!session.current && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRevokeSession(session.id)}
+                    disabled={busySession === session.id}
+                  >
+                    {busySession === session.id ? "Signing out…" : "Sign out"}
+                  </Button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>
