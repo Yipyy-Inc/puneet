@@ -91,10 +91,22 @@ const NOTHING: PlannedBadgeReward = {
  * rather than inline at the call site, because the mapping is where a reward
  * can quietly become the wrong thing.
  *
- * `gift_card` maps to NOTHING, and that is the honest answer rather than a gap:
- * there is no gift-card table in this database at all — the whole gift-card
- * feature is still fixtures. Turning it into account credit of the same dollar
- * value would be this code deciding something the facility did not.
+ * `gift_card` still maps to NOTHING, and the reason CHANGED on 2026-08-23.
+ * There is a `gift_cards` table now (20260822900000) and `issue_gift_card`
+ * could be called from here — but it must not be, for two reasons that are
+ * about money rather than about plumbing:
+ *
+ *   - Earning runs off "mark this booking complete", and that button is pressed
+ *     by whoever is on the desk. `issue_gift_card` requires
+ *     `financial_manage_gift_cards`, which reception holds and a groomer does
+ *     not — so the same badge would hand out a card or nothing depending on who
+ *     clicked. A reward that depends on the clicker is worse than no reward.
+ *   - It puts a real liability on the business's books with nobody deciding to.
+ *     Every other reward here is a discount on a future bill; this one is money
+ *     owed the moment it is issued.
+ *
+ * Turning it into account credit of the same dollar value would still be this
+ * code deciding something the facility did not.
  */
 export function plannedBadgeReward(badge: Badge): PlannedBadgeReward {
   const reward = badge.reward;
