@@ -107,6 +107,11 @@ export function YipyyPayLanding({ overview }: { overview: YipyyPayOverview }) {
   const resuming =
     overview.connection.connected && !overview.config.setupCompletedAt;
 
+  // Where "Continue" should drop them. The stored step is only a hint — the
+  // wizard clamps it down to the first step that is genuinely incomplete — so
+  // an optimistic 3 lands on 2 rather than skipping anything.
+  const startAt = resuming ? overview.config.setupStep : 1;
+
   return (
     <div className="space-y-6">
       <YipyyPayHero>
@@ -126,7 +131,7 @@ export function YipyyPayLanding({ overview }: { overview: YipyyPayOverview }) {
             <Button
               size="lg"
               className="bg-white text-sky-700 hover:bg-white/90"
-              onClick={() => nav.go({ step: 1 })}
+              onClick={() => nav.go({ step: startAt })}
             >
               {resuming ? "Continue setup" : "Get started"}
               <ArrowRight className="size-4" />
@@ -177,7 +182,10 @@ export function YipyyPayLanding({ overview }: { overview: YipyyPayOverview }) {
         ))}
       </div>
 
-      <BeforeYouStart onStart={() => nav.go({ step: 1 })} resuming={resuming} />
+      <BeforeYouStart
+        onStart={() => nav.go({ step: startAt })}
+        resuming={resuming}
+      />
     </div>
   );
 }

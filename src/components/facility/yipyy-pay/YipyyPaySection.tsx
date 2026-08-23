@@ -152,13 +152,29 @@ export function YipyyPaySection() {
   const overview: YipyyPayOverview = data;
   const finished = Boolean(overview.config.setupCompletedAt);
 
-  // Connected AND finished: the landing page is never shown again.
-  if (overview.connection.connected && finished && !nav.inWizard) {
+  // Setup finished: the landing page is never shown to this facility again.
+  //
+  // Keyed on `setupCompletedAt` alone, NOT on the connection. A facility that
+  // finished and later had the app removed at Clover still gets the dashboard —
+  // which is where the "card payments are not working" banner and the reconnect
+  // link live. Sending them back to a marketing page for a product they already
+  // bought would hide the one control that fixes it.
+  if (finished && !nav.inWizard) {
     return <YipyyPayDashboard overview={overview} />;
   }
 
-  // Mid-setup — either they just asked to start, or they left and came back.
-  if (nav.inWizard || overview.connection.connected) {
+  // Only `&step=` opens the wizard.
+  //
+  // This used to also trigger on `connection.connected`, so a facility that
+  // connected and then left mid-setup came back straight into step 2 — and the
+  // wizard's own "Back to Yipyy Pay" link then rendered the wizard again,
+  // because leaving it did not change the condition that put them there. A
+  // control that visibly does nothing.
+  //
+  // Now a bare URL lands on the landing page, which is where the spec asks for
+  // "Setup in progress — step N of 3" and a Continue button. That banner was
+  // otherwise unreachable code.
+  if (nav.inWizard) {
     return <YipyyPaySetupWizard overview={overview} />;
   }
 

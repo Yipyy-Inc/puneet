@@ -4558,6 +4558,57 @@ on a day nobody touched the code, and the cost is not the red run — it is that
 people learn to skip a red suite. Same shape as the loyalty-ledger newest-N cap
 above.
 
+### 🔴 A true answer to a narrower question than the one being asked — 2026-08-23
+
+Two sessions each lost most of an afternoon to this on the same day, in
+unrelated subsystems, and neither spotted it from the inside. It is one mistake
+wearing two sets of clothes, so it gets one entry.
+
+**Case one — the permission that was not there.** Chasing an elevated groomer,
+we read `facility_role_permissions`, `membership_permissions`,
+`staff_permissions` and the memberships row, and called `GET
+/api/roles/overrides`, which answered `{}`. Every reading was **true**. The
+grant was in `staff_custom_roles` → `facility_custom_role_permissions`, a branch
+that endpoint does not report. `{}` was a correct answer to "what is in the two
+override layers", read as an answer to "is the groomer elevated".
+
+**Case two — the fixture that was the wrong shape.** `forms.spec.ts` built a
+schema nesting `fields` under `sections`; the application writes flat
+`questions` with a `sectionId`, and the column is plain jsonb so it accepted the
+invention. Twelve API-level assertions passed, because every one of them was
+`JSON.stringify(schema).toContain(...)` — **true of the bytes it searched**, and
+silent about whether the structure was the one the code reads. Only the screen
+test caught it, because the page rendered a form with no questions.
+
+**The defence is not more assertions.** Both suites had plenty and both were
+green. It is **at least one assertion at the layer the user sits at** — a render,
+a resolved permission map, a total on a screen — because that is the only layer
+where "answered the wrong question" and "answered the right one" look different.
+
+**Do instead:** before believing a clean reading, ask what the query or endpoint
+does NOT cover, and say so in the assertion's name. Prefer an assertion that
+would fail if the structure changed over one that searches a serialised blob.
+And when a bug is invisible from four true readings, that is evidence you are
+asking a narrower question — not evidence the data is fine.
+
+### 🟡 One tree, one `.git`, one branch — a push vouches for everyone's commits — 2026-08-23
+
+Two sessions worked `c:\dev\puneet` simultaneously. Both reasoned as though
+"my commit" and "your commit" were separable units of risk. They are not: there
+is one `main`, `git log --oneline` interleaves both authors, and whoever types
+`git push` ships **every** commit ahead of `origin`.
+
+So "I will push mine before you start" does not isolate anyone — it ships the
+other session's unverified work on your say-so, and Vercel deploys production
+from `main` on push.
+
+**Do instead:** nobody pushes unless everything unpushed is verified by whoever
+wrote it. "My part is green" was never sufficient. Check `git log
+origin/main..HEAD` before pushing and confirm you recognise every commit in it.
+Stage by explicit path, never `git add -A`, so at least the _contents_ of a
+commit stay yours. And treat a running Playwright suite as an exclusive lock —
+announce before, not after.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
