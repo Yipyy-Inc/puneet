@@ -4628,10 +4628,6 @@ by screens that import the fixtures directly — so the compiler had no opinion,
 that noticed was stale `.next/types` holding route paths that no longer
 existed, which is a nuisance ninety-nine times and a smoke alarm the hundredth.
 
-A second copy survived the first fix: `boardingQueries` was exported from
-**two** files in `src/lib/api` for several hours — `boarding.ts` (dogs) and
-`merchant-application.ts` (merchants) — with nothing anywhere complaining.
-
 **Do instead:** before naming a module, a route folder or an exported symbol
 after a domain word, grep for the word first — `grep -rn "boarding" src/lib/api
 src/app/api --include=*.ts -l`. If it comes back with anything, the word is
@@ -4642,6 +4638,32 @@ leave the bare word to whoever had it. Restore with `git checkout HEAD --
 And do not treat a green typecheck as evidence that a file is unused or that a
 rename is safe. In a half-converted codebase, "nothing imports it" is the
 normal state of code that is very much alive.
+
+### 🔴 Two modules can export the SAME symbol from the same directory, and nothing objects — 2026-08-23
+
+Distinct from the entry above, which is about _choosing_ a name. This one is
+about the toolchain being structurally unable to tell you the name is occupied.
+
+After the `boarding` overwrite was reverted, a second copy survived the fix:
+`boardingQueries` was exported from **two** files in `src/lib/api` for several
+hours — `boarding.ts` (dogs, `.guests` / `.careSheets` / `.roomTypes`) and
+`merchant-application.ts` (merchants, `.application`). Measured: `bun run
+typecheck`, `bun run lint`, `bun run build` and `bun run prune` were **all
+green** the whole time. There is no barrel file to collide in and no rule that
+two sibling modules may not export the same name, so nothing had an opinion.
+
+The bug this shape produces is not a crash. It is an import that resolves to
+the wrong module and returns **plausible-looking data** — a query factory whose
+`.detail(id)` answers with something, just not the something the caller meant.
+That is the same failure class as the PostgREST embedded-filter entry above:
+the wrong answer arrives looking exactly like the right one.
+
+**Do instead:** when adding an exported symbol to `src/lib/api`, grep the
+directory for the bare name first — `grep -rn "export const <name>" src/lib/api`
+— and expect a hit to mean "pick another name", not "check whether it matters".
+`bun run prune` will not find this: both copies are imported by somebody, so
+neither is dead. Nothing in CI finds it. A grep before you type is currently
+the entire defence.
 
 ### 🟡 `check:settings-fixture` guards a DIRECTORY, not a class of facts — 2026-08-23
 
