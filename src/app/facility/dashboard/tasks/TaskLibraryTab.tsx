@@ -1,21 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -26,34 +28,52 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
-  Plus,
-  Clock,
+  AlertCircle,
+  AlertTriangle,
+  Archive,
   Camera,
+  ClipboardList,
   PenLine,
-  Trash2,
-  BookOpen,
-  CheckCircle2,
+  Plus,
+  RotateCcw,
 } from "lucide-react";
 import {
-  workTaskLibrary,
-  type WorkTaskDefinition,
-  type WorkTaskCategory,
-  type WorkTaskPriority,
-} from "@/data/work-tasks";
-import { toast } from "sonner";
+  chorelistQueries,
+  useCreateDefinition,
+  useUpdateDefinition,
+  type TaskDefinitionRow,
+} from "@/lib/api/task-groups";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ============================================================================
+// The chore library, from Postgres.
+//
+// ── DELETE IS GONE, AND NOT BECAUSE IT WAS HARD ───────────────────────────
+//
+// Its button called `toast.error("Task removed from library")` and removed
+// nothing. Wiring it would have been worse: a chore named by a group is
+// `on delete restrict`, so a real Delete would succeed for the chores nobody
+// uses and fail for exactly the ones people care about — a control that works
+// right up until it matters.
+//
+// **Retire** is the operation. Each row carries `usedByGroups`, so the screen
+// can say which chores are in use BEFORE anybody clicks, rather than
+// discovering it from a 409.
+//
+// ── AND RETIRING IS NOT DESTRUCTIVE ───────────────────────────────────────
+//
+// A retired chore stays in its groups and stays attached to work already done;
+// generation simply skips it. So the screen shows retired ones on request
+// rather than hiding them, and offers to restore.
+// ============================================================================
 
-type ExtendedDef = WorkTaskDefinition & Record<string, unknown>;
-
-const PRIORITY_COLORS: Record<WorkTaskPriority, string> = {
+const PRIORITY_COLORS: Record<string, string> = {
   low: "bg-slate-100 text-slate-700",
   medium: "bg-blue-100 text-blue-700",
   high: "bg-orange-100 text-orange-700",
   urgent: "bg-red-100 text-red-700",
 };
 
-const CATEGORY_COLORS: Record<WorkTaskCategory, string> = {
+const CATEGORY_COLORS: Record<string, string> = {
   opening: "bg-amber-100 text-amber-700",
   closing: "bg-indigo-100 text-indigo-700",
   operations: "bg-sky-100 text-sky-700",
@@ -65,7 +85,7 @@ const CATEGORY_COLORS: Record<WorkTaskCategory, string> = {
   general: "bg-slate-100 text-slate-700",
 };
 
-const CATEGORY_OPTIONS: { value: WorkTaskCategory; label: string }[] = [
+const CATEGORY_OPTIONS = [
   { value: "opening", label: "Opening" },
   { value: "closing", label: "Closing" },
   { value: "operations", label: "Operations" },
@@ -77,101 +97,116 @@ const CATEGORY_OPTIONS: { value: WorkTaskCategory; label: string }[] = [
   { value: "general", label: "General" },
 ];
 
-const EMPTY_FORM: Omit<WorkTaskDefinition, "id" | "createdAt"> = {
-  title: "",
-  description: "",
-  category: "general",
-  priority: "medium",
-  estimatedMinutes: 15,
-  requiresPhoto: false,
-  requiresSignoff: false,
-  isActive: true,
-};
+type Row = TaskDefinitionRow & Record<string, unknown>;
 
-// ── Task Form Dialog ──────────────────────────────────────────────────────────
-
-function TaskFormDialog({
+function ChoreFormDialog({
   open,
   onClose,
   initial,
 }: {
   open: boolean;
   onClose: () => void;
-  initial?: WorkTaskDefinition;
+  initial?: TaskDefinitionRow;
 }) {
-  const isEdit = !!initial;
-  const [form, setForm] = useState<
-    Omit<WorkTaskDefinition, "id" | "createdAt">
-  >(
-    initial
-      ? {
-          title: initial.title,
-          description: initial.description ?? "",
-          category: initial.category,
-          priority: initial.priority,
-          estimatedMinutes: initial.estimatedMinutes,
-          requiresPhoto: initial.requiresPhoto,
-          requiresSignoff: initial.requiresSignoff,
-          isActive: initial.isActive,
-        }
-      : EMPTY_FORM,
+  const isEdit = Boolean(initial);
+  const create = useCreateDefinition();
+  const update = useUpdateDefinition();
+  const pending = create.isPending || update.isPending;
+
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "general");
+  const [priority, setPriority] = useState<string>(
+    initial?.priority ?? "medium",
   );
+  const [minutes, setMinutes] = useState(
+    String(initial?.estimatedMinutes ?? 15),
+  );
+  const [photo, setPhoto] = useState(initial?.requiresPhoto ?? false);
+  const [signoff, setSignoff] = useState(initial?.requiresSignoff ?? false);
+  const [error, setError] = useState<string | null>(null);
 
-  const p = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
-    setForm((f) => ({ ...f, [k]: v }));
+  const submit = () => {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setError("A chore needs a name.");
+      return;
+    }
+    setError(null);
 
-  const handleSave = () => {
-    if (!form.title.trim()) return;
-    toast.success(isEdit ? "Task updated" : "Task added to library");
-    onClose();
+    const parsed = Number(minutes);
+    const input = {
+      title: trimmed,
+      description: description.trim() || null,
+      category,
+      priority: priority as TaskDefinitionRow["priority"],
+      estimatedMinutes: Number.isFinite(parsed) && parsed > 0 ? parsed : null,
+      requiresPhoto: photo,
+      requiresSignoff: signoff,
+    };
+
+    const handlers = {
+      onSuccess: () => {
+        toast.success(isEdit ? "Chore updated" : "Chore added to the library");
+        onClose();
+      },
+      // The dialog STAYS OPEN on failure, holding what was typed.
+      onError: (err: unknown) =>
+        setError(err instanceof Error ? err.message : "Could not save that."),
+    };
+
+    if (initial) {
+      update.mutate({ id: initial.id, ...input }, handlers);
+    } else {
+      create.mutate(input, handlers);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(next) => !next && !pending && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Task" : "New Library Task"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit chore" : "New chore"}</DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update this reusable task definition."
-              : "Create a reusable task that can be added to any group or assignment."}
+              ? "Changing this leaves work already generated from it exactly as it was asked."
+              : "A reusable piece of work. Add it to a shift or position group to have it generated."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Title *</Label>
+            <Label htmlFor="chore-title">Chore</Label>
             <Input
-              placeholder="e.g. Morning Safety Walkthrough"
-              value={form.title}
-              onChange={(e) => p("title", e.target.value)}
+              id="chore-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Hose down run 3"
+              autoFocus
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label htmlFor="chore-description">Details (optional)</Label>
             <Textarea
+              id="chore-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              placeholder="Step-by-step instructions or important context…"
-              value={form.description ?? ""}
-              onChange={(e) => p("description", e.target.value)}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Category *</Label>
-              <Select
-                value={form.category}
-                onValueChange={(v: WorkTaskCategory) => p("category", v)}
-              >
-                <SelectTrigger>
+              <Label>Category</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORY_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -179,12 +214,9 @@ function TaskFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Priority *</Label>
-              <Select
-                value={form.priority}
-                onValueChange={(v: WorkTaskPriority) => p("priority", v)}
-              >
-                <SelectTrigger>
+              <Label>Priority</Label>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -195,56 +227,67 @@ function TaskFormDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Estimated Time (minutes)</Label>
-            <Input
-              type="number"
-              min={1}
-              value={form.estimatedMinutes}
-              onChange={(e) =>
-                p("estimatedMinutes", parseInt(e.target.value) || 15)
-              }
-            />
-          </div>
-
-          <div className="flex items-center gap-6">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <Checkbox
-                checked={form.requiresPhoto}
-                onCheckedChange={(c) => p("requiresPhoto", !!c)}
+            <div className="space-y-2">
+              <Label htmlFor="chore-minutes">Estimated minutes</Label>
+              <Input
+                id="chore-minutes"
+                type="number"
+                min={1}
+                value={minutes}
+                onChange={(e) => setMinutes(e.target.value)}
               />
-              Requires photo proof
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <Checkbox
-                checked={form.requiresSignoff}
-                onCheckedChange={(c) => p("requiresSignoff", !!c)}
-              />
-              Requires manager sign-off
-            </label>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Switch
-              checked={form.isActive}
-              onCheckedChange={(c) => p("isActive", c)}
-              id="active-toggle"
-            />
-            <Label htmlFor="active-toggle" className="font-normal">
-              Active (available for assignment)
-            </Label>
+          <div className="space-y-3 rounded-md border px-3 py-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="chore-photo" className="font-normal">
+                Needs a photo
+              </Label>
+              <Switch
+                id="chore-photo"
+                checked={photo}
+                onCheckedChange={setPhoto}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="chore-signoff" className="font-normal">
+                Needs a sign-off
+              </Label>
+              <Switch
+                id="chore-signoff"
+                checked={signoff}
+                onCheckedChange={setSignoff}
+              />
+            </div>
+            <p className="text-muted-foreground text-xs">
+              {/* Said plainly rather than implied: the task board records these
+                  as requirements and shows them, but nothing captures a photo
+                  or a second signature yet. */}
+              Both are recorded on the task and shown to whoever picks it up.
+              Neither is captured in the app yet.
+            </p>
           </div>
+
+          {error && (
+            <p className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              {error}
+            </p>
+          )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={pending}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!form.title.trim()}>
-            <CheckCircle2 className="mr-2 size-4" />
-            {isEdit ? "Save Changes" : "Add to Library"}
+          <Button
+            onClick={submit}
+            disabled={pending}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            {pending ? "Saving…" : isEdit ? "Save chore" : "Add chore"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -252,47 +295,61 @@ function TaskFormDialog({
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
-
 export function TaskLibraryTab() {
   const [formOpen, setFormOpen] = useState(false);
-  const [editTask, setEditTask] = useState<WorkTaskDefinition | undefined>();
+  const [editing, setEditing] = useState<TaskDefinitionRow | undefined>();
+  const [showRetired, setShowRetired] = useState(false);
 
-  const openEdit = (t: WorkTaskDefinition) => {
-    setEditTask(t);
-    setFormOpen(true);
-  };
+  const { data, isPending, isError, error } = useQuery(
+    chorelistQueries.definitions({ includeRetired: showRetired }),
+  );
+  const update = useUpdateDefinition();
 
-  const openNew = () => {
-    setEditTask(undefined);
-    setFormOpen(true);
-  };
+  const definitions = useMemo<TaskDefinitionRow[]>(() => data ?? [], [data]);
 
-  const data: ExtendedDef[] = workTaskLibrary as ExtendedDef[];
+  const activeCount = definitions.filter((d) => d.isActive).length;
+  const photoCount = definitions.filter((d) => d.requiresPhoto).length;
+  const signoffCount = definitions.filter((d) => d.requiresSignoff).length;
 
-  const activeCount = workTaskLibrary.filter((t) => t.isActive).length;
-  const photoCount = workTaskLibrary.filter((t) => t.requiresPhoto).length;
-  const signoffCount = workTaskLibrary.filter((t) => t.requiresSignoff).length;
+  const setActive = (chore: TaskDefinitionRow, isActive: boolean) =>
+    update.mutate(
+      { id: chore.id, isActive },
+      {
+        onSuccess: () =>
+          toast.success(isActive ? "Chore restored" : "Chore retired"),
+        onError: (err) =>
+          toast.error(
+            err instanceof Error ? err.message : "Could not save that.",
+          ),
+      },
+    );
 
-  const columns: ColumnDef<ExtendedDef>[] = [
+  const columns: ColumnDef<Row>[] = [
     {
       key: "title",
-      label: "Task Title",
-      icon: BookOpen,
+      label: "Chore",
       defaultVisible: true,
-      render: (t) => (
+      render: (d) => (
         <div className="space-y-0.5">
-          <span
-            className={cn(
-              "font-medium",
-              !t.isActive && "text-muted-foreground line-through",
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "font-medium",
+                !d.isActive && "text-muted-foreground line-through",
+              )}
+            >
+              {d.title}
+            </span>
+            {d.requiresPhoto && (
+              <Camera className="text-muted-foreground size-3" />
             )}
-          >
-            {t.title as string}
-          </span>
-          {t.description && (
+            {d.requiresSignoff && (
+              <PenLine className="text-muted-foreground size-3" />
+            )}
+          </div>
+          {d.description && (
             <p className="text-muted-foreground line-clamp-1 text-xs">
-              {t.description as string}
+              {d.description}
             </p>
           )}
         </div>
@@ -302,15 +359,15 @@ export function TaskLibraryTab() {
       key: "category",
       label: "Category",
       defaultVisible: true,
-      render: (t) => (
+      render: (d) => (
         <Badge
           className={cn(
             "px-1.5 py-0 text-[10px]",
-            CATEGORY_COLORS[t.category as WorkTaskCategory],
+            CATEGORY_COLORS[d.category] ?? CATEGORY_COLORS.general,
           )}
           variant="secondary"
         >
-          {(t.category as string).replace("-", " ")}
+          {d.category.replace("-", " ")}
         </Badge>
       ),
     },
@@ -318,75 +375,33 @@ export function TaskLibraryTab() {
       key: "priority",
       label: "Priority",
       defaultVisible: true,
-      render: (t) => (
+      render: (d) => (
         <Badge
-          className={cn(
-            "px-1.5 py-0 text-[10px]",
-            PRIORITY_COLORS[t.priority as WorkTaskPriority],
-          )}
+          className={cn("px-1.5 py-0 text-[10px]", PRIORITY_COLORS[d.priority])}
           variant="secondary"
         >
-          {t.priority as string}
+          {d.priority}
         </Badge>
       ),
     },
     {
       key: "estimatedMinutes",
-      label: "Est. Time",
-      icon: Clock,
+      label: "Est.",
       defaultVisible: true,
-      render: (t) => (
-        <span className="flex items-center gap-1 text-sm">
-          <Clock className="text-muted-foreground size-3.5" />
-          {t.estimatedMinutes as number} min
-        </span>
-      ),
+      render: (d) => (d.estimatedMinutes ? `${d.estimatedMinutes}m` : "—"),
     },
     {
-      key: "requiresPhoto",
-      label: "Photo",
-      icon: Camera,
+      key: "usedByGroups",
+      label: "In groups",
       defaultVisible: true,
-      render: (t) =>
-        t.requiresPhoto ? (
-          <span title="Photo required">
-            <Camera className="text-muted-foreground size-4" />
-          </span>
+      render: (d) =>
+        (d.usedByGroups ?? 0) > 0 ? (
+          <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+            {d.usedByGroups}
+          </Badge>
         ) : (
-          <span className="text-muted-foreground text-sm">—</span>
+          <span className="text-muted-foreground text-xs">—</span>
         ),
-    },
-    {
-      key: "requiresSignoff",
-      label: "Sign-off",
-      icon: PenLine,
-      defaultVisible: true,
-      render: (t) =>
-        t.requiresSignoff ? (
-          <span title="Sign-off required">
-            <PenLine className="text-muted-foreground size-4" />
-          </span>
-        ) : (
-          <span className="text-muted-foreground text-sm">—</span>
-        ),
-    },
-    {
-      key: "isActive",
-      label: "Status",
-      defaultVisible: true,
-      render: (t) => (
-        <Badge
-          variant="secondary"
-          className={cn(
-            "px-1.5 py-0 text-[10px]",
-            t.isActive
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-slate-100 text-slate-600",
-          )}
-        >
-          {t.isActive ? "Active" : "Inactive"}
-        </Badge>
-      ),
     },
   ];
 
@@ -394,18 +409,7 @@ export function TaskLibraryTab() {
     {
       key: "category",
       label: "Category",
-      options: [
-        { value: "all", label: "All Categories" },
-        { value: "opening", label: "Opening" },
-        { value: "closing", label: "Closing" },
-        { value: "operations", label: "Operations" },
-        { value: "cleaning", label: "Cleaning" },
-        { value: "customer-service", label: "Customer Service" },
-        { value: "admin", label: "Admin" },
-        { value: "maintenance", label: "Maintenance" },
-        { value: "safety", label: "Safety" },
-        { value: "general", label: "General" },
-      ],
+      options: [{ value: "all", label: "All Categories" }, ...CATEGORY_OPTIONS],
     },
     {
       key: "priority",
@@ -418,36 +422,36 @@ export function TaskLibraryTab() {
         { value: "low", label: "Low" },
       ],
     },
-    {
-      key: "isActive",
-      label: "Status",
-      options: [
-        { value: "all", label: "All" },
-        { value: "true", label: "Active" },
-        { value: "false", label: "Inactive" },
-      ],
-    },
   ];
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-sm">
-          Reusable task definitions. Add them to shift groups, position groups,
-          or standalone assignments via the wizard.
+          Reusable chores. Put them in a shift or position group and they become
+          tasks somebody is asked to do.
         </p>
-        <Button onClick={openNew} className="gap-2">
-          <Plus className="size-4" />
-          New Task
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowRetired((s) => !s)}>
+            {showRetired ? "Active only" : "Show retired"}
+          </Button>
+          <Button
+            onClick={() => {
+              setEditing(undefined);
+              setFormOpen(true);
+            }}
+            className="gap-2"
+          >
+            <Plus className="size-4" />
+            New Chore
+          </Button>
+        </div>
       </div>
 
-      {/* Summary strip */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
-          <span className="text-muted-foreground text-[11px]">Total tasks</span>
-          <span className="text-2xl font-bold">{workTaskLibrary.length}</span>
+          <span className="text-muted-foreground text-[11px]">Chores</span>
+          <span className="text-2xl font-bold">{definitions.length}</span>
           <span className="text-muted-foreground text-[11px]">
             {activeCount} active
           </span>
@@ -458,8 +462,9 @@ export function TaskLibraryTab() {
           </span>
           <span className="text-2xl font-bold">{photoCount}</span>
           <span className="text-muted-foreground text-[11px]">
-            {Math.round((photoCount / workTaskLibrary.length) * 100)}% of
-            library
+            {definitions.length > 0
+              ? `${Math.round((photoCount / definitions.length) * 100)}% of library`
+              : "—"}
           </span>
         </div>
         <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
@@ -473,44 +478,94 @@ export function TaskLibraryTab() {
         </div>
       </div>
 
-      {/* Table */}
-      <DataTable
-        data={data}
-        columns={columns}
-        filters={filters}
-        searchKey="title"
-        searchPlaceholder="Search library…"
-        itemsPerPage={10}
-        actions={(t) => (
-          <div className="flex gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openEdit(t as WorkTaskDefinition)}
-              title="Edit"
-            >
-              <PenLine className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              title="Delete"
-              onClick={() => toast.error("Task removed from library")}
-            >
-              <Trash2 className="text-destructive size-4" />
-            </Button>
-          </div>
-        )}
-      />
+      {isPending ? (
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : isError ? (
+        <div className="text-muted-foreground flex flex-col items-center justify-center rounded-md border py-12 text-center">
+          <AlertTriangle className="mb-4 size-10 text-red-500 opacity-70" />
+          <p>Could not load the chore library.</p>
+          <p className="mt-1 text-sm">
+            {error instanceof Error ? error.message : "Please try again."}
+          </p>
+        </div>
+      ) : (
+        <DataTable
+          data={definitions as Row[]}
+          columns={columns}
+          filters={filters}
+          searchKey="title"
+          searchPlaceholder="Search the library…"
+          itemsPerPage={10}
+          emptyState={{
+            icon: ClipboardList,
+            title: showRetired ? "No chores" : "No active chores",
+            description:
+              "Add one, then put it in a shift or position group to have it generated.",
+          }}
+          actions={(row) => {
+            const chore = row as TaskDefinitionRow;
+            return (
+              <div className="flex gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  title="Edit"
+                  onClick={() => {
+                    setEditing(chore);
+                    setFormOpen(true);
+                  }}
+                >
+                  <PenLine className="size-4" />
+                </Button>
+                {chore.isActive ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={update.isPending}
+                    title={
+                      (chore.usedByGroups ?? 0) > 0
+                        ? `In ${chore.usedByGroups} group(s) — retiring stops it being generated and leaves the groups intact`
+                        : "Retire this chore"
+                    }
+                    onClick={() => setActive(chore, false)}
+                  >
+                    <Archive className="size-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={update.isPending}
+                    title="Restore this chore"
+                    onClick={() => setActive(chore, true)}
+                  >
+                    <RotateCcw className="size-4 text-emerald-600" />
+                  </Button>
+                )}
+              </div>
+            );
+          }}
+        />
+      )}
 
-      <TaskFormDialog
-        open={formOpen}
-        onClose={() => {
-          setFormOpen(false);
-          setEditTask(undefined);
-        }}
-        initial={editTask}
-      />
+      {formOpen && (
+        <ChoreFormDialog
+          // Remounted per chore so the form starts from the right values —
+          // without the key an edit dialog opened twice keeps the first
+          // chore's text.
+          key={editing?.id ?? "new"}
+          open={formOpen}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(undefined);
+          }}
+          initial={editing}
+        />
+      )}
     </div>
   );
 }
