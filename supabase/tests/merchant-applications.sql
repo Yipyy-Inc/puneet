@@ -112,11 +112,21 @@ on conflict (id) do nothing;
 
 do $$
 begin
-  perform pg_temp.t('M1 authenticated holds no DELETE on any boarding table',
+  -- Two of three. An application is withdrawn rather than deleted, and a
+  -- document is superseded by uploading another — an applicant quietly removing
+  -- what they submitted is what staff_documents refuses too.
+  perform pg_temp.t('M1 an application and a document cannot be deleted',
     not has_table_privilege('authenticated', 'public.merchant_applications', 'DELETE')
-    and not has_table_privilege('authenticated', 'public.merchant_application_principals', 'DELETE')
     and not has_table_privilege('authenticated', 'public.merchant_application_documents', 'DELETE'),
     'a default privilege grants the full set; the revoke has to be checked');
+
+  -- The third is deliberately different, and the first version of this file had
+  -- it wrong: revoking DELETE everywhere meant a co-owner typed in twice could
+  -- never be removed, so the only correction available was abandoning the
+  -- application and re-uploading every document.
+  perform pg_temp.t('M1b …but an owner added by mistake CAN be',
+    has_table_privilege('authenticated', 'public.merchant_application_principals', 'DELETE'),
+    'an application that cannot be corrected is one somebody restarts from scratch');
 
   perform pg_temp.t('M2 anon reaches none of it',
     not has_table_privilege('anon', 'public.merchant_applications', 'SELECT')
@@ -387,6 +397,32 @@ begin
   perform pg_temp.t('M16 an application still under review cannot be purged',
     state = '42501', 'state=' || state);
 end $$;
+
+-- The delete is NARROW: a privilege plus a policy, and the policy is what makes
+-- it safe. Asserted from the rival's session, who holds settings_billing at
+-- their own facility and DELETE on the table — and must still not be able to
+-- remove somebody else's owner.
+select set_config('request.jwt.claims',
+  json_build_object('sub','00000000-0000-0000-0000-0000002b0004','role','authenticated')::text, true);
+set local role authenticated;
+
+do $$
+declare v_left int;
+begin
+  delete from public.merchant_application_principals
+   where id = '00000000-0000-0000-0000-0000002b0050';
+
+  -- No exception: a DELETE refused by its `using` clause removes zero rows and
+  -- reports success. Counting is the only way to tell refusal from absence,
+  -- which is the whole reason deniedIfExpectedRowsSurvived exists in the app.
+  reset role;
+  v_left := (select count(*) from public.merchant_application_principals
+              where id = '00000000-0000-0000-0000-0000002b0050');
+  perform pg_temp.t('M18 a rival holding DELETE still cannot remove another facility''s owner',
+    v_left = 1, 'rows remaining=' || v_left);
+end $$;
+
+reset role;
 
 -- One live application per facility, or "what is our status" has two answers.
 do $$
