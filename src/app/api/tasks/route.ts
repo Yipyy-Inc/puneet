@@ -49,10 +49,17 @@ export async function GET(request: NextRequest) {
   const supabase = await createServerClient();
   const params = new URL(request.url).searchParams;
 
+  // Soonest first, and among the undated the NEWEST first. Without the second
+  // key an undated task sorts behind every other undated task forever, so a
+  // board with any history buries the one just written at the bottom of the
+  // last page. That is how this route shipped, and CI caught it: the screen
+  // test passed locally against a near-empty table and failed once the table
+  // had a day of rows in it.
   let query = supabase
     .from("facility_tasks")
     .select(TASK_SELECT)
     .order("due_at", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false })
     .limit(PAGE);
 
   const context = await getFacilityContext();
