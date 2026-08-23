@@ -7,6 +7,7 @@ import type { GiftCardDetailPayload } from "@/app/api/gift-cards/[id]/route";
 import type { GiftCardTransactionRow } from "@/lib/api/gift-card-ledger";
 import type { RedeemResult } from "@/app/api/gift-cards/redeem/route";
 import type { AdjustResult } from "@/app/api/gift-cards/[id]/adjust/route";
+import type { ToCreditResult } from "@/app/api/gift-cards/to-credit/route";
 
 // ============================================================================
 // Gift cards, from the browser.
@@ -175,6 +176,34 @@ export function useRedeemGiftCard() {
       note?: string;
     }) => await send<RedeemResult>("/api/gift-cards/redeem", input),
     onSuccess: () => invalidateGiftCards(queryClient),
+  });
+}
+
+/**
+ * Hand the card in: its value moves onto the customer's account credit.
+ *
+ * The destination is `store_credit_entries` — the same ledger `record_payment`
+ * spends from at checkout, so this is money the customer can actually use, not
+ * a number parked somewhere. Both ledgers move in ONE database transaction, so
+ * there is no state where the card is spent and nothing was credited.
+ *
+ * Needs `financial_manage_gift_cards`, NOT `process_refund`: this is a transfer
+ * between two liabilities rather than a grant, and reception — who works the
+ * counter — holds the first and not the second.
+ */
+export function useRedeemGiftCardToCredit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      code: string;
+      amount: number;
+      clientRef: number;
+      note?: string;
+    }) => await send<ToCreditResult>("/api/gift-cards/to-credit", input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["store-credit"] });
+      return invalidateGiftCards(queryClient);
+    },
   });
 }
 

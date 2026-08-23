@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,12 +31,10 @@ import {
   ScanLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  giftCards,
-  customerWallets,
-  physicalCardBatches,
-} from "@/data/gift-cards";
-import { clients } from "@/data/clients";
+import { physicalCardBatches } from "@/data/gift-cards";
+import { clientQueries } from "@/lib/api/client";
+import { useStoreCredit } from "@/lib/api/store-credit";
+import { useRedeemGiftCardToCredit } from "@/lib/api/gift-cards";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { canRedeemGiftCard } from "@/lib/hq/redemption";
 import { deriveLocationId } from "@/data/locations";
@@ -52,7 +51,8 @@ export interface RedeemToWalletResult {
   cardId: string;
   amount: number;
   clientId: number;
-  walletId: string | null;
+  /** The customer's store-credit balance AFTER the move, from the database. */
+  creditBalance: number;
 }
 
 interface RedeemGiftCardModalProps {
@@ -60,8 +60,9 @@ interface RedeemGiftCardModalProps {
   onOpenChange: (open: boolean) => void;
   facilityId: number;
   onSuccess?: (result: RedeemToWalletResult) => void;
-  /** Cards to look up — pass the page's session-overridden list so a drained
-   *  card reflects its current balance. Defaults to the raw mock data. */
+  /** The facility's real cards, from `giftCardQueries.allWithLedger()`. Empty
+   *  by default: this modal MOVES MONEY, and defaulting to a fixture is how it
+   *  would look like it worked against cards nobody had sold. */
   cards?: GiftCard[];
 }
 
@@ -74,7 +75,7 @@ export function RedeemGiftCardModal({
   onOpenChange,
   facilityId,
   onSuccess,
-  cards = giftCards,
+  cards = [],
 }: RedeemGiftCardModalProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   // Step 1 — destination customer
@@ -96,12 +97,26 @@ export function RedeemGiftCardModal({
   const { currentLocation, settings, locations, isMultiLocation } =
     useLocationContext();
 
-  const facilityClients = clients.filter((c) => c.id >= 15);
+  // ── THE CUSTOMER AND THEIR CREDIT ARE BOTH REAL ────────────────────────
+  //
+  // `redeem_gift_card_to_credit` resolves the customer by `clients.ref` against
+  // Postgres, so a picker offering `src/data/clients` would name a ref that is
+  // either nobody or - worse - a DIFFERENT person holding that number.
+  //
+  // The wallet is `store_credit_entries`: append-only, balance derived by the
+  // `client_store_credit` view, and already spent down by `record_payment` at
+  // checkout. `customerWallets` was a fixture duplicating it.
+  const clientsQuery = useQuery(clientQueries.all());
+  const facilityClients = clientsQuery.data ?? [];
   const selectedClient = facilityClients.find((c) => c.id === selectedClientId);
-  const selectedWallet = customerWallets.find(
-    (w) => w.clientId === selectedClientId && w.facilityId === facilityId,
-  );
-  const walletBalance = selectedWallet?.balance ?? 0;
+
+  const storeCredit = useStoreCredit();
+  const walletBalance =
+    storeCredit.data?.accounts.find((a) => a.clientRef === selectedClientId)
+      ?.balance ?? 0;
+
+  const toCredit = useRedeemGiftCardToCredit();
+  const [redeemError, setRedeemError] = useState<string | null>(null);
 
   const customerMatches = (() => {
     const q = customerQuery.trim().toLowerCase();
@@ -138,11 +153,15 @@ export function RedeemGiftCardModal({
 
     // Match a digital code / POS card number, else resolve a printed physical
     // card number or barcode to its activated gift card.
+    // NO `gc.facilityId === facilityId` here, deliberately. `cards` arrives
+    // already scoped to this facility by the SESSION, and a Postgres card
+    // carries a uuid facility - the shim sets that legacy number to a sentinel
+    // that matches nothing, so this filter would find no card at all and every
+    // lookup would read "not found".
     let card =
       cards.find(
         (gc) =>
-          gc.facilityId === facilityId &&
-          (gc.code.toLowerCase() === q || gc.cardNumber?.toLowerCase() === q),
+          gc.code.toLowerCase() === q || gc.cardNumber?.toLowerCase() === q,
       ) ?? null;
     if (!card) {
       const physical = physicalCardBatches
@@ -190,19 +209,46 @@ export function RedeemGiftCardModal({
     redeemAmount <= (foundCard?.currentBalance ?? 0) &&
     (!requiresPin || pin.length === 4);
 
+  /**
+   * Move the card's value onto the customer's account — for real.
+   *
+   * What this replaced waited 1,200ms and handed the page a result object; the
+   * page then bumped a number in React state. The card was never debited and no
+   * credit existed, so a customer who came back the next day had neither.
+   *
+   * ONE call, because it is one movement. The gift-card ledger is debited and
+   * `store_credit_entries` is credited inside a single database transaction, so
+   * there is no outcome where the card is spent and nothing was credited.
+   */
   const handleRedeem = async () => {
     if (!foundCard || selectedClientId == null) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    onSuccess?.({
-      cardCode: foundCard.code,
-      cardId: foundCard.id,
-      amount: redeemAmount,
-      clientId: selectedClientId,
-      walletId: selectedWallet?.id ?? null,
-    });
-    setLoading(false);
-    setDone(true);
+    setRedeemError(null);
+    try {
+      const moved = await toCredit.mutateAsync({
+        code: foundCard.code,
+        amount: redeemAmount,
+        clientRef: selectedClientId,
+      });
+      onSuccess?.({
+        cardCode: foundCard.code,
+        cardId: foundCard.id,
+        amount: moved.amount,
+        clientId: selectedClientId,
+        // The balance the DATABASE reports afterwards, not the arithmetic this
+        // component could do. If they ever disagree the ledger is the one that
+        // is right.
+        creditBalance: moved.creditBalance,
+      });
+      setDone(true);
+    } catch (error) {
+      // Stay on the confirm step showing why. Advancing to the success screen
+      // and reporting the failure elsewhere is how somebody tells a customer
+      // their card is on the account when it is not.
+      setRedeemError((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -300,9 +346,11 @@ export function RedeemGiftCardModal({
         <div className="bg-popover absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-md border shadow-md">
           {customerMatches.length > 0 ? (
             customerMatches.map((c) => {
-              const wallet = customerWallets.find(
-                (w) => w.clientId === c.id && w.facilityId === facilityId,
-              );
+              // Their REAL balance, off the store-credit ledger, so the number
+              // in this list is the one the till will honour.
+              const balance =
+                storeCredit.data?.accounts.find((a) => a.clientRef === c.id)
+                  ?.balance ?? 0;
               return (
                 <button
                   key={c.id}
@@ -321,7 +369,7 @@ export function RedeemGiftCardModal({
                     </span>
                   </span>
                   <span className="text-muted-foreground text-xs">
-                    Wallet ${(wallet?.balance ?? 0).toFixed(2)}
+                    Credit ${balance.toFixed(2)}
                   </span>
                 </button>
               );
@@ -656,7 +704,7 @@ export function RedeemGiftCardModal({
                   <div className="flex items-center justify-between border-t pt-2">
                     <span className="text-muted-foreground flex items-center gap-1.5">
                       <Wallet className="size-3.5" />
-                      {selectedClient?.name}&apos;s wallet
+                      {selectedClient?.name}&apos;s credit
                     </span>
                     <span className="font-medium">
                       ${walletBalance.toFixed(2)}
@@ -670,6 +718,18 @@ export function RedeemGiftCardModal({
               </div>
             )}
           </div>
+
+          {/* Nothing moved. Said beside the button that tried, rather than as a
+              toast over a success screen. */}
+          {redeemError && (
+            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <p className="font-medium">Nothing was moved.</p>
+                <p className="text-xs">{redeemError}</p>
+              </div>
+            </div>
+          )}
 
           <DialogFooter className="flex justify-between sm:justify-between">
             <div>

@@ -4212,7 +4212,7 @@ Also measured, same run: the minted token carries `"role": "authenticated"` from
 
 ## Snapshot (2026-08-23, gift cards)
 
-### 🔴 Making one end of a value transfer real, while the other stays a fixture, DESTROYS money
+### ~~🔴 Making one end of a value transfer real, while the other stays a fixture, DESTROYS money~~ — RESOLVED 2026-08-23
 
 `/facility/dashboard/gift-cards` has a "Redeem to Wallet" button. It moves value
 off a gift card and onto a customer wallet.
@@ -4239,13 +4239,21 @@ and convert them together or neither. If one end cannot be built in the same
 change, turn the transfer off in the UI **and** in the handler, and say why in
 both places.
 
-For this one specifically: the likeliest right answer is that a customer wallet
-IS `loyalty_accounts.credit_balance`, which already exists, is guarded by the
-same trigger pattern, and is already the customer's store credit. It would need
-one function moving both ledgers in a single transaction, the way
-`issue_gift_card` moves the card and its opening entry. Note before building it
-that **nothing spends `credit_balance` down yet** — it is only ever added to — so
-that gap is the real decision, not the plumbing.
+**RESOLVED the same day, and the guess above was WRONG.** The wallet is not
+`loyalty_accounts.credit_balance`. It is `store_credit_entries` (20260806220000),
+which had existed for weeks: append-only, signed, balance derived by the
+`client_store_credit` view, and — the part that settles it — **already spent down
+by `record_payment` at checkout**. `credit_balance` would have been the worse
+choice for exactly the reason flagged: nothing spends it.
+
+The lesson is the one this repo keeps paying for. Before building a store for
+something, grep for one. `/facility/dashboard/gift-cards` reached for a
+`customerWallets` fixture that duplicated a real ledger, which is the identical
+mistake `/facility/services/memberships` made with `prepaidCredits` — issuing
+credit against typed-in names that matched no client.
+
+`redeem_gift_card_to_credit` now moves both ledgers in one transaction and the
+button is back on.
 
 ### 🟡 The three CUSTOMER gift-card screens are still wholly fixture, and that is the safe half
 
@@ -4336,6 +4344,63 @@ remaining half.
 The structural fix, not done: these specs should mint a fresh account per run
 instead of piling onto one shared row. The entries stay append-only, they just
 stop accumulating in the same place. Its own change.
+
+### 🔴 A `SECURITY DEFINER` function BYPASSES RLS entirely here — `force row level security` does not stop it — 2026-08-23
+
+`store_credit_entries` is `force row level security`, and its insert policy is
+the permission split that matters most in the product: a POSITIVE entry needs
+`process_refund` (giving money away), a negative one needs
+`financial_take_payment` (taking money in).
+
+Measured on production, signed in as `reception`, who holds **no**
+`process_refund`:
+
+```
+a SECURITY DEFINER function inserting a positive `added` row  ->  ALLOWED
+```
+
+FORCE removes the table OWNER's exemption from RLS. It does not help when the
+owner is a **superuser**, and superusers bypass RLS outright. So inside any
+`SECURITY DEFINER` function in this database, every policy on every table simply
+is not there.
+
+**Why it's risky:** it is invisible at the call site and it inverts the usual
+intuition, which is that a definer is "the safe way" to do a privileged thing.
+It also means the reason every writer of `store_credit_entries` is
+`SECURITY INVOKER` is load-bearing rather than stylistic — 20260806760000 says so
+in as many words ("SECURITY INVOKER, so both inserts face their own policies")
+and that sentence is the only thing standing between the money split and a
+refactor that "simplifies" one of them to a definer.
+
+**Do instead:** if a function must be `SECURITY DEFINER` — `redeem_gift_card_to_
+credit` must be, because `gift_card_transactions` has no write policy at all by
+design — then re-implement every permission check **explicitly inside it** and say
+in the header that the policy is not reachable from there. Never reason "the
+policy will catch it". And when a function only needs tables that DO have
+policies, keep it `SECURITY INVOKER` so the policy stays the enforcer.
+
+### 🟡 A transfer between two liabilities is not a grant, and the permission has to say so — 2026-08-23
+
+Moving a gift card's value onto a customer's account looks like creating store
+credit, and the ledger's policy asks for `process_refund` on any positive entry.
+Applying that rule here would have been defensible and wrong: measured,
+`reception` and `retail` hold `financial_manage_gift_cards` and **not**
+`process_refund`, and they are precisely who stands at the counter when somebody
+hands a card over.
+
+The distinction is that nothing is created. The business owed the money on the
+card; afterwards it owes the same money on the account. `redeem_gift_card_to_
+credit` is gated on `financial_manage_gift_cards`, and what makes that safe is
+structural rather than a matter of trust: the debit is in the **same transaction**
+and the gift-card trigger refuses an overdraft, so credit can only appear where a
+card really held it. G21 asserts the sum is unchanged; G23 asserts an overdrawing
+transfer moves **neither** ledger.
+
+**Do instead:** when adding a movement between two money tables, ask whether the
+total liability changes. If it does not, it is a transfer, and reusing the
+"granting" permission will lock out the people whose job it is. Give it its own
+reason on the ledger too — `gift_card` rather than `added` — or an auditor reads
+it as the business having given the customer money.
 
 ## How to add to this map
 

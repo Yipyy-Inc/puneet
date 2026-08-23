@@ -58,6 +58,7 @@ import { ACCOUNTS, signIn } from "./_auth";
 
 const CARDS = "/api/gift-cards";
 const REDEEM = "/api/gift-cards/redeem";
+const TO_CREDIT = "/api/gift-cards/to-credit";
 
 /** Every code this file creates starts here, and cleanup touches nothing else. */
 const MARKER = "E2E-GC-";
@@ -97,6 +98,18 @@ async function readByCode(page: Page, code: string): Promise<Card | null> {
   );
   expect(res.ok(), await res.text()).toBe(true);
   return ((await res.json()) as { cards: Card[] }).cards[0] ?? null;
+}
+
+/** A customer's store-credit balance, from the ledger that owns the sum. */
+async function creditBalance(page: Page, clientRef: number): Promise<number> {
+  const res = await page.request.get(
+    `/api/store-credit?clientRef=${clientRef}`,
+  );
+  expect(res.ok(), await res.text()).toBe(true);
+  const { accounts } = (await res.json()) as {
+    accounts: { clientRef: number; balance: number }[];
+  };
+  return accounts.find((a) => a.clientRef === clientRef)?.balance ?? 0;
 }
 
 async function ledgerOf(page: Page, id: string): Promise<LedgerEntry[]> {
@@ -362,12 +375,14 @@ test.describe("gift cards", () => {
       timeout: 15_000,
     });
 
-    // Redeeming to a wallet is OFF: there is no wallet table, so it would take
-    // the balance off a real card and put it nowhere. If this button ever comes
-    // back enabled, either wallets became real or the guard was removed.
+    // This button was DISABLED for part of 2026-08-23, while the cards were real
+    // rows and their destination was not. It is on again because the destination
+    // turned out to exist: `store_credit_entries`, the ledger the till already
+    // spends from. What makes it safe is asserted properly by the two transfer
+    // tests below, not by it being clickable.
     await expect(
-      page.getByRole("button", { name: /redeem to wallet/i }),
-    ).toBeDisabled();
+      page.getByRole("button", { name: /redeem to credit/i }),
+    ).toBeEnabled();
   });
 
   test("selling a card through the wizard records it", async ({ page }) => {
@@ -420,6 +435,82 @@ test.describe("gift cards", () => {
     await page.request.patch(`${CARDS}/${card!.id}`, {
       data: { status: "cancelled" },
     });
+  });
+
+  test("handing a card in moves its value onto the customer's credit", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    // A real client at this facility, by the ref every screen uses.
+    const clientsRes = await page.request.get("/api/clients");
+    expect(clientsRes.ok(), await clientsRes.text()).toBe(true);
+    const clientRef = ((await clientsRes.json()) as { id?: number }[])
+      .map((c) => c.id)
+      .find((v): v is number => typeof v === "number");
+    expect(clientRef, "the facility has at least one client").toBeTruthy();
+
+    const before = await creditBalance(page, clientRef as number);
+
+    const code = freshCode("to-credit");
+    await issue(page, { amount: 70, code });
+
+    const res = await page.request.post(TO_CREDIT, {
+      data: { code, amount: 45, clientRef },
+    });
+    expect(res.ok(), await res.text()).toBe(true);
+    const moved = (await res.json()) as {
+      creditBalance: number;
+      amount: number;
+    };
+
+    // BOTH ledgers, and the sum of them. The business owed 70 on the card;
+    // afterwards it owes 25 on the card and 45 more on the account. Nothing was
+    // created and nothing vanished — which is what makes this a transfer rather
+    // than a payout, and why it needs no `process_refund`.
+    const card = await readByCode(page, code);
+    expect(card?.balance).toBe(25);
+    expect(moved.creditBalance).toBeCloseTo(before + 45, 2);
+    expect(card!.balance + moved.amount).toBe(70);
+
+    // And the credit says where it came from, rather than reading as a gift.
+    const ledger = await page.request.get(
+      `/api/store-credit?clientRef=${clientRef}`,
+    );
+    expect(ledger.ok(), await ledger.text()).toBe(true);
+    const { entries } = (await ledger.json()) as {
+      entries: { amount: number; reason: string; note: string }[];
+    };
+    const fromCard = entries.filter(
+      (e) => e.reason === "gift_card" && e.note.includes(code),
+    );
+    expect(fromCard).toHaveLength(1);
+    expect(fromCard[0].amount).toBe(45);
+  });
+
+  test("a transfer that overdraws moves NEITHER ledger", async ({ page }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const clientsRes = await page.request.get("/api/clients");
+    const clientRef = ((await clientsRes.json()) as { id?: number }[])
+      .map((c) => c.id)
+      .find((v): v is number => typeof v === "number") as number;
+
+    const code = freshCode("to-credit-over");
+    const card = await issue(page, { amount: 10, code });
+    const before = await creditBalance(page, clientRef);
+
+    const res = await page.request.post(TO_CREDIT, {
+      data: { code, amount: 500, clientRef },
+    });
+    expect(res.status()).toBe(409);
+
+    // The half that matters. A transfer that debited the card and then failed
+    // to credit — or credited without debiting — is exactly what doing both in
+    // one transaction exists to prevent.
+    expect((await readByCode(page, code))?.balance).toBe(10);
+    expect(await creditBalance(page, clientRef)).toBeCloseTo(before, 2);
+    expect(await ledgerOf(page, card.id)).toHaveLength(1);
   });
 
   test("a groomer holds no gift cards and cannot issue one", async ({
