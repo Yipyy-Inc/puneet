@@ -34,14 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { cn } from "@/lib/utils";
 
 /**
@@ -108,10 +101,6 @@ export function LoginSecurityCard({
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   // 2FA
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [twoFactorMethod, setTwoFactorMethod] = useState<
-    "sms" | "authenticator"
-  >("authenticator");
 
   // Sessions
   const [busySession, setBusySession] = useState<string | null>(null);
@@ -172,33 +161,6 @@ export function LoginSecurityCard({
     );
   };
 
-  // ── STILL A MOCK. NOT WIRED TO ANYTHING. ──────────────────────────────
-  //
-  // Flagged explicitly because the password and session controls in this file
-  // became real on 2026-08-23, and a lone fake among working ones is far more
-  // convincing than it was when everything here was fake.
-  //
-  // This toggle enrols nobody in anything: `mfaEnabled` is "Off" on both WorkOS
-  // environments, so there is no second factor to turn on. A user who flips it
-  // believes their account is protected by 2FA and it is not — which is worse
-  // than not offering it.
-  //
-  // Either delete the control or implement it with
-  // `userManagement.enrollAuthFactor` and flip the environment setting. Do not
-  // leave it looking finished.
-  const handleToggle2FA = (enabled: boolean) => {
-    setTwoFactorEnabled(enabled);
-    toast.success(
-      enabled
-        ? "Two-factor authentication enabled."
-        : "Two-factor authentication disabled.",
-    );
-  };
-
-  // BOTH WERE MOCKS, and these were the dangerous ones: they filtered a local
-  // array and claimed the device had been signed out. Someone ending a session
-  // they did not recognise -- the whole reason this control exists -- was told
-  // the intruder was gone while the session stayed live.
   const handleRevokeSession = async (id: string) => {
     setBusySession(id);
     const result = await revokeMySession(id);
@@ -429,62 +391,6 @@ export function LoginSecurityCard({
                   {isUpdatingPassword ? "Updating..." : "Update password"}
                 </Button>
               </div>
-            </div>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Two-factor authentication */}
-        <div className="space-y-3">
-          <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
-            <div className="space-y-0.5 pr-4">
-              <Label className="text-base font-semibold">
-                Two-factor authentication
-              </Label>
-              <p className="text-muted-foreground text-xs">
-                Add a second step at sign-in to protect your account if your
-                password is ever compromised.
-              </p>
-            </div>
-            <Switch
-              checked={twoFactorEnabled}
-              onCheckedChange={handleToggle2FA}
-            />
-          </div>
-
-          {twoFactorEnabled && (
-            <div className="space-y-3 rounded-lg border p-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="2fa-method">Method</Label>
-                <Select
-                  value={twoFactorMethod}
-                  onValueChange={(value) =>
-                    setTwoFactorMethod(value as "sms" | "authenticator")
-                  }
-                >
-                  <SelectTrigger id="2fa-method">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="authenticator">
-                      Authenticator app (recommended)
-                    </SelectItem>
-                    <SelectItem value="sms" disabled={!phoneVerified}>
-                      SMS to verified phone
-                      {!phoneVerified && " — verify phone first"}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-muted-foreground text-xs">
-                  {twoFactorMethod === "authenticator"
-                    ? "Use Authy, Google Authenticator, or 1Password to generate codes."
-                    : "We'll text a 6-digit code to your phone at each sign-in."}
-                </p>
-              </div>
-              <Button variant="outline" size="sm">
-                Manage backup codes
-              </Button>
             </div>
           )}
         </div>
