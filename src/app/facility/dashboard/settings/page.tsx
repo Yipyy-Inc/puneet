@@ -14,7 +14,7 @@ import type {
   ScheduleTimeOverride,
   DropOffPickUpOverride,
 } from "@/types/facility";
-import { FacilityCloverCard } from "@/components/integrations/FacilityCloverCard";
+import { YipyyPayStatusTile } from "@/components/integrations/YipyyPayStatusTile";
 import { SettingsBlock } from "@/components/ui/settings-block";
 import { ReportCardBrandedHeader } from "@/components/shared/ReportCardBrandedHeader";
 import { ReportCardBrandedFooter } from "@/components/shared/ReportCardBrandedFooter";
@@ -132,6 +132,16 @@ const IncidentReportingSettings = dynamic(
     ),
   { ssr: false },
 );
+// The whole Yipyy Pay product — landing page, setup wizard and account
+// dashboard. Split out because it is by far the largest section on this page
+// and the great majority of visits here are not about payments.
+const YipyyPaySection = dynamic(
+  () =>
+    import("@/components/facility/yipyy-pay/YipyyPaySection").then(
+      (mod) => mod.YipyyPaySection,
+    ),
+  { ssr: false },
+);
 // Reads the QuickBooks connection store, so it can't render on the server.
 const QuickBooksSettingsEntry = dynamic(
   () =>
@@ -173,11 +183,13 @@ import {
 } from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
+// `paymentGateways`, `taxRates` and `currencySettings` were dropped with the
+// old Financial section — fake API keys, a duplicate tax screen whose Edit
+// button called alert(), and a read-only currency block. The real answers are
+// ?section=taxes and the Yipyy Pay dashboard, which reads the currency off the
+// merchant account.
 import {
   locations,
-  paymentGateways,
-  taxRates,
-  currencySettings,
   subscription,
   auditLog,
   reportCardSectionMeta,
@@ -3760,10 +3772,20 @@ export default function SettingsPage() {
   const permissions = useEffectivePermissions();
   const { viewer } = useFacilityRbac();
   const requestedSection = searchParams.get("section");
+  // Sections that were renamed keep their old address working. A settings
+  // deep-link lives in bookmarks, in emails and in other people's
+  // documentation, and a rename that breaks them is a rename that generates
+  // support tickets for months.
+  //
+  // `financial` was a leaf called "Payments & Billing" that rendered tip tiers
+  // beside four fixture cards; it is now the heading over Yipyy Pay, so the old
+  // address resolves to the screen a person following that link wanted.
   const normalizedRequest =
     requestedSection === "form-permissions"
       ? "roles-permissions"
-      : requestedSection;
+      : requestedSection === "financial"
+        ? "yipyy-pay"
+        : requestedSection;
   // Admins who can open Business land there; everyone else (an employee with
   // only personal access) defaults to My Profile.
   const fallbackSection = canAccessSettingsSection("business", permissions)
@@ -4019,185 +4041,25 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Financial Settings */}
-          {activeSection === "financial" && (
+          {/* ── Payments & Billing ────────────────────────────────────────
+              Yipyy Pay: the branded payment product. Its own screen because
+              deciding where a business's revenue lands is not a settings row.
+
+              The old `financial` address resolves here — see the alias map
+              above. */}
+          {activeSection === "yipyy-pay" && <YipyyPaySection />}
+
+          {/* Tip Settings — moved out of the old `financial` section, which
+              also held four cards that read from `src/data/settings` and saved
+              nowhere: a Payment Gateways list of fake API keys and webhook
+              secrets, a second Tax Rates screen whose Edit button called
+              alert() (the real one is ?section=taxes), a read-only Currency
+              block, and a Financial Lock-down switch wired to nothing. All four
+              were removed with this change — four inert money cards under a nav
+              item is worse than an empty one. */}
+          {activeSection === "tips" && (
             <div className="space-y-6">
               <TipSettings />
-
-              {/* Payment Gateways */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Payment Gateways</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {paymentGateways.map((gateway, idx) => (
-                    <div key={idx} className="space-y-3 rounded-lg border p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="font-semibold capitalize">
-                            {gateway.provider}
-                          </div>
-                          {gateway.isEnabled && (
-                            <Badge variant="default">Active</Badge>
-                          )}
-                          {gateway.testMode && (
-                            <Badge variant="secondary">Test Mode</Badge>
-                          )}
-                        </div>
-                        <Switch checked={gateway.isEnabled} />
-                      </div>
-                      {gateway.isEnabled && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-xs">API Key</Label>
-                            <Input
-                              type="password"
-                              value={gateway.apiKey}
-                              readOnly
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Webhook Secret</Label>
-                            <Input
-                              type="password"
-                              value={gateway.webhookSecret}
-                              readOnly
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Tax Rates */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tax Rates</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {taxRates.map((tax) => (
-                    <div key={tax.id} className="rounded-lg border p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">{tax.name}</span>
-                            {tax.isDefault && (
-                              <Badge variant="default">Default</Badge>
-                            )}
-                          </div>
-                          <div className="mt-2 text-2xl font-bold">
-                            {tax.rate}%
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {tax.applicableServices.map((service, idx) => (
-                              <Badge
-                                key={idx}
-                                variant="outline"
-                                className="text-xs capitalize"
-                              >
-                                {service}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            alert(
-                              `Edit tax rate "${tax.name}" - Opens tax rate editor`,
-                            );
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Currency Settings */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Currency Settings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Currency</Label>
-                      <Select value={currencySettings.currency}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="USD">USD - US Dollar</SelectItem>
-                          <SelectItem value="EUR">EUR - Euro</SelectItem>
-                          <SelectItem value="GBP">
-                            GBP - British Pound
-                          </SelectItem>
-                          <SelectItem value="CAD">
-                            CAD - Canadian Dollar
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Currency Symbol</Label>
-                      <Input value={currencySettings.symbol} readOnly />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Decimal Places</Label>
-                      <Input
-                        type="number"
-                        value={currencySettings.decimalPlaces}
-                        readOnly
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Format Preview</Label>
-                      <div className="bg-muted rounded-sm border p-2 font-mono">
-                        {currencySettings.symbol}1
-                        {currencySettings.thousandSeparator}234
-                        {currencySettings.decimalSeparator}56
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Financial Data Lock-down */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Financial Data Lock-down</CardTitle>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    Prevent editing of financial records after a certain period
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between rounded-lg border p-3">
-                    <div>
-                      <div className="font-medium">
-                        Enable Financial Lock-down
-                      </div>
-                      <div className="text-muted-foreground text-sm">
-                        Lock financial data after end of month
-                      </div>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Lock Period (days after month end)</Label>
-                    <Input type="number" defaultValue={7} />
-                    <p className="text-muted-foreground text-xs">
-                      Financial records will be locked 7 days after the month
-                      ends
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           )}
 
@@ -4257,12 +4119,15 @@ export default function SettingsPage() {
           {/* Integrations */}
           {activeSection === "integrations" && (
             <div className="space-y-6">
-              {/* Payments. FIRST, and a real connection rather than a toggle:
-                  the flow behind it has worked since the Clover OAuth routes
-                  landed, but the only way to reach it was to type /clover into
-                  the address bar. Everything below this card is still the
-                  fixture-backed switch list. */}
-              <FacilityCloverCard />
+              {/* Payments, as a signpost rather than a screen. The whole
+                  connect flow used to live here — a processor-branded card with
+                  numbered steps, a merchant id and a disconnect dialog, sitting
+                  between Twilio SMS and SendGrid Email. Deciding where a
+                  business's revenue lands is not an integration in the sense
+                  the rest of this page means, so it moved to Financial →
+                  Payments & Billing → Yipyy Pay. Everything below this tile is
+                  still the fixture-backed switch list. */}
+              <YipyyPayStatusTile />
 
               {/* Communication Integrations */}
               <Card>

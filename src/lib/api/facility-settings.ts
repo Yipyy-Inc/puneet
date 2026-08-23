@@ -25,6 +25,7 @@ import type { PricingRules } from "@/lib/settings/pricing";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
 import type { LoyaltyProgramConfig } from "@/lib/settings/loyalty";
+import type { YipyyPayConfig } from "@/lib/settings/yipyy-pay";
 
 // ============================================================================
 // A facility's own settings, per domain.
@@ -62,6 +63,14 @@ export interface FacilitySettings {
    */
   loyalty_config: SettingState<LoyaltyProgramConfig>;
   pricing_rules: SettingState<PricingRules>;
+  /**
+   * Yipyy Pay preferences.
+   *
+   * `configured: false` means nobody has walked the setup wizard — which is
+   * NOT the same as a facility that has, and chose to absorb the card fee.
+   * The Yipyy Pay screens read `setupCompletedAt` to tell those apart.
+   */
+  yipyy_pay_config: SettingState<YipyyPayConfig>;
   booking_flow: SettingState<FacilityBookingFlowConfig>;
   daycare_config: SettingState<ModuleConfig>;
   boarding_config: SettingState<ModuleConfig>;
