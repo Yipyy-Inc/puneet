@@ -1684,6 +1684,161 @@ export type Database = {
           },
         ];
       };
+      facility_task_definitions: {
+        Row: {
+          category: string;
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          estimated_minutes: number | null;
+          facility_id: string;
+          id: string;
+          is_active: boolean;
+          priority: string;
+          requires_photo: boolean;
+          requires_signoff: boolean;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          category?: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          estimated_minutes?: number | null;
+          facility_id: string;
+          id?: string;
+          is_active?: boolean;
+          priority?: string;
+          requires_photo?: boolean;
+          requires_signoff?: boolean;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          category?: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          estimated_minutes?: number | null;
+          facility_id?: string;
+          id?: string;
+          is_active?: boolean;
+          priority?: string;
+          requires_photo?: boolean;
+          requires_signoff?: boolean;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_task_definitions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_task_group_items: {
+        Row: {
+          definition_id: string;
+          group_id: string;
+          sort_order: number;
+        };
+        Insert: {
+          definition_id: string;
+          group_id: string;
+          sort_order?: number;
+        };
+        Update: {
+          definition_id?: string;
+          group_id?: string;
+          sort_order?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_task_group_items_definition_id_fkey";
+            columns: ["definition_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_task_definitions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_task_group_items_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_task_groups";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_task_groups: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          days_of_week: number[];
+          department_id: string | null;
+          description: string | null;
+          facility_id: string;
+          id: string;
+          is_active: boolean;
+          is_recurring: boolean;
+          name: string;
+          scope: string;
+          shift_key: string | null;
+          specific_date: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          days_of_week?: number[];
+          department_id?: string | null;
+          description?: string | null;
+          facility_id: string;
+          id?: string;
+          is_active?: boolean;
+          is_recurring?: boolean;
+          name: string;
+          scope: string;
+          shift_key?: string | null;
+          specific_date?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          days_of_week?: number[];
+          department_id?: string | null;
+          description?: string | null;
+          facility_id?: string;
+          id?: string;
+          is_active?: boolean;
+          is_recurring?: boolean;
+          name?: string;
+          scope?: string;
+          shift_key?: string | null;
+          specific_date?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_task_groups_department_id_fkey";
+            columns: ["department_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_departments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_task_groups_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       facility_tasks: {
         Row: {
           assigned_to: string | null;
@@ -3682,6 +3837,297 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "permissions";
             referencedColumns: ["key"];
+          },
+        ];
+      };
+      merchant_application_documents: {
+        Row: {
+          application_id: string;
+          content_type: string;
+          created_at: string;
+          doc_type: string;
+          facility_id: string;
+          file_name: string;
+          id: string;
+          principal_id: string | null;
+          purged_at: string | null;
+          size_bytes: number;
+          storage_path: string;
+          uploaded_at: string;
+          uploaded_by: string | null;
+        };
+        Insert: {
+          application_id: string;
+          content_type: string;
+          created_at?: string;
+          doc_type: string;
+          facility_id: string;
+          file_name: string;
+          id?: string;
+          principal_id?: string | null;
+          purged_at?: string | null;
+          size_bytes: number;
+          storage_path: string;
+          uploaded_at?: string;
+          uploaded_by?: string | null;
+        };
+        Update: {
+          application_id?: string;
+          content_type?: string;
+          created_at?: string;
+          doc_type?: string;
+          facility_id?: string;
+          file_name?: string;
+          id?: string;
+          principal_id?: string | null;
+          purged_at?: string | null;
+          size_bytes?: number;
+          storage_path?: string;
+          uploaded_at?: string;
+          uploaded_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "merchant_application_documents_application_id_fkey";
+            columns: ["application_id"];
+            isOneToOne: false;
+            referencedRelation: "merchant_applications";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "merchant_application_documents_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "merchant_application_documents_principal_id_fkey";
+            columns: ["principal_id"];
+            isOneToOne: false;
+            referencedRelation: "merchant_application_principals";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      merchant_application_principals: {
+        Row: {
+          address_line1: string | null;
+          address_line2: string | null;
+          application_id: string;
+          city: string | null;
+          country: string | null;
+          created_at: string;
+          date_of_birth: string | null;
+          email: string | null;
+          facility_id: string;
+          full_name: string;
+          id: string;
+          is_control_person: boolean;
+          national_id_last4: string | null;
+          national_id_secret_id: string | null;
+          ownership_percent: number | null;
+          phone: string | null;
+          postal_code: string | null;
+          region: string | null;
+          title: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          address_line1?: string | null;
+          address_line2?: string | null;
+          application_id: string;
+          city?: string | null;
+          country?: string | null;
+          created_at?: string;
+          date_of_birth?: string | null;
+          email?: string | null;
+          facility_id: string;
+          full_name: string;
+          id?: string;
+          is_control_person?: boolean;
+          national_id_last4?: string | null;
+          national_id_secret_id?: string | null;
+          ownership_percent?: number | null;
+          phone?: string | null;
+          postal_code?: string | null;
+          region?: string | null;
+          title?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          address_line1?: string | null;
+          address_line2?: string | null;
+          application_id?: string;
+          city?: string | null;
+          country?: string | null;
+          created_at?: string;
+          date_of_birth?: string | null;
+          email?: string | null;
+          facility_id?: string;
+          full_name?: string;
+          id?: string;
+          is_control_person?: boolean;
+          national_id_last4?: string | null;
+          national_id_secret_id?: string | null;
+          ownership_percent?: number | null;
+          phone?: string | null;
+          postal_code?: string | null;
+          region?: string | null;
+          title?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "merchant_application_principals_application_id_fkey";
+            columns: ["application_id"];
+            isOneToOne: false;
+            referencedRelation: "merchant_applications";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "merchant_application_principals_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      merchant_applications: {
+        Row: {
+          address_line1: string | null;
+          address_line2: string | null;
+          average_ticket_cents: number | null;
+          bank_account_name: string | null;
+          bank_last4: string | null;
+          bank_secret_id: string | null;
+          business_email: string | null;
+          business_phone: string | null;
+          business_structure: string | null;
+          card_not_present_percent: number | null;
+          city: string | null;
+          country: string | null;
+          created_at: string;
+          created_by: string | null;
+          decided_at: string | null;
+          estimated_monthly_volume_cents: number | null;
+          external_reference: string | null;
+          facility_id: string;
+          highest_ticket_cents: number | null;
+          id: string;
+          incorporated_on: string | null;
+          legal_name: string | null;
+          mcc: string | null;
+          postal_code: string | null;
+          purged_at: string | null;
+          refund_policy: string | null;
+          region: string | null;
+          signed_at: string | null;
+          signed_by: string | null;
+          signed_ip: string | null;
+          signed_name: string | null;
+          signed_terms: string | null;
+          signed_title: string | null;
+          status: string;
+          status_detail: string | null;
+          submitted_at: string | null;
+          tax_id: string | null;
+          trading_name: string | null;
+          updated_at: string;
+          website: string | null;
+        };
+        Insert: {
+          address_line1?: string | null;
+          address_line2?: string | null;
+          average_ticket_cents?: number | null;
+          bank_account_name?: string | null;
+          bank_last4?: string | null;
+          bank_secret_id?: string | null;
+          business_email?: string | null;
+          business_phone?: string | null;
+          business_structure?: string | null;
+          card_not_present_percent?: number | null;
+          city?: string | null;
+          country?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          decided_at?: string | null;
+          estimated_monthly_volume_cents?: number | null;
+          external_reference?: string | null;
+          facility_id: string;
+          highest_ticket_cents?: number | null;
+          id?: string;
+          incorporated_on?: string | null;
+          legal_name?: string | null;
+          mcc?: string | null;
+          postal_code?: string | null;
+          purged_at?: string | null;
+          refund_policy?: string | null;
+          region?: string | null;
+          signed_at?: string | null;
+          signed_by?: string | null;
+          signed_ip?: string | null;
+          signed_name?: string | null;
+          signed_terms?: string | null;
+          signed_title?: string | null;
+          status?: string;
+          status_detail?: string | null;
+          submitted_at?: string | null;
+          tax_id?: string | null;
+          trading_name?: string | null;
+          updated_at?: string;
+          website?: string | null;
+        };
+        Update: {
+          address_line1?: string | null;
+          address_line2?: string | null;
+          average_ticket_cents?: number | null;
+          bank_account_name?: string | null;
+          bank_last4?: string | null;
+          bank_secret_id?: string | null;
+          business_email?: string | null;
+          business_phone?: string | null;
+          business_structure?: string | null;
+          card_not_present_percent?: number | null;
+          city?: string | null;
+          country?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          decided_at?: string | null;
+          estimated_monthly_volume_cents?: number | null;
+          external_reference?: string | null;
+          facility_id?: string;
+          highest_ticket_cents?: number | null;
+          id?: string;
+          incorporated_on?: string | null;
+          legal_name?: string | null;
+          mcc?: string | null;
+          postal_code?: string | null;
+          purged_at?: string | null;
+          refund_policy?: string | null;
+          region?: string | null;
+          signed_at?: string | null;
+          signed_by?: string | null;
+          signed_ip?: string | null;
+          signed_name?: string | null;
+          signed_terms?: string | null;
+          signed_title?: string | null;
+          status?: string;
+          status_detail?: string | null;
+          submitted_at?: string | null;
+          tax_id?: string | null;
+          trading_name?: string | null;
+          updated_at?: string;
+          website?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "merchant_applications_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -7510,6 +7956,39 @@ export type Database = {
         Args: { p_facility_id: string; p_months?: number };
         Returns: Json;
       };
+      generate_tasks_from_group: {
+        Args: { p_assign_to?: string; p_for_date?: string; p_group_id: string };
+        Returns: {
+          assigned_to: string | null;
+          category: string;
+          completed_at: string | null;
+          completed_by: string | null;
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          due_at: string | null;
+          estimated_minutes: number | null;
+          facility_id: string;
+          id: string;
+          metadata: Json;
+          notes: string | null;
+          priority: string;
+          requires_photo: boolean;
+          requires_signoff: boolean;
+          source: string;
+          source_ref: string | null;
+          status: string;
+          template_id: string | null;
+          title: string;
+          updated_at: string;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "facility_tasks";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       grant_platform_role: {
         Args: {
           p_profile_id: string;
@@ -7740,6 +8219,14 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      read_boarding_secret: {
+        Args: {
+          p_application_id: string;
+          p_kind: string;
+          p_principal_id: string;
+        };
+        Returns: string;
       };
       record_boarding_arrival: {
         Args: { p_action: string; p_booking_ref: number };
@@ -8077,6 +8564,16 @@ export type Database = {
           p_receipt_channels?: string[];
         };
         Returns: Json;
+      };
+      store_boarding_secret: {
+        Args: {
+          p_application_id: string;
+          p_kind: string;
+          p_last4: string;
+          p_principal_id: string;
+          p_value: string;
+        };
+        Returns: undefined;
       };
       store_communication_credentials: {
         Args: {

@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -12,19 +10,13 @@ import {
   Users,
   UserCheck,
   BookOpen,
-  Plus,
   CheckCircle2,
   AlertTriangle,
   UserX,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { TaskWizard } from "./TaskWizard";
-import {
-  shiftTaskGroups,
-  positionTaskGroups,
-  workTaskLibrary,
-} from "@/data/work-tasks";
 import { taskQueries } from "@/lib/api/facility-tasks";
+import { chorelistQueries } from "@/lib/api/task-groups";
 import { getOffboardingInstances } from "@/data/staff-onboarding";
 
 const ShiftTasksTab = dynamic(
@@ -51,16 +43,15 @@ const OffboardingTasksTab = dynamic(
 // ── Overview stat cards ───────────────────────────────────────────────────────
 
 function OverviewStats() {
-  // The two group counts are still fixtures — the shift and position tabs have
-  // no table yet. The standalone half is real, and `overdue` comes from the
-  // SERVER's clock rather than this browser's.
   const { data } = useQuery(taskQueries.all());
   const tasks = data?.tasks ?? [];
+  const { data: groups } = useQuery(chorelistQueries.groups());
+  const allGroups = groups ?? [];
 
-  const activeShiftGroups = shiftTaskGroups.filter((g) => g.isActive).length;
-  const activePositionGroups = positionTaskGroups.filter(
-    (g) => g.isActive,
-  ).length;
+  const shiftGroups = allGroups.filter((g) => g.scope === "shift");
+  const positionGroups = allGroups.filter((g) => g.scope === "position");
+  const activeShiftGroups = shiftGroups.filter((g) => g.isActive).length;
+  const activePositionGroups = positionGroups.filter((g) => g.isActive).length;
 
   const pendingStandalone = tasks.filter(
     (t) => t.status === "pending" || t.status === "in_progress",
@@ -81,7 +72,7 @@ function OverviewStats() {
     {
       label: "Active Shift Groups",
       value: activeShiftGroups,
-      sub: `across ${shiftTaskGroups.length} total`,
+      sub: `across ${shiftGroups.length} total`,
       icon: CalendarClock,
       color: "text-amber-600",
       bg: "bg-amber-50 border-amber-200",
@@ -89,7 +80,7 @@ function OverviewStats() {
     {
       label: "Position Task Groups",
       value: activePositionGroups,
-      sub: `${positionTaskGroups.reduce((s, g) => s + g.taskIds.length, 0)} tasks assigned`,
+      sub: `${positionGroups.reduce((s, g) => s + g.items.length, 0)} chores assigned`,
       icon: Users,
       color: "text-blue-600",
       bg: "bg-blue-50 border-blue-200",
@@ -123,10 +114,7 @@ function OverviewStats() {
       {stats.map(({ label, value, sub, icon: Icon, color, bg }) => (
         <div
           key={label}
-          className={cn(
-            "flex items-start gap-3 rounded-xl border px-4 py-4",
-            bg,
-          )}
+          className={cn("flex items-start gap-3 rounded-xl border p-4", bg)}
         >
           <div className={cn("mt-0.5 shrink-0", color)}>
             <Icon className="size-5" />
@@ -161,10 +149,11 @@ function TabCount({ n }: { n: number }) {
 export default function TaskManagementPage() {
   const searchParams = useSearchParams();
   const defaultTab = searchParams?.get("tab") ?? "shift";
-  const [wizardOpen, setWizardOpen] = useState(false);
 
   const { data: taskPayload } = useQuery(taskQueries.all());
   const liveTasks = taskPayload?.tasks ?? [];
+  const { data: groupList } = useQuery(chorelistQueries.groups());
+  const { data: choreList } = useQuery(chorelistQueries.definitions());
 
   const overdueCount = liveTasks.filter((t) => t.overdue).length;
   const pendingStandalone = liveTasks.filter(
@@ -197,14 +186,12 @@ export default function TaskManagementPage() {
             Shift tasks, position tasks, and one-off staff assignments
           </p>
         </div>
-        <Button
-          onClick={() => setWizardOpen(true)}
-          size="default"
-          className="shrink-0 gap-2"
-        >
-          <Plus className="size-4" />
-          Create Task
-        </Button>
+        {/* The page-level "Create Task" button is gone with `TaskWizard`. It
+            opened a 1,114-line wizard whose only outcome was
+            `toast.success("Task assigned to …")` — it created nothing, in any
+            of its three modes. Every tab now has its own New button that
+            writes to Postgres, so there is nothing for a page-level one to do
+            that is not already better done one click away. */}
       </div>
 
       {/* Overview stats */}
@@ -216,12 +203,24 @@ export default function TaskManagementPage() {
           <TabsTrigger value="shift" className="gap-1.5 text-xs sm:text-sm">
             <CalendarClock className="size-4" />
             Shift Tasks
-            <TabCount n={shiftTaskGroups.filter((g) => g.isActive).length} />
+            <TabCount
+              n={
+                (groupList ?? []).filter(
+                  (g) => g.scope === "shift" && g.isActive,
+                ).length
+              }
+            />
           </TabsTrigger>
           <TabsTrigger value="position" className="gap-1.5 text-xs sm:text-sm">
             <Users className="size-4" />
             Position Tasks
-            <TabCount n={positionTaskGroups.filter((g) => g.isActive).length} />
+            <TabCount
+              n={
+                (groupList ?? []).filter(
+                  (g) => g.scope === "position" && g.isActive,
+                ).length
+              }
+            />
           </TabsTrigger>
           <TabsTrigger
             value="standalone"
@@ -240,7 +239,7 @@ export default function TaskManagementPage() {
           <TabsTrigger value="library" className="gap-1.5 text-xs sm:text-sm">
             <BookOpen className="size-4" />
             Task Library
-            <TabCount n={workTaskLibrary.filter((t) => t.isActive).length} />
+            <TabCount n={(choreList ?? []).filter((c) => c.isActive).length} />
           </TabsTrigger>
           {offboardingOpen > 0 && (
             <TabsTrigger
@@ -280,7 +279,6 @@ export default function TaskManagementPage() {
       </Tabs>
 
       {/* Global wizard */}
-      <TaskWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
     </div>
   );
 }
