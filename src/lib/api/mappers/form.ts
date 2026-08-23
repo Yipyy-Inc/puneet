@@ -71,6 +71,8 @@ export interface SubmissionRow {
   clientRef: number | null;
   clientName: string | null;
   petId: string | null;
+  /** Resolved by a second query — `pet_id` carries no FK, so it cannot embed. */
+  petName: string | null;
   bookingId: string | null;
   status: SubmissionStatus;
   answers: Record<string, unknown>;
@@ -105,7 +107,14 @@ interface VersionEmbed {
 export type SubmissionRecord = Tables<"form_submissions"> & {
   // Both are TO-ONE relations, so PostgREST returns an object or null — not an
   // array. Reading a to-one as an array is what emptied the boarding board
-  // once, so the helpers below tolerate either rather than trusting which.
+  // once, so `one()` below tolerates either rather than trusting which.
+  //
+  // `pet_id` is NOT among them and cannot be: it carries no foreign key on
+  // purpose (a pet may be removed and the answers stay), and PostgREST embeds
+  // only what a constraint describes. Asking for one costs the whole select —
+  // "Could not find a relationship between 'form_submissions' and 'pet_id'"
+  // fails every route that shares this string, including submitting. Pet names
+  // are resolved separately; see `resolvePetNames`.
   clients?: ClientEmbed | ClientEmbed[] | null;
   form_versions?: VersionEmbed | VersionEmbed[] | null;
 };
@@ -171,7 +180,10 @@ export function toFormRow(
   };
 }
 
-export function toSubmissionRow(row: SubmissionRecord): SubmissionRow {
+export function toSubmissionRow(
+  row: SubmissionRecord,
+  petNames?: Map<string, string>,
+): SubmissionRow {
   const client = one(row.clients);
   const version = one(row.form_versions);
   const form = version ? one(version.forms) : null;
@@ -189,6 +201,7 @@ export function toSubmissionRow(row: SubmissionRecord): SubmissionRow {
     clientRef: client?.ref ?? null,
     clientName: client?.name ?? null,
     petId: row.pet_id,
+    petName: row.pet_id ? (petNames?.get(row.pet_id) ?? null) : null,
     bookingId: row.booking_id,
     status: row.status as SubmissionStatus,
     answers: asRecord(row.answers),

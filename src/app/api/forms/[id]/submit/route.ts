@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getViewer } from "@/lib/auth/viewer";
+import { resolvePetNames } from "@/lib/api/form-pets";
 import {
   SUBMISSION_SELECT,
   toSubmissionRow,
@@ -182,7 +183,14 @@ export async function POST(
   }
 
   const result: SubmitFormResult = {
-    submission: toSubmissionRow(inserted as unknown as SubmissionRecord),
+    // Resolved rather than left null: a submission filed WITH a pet would
+    // otherwise come back saying it has none.
+    submission: toSubmissionRow(
+      inserted as unknown as SubmissionRecord,
+      await resolvePetNames(supabase, [
+        inserted as unknown as SubmissionRecord,
+      ]),
+    ),
   };
   return NextResponse.json(result, { status: 201 });
 }

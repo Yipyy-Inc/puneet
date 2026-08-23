@@ -115,11 +115,23 @@ values
    'task-bank', 'banking', 'not_started');
 
 -- ── T0: the fixture is what the tests think, and the token is a hash ────────
+--
+-- SCOPED TO THE FIXTURE'S OWN FACILITY, and it has to be. This ran as an
+-- unfiltered `count(*)` over the whole table, which asserted something the test
+-- has no business asserting: that the database contains NOTHING ELSE. It went
+-- red on 2026-08-23 because a CI e2e run had left one real onboarding instance
+-- behind at the demo facility — a true fact about the database, reported as a
+-- failure of a test about token hashing.
+--
+-- A shared Postgres will always have rows somebody else put there. An assertion
+-- that breaks on a day nobody touched the code is not a gate, it is noise that
+-- teaches people to skip a red suite.
 do $$
 declare c integer; h bytea;
 begin
   perform set_config('request.jwt.claims', '', true);
-  select count(*) into c from public.onboarding_instances;
+  select count(*) into c from public.onboarding_instances
+   where facility_id = '00000000-0000-0000-0000-0000000000ba';
   select token_hash into h from public.onboarding_instances
    where id = '00000000-0000-0000-0000-00000000c101';
   perform pg_temp.t('T0  fixture: 3 instances; token stored as a hash, not text',

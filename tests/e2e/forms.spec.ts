@@ -70,21 +70,39 @@ interface Submission {
   answers: Record<string, unknown>;
   status: string;
   score: number | null;
+  clientId: string | null;
+  clientRef: number | null;
+  clientName: string | null;
 }
 
 function freshName(label: string): string {
   return `${MARKER} ${label} ${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
 }
 
+/**
+ * A version schema in the shape the APPLICATION writes.
+ *
+ * `schemaFromFlatForm` produces `{ questions, sections, logicRules,
+ * fieldMapping }` with questions flat and carrying a `sectionId` — the version
+ * column is plain jsonb and will accept anything, which is exactly why this
+ * helper has to match what a screen will read. It used to nest fields under
+ * sections, a shape nothing in the app produces, so a schema written here
+ * rendered as a form with no questions.
+ */
 function questions(label: string) {
   return {
-    sections: [
+    questions: [
       {
-        id: "s1",
-        title: "Health",
-        fields: [{ id: "f1", label, type: "yes_no" }],
+        id: "f1",
+        type: "yes_no",
+        label,
+        required: true,
+        sectionId: "s1",
       },
     ],
+    sections: [{ id: "s1", title: "Health", order: 1 }],
+    logicRules: [],
+    fieldMapping: [],
   };
 }
 
@@ -104,24 +122,51 @@ async function patchForm(
   return ((await res.json()) as { form: Form }).form;
 }
 
-async function anyClientRef(page: Page): Promise<number> {
+async function clientRefs(page: Page, count = 1): Promise<number[]> {
   const res = await page.request.get("/api/clients");
   expect(res.ok(), await res.text()).toBe(true);
-  const ref = ((await res.json()) as { id?: number }[])
+  const refs = ((await res.json()) as { id?: number }[])
     .map((c) => c.id)
-    .find((v): v is number => typeof v === "number");
-  expect(ref, "the facility has at least one client").toBeTruthy();
-  return ref as number;
+    .filter((v): v is number => typeof v === "number")
+    .slice(0, count);
+  expect(refs.length, `the facility has at least ${count} client(s)`).toBe(
+    count,
+  );
+  return refs;
+}
+
+/** A published form and one submission against it, with nobody's name on it. */
+async function unfiledSubmission(
+  page: Page,
+  label: string,
+): Promise<Submission> {
+  const form = await createForm(page, freshName(label));
+  await patchForm(page, form.id, {
+    schema: questions(`${label}: is your dog vaccinated?`),
+    publish: true,
+    status: "published",
+  });
+  const filed = await page.request.post(`${FORMS}/${form.id}/submit`, {
+    data: { answers: { f1: "yes" } },
+  });
+  expect(filed.ok(), await filed.text()).toBe(true);
+  const submission = ((await filed.json()) as { submission: Submission })
+    .submission;
+  // Staff capture one at the counter before the person has a record. If this
+  // ever comes back attached, the rest of the block proves nothing.
+  expect(submission.clientId, "arrives with no customer").toBeNull();
+  return submission;
 }
 
 test.describe("forms", () => {
   let clientRef = 0;
+  let otherClientRef = 0;
 
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
     await signIn(page, ACCOUNTS.owner);
-    clientRef = await anyClientRef(page);
+    [clientRef, otherClientRef] = await clientRefs(page, 2);
     await context.close();
   });
 
@@ -326,6 +371,115 @@ test.describe("forms", () => {
     // The row the API created. What this replaced read a module-level array,
     // so this assertion could not have passed against it.
     await expect(page.getByText(name).first()).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("a submission with no customer can be filed under one", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const submission = await unfiledSubmission(page, "file");
+
+    const res = await page.request.patch(`${SUBMISSIONS}/${submission.id}`, {
+      data: { clientRef },
+    });
+    expect(res.ok(), await res.text()).toBe(true);
+
+    // Read back through the detail route. An RLS-refused UPDATE affects zero
+    // rows and returns success, so the response of the write proves nothing.
+    const after = await page.request.get(`${SUBMISSIONS}/${submission.id}`);
+    expect(after.ok(), await after.text()).toBe(true);
+    const reread = ((await after.json()) as { submission: Submission })
+      .submission;
+    expect(reread.clientRef).toBe(clientRef);
+    expect(reread.answers.f1).toBe("yes");
+  });
+
+  test("filed answers cannot be moved onto a different customer", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const submission = await unfiledSubmission(page, "move");
+
+    const first = await page.request.patch(`${SUBMISSIONS}/${submission.id}`, {
+      data: { clientRef },
+    });
+    expect(first.ok(), await first.text()).toBe(true);
+
+    // THE POINT. Otherwise "mark as reviewed" is a way to quietly move what
+    // somebody said onto somebody else's file.
+    const second = await page.request.patch(`${SUBMISSIONS}/${submission.id}`, {
+      data: { clientRef: otherClientRef },
+    });
+    expect(second.status()).toBe(403);
+
+    const after = await page.request.get(`${SUBMISSIONS}/${submission.id}`);
+    const reread = ((await after.json()) as { submission: Submission })
+      .submission;
+    expect(reread.clientRef).toBe(clientRef);
+  });
+
+  test("a groomer can review a submission but not file it", async ({
+    page,
+  }) => {
+    const owner = await page.context().browser()!.newContext();
+    const ownerPage = await owner.newPage();
+    await signIn(ownerPage, ACCOUNTS.owner);
+    const submission = await unfiledSubmission(ownerPage, "groomer-file");
+    await owner.close();
+
+    await signIn(page, ACCOUNTS.groomer);
+
+    // Marking a form read is `view_client_documents`, which a groomer holds.
+    const reviewed = await page.request.patch(
+      `${SUBMISSIONS}/${submission.id}`,
+      { data: { status: "reviewed" } },
+    );
+    expect(reviewed.ok(), await reviewed.text()).toBe(true);
+
+    // Deciding whose file the answers belong in is a change to a client
+    // record, and a groomer has no `edit_clients`. A VIEW permission must not
+    // authorise a WRITE.
+    const filedByGroomer = await page.request.patch(
+      `${SUBMISSIONS}/${submission.id}`,
+      { data: { clientRef } },
+    );
+    expect(filedByGroomer.status()).toBe(403);
+  });
+
+  test("the inbox lists what the database holds, and opens one", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const name = freshName("inbox");
+    const form = await createForm(page, name);
+    await patchForm(page, form.id, {
+      schema: questions("INBOX: is your dog vaccinated?"),
+      publish: true,
+      status: "published",
+    });
+    await page.request.post(`${FORMS}/${form.id}/submit`, {
+      data: { clientRef, answers: { f1: "yes" } },
+    });
+
+    await page.goto("/facility/dashboard/forms/submissions");
+    await expect(
+      page.getByRole("heading", { name: "Submissions Inbox" }),
+    ).toBeVisible();
+
+    // The row the API created. What this replaced read a module-level array,
+    // so this assertion could not have passed against it.
+    const row = page.getByRole("row").filter({ hasText: name });
+    await expect(row.first()).toBeVisible({ timeout: 15_000 });
+
+    await row.first().click();
+
+    // And the detail shows the QUESTION, not just the answer — rendered from
+    // the version the submission carries.
+    await expect(page.getByText("INBOX: is your dog vaccinated?")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByText("Answers", { exact: true })).toBeVisible();
   });
 
   test("a groomer cannot author a form", async ({ page }) => {
