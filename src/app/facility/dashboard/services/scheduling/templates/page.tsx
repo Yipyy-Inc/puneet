@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
-  Plus,
-  Copy,
-  Trash2,
-  MoreHorizontal,
-  Calendar,
+  AlertCircle,
+  AlertTriangle,
+  Archive,
+  CalendarDays,
+  CalendarPlus,
   Clock,
+  Moon,
+  Plus,
+  RotateCcw,
+  Trash2,
   Users,
-  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,312 +24,352 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "sonner";
-import {
-  scheduleTemplates as initialTemplates,
-  departments,
-} from "@/data/scheduling";
-import type { ScheduleTemplate } from "@/types/scheduling";
+  scheduleTemplateQueries,
+  useApplyScheduleTemplate,
+  useDeleteScheduleTemplate,
+  useUpdateScheduleTemplate,
+  type ScheduleTemplateRow,
+} from "@/lib/api/schedule-templates";
+import { NewScheduleTemplateDialog } from "./NewScheduleTemplateDialog";
 
-const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// ============================================================================
+// Schedule templates, from Postgres.
+//
+// ── WHAT THIS REPLACES ────────────────────────────────────────────────────
+//
+// `scheduleTemplates` in `src/data/scheduling.ts`, and four buttons that
+// announced work they never did: "Template created", "Template deleted",
+// "Template duplicated", and — the one that mattered —
+//
+//   Template "X" applied as draft shifts. Review and publish when ready.
+//
+// Nothing was applied and there was nothing to review. The roster itself was
+// real the whole time; the step from "here is our week" to "put it on the
+// calendar" simply did not exist.
+//
+// ── APPLYING SAYS WHAT IT ACTUALLY DID ────────────────────────────────────
+//
+// Pressing apply twice creates the week once, so the response distinguishes
+// "34 shifts added" from "already applied". Those are different facts and
+// somebody acts on them differently — reporting the second as a failure would
+// send a manager looking for a problem that is not there.
+//
+// ── THE WEEK PICKER IS A DATE, NOT A `Date` ───────────────────────────────
+//
+// It stays a plain "YYYY-MM-DD" string all the way to the database, which
+// converts it in the FACILITY's timezone. Parsing it here would attach this
+// browser's offset, and a manager working away from the site would apply
+// somebody else's week.
+// ============================================================================
 
-export default function TemplatesPage() {
-  const [templates, setTemplates] =
-    useState<ScheduleTemplate[]>(initialTemplates);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [applyOpen, setApplyOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] =
-    useState<ScheduleTemplate | null>(null);
-  const [newName, setNewName] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [newDeptId, setNewDeptId] = useState(departments[0]?.id || "");
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const handleCreate = () => {
-    if (!newName.trim()) return;
-    const tmpl: ScheduleTemplate = {
-      id: `tmpl-${Date.now()}`,
-      name: newName,
-      departmentId: newDeptId,
-      description: newDescription,
-      shifts: [],
-      createdAt: new Date().toISOString().split("T")[0],
-      createdBy: "emp-1",
-    };
-    setTemplates((prev) => [...prev, tmpl]);
-    setCreateOpen(false);
-    setNewName("");
-    setNewDescription("");
-    toast.success("Template created. Add shifts from the main schedule view.");
-  };
+/** The Sunday on or before today, as a plain calendar string. */
+function currentWeekStart(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay());
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
-  const handleDelete = (id: string) => {
-    setTemplates((prev) => prev.filter((t) => t.id !== id));
-    toast.success("Template deleted");
-  };
+function TemplateCard({ template }: { template: ScheduleTemplateRow }) {
+  const [weekStart, setWeekStart] = useState(currentWeekStart);
+  const apply = useApplyScheduleTemplate();
+  const update = useUpdateScheduleTemplate();
+  const remove = useDeleteScheduleTemplate();
 
-  const handleDuplicate = (tmpl: ScheduleTemplate) => {
-    const dup: ScheduleTemplate = {
-      ...tmpl,
-      id: `tmpl-${Date.now()}`,
-      name: `${tmpl.name} (Copy)`,
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-    setTemplates((prev) => [...prev, dup]);
-    toast.success("Template duplicated");
-  };
+  const byDay = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const shift of template.shifts) {
+      map.set(shift.dayOfWeek, (map.get(shift.dayOfWeek) ?? 0) + shift.slots);
+    }
+    return map;
+  }, [template.shifts]);
 
-  const handleApply = () => {
-    if (!selectedTemplate) return;
-    toast.success(
-      `Template "${selectedTemplate.name}" applied as draft shifts. Review and publish when ready.`,
-    );
-    setApplyOpen(false);
-    setSelectedTemplate(null);
-  };
+  const overnightCount = template.shifts.filter((s) => s.endsNextDay).length;
+  const openCount = template.shifts.filter((s) => s.staffId === null).length;
+  const alreadyApplied = template.appliedWeeks.includes(weekStart);
+
+  return (
+    <Card className={cn(!template.isActive && "opacity-60")}>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+              {template.name}
+              {!template.isActive && (
+                <Badge variant="outline" className="text-[10px]">
+                  retired
+                </Badge>
+              )}
+              {template.departmentName && (
+                <Badge variant="secondary" className="gap-1 text-[10px]">
+                  <Users className="size-3" />
+                  {template.departmentName}
+                </Badge>
+              )}
+            </CardTitle>
+            {template.description && (
+              <CardDescription>{template.description}</CardDescription>
+            )}
+          </div>
+
+          <div className="flex shrink-0 gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={update.isPending}
+              title={template.isActive ? "Retire this template" : "Restore it"}
+              onClick={() =>
+                update.mutate(
+                  { id: template.id, isActive: !template.isActive },
+                  {
+                    onSuccess: () =>
+                      toast.success(
+                        template.isActive
+                          ? "Template retired"
+                          : "Template restored",
+                      ),
+                    onError: (err) =>
+                      toast.error(
+                        err instanceof Error
+                          ? err.message
+                          : "Could not save that.",
+                      ),
+                  },
+                )
+              }
+            >
+              {template.isActive ? (
+                <Archive className="size-4" />
+              ) : (
+                <RotateCcw className="size-4 text-emerald-600" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={remove.isPending}
+              title="Delete this template. Weeks already on the calendar stay."
+              onClick={() =>
+                remove.mutate(template.id, {
+                  onSuccess: () =>
+                    toast.success("Template deleted", {
+                      description:
+                        "Shifts already on the calendar were left alone.",
+                    }),
+                  onError: (err) =>
+                    toast.error(
+                      err instanceof Error
+                        ? err.message
+                        : "Could not delete that.",
+                    ),
+                })
+              }
+            >
+              <Trash2 className="text-destructive size-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <span className="flex items-center gap-1">
+            <CalendarDays className="size-3.5" />
+            {template.shifts.length} shift
+            {template.shifts.length === 1 ? "" : "s"}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="size-3.5" />
+            {template.weeklyHours} h a week
+          </span>
+          {openCount > 0 && (
+            <span className="flex items-center gap-1">
+              <Users className="size-3.5" />
+              {openCount} open
+            </span>
+          )}
+          {overnightCount > 0 && (
+            <span className="flex items-center gap-1 text-indigo-600">
+              <Moon className="size-3.5" />
+              {overnightCount} overnight
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-1">
+          {DAY_LABELS.map((label, day) => {
+            const count = byDay.get(day) ?? 0;
+            return (
+              <span
+                key={label}
+                className={cn(
+                  "flex min-w-11 flex-col items-center rounded-md border px-1.5 py-1",
+                  count === 0 && "text-muted-foreground",
+                )}
+              >
+                <span className="text-[10px]">{label}</span>
+                <span className="text-sm font-semibold">{count}</span>
+              </span>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap items-end gap-2 border-t pt-3">
+          <div className="space-y-1">
+            <Label
+              htmlFor={`week-${template.id}`}
+              className="text-[11px] font-normal"
+            >
+              Week beginning
+            </Label>
+            <Input
+              id={`week-${template.id}`}
+              type="date"
+              className="w-[150px]"
+              value={weekStart}
+              onChange={(e) => setWeekStart(e.target.value)}
+            />
+          </div>
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+            disabled={
+              apply.isPending ||
+              !template.isActive ||
+              template.shifts.length === 0
+            }
+            onClick={() =>
+              apply.mutate(
+                { id: template.id, weekStart },
+                {
+                  onSuccess: (result) => {
+                    // Says what it DID. "Already applied" is a success, not a
+                    // failure, and reporting it as one sends somebody hunting
+                    // for a problem that is not there.
+                    if (result.created === 0) {
+                      toast.info("That week is already on the calendar", {
+                        description:
+                          "Applying again changes nothing. Edit the shifts on the schedule instead.",
+                      });
+                    } else {
+                      toast.success(
+                        `${result.created} draft shift${result.created === 1 ? "" : "s"} added`,
+                        {
+                          description:
+                            "Review them on the schedule, then publish when you are ready.",
+                        },
+                      );
+                    }
+                  },
+                  onError: (err) =>
+                    toast.error(
+                      err instanceof Error
+                        ? err.message
+                        : "Could not apply the template.",
+                    ),
+                },
+              )
+            }
+          >
+            <CalendarPlus className="size-4" />
+            {apply.isPending ? "Applying…" : "Apply to this week"}
+          </Button>
+
+          {alreadyApplied && (
+            <span className="text-muted-foreground flex items-center gap-1.5 pb-2 text-xs">
+              <AlertCircle className="size-3.5" />
+              Already applied
+            </span>
+          )}
+        </div>
+
+        {template.appliedWeeks.length > 0 && (
+          <p className="text-muted-foreground text-xs">
+            Applied to {template.appliedWeeks.length} week
+            {template.appliedWeeks.length === 1 ? "" : "s"}, most recently{" "}
+            {template.appliedWeeks[0]}.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function ScheduleTemplatesPage() {
+  const [newOpen, setNewOpen] = useState(false);
+  const [showRetired, setShowRetired] = useState(false);
+
+  const { data, isPending, isError, error } = useQuery(
+    scheduleTemplateQueries.all({ includeRetired: showRetired }),
+  );
+
+  const templates = useMemo<ScheduleTemplateRow[]>(() => data ?? [], [data]);
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">
             Schedule Templates
           </h2>
           <p className="text-muted-foreground text-sm">
-            Save and reuse schedule patterns for holidays, seasons, and regular
-            weeks
+            The shape of a week. Applying one creates draft shifts you review
+            before anybody is told they are working.
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-1.5 size-4" />
-          New Template
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowRetired((s) => !s)}>
+            {showRetired ? "Active only" : "Show retired"}
+          </Button>
+          <Button onClick={() => setNewOpen(true)} className="gap-2">
+            <Plus className="size-4" />
+            New Template
+          </Button>
+        </div>
       </div>
 
-      {/* Template Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {templates.map((tmpl) => {
-          const dept = departments.find((d) => d.id === tmpl.departmentId);
-          const uniqueEmployees = new Set(tmpl.shifts.map((s) => s.employeeId))
-            .size;
-          const uniqueDays = new Set(tmpl.shifts.map((s) => s.dayOfWeek)).size;
+      {isPending ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-52 w-full" />
+          ))}
+        </div>
+      ) : isError ? (
+        <div className="text-muted-foreground flex flex-col items-center justify-center rounded-md border py-16 text-center">
+          <AlertTriangle className="mb-4 size-10 text-red-500 opacity-70" />
+          <p>Could not load the templates.</p>
+          <p className="mt-1 text-sm">
+            {error instanceof Error ? error.message : "Please try again."}
+          </p>
+        </div>
+      ) : templates.length === 0 ? (
+        <div className="text-muted-foreground flex flex-col items-center justify-center rounded-md border py-16 text-center">
+          <CalendarDays className="mb-4 size-10 opacity-50" />
+          <p>No templates yet.</p>
+          <p className="mt-1 max-w-sm text-sm">
+            Build the week you keep re-typing, then apply it to any week you
+            like.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {templates.map((template) => (
+            <TemplateCard key={template.id} template={template} />
+          ))}
+        </div>
+      )}
 
-          return (
-            <Card
-              key={tmpl.id}
-              className="group transition-shadow hover:shadow-lg"
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-base">{tmpl.name}</CardTitle>
-                    {tmpl.description && (
-                      <CardDescription className="mt-0.5 text-xs">
-                        {tmpl.description}
-                      </CardDescription>
-                    )}
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 opacity-0 group-hover:opacity-100"
-                      >
-                        <MoreHorizontal className="size-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSelectedTemplate(tmpl);
-                          setApplyOpen(true);
-                        }}
-                      >
-                        <Upload className="mr-2 size-3.5" /> Apply to Schedule
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDuplicate(tmpl)}>
-                        <Copy className="mr-2 size-3.5" /> Duplicate
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => handleDelete(tmpl.id)}
-                      >
-                        <Trash2 className="mr-2 size-3.5" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-3">
-                  {dept && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px]"
-                      style={{ borderColor: dept.color, color: dept.color }}
-                    >
-                      {dept.name}
-                    </Badge>
-                  )}
-                  <span className="text-muted-foreground text-xs">
-                    Created {tmpl.createdAt}
-                  </span>
-                </div>
-
-                <div className="text-muted-foreground flex items-center gap-4 text-xs">
-                  <span className="flex items-center gap-1">
-                    <Clock className="size-3" />
-                    {tmpl.shifts.length} shifts
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="size-3" />
-                    {uniqueEmployees} employees
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="size-3" />
-                    {uniqueDays} days
-                  </span>
-                </div>
-
-                {/* Day dots */}
-                <div className="flex gap-1">
-                  {[0, 1, 2, 3, 4, 5, 6].map((day) => {
-                    const hasShifts = tmpl.shifts.some(
-                      (s) => s.dayOfWeek === day,
-                    );
-                    return (
-                      <div
-                        key={day}
-                        className={`flex size-7 items-center justify-center rounded-sm text-[10px] font-medium ${
-                          hasShifts
-                            ? "bg-primary/10 text-primary"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {dayNames[day]}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => {
-                    setSelectedTemplate(tmpl);
-                    setApplyOpen(true);
-                  }}
-                >
-                  <Upload className="mr-1.5 size-3.5" />
-                  Apply to Schedule
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Create Template</DialogTitle>
-            <DialogDescription>
-              Create a new schedule template. You can populate it with shifts
-              later.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Template Name</Label>
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g., Holiday Schedule"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Department</Label>
-              <Select value={newDeptId} onValueChange={setNewDeptId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Description</Label>
-              <Textarea
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Describe when to use this template..."
-                rows={2}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreate} disabled={!newName.trim()}>
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Apply Dialog */}
-      <Dialog open={applyOpen} onOpenChange={setApplyOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Apply Template</DialogTitle>
-            <DialogDescription>
-              This will add all shifts from &quot;{selectedTemplate?.name}&quot;
-              as draft shifts to the current schedule period. You can review and
-              modify them before publishing.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApplyOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleApply}>Apply as Draft</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NewScheduleTemplateDialog
+        open={newOpen}
+        onClose={() => setNewOpen(false)}
+      />
     </div>
   );
 }

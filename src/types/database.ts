@@ -6012,6 +6012,183 @@ export type Database = {
           },
         ];
       };
+      schedule_template_applications: {
+        Row: {
+          applied_by: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          template_id: string;
+          week_start: string;
+        };
+        Insert: {
+          applied_by?: string | null;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          template_id: string;
+          week_start: string;
+        };
+        Update: {
+          applied_by?: string | null;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          template_id?: string;
+          week_start?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "schedule_template_applications_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "schedule_template_applications_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "schedule_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      schedule_template_shifts: {
+        Row: {
+          break_minutes: number;
+          created_at: string;
+          day_of_week: number;
+          department_id: string;
+          end_time: string;
+          id: string;
+          position_id: string;
+          required_skills: string[];
+          slots: number;
+          sort_order: number;
+          staff_id: string | null;
+          start_time: string;
+          template_id: string;
+        };
+        Insert: {
+          break_minutes?: number;
+          created_at?: string;
+          day_of_week: number;
+          department_id: string;
+          end_time: string;
+          id?: string;
+          position_id: string;
+          required_skills?: string[];
+          slots?: number;
+          sort_order?: number;
+          staff_id?: string | null;
+          start_time: string;
+          template_id: string;
+        };
+        Update: {
+          break_minutes?: number;
+          created_at?: string;
+          day_of_week?: number;
+          department_id?: string;
+          end_time?: string;
+          id?: string;
+          position_id?: string;
+          required_skills?: string[];
+          slots?: number;
+          sort_order?: number;
+          staff_id?: string | null;
+          start_time?: string;
+          template_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "schedule_template_shifts_department_id_fkey";
+            columns: ["department_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_departments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "schedule_template_shifts_position_id_fkey";
+            columns: ["position_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_positions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "schedule_template_shifts_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "schedule_template_shifts_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "schedule_template_shifts_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "schedule_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      schedule_templates: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          department_id: string | null;
+          description: string | null;
+          facility_id: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          department_id?: string | null;
+          description?: string | null;
+          facility_id: string;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          department_id?: string | null;
+          description?: string | null;
+          facility_id?: string;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "schedule_templates_department_id_fkey";
+            columns: ["department_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_departments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "schedule_templates_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       shift_swap_requests: {
         Row: {
           created_at: string;
@@ -7796,6 +7973,33 @@ export type Database = {
           to: "gift_cards";
           isOneToOne: true;
           isSetofReturn: false;
+        };
+      };
+      apply_schedule_template: {
+        Args: { p_template_id: string; p_week_start: string };
+        Returns: {
+          break_minutes: number;
+          created_at: string;
+          department_id: string;
+          ends_at: string;
+          facility_id: string;
+          id: string;
+          notes: string | null;
+          position_id: string;
+          recurrence_id: string | null;
+          required_skills: string[];
+          slots: number;
+          staff_id: string | null;
+          starts_at: string;
+          status: Database["public"]["Enums"]["shift_status"];
+          updated_at: string;
+          urgent: boolean;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "staff_shifts";
+          isOneToOne: false;
+          isSetofReturn: true;
         };
       };
       approve_availability_request: {
