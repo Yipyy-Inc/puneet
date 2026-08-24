@@ -90,22 +90,59 @@ function weekEnd(weekStart: string): string {
   return `${end.getUTCFullYear()}-${pad(end.getUTCMonth() + 1)}-${pad(end.getUTCDate())}`;
 }
 
-async function firstPosition(
-  page: Page,
-): Promise<{ positionId: string; departmentId: string }> {
-  const res = await page.request.get(STRUCTURE);
-  expect(res.ok(), await res.text()).toBe(true);
-  const { positions } = (await res.json()) as {
-    positions: { id: string; departmentId: string }[];
+/**
+ * A department and a position OF THIS SPEC'S OWN, created once and removed in
+ * `afterAll`.
+ *
+ * This used to read the org chart and assert a position existed. It passed in
+ * isolation and failed 8/8 in the full suite, every test on the same setup
+ * line — because the demo facility has NO permanent positions. The only ones
+ * that exist during a run are the ones `scheduling-attendance` and
+ * `scheduling-org-chart` create and then delete, and both run before this file.
+ *
+ * So the precondition was satisfied by another spec's leftovers, which is a
+ * pass for a reason nobody chose. Create what you need; do not assert that
+ * somebody else left it lying around.
+ */
+const OWN_DEPARTMENT = `${MARKER} template dept`;
+const OWN_POSITION = `${MARKER} template position`;
+
+let ownDepartmentId = "";
+let ownPositionId = "";
+
+async function ensureStructure(page: Page): Promise<void> {
+  const existing = (await (await page.request.get(STRUCTURE)).json()) as {
+    departments: { id: string; name: string }[];
+    positions: { id: string; name: string }[];
   };
-  expect(
-    positions.length,
-    "the facility has at least one position in its org chart",
-  ).toBeGreaterThan(0);
-  return {
-    positionId: positions[0].id,
-    departmentId: positions[0].departmentId,
-  };
+
+  ownDepartmentId =
+    existing.departments.find((d) => d.name === OWN_DEPARTMENT)?.id ?? "";
+  if (!ownDepartmentId) {
+    const res = await page.request.post(STRUCTURE, {
+      data: { kind: "department", name: OWN_DEPARTMENT, color: "#7c3aed" },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    ownDepartmentId = ((await res.json()) as { id: string }).id;
+  }
+
+  ownPositionId =
+    existing.positions.find((p) => p.name === OWN_POSITION)?.id ?? "";
+  if (!ownPositionId) {
+    const res = await page.request.post(STRUCTURE, {
+      data: {
+        kind: "position",
+        name: OWN_POSITION,
+        departmentId: ownDepartmentId,
+      },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    ownPositionId = ((await res.json()) as { id: string }).id;
+  }
+}
+
+function ownRoles(): { positionId: string; departmentId: string } {
+  return { positionId: ownPositionId, departmentId: ownDepartmentId };
 }
 
 async function createTemplate(
@@ -146,6 +183,14 @@ async function apply(
 }
 
 test.describe("schedule templates", () => {
+  test.beforeAll(async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await signIn(page, ACCOUNTS.owner);
+    await ensureStructure(page);
+    await context.close();
+  });
+
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -173,6 +218,27 @@ test.describe("schedule templates", () => {
         await page.request.delete(`${TEMPLATES}/${template.id}`);
       }
     }
+
+    // The org-chart rows this file created. Position before department — both
+    // references are RESTRICT, so the department cannot go while a position
+    // still points at it, and the position cannot go while a shift does.
+    //
+    // ASSERTED, not fired and forgotten. A 409 here means a shift above was
+    // missed, and the difference between "cleaned up" and "silently left two
+    // rows in a shared database" is exactly this expectation.
+    const orgRows: { what: string; id: string }[] = [
+      { what: "position", id: ownPositionId },
+      { what: "department", id: ownDepartmentId },
+    ];
+    for (const { what, id } of orgRows) {
+      if (!id) continue;
+      const removed = await page.request.delete(`${STRUCTURE}?${what}=${id}`);
+      expect(
+        removed.ok() || removed.status() === 404,
+        `could not remove the ${what} this spec created: ${await removed.text()}`,
+      ).toBe(true);
+    }
+
     await context.close();
   });
 
@@ -186,7 +252,7 @@ test.describe("schedule templates", () => {
     page,
   }) => {
     await signIn(page, ACCOUNTS.owner);
-    const { positionId, departmentId } = await firstPosition(page);
+    const { positionId, departmentId } = ownRoles();
 
     const badDay = await page.request.post(TEMPLATES, {
       data: {
@@ -225,7 +291,7 @@ test.describe("schedule templates", () => {
     page,
   }) => {
     await signIn(page, ACCOUNTS.owner);
-    const { positionId, departmentId } = await firstPosition(page);
+    const { positionId, departmentId } = ownRoles();
 
     // 22:00 to 06:00. A naive `endTime > startTime` check would refuse this,
     // and it would look perfectly reasonable doing so.
@@ -252,7 +318,7 @@ test.describe("schedule templates", () => {
     page,
   }) => {
     await signIn(page, ACCOUNTS.owner);
-    const { positionId, departmentId } = await firstPosition(page);
+    const { positionId, departmentId } = ownRoles();
 
     const template = await createTemplate(page, {
       name: fresh("apply"),
@@ -303,7 +369,7 @@ test.describe("schedule templates", () => {
     page,
   }) => {
     await signIn(page, ACCOUNTS.owner);
-    const { positionId, departmentId } = await firstPosition(page);
+    const { positionId, departmentId } = ownRoles();
 
     const template = await createTemplate(page, {
       name: fresh("twice"),
@@ -338,7 +404,7 @@ test.describe("schedule templates", () => {
 
   test("the applied weeks come back on the template", async ({ page }) => {
     await signIn(page, ACCOUNTS.owner);
-    const { positionId, departmentId } = await firstPosition(page);
+    const { positionId, departmentId } = ownRoles();
 
     const template = await createTemplate(page, {
       name: fresh("applied weeks"),
@@ -366,7 +432,7 @@ test.describe("schedule templates", () => {
 
   test("a retired template cannot be applied", async ({ page }) => {
     await signIn(page, ACCOUNTS.owner);
-    const { positionId, departmentId } = await firstPosition(page);
+    const { positionId, departmentId } = ownRoles();
 
     const template = await createTemplate(page, {
       name: fresh("retired"),
@@ -396,7 +462,7 @@ test.describe("schedule templates", () => {
     page,
   }) => {
     await signIn(page, ACCOUNTS.owner);
-    const { positionId, departmentId } = await firstPosition(page);
+    const { positionId, departmentId } = ownRoles();
 
     const template = await createTemplate(page, {
       name: fresh("delete"),
@@ -452,7 +518,7 @@ test.describe("schedule templates", () => {
     page,
   }) => {
     await signIn(page, ACCOUNTS.owner);
-    const { positionId, departmentId } = await firstPosition(page);
+    const { positionId, departmentId } = ownRoles();
 
     const name = fresh("on screen");
     await createTemplate(page, {
