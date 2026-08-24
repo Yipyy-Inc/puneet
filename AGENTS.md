@@ -96,10 +96,10 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
   `main` on push, so CI now reports _after_ customers have the code. Run the
   green sequence before every push, and `bun run test:e2e:ci` as well for
   anything touching auth, a portal gate, a permission or an identity.
-  **But do not infer the deploy from the push.** On 2026-08-24 six pushes in a
-  row created no deployment at all — the project is on Vercel's **Hobby** plan
-  and a `vercel.json` cron it does not permit stopped deployments being created,
-  silently, with every local gate and every CI check green. Confirm:
+  **But do not infer the deploy from the push.** On 2026-08-24 fourteen commits
+  in a row produced no deployment at all, silently, with every local gate and
+  every CI check green — two unrelated `vercel.json`/env faults stacked, the
+  first hiding the second. Confirm, and confirm **READY**, not merely created:
 
   ```
   gh api repos/Yipyy-Inc/puneet/deployments --jq '.[0] | "\(.created_at) \(.sha[0:8])"'

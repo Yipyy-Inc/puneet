@@ -1755,7 +1755,7 @@ telling a facility their hardware will not work is a claim worth being sure of.
 It searches `productName`, `model` AND `deviceTypeName`, because reading `model`
 alone reported a supported Flex 4 (`Clover_C406`) as unknown on a live screen.
 
-### 🔴 This project deploys on Vercel's **Hobby** plan, and it silently sets the rules
+### 🔴 Two deploy blockers stacked, and the first hid the second
 
 Found 2026-08-24, after four hours of believing a push had shipped when nothing
 had. `bun run typecheck && lint && format:check` were green, CI was green
@@ -1799,10 +1799,51 @@ There was no red cross to open, no notification, and nothing to retry.
 **The absence of a deployment looks exactly like a deployment you have not
 checked on.**
 
-**The plan is the constraint.** `get_git_deployment_context` reports
-`"plan": "hobby"` for team Yipyy. Hobby permits cron jobs **once per day**. A
-sub-daily schedule is not a warning on that plan; it is a config the project may
-not have, and everything downstream of it stopped.
+**The cause was NOT the schedule, and this entry said it was.** That first
+version is left described here rather than quietly overwritten, because being
+confidently wrong in a debt map is the failure this file exists to prevent.
+
+The reasoning was: the team is on `"plan": "hobby"`
+(`get_git_deployment_context`), Hobby restricts cron frequency, `17 */4 * * *`
+is six a day, therefore over the limit. Timeline fit, so it got written down as
+fact. **It was never verified against Vercel's documentation, and a later search
+did not support it.**
+
+Reducing the schedule to `17 4 * * *` DID make deployments start being created
+again — and the one it created failed immediately, with a real id and a real
+log, saying something else entirely:
+
+```
+Error: The `CRON_SECRET` environment variable contains leading or trailing
+whitespace, which is not allowed in HTTP header values.
+```
+
+**A trailing newline on a pasted secret.** Adding the `crons` key is what made
+Vercel start validating `CRON_SECRET` at all, so the commit did trigger this —
+but the fault was the value, not the frequency, and no amount of editing
+`vercel.json` was ever going to reach it.
+
+**The shape worth keeping is the stacking.** Each step was individually correct:
+
+```
+1. cron added to vercel.json        -> deployments stop being created
+2. CRON_SECRET set so the sweep can authenticate -> pasted with whitespace
+3. cron schedule reduced            -> deployments resume, and IMMEDIATELY
+                                       hit the whitespace from step 2
+```
+
+Step 2 was necessary and right, and it planted a failure that **could not
+surface until step 3 removed the thing hiding it**. Fourteen commits of
+"nothing deployed" had two independent causes in series.
+
+**So: when a blocker lifts, do not assume the queue drains.** The next thing in
+it has been untested for exactly as long as the blocker stood, and the relief of
+seeing movement is the worst moment to stop checking. Confirm READY, not
+created.
+
+The daily schedule stays for now because it is untested either way; revisit
+`*/4` once deployments are green, and verify against Vercel's own docs rather
+than a plausible story about a plan.
 
 **Two things follow, and the second is bigger than the cron:**
 
@@ -1814,9 +1855,11 @@ not have, and everything downstream of it stopped.
 
 2. **A commercial product is running on a Hobby plan.** This codebase takes real
    card payments through a live Clover merchant. Hobby forbids commercial use,
-   caps deployments at 100/day, and has no SLA. That is a business decision
-   somebody has to make deliberately — it is recorded here because it was
-   discovered by accident, while chasing a bug that turned out to be it.
+   caps deployments at 100/day and has no SLA. That is a business decision
+   somebody has to make deliberately — recorded here because it was found by
+   accident. It is **not** what broke the deployments, and the temptation to let
+   a true-and-alarming fact stand in for a cause is precisely how the wrong
+   version of this entry got written.
 
 **The correction that matters most is to a sentence in this repo's own docs.**
 AGENTS.md and CLAUDE.md both say _"Vercel deploys production from `main` on
