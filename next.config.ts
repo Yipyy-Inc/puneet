@@ -54,11 +54,39 @@ const nextConfig: NextConfig = {
   // TEMPORARY (307), not permanent. A 308 is cached by the browser until it is
   // cleared, so if /groomer is ever revived — or this redirect is wrong — the
   // people who hit it first would be the last to find out.
+  //
+  // The two scheduling screens below were RETIRED rather than converted, on
+  // 2026-08-24. Both edited facts that were already real somewhere else, so a
+  // facility could change something, be told it saved, and have the system go
+  // on using the other value:
+  //
+  //   company       -> name, contact details, timezone and per-location hours,
+  //                    all of which live on `facilities` / `locations` /
+  //                    the `business_hours` settings domain. The sharp edge was
+  //                    the timezone: `apply_schedule_template` reads
+  //                    `locations.timezone` to convert every shift it creates.
+  //   notifications -> quiet hours and event triggers duplicated the real
+  //                    `notification_toggles` domain, and its "Send a message"
+  //                    tab announced "Sent to N recipients" while writing to
+  //                    React state and nothing else.
+  //
+  // A duplicate editor is worse than a screen that does nothing, because it
+  // disagrees with one that works.
   async redirects() {
     return [
       {
         source: "/groomer/:path*",
         destination: "/employee/schedule",
+        permanent: false,
+      },
+      {
+        source: "/facility/dashboard/services/scheduling/company",
+        destination: "/facility/dashboard/settings?section=business",
+        permanent: false,
+      },
+      {
+        source: "/facility/dashboard/services/scheduling/notifications",
+        destination: "/facility/dashboard/settings?section=notifications",
         permanent: false,
       },
     ];

@@ -6,7 +6,6 @@ import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { broadcastMessages } from "@/data/scheduling";
 import { swapQueries, useDecideSwap } from "@/lib/api/scheduling";
 import type { FacilityNotification } from "@/types/facility";
 
@@ -38,12 +37,18 @@ export function swapIdFromNotification(
 }
 
 const SCHEDULE_LINK = "/facility/dashboard/services/scheduling/shift-swaps";
-const BROADCAST_LINK = "/facility/dashboard/services/scheduling/notifications";
 
 /**
- * Live schedule notifications (category "schedule"). Pending swaps are unread
- * so they count toward the Schedule pill; broadcasts are informational (read)
- * so they show in the list without inflating the actionable unread count.
+ * Live schedule notifications (category "schedule"). Pending swaps only, and
+ * they are unread so they count toward the Schedule pill.
+ *
+ * This used to inject two entries from the `broadcastMessages` fixture, each
+ * reading "Sent to N staff by Sarah Johnson". No message had been sent, there
+ * were no recipients, and Sarah Johnson is a fixture. The bell is where a
+ * manager looks to find out what has happened, so an entry there asserting a
+ * delivery that never occurred is the most expensive place in the product to
+ * put a false claim. Staff announcements arrive through the real notification
+ * centre; nothing is derived from a fixture here any more.
  */
 export function useScheduleNotifications(): FacilityNotification[] {
   // Only the pending ones: a bell is a queue of things to do, and the page is
@@ -64,19 +69,6 @@ export function useScheduleNotifications(): FacilityNotification[] {
         timestamp: `${swap.requestedAt}T12:00:00Z`,
         category: "schedule",
         link: SCHEDULE_LINK,
-      });
-    }
-
-    for (const msg of broadcastMessages.slice(0, 2)) {
-      items.push({
-        id: `sched-broadcast-${msg.id}`,
-        type: "staff_announcement",
-        title: msg.subject,
-        message: `Sent to ${msg.recipientCount} staff by ${msg.sentByName}`,
-        read: true,
-        timestamp: msg.sentAt,
-        category: "schedule",
-        link: BROADCAST_LINK,
       });
     }
 
