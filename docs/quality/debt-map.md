@@ -5087,6 +5087,44 @@ empty. Nothing fails. `bun run prune` does not look at SQL. The only way it
 surfaces is somebody asking "which terminal took this" and finding they cannot
 answer.
 
+### 🔴 A local typecheck cannot prove an import resolves in CI — only the lockfile can — 2026-08-24
+
+`playwright.shots.config.ts` imported `dotenv`. `bun run typecheck` passed
+locally. CI failed:
+
+```
+playwright.shots.config.ts(2,35): error TS2307:
+  Cannot find module 'dotenv' or its corresponding type declarations.
+```
+
+`dotenv` is **not a dependency of this project**. It resolves on a developer
+machine because something else hoists it into `node_modules`; CI runs
+`bun install --frozen-lockfile`, which installs exactly the lockfile and
+nothing else. So the two environments disagree, and the one that is right is the
+one that fails.
+
+**The trap was a comment that read as permission.** `playwright.config.ts` had
+already met this and solved it with four hand-rolled lines, ending:
+
+> Deliberately minimal: KEY=value, no quoting or interpolation. If this ever
+> needs to grow, use a real dotenv rather than extending it.
+
+Read as an instruction, that says "reach for dotenv". What it means is "add
+dotenv as a dependency first" — and the gap between those two readings is one
+required check failing on `main`, with `build` skipped behind it because it
+`needs: typecheck`, so no deployment either.
+
+**Do instead:** before importing a package a file does not already import, grep
+`package.json` for it. `grep -n '"the-package"' package.json` is the whole
+check. A green local typecheck is not evidence: it is a statement about your
+`node_modules`, which nobody chose and no lockfile guarantees.
+
+Same family as two other entries added the same day — **something that resolves
+locally because of state nobody chose.** A hoisted transitive dependency, one
+spec relying on another spec's org-chart rows, a teardown sweeping a list that
+only ever grows. In every case the local run passes for a reason that is not in
+any file.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
