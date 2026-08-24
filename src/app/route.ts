@@ -120,11 +120,32 @@ export async function GET(request: NextRequest) {
       ? viewer.memberships.find((m) => m.facilityId === named.id)
       : undefined;
 
-    // Only when they actually belong here. A platform admin with no membership
-    // at this facility keeps the platform landing — sending them into a portal
-    // they hold no role in would be a worse answer than the one being fixed.
+    // Only when they actually belong here.
     if (membership) {
       destination = landingPathForClaims(false, [membership]);
+    } else if (viewer.isPlatformAdmin) {
+      // ── A PLATFORM ADMIN WHO IS NOT A MEMBER GOES TO THE APEX ───────────
+      //
+      // A facility subdomain is that facility's front door. It should never
+      // paint platform-wide figures, whoever is looking — so rather than
+      // choosing between two wrong portals at this address, send them to the
+      // address where the platform portal belongs.
+      //
+      // GUARDED, because crossing hosts can sign somebody out. The AuthKit
+      // cookie only spans yipyy.com and pawradise.yipyy.com when
+      // WORKOS_COOKIE_DOMAIN widens it to a leading-dot domain; without that it
+      // is host-only and this redirect would land them on a sign-in page. So
+      // the redirect happens only when the configuration actually permits it,
+      // and otherwise nothing changes. A fix that logs people out is not a fix,
+      // and this is the kind of cookie trap that fails silently in production
+      // and looks like a session bug.
+      const cookieDomain = process.env.WORKOS_COOKIE_DOMAIN?.trim() ?? "";
+      const apex = process.env.NEXT_PUBLIC_APP_DOMAIN?.trim() ?? "";
+
+      if (cookieDomain.startsWith(".") && apex) {
+        const away = new URL(`https://${apex}/dashboard`);
+        return NextResponse.redirect(away, 307);
+      }
     }
   }
 
