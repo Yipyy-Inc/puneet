@@ -4891,6 +4891,71 @@ through the Playwright CLI rather than calling `chromium.launch()` from bun.
 suspiciously close to 180 seconds, check which runtime is holding the pipe
 before debugging anything else.
 
+## Snapshot (2026-08-24, Clover two-way sync)
+
+### 🔴 The Developer Pay API is a dead end — do not reach for it to get order linkage — 2026-08-24
+
+It is the obvious answer to "the terminal API will not accept an order id", it
+_requires_ an orderId, and it is wrong on four counts. Read before anybody
+proposes it again:
+
+- **Deprecated.** "The Developer Pay API is superseded by the Ecommerce API.
+  Developer Pay apps will no longer be available on the App Market starting
+  October 27, 2021."
+- **No tips, no refunds, no voids.** All three are documented as unsupported.
+  Yipyy needs all three.
+- **It takes raw card data** — `first6`, `last4`, expiry, CVV in the request
+  body. That drags PCI scope onto Yipyy's own servers, which the PAKMS-tokenised
+  `clv_` flow exists specifically to avoid.
+- US and Canada only.
+
+**Do instead:** online, Clover supports a genuine link —
+`POST /v3/merchants/{mId}/atomic_order/orders` then
+`POST /v1/orders/{orderId}/pay`, the same Ecommerce host and the same `clv_`
+token. On the terminal there is no link to be had: the REST Pay Display API is
+documented as payment-only and "does not support passing an order ID or item ID
+directly". That is Clover's limit and no amount of work changes it.
+
+### 🟠 The sandbox merchant cannot be exercised from a local run, and the reason is not obvious — 2026-08-24
+
+Measured 2026-08-24 while trying to prove `atomic_order` works: every call
+returned **401**, including a plain `GET /v3/merchants/{mId}`. The token was not
+wrong, it was **expired** — `access_token_expires_at` was 2026-08-22 and the
+access token lives thirty minutes.
+
+`public.payment_access_token` returns what is STORED. The refresh lives in
+`validAccessToken` (src/lib/clover/connection.ts), in app code. So any script
+that reads the token straight out of the database gets a stale one roughly
+always, and the 401 it produces looks exactly like a revoked grant.
+
+**And you cannot simply refresh it yourself.** Clover rotates refresh tokens: a
+successful refresh invalidates the one that bought it. A throwaway script that
+refreshes without writing the new pair back would break the facility's stored
+credentials and take their card payments down. Two sessions refreshing at once
+already caused an outage here once — see the Clover notes.
+
+The app path is closed too: the connection belongs to `pawradise`, whose only
+members are PRODUCTION identities, and a local run holds staging keys. So
+nothing local can hold a live Clover token for that merchant.
+
+**Do instead:** to exercise anything against the sandbox, do it through the
+deployed app as somebody who can sign in there, or accept that the change is
+unverified and say so. Do not hand-refresh. Do not read the conclusion "401,
+therefore revoked" off a script — check `access_token_expires_at` first.
+
+### 🟡 `payment_intents.device_id` existed for weeks and nothing ever passed it — 2026-08-24
+
+`open_payment_intent` has taken `p_device_id` since intents were added.
+`chargeOnTerminal` never sent it, so the column was NULL on every row and every
+Clover ledger row recorded the money and not the till. Fixed 2026-08-24, along
+with `payments.processor_device_serial`.
+
+Worth noting as a shape rather than a bug: a nullable column with a parameter
+and no caller is indistinguishable, in the schema, from one that is legitimately
+empty. Nothing fails. `bun run prune` does not look at SQL. The only way it
+surfaces is somebody asking "which terminal took this" and finding they cannot
+answer.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
