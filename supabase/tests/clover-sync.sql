@@ -56,12 +56,13 @@ $$;
 
 -- ── Fixture ───────────────────────────────────────────────────────────────
 --
--- An owner who can take money, an ACCOUNTANT who can see the takings and not
--- take them, and a groomer who holds neither. The accountant is the load-
--- bearing one: measured against role_preset_permissions, `financial_view_amounts`
--- is held by owner, admin, manager, supervisor, reception AND accountant, while
--- `financial_take_payment` is not held by the accountant. That gap is the
--- entire subject of C4 and C5.
+-- An owner, an accountant and a groomer.
+--
+-- The accountant was introduced as somebody who could SEE takings without being
+-- able to take them. That was wrong — see C4. Every preset role holding
+-- `financial_view_amounts` also holds `financial_take_payment`, so the
+-- accountant is a second person who CAN attach, not a control. The groomer,
+-- holding neither, is the one carrying the refusals.
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000002c0001', 'cs-owner@example.invalid'),
@@ -93,6 +94,14 @@ insert into public.facility_memberships (id, facility_id, profile_id, role, is_a
    '00000000-0000-0000-0000-0000002c0003', 'groomer', true)
 on conflict (id) do nothing;
 
+-- Somebody to attach a payment TO, for the positive control below. `ref` has no
+-- default on this table, so it is named explicitly rather than left to a
+-- sequence that does not exist.
+insert into public.clients (id, ref, facility_id, name, email) values
+  ('00000000-0000-0000-0000-0000002c0050', 92000041,
+   '00000000-0000-0000-0000-0000002c0020', 'CS Client', 'cs-client@example.invalid')
+on conflict (id) do nothing;
+
 -- A payment Clover took that Yipyy cannot place.
 --
 -- Written AS service_role, which is the only role that can: the table has no
@@ -106,7 +115,11 @@ insert into public.unattached_payments
    currency, card_brand, card_last4, entry_method, taken_at)
 values
   ('00000000-0000-0000-0000-0000002c0040', '00000000-0000-0000-0000-0000002c0020',
-   'CS-CLOVER-PAYMENT-1', 6250, 500, 250, 'CAD', 'VISA', '4242', 'chip', now());
+   'CS-CLOVER-PAYMENT-1', 6250, 500, 250, 'CAD', 'VISA', '4242', 'chip', now()),
+  -- Its own row. C5c ATTACHES, and an attach is not repeatable, so sharing the
+  -- row above would make the order these blocks run in load-bearing.
+  ('00000000-0000-0000-0000-0000002c0041', '00000000-0000-0000-0000-0000002c0020',
+   'CS-CLOVER-PAYMENT-2', 6250, 500, 250, 'CAD', 'VISA', '4242', 'chip', now());
 
 reset role;
 
@@ -200,30 +213,50 @@ end $$;
 
 -- ── C4  Seeing the queue is not claiming from it ──────────────────────────
 --
--- The accountant reads it (financial_view_amounts) and cannot attach
--- (financial_take_payment). Both halves in one block, because a test that only
--- proved the refusal would pass just as well against a function nobody can call.
+-- MEASURED 2026-08-24, and the original premise of this block was FALSE. It
+-- said `financial_take_payment` "is not held by the accountant". Counting
+-- role_preset_permissions:
+--
+--   sees amounts: owner admin manager supervisor reception retail accountant
+--   can take    : owner admin manager supervisor reception retail accountant
+--
+-- They are the same seven. **No preset role separates seeing takings from
+-- taking them**, so the accountant attaching is CORRECT, and this test spent
+-- its life asserting a refusal that only ever happened because the arguments
+-- were invalid. (It also means the "Needs someone who can take payments" branch
+-- in UnattachedPayments.tsx is unreachable without a custom permission
+-- override. That is fine; it is not dead, it is rare.)
+--
+-- So the person who must be refused is the GROOMER, who holds neither. They do
+-- not see the row at all, and the function is deliberately written to say "No
+-- such payment" rather than "not yours" — telling an outsider nothing about
+-- what the facility holds. 42704, asserted exactly.
 
 do $$
 declare visible integer; state text;
 begin
   set local role authenticated;
   set local request.jwt.claims to
-    '{"sub":"00000000-0000-0000-0000-0000002c0002","role":"authenticated"}';
+    '{"sub":"00000000-0000-0000-0000-0000002c0003","role":"authenticated"}';
 
   select count(*) into visible from public.unattached_payments
    where facility_id = '00000000-0000-0000-0000-0000002c0020';
 
   begin
     perform public.attach_unattached_payment(
-      '00000000-0000-0000-0000-0000002c0040'::uuid, null, null, 'should refuse');
+      '00000000-0000-0000-0000-0000002c0040'::uuid, null,
+      '00000000-0000-0000-0000-0000002c0050'::uuid, 'should refuse');
     state := 'ALLOWED';
   exception when others then state := sqlstate;
   end;
 
   reset role;
-  perform pg_temp.t('C4 an accountant sees the queue and cannot attach from it',
-    visible = 1 and state <> 'ALLOWED',
+  -- A real client is named so the call REACHES the gate. Passing null for both
+  -- the booking and the client is refused at argument validation with 22023,
+  -- before any policy is consulted — which is what the first version did, and
+  -- why it passed while nobody at all could attach.
+  perform pg_temp.t('C4 a groomer sees none of the queue and cannot attach',
+    visible = 0 and state = '42704',
     'visible=' || visible || ' attach=' || state);
 end $$;
 
@@ -269,6 +302,71 @@ begin
 
   perform pg_temp.t('C5b a refused attach leaves the payment unclaimed',
     moved = 1, 'still unattached=' || moved);
+end $$;
+
+-- ── C5c  THE ACTUAL POSITIVE CONTROL ───────────────────────────
+--
+-- C5a and C5b were labelled "the positive control" and are nothing of the kind:
+-- both assert a REFUSAL. C5a refuses at argument validation, before the UPDATE
+-- is reached, so it never touches RLS at all. C4, C5a, C5b, C8a and C8b were
+-- therefore all satisfied by functions that refused EVERYBODY — which is exactly
+-- what they did, because `unattached_payments` had no UPDATE policy and RLS
+-- excluded every row before any permission predicate was evaluated. The whole
+-- queue was unresolvable in production and every test passed.
+--
+-- The comment above C5 says: "Without this, C4 is satisfied by a function that
+-- refuses everybody." It was right, and then did not do it.
+--
+-- So: the OWNER holds `financial_take_payment`. They must be ALLOWED, the queue
+-- row must move to `attached`, and a ledger row must exist carrying the Clover
+-- identifiers. Assert the effects, not the absence of an exception.
+
+do $$
+declare payment_id uuid; state text; moved text; ledger integer; merchant text;
+begin
+  set local role authenticated;
+  set local request.jwt.claims to
+    '{"sub":"00000000-0000-0000-0000-0000002c0001","role":"authenticated"}';
+  begin
+    payment_id := public.attach_unattached_payment(
+      '00000000-0000-0000-0000-0000002c0041'::uuid, null,
+      '00000000-0000-0000-0000-0000002c0050'::uuid, 'walk-in nail trim');
+    state := 'ALLOWED';
+  exception when others then state := sqlstate || ' ' || sqlerrm;
+  end;
+  reset role;
+
+  perform pg_temp.t('C5c an owner who can take payments CAN attach one',
+    state = 'ALLOWED' and payment_id is not null, 'state=' || state);
+
+  select status into moved from public.unattached_payments
+   where id = '00000000-0000-0000-0000-0000002c0041';
+  perform pg_temp.t('C5c2 the attached payment leaves the queue',
+    moved = 'attached', 'status=' || coalesce(moved, 'null'));
+
+  select count(*), max(processor_merchant_id) into ledger, merchant
+    from public.payments where id = payment_id;
+  perform pg_temp.t('C5c3 attaching writes exactly one ledger row',
+    ledger = 1, 'rows=' || ledger);
+
+  -- Attaching twice must not be possible. The queue row is claimed BEFORE the
+  -- append-only insert precisely so a second press cannot double the takings.
+  set local role authenticated;
+  set local request.jwt.claims to
+    '{"sub":"00000000-0000-0000-0000-0000002c0001","role":"authenticated"}';
+  begin
+    perform public.attach_unattached_payment(
+      '00000000-0000-0000-0000-0000002c0041'::uuid, null,
+      '00000000-0000-0000-0000-0000002c0050'::uuid, 'again');
+    state := 'ALLOWED';
+  exception when others then state := sqlstate;
+  end;
+  reset role;
+
+  select count(*) into ledger from public.payments
+   where processor_payment_id = 'CS-CLOVER-PAYMENT-2';
+  perform pg_temp.t('C5c4 attaching the same payment twice writes ONE row',
+    state = '42501' and ledger = 1, 'state=' || state || ' rows=' || ledger);
 end $$;
 
 -- ── C6  Anon reaches none of it ───────────────────────────────────────────

@@ -1913,6 +1913,92 @@ gh api repos/Yipyy-Inc/puneet/deployments --jq '.[0] | "\(.created_at) \(.sha[0:
 
 If that sha is not the one you just pushed, you have not shipped.
 
+### 🔴 “No UPDATE policy” means no row is updatable — not “no restriction”
+
+`unattached_payments` shipped with RLS on and exactly one policy, for SELECT.
+The two functions that resolve a queue row are `security invoker` by deliberate
+design, so that `payments_insert` and the caller's own permissions decide. The
+dismiss function carried this comment:
+
+```
+-- INVOKER cannot help here: there is no UPDATE policy on this table, so
+-- the permission is asked for directly.
+```
+
+**That sentence is the bug, written down and reasoned about.** No UPDATE policy
+does not mean UPDATE is unguarded so check it yourself; it means **RLS excludes
+every row from the UPDATE**, before the `where` clause is evaluated. The
+`has_permission(...)` predicate was never what was being tested. Nothing could
+ever be dismissed or attached.
+
+**One failed honestly and one did not, and the difference is the whole entry.**
+
+`dismiss_unattached_payment` returns `row_count > 0`, so it returned false and
+the screen said "that payment was not set aside". Wrong, but visible — and it
+is the only reason this was caught, by a person clicking "Not a Yipyy payment"
+on an 11¢ test charge.
+
+`attach_unattached_payment` did this instead:
+
+```
+1. insert into public.payments     -> SUCCEEDS (payments has an insert policy)
+2. update unattached_payments      -> 0 rows, no error raised
+3. return v_payment                -> the caller reports success
+```
+
+The ledger row is written and **permanent** — `payments` is append-only, revoked
+from every role including `service_role`. The queue row stays `unattached`, so
+the payment reappears in "payments to attach", and **the next press writes a
+second ledger row for the same Clover payment.** A facility tidying their queue
+would double their own takings, repeatedly, with the screen agreeing every time.
+Verified after the fact that this never fired: no `payments` row carries
+`author_name = 'Attached from Clover'`.
+
+**The fix is the missing policy plus a refusal to trust it** (20260824190000).
+`attach` now claims the queue row FIRST and raises if that update touches zero
+rows, so the irreversible insert cannot happen unless the reversible thing
+provably succeeded — and raising rolls both back. **Order irreversible writes
+last, and check the row count of everything before them.**
+
+**`bun run check:rls-writes` exists for exactly this shape and did not catch
+it.** It reads API routes for updates that cannot tell an RLS refusal from a
+no-op; this was a plpgsql function, which it does not read. The gate is not
+wrong, its reach is — a `get diagnostics row_count` check belongs in every
+invoker function that writes, and nothing enforces that.
+
+**And a policy is not a privilege.** `grant update ... to authenticated` was
+needed as well; the policy alone would have kept refusing.
+
+**The SQL suite had a block literally titled "The positive control" and it was
+not one.** `clover-sync.sql` C5a/C5b both asserted REFUSALS, and C5a's refusal
+was `22023` — argument validation, reached before the UPDATE, so it never
+touched RLS. C4 did the same: it passed `null` for both the booking and the
+client, got refused by the same validation, and asserted `state <> 'ALLOWED'`.
+Five assertions across C4, C5a, C5b, C8a and C8b were all satisfied by functions
+that refused **everybody**, which is exactly what they were doing.
+
+The header above C5 said: _"Without this, C4 is satisfied by a function that
+refuses everybody."_ It named the failure and then committed it.
+
+**A refusal test must reach the thing it claims to test.** Assert the exact
+errcode, never "anything but success", and give the call arguments valid enough
+to get past validation. C5c now attaches as a permitted user and asserts the
+row moved, one ledger row exists, and a second attempt writes no second row.
+
+**Two more facts fell out of writing it, both measured:**
+
+1. **Claiming the queue row before the ledger insert is impossible.**
+   `unattached_attached_has_payment` requires `attached_payment_id` whenever
+   status is `attached`, so there is no valid moment to claim first. The
+   ordering fix was wrong and C5c caught it on its first run. Raising _after_
+   the insert is equivalent — the exception rolls the insert back with it.
+2. **No preset role separates seeing takings from taking them.** All seven roles
+   holding `financial_view_amounts` also hold `financial_take_payment`, so C4's
+   accountant was never a control. The refusals belong to the groomer, who holds
+   neither. Consequence for the UI: the "Needs someone who can take payments"
+   branch in `UnattachedPayments.tsx` is unreachable without a custom permission
+   override — rare, not dead.
+
 ### 🔴 A Clover payment is not money until `result` says so
 
 `reconcile.ts` reads a payment from Clover and decides what to do with it. Until

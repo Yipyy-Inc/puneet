@@ -193,6 +193,14 @@ export function UnattachedPayments() {
                   ) : (
                     // Said, rather than a disabled button somebody hovers over
                     // hunting for a reason.
+                    //
+                    // Rare by construction, and worth knowing why: measured
+                    // 2026-08-24, every preset role holding
+                    // `financial_view_amounts` also holds
+                    // `financial_take_payment`. So anyone who can SEE this card
+                    // can normally attach from it, and this branch only appears
+                    // under a custom permission override. Not dead code - but
+                    // do not expect to meet it by switching preset roles.
                     <span className="text-muted-foreground text-xs">
                       Needs someone who can take payments
                     </span>
