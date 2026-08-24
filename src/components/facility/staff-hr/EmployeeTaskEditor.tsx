@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Upload, FileText } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   EMPLOYEE_TASK_LABEL,
   EMPLOYEE_TASK_FIELDS,
@@ -61,7 +62,7 @@ function newEmployeeTask(
     ...(type === "document_upload" || type === "document_sign"
       ? { documentName: "" }
       : {}),
-    ...(type === "document_sign" ? { documentRef: "" } : {}),
+    ...(type === "document_sign" ? { agreementText: "" } : {}),
     ...(type === "custom_question"
       ? { question: { format: "text" as CustomQuestionFormat, prompt: "" } }
       : {}),
@@ -157,39 +158,38 @@ export function EmployeeTaskEditor({
                       }
                     />
                   </div>
+                  {/* ── THE WORDS, NOT A REFERENCE TO THEM ─────────────
+                      This replaced an "Upload PDF" control that stored
+                      `e.target.files[0].name` and nothing else — the FILENAME.
+                      No file was ever uploaded, so a facility could attach
+                      "employment-contract.pdf", see it listed, and have
+                      nothing but a string.
+
+                      The text lives here because it is what gets PROVEN.
+                      `/api/staff-signatures` copies it into the signature row
+                      and hashes it, so the record still says what was agreed
+                      after this task is edited or deleted. A pointer to a
+                      document somebody can change afterwards proves nothing,
+                      which is why that route refuses to record a signature
+                      against a task with no text at all. */}
                   <div className="space-y-1">
-                    <Label className="text-xs">
-                      Facility PDF (employee signs)
+                    <Label className="text-xs" htmlFor={`agreement-${task.id}`}>
+                      What the employee is agreeing to
                     </Label>
-                    {task.documentRef ? (
-                      <div className="flex items-center gap-2 text-sm">
-                        <FileText className="text-muted-foreground size-4" />
-                        <span className="truncate">{task.documentRef}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7"
-                          onClick={() => patch(task.id, { documentRef: "" })}
-                        >
-                          Replace
-                        </Button>
-                      </div>
-                    ) : (
-                      <label className="border-muted-foreground/30 hover:bg-muted/50 flex w-fit cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-1.5 text-sm">
-                        <Upload className="size-4" />
-                        Upload PDF
-                        <input
-                          type="file"
-                          accept="application/pdf"
-                          className="hidden"
-                          onChange={(e) =>
-                            patch(task.id, {
-                              documentRef: e.target.files?.[0]?.name ?? "",
-                            })
-                          }
-                        />
-                      </label>
-                    )}
+                    <Textarea
+                      id={`agreement-${task.id}`}
+                      value={task.agreementText ?? ""}
+                      rows={6}
+                      placeholder="Paste the full text of the agreement. This is copied into the signature record, so it is what the signature proves."
+                      onChange={(e) =>
+                        patch(task.id, { agreementText: e.target.value })
+                      }
+                    />
+                    <p className="text-muted-foreground text-[11px]">
+                      {task.agreementText?.trim()
+                        ? "Copied into each signature and hashed. Editing it later does not change signatures already given."
+                        : "Required — a signature cannot be recorded against an agreement with no text."}
+                    </p>
                   </div>
                 </div>
               )}

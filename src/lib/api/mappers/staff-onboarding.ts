@@ -67,6 +67,7 @@ function rowToEmployeeTask(
   const config = (row.config ?? {}) as {
     fields?: EmployeeFieldSpec[];
     question?: EmployeeCustomQuestion;
+    agreementText?: string;
   };
   return {
     id: appId(row),
@@ -77,6 +78,7 @@ function rowToEmployeeTask(
     fields: config.fields ?? [],
     documentName: row.document_name ?? undefined,
     documentRef: row.document_ref ?? undefined,
+    agreementText: config.agreementText,
     question: config.question,
   };
 }
@@ -211,6 +213,12 @@ export function employeeTasksToRows(
     config: {
       fields: task.fields ?? [],
       ...(task.question ? { question: task.question } : {}),
+      // The agreement's words. `/api/staff-signatures` reads them from HERE and
+      // ignores whatever the signing request claims they were — so a signature
+      // records what the facility wrote, not what the signer sent.
+      ...(task.agreementText?.trim()
+        ? { agreementText: task.agreementText.trim() }
+        : {}),
     } as unknown as TablesInsert<"onboarding_employee_tasks">["config"],
   }));
 }

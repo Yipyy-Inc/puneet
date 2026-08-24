@@ -101,8 +101,12 @@ const navItems: NavItem[] = [
     requires: "schedule.edit",
   },
   {
+    // Points OUT of the scheduling module, like Company above. This tab
+    // rendered a second onboarding tracker and a second document-template
+    // editor, both over fixtures, while the real ones — six tables, ten routes
+    // and a wired editor — sit under Staff and in settings. See next.config.ts.
     label: "Onboarding",
-    href: "/facility/dashboard/services/scheduling/onboarding",
+    href: "/facility/dashboard/staff",
     icon: BookOpen,
     requires: "employee.edit",
   },

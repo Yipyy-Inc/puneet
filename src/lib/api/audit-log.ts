@@ -317,11 +317,7 @@ async function readTrail(search: string): Promise<AuditLogEntry[]> {
 }
 
 /** The entity types the roster writes. Kept here so one list feeds the query. */
-export const SCHEDULING_ENTITY_TYPES = [
-  "shift",
-  "time_off",
-  "shift_swap",
-] as const;
+const SCHEDULING_ENTITY_TYPES = ["shift", "time_off", "shift_swap"] as const;
 
 export const auditLogQueries = {
   all: () => ({
