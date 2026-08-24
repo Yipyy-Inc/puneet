@@ -40,7 +40,8 @@
     "check:link-origin": "bun scripts/check-link-origin.ts",
     "check:success-claims": "bun scripts/check-success-claims.ts",
     "check:passkey-email-verified": "bun scripts/check-passkey-email-verified.ts",
-    "check:doc-counts": "bun scripts/check-doc-counts.ts"
+    "check:doc-counts": "bun scripts/check-doc-counts.ts",
+    "shoot": "bun scripts/shoot.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.91.1",

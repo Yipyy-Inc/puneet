@@ -351,6 +351,27 @@ test.describe("Yipyy Pay — the review queue", () => {
     expect(response.status()).toBe(403);
   });
 
+  test("runs the detail query for real, and 404s a stranger's id", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.admin);
+    const response = await page.request.get(
+      `${QUEUE}/00000000-0000-0000-0000-000000000000`,
+    );
+
+    // 404 is the interesting part, but not for the reason it looks. A
+    // malformed PostgREST select string — a relation named wrongly, a column
+    // that does not exist — fails at REQUEST time, not compile time, and would
+    // surface here as a 400 or a 500. So an admin asking for an id that cannot
+    // exist is the cheapest possible proof that the detail query, joins and
+    // all, is one Postgres will actually run.
+    //
+    // It writes nothing, needs no application to exist, and is the only test
+    // that covers the select at all: the shared facility may have no
+    // application, so nothing else here can reach the happy path.
+    expect(response.status()).toBe(404);
+  });
+
   test("admits a platform administrator, and answers with a list", async ({
     page,
   }) => {
