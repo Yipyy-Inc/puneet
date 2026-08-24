@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { cloverConfig } from "./config";
 import { chargeableConnection, validAccessToken } from "./connection";
+import { createAtomicOrder, type OrderLine } from "./orders";
 
 // ============================================================================
 // Taking the money.
@@ -91,6 +92,14 @@ export interface ChargeRequest {
   source: string;
   createdBy: string | null;
   authorName?: string;
+  /**
+   * What is being paid for, for the Clover order.
+   *
+   * Optional. A missing list means no order — never a failed charge.
+   */
+  orderLines?: OrderLine[];
+  /** The booking this belongs to, written on the order as a note. */
+  orderNote?: string;
 }
 
 export async function chargeCard(
@@ -219,6 +228,41 @@ export async function chargeCard(
       "no_token",
       "The connection to Clover could not be refreshed. Reconnect the payment account.",
     );
+  }
+
+  // ── 2b. The order, before the money ─────────────────────────────────────
+  //
+  // Created here because `payments` is append-only: the order id must be on the
+  // intent before `record_clover_payment` runs, or it can never reach the
+  // ledger row.
+  //
+  // NOTE ON WHAT THIS IS NOT. Clover supports a real order → payment link
+  // online: POST /v1/orders/{orderId}/pay, the same Ecommerce host and the same
+  // `clv_` token used below. That is the better shape and it is deliberately
+  // NOT built here, because it changes how money is taken and could not be
+  // proven: the sandbox merchant's access token had expired, refreshing it
+  // outside the app would invalidate the stored refresh token (Clover rotates
+  // them), and pawradise's only members are production identities so the app
+  // path is unreachable from a local run.
+  //
+  // So the charge below is byte-identical to what it has always been, the order
+  // is a record, and the id is kept. Switching to /v1/orders/{id}/pay needs one
+  // browser session against the sandbox and should be its own change.
+  if (request.orderLines && request.orderLines.length > 0) {
+    const orderId = await createAtomicOrder({
+      accessToken: active.accessToken,
+      merchantId: active.merchantId,
+      environment: active.environment,
+      lines: request.orderLines,
+      taxCents,
+      note: request.orderNote,
+    });
+    if (orderId) {
+      await admin.rpc("name_intent_order", {
+        p_intent_id: intentId,
+        p_order_id: orderId,
+      });
+    }
   }
 
   // ── 3. The only step that moves money ────────────────────────────────────
