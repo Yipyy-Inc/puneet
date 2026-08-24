@@ -3,6 +3,7 @@ import "server-only";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { cloverConfig } from "./config";
 import { validAccessToken } from "./connection";
+import { facilityTerminals } from "./devices";
 import { fetchMerchantProfile } from "./merchant";
 import { cloverGet } from "./request";
 
@@ -61,7 +62,7 @@ interface CloverV3Payment {
    * stripped, because Clover caps the field at 32 characters and a uuid is 36.
    */
   externalPaymentId?: string;
-  order?: { id?: string };
+  order?: { id?: string; currency?: string };
   device?: { id?: string; serial?: string };
   tender?: { label?: string; labelKey?: string };
   cardTransaction?: {
@@ -136,7 +137,7 @@ export async function reconcilePayment(
   // chance to ask is this read.
   const read = await cloverGet<CloverV3Payment>(
     config.apiOrigin,
-    `/v3/merchants/${active.merchantId}/payments/${cloverPaymentId}?expand=refunds,order,device,tender`,
+    `/v3/merchants/${active.merchantId}/payments/${cloverPaymentId}?expand=refunds,order,device,tender,cardTransaction`,
     active.accessToken,
     active.merchantId,
   );
@@ -179,7 +180,7 @@ export async function reconcilePayment(
     //   a payment genuinely taken outside Yipyy. Still not a ledger row, but
     //   held where somebody can say what it was, instead of discarded so that
     //   the day's takings can never agree with Clover's.
-    return claimOrHold(admin, facilityId, payment);
+    return claimOrHold(admin, facilityId, payment, active.merchantId);
   }
 
   const voided = payment.result === "VOIDED";
@@ -513,6 +514,7 @@ async function claimOrHold(
   admin: ReturnType<typeof createAdminClient>,
   facilityId: string,
   payment: CloverV3Payment,
+  merchantId: string,
 ): Promise<PaymentReconciliation> {
   const cloverPaymentId = payment.id as string;
 
@@ -587,7 +589,15 @@ async function claimOrHold(
       // opened for. That is a disagreement about money and it is held for a
       // person, never forced through.
       const why = recorded.error?.message ?? "the ledger refused the row";
-      await holdIt(admin, facilityId, payment, baseCents, tipCents, taxCents);
+      await holdIt(
+        admin,
+        facilityId,
+        payment,
+        merchantId,
+        baseCents,
+        tipCents,
+        taxCents,
+      );
       return {
         kind: "unattached",
         detail: `Matched intent ${intentId} but could not settle it (${why}). Held for review.`,
@@ -595,7 +605,15 @@ async function claimOrHold(
     }
   }
 
-  await holdIt(admin, facilityId, payment, baseCents, tipCents, taxCents);
+  await holdIt(
+    admin,
+    facilityId,
+    payment,
+    merchantId,
+    baseCents,
+    tipCents,
+    taxCents,
+  );
   return {
     kind: "unattached",
     detail:
@@ -603,10 +621,55 @@ async function claimOrHold(
   };
 }
 
+// ── Which till took it ────────────────────────────────────────────────────
+//
+// Clover carries `device` on a payment as a bare reference — `{ id: "43cbda75-
+// 8d97-757c-1c59-068cf4026206" }` — and `expand=device` does NOT add the
+// serial. Measured, not assumed: the first live sweep stored exactly that and
+// left `processor_device_serial` null on every payment it held.
+//
+// A uuid means nothing to the person holding the terminal. The serial is the
+// number printed on the sticker, and it is already what the terminal path
+// writes into that column via `record_clover_payment`. Translating here keeps
+// ONE meaning in the column instead of two, which is the whole reason the
+// column is named for the serial and not for "whatever Clover said".
+//
+// Cached per facility: a sweep of a hundred payments must not become a hundred
+// device lookups, and a merchant's terminals do not change between two
+// payments. A miss is null — an unknown till is not worth failing a sweep for.
+const DEVICE_ESTATE_MS = 5 * 60_000;
+const deviceEstate = new Map<
+  string,
+  { readAt: number; serialById: Map<string, string> }
+>();
+
+async function serialFor(
+  facilityId: string,
+  deviceId: string | undefined,
+): Promise<string | null> {
+  if (!deviceId) return null;
+
+  const cached = deviceEstate.get(facilityId);
+  if (cached && Date.now() - cached.readAt < DEVICE_ESTATE_MS) {
+    return cached.serialById.get(deviceId) ?? null;
+  }
+
+  const read = await facilityTerminals(facilityId);
+  const serialById = new Map<string, string>();
+  if (read.kind === "terminals") {
+    for (const terminal of read.terminals) {
+      if (terminal.serial) serialById.set(terminal.id, terminal.serial);
+    }
+  }
+  deviceEstate.set(facilityId, { readAt: Date.now(), serialById });
+  return serialById.get(deviceId) ?? null;
+}
+
 async function holdIt(
   admin: ReturnType<typeof createAdminClient>,
   facilityId: string,
   payment: CloverV3Payment,
+  merchantId: string,
   baseCents: number,
   tipCents: number,
   taxCents: number,
@@ -620,7 +683,19 @@ async function holdIt(
     p_tip_cents: tipCents,
     p_tax_cents: taxCents,
     p_processor_order_id: payment.order?.id ?? null,
-    p_processor_device_serial: payment.device?.serial ?? null,
+    // Both of these have been parameters of record_unattached_payment since the
+    // migration that created it, defaulting to null, and nothing passed either.
+    // The merchant is the sharp one: attach_unattached_payment copies it onto
+    // the `payments` row, and `payments` cannot be updated — so a null here is
+    // a permanently anonymous ledger row, which is the exact thing the client
+    // asked us not to produce.
+    p_processor_merchant_id: merchantId,
+    // Clover states it on the order, per payment, rather than making us assume
+    // the connection's settlement currency still matches this one.
+    p_currency: payment.order?.currency ?? null,
+    p_processor_device_serial:
+      payment.device?.serial ??
+      (await serialFor(facilityId, payment.device?.id)),
     p_card_brand: payment.cardTransaction?.cardType ?? null,
     p_card_last4: payment.cardTransaction?.last4 ?? null,
     p_entry_method: entryMethodOf(payment),
