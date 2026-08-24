@@ -4770,9 +4770,31 @@ merely shares a name, until you have read it.
 
 ## Snapshot (2026-08-24, what a full suite run found)
 
-Three entries from one CI run that reported 9 failures. Two are the same
-mistake wearing different clothes — a spec depending on state it did not create
-— and the third is why a browser script that "obviously works" does not.
+Five entries. They began with one CI run reporting 9 failures and grew as each
+answer exposed the next thing, which is itself the point of the day.
+
+**They are all the same failure.** In every case the thing that made it work
+locally was **invisible from where you were standing**:
+
+| what broke                                       | what was holding it up, out of sight                      |
+| ------------------------------------------------ | --------------------------------------------------------- |
+| a spec that passed alone and failed in the suite | org-chart rows another spec created and deleted           |
+| a teardown that timed out                        | a waiver list that only ever grows, across every run ever |
+| a browser script that hung for 180s              | which runtime was holding the pipe                        |
+| a `format:check` failure that was not one        | a peer's file, mid edit-then-format                       |
+| rows leaked with nothing running locally         | a CI job cancelled on a machine that is not yours         |
+
+That is not an argument that local checking is weak. It is that **the state
+deciding the outcome sits somewhere nobody is looking** — a hoisted dependency
+is not in `package.json`, another spec's rows are not in your file, a cancelled
+job is not on your machine.
+
+**The corollary is the useful half: every one of these was cheap to CHECK and
+none was cheap to NOTICE.** `grep package.json`, `gh run list`,
+`git status --short <file>`, count the rows before you assert on them — seconds
+each, and worth nothing unless something prompts you. Nothing did, five times.
+So when a result surprises you, the first question is not "what is wrong with my
+code" but **"what is holding this up that I cannot see from here?"**
 
 ### 🔴 `facility_positions` is EMPTY at rest, so a spec cannot assume one exists — 2026-08-24
 
