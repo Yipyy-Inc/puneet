@@ -211,7 +211,12 @@ export function YipyyPayLanding({
         <ApplicationResumeNotice application={application} onResume={begin} />
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Two columns, never four. This renders inside the settings content
+          pane, which is about 540px wide on a 1440px screen — a `lg:grid-cols-4`
+          here gave four ~120px cards whose headings wrapped to two lines and
+          whose body text broke every three words. The breakpoint describes the
+          VIEWPORT, and the viewport is not what this sits in. */}
+      <div className="grid gap-4 sm:grid-cols-2">
         {VALUE_PROPS.map(({ icon: Icon, title, body }) => (
           <Card
             key={title}

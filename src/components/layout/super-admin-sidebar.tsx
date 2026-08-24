@@ -140,7 +140,10 @@ export function AppSidebar() {
           // Facilities applying for a Yipyy Pay merchant account. It sits under
           // Commercial rather than Platform Control because it is somebody's
           // daily work with a queue and a wait time, not a switch.
-          title: "Merchant Applications",
+          // "Merchant Applications" truncated to "Merchant Applicatio…" once
+          // the active-item chevron appeared beside it. Shorter, and it names
+          // the product a facility is applying for rather than the paperwork.
+          title: "Pay Applications",
           url: "/dashboard/commercial/merchant-applications",
           icon: ClipboardCheck,
           disabled: false,
