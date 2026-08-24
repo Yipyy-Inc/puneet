@@ -1755,6 +1755,62 @@ telling a facility their hardware will not work is a claim worth being sure of.
 It searches `productName`, `model` AND `deviceTypeName`, because reading `model`
 alone reported a supported Flex 4 (`Clover_C406`) as unknown on a live screen.
 
+### 🔴 This project deploys on Vercel's **Hobby** plan, and it silently sets the rules
+
+Found 2026-08-24, after four hours of believing a push had shipped when nothing
+had. `bun run typecheck && lint && format:check` were green, CI was green
+including `build`, `git push` was accepted, GitHub ran every check — and
+production kept serving an eleven-o'clock build.
+
+**The timeline, because the shape of it is the lesson:**
+
+```
+11:51  5756fc8b deployed.  The last deployment of the day.
+12:51  b2ba179c pushed. It added the first `crons` key vercel.json has
+       ever had:  "schedule": "17 */4 * * *"   — six runs a day.
+12:54  the Vercel project's state changes.
+        … six more pushes, all accepted by GitHub, all green in CI …
+16:37  production is still serving 5756fc8b.
+```
+
+`GET repos/…/deployments` stops at `5756fc8b` and the commit status for
+`b2ba179c` is **`pending`, forever**. Vercel did not fail a build — it never
+created a deployment, so there was no failed deployment to notice, no red cross
+anywhere, and no notification. **The absence of a deployment looks exactly like
+a deployment you have not checked on.**
+
+**The plan is the constraint.** `get_git_deployment_context` reports
+`"plan": "hobby"` for team Yipyy. Hobby permits cron jobs **once per day**. A
+sub-daily schedule is not a warning on that plan; it is a config the project may
+not have, and everything downstream of it stopped.
+
+**Two things follow, and the second is bigger than the cron:**
+
+1. **Anything in `vercel.json` is a deploy-time contract with the plan, not
+   just configuration.** Crons, regions, function sizes and durations all have
+   Hobby ceilings. Adding one is not like adding a route — no local gate,
+   including `bun run build`, reads `vercel.json` against the plan. Change it
+   and then go and confirm a deployment was _created_.
+
+2. **A commercial product is running on a Hobby plan.** This codebase takes real
+   card payments through a live Clover merchant. Hobby forbids commercial use,
+   caps deployments at 100/day, and has no SLA. That is a business decision
+   somebody has to make deliberately — it is recorded here because it was
+   discovered by accident, while chasing a bug that turned out to be it.
+
+**The correction that matters most is to a sentence in this repo's own docs.**
+AGENTS.md and CLAUDE.md both say _"Vercel deploys production from `main` on
+push, so a bad commit reaches customers before CI reports it."_ For four hours
+on 2026-08-24 the opposite was true: **CI reported and nothing reached
+customers at all.** The doc describes a promise the platform makes when it is
+able to keep it. **Confirm a deployment exists; do not infer it from a push.**
+
+```
+gh api repos/Yipyy-Inc/puneet/deployments --jq '.[0] | "\(.created_at) \(.sha[0:8])"'
+```
+
+If that sha is not the one you just pushed, you have not shipped.
+
 ### 🔴 A Clover payment is not money until `result` says so
 
 `reconcile.ts` reads a payment from Clover and decides what to do with it. Until

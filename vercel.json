@@ -4,7 +4,7 @@
   "crons": [
     {
       "path": "/api/cron/clover-sweep",
-      "schedule": "17 */4 * * *"
+      "schedule": "17 4 * * *"
     }
   ]
 }
