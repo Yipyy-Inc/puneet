@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { config as loadEnv } from "dotenv";
+import { readFileSync } from "node:fs";
 
 // ============================================================================
 // The config behind `bun run shoot` — looking at the app, not testing it.
@@ -12,7 +12,20 @@ import { config as loadEnv } from "dotenv";
 // would mean waiting three minutes to look at a screen.
 // ============================================================================
 
-loadEnv({ path: ".env.local", quiet: true });
+// The same four lines playwright.config.ts uses, and for its stated reason: a
+// `dotenv` import compiles locally because the package is hoisted into
+// node_modules by something else, and FAILS in CI, where `bun install
+// --frozen-lockfile` installs exactly the lockfile and dotenv is not a
+// dependency of this project. Caught by CI typecheck on 2026-08-24 after a
+// local typecheck passed — the difference between the two is the whole lesson.
+try {
+  for (const line of readFileSync(".env.local", "utf8").split("\n")) {
+    const match = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+    if (match && !process.env[match[1]!]) process.env[match[1]!] = match[2]!;
+  }
+} catch {
+  /* no .env.local — CI, or a fresh clone */
+}
 
 const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3100";
 
