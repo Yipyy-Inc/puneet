@@ -1799,29 +1799,65 @@ There was no red cross to open, no notification, and nothing to retry.
 **The absence of a deployment looks exactly like a deployment you have not
 checked on.**
 
-**The cause was NOT the schedule, and this entry said it was.** That first
-version is left described here rather than quietly overwritten, because being
-confidently wrong in a debt map is the failure this file exists to prevent.
+**Two faults, in series, and the first hid the second.** Both are proven now;
+this entry was rewritten twice before it was, and how that happened is the most
+useful part of it.
 
-The reasoning was: the team is on `"plan": "hobby"`
-(`get_git_deployment_context`), Hobby restricts cron frequency, `17 */4 * * *`
-is six a day, therefore over the limit. Timeline fit, so it got written down as
-fact. **It was never verified against Vercel's documentation, and a later search
-did not support it.**
+**Blocker 1 — the cron frequency.** The commit added `17 */4 * * *`, six runs a
+day. Vercel's own failure status linked to `vercel.link/3Fpeeb1`, which
+redirects to
+[cron-jobs/usage-and-pricing](https://vercel.com/docs/cron-jobs/usage-and-pricing):
 
-Reducing the schedule to `17 4 * * *` DID make deployments start being created
-again — and the one it created failed immediately, with a real id and a real
-log, saying something else entirely:
+> Hobby accounts are limited to cron jobs that run **once per day**. Cron
+> expressions that would run more frequently **will fail during deployment**.
+
+|           | Minimum interval | Scheduling precision |
+| --------- | ---------------- | -------------------- |
+| **Hobby** | Once per day     | Per-hour (±59 min)   |
+| **Pro**   | Once per minute  | Per-minute           |
+
+It fails _during deployment_, before any build, which is why there was no
+deployment record to open and no log to read.
+
+**Blocker 2 — the secret.** With the schedule reduced to `17 4 * * *`, a
+deployment was created for the first time in six hours, and failed at once:
 
 ```
 Error: The `CRON_SECRET` environment variable contains leading or trailing
 whitespace, which is not allowed in HTTP header values.
 ```
 
-**A trailing newline on a pasted secret.** Adding the `crons` key is what made
-Vercel start validating `CRON_SECRET` at all, so the commit did trigger this —
-but the fault was the value, not the frequency, and no amount of editing
-`vercel.json` was ever going to reach it.
+A trailing newline on a pasted value, in a `textarea` that accepts one. It was
+set around 13:00, after blocker 1 had already stopped deployments — so it sat
+undetectable until the schedule fix let a build get far enough to read it.
+
+**±59 minutes.** On Hobby, `17 4 * * *` fires somewhere between 04:00 and 04:59
+UTC. Nothing here needs the precision, but do not write a comment promising
+04:17.
+
+### How this entry was wrong twice, which is the actual lesson
+
+1. **Diagnosed the cron limit from the timeline.** Correct, but asserted as fact
+   without a citation.
+2. **Retracted it.** A generic documentation search for Hobby cron limits
+   returned pages showing `* * * * *` as an unremarkable example and no plan
+   caveat. Two sessions searched independently and neither found the pricing
+   page. So the claim was written up as unproven — confidently, at length, with
+   a passage about the danger of confident debt-map entries.
+3. **Followed the error link.** `vercel.link/3Fpeeb1` had been in the failure
+   status the entire time, on three separate commits, and goes straight to the
+   page that says it in bold.
+
+**Nobody clicked the link.** Both sessions went looking for the answer in
+general documentation while the specific answer sat in the error itself. The
+retraction was not caution — it was searching in the wrong place and then
+trusting the silence.
+
+**So: follow the link the error gives you before you go looking for the answer.
+A short-link in a failure status is not decoration; it is the error's own name
+for itself.** And note the second trap: **a fix that changes the symptom looks
+exactly like a fix that found the cause.** Deployments started appearing again,
+which was encouraging and true and not the same as being finished.
 
 **The shape worth keeping is the stacking.** Each step was individually correct:
 
@@ -1841,9 +1877,12 @@ it has been untested for exactly as long as the blocker stood, and the relief of
 seeing movement is the worst moment to stop checking. Confirm READY, not
 created.
 
-The daily schedule stays for now because it is untested either way; revisit
-`*/4` once deployments are green, and verify against Vercel's own docs rather
-than a plausible story about a plan.
+The daily schedule is not provisional — it is the only thing Hobby permits, and
+`*/4` cannot be restored without a Pro plan. The cost is real and should be
+stated plainly: **up to 24 hours before a missed Clover webhook is swept**,
+against 4 under the original schedule. The webhook remains the primary path and
+"Reconcile now" covers the impatient case, but that gap is a plan decision, not
+a code one.
 
 **Two things follow, and the second is bigger than the cron:**
 
@@ -1857,9 +1896,9 @@ than a plausible story about a plan.
    card payments through a live Clover merchant. Hobby forbids commercial use,
    caps deployments at 100/day and has no SLA. That is a business decision
    somebody has to make deliberately — recorded here because it was found by
-   accident. It is **not** what broke the deployments, and the temptation to let
-   a true-and-alarming fact stand in for a cause is precisely how the wrong
-   version of this entry got written.
+   accident while chasing blocker 1, which turned out to be the same plan. The
+   cron ceiling is the cheap symptom; commercial use on a plan that forbids it,
+   with no SLA in front of live card payments, is the expensive one.
 
 **The correction that matters most is to a sentence in this repo's own docs.**
 AGENTS.md and CLAUDE.md both say _"Vercel deploys production from `main` on
