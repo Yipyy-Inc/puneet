@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getViewer, landingPathFor } from "@/lib/auth/viewer";
+import {
+  getViewer,
+  landingPathFor,
+  landingPathForClaims,
+} from "@/lib/auth/viewer";
+import { createServerClient } from "@/lib/supabase/server";
+import { facilitySlugFromHost } from "@/lib/facility-host";
 
 // ============================================================================
 // The front door. It resolves where you belong ONCE, and answers with a REAL
@@ -79,8 +85,48 @@ export async function GET(request: NextRequest) {
 
   // `source`, not `userId !== null` — the gates read the same field, and it is
   // what shows up in logs.
-  const destination =
+  let destination =
     viewer.source === "anonymous" ? "/sign-in" : landingPathFor(viewer);
+
+  // ── THE ADDRESS NAMES A FACILITY, SO HONOUR IT ──────────────────────────
+  //
+  // `landingPathFor` answers from the identity alone, and `isPlatformAdmin`
+  // wins there unconditionally. That is right at the apex and wrong at
+  // pawradise.yipyy.com: a platform admin who is also a member of a facility
+  // opened THAT facility's address and was sent to the platform-wide Command
+  // Center, showing other tenants' invoices at a tenant's own front door.
+  //
+  // Reported from production 2026-08-24. Not a data leak — /dashboard is gated
+  // on is_platform_admin and a facility owner is refused it — but the address
+  // meant one thing and the app did another.
+  //
+  // One extra read, and only for a signed-in visitor on a facility host. The
+  // apex, www, localhost and previews resolve no slug and skip it entirely,
+  // which is the ordinary case this file was optimised for.
+  const slug = facilitySlugFromHost(
+    request.headers.get("host"),
+    process.env.NEXT_PUBLIC_APP_DOMAIN,
+  );
+
+  if (slug && viewer.source === "session" && viewer.memberships.length > 0) {
+    const supabase = await createServerClient();
+    const { data: named } = await supabase
+      .from("facilities")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    const membership = named
+      ? viewer.memberships.find((m) => m.facilityId === named.id)
+      : undefined;
+
+    // Only when they actually belong here. A platform admin with no membership
+    // at this facility keeps the platform landing — sending them into a portal
+    // they hold no role in would be a worse answer than the one being fixed.
+    if (membership) {
+      destination = landingPathForClaims(false, [membership]);
+    }
+  }
 
   // `nextUrl.clone()` rather than `new URL(dest, request.url)`: it carries the
   // origin Next itself resolved, which is what keeps this pointing at
