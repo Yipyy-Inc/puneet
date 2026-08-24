@@ -4609,6 +4609,25 @@ Stage by explicit path, never `git add -A`, so at least the _contents_ of a
 commit stay yours. And treat a running Playwright suite as an exclusive lock —
 announce before, not after.
 
+**Added 2026-08-24 — a whole-repo gate reads the TREE, not your commit, so on a
+shared tree it tells you about work that is not yours and may not be finished.**
+`bun run format:check` was reported as failing on `src/types/database.ts` and
+the author was told so. It was true when measured and false a minute later: the
+other session was mid edit-then-format, and the check had been run in the
+window between. Re-measured after: exit 0, file clean, committed.
+
+The trap is that the failure is indistinguishable from a real one. **You cannot
+tell "not formatted yet" from "will fail CI"** — the gate reports both
+identically, and it fails in the other direction too: a green `format:check`
+says nothing about a file a peer has not saved yet.
+
+**Do instead:** before reporting a whole-repo gate failure on a shared tree,
+check `git status --short` for the named file. If it is someone else's
+uncommitted work, that is a snapshot of a moment, not a defect — ask before
+announcing it, and never format a file you do not own to "fix" it. Gates that
+take explicit paths (`bunx prettier --check <path>`) are worth preferring when
+you only want to know about your own change.
+
 ### 🔴 A domain word that is already taken is not available, and typecheck cannot tell you — 2026-08-23
 
 `boarding` means **dogs** in this repo. `src/lib/api/boarding.ts` is the kennels
