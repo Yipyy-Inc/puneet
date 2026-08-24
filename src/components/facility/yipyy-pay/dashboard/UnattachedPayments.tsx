@@ -74,7 +74,7 @@ function when(iso: string | null): string {
 }
 
 export function UnattachedPayments() {
-  const { data, isPending } = useUnattachedPayments();
+  const { data, isPending, error } = useUnattachedPayments();
   const reconcile = useReconcileNow();
   const [attaching, setAttaching] = useState<UnattachedPayment | null>(null);
 
@@ -106,6 +106,12 @@ export function UnattachedPayments() {
 
   const payments = data?.payments ?? [];
 
+  // Somebody without `financial_view_amounts` gets a 403 from the route. Draw
+  // nothing rather than offering them a Reconcile button that would 403 too —
+  // a control whose only outcome is a refusal is worse than no control, and the
+  // first version of this rendered the button on the error branch.
+  if (isPending || error || !data) return null;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -128,10 +134,9 @@ export function UnattachedPayments() {
         </Button>
       </div>
 
-      {/* Nothing at all while it loads, and nothing when the queue is empty.
-          A skeleton for a card that usually should not exist is a card that
-          usually should not exist, flickering. */}
-      {!isPending && payments.length > 0 && (
+      {/* Nothing when the queue is empty. A skeleton for a card that usually
+          should not exist is a card that usually should not exist, flickering. */}
+      {payments.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20">
           <CardContent className="space-y-4 p-5">
             <div className="flex items-start gap-2.5">

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getViewer } from "@/lib/auth/viewer";
 import { holds, myPermissions } from "@/lib/auth/permissions";
 import { createServerClient } from "@/lib/supabase/server";
+import { linesFromBill } from "@/lib/clover/orders";
 import { chargeOnTerminal, deviceState } from "@/lib/clover/terminal";
 import {
   deliverStandardReceipt,
@@ -225,6 +226,18 @@ export async function POST(request: NextRequest) {
     deviceSerial: parsed.data.deviceSerial,
     createdBy: viewer.userId,
     authorName: viewer.email ?? "Terminal payment",
+    // The same lines the receipt prints, so Clover's dashboard and Clover's own
+    // reporting stop showing a bare total. Read here from the booking, never
+    // from the request: an order is a record of what was charged, and a caller
+    // that could name its own lines could produce one that disagrees with the
+    // payment. `billFor` has already read them once for the receipt.
+    orderLines: linesFromBill(
+      bill.lines.map((line) => ({
+        name: line.label,
+        priceCents: line.amountCents,
+      })),
+    ),
+    orderNote: `Yipyy booking ${booking.ref}`,
   });
 
   if (!outcome.ok) {

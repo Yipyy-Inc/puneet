@@ -3,6 +3,7 @@ import "server-only";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { cloverConfig } from "./config";
 import { chargeableConnection, validAccessToken } from "./connection";
+import { createAtomicOrder, type OrderLine } from "./orders";
 
 // ============================================================================
 // Taking a card on the facility's own terminal.
@@ -201,6 +202,18 @@ export interface TerminalChargeRequest {
   deviceSerial: string;
   createdBy: string | null;
   authorName?: string;
+  /**
+   * What the customer is paying for, for the Clover order.
+   *
+   * Optional, and a missing list means no order is created — never a failed
+   * sale. The lines are read server-side from the booking by the caller, not
+   * passed from a browser: an order is a record of what was charged, and a
+   * caller that could name its own line items could produce one that disagrees
+   * with the payment.
+   */
+  orderLines?: OrderLine[];
+  /** The booking this belongs to, written on the order as a note. */
+  orderNote?: string;
 }
 
 const MAX_TIP_CENTS = 100_000;
@@ -281,6 +294,10 @@ export async function chargeOnTerminal(
     p_booking_id: request.bookingId,
     p_client_id: request.clientId,
     p_created_by: request.createdBy,
+    // Which terminal took it. The column has existed since intents were added
+    // and nothing has ever passed it, so every ledger row so far records the
+    // money and not the till.
+    p_device_id: request.deviceSerial,
   });
   if (opened.error || !opened.data) {
     return {
@@ -312,6 +329,39 @@ export async function chargeOnTerminal(
       "no_token",
       "The connection to Clover could not be refreshed. Reconnect the payment account.",
     );
+  }
+
+  // ── The order, before the money ─────────────────────────────────────────
+  //
+  // Created here and not after the sale, because `payments` is append-only: the
+  // order id has to be on the intent before `record_clover_payment` runs or it
+  // can never reach the ledger row at all.
+  //
+  // The REST Pay Display call below is BYTE-IDENTICAL either way — Clover
+  // documents that API as payment-only and it will not accept an order id. So
+  // this is a record, giving the merchant's dashboard and Clover's own
+  // reporting the line items they otherwise never see.
+  //
+  // A declined sale leaves an unpaid open order at Clover, which is what a
+  // till does: you ring the items up, then the card fails.
+  //
+  // It cannot cost a sale. `createAtomicOrder` returns null on any failure and
+  // never throws, and nothing below reads the result except to record it.
+  if (request.orderLines && request.orderLines.length > 0) {
+    const orderId = await createAtomicOrder({
+      accessToken: active.accessToken,
+      merchantId: active.merchantId,
+      environment: active.environment,
+      lines: request.orderLines,
+      taxCents: request.taxCents,
+      note: request.orderNote,
+    });
+    if (orderId) {
+      await admin.rpc("name_intent_order", {
+        p_intent_id: intentId,
+        p_order_id: orderId,
+      });
+    }
   }
 
   await admin.rpc("close_payment_intent", {
