@@ -18,6 +18,7 @@ import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { cn } from "@/lib/utils";
 import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
 import { useYipyyPayNav } from "../use-yipyy-pay-nav";
+import { UnattachedPayments } from "./UnattachedPayments";
 
 // ============================================================================
 // Is my money moving, and where is it?
@@ -82,6 +83,12 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
 
   return (
     <div className="space-y-6">
+      {/* Above the tiles, deliberately. Money Clover has that Yipyy cannot
+          place makes every figure below it wrong, and a queue rendered under
+          the numbers it invalidates is one people find after they have already
+          trusted them. It draws nothing at all when there is nothing waiting. */}
+      <UnattachedPayments />
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <KpiTile
           label="Next payout"
