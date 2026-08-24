@@ -1712,13 +1712,30 @@ a null, a wrong status code, a missing row.
 works. Every money path here has been. If you change one and cannot test it, say
 so in the commit rather than letting green typecheck stand in for evidence.
 
-### 🟡 Card-present is built; nobody has pressed the button
+### 🟢 Card-present has been used in production (was 🟡 “nobody has pressed the button”)
 
 `src/lib/clover/terminal.ts` charges a device and the Terminal tender in the
 checkout dialog drives it. Proven with a real card through the library (1¢, VISA
-contactless, Flex 4) and the route proven against real hardware. **The React
-wiring between them has only ever been typechecked** — clicking it through ends
-with a human tapping a card and cannot be automated.
+contactless, Flex 4) and the route proven against real hardware.
+
+This entry then said, for weeks, that the React wiring between them **“has only
+ever been typechecked”**. Counting the ledger on 2026-08-24 says otherwise:
+
+```
+method    entry_method   n    total      earliest     latest
+terminal  swipe          8    $912.00    2026-08-19   2026-08-19
+terminal  contactless    3    $128.22    2026-08-08   2026-08-19
+```
+
+**Eleven card-present Clover payments totalling $1,040.22**, every one carrying a
+Clover payment id. The button has been pressed, repeatedly, with real cards.
+
+**Why the claim survived:** nobody ran the one query that would have settled it.
+It is the same failure as the SQL-suite entry below — a statement about
+production that could be checked in four seconds, repeated instead of checked,
+and then quoted onward as a reason not to do other work (it was, verbatim, in
+the “no order is ever created” entry). **Before citing this map as evidence that
+something has never happened, go and count.**
 
 **Refunding a terminal payment is untested.** The refund path calls the
 ecommerce `/v1/refunds`, and whether that reverses a card-PRESENT payment is an
@@ -1737,6 +1754,46 @@ Duo needs a LAN connection a hosted app cannot make. The classifier in
 telling a facility their hardware will not work is a claim worth being sure of.
 It searches `productName`, `model` AND `deviceTypeName`, because reading `model`
 alone reported a supported Flex 4 (`Clover_C406`) as unknown on a live screen.
+
+### 🔴 A Clover payment is not money until `result` says so
+
+`reconcile.ts` reads a payment from Clover and decides what to do with it. Until
+2026-08-24 it never looked at `payment.result`, and the first sweep of the live
+merchant showed what that costs. Of seven payments it held out for a human to
+attach, **two were `FAIL`** — $62.50 each, both declined attempts against booking
+896, no `cardTransaction`, no `device`, no money anywhere:
+
+```json
+{
+  "id": "VXZCT18MHAKZE",
+  "amount": 6250,
+  "result": "FAIL",
+  "tender": { "label": "Credit Card" }
+}
+```
+
+The screen would have offered those as _“Payments to attach”_, and attaching one
+marks a booking paid for takings that do not exist. **The inverse of the feature’s
+entire purpose**, on the append-only table, where the row cannot be taken back.
+
+**The worse half is the path nobody would have looked at.** A failed payment
+carrying a matching `externalPaymentId` did not merely get held — it went to
+`record_clover_payment` and became a ledger row directly. Recovery of a lost
+terminal sale and recovery of a declined card were the same code path.
+
+**The rule:** `SUCCESS` and nothing else. Not `FAIL`; not `INITIALIZED`; not
+`AUTH`, which is a hold and not a taking; and not `VOIDED`, which nets to zero
+when it never reached the ledger in the first place. The check sits at the TOP of
+`claimOrHold`, before the intent lookup, because the intent branch is the
+dangerous one.
+
+**The lesson underneath it:** every amount in that payload was correct. The
+money was right, the tip was right, the order id was right, and the record was
+still false, because the one field that says whether any of it happened was not
+read. **An integration that copies numbers faithfully has not thereby copied the
+truth.** It was found by running the thing once and reading the rows back — not
+by typechecking it, not by review, and not by the SQL suite, which tests the
+tables this writes and cannot see what TypeScript chose to write into them.
 
 ### 🟡 A webhook delivery is evidence, not a fact
 
@@ -2318,11 +2375,14 @@ has one number to print, so the receipt is a total by construction.
 line (the same lines the panel above now renders), then take the payment against
 that order id rather than a naked amount.
 
-**Why it is not done here:** it changes the live money path, on the one leg of
-the Clover integration that has never been exercised in production — the
-terminal tender has never been clicked (see the Clover notes). It needs the
+**Why it is not done here:** it changes the live money path. It needs the
 sandbox device in hand to verify, and shipping an unverified change to how money
 is taken is worse than a receipt that under-reports.
+
+This paragraph used to give a second reason — “the terminal tender has never
+been clicked” — and that was already false when it was written. Eleven
+card-present payments had been taken. A wrong fact in this map does not sit
+still; it gets cited.
 
 ### 🟢 Logging a feeding and giving a dose are real (was 🔴 — the follow-on)
 

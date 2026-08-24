@@ -491,12 +491,42 @@ function intentIdFrom(external: string | undefined): string | null {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
+/**
+ * The Clover `result` values that mean money actually changed hands.
+ *
+ * Measured, not assumed: the first sweep of the live merchant surfaced two
+ * $62.50 payments against booking 896 that this file offered up for a human to
+ * attach. Both were `FAIL` — a declined card, no `cardTransaction`, no
+ * `device`, no money. Attaching one would have marked the booking paid for
+ * takings that do not exist, which is the precise inverse of what holding
+ * unattached payments is for.
+ *
+ * `SUCCESS` alone. Not `FAIL`, not `INITIALIZED`, and not `AUTH` — an
+ * authorisation is a hold, not a taking. `VOIDED` is deliberately absent too:
+ * a void that never reached the ledger nets to nothing, so there is nothing to
+ * attach. (A void on a payment Yipyy DOES know about is handled far above, on
+ * the branch that mirrors reversals.)
+ */
+const RESULT_MEANS_MONEY_MOVED = "SUCCESS";
+
 async function claimOrHold(
   admin: ReturnType<typeof createAdminClient>,
   facilityId: string,
   payment: CloverV3Payment,
 ): Promise<PaymentReconciliation> {
   const cloverPaymentId = payment.id as string;
+
+  // BEFORE the intent lookup, deliberately. A failed payment that happens to
+  // carry a matching externalPaymentId is the worse case of the two: it would
+  // not merely be held for review, it would go straight into
+  // `record_clover_payment` and become an append-only ledger row for a card
+  // that declined. There is no correcting that row afterwards.
+  if (payment.result !== RESULT_MEANS_MONEY_MOVED) {
+    return {
+      kind: "not_ours",
+      detail: `Clover reports this payment as ${payment.result ?? "having no result"}; no money was taken.`,
+    };
+  }
 
   // Clover's `amount` EXCLUDES the tip; `tipAmount` carries it separately. The
   // intent was opened for the sum of the two, which is what makes the check
