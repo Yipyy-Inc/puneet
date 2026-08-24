@@ -119,8 +119,13 @@ const navItems: NavItem[] = [
     requires: "schedule.publish",
   },
   {
+    // Points OUT of the scheduling module on purpose. This tab used to render
+    // its own company-profile editor over a fixture; every field it offered
+    // (name, contact details, timezone, per-location operating hours) already
+    // had a real home in facility settings, so the two disagreed and only one
+    // of them wrote anything. See the redirect in next.config.ts.
     label: "Company",
-    href: "/facility/dashboard/services/scheduling/company",
+    href: "/facility/dashboard/settings?section=business",
     icon: Building,
     requires: "company.manage",
   },
