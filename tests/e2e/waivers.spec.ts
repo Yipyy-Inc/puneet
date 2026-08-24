@@ -87,13 +87,29 @@ function freshName(label: string): string {
   return `${MARKER} ${label} ${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
 }
 
+/**
+ * Every waiver THIS RUN published, so the teardown's work is bounded by what
+ * this file did rather than by everything the suite has ever left behind.
+ *
+ * The teardown used to sweep every `[e2e]`-prefixed waiver in the facility.
+ * Waivers are retired, never deleted — there is no delete policy, deliberately
+ * — so that list only ever grows, and on 2026-08-23 the hook finally exceeded
+ * its 120-second timeout part-way through the loop. A timed-out `afterAll` is
+ * indistinguishable from one that ran: it leaks silently and the summary line
+ * still reads green.
+ */
+const publishedWaiverIds: string[] = [];
+
 async function publish(
   page: Page,
   body: Record<string, unknown>,
 ): Promise<Waiver> {
   const res = await page.request.post(WAIVERS, { data: body });
   expect(res.ok(), await res.text()).toBe(true);
-  return ((await res.json()) as { waiver: Waiver }).waiver;
+  const waiver = ((await res.json()) as { waiver: Waiver }).waiver;
+  // Recorded at creation, before any assertion in the calling test can fail.
+  publishedWaiverIds.push(waiver.id);
+  return waiver;
 }
 
 async function anyClientRef(page: Page): Promise<number> {
@@ -128,29 +144,36 @@ test.describe("waivers", () => {
     const page = await context.newPage();
     await signIn(page, ACCOUNTS.owner);
 
-    const res = await page.request.get(`${WAIVERS}?all=1`);
-    if (res.ok()) {
-      const { waivers } = (await res.json()) as { waivers: Waiver[] };
-      for (const waiver of waivers) {
-        if (!waiver.name.startsWith(MARKER)) continue;
-
-        // Revoke this run's signatures BEFORE retiring the waiver, so the log
-        // does not keep a live signature against a document nobody stands
-        // behind any more.
-        for (const signature of await signaturesFor(page, waiver.id)) {
-          if (signature.status === "revoked") continue;
-          await page.request.post(`${SIGNATURES}/${signature.id}/revoke`, {
-            data: { reason: "E2E cleanup: test signature withdrawn" },
-          });
-        }
-
-        if (waiver.active) {
-          await page.request.patch(`${WAIVERS}/${waiver.id}`, {
-            data: { active: false },
-          });
-        }
+    // ONLY THIS RUN'S WAIVERS, by the ids `publish` recorded. A sweep of every
+    // `[e2e]` waiver in the facility grows with the history of the suite and
+    // will exceed the hook timeout again the moment it is long enough — and a
+    // teardown that times out mid-loop leaves live signatures behind while the
+    // run still reports green.
+    //
+    // Earlier runs' waivers are already retired and their signatures already
+    // revoked by their own teardown, so re-checking them bought nothing.
+    for (const waiverId of publishedWaiverIds) {
+      // Revoke this run's signatures BEFORE retiring the waiver, so the log
+      // does not keep a live signature against a document nobody stands
+      // behind any more.
+      for (const signature of await signaturesFor(page, waiverId)) {
+        if (signature.status === "revoked") continue;
+        await page.request.post(`${SIGNATURES}/${signature.id}/revoke`, {
+          data: { reason: "E2E cleanup: test signature withdrawn" },
+        });
       }
+
+      const retired = await page.request.patch(`${WAIVERS}/${waiverId}`, {
+        data: { active: false },
+      });
+      // Fail loudly rather than quietly. A teardown is a write, and a write
+      // that cannot tell a refusal from a no-op is what leaves rows behind.
+      expect(
+        retired.ok() || retired.status() === 404,
+        `could not retire waiver ${waiverId}: ${await retired.text()}`,
+      ).toBe(true);
     }
+
     await context.close();
   });
 
