@@ -17,6 +17,24 @@ import { sweepEveryFacility } from "@/lib/clover/sweep";
 //
 // ── THE SECRET IS COMPARED IN CONSTANT TIME ───────────────────────────────
 //
+// ── THE SCHEDULE AND THE SECRET BOTH FAIL BEFORE THE BUILD ───────────────
+//
+// vercel.json runs this once a day (`17 4 * * *`) and that is not a preference.
+// Hobby rejects any expression that would run more than once a day, and it
+// rejects it DURING DEPLOYMENT, before a build exists - so the symptom is no
+// deployment record at all, not a failed build with a log. `17 */4 * * *` cost
+// six hours of "nothing deploys" on 2026-08-24 before anyone followed the
+// vercel.link in the failure status. Hobby timing is also +/-59 min, so this
+// fires between 04:00 and 04:59 UTC.
+//
+// CRON_SECRET fails the same way and just as invisibly: a value with leading or
+// trailing whitespace is refused before the build, because it cannot go in an
+// HTTP header. A trailing newline from a paste is the usual cause, and the
+// Vercel field is a textarea that accepts one.
+//
+// Both are in docs/quality/debt-map.md. Neither is reachable from any local
+// gate - `bun run build` does not read vercel.json against the plan.
+//
 // Vercel sends `Authorization: Bearer $CRON_SECRET`. The comparison is
 // `timingSafeEqual` for the same reason the Clover webhook's is: a `===` on a
 // secret leaks its prefix to anybody willing to measure, and this endpoint
