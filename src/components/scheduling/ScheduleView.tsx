@@ -7,20 +7,7 @@ import { CalendarRange } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePermission } from "@/hooks/use-facility-rbac";
-import {
-  logShiftCreated,
-  logShiftUpdated,
-  logShiftDeleted,
-  logShiftAssigned,
-  logShiftUnassigned,
-  logShiftMoved,
-  logShiftCopied,
-  logSchedulePublished,
-  logDraftDiscarded,
-  logOpenShiftPosted,
-} from "@/lib/schedule-audit";
 import {
   ScheduleHeader,
   type ViewMode,
@@ -74,7 +61,6 @@ const schedulingSettings = {
 };
 
 export function ScheduleView() {
-  const { user } = useCurrentUser();
   // Section 5E — editing shifts (opening the edit dialog, drag move/copy)
   // requires scheduling_edit_shifts; creating requires scheduling_create_shifts.
   // All-access fallback keeps admin intact.
@@ -205,7 +191,6 @@ export function ScheduleView() {
   // below still have to run, so they get an empty id and the render returns an
   // empty state before any of it reaches the screen.
   const deptId = selectedDepartment?.id ?? "";
-  const deptName = selectedDepartment?.name ?? "";
 
   // `rowId`, NOT `id`: `StaffProfile.id` is the legacy string ("fs-003") and
   // `staff_shifts.staff_id` is the uuid. Keying on the label matches no shift.
@@ -448,107 +433,6 @@ export function ScheduleView() {
     [deptRequests, deptId],
   );
 
-  // ─── Audit helpers ───────────────────────────────────────────────────────
-
-  const buildShiftCtx = useCallback(
-    (shift: Partial<ScheduleShift> & { id?: string }) => {
-      const position = shift.positionId
-        ? deptPositions.find((p) => p.id === shift.positionId)
-        : undefined;
-      const employee = shift.employeeId
-        ? deptEmployees.find((e) => e.id === shift.employeeId)
-        : undefined;
-      return {
-        departmentId: deptId,
-        departmentName: deptName,
-        shiftId: shift.id,
-        shiftDate: shift.date,
-        shiftTimeRange:
-          shift.startTime && shift.endTime
-            ? `${shift.startTime} – ${shift.endTime}`
-            : undefined,
-        positionId: shift.positionId,
-        positionName: position?.name,
-        employeeId: shift.employeeId,
-        employeeName: employee?.name,
-        actorId: user.id,
-        actorName: user.name,
-        actorType: "staff" as const,
-      };
-    },
-    [deptEmployees, deptPositions, deptId, deptName, user.id, user.name],
-  );
-
-  const diffShifts = useCallback(
-    (
-      before: ScheduleShift,
-      after: Partial<ScheduleShift>,
-    ): { field: string; oldValue: string; newValue: string }[] => {
-      const out: { field: string; oldValue: string; newValue: string }[] = [];
-      if (after.date && after.date !== before.date) {
-        out.push({
-          field: "Date",
-          oldValue: before.date,
-          newValue: after.date,
-        });
-      }
-      if (after.startTime && after.startTime !== before.startTime) {
-        out.push({
-          field: "Start time",
-          oldValue: before.startTime,
-          newValue: after.startTime,
-        });
-      }
-      if (after.endTime && after.endTime !== before.endTime) {
-        out.push({
-          field: "End time",
-          oldValue: before.endTime,
-          newValue: after.endTime,
-        });
-      }
-      if (
-        after.positionId !== undefined &&
-        after.positionId !== before.positionId
-      ) {
-        const oldPos = deptPositions.find((p) => p.id === before.positionId);
-        const newPos = deptPositions.find((p) => p.id === after.positionId);
-        out.push({
-          field: "Position",
-          oldValue: oldPos?.name ?? before.positionId,
-          newValue: newPos?.name ?? after.positionId,
-        });
-      }
-      if (
-        after.employeeId !== undefined &&
-        after.employeeId !== before.employeeId
-      ) {
-        const oldEmp = before.employeeId
-          ? deptEmployees.find((e) => e.id === before.employeeId)
-          : null;
-        const newEmp = after.employeeId
-          ? deptEmployees.find((e) => e.id === after.employeeId)
-          : null;
-        out.push({
-          field: "Assigned to",
-          oldValue: oldEmp?.name ?? "Open",
-          newValue: newEmp?.name ?? "Open",
-        });
-      }
-      if (
-        after.breakMinutes !== undefined &&
-        after.breakMinutes !== before.breakMinutes
-      ) {
-        out.push({
-          field: "Break (min)",
-          oldValue: String(before.breakMinutes),
-          newValue: String(after.breakMinutes),
-        });
-      }
-      return out;
-    },
-    [deptEmployees, deptPositions],
-  );
-
   // ─── Shift handlers ──────────────────────────────────────────────────────
 
   const handleShiftClick = (shift: ScheduleShift) => {
@@ -578,7 +462,6 @@ export function ScheduleView() {
   const handleSaveShift = async (shiftsData: Omit<ScheduleShift, "id">[]) => {
     if (editingShift) {
       const shiftData = shiftsData[0]!;
-      const changes = diffShifts(editingShift, shiftData);
       try {
         await updateShift.mutateAsync({
           id: editingShift.id,
@@ -598,10 +481,6 @@ export function ScheduleView() {
         toast.error((error as Error).message);
         return;
       }
-      logShiftUpdated({
-        ...buildShiftCtx({ ...editingShift, ...shiftData }),
-        changes,
-      });
       toast.success("Shift updated");
       return;
     }
@@ -633,9 +512,7 @@ export function ScheduleView() {
 
     written.forEach((shift) => {
       if (shift.employeeId) {
-        logShiftCreated(buildShiftCtx(shift));
       } else {
-        logOpenShiftPosted(buildShiftCtx(shift));
       }
     });
 
@@ -660,14 +537,12 @@ export function ScheduleView() {
   };
 
   const handleDeleteShift = async (shiftId: string) => {
-    const target = shifts.find((s) => s.id === shiftId);
     try {
       await removeShift.mutateAsync(shiftId);
     } catch (error) {
       toast.error((error as Error).message);
       return;
     }
-    if (target) logShiftDeleted(buildShiftCtx(target));
     toast.success("Shift deleted");
   };
 
@@ -679,7 +554,6 @@ export function ScheduleView() {
     ) => {
       // 5E: drag-move is an edit — no-op without scheduling_edit_shifts.
       if (!canEditShifts) return;
-      const original = shifts.find((s) => s.id === shiftId);
       try {
         await updateShift.mutateAsync({
           id: shiftId,
@@ -693,35 +567,9 @@ export function ScheduleView() {
         toast.error((error as Error).message);
         return;
       }
-      if (original) {
-        const changes = diffShifts(original, {
-          employeeId: newEmployeeId,
-          date: newDate,
-        });
-        const previousEmp = original.employeeId
-          ? deptEmployees.find((e) => e.id === original.employeeId)
-          : null;
-        logShiftMoved({
-          ...buildShiftCtx({
-            ...original,
-            employeeId: newEmployeeId,
-            date: newDate,
-          }),
-          previousEmployeeId: original.employeeId,
-          previousEmployeeName: previousEmp?.name,
-          changes,
-        });
-      }
       toast.success("Shift moved");
     },
-    [
-      shifts,
-      deptEmployees,
-      buildShiftCtx,
-      diffShifts,
-      canEditShifts,
-      updateShift,
-    ],
+    [canEditShifts, updateShift],
   );
 
   const handleCopyShift = useCallback(
@@ -738,9 +586,8 @@ export function ScheduleView() {
       // A copy is a NEW row, so it goes through create rather than update — and
       // it lands as a draft with no recurrence, because a copied shift is not
       // part of the series it was copied from.
-      let copied: ScheduleShift;
       try {
-        copied = await createShift.mutateAsync({
+        await createShift.mutateAsync({
           employeeId: newEmployeeId ?? null,
           departmentId: original.departmentId,
           positionId: original.positionId,
@@ -755,15 +602,13 @@ export function ScheduleView() {
         toast.error((error as Error).message);
         return;
       }
-      logShiftCopied(buildShiftCtx(copied));
       toast.success("Shift copied");
     },
-    [shifts, buildShiftCtx, canEditShifts, createShift],
+    [shifts, canEditShifts, createShift],
   );
 
   const handleAssignShift = useCallback(
     async (shiftId: string, employeeId: string | undefined) => {
-      const original = shifts.find((s) => s.id === shiftId);
       try {
         // `null`, not undefined: making a shift OPEN is a value, and a field
         // the route reads as "not sent" would leave the person on it.
@@ -775,27 +620,13 @@ export function ScheduleView() {
         toast.error((error as Error).message);
         return;
       }
-      if (original) {
-        if (employeeId) {
-          logShiftAssigned(buildShiftCtx({ ...original, employeeId }));
-        } else {
-          const previousEmp = original.employeeId
-            ? deptEmployees.find((e) => e.id === original.employeeId)
-            : null;
-          logShiftUnassigned({
-            ...buildShiftCtx({ ...original, employeeId: undefined }),
-            previousEmployeeId: original.employeeId,
-            previousEmployeeName: previousEmp?.name,
-          });
-        }
-      }
       if (employeeId) {
         toast.success("Employee assigned");
       } else {
         toast.success("Shift made open");
       }
     },
-    [shifts, deptEmployees, buildShiftCtx, updateShift],
+    [updateShift],
   );
 
   // ─── Publish / Draft handlers ──────────────────────────────────────────
@@ -814,15 +645,6 @@ export function ScheduleView() {
       toast.error((error as Error).message);
       return;
     }
-
-    logSchedulePublished({
-      departmentId: deptId,
-      departmentName: deptName,
-      count: published,
-      weekStart: dateRange.start,
-      actorId: user.id,
-      actorName: user.name,
-    });
 
     if (published === 0) {
       toast.info("Nothing to publish", {
@@ -854,14 +676,6 @@ export function ScheduleView() {
         // Collected below rather than one toast per failure.
       }
     }
-
-    logDraftDiscarded({
-      departmentId: deptId,
-      departmentName: deptName,
-      count: removed.length,
-      actorId: user.id,
-      actorName: user.name,
-    });
 
     if (removed.length < doomed.length) {
       toast.error(
@@ -1116,25 +930,6 @@ export function ScheduleView() {
           const oppDept = departments.find((d) => d.id === opp.departmentId);
           if (oppDept) setSelectedDepartmentId(oppDept.id);
           setCurrentDate(new Date(opp.date + "T12:00:00"));
-          const pos = allPositions.find((p) => p.id === opp.positionId);
-          logOpenShiftPosted({
-            departmentId: opp.departmentId,
-            departmentName: oppDept?.name,
-            shiftId: opp.id,
-            shiftDate: opp.date,
-            shiftTimeRange: `${opp.startTime} – ${opp.endTime}`,
-            positionId: opp.positionId,
-            positionName: pos?.name,
-            actorId: user.id,
-            actorName: user.name,
-            metadata:
-              opp.claimMode === "invite_only"
-                ? {
-                    claimMode: opp.claimMode,
-                    invitedCount: opp.invitedEmployeeIds?.length ?? 0,
-                  }
-                : { claimMode: opp.claimMode ?? "open" },
-          });
         }}
       />
 

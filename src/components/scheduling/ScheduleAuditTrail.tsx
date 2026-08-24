@@ -1,9 +1,23 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  ArrowRightLeft,
+  CalendarClock,
+  ChevronDown,
+  History,
+  Search,
+  Shield,
+  UserMinus,
+  UserPlus,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -11,614 +25,278 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import {
-  CalendarPlus,
-  CalendarCog,
-  CalendarMinus,
-  UserPlus,
-  UserMinus,
-  Send,
-  Megaphone,
-  Sparkles,
-  Trash2,
-  Move,
-  Copy,
-  ChevronDown,
-  ChevronRight,
-  Shield,
-  Clock,
-  Filter,
-  User,
-  Bot,
-  Briefcase,
-} from "lucide-react";
-import {
-  getScheduleAuditLog,
-  type ScheduleAuditEntry,
-  type ScheduleAuditAction,
-} from "@/lib/schedule-audit";
-import { departments as allDepartments } from "@/data/scheduling";
+  auditLogQueries,
+  type AuditLogEntry,
+  type AuditSeverity,
+} from "@/lib/api/audit-log";
 
-// ─── helpers ──────────────────────────────────────────
+// ============================================================================
+// What actually happened to the roster.
+//
+// ── WHAT THIS REPLACES ────────────────────────────────────────────────────
+//
+// `getScheduleAuditLog()` from `src/lib/schedule-audit.ts` — a module-level
+// array holding a seeded history plus whatever the current browser tab had
+// done. `ScheduleView` genuinely appended to it, against a roster that is real
+// Postgres, so shifts moved and the record of who moved them died with the
+// process. On serverless it was not even shared between two requests of the
+// same session.
+//
+// Entries now come from `public.audit_log`, written by triggers on
+// `staff_shifts`, `staff_time_off_requests` and `shift_swap_requests`
+// (20260824200000). A trigger fires for every writer — including
+// `apply_schedule_template`, which writes shifts directly and would have been
+// invisible to any logger living in this app.
+//
+// ── THE FACILITY SCOPE IS NOT SET HERE ────────────────────────────────────
+//
+// There is no `facilityId` prop any more. This component used to take one and
+// the page passed `facilityId={11}` — a hardcoded legacy number that meant
+// every facility saw the same fixture. The rows are scoped by
+// `audit_log_facility_read`, which admits a facility ADMIN to their own
+// facility's entries. Asking the browser which facility it wants would be a
+// filter wearing a boundary's clothes.
+//
+// ── AN EMPTY TRAIL IS A REAL ANSWER ───────────────────────────────────────
+//
+// Nothing is seeded. A facility that has not touched its roster since the
+// triggers landed sees nothing, and the empty state says why rather than
+// implying the screen is broken.
+// ============================================================================
 
-const ACTION_META: Record<
-  ScheduleAuditAction,
-  { label: string; color: string; bg: string; icon: React.ReactNode }
-> = {
-  shift_created: {
-    label: "Shift Created",
-    color: "text-emerald-700",
-    bg: "bg-emerald-50 border-emerald-200",
-    icon: <CalendarPlus className="size-4 text-emerald-600" />,
-  },
-  shift_updated: {
-    label: "Shift Updated",
-    color: "text-amber-700",
-    bg: "bg-amber-50 border-amber-200",
-    icon: <CalendarCog className="size-4 text-amber-600" />,
-  },
-  shift_deleted: {
-    label: "Shift Deleted",
-    color: "text-rose-700",
-    bg: "bg-rose-50 border-rose-200",
-    icon: <Trash2 className="size-4 text-rose-600" />,
-  },
-  shift_assigned: {
-    label: "Shift Assigned",
-    color: "text-indigo-700",
-    bg: "bg-indigo-50 border-indigo-200",
-    icon: <UserPlus className="size-4 text-indigo-600" />,
-  },
-  shift_unassigned: {
-    label: "Shift Unassigned",
-    color: "text-orange-700",
-    bg: "bg-orange-50 border-orange-200",
-    icon: <UserMinus className="size-4 text-orange-600" />,
-  },
-  shift_moved: {
-    label: "Shift Moved",
-    color: "text-violet-700",
-    bg: "bg-violet-50 border-violet-200",
-    icon: <Move className="size-4 text-violet-600" />,
-  },
-  shift_copied: {
-    label: "Shift Copied",
-    color: "text-sky-700",
-    bg: "bg-sky-50 border-sky-200",
-    icon: <Copy className="size-4 text-sky-600" />,
-  },
-  schedule_published: {
-    label: "Schedule Published",
-    color: "text-emerald-700",
-    bg: "bg-emerald-50 border-emerald-200",
-    icon: <Send className="size-4 text-emerald-600" />,
-  },
-  draft_discarded: {
-    label: "Draft Discarded",
-    color: "text-slate-700",
-    bg: "bg-slate-50 border-slate-200",
-    icon: <CalendarMinus className="size-4 text-slate-600" />,
-  },
-  open_shift_posted: {
-    label: "Open Shift Posted",
-    color: "text-amber-700",
-    bg: "bg-amber-50 border-amber-200",
-    icon: <Megaphone className="size-4 text-amber-600" />,
-  },
-  open_shift_claimed: {
-    label: "Open Shift Claimed",
-    color: "text-emerald-700",
-    bg: "bg-emerald-50 border-emerald-200",
-    icon: <Sparkles className="size-4 text-emerald-600" />,
-  },
+const SEVERITY_STYLE: Record<AuditSeverity, string> = {
+  Low: "bg-slate-100 text-slate-700",
+  Medium: "bg-amber-100 text-amber-800",
+  High: "bg-orange-100 text-orange-800",
+  Critical: "bg-red-100 text-red-800",
 };
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+/** Actions the roster triggers produce, and how to draw each. */
+const ACTION_ICON: Record<string, React.ElementType> = {
+  "Shift created": CalendarClock,
+  "Shift changed": CalendarClock,
+  "Shift published": Shield,
+  "Shift assigned": UserPlus,
+  "Shift unassigned": UserMinus,
+  "Shift deleted": UserMinus,
+  "Shift swap approved": ArrowRightLeft,
+  "Shift swap denied": ArrowRightLeft,
+};
+
+/** "assigned_to" reads badly in a column somebody scans. */
+const FIELD_LABEL: Record<string, string> = {
+  assigned_to: "Assigned to",
+  starts_at: "Starts",
+  ends_at: "Ends",
+  status: "Status",
+  position_id: "Position",
+};
+
+function when(timestamp: string): string {
+  const at = new Date(timestamp);
+  return at.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
+    hour: "2-digit",
     minute: "2-digit",
-    hour12: true,
   });
 }
 
-function formatRelative(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
-  return formatDate(iso);
-}
-
-function getDescription(entry: ScheduleAuditEntry): string {
-  const actor = entry.actorName ?? "Staff";
-  switch (entry.action) {
-    case "shift_created":
-      return `${actor} created a shift for ${entry.employeeName ?? "an open slot"} on ${entry.shiftDate}`;
-    case "shift_updated":
-      return `${actor} updated ${entry.employeeName ?? "open"} shift (${entry.changes?.length ?? 0} field${(entry.changes?.length ?? 0) === 1 ? "" : "s"})`;
-    case "shift_deleted":
-      return `${actor} deleted ${entry.employeeName ?? "open"} shift on ${entry.shiftDate}`;
-    case "shift_assigned":
-      return `${actor} assigned shift to ${entry.employeeName ?? "an employee"}`;
-    case "shift_unassigned":
-      return `${actor} removed ${entry.previousEmployeeName ?? "employee"} — shift is now open`;
-    case "shift_moved":
-      return `${actor} moved shift${entry.previousEmployeeName ? ` from ${entry.previousEmployeeName}` : ""}${entry.employeeName ? ` to ${entry.employeeName}` : ""}`;
-    case "shift_copied":
-      return `${actor} duplicated a shift on ${entry.shiftDate}`;
-    case "schedule_published":
-      return `${actor} published ${entry.count ?? 0} shift${entry.count === 1 ? "" : "s"} for ${entry.departmentName}`;
-    case "draft_discarded":
-      return `${actor} discarded ${entry.count ?? 0} draft shift${entry.count === 1 ? "" : "s"}`;
-    case "open_shift_posted":
-      return `${actor} posted an open shift for ${entry.positionName ?? "a position"} on ${entry.shiftDate}`;
-    case "open_shift_claimed":
-      return `${actor} claimed an open shift on ${entry.shiftDate}`;
-    default:
-      return "";
-  }
-}
-
-// ─── detail sub-components ────────────────────────────
-
-function ChangesTable({
-  changes,
-}: {
-  changes: { field: string; oldValue: string; newValue: string }[];
-}) {
-  return (
-    <div className="overflow-hidden rounded-lg border">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="bg-muted/40">
-            <th className="text-muted-foreground p-2 text-left font-medium">
-              Field
-            </th>
-            <th className="text-muted-foreground p-2 text-left font-medium">
-              Before
-            </th>
-            <th className="text-muted-foreground p-2 text-left font-medium">
-              After
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {changes.map((c, i) => (
-            <tr key={i} className="border-t">
-              <td className="p-2 font-medium">{c.field}</td>
-              <td className="text-muted-foreground p-2">
-                {c.oldValue || (
-                  <span className="text-muted-foreground/50 italic">empty</span>
-                )}
-              </td>
-              <td className="text-foreground p-2 font-medium">{c.newValue}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// ─── single audit row ─────────────────────────────────
-
-function AuditRow({ entry }: { entry: ScheduleAuditEntry }) {
-  const [expanded, setExpanded] = useState(false);
-  const meta = ACTION_META[entry.action];
-  const hasDetail =
-    (entry.changes && entry.changes.length > 0) ||
-    entry.shiftId !== undefined ||
-    entry.count !== undefined;
+function AuditRow({ entry }: { entry: AuditLogEntry }) {
+  const [open, setOpen] = useState(false);
+  const Icon = ACTION_ICON[entry.action] ?? History;
+  const hasDetail = entry.changes.length > 0;
 
   return (
-    <div
-      className={`rounded-lg border transition-all ${
-        expanded ? meta.bg : `bg-background hover:bg-muted/30`
-      }`}
-    >
+    <div className="border-b last:border-b-0">
       <button
         type="button"
-        onClick={() => hasDetail && setExpanded(!expanded)}
-        className={`flex w-full items-start gap-3 p-3 text-left ${hasDetail ? "cursor-pointer" : "cursor-default"}`}
+        disabled={!hasDetail}
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn(
+          "flex w-full items-start gap-3 px-4 py-3 text-left",
+          hasDetail && "hover:bg-muted/50",
+        )}
       >
-        {/* timeline dot */}
-        <div className={`mt-0.5 shrink-0 rounded-full border p-1.5 ${meta.bg}`}>
-          {meta.icon}
-        </div>
-
-        {/* content */}
+        <Icon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium">{entry.action}</span>
             <Badge
-              variant="outline"
-              className={`text-[10px] ${meta.color} border-current/20`}
+              variant="secondary"
+              className={cn("text-[10px]", SEVERITY_STYLE[entry.severity])}
             >
-              {meta.label}
+              {entry.severity}
             </Badge>
-            {entry.departmentName && (
-              <Badge variant="secondary" className="gap-1 text-[10px]">
-                <Briefcase className="size-2.5" />
-                {entry.departmentName}
-              </Badge>
-            )}
-            <span className="text-muted-foreground text-xs">
-              {formatRelative(entry.timestamp)}
-            </span>
           </div>
-          <p className="mt-1 text-sm font-medium">
-            {entry.positionName
-              ? `${entry.positionName}${entry.shiftTimeRange ? ` · ${entry.shiftTimeRange}` : ""}`
-              : entry.action === "schedule_published"
-                ? `${entry.count ?? 0} shifts published`
-                : entry.action === "draft_discarded"
-                  ? `${entry.count ?? 0} drafts discarded`
-                  : (entry.shiftDate ?? "Schedule change")}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {getDescription(entry)}
-          </p>
-        </div>
-
-        {/* actor chip */}
-        <div className="text-muted-foreground mt-0.5 flex shrink-0 items-center gap-1.5 text-xs">
-          {entry.actorType === "employee" ? (
-            <User className="size-3" />
-          ) : entry.actorType === "system" ? (
-            <Bot className="size-3" />
-          ) : (
-            <Shield className="size-3" />
+          {entry.description && (
+            <p className="text-muted-foreground mt-0.5 truncate text-xs">
+              {entry.description}
+            </p>
           )}
-          <span className="hidden sm:inline">
-            {entry.actorName ?? String(entry.actorId ?? "System")}
-          </span>
         </div>
-
-        {/* expand chevron */}
+        <div className="text-muted-foreground shrink-0 text-right text-xs">
+          <div>{when(entry.timestamp)}</div>
+          {/* "System" is the truthful reading of an act with no signed-in
+              person behind it — a migration, a scheduled job — not a gap. */}
+          <div>{entry.userName}</div>
+        </div>
         {hasDetail && (
-          <div className="text-muted-foreground mt-1 shrink-0">
-            {expanded ? (
-              <ChevronDown className="size-4" />
-            ) : (
-              <ChevronRight className="size-4" />
+          <ChevronDown
+            className={cn(
+              "text-muted-foreground mt-0.5 size-4 shrink-0 transition-transform",
+              open && "rotate-180",
             )}
-          </div>
+          />
         )}
       </button>
 
-      {expanded && (
-        <div className="space-y-3 px-3 pb-3 pl-12">
-          <Separator />
-
-          {/* Field changes table */}
-          {entry.changes && entry.changes.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                <span>
-                  {entry.changes.length} field
-                  {entry.changes.length === 1 ? "" : "s"} changed
-                </span>
-              </div>
-              <ChangesTable changes={entry.changes} />
+      {open && hasDetail && (
+        <div className="bg-muted/30 space-y-1 px-11 pb-3">
+          {entry.changes.map((change) => (
+            <div
+              key={change.field}
+              className="flex flex-wrap items-center gap-2 text-xs"
+            >
+              <span className="text-muted-foreground w-24 shrink-0">
+                {FIELD_LABEL[change.field] ?? change.field}
+              </span>
+              <span className="text-muted-foreground line-through">
+                {change.oldValue}
+              </span>
+              <span aria-hidden>→</span>
+              <span className="font-medium">{change.newValue}</span>
             </div>
-          )}
-
-          {/* Shift detail */}
-          {entry.shiftId &&
-            (entry.shiftDate || entry.shiftTimeRange || entry.employeeName) && (
-              <div className="text-muted-foreground space-y-1 text-xs">
-                {entry.shiftId && (
-                  <p>
-                    Shift ID:{" "}
-                    <span className="text-foreground font-mono font-medium">
-                      {entry.shiftId}
-                    </span>
-                  </p>
-                )}
-                {entry.shiftDate && (
-                  <p>
-                    Date:{" "}
-                    <span className="text-foreground font-medium">
-                      {entry.shiftDate}
-                    </span>
-                    {entry.shiftTimeRange && (
-                      <>
-                        {" · "}
-                        <span className="text-foreground font-medium">
-                          {entry.shiftTimeRange}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                )}
-                {entry.employeeName && (
-                  <p>
-                    Employee:{" "}
-                    <span className="text-foreground font-medium">
-                      {entry.employeeName}
-                    </span>
-                  </p>
-                )}
-                {entry.previousEmployeeName && (
-                  <p>
-                    Previously assigned to:{" "}
-                    <span className="text-foreground font-medium">
-                      {entry.previousEmployeeName}
-                    </span>
-                  </p>
-                )}
-                <p>
-                  At: {formatDate(entry.timestamp)} ·{" "}
-                  {formatTime(entry.timestamp)}
-                </p>
-              </div>
-            )}
-
-          {/* Bulk action detail */}
-          {entry.count !== undefined && !entry.shiftId && (
-            <div className="text-muted-foreground space-y-1 text-xs">
-              <p>
-                Affected:{" "}
-                <span className="text-foreground font-medium">
-                  {entry.count} shift{entry.count === 1 ? "" : "s"}
-                </span>
-              </p>
-              {entry.metadata &&
-                Boolean(
-                  (entry.metadata as Record<string, unknown>).weekStart,
-                ) && (
-                  <p>
-                    Week starting:{" "}
-                    <span className="text-foreground font-medium">
-                      {String(
-                        (entry.metadata as Record<string, unknown>).weekStart,
-                      )}
-                    </span>
-                  </p>
-                )}
-              <p>
-                At: {formatDate(entry.timestamp)} ·{" "}
-                {formatTime(entry.timestamp)}
-              </p>
-            </div>
-          )}
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// ─── main component ───────────────────────────────────
+export function ScheduleAuditTrail() {
+  const [search, setSearch] = useState("");
+  const [actionFilter, setActionFilter] = useState("all");
 
-interface ScheduleAuditTrailProps {
-  facilityId?: number;
-}
-
-export function ScheduleAuditTrail({
-  facilityId = 11,
-}: ScheduleAuditTrailProps) {
-  const [actionFilter, setActionFilter] = useState<string>("all");
-  const [deptFilter, setDeptFilter] = useState<string>("all");
-
-  const allEntries = useMemo(
-    () => getScheduleAuditLog({ facilityId }),
-    [facilityId],
+  const { data, isPending, isError, error } = useQuery(
+    auditLogQueries.scheduling(),
   );
 
-  const filtered = useMemo(() => {
-    let list = allEntries;
-    if (actionFilter !== "all")
-      list = list.filter((e) => e.action === actionFilter);
-    if (deptFilter !== "all")
-      list = list.filter((e) => e.departmentId === deptFilter);
-    return list;
-  }, [allEntries, actionFilter, deptFilter]);
+  const entries = useMemo<AuditLogEntry[]>(() => data ?? [], [data]);
 
-  // Stats
-  const publishCount = allEntries.filter(
-    (e) => e.action === "schedule_published",
-  ).length;
-  const shiftChangeCount = allEntries.filter((e) =>
-    [
-      "shift_created",
-      "shift_updated",
-      "shift_deleted",
-      "shift_moved",
-      "shift_copied",
-    ].includes(e.action),
-  ).length;
-  const assignmentCount = allEntries.filter((e) =>
-    ["shift_assigned", "shift_unassigned"].includes(e.action),
-  ).length;
-  const openShiftCount = allEntries.filter((e) =>
-    ["open_shift_posted", "open_shift_claimed"].includes(e.action),
-  ).length;
+  const actions = useMemo(
+    () => Array.from(new Set(entries.map((e) => e.action))).sort(),
+    [entries],
+  );
 
-  const stats = [
-    {
-      label: "Publishes",
-      count: publishCount,
-      icon: <Send className="size-4 text-emerald-500" />,
-      bg: "bg-emerald-50",
-    },
-    {
-      label: "Shift Changes",
-      count: shiftChangeCount,
-      icon: <CalendarCog className="size-4 text-amber-500" />,
-      bg: "bg-amber-50",
-    },
-    {
-      label: "Assignments",
-      count: assignmentCount,
-      icon: <UserPlus className="size-4 text-indigo-500" />,
-      bg: "bg-indigo-50",
-    },
-    {
-      label: "Open Shifts",
-      count: openShiftCount,
-      icon: <Megaphone className="size-4 text-orange-500" />,
-      bg: "bg-orange-50",
-    },
-  ];
-
-  // Group by date for timeline effect
-  const groupedByDate = useMemo(() => {
-    const groups: { date: string; entries: ScheduleAuditEntry[] }[] = [];
-    let currentDate = "";
-    for (const entry of filtered) {
-      const d = formatDate(entry.timestamp);
-      if (d !== currentDate) {
-        currentDate = d;
-        groups.push({ date: d, entries: [] });
-      }
-      groups[groups.length - 1].entries.push(entry);
-    }
-    return groups;
-  }, [filtered]);
+  const shown = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return entries.filter((entry) => {
+      if (actionFilter !== "all" && entry.action !== actionFilter) return false;
+      if (!needle) return true;
+      return (
+        entry.entityName.toLowerCase().includes(needle) ||
+        entry.userName.toLowerCase().includes(needle) ||
+        entry.description.toLowerCase().includes(needle)
+      );
+    });
+  }, [entries, actionFilter, search]);
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
+    <div className="space-y-4 p-6">
       <div>
-        <div className="flex items-center gap-2">
-          <Shield className="text-primary size-5" />
-          <h2 className="text-2xl font-bold">Schedule Audit Trail</h2>
-        </div>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Complete compliance log — every shift change, publish, assignment, and
-          open-shift claim.
+        <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+          <History className="size-5" />
+          Schedule Audit Trail
+        </h2>
+        <p className="text-muted-foreground text-sm">
+          Every change to the roster, recorded by the database as it happened.
+          Entries cannot be edited or removed by anyone.
         </p>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {stats.map((s) => (
-          <Card key={s.label} className="border">
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className={`rounded-lg p-2 ${s.bg}`}>{s.icon}</div>
-              <div>
-                <p className="text-2xl font-bold">{s.count}</p>
-                <p className="text-muted-foreground text-xs">{s.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-56 flex-1 space-y-1">
+          <Label htmlFor="audit-search" className="text-[11px] font-normal">
+            Search
+          </Label>
+          <div className="relative">
+            <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
+            <Input
+              id="audit-search"
+              className="pl-8"
+              placeholder="A person, or what changed"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[11px] font-normal">Action</Label>
+          <Select value={actionFilter} onValueChange={setActionFilter}>
+            <SelectTrigger className="w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All actions</SelectItem>
+              {actions.map((action) => (
+                <SelectItem key={action} value={action}>
+                  {action}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="text-muted-foreground flex items-center gap-2 text-sm">
-              <Filter className="size-4" />
-              <span className="font-medium">Filters</span>
+        <CardContent className="p-0">
+          {isPending ? (
+            <div className="space-y-2 p-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
             </div>
-            <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger className="h-8 w-[200px] text-xs">
-                <SelectValue placeholder="All actions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All actions</SelectItem>
-                <SelectItem value="schedule_published">
-                  Schedule Published
-                </SelectItem>
-                <SelectItem value="shift_created">Shift Created</SelectItem>
-                <SelectItem value="shift_updated">Shift Updated</SelectItem>
-                <SelectItem value="shift_deleted">Shift Deleted</SelectItem>
-                <SelectItem value="shift_moved">Shift Moved</SelectItem>
-                <SelectItem value="shift_copied">Shift Copied</SelectItem>
-                <SelectItem value="shift_assigned">Shift Assigned</SelectItem>
-                <SelectItem value="shift_unassigned">
-                  Shift Unassigned
-                </SelectItem>
-                <SelectItem value="open_shift_posted">
-                  Open Shift Posted
-                </SelectItem>
-                <SelectItem value="open_shift_claimed">
-                  Open Shift Claimed
-                </SelectItem>
-                <SelectItem value="draft_discarded">Draft Discarded</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={deptFilter} onValueChange={setDeptFilter}>
-              <SelectTrigger className="h-8 w-[200px] text-xs">
-                <SelectValue placeholder="All departments" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All departments</SelectItem>
-                {allDepartments.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {(actionFilter !== "all" || deptFilter !== "all") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs"
-                onClick={() => {
-                  setActionFilter("all");
-                  setDeptFilter("all");
-                }}
-              >
-                Clear filters
-              </Button>
-            )}
-            <div className="text-muted-foreground ml-auto text-xs">
-              {filtered.length} event{filtered.length === 1 ? "" : "s"}
+          ) : isError ? (
+            <div className="text-muted-foreground flex flex-col items-center py-16 text-center">
+              <AlertTriangle className="mb-3 size-8 text-red-500 opacity-70" />
+              <p>Could not read the audit trail.</p>
+              <p className="mt-1 text-sm">
+                {error instanceof Error ? error.message : "Please try again."}
+              </p>
             </div>
-          </div>
+          ) : shown.length === 0 ? (
+            <div className="text-muted-foreground flex flex-col items-center py-16 text-center">
+              <History className="mb-3 size-8 opacity-50" />
+              <p>
+                {entries.length === 0
+                  ? "Nothing recorded yet."
+                  : "No entries match that."}
+              </p>
+              <p className="mt-1 max-w-sm text-sm">
+                {entries.length === 0
+                  ? "Changes to shifts, leave and swaps appear here as they are made. Nothing is seeded — an empty trail means nothing has changed."
+                  : "Try a different action or clear the search."}
+              </p>
+            </div>
+          ) : (
+            <>
+              {shown.map((entry) => (
+                <AuditRow key={entry.id} entry={entry} />
+              ))}
+              {/* The route caps at 500. Saying so beats a list that silently
+                  stops being the whole story. */}
+              {entries.length >= 500 && (
+                <p className="text-muted-foreground border-t px-4 py-2 text-xs">
+                  Showing the 500 most recent entries.
+                </p>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
-
-      {/* Timeline */}
-      {filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Clock className="text-muted-foreground mx-auto mb-3 size-8" />
-            <p className="text-muted-foreground font-medium">No audit events</p>
-            <p className="text-muted-foreground mt-1 text-xs">
-              {actionFilter !== "all" || deptFilter !== "all"
-                ? "Try adjusting your filters"
-                : "Events will appear here as the schedule changes"}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {groupedByDate.map((group) => (
-            <div key={group.date}>
-              <div className="mb-3 flex items-center gap-3">
-                <div className="bg-border h-px flex-1" />
-                <span className="text-muted-foreground shrink-0 text-xs font-medium">
-                  {group.date}
-                </span>
-                <div className="bg-border h-px flex-1" />
-              </div>
-              <div className="space-y-2">
-                {group.entries.map((entry) => (
-                  <AuditRow key={entry.id} entry={entry} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

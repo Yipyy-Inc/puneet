@@ -4867,6 +4867,137 @@ summary line: 17/17 passed, and afterwards 0 active `[e2e]` waivers, 0 live
 signatures, 0 leftover templates, 0 draft shifts, and `facility_positions` /
 `facility_departments` both back to **0**.
 
+### 🔴 An `expect` inside a cleanup loop makes the cleanup PARTIAL — 2026-08-24
+
+The third teardown defect in one day, and the one that completes the family.
+`schedule-audit-trail.spec.ts` cleaned up like this:
+
+```ts
+for (const shiftId of createdShiftIds) {
+  const removed = await page.request.delete(`${SHIFTS}?id=${shiftId}`);
+  expect(removed.ok() || removed.status() === 404, ...).toBe(true);  // throws
+}
+```
+
+One shift had already been deleted by a test that deletes on purpose. The
+second delete affects zero rows, so `deniedIfUntouched` answers **403, not
+404** — an RLS refusal and a row that is already gone are indistinguishable
+from the server's side, which is a documented property of this codebase and not
+a bug. The `expect` threw, **the loop stopped**, and the remaining shifts were
+never deleted.
+
+Then the damage compounded, which is the part worth remembering:
+
+1. shifts survived, so the position they sat on could not be removed
+   (`RESTRICT`), so the department could not either;
+2. the next run's `ensureStructure` found that position **by name** and reused
+   it — inheriting an orphan shift it had no record of;
+3. that run's teardown then failed for a different reason than the first one,
+   which is how a small teardown bug becomes an unreadable one.
+
+Measured: 1 orphan shift on `[e2e] audit position`, blocking two rows, after a
+single failed run.
+
+**Do instead:** a teardown attempts everything and asserts once, at the end.
+
+```ts
+const failures: string[] = [];
+async function remove(what: string, url: string) {
+  const res = await page.request.delete(url);
+  if (!res.ok() && res.status() !== 404) failures.push(`${what}: ${res.status()}`);
+}
+// ... every removal ...
+expect(failures, `cleanup left rows behind:
+${failures.join("
+")}`).toEqual([]);
+```
+
+Two supporting rules the same file now follows:
+
+- **Stop tracking what a test deleted on purpose** (`forgetShift(id)`), rather
+  than widening the teardown to tolerate 403. Tolerating 403 would also swallow
+  a genuine refusal, which is the one thing the assertion exists to catch.
+- **A reuse-by-name setup needs a bounded self-heal.** Before removing a
+  position it owns, the teardown clears any shift still standing on _that
+  position_ inside _its own date window_. That is bounded by an object this file
+  created — not the global sweep that timed out the waivers hook.
+
+### 🔴 A push CANCELS the running CI e2e job — "do not push during a run" includes "do not push twice in an hour" — 2026-08-24
+
+`.github/workflows/ci.yml` lines 13-15:
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+
+Every push to `main` **cancels the run still in flight for the previous push**,
+including its Playwright job. A cancelled Playwright run skips `afterAll`, so it
+leaks every row it had created.
+
+Measured on 2026-08-24, four pushes in forty minutes:
+
+```
+32725203491  c64c81f3  e2e (auth, access & operations)  cancelled
+32726286417  419b957b  e2e (auth, access & operations)  cancelled
+```
+
+`"E2E Requests Position"` was found orphaned on the demo facility at 12:45:14
+with no local suite running on either machine. It came from one of those.
+
+**Why this was invisible.** The existing rule was written as "cancelling an e2e
+run leaks rows", which reads as a warning about pressing Ctrl-C. It is not: with
+`cancel-in-progress`, the cancellation is **automatic, remote, and caused by an
+action that feels unrelated** — pushing a commit. Nothing on the machine doing
+the pushing reports that a run somewhere else just died half-way through its
+setup. Two sessions each pushing "only twice" is enough.
+
+**It now costs more than it used to.** Since 20260824200000, a cancelled run
+that created shifts also leaves rows in `public.audit_log`, and those cannot be
+deleted by anyone — see the entry above. The growth rate of that table is set by
+**push cadence**, not by the test suite.
+
+**Do instead:** before `git push`, check for a run in flight and wait for it.
+
+```
+gh run list --limit 5 --json databaseId,status,headSha,displayTitle
+```
+
+If anything is `in_progress`, the push will kill it. On a shared tree this needs
+saying out loud to the other session, because "I am pushing" and "I am about to
+destroy your test run's cleanup" are the same action. Batching commits and
+pushing once is strictly better than pushing each one as it lands.
+
+Do **not** fix this by removing `cancel-in-progress` without thinking: it exists
+so a stale run does not report on superseded code. The cost is real either way;
+the point is to know which one you are paying.
+
+### 🟡 `audit_log` now grows with every e2e run, and cannot be cleaned — 2026-08-24
+
+20260824200000 put triggers on `staff_shifts`, `staff_time_off_requests` and
+`shift_swap_requests`, so **every shift a spec creates or deletes writes an
+audit row**. Measured on the first suite run afterwards: 45 `Shift created` and
+45 `Shift deleted` in a four-minute window, plus published/assigned/changed.
+
+Those rows cannot be removed. `public.audit_log` refuses UPDATE, DELETE and
+TRUNCATE for every role including its owner and `service_role` (20260807460000)
+— deliberately, because a trail you can tidy is not a trail. So unlike every
+other e2e artefact in this project, **there is no teardown available and none
+should be written.**
+
+This is a deliberate trade, recorded so nobody reads a growing table as a leak
+and tries to "fix" it:
+
+- the screens read the newest 500, so the table growing does not degrade them;
+- the alternative is a delete path on the audit trail, which is worse than the
+  problem;
+- SQL tests are unaffected — they run in a rolled-back transaction, verified by
+  running the whole suite twice and watching the count stay at 32.
+
+**Do instead:** if the volume ever genuinely matters, archive by date into a
+separate table — do not grant DELETE on this one.
+
 ### 🔴 `chromium.launch()` hangs under bun for its full 180-second timeout; node returns in 337 ms — 2026-08-24
 
 **Not measured by the author of this entry** — reported by the session that
