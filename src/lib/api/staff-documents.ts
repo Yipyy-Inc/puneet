@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { MyAgreementsPayload } from "@/app/api/staff-onboarding/my-agreements/route";
+
 // ============================================================================
 // Staff documents and signatures.
 //
@@ -153,6 +155,22 @@ export function useUploadStaffDocument() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: staffDocumentKeys.all });
     },
+  });
+}
+
+/**
+ * The agreements this person has been asked to sign, and which they have.
+ *
+ * Paired with `useSignAgreement` below — that mutation had NO callers until
+ * this screen existed, so nothing in the app had ever recorded an employee
+ * signature. The table, the route, the hashing and 26 SQL assertions were all
+ * built and unused.
+ */
+export function useMyAgreements() {
+  return useQuery({
+    queryKey: ["my-agreements"] as const,
+    queryFn: () =>
+      json<MyAgreementsPayload>("/api/staff-onboarding/my-agreements"),
   });
 }
 

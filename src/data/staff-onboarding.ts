@@ -420,6 +420,17 @@ export interface EmployeeOnboardingTask {
   documentName?: string;
   /** Facility-uploaded PDF the employee reads/signs (blank template ref). */
   documentRef?: string;
+  /**
+   * document_sign: THE WORDS. Copied into `staff_signatures.agreement_text` and
+   * hashed at signing, so the record proves what was agreed even after this
+   * task is edited or deleted.
+   *
+   * Not `documentRef`, and not instead of it. A reference is a pointer to a
+   * mutable document and proves nothing on its own — `/api/staff-signatures`
+   * refuses to record a signature against a task with no text, rather than
+   * storing a row that looks like proof and is not one.
+   */
+  agreementText?: string;
   /** custom_question only. */
   question?: EmployeeCustomQuestion;
 }

@@ -89,6 +89,17 @@ const nextConfig: NextConfig = {
         destination: "/facility/dashboard/settings?section=notifications",
         permanent: false,
       },
+      // Retired 2026-08-24, same reason as the two above. This one held TWO
+      // parallel systems: an onboarding tracker duplicating the real one under
+      // Staff, and a 1,347-line document-template editor whose five "Template
+      // created / updated / deleted" toasts sat on no mutation and no API call
+      // at all. The real template editor is in settings; per-hire progress is
+      // under Staff, which is where the nav now points.
+      {
+        source: "/facility/dashboard/services/scheduling/onboarding",
+        destination: "/facility/dashboard/staff",
+        permanent: false,
+      },
     ];
   },
   typescript: {

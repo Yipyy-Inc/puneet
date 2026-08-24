@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,23 +14,13 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { employeeFiles } from "@/data/employee-files";
-import {
-  employeeDocumentTemplates,
-  employeeDocumentSubmissions,
-} from "@/data/scheduling";
-import type {
-  EmployeeDocument,
-  EmployeeDocType,
-  EmployeeDocumentTemplate,
-} from "@/types/scheduling";
-import { EmployeeDocumentSigningDialog } from "@/components/scheduling/EmployeeDocumentSigningDialog";
+import type { EmployeeDocument, EmployeeDocType } from "@/types/scheduling";
 import { useFacilityViewer } from "@/hooks/use-facility-rbac";
-import { useStaffDocuments } from "@/lib/api/staff-documents";
-import { ROLE_META, type StaffProfile } from "@/types/facility-staff";
-import {
-  fullNameOf,
-  initialsOf,
-} from "@/app/facility/dashboard/staff/_components/staff-shared";
+import { useMyAgreements, useStaffDocuments } from "@/lib/api/staff-documents";
+import type { MyAgreement } from "@/app/api/staff-onboarding/my-agreements/route";
+import { SignAgreementDialog } from "./SignAgreementDialog";
+import type { StaffProfile } from "@/types/facility-staff";
+import { fullNameOf } from "@/app/facility/dashboard/staff/_components/staff-shared";
 
 const DOC_TYPE_LABEL: Record<string, string> = {
   work_permit: "Work permit",
@@ -99,27 +88,23 @@ function MyDocumentsBody({ staff }: { staff: StaffProfile }) {
       .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
   }, [liveDocs, staff]);
 
-  // Documents this staff has already signed (from the submissions store + this
-  // session's new signatures).
-  const [signedTemplateIds, setSignedTemplateIds] = useState<Set<string>>(
-    () =>
-      new Set(
-        employeeDocumentSubmissions
-          .filter((s) => s.employeeId === staff.id && s.status === "signed")
-          .map((s) => s.templateId),
-      ),
-  );
+  // What this person has actually been asked to sign, and what they have
+  // already signed — both from Postgres.
+  //
+  // This was two fixtures and a `useState<Set<string>>` that started from a
+  // mock submissions array. Signing added an id to that Set, raised a toast,
+  // and wrote nothing: `staff_signatures` was empty because nothing in the app
+  // had ever called the route that fills it.
+  //
+  // Signed status is NOT tracked in local state any more. It comes back from
+  // the server on refetch, so a signature that failed cannot leave the screen
+  // claiming success.
+  const { data: agreementData, isPending: agreementsPending } =
+    useMyAgreements();
+  const agreements = agreementData?.agreements ?? [];
+  const signingStaffId = agreementData?.staffId ?? null;
 
-  const signable = useMemo(
-    () =>
-      employeeDocumentTemplates.filter(
-        (t) => t.isActive && t.requiresSignature,
-      ),
-    [],
-  );
-
-  const [signingTemplate, setSigningTemplate] =
-    useState<EmployeeDocumentTemplate | null>(null);
+  const [signing, setSigning] = useState<MyAgreement | null>(null);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
@@ -132,14 +117,14 @@ function MyDocumentsBody({ staff }: { staff: StaffProfile }) {
         </p>
       </div>
 
-      {/* Documents to sign */}
-      {signable.length > 0 && (
+      {/* Agreements this person must sign — from their onboarding template. */}
+      {!agreementsPending && agreements.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-sm font-semibold">Needs your signature</h2>
-          {signable.map((t) => {
-            const signed = signedTemplateIds.has(t.id);
+          {agreements.map((a) => {
+            const signed = Boolean(a.signedAt);
             return (
-              <Card key={t.id}>
+              <Card key={a.taskKey}>
                 <CardContent className="flex items-center justify-between gap-3 p-3.5">
                   <div className="flex min-w-0 items-center gap-3">
                     <div
@@ -157,9 +142,12 @@ function MyDocumentsBody({ staff }: { staff: StaffProfile }) {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{t.title}</p>
+                      <p className="truncate text-sm font-medium">{a.name}</p>
                       <p className="text-muted-foreground truncate text-xs">
-                        {t.description} · v{t.version}
+                        {signed
+                          ? `Signed ${new Date(a.signedAt as string).toLocaleDateString()} as ${a.signatureName}`
+                          : (a.description ??
+                            (a.required ? "Required" : "Optional"))}
                       </p>
                     </div>
                   </div>
@@ -174,7 +162,8 @@ function MyDocumentsBody({ staff }: { staff: StaffProfile }) {
                     <Button
                       size="sm"
                       className="shrink-0"
-                      onClick={() => setSigningTemplate(t)}
+                      disabled={!signingStaffId}
+                      onClick={() => setSigning(a)}
                     >
                       Review &amp; sign
                     </Button>
@@ -245,26 +234,10 @@ function MyDocumentsBody({ staff }: { staff: StaffProfile }) {
         )}
       </section>
 
-      <EmployeeDocumentSigningDialog
-        open={!!signingTemplate}
-        onOpenChange={(v) => {
-          if (!v) setSigningTemplate(null);
-        }}
-        template={signingTemplate ?? employeeDocumentTemplates[0]}
-        employee={{
-          id: staff.id,
-          name: fullNameOf(staff),
-          avatar: staff.avatarUrl,
-          initials: initialsOf(staff),
-          role: ROLE_META[staff.primaryRole].label,
-        }}
-        onComplete={(submission) => {
-          setSignedTemplateIds((prev) =>
-            new Set(prev).add(submission.templateId),
-          );
-          setSigningTemplate(null);
-          toast.success("Document signed");
-        }}
+      <SignAgreementDialog
+        agreement={signing}
+        staffId={signingStaffId ?? ""}
+        onClose={() => setSigning(null)}
       />
     </div>
   );
