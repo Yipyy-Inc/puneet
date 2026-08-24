@@ -4789,6 +4789,23 @@ deciding the outcome sits somewhere nobody is looking** — a hoisted dependency
 is not in `package.json`, another spec's rows are not in your file, a cancelled
 job is not on your machine.
 
+**And be clear which half of the fix is load-bearing.** Four of these entries
+harden a teardown — record ids at creation, delete by id, assert the result,
+walk only this run's rows. All good changes, and **none of them is the cause.**
+Every leak actually chased on 2026-08-24 came from a run that **did not finish**:
+one timed out, one threw inside a cleanup loop, two were cancelled remotely. A
+teardown that is never reached cannot be improved into running.
+
+The proof is the run that worked. `32728764039` succeeded, reached its
+`afterAll`, and left `facility_positions` and `facility_departments` at **zero
+rows** — the position that had looked orphaned for an hour was simply a suite
+still in progress. The teardowns were never the problem; not reaching them was.
+
+So the fixes that bear on the failure are the ones about REACHING the teardown:
+do not cancel a run, do not let an unbounded loop meet its timeout, do not put
+cleanup after an assertion that can throw. Harden the teardown as well — but do
+not mistake the hardening for the cure.
+
 **The corollary is the useful half: every one of these was cheap to CHECK and
 none was cheap to NOTICE.** `grep package.json`, `gh run list`,
 `git status --short <file>`, count the rows before you assert on them — seconds
