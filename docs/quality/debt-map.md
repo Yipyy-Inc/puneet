@@ -1773,11 +1773,31 @@ production kept serving an eleven-o'clock build.
 16:37  production is still serving 5756fc8b.
 ```
 
-`GET repos/…/deployments` stops at `5756fc8b` and the commit status for
-`b2ba179c` is **`pending`, forever**. Vercel did not fail a build — it never
-created a deployment, so there was no failed deployment to notice, no red cross
-anywhere, and no notification. **The absence of a deployment looks exactly like
-a deployment you have not checked on.**
+`GET repos/…/deployments` stops at `5756fc8b`, and 14 commits were pushed after
+it with no deployment created for any of them.
+
+**The GitHub statuses are not uniform, and that is the tell.** Some commits
+carry a Vercel status; others carry none at all:
+
+```
+c64c81f3  failure   "Vercel – puneet   Deployment failed."
+7bcc7e0f  failure   "Vercel – puneet   Deployment failed."
+40c71d29  failure   "Vercel – puneet   Deployment failed."
+b2ba179c  (no statuses at all)
+e477049e  (no statuses at all)
+```
+
+**A "Deployment failed" status with no deployment behind it is a different
+animal from a failed build.** A build that fails leaves a deployment in `ERROR`
+that you can open and read a log from. There are none — the deployments list is
+empty for every one of these. That is the signature of the config being
+rejected _before any build starts_, which is exactly what an over-limit `crons`
+key does.
+
+So the place this shows up is **the deployments list being empty, not a log**.
+There was no red cross to open, no notification, and nothing to retry.
+**The absence of a deployment looks exactly like a deployment you have not
+checked on.**
 
 **The plan is the constraint.** `get_git_deployment_context` reports
 `"plan": "hobby"` for team Yipyy. Hobby permits cron jobs **once per day**. A
