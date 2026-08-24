@@ -305,13 +305,40 @@ export function summariseAuditLog(
  * There is deliberately no mutation query: appending is a consequence of an
  * audited action, never a user edit, and the database would refuse one anyway.
  */
+async function readTrail(search: string): Promise<AuditLogEntry[]> {
+  const response = await fetch(`/api/audit-log${search}`);
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(detail?.error ?? "Could not read the audit trail.");
+  }
+  return (await response.json()) as AuditLogEntry[];
+}
+
+/** The entity types the roster writes. Kept here so one list feeds the query. */
+export const SCHEDULING_ENTITY_TYPES = [
+  "shift",
+  "time_off",
+  "shift_swap",
+] as const;
+
 export const auditLogQueries = {
   all: () => ({
     queryKey: ["audit-logs"] as const,
-    queryFn: async (): Promise<AuditLogEntry[]> => {
-      const response = await fetch("/api/audit-log");
-      if (!response.ok) throw new Error("Could not read the audit trail.");
-      return (await response.json()) as AuditLogEntry[];
-    },
+    queryFn: () => readTrail(""),
+  }),
+
+  /**
+   * The roster's own history.
+   *
+   * Scoped by RLS, not by this file: a facility admin gets their facility's
+   * rows because `audit_log_facility_read` says so. Passing a facility id from
+   * the browser would be a filter, not a boundary — and the two would drift.
+   */
+  scheduling: () => ({
+    queryKey: ["audit-logs", "scheduling"] as const,
+    queryFn: () =>
+      readTrail(`?entityTypes=${SCHEDULING_ENTITY_TYPES.join(",")}`),
   }),
 };
