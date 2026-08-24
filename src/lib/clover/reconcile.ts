@@ -42,16 +42,51 @@ export type PaymentReconciliation =
   | { kind: "not_ours"; detail: string }
   | { kind: "unreadable"; detail: string }
   | { kind: "settled"; detail: string }
-  | { kind: "reversed"; detail: string; amountCents: number };
+  | { kind: "reversed"; detail: string; amountCents: number }
+  /** A terminal sale whose HTTP response was lost, finished from Clover's copy. */
+  | { kind: "recovered"; detail: string; paymentId: string }
+  /** Real money at this merchant that Yipyy cannot place. Held, not discarded. */
+  | { kind: "unattached"; detail: string };
 
 interface CloverV3Payment {
   id?: string;
   amount?: number;
+  tipAmount?: number;
+  taxAmount?: number;
   result?: string;
   voidReason?: string;
+  createdTime?: number;
+  /**
+   * What the POS called this payment. Yipyy sends the intent id with its dashes
+   * stripped, because Clover caps the field at 32 characters and a uuid is 36.
+   */
+  externalPaymentId?: string;
+  order?: { id?: string };
+  device?: { id?: string; serial?: string };
+  tender?: { label?: string; labelKey?: string };
+  cardTransaction?: {
+    cardType?: string;
+    last4?: string;
+    entryType?: string;
+    authCode?: string;
+  };
   /** Clover's id for the VOID itself — a real id, not one we invent. */
   voidPaymentRef?: { id?: string };
   refunds?: { elements?: { id?: string; amount?: number }[] };
+}
+
+/** Clover's entryType vocabulary, mapped onto the column's CHECK. */
+function entryMethodOf(payment: CloverV3Payment): string | null {
+  const raw = payment.cardTransaction?.entryType?.toUpperCase();
+  if (!raw) return null;
+  if (raw.includes("SWIPE")) return "swipe";
+  if (raw.includes("CONTACTLESS") || raw.includes("NFC")) return "contactless";
+  if (raw.includes("CHIP") || raw.includes("EMV")) return "chip";
+  if (raw.includes("KEYED") || raw.includes("MANUAL")) return "keyed";
+  if (raw.includes("ECOM")) return "ecom";
+  // Unrecognised is null, never a guess: the CHECK would refuse an invented
+  // value and take the whole row with it.
+  return null;
 }
 
 /** Cents, from a numeric-dollars column. */
@@ -75,30 +110,6 @@ export async function reconcilePayment(
 
   const admin = createAdminClient();
 
-  // The ORIGINAL row. A reversal also carries a processor_payment_id — the
-  // void's or refund's own id — so restricting to a positive grand_total is
-  // what keeps a reversal from being mistaken for the payment it reverses.
-  const { data: original } = await admin
-    .from("payments")
-    .select(
-      "id, facility_id, booking_id, client_id, method, subtotal, tax, tip, grand_total, amount_charged, card_brand, card_last4, entry_method, processor",
-    )
-    .eq("processor", "clover")
-    .eq("processor_payment_id", cloverPaymentId)
-    .gt("grand_total", 0)
-    .maybeSingle();
-
-  if (!original) {
-    // Every payment the merchant takes on their own terminal reaches this
-    // endpoint too. Those are real money at that merchant and none of Yipyy's
-    // business; inventing ledger rows for them would put a facility's own
-    // walk-in trade into their Yipyy revenue.
-    return {
-      kind: "not_ours",
-      detail: "No Yipyy payment carries this processor id.",
-    };
-  }
-
   const active = await validAccessToken(facilityId);
   if (!active) {
     return {
@@ -120,9 +131,12 @@ export async function reconcilePayment(
   // Through the retrying reader. A 429 here used to close the delivery as
   // 'failed' and stop — and because the route answers 200 even on failure (so
   // Clover does not redeliver forever), a dropped read stayed dropped.
+  // `order`, `device` and `tender` are expanded because a payment we do NOT
+  // recognise has to be describable to whoever will place it, and the only
+  // chance to ask is this read.
   const read = await cloverGet<CloverV3Payment>(
     config.apiOrigin,
-    `/v3/merchants/${active.merchantId}/payments/${cloverPaymentId}?expand=refunds`,
+    `/v3/merchants/${active.merchantId}/payments/${cloverPaymentId}?expand=refunds,order,device,tender`,
     active.accessToken,
     active.merchantId,
   );
@@ -135,6 +149,37 @@ export async function reconcilePayment(
         ? `Clover answered ${read.status} for this payment.`
         : "Could not reach Clover.",
     };
+  }
+
+  // The ORIGINAL row. A reversal also carries a processor_payment_id — the
+  // void's or refund's own id — so restricting to a positive grand_total is
+  // what keeps a reversal from being mistaken for the payment it reverses.
+  const { data: original } = await admin
+    .from("payments")
+    .select(
+      "id, facility_id, booking_id, client_id, method, subtotal, tax, tip, grand_total, amount_charged, card_brand, card_last4, entry_method, processor",
+    )
+    .eq("processor", "clover")
+    .eq("processor_payment_id", cloverPaymentId)
+    .gt("grand_total", 0)
+    .maybeSingle();
+
+  if (!original) {
+    // This used to return `not_ours` and stop, on the reasoning that a payment
+    // the merchant took on their own terminal is their business and inventing a
+    // ledger row for it would put walk-in trade into Yipyy revenue.
+    //
+    // That reasoning was right about the ledger and wrong about the silence.
+    // Two different things arrive here and only one of them is a stranger:
+    //
+    //   a TERMINAL SALE WHOSE RESPONSE WE LOST. The 150-second call died, so
+    //   nothing was ever written — but Clover has the money and is holding the
+    //   intent id we sent as externalPaymentId. That is ours, and recoverable.
+    //
+    //   a payment genuinely taken outside Yipyy. Still not a ledger row, but
+    //   held where somebody can say what it was, instead of discarded so that
+    //   the day's takings can never agree with Clover's.
+    return claimOrHold(admin, facilityId, payment);
   }
 
   const voided = payment.result === "VOIDED";
@@ -409,4 +454,242 @@ export async function verifyConnection(
   // revoking a merchant for being busy.
   if (read.refused) return "revoked";
   return read.data ? "live" : "unreachable";
+}
+
+// ============================================================================
+// A Clover payment with no Yipyy ledger row behind it.
+//
+// Two things arrive here wearing the same clothes, and telling them apart is
+// the entire job.
+//
+// ── ONE OF THEM IS OURS AND WE LOST IT ────────────────────────────────────
+//
+// `chargeOnTerminal` is a single 150-second HTTP call. If it dies — a function
+// timeout, a deploy, a dropped connection — Clover has taken the money and
+// nothing was written. What survives is `externalPaymentId`: the intent id with
+// its dashes stripped, which Clover has been storing on every terminal sale
+// since the path was built and which nothing has ever read back.
+//
+// Put the dashes back and it is a primary key. That is why this needs no
+// clever lookup: the identifier IS the row's id, written differently.
+//
+// ── THE OTHER IS SOMEBODY ELSE'S SALE ─────────────────────────────────────
+//
+// A walk-in rung up on the merchant's own terminal is real money at that
+// merchant and NOT a Yipyy ledger row — inventing one would put a facility's
+// counter trade into their Yipyy revenue. But discarding it, which is what
+// happened until now, guarantees the day's takings in Yipyy can never agree
+// with the day's takings in Clover, and gives nobody anything to look at.
+//
+// So it is held in `unattached_payments` until a person says what it was.
+// ============================================================================
+
+/** The 32 hex characters Clover holds, back into the uuid they came from. */
+function intentIdFrom(external: string | undefined): string | null {
+  if (!external || !/^[0-9a-fA-F]{32}$/.test(external)) return null;
+  const h = external.toLowerCase();
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+async function claimOrHold(
+  admin: ReturnType<typeof createAdminClient>,
+  facilityId: string,
+  payment: CloverV3Payment,
+): Promise<PaymentReconciliation> {
+  const cloverPaymentId = payment.id as string;
+
+  // Clover's `amount` EXCLUDES the tip; `tipAmount` carries it separately. The
+  // intent was opened for the sum of the two, which is what makes the check
+  // inside record_clover_payment meaningful.
+  const baseCents = Math.max(0, Math.round(Number(payment.amount ?? 0)));
+  const tipCents = Math.max(0, Math.round(Number(payment.tipAmount ?? 0)));
+  const taxCents = Math.max(
+    0,
+    Math.min(baseCents, Math.round(Number(payment.taxAmount ?? 0))),
+  );
+
+  // ── Was it ours all along? ───────────────────────────────────────────────
+  const intentId = intentIdFrom(payment.externalPaymentId);
+  if (intentId) {
+    const { data: intent } = await admin
+      .from("payment_intents")
+      .select("id, facility_id, payment_id, amount_cents")
+      .eq("id", intentId)
+      .maybeSingle();
+
+    // Belonging to ANOTHER facility is not a near miss to be tidied up — it
+    // would attach this money to the wrong business. Fall through and hold it.
+    if (intent && intent.facility_id === facilityId) {
+      if (intent.payment_id) {
+        // The intent already has its row, and the lookup at the top of
+        // reconcilePayment did not find it. That means the ledger row carries a
+        // different Clover id from this one, which is a real inconsistency and
+        // not something to paper over by writing a second row.
+        return {
+          kind: "unreadable",
+          detail: `Intent ${intentId} is already settled against a different payment id.`,
+        };
+      }
+
+      const recorded = await admin.rpc("record_clover_payment", {
+        p_intent_id: intentId,
+        p_processor_payment_id: cloverPaymentId,
+        p_subtotal_cents: baseCents - taxCents,
+        p_tax_cents: taxCents,
+        p_tip_cents: tipCents,
+        p_card_brand: payment.cardTransaction?.cardType ?? null,
+        p_card_last4: payment.cardTransaction?.last4 ?? null,
+        p_auth_code: payment.cardTransaction?.authCode ?? null,
+        p_entry_method: entryMethodOf(payment) ?? "chip",
+        p_author_name: "Recovered from Clover",
+      });
+
+      if (!recorded.error && recorded.data) {
+        return {
+          kind: "recovered",
+          detail: `A terminal sale whose response was lost has been completed from Clover's own record (intent ${intentId}).`,
+          paymentId: recorded.data as unknown as string,
+        };
+      }
+
+      // The commonest refusal is the amount check: the device collected a tip
+      // we did not ask for, so Clover's total is not the total the intent was
+      // opened for. That is a disagreement about money and it is held for a
+      // person, never forced through.
+      const why = recorded.error?.message ?? "the ledger refused the row";
+      await holdIt(admin, facilityId, payment, baseCents, tipCents, taxCents);
+      return {
+        kind: "unattached",
+        detail: `Matched intent ${intentId} but could not settle it (${why}). Held for review.`,
+      };
+    }
+  }
+
+  await holdIt(admin, facilityId, payment, baseCents, tipCents, taxCents);
+  return {
+    kind: "unattached",
+    detail:
+      "Taken at this merchant with no Yipyy payment behind it. Held to be attached.",
+  };
+}
+
+async function holdIt(
+  admin: ReturnType<typeof createAdminClient>,
+  facilityId: string,
+  payment: CloverV3Payment,
+  baseCents: number,
+  tipCents: number,
+  taxCents: number,
+): Promise<void> {
+  await admin.rpc("record_unattached_payment", {
+    p_facility_id: facilityId,
+    p_processor_payment_id: payment.id as string,
+    // The whole of it, tip included: this is what Clover took, and what a
+    // person comparing the two systems is looking at.
+    p_amount_cents: baseCents + tipCents,
+    p_tip_cents: tipCents,
+    p_tax_cents: taxCents,
+    p_processor_order_id: payment.order?.id ?? null,
+    p_processor_device_serial: payment.device?.serial ?? null,
+    p_card_brand: payment.cardTransaction?.cardType ?? null,
+    p_card_last4: payment.cardTransaction?.last4 ?? null,
+    p_entry_method: entryMethodOf(payment),
+    p_taken_at: payment.createdTime
+      ? new Date(payment.createdTime).toISOString()
+      : null,
+    p_payload: payment as never,
+  });
+}
+
+// ============================================================================
+// An order event, which is a payment event wearing a different hat.
+//
+// Clover has no refund event type. A reversal surfaces as a `P:` UPDATE, and
+// sometimes as an `O:` UPDATE on the order the payment belonged to — an amount
+// changed, a line voided, a refund attached. Neither says what happened; both
+// are a prompt to go and read.
+//
+// So an order resolves to its payments and each one is reconciled by the same
+// gap arithmetic. Nothing here is order-specific, deliberately: a second way of
+// deciding what a reversal means is a second thing to keep in step with the
+// first.
+// ============================================================================
+
+export interface OrderReconciliation {
+  status: "processed" | "ignored" | "failed";
+  detail: string;
+}
+
+export async function reconcileOrder(
+  facilityId: string,
+  cloverOrderId: string,
+): Promise<OrderReconciliation> {
+  if (!hasServiceRoleKey()) {
+    return { status: "failed", detail: "Clover is not configured here." };
+  }
+
+  const active = await validAccessToken(facilityId);
+  if (!active) {
+    return {
+      status: "failed",
+      detail: "No usable access token for this merchant.",
+    };
+  }
+
+  const config = cloverConfig(active.environment);
+  if (!config) {
+    return {
+      status: "failed",
+      detail: `Clover is not configured for ${active.environment}.`,
+    };
+  }
+
+  const read = await cloverGet<{
+    id?: string;
+    payments?: { elements?: { id?: string }[] };
+  }>(
+    config.apiOrigin,
+    `/v3/merchants/${active.merchantId}/orders/${cloverOrderId}?expand=payments`,
+    active.accessToken,
+    active.merchantId,
+  );
+
+  if (!read.data?.id) {
+    return {
+      status: "failed",
+      detail: read.status
+        ? `Clover answered ${read.status} for order ${cloverOrderId}.`
+        : `Could not read order ${cloverOrderId}.`,
+    };
+  }
+
+  const paymentIds = (read.data.payments?.elements ?? [])
+    .map((element) => element.id)
+    .filter((id): id is string => Boolean(id));
+
+  if (paymentIds.length === 0) {
+    // An order with no payments is a cart, not money. Common and uninteresting:
+    // Clover creates one the moment a line item is rung up.
+    return {
+      status: "ignored",
+      detail: `Order ${cloverOrderId} carries no payments.`,
+    };
+  }
+
+  const outcomes: string[] = [];
+  let worst: OrderReconciliation["status"] = "processed";
+
+  for (const paymentId of paymentIds) {
+    const result = await reconcilePayment(facilityId, paymentId);
+    outcomes.push(`${paymentId}: ${result.kind}`);
+    // One unreadable payment does not make the others unhandled, but it does
+    // leave work outstanding — and the whole delivery is the unit that gets
+    // retried, so the worst outcome is the one that counts.
+    if (result.kind === "unreadable") worst = "failed";
+  }
+
+  return {
+    status: worst,
+    detail: `Order ${cloverOrderId} → ${outcomes.join("; ")}`,
+  };
 }

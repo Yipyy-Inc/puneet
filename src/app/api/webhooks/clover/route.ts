@@ -7,6 +7,7 @@ import {
   defaultCloverEnvironment,
 } from "@/lib/clover/config";
 import {
+  reconcileOrder,
   reconcilePayment,
   refreshMerchantProfile,
   verifyConnection,
@@ -228,6 +229,17 @@ async function act(
           return { status: "processed", detail: result.detail };
         case "settled":
           return { status: "processed", detail: result.detail };
+        case "recovered":
+          // A terminal sale whose HTTP response was lost, finished from
+          // Clover's own copy. This is the single most valuable thing the
+          // webhook does: without it the customer is charged and the booking
+          // says unpaid, for ever.
+          return { status: "processed", detail: result.detail };
+        case "unattached":
+          // PROCESSED, not ignored. Something was done with it — it is on a
+          // facility's screen waiting to be placed. Closing it `ignored` would
+          // say the delivery led nowhere.
+          return { status: "processed", detail: result.detail };
         case "not_ours":
           return { status: "ignored", detail: result.detail };
         case "unreadable":
@@ -237,6 +249,17 @@ async function act(
           return { status: "failed", detail: result.detail };
       }
       break;
+    }
+
+    // ── Orders ───────────────────────────────────────────────────────────
+    //
+    // Clover publishes no refund event. A reversal reaches us as a payment
+    // UPDATE and, when the order was the thing that changed, as one of these.
+    // Until now this fell through to "Nothing here acts on a O object", so a
+    // refund that only moved the order was never seen.
+    case "O": {
+      const result = await reconcileOrder(facilityId, delivery.objectId);
+      return { status: result.status, detail: result.detail };
     }
 
     // ── The app itself: installed, uninstalled, subscription changed ──────
