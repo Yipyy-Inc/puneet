@@ -4749,6 +4749,129 @@ writing columns — it also offers `align`, `sortable`, `sortValue`, `icon` and
 treat a familiar type name imported from `@/components` as a local type that
 merely shares a name, until you have read it.
 
+## Snapshot (2026-08-24, what a full suite run found)
+
+Three entries from one CI run that reported 9 failures. Two are the same
+mistake wearing different clothes — a spec depending on state it did not create
+— and the third is why a browser script that "obviously works" does not.
+
+### 🔴 `facility_positions` is EMPTY at rest, so a spec cannot assume one exists — 2026-08-24
+
+`schedule-templates.spec.ts` opened with a helper that read the org chart and
+asserted a position was there, then rostered every template against it. It
+passed 10/10 alone and failed **8/8 in the full suite — every test on that one
+setup line**, received 0.
+
+The measurement, run against production while nothing else was:
+
+```sql
+select count(*) from facility_positions;   -- 0
+select count(*) from facility_departments; -- 0
+```
+
+**Zero, facility-wide, at rest.** Not "the earlier specs happen to delete
+theirs" — there are no permanent positions at all. The only ones alive during a
+run are created and then deleted by `scheduling-attendance` (CI #31) and
+`scheduling-org-chart` (#32), and `schedule-templates` is #56.
+
+That distinction decides the fix. "Another spec deletes theirs" would have been
+cured by reordering the files. "The table is empty at rest" says reordering
+could never have worked, because the rows exist only inside two other specs'
+lifetimes. **A green run of this spec was always a pass for a reason nobody
+chose.**
+
+**Do instead:** create the structure you need in `beforeAll` and remove it in
+`afterAll` — position before department, both references are `RESTRICT`. Never
+write `expect(things.length).toBeGreaterThan(0)` as _setup_; that is not a
+precondition, it is a wish about another file. If a spec genuinely needs shared
+seed data, it belongs in a seed migration where its lifetime is visible, not in
+whatever happened to run first.
+
+### 🔴 A teardown whose work grows without bound eventually times out — and a timed-out `afterAll` looks exactly like one that ran — 2026-08-24
+
+`waivers.spec.ts` cleaned up by listing **every** `[e2e]`-prefixed waiver in the
+facility and, for each, revoking its signatures and retiring it. Waivers are
+retired, never deleted, deliberately — deleting one destroys the only readable
+record of what the business used to ask people to agree to — so that list only
+ever grows.
+
+Measured on the day it broke:
+
+```
+waivers on the demo facility:      68
+of those, [e2e]-prefixed:          68   (i.e. all of them)
+still active when it timed out:     2
+live signatures on those two:       0
+```
+
+It died at **120000 ms**, the hook timeout. The two survivors tell you _where_:
+one had a signature that was **already revoked**, the other had none — so the
+sweep had completed the expensive revoke work and expired on the retire step at
+the end. Cost was per-waiver-ever-created, and 66 of the 68 were pure re-work on
+rows their own teardown had already dealt with.
+
+**The dangerous half is not the slowness.** Playwright reports a hook timeout
+separately from test results, so the tests still read as passed and the run
+still looks green while rows are left behind. **A timed-out teardown is
+indistinguishable from one that ran** — which is why the leak survived several
+runs before anyone noticed.
+
+**Do instead:** record ids **at creation**, in a module-level array, inside the
+helper that creates them — before any assertion in the calling test can fail —
+and have `afterAll` delete only those:
+
+```ts
+const publishedWaiverIds: string[] = [];
+
+async function publish(page: Page, body: Record<string, unknown>) {
+  const res = await page.request.post(WAIVERS, { data: body });
+  expect(res.ok(), await res.text()).toBe(true);
+  const waiver = ((await res.json()) as { waiver: Waiver }).waiver;
+  publishedWaiverIds.push(waiver.id); // recorded before anything can throw
+  return waiver;
+}
+```
+
+Three properties, all load-bearing:
+
+1. **Bounded by this run**, so cost never grows with the suite's history.
+2. **Recorded at creation**, so a failing assertion mid-test cannot hide the row
+   from cleanup — the trailing-cleanup version does not run at all when the test
+   throws, and `afterAll` does.
+3. **Asserted.** `expect(res.ok() || res.status() === 404)`. A cleanup that
+   cannot fail is a cleanup nobody can trust; 404 is fine because a test may have
+   removed it already, anything else means the teardown did not do what it
+   thinks it did.
+
+Verified by reading Postgres back after the fixed run rather than trusting the
+summary line: 17/17 passed, and afterwards 0 active `[e2e]` waivers, 0 live
+signatures, 0 leftover templates, 0 draft shifts, and `facility_positions` /
+`facility_departments` both back to **0**.
+
+### 🔴 `chromium.launch()` hangs under bun for its full 180-second timeout; node returns in 337 ms — 2026-08-24
+
+**Not measured by the author of this entry** — reported by the session that
+wrote `scripts/shoot.ts`, measured twice each way (once via `bun run`, once via a
+bare `.mjs` at the repo root). Recorded because the failure mode is expensive to
+rediscover, and flagged as second-hand per this file's own rule.
+
+A Playwright `chromium.launch()` called from a **bun** process starts the
+browser but never completes the `--remote-debugging-pipe` handshake, and fails
+at the 180 s launch timeout. The identical call under **node** returns in 337 ms.
+It is a pipe-transport problem, not a Playwright or browser problem.
+
+**Why it hides:** `bun run test:e2e` is completely unaffected, because it shells
+out to the Playwright CLI, which spawns its own **node** workers. So the suite
+works. The natural conclusion when your own script hangs is therefore that your
+script is wrong — and the project standard is `bun` for everything, which points
+you further away from the actual cause.
+
+**Do instead:** let bun parse argv and let **node** drive the browser — go
+through the Playwright CLI rather than calling `chromium.launch()` from bun.
+`scripts/shoot.ts` is the worked example. If a browser script hangs for
+suspiciously close to 180 seconds, check which runtime is holding the pipe
+before debugging anything else.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
