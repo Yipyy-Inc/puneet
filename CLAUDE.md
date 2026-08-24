@@ -42,11 +42,11 @@ Always use **bun** as the package manager (not npm, yarn, or pnpm).
     from `main` on push, so a bad commit reaches customers before CI reports it —
     the required checks become a post-mortem rather than a gate. `bun run typecheck && bun run lint && bun run format:check`, plus `bun run build` for
     anything structural.
-    **And confirm the deployment was created**, rather than assuming the push
-    made one. The Vercel project is on the **Hobby** plan, which silently
-    constrains `vercel.json` (crons run once a day at most); a schedule it does
-    not permit stopped every deployment for four hours on 2026-08-24 with all
-    gates green. `gh api repos/Yipyy-Inc/puneet/deployments --jq '.[0].sha'`.
+    **And confirm the deployment reached READY**, rather than assuming the push
+    made one. On 2026-08-24 fourteen commits produced no deployment at all for
+    six hours with every gate green, because `vercel.json` and an environment
+    variable were each broken in a way that fails BEFORE any build — so there
+    was no failed build to notice. `gh api repos/Yipyy-Inc/puneet/deployments --jq '.[0].sha'`.
   - Touching auth, a portal gate, a permission or an identity — or bookings,
     boarding, daycare, rooms, the care log, the calendar or the roster? Run
     `bun run test:e2e:ci` locally too. It is 56 specs, not 10 — `bun run check:doc-counts` derives this from package.json and fails if it drifts.
