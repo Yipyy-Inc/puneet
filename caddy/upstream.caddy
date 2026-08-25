@@ -1,0 +1,69 @@
+# ============================================================================
+# WHICH COLOUR IS SERVING TRAFFIC.
+#
+# This file is rewritten by `deploy.sh` — one token, `app_blue` or `app_green` —
+# and applied with `caddy reload`. That reload is graceful: in-flight requests
+# finish on the old configuration, the process is not restarted, and the
+# certificate store is untouched. A card-present payment that has been waiting
+# 90 seconds for somebody to tap survives a deploy because of this file.
+#
+# It is a whole snippet rather than a bare address because a Caddyfile snippet
+# cannot be interpolated as an inline value — `reverse_proxy {import x}` is not
+# valid. So the entire directive lives here, and the Caddyfile imports it.
+#
+# EDIT THE TOKEN, NOTHING ELSE. Everything below the upstream line is proxy
+# behaviour that both colours must share; if it drifts, a deploy changes how the
+# site behaves as a side effect of changing what it runs.
+# ============================================================================
+
+(upstream) {
+	reverse_proxy app_blue:3000 {
+		# ── HOST IS PRESERVED, AND THAT IS CADDY'S DEFAULT ────────────────
+		#
+		# There is deliberately NO `header_up Host` line here. Caddy passes the
+		# incoming Host through unchanged (unlike nginx, which rewrites it to
+		# the upstream address), and writing the directive out is how somebody
+		# later "helpfully" sets it to {upstream_hostport} and breaks all three
+		# of these at once:
+		#
+		#   src/proxy.ts:70        facilitySlugFromHost(host) → x-facility-slug
+		#   workos-actions.ts:44   the OAuth redirect_uri and signOut returnTo
+		#   passkeys.ts:66         the WebAuthn origin, compared byte for byte
+		#
+		# Note it reads `host` and never `x-forwarded-host`. Do not add one.
+
+		# ── PROTO IS A FACT HERE, NOT A CLIENT ASSERTION ──────────────────
+		# These blocks only ever serve TLS, so the value is pinned rather than
+		# forwarded. `header_up` with a single value REPLACES, so a browser
+		# sending its own `X-Forwarded-Proto: http` cannot downgrade the origin
+		# that passkeys.ts compares byte for byte.
+		header_up X-Forwarded-Proto https
+		header_up X-Real-IP {remote_host}
+
+		transport http {
+			dial_timeout 5s
+
+			# ── THE INTERMITTENT 502 YOU WOULD SPEND A WEEK ON ────────────
+			# Node's default server.keepAliveTimeout is 5 seconds. Caddy's
+			# default upstream idle keep-alive is TWO MINUTES. So Caddy keeps
+			# pooled connections Node has already closed, and the reuse loses
+			# the race: a few 502s per thousand requests, correlated with
+			# nothing. Shorter than Node's, so Caddy always closes first.
+			keepalive 3s
+			keepalive_idle_conns 32
+
+			# The real ceiling on a handler now that `maxDuration` is dead code
+			# off Vercel — nothing else bounds one. 180s sits above
+			# terminal.ts's own 150s budget, so its AbortSignal fires first and
+			# the app returns a real error rather than Caddy cutting the socket
+			# underneath a card payment.
+			response_header_timeout 180s
+			read_timeout 200s
+		}
+
+		# Retry only a connection that was never established. Never one that was
+		# accepted — /api/payments/* is not idempotent.
+		lb_try_duration 3s
+		lb_try_interval 250ms
+	}
+}

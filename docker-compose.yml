@@ -1,112 +1,130 @@
 # ============================================================================
 # Yipyy — what runs on the VPS.
 #
-# Two containers. The app never binds a host port: the ONLY way in is through
-# Caddy on 80/443. That matters more than it looks — Docker publishes ports by
-# writing iptables rules directly, bypassing ufw entirely, so a published app
-# port would be reachable from the internet whatever the firewall says.
+# Two app containers and one Caddy. The apps never bind a host port: the ONLY
+# way in is through Caddy on 80/443. That matters more than it looks — Docker
+# publishes ports by writing iptables rules directly, bypassing ufw entirely, so
+# a published app port would be reachable from the internet whatever the
+# firewall says.
 #
-# ── DEPLOY AND ROLLBACK ────────────────────────────────────────────────────
+# ── WHY TWO COLOURS ────────────────────────────────────────────────────────
 #
-#   IMAGE_TAG=<sha> docker compose up -d
+# With one container, `docker compose up -d` STOPS the old one before starting
+# the new. `stop_grace_period` is 200s so a card-present payment in flight can
+# finish — which means the site can be down for the whole of that window. That
+# is not a deploy strategy for a platform taking card payments.
 #
-# and rollback is the same line with an earlier SHA. Every commit's image stays
-# in GHCR, so going back is a pull, not a rebuild.
+# So deploys start the IDLE colour, wait for it to be healthy, prove it with a
+# real request, and then point Caddy at it with `caddy reload`. The reload is
+# graceful: in-flight requests finish on the old config. Nobody is interrupted,
+# including somebody 90 seconds into tapping a card.
 #
-# ── KNOWN LIMIT: THIS RECREATES, IT DOES NOT ROLL ─────────────────────────
+# The previous colour is LEFT RUNNING. ~600 MB of idle memory buys a rollback
+# that is one reload and under a second — the only rollback speed that matters
+# when the thing being rolled back moves money.
 #
-# A single app container means `up -d` stops the old one before starting the
-# new: a short gap, and `stop_grace_period` below means a card payment in
-# flight is allowed to finish rather than being severed. That is acceptable for
-# the staging host and for the first facility, and it is NOT acceptable for the
-# apex once every facility is behind it. Blue/green — two app services, one
-# Caddy, swapped with `caddy reload` — is required BEFORE the final DNS flip.
-# Recorded here rather than discovered then.
+# Both colours carry the network alias `app`, so the on-demand-TLS `ask`
+# endpoint in the Caddyfile has a stable address that never needs rewriting.
 # ============================================================================
 
+name: yipyy
+
+x-app: &app
+  restart: unless-stopped
+
+  # Runtime secrets live in a root-owned .env beside this file — never in the
+  # image, never in GitHub Actions. The six NEXT_PUBLIC_* values are NOT here:
+  # they were inlined at build time and setting them now does nothing at all.
+  #
+  # WORKOS_COOKIE_DOMAIN must be `.yipyy.com` WITH the leading dot once the apex
+  # is served here, or a session does not span facility subdomains and signing
+  # in appears to succeed then bounces back to the login page.
+  env_file:
+    - .env
+
+  environment:
+    NODE_ENV: production
+    PORT: "3000"
+    HOSTNAME: "0.0.0.0"
+    # The box has 7.8 GB, its swap is insurance rather than headroom, and BOTH
+    # colours are resident during a swap. An uncapped Node heap gets the
+    # container OOM-killed with no log line anywhere; a capped one collects
+    # garbage instead.
+    NODE_OPTIONS: "--max-old-space-size=1800"
+    # facility_takings does its own timezone bucketing. A box-local timezone
+    # would silently reinterpret it.
+    TZ: UTC
+
+  # PID 1 in a container neither reaps children nor forwards signals the way an
+  # init does. Without this, SIGTERM never reaches Node and every stop waits out
+  # the full grace period.
+  init: true
+
+  # Longer than the 150 seconds src/lib/clover/terminal.ts will wait for a human
+  # to tap a card. Retiring a colour must not sever a payment.
+  stop_grace_period: 200s
+
+  mem_limit: 2600m
+
+  # Deliberately no `ports:`. See the header.
+  expose:
+    - "3000"
+
+  # receipt-image.ts sets XDG_CACHE_HOME=/tmp before loading sharp, so
+  # fontconfig writes its cache here. tmpfs keeps it off disk and writable by
+  # the unprivileged uid the image runs as.
+  tmpfs:
+    - /tmp:size=256m,mode=1777,uid=10001,gid=10001
+
+  volumes:
+    # next/image now transcodes on 2 vCPU rather than at Vercel's edge. Without
+    # this the cache is empty after every deploy and the first page load
+    # re-optimises every Supabase-hosted facility logo. Shared between colours:
+    # Next writes content-hashed paths, so two readers and writers are safe.
+    - next_image_cache:/app/.next/cache
+
+  networks:
+    edge:
+      aliases:
+        - app
+
+  healthcheck:
+    test:
+      [
+        "CMD",
+        "node",
+        "-e",
+        "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+      ]
+    interval: 15s
+    timeout: 5s
+    start_period: 45s
+    retries: 4
+
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
 services:
-  app:
-    image: ghcr.io/yipyy-inc/puneet:${IMAGE_TAG:?set IMAGE_TAG to a commit sha}
-    container_name: yipyy-app
-    restart: unless-stopped
+  app_blue:
+    <<: *app
+    profiles: ["blue"]
+    container_name: yipyy-app-blue
+    image: ghcr.io/yipyy-inc/puneet:${IMAGE_TAG_BLUE:-latest}
 
-    # Runtime secrets live in a root-owned .env beside this file — never in the
-    # image, never in GitHub Actions. The six NEXT_PUBLIC_* values are NOT here:
-    # they were inlined at build time and setting them now does nothing at all.
-    #
-    # WORKOS_COOKIE_DOMAIN must be `.yipyy.com` WITH the leading dot, or
-    # sign-in appears to succeed and bounces straight back to the login page.
-    env_file:
-      - .env
-
-    environment:
-      NODE_ENV: production
-      PORT: "3000"
-      HOSTNAME: "0.0.0.0"
-      # The box has 7.8 GB and its swap is insurance, not headroom. An uncapped
-      # Node heap gets the container OOM-killed with no log line anywhere; a
-      # capped one garbage-collects instead.
-      NODE_OPTIONS: "--max-old-space-size=2048"
-      # The facility_takings RPC does its own timezone bucketing. A box-local
-      # timezone would silently reinterpret it.
-      TZ: UTC
-
-    # PID 1 in a container neither reaps children nor forwards signals the way
-    # an init does. Without this, SIGTERM never reaches Node and every stop
-    # waits out the full grace period.
-    init: true
-
-    # Longer than the 150 seconds `src/lib/clover/terminal.ts` will wait for a
-    # human to tap a card. A deploy must not sever a card-present payment.
-    stop_grace_period: 200s
-
-    # Deliberately no `ports:`. See the header.
-    expose:
-      - "3000"
-
-    # `receipt-image.ts` sets XDG_CACHE_HOME=/tmp before loading sharp, so
-    # fontconfig writes its cache here. tmpfs keeps it off disk and writable by
-    # the unprivileged uid the image runs as.
-    tmpfs:
-      - /tmp:size=256m,mode=1777,uid=10001,gid=10001
-
-    volumes:
-      # next/image now transcodes on 2 vCPU rather than at Vercel's edge.
-      # Without this the cache is empty after every deploy and the first page
-      # load re-optimises every Supabase-hosted facility logo.
-      - next_image_cache:/app/.next/cache
-
-    networks:
-      # Caddy reaches the TLS gate at `http://app:3000`, so this name is part of
-      # the Caddyfile's contract.
-      - edge
-
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 30s
-      timeout: 5s
-      start_period: 45s
-      retries: 4
-
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "5"
+  app_green:
+    <<: *app
+    profiles: ["green"]
+    container_name: yipyy-app-green
+    image: ghcr.io/yipyy-inc/puneet:${IMAGE_TAG_GREEN:-latest}
 
   caddy:
     image: caddy:2-alpine
     container_name: yipyy-caddy
     restart: unless-stopped
     init: true
-    depends_on:
-      - app
 
     ports:
       - "80:80"
@@ -115,19 +133,15 @@ services:
       - "443:443/udp"
 
     volumes:
-      # ── EDITING THIS FILE IS NOT ENOUGH ─────────────────────────────────
+      # ── THE DIRECTORY, NOT THE FILES ────────────────────────────────────
       #
-      # Docker bind-mounts a single FILE by inode. Anything that REPLACES the
-      # file rather than writing it in place — scp, most editors' save-by-
-      # rename, `mv` — leaves the container reading the old inode, so the new
-      # config is on disk and invisible to Caddy. The symptom is a config error
-      # that names a line you have already deleted.
-      #
-      # After changing it: `docker compose up -d --force-recreate caddy`, or
-      # better `docker exec yipyy-caddy caddy reload --config /etc/caddy/Caddyfile
-      # --adapter caddyfile`, which is graceful and does not drop in-flight
-      # requests — including a card payment mid-tap.
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Docker bind-mounts a single FILE by inode, so anything that REPLACES it
+      # rather than writing in place — scp, `sed -i`, most editors' save — leaves
+      # the container reading the old inode while the new content sits on disk.
+      # The symptom is a config error naming a line you have already deleted.
+      # Mounting the directory makes the file swap invisible, which is exactly
+      # what deploy.sh needs when it rewrites upstream.caddy.
+      - ./caddy:/etc/caddy:ro
       # ── DO NOT LOSE THIS ────────────────────────────────────────────────
       # Every issued certificate AND the ACME account key. Recreate this volume
       # and every host re-issues at once, against a limit of 50 certificates per
@@ -137,12 +151,11 @@ services:
       - caddy_config:/config
 
     environment:
-      ACME_EMAIL: ${ACME_EMAIL:-}
       # Which hostnames get a certificate AT STARTUP rather than on demand.
       # During the parallel run this is `staging.yipyy.com`, because naming a
       # host whose DNS still points at Vercel makes Caddy fail HTTP-01 in a
       # retry loop against a 5-failures-per-hour limit. It becomes
-      # `yipyy.com, www.yipyy.com` at the flip.
+      # `yipyy.com, www.yipyy.com` once the apex actually resolves here.
       PRIMARY_HOSTS: ${PRIMARY_HOSTS:-yipyy.com, www.yipyy.com}
       TZ: UTC
 
