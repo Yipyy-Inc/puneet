@@ -1,69 +1,170 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import type { Location } from "@/types/location";
 import { DatePicker } from "@/components/ui/date-picker";
 import { HqKpiTile } from "@/components/hq/HqKpiTile";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import {
-  buildCommandCenterKpis,
-  type CommandCenterRange,
-} from "@/lib/hq/command-center-kpis";
+  useFacilityReport,
+  type RevenueByLocationData,
+  type ServiceMixByLocationData,
+} from "@/lib/api/facility-reports";
 
-const RANGES: { key: CommandCenterRange; label: string }[] = [
+// ============================================================================
+// The Command Center KPI tiles, from the same ledger the Reports page reads.
+//
+// ── WHAT THIS REPLACED ────────────────────────────────────────────────────
+//
+// `buildCommandCenterKpis` scaled a fixture's ONE monthly total by a range
+// factor (today = 1/30th of the month, "This Week" = 7/30ths) rather than
+// reading a real window — a slow Tuesday and a slammed one produced the exact
+// same "Today" figure, always 1/30th of April 2026's number.
+//
+// Occupancy and Outstanding Payments tiles are gone, not converted: neither
+// has a real per-location source (occupancy joined this decision earlier;
+// outstanding-by-location needs a query this pass didn't build).
+// ============================================================================
+
+type Range = "today" | "week" | "month" | "custom";
+
+const RANGES: { key: Range; label: string }[] = [
   { key: "today", label: "Today" },
   { key: "week", label: "This Week" },
   { key: "month", label: "This Month" },
   { key: "custom", label: "Custom" },
 ];
 
-// Inclusive day count between two YYYY-MM-DD strings; 0 if either is unset or
-// the range is invalid (from after to). Pure — no clock read.
-function inclusiveDays(from: string, to: string): number {
-  if (!from || !to) return 0;
-  const a = new Date(`${from}T00:00:00`).getTime();
-  const b = new Date(`${to}T00:00:00`).getTime();
-  if (Number.isNaN(a) || Number.isNaN(b) || b < a) return 0;
-  return Math.round((b - a) / 86_400_000) + 1;
+function dayStart(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-interface Props {
-  locations: Location[];
+function windowFor(
+  range: Range,
+  customFrom: string,
+  customTo: string,
+  now: Date,
+): { from: string; to: string; label: string; priorNoun: string } {
+  const todayStart = dayStart(now);
+  const tomorrowStart = new Date(todayStart.getTime() + 86_400_000);
+
+  if (range === "today") {
+    return {
+      from: todayStart.toISOString(),
+      to: tomorrowStart.toISOString(),
+      label: "Today",
+      priorNoun: "day",
+    };
+  }
+  if (range === "week") {
+    return {
+      from: new Date(todayStart.getTime() - 6 * 86_400_000).toISOString(),
+      to: tomorrowStart.toISOString(),
+      label: "This Week",
+      priorNoun: "week",
+    };
+  }
+  if (range === "month") {
+    return {
+      from: new Date(todayStart.getTime() - 29 * 86_400_000).toISOString(),
+      to: tomorrowStart.toISOString(),
+      label: "This Month",
+      priorNoun: "month",
+    };
+  }
+  // custom
+  if (customFrom && customTo) {
+    const from = new Date(`${customFrom}T00:00:00`);
+    const to = new Date(
+      new Date(`${customTo}T00:00:00`).getTime() + 86_400_000,
+    );
+    const days = Math.max(
+      1,
+      Math.round((to.getTime() - from.getTime()) / 86_400_000),
+    );
+    return {
+      from: from.toISOString(),
+      to: to.toISOString(),
+      label: `Custom · ${days} day${days === 1 ? "" : "s"}`,
+      priorNoun: "period",
+    };
+  }
+  // No valid custom range yet — fall back to a month-equivalent view.
+  return {
+    from: new Date(todayStart.getTime() - 29 * 86_400_000).toISOString(),
+    to: tomorrowStart.toISOString(),
+    label: "Custom",
+    priorNoun: "period",
+  };
 }
 
-/**
- * The four HQ Command Center KPI tiles plus the date-range selector that drives
- * them. Built on the shared HqKpiTile primitive and sourced entirely from
- * hq-analytics + LocationMetrics via buildCommandCenterKpis.
- */
-export function CommandCenterKpis({ locations }: Props) {
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+function sum<T extends { revenue: number; bookings: number }>(
+  rows: T[] | undefined,
+  key: "revenue" | "bookings",
+): number {
+  return (rows ?? []).reduce((s, r) => s + r[key], 0);
+}
+
+export function CommandCenterKpis() {
   const router = useRouter();
-  // Revenue/financial tiles are Manager+ only (spec A5 / F0.2). Lower roles get
-  // the tiles absent, not blurred. TODO: also strip server-side when a backend
-  // exists — the client shouldn't receive figures it can't show.
+  // Revenue/financial tiles are Manager+ only (spec A5 / F0.2).
   const canSeeRevenue = usePermission("financial_view_revenue");
-  const [range, setRange] = useState<CommandCenterRange>("today");
+  const [range, setRange] = useState<Range>("today");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  // Snapshot "now" once at mount, not on every render.
+  const [now] = useState(() => new Date());
 
-  const customDays = inclusiveDays(customFrom, customTo);
-  // Custom with no valid range yet → fall back to a month-equivalent view.
-  const effectiveCustomDays =
-    range === "custom" && customDays > 0 ? customDays : 30;
+  const { from, to, label, priorNoun } = useMemo(
+    () => windowFor(range, customFrom, customTo, now),
+    [range, customFrom, customTo, now],
+  );
 
-  const kpis = buildCommandCenterKpis(locations, range, effectiveCustomDays);
+  const { data: revenueReport } = useFacilityReport(
+    "revenue-by-location",
+    from,
+    to,
+  );
+  const { data: mixReport } = useFacilityReport(
+    "service-mix-by-location",
+    from,
+    to,
+  );
 
-  const occupancySub = kpis.occupancy.perLocation
-    .map((l) => `${l.shortCode} ${l.rate}%`)
+  const revenue = revenueReport?.data as RevenueByLocationData | undefined;
+  const mix = mixReport?.data as ServiceMixByLocationData | undefined;
+
+  const curRevenue = sum(revenue?.current, "revenue");
+  const prevRevenue = sum(revenue?.previous, "revenue");
+  const deltaPct = prevRevenue
+    ? round1(((curRevenue - prevRevenue) / prevRevenue) * 100)
+    : 0;
+  const totalBookings = sum(revenue?.current, "bookings");
+
+  const byService = new Map<string, number>();
+  for (const row of mix?.current ?? []) {
+    byService.set(
+      row.service,
+      (byService.get(row.service) ?? 0) + row.bookings,
+    );
+  }
+  const bookingsSub = Array.from(byService.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(
+      ([service, count]) =>
+        `${service[0].toUpperCase()}${service.slice(1)} ${count}`,
+    )
     .join(" · ");
-  const bookingsSub = `Boarding ${kpis.bookings.byService.boarding} · Daycare ${kpis.bookings.byService.daycare} · Grooming ${kpis.bookings.byService.grooming} · Training ${kpis.bookings.byService.training}`;
 
   return (
     <div className="space-y-4">
-      {/* Date-range selector — drives all four tiles */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="bg-muted/60 inline-flex items-center gap-1 rounded-xl border p-1">
           {RANGES.map((r) => (
@@ -105,41 +206,21 @@ export function CommandCenterKpis({ locations }: Props) {
         )}
       </div>
 
-      {/* KPI tiles — revenue/financial tiles gated to Manager+ (financial_view_revenue) */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
         {canSeeRevenue && (
           <HqKpiTile
-            label={`Network Revenue · ${kpis.rangeLabel}`}
-            value={`$${kpis.revenue.value.toLocaleString()}`}
-            delta={kpis.revenue.deltaPct}
-            sublabel={`vs. prior ${kpis.priorNoun}`}
+            label={`Network Revenue · ${label}`}
+            value={`$${curRevenue.toLocaleString()}`}
+            delta={deltaPct}
+            sublabel={`vs. prior ${priorNoun}`}
           />
         )}
         <HqKpiTile
-          label={`Total Bookings · ${kpis.rangeLabel}`}
-          value={kpis.bookings.total.toLocaleString()}
-          sublabel={bookingsSub}
+          label={`Total Bookings · ${label}`}
+          value={totalBookings.toLocaleString()}
+          sublabel={bookingsSub || "No bookings in this window"}
+          onClick={() => router.push("/facility/dashboard/bookings")}
         />
-        <HqKpiTile
-          label="Average Occupancy"
-          value={kpis.occupancy.weighted}
-          unit="%"
-          sublabel={occupancySub}
-        />
-        {canSeeRevenue && (
-          <HqKpiTile
-            label="Outstanding Payments"
-            value={`$${kpis.outstanding.total.toLocaleString()}`}
-            sublabel={`${kpis.outstanding.invoiceCount} open invoices · manage`}
-            // Billing & Payments, which lists the outstanding invoices this
-            // tile counts. It used to point at ?section=financial — a settings
-            // screen holding tip tiers and a fixture list of payment gateways,
-            // with nothing to chase an invoice with. That section has since
-            // become Yipyy Pay, so the wrong destination would now be a
-            // differently wrong one.
-            onClick={() => router.push("/facility/dashboard/billing")}
-          />
-        )}
       </div>
     </div>
   );

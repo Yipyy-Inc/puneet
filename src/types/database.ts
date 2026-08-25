@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5";
+    PostgrestVersion: "14.17";
   };
   public: {
     Tables: {
@@ -5014,6 +5014,7 @@ export type Database = {
           environment: string;
           facility_id: string;
           last_error: string | null;
+          last_swept_at: string | null;
           last_verified_at: string | null;
           merchant_id: string;
           processor: string;
@@ -5032,6 +5033,7 @@ export type Database = {
           environment: string;
           facility_id: string;
           last_error?: string | null;
+          last_swept_at?: string | null;
           last_verified_at?: string | null;
           merchant_id: string;
           processor?: string;
@@ -5050,6 +5052,7 @@ export type Database = {
           environment?: string;
           facility_id?: string;
           last_error?: string | null;
+          last_swept_at?: string | null;
           last_verified_at?: string | null;
           merchant_id?: string;
           processor?: string;
@@ -5095,6 +5098,7 @@ export type Database = {
           kind: string;
           payment_id: string | null;
           processor: string;
+          processor_order_id: string | null;
           processor_payment_id: string | null;
           status: string;
           updated_at: string;
@@ -5117,6 +5121,7 @@ export type Database = {
           kind: string;
           payment_id?: string | null;
           processor?: string;
+          processor_order_id?: string | null;
           processor_payment_id?: string | null;
           status?: string;
           updated_at?: string;
@@ -5139,6 +5144,7 @@ export type Database = {
           kind?: string;
           payment_id?: string | null;
           processor?: string;
+          processor_order_id?: string | null;
           processor_payment_id?: string | null;
           status?: string;
           updated_at?: string;
@@ -5271,6 +5277,9 @@ export type Database = {
           package_pass_applied: number;
           package_pass_id: string | null;
           processor: string | null;
+          processor_device_serial: string | null;
+          processor_merchant_id: string | null;
+          processor_order_id: string | null;
           processor_payment_id: string | null;
           receipt_channels: string[];
           refund_of_payment_id: string | null;
@@ -5300,6 +5309,9 @@ export type Database = {
           package_pass_applied?: number;
           package_pass_id?: string | null;
           processor?: string | null;
+          processor_device_serial?: string | null;
+          processor_merchant_id?: string | null;
+          processor_order_id?: string | null;
           processor_payment_id?: string | null;
           receipt_channels?: string[];
           refund_of_payment_id?: string | null;
@@ -5329,6 +5341,9 @@ export type Database = {
           package_pass_applied?: number;
           package_pass_id?: string | null;
           processor?: string | null;
+          processor_device_serial?: string | null;
+          processor_merchant_id?: string | null;
+          processor_order_id?: string | null;
           processor_payment_id?: string | null;
           receipt_channels?: string[];
           refund_of_payment_id?: string | null;
@@ -7543,6 +7558,99 @@ export type Database = {
           },
         ];
       };
+      unattached_payments: {
+        Row: {
+          amount_cents: number;
+          attached_payment_id: string | null;
+          card_brand: string | null;
+          card_last4: string | null;
+          currency: string | null;
+          discovered_at: string;
+          entry_method: string | null;
+          facility_id: string;
+          id: string;
+          note: string | null;
+          payload: Json | null;
+          processor: string;
+          processor_device_serial: string | null;
+          processor_merchant_id: string | null;
+          processor_order_id: string | null;
+          processor_payment_id: string;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          status: string;
+          taken_at: string | null;
+          tax_cents: number;
+          tip_cents: number;
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents: number;
+          attached_payment_id?: string | null;
+          card_brand?: string | null;
+          card_last4?: string | null;
+          currency?: string | null;
+          discovered_at?: string;
+          entry_method?: string | null;
+          facility_id: string;
+          id?: string;
+          note?: string | null;
+          payload?: Json | null;
+          processor?: string;
+          processor_device_serial?: string | null;
+          processor_merchant_id?: string | null;
+          processor_order_id?: string | null;
+          processor_payment_id: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+          taken_at?: string | null;
+          tax_cents?: number;
+          tip_cents?: number;
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          attached_payment_id?: string | null;
+          card_brand?: string | null;
+          card_last4?: string | null;
+          currency?: string | null;
+          discovered_at?: string;
+          entry_method?: string | null;
+          facility_id?: string;
+          id?: string;
+          note?: string | null;
+          payload?: Json | null;
+          processor?: string;
+          processor_device_serial?: string | null;
+          processor_merchant_id?: string | null;
+          processor_order_id?: string | null;
+          processor_payment_id?: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+          taken_at?: string | null;
+          tax_cents?: number;
+          tip_cents?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "unattached_payments_attached_payment_id_fkey";
+            columns: ["attached_payment_id"];
+            isOneToOne: false;
+            referencedRelation: "payments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "unattached_payments_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_passkeys: {
         Row: {
           backed_up: boolean;
@@ -7738,99 +7846,6 @@ export type Database = {
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      unattached_payments: {
-        Row: {
-          amount_cents: number;
-          attached_payment_id: string | null;
-          card_brand: string | null;
-          card_last4: string | null;
-          currency: string | null;
-          discovered_at: string;
-          entry_method: string | null;
-          facility_id: string;
-          id: string;
-          note: string | null;
-          payload: Json | null;
-          processor: string;
-          processor_device_serial: string | null;
-          processor_merchant_id: string | null;
-          processor_order_id: string | null;
-          processor_payment_id: string;
-          resolved_at: string | null;
-          resolved_by: string | null;
-          status: string;
-          tax_cents: number;
-          taken_at: string | null;
-          tip_cents: number;
-          updated_at: string;
-        };
-        Insert: {
-          amount_cents: number;
-          attached_payment_id?: string | null;
-          card_brand?: string | null;
-          card_last4?: string | null;
-          currency?: string | null;
-          discovered_at?: string;
-          entry_method?: string | null;
-          facility_id: string;
-          id?: string;
-          note?: string | null;
-          payload?: Json | null;
-          processor?: string;
-          processor_device_serial?: string | null;
-          processor_merchant_id?: string | null;
-          processor_order_id?: string | null;
-          processor_payment_id: string;
-          resolved_at?: string | null;
-          resolved_by?: string | null;
-          status?: string;
-          tax_cents?: number;
-          taken_at?: string | null;
-          tip_cents?: number;
-          updated_at?: string;
-        };
-        Update: {
-          amount_cents?: number;
-          attached_payment_id?: string | null;
-          card_brand?: string | null;
-          card_last4?: string | null;
-          currency?: string | null;
-          discovered_at?: string;
-          entry_method?: string | null;
-          facility_id?: string;
-          id?: string;
-          note?: string | null;
-          payload?: Json | null;
-          processor?: string;
-          processor_device_serial?: string | null;
-          processor_merchant_id?: string | null;
-          processor_order_id?: string | null;
-          processor_payment_id?: string;
-          resolved_at?: string | null;
-          resolved_by?: string | null;
-          status?: string;
-          tax_cents?: number;
-          taken_at?: string | null;
-          tip_cents?: number;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "unattached_payments_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "unattached_payments_attached_payment_id_fkey";
-            columns: ["attached_payment_id"];
-            isOneToOne: false;
-            referencedRelation: "payments";
             referencedColumns: ["id"];
           },
         ];
@@ -8140,6 +8155,15 @@ export type Database = {
         };
         Returns: string;
       };
+      attach_unattached_payment: {
+        Args: {
+          p_booking_ref?: number;
+          p_client_id?: string;
+          p_id: string;
+          p_note?: string;
+        };
+        Returns: string;
+      };
       award_loyalty_badge: {
         Args: {
           p_account_id: string;
@@ -8229,6 +8253,10 @@ export type Database = {
           credentials_removed: boolean;
         }[];
       };
+      dismiss_unattached_payment: {
+        Args: { p_id: string; p_note: string };
+        Returns: boolean;
+      };
       facility_branding_by_slug: {
         Args: { p_slug: string };
         Returns: {
@@ -8272,6 +8300,40 @@ export type Database = {
       };
       facility_report: {
         Args: { p_facility_id: string; p_months?: number };
+        Returns: Json;
+      };
+      facility_report_dataset: {
+        Args: {
+          p_facility_id: string;
+          p_from: string;
+          p_prev_from: string;
+          p_prev_to: string;
+          p_report: string;
+          p_to: string;
+        };
+        Returns: Json;
+      };
+      facility_report_kpis: {
+        Args: {
+          p_facility_id: string;
+          p_from: string;
+          p_prev_from: string;
+          p_prev_to: string;
+          p_to: string;
+        };
+        Returns: Json;
+      };
+      facility_revenue_trend_by_location: {
+        Args: { p_facility_id: string; p_months?: number };
+        Returns: Json;
+      };
+      facility_takings: {
+        Args: {
+          p_facility_id: string;
+          p_from: string;
+          p_time_zone?: string;
+          p_to: string;
+        };
         Returns: Json;
       };
       generate_tasks_from_group: {
@@ -8421,6 +8483,10 @@ export type Database = {
           scope: Database["public"]["Enums"]["access_scope"];
         }[];
       };
+      name_intent_order: {
+        Args: { p_intent_id: string; p_order_id: string };
+        Returns: undefined;
+      };
       offboard_staff: {
         Args: {
           p_last_day?: string;
@@ -8550,49 +8616,6 @@ export type Database = {
         Args: { p_action: string; p_booking_ref: number };
         Returns: string;
       };
-      attach_unattached_payment: {
-        Args: {
-          p_booking_ref?: number;
-          p_client_id?: string;
-          p_id: string;
-          p_note?: string;
-        };
-        Returns: string;
-      };
-      dismiss_unattached_payment: {
-        Args: { p_id: string; p_note: string };
-        Returns: boolean;
-      };
-      facility_report_dataset: {
-        Args: {
-          p_facility_id: string;
-          p_from: string;
-          p_prev_from: string;
-          p_prev_to: string;
-          p_report: string;
-          p_to: string;
-        };
-        Returns: Json;
-      };
-      facility_report_kpis: {
-        Args: {
-          p_facility_id: string;
-          p_from: string;
-          p_prev_from: string;
-          p_prev_to: string;
-          p_to: string;
-        };
-        Returns: Json;
-      };
-      facility_takings: {
-        Args: {
-          p_facility_id: string;
-          p_from: string;
-          p_time_zone?: string;
-          p_to: string;
-        };
-        Returns: Json;
-      };
       record_clover_payment: {
         Args: {
           p_auth_code?: string;
@@ -8603,25 +8626,6 @@ export type Database = {
           p_intent_id: string;
           p_processor_payment_id: string;
           p_subtotal_cents: number;
-          p_tax_cents?: number;
-          p_tip_cents?: number;
-        };
-        Returns: string;
-      };
-      record_unattached_payment: {
-        Args: {
-          p_amount_cents: number;
-          p_card_brand?: string;
-          p_card_last4?: string;
-          p_currency?: string;
-          p_entry_method?: string;
-          p_facility_id: string;
-          p_payload?: Json;
-          p_processor_device_serial?: string;
-          p_processor_merchant_id?: string;
-          p_processor_order_id?: string;
-          p_processor_payment_id: string;
-          p_taken_at?: string;
           p_tax_cents?: number;
           p_tip_cents?: number;
         };
@@ -8690,6 +8694,25 @@ export type Database = {
           event_id: string;
           is_new: boolean;
         }[];
+      };
+      record_unattached_payment: {
+        Args: {
+          p_amount_cents: number;
+          p_card_brand?: string;
+          p_card_last4?: string;
+          p_currency?: string;
+          p_entry_method?: string;
+          p_facility_id: string;
+          p_payload?: Json;
+          p_processor_device_serial?: string;
+          p_processor_merchant_id?: string;
+          p_processor_order_id?: string;
+          p_processor_payment_id: string;
+          p_taken_at?: string;
+          p_tax_cents?: number;
+          p_tip_cents?: number;
+        };
+        Returns: string;
       };
       redeem_gift_card: {
         Args: {

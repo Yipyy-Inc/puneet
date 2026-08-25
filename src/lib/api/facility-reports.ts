@@ -38,9 +38,28 @@ export interface ServiceHours {
 }
 
 export interface LocationRevenue {
+  /** Null for bookings whose branch was later deleted -- grouped under "No
+   *  branch" rather than dropped. */
+  locationId: string | null;
   location: string;
   revenue: number;
   bookings: number;
+}
+
+export interface ServiceLocationRevenue {
+  service: string;
+  locationId: string | null;
+  location: string;
+  revenue: number;
+  bookings: number;
+}
+
+export interface MonthlyLocationRevenue {
+  /** "YYYY-MM". */
+  month: string;
+  locationId: string | null;
+  location: string;
+  revenue: number;
 }
 
 export interface OccupancyDay {
@@ -91,6 +110,11 @@ export interface RevenueByLocationData {
   previous: LocationRevenue[];
 }
 
+export interface ServiceMixByLocationData {
+  current: ServiceLocationRevenue[];
+  previous: ServiceLocationRevenue[];
+}
+
 export interface OccupancyData {
   current: OccupancyDay[];
   previous: OccupancyDay[];
@@ -124,6 +148,7 @@ export interface TotalRevenueData {
 export type ReportDataset =
   | RevenueByServiceData
   | RevenueByLocationData
+  | ServiceMixByLocationData
   | OccupancyData
   | CancelledData
   | CustomerValueData
@@ -165,5 +190,28 @@ export function useFacilityReport(
     ...facilityReportQueries.dataset(report ?? "", from, to),
     enabled: Boolean(report),
     placeholderData: keepPreviousData,
+  });
+}
+
+/** Trailing months of revenue per branch -- a different shape than the
+ *  current/previous reports above, so its own endpoint and its own hook. */
+export function useRevenueTrendByLocation(months = 12) {
+  return useQuery({
+    queryKey: ["facility-report", "revenue-trend", months] as const,
+    queryFn: async (): Promise<MonthlyLocationRevenue[]> => {
+      const response = await fetch(
+        `/api/facility/reports/revenue-trend?months=${months}`,
+      );
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(body?.error ?? "Could not read the revenue trend.");
+      }
+      const body = (await response.json()) as {
+        data: MonthlyLocationRevenue[];
+      };
+      return body.data;
+    },
   });
 }

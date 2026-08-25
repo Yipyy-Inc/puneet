@@ -1,8 +1,8 @@
-import { hqOverviewMetrics } from "@/data/hq-analytics";
-import { getLocationsByFacility } from "@/data/locations";
 import { HQOverviewClient } from "@/components/hq/HQOverviewClient";
 
+// Real branches, real revenue, real headcount -- it used to be
+// `hqOverviewMetrics` + `getLocationsByFacility(11)`, a fixture anchored to
+// April 2026.
 export default function HQOverviewPage() {
-  const locations = getLocationsByFacility(11);
-  return <HQOverviewClient metrics={hqOverviewMetrics} locations={locations} />;
+  return <HQOverviewClient />;
 }

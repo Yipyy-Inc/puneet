@@ -1,8 +1,6 @@
-import { getLocationsByFacility } from "@/data/locations";
 import { HQAnalyticsPanel } from "@/components/hq/HQAnalyticsPanel";
 
 export default function HQReportsPage() {
-  const locations = getLocationsByFacility(11);
   return (
     <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       <div>
@@ -12,7 +10,7 @@ export default function HQReportsPage() {
           to scope every chart
         </p>
       </div>
-      <HQAnalyticsPanel locations={locations} />
+      <HQAnalyticsPanel />
     </div>
   );
 }
