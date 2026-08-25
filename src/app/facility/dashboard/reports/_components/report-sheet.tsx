@@ -39,6 +39,7 @@ import {
   type CustomerValueData,
   type OccupancyData,
   type ReportDataset,
+  type RevenueByLocationData,
   type RevenueByServiceData,
   type TotalRevenueData,
 } from "@/lib/api/facility-reports";
@@ -95,6 +96,22 @@ function withColor<T extends { service: string }>(
     ...row,
     color: BUILTIN_SERVICE_COLORS[row.service] ?? "#6b7280",
   };
+}
+
+// Branches have no fixed palette the way built-in services do -- this report
+// only ever gets a name back from the RPC, not a location's real color -- so
+// bars are colored by position instead.
+const LOCATION_PALETTE = [
+  "#6366f1",
+  "#10b981",
+  "#f59e0b",
+  "#ec4899",
+  "#06b6d4",
+  "#8b5cf6",
+];
+
+function withLocationColor<T>(row: T, index: number): T & { color: string } {
+  return { ...row, color: LOCATION_PALETTE[index % LOCATION_PALETTE.length] };
 }
 
 // ── Coming Soon ───────────────────────────────────────────────────────────────
@@ -245,6 +262,107 @@ function buildRevenueView(d: RevenueByServiceData): ReportView {
     body,
     exportData: cur.map((r) => ({
       Service: r.service,
+      Revenue: r.revenue,
+      Bookings: r.bookings,
+      "Avg / Booking": r.bookings > 0 ? r.revenue / r.bookings : 0,
+      "Share %":
+        curRevenue > 0 ? Math.round((r.revenue / curRevenue) * 1000) / 10 : 0,
+    })),
+    isEmpty: cur.length === 0,
+    emptyTitle: "No revenue in this period",
+  };
+}
+
+// ── Revenue by location ─────────────────────────────────────────────────────
+
+function buildRevenueByLocationView(d: RevenueByLocationData): ReportView {
+  const cur = d.current.map(withLocationColor);
+  const prev = d.previous;
+
+  const sum = (
+    rows: { revenue: number; bookings: number }[],
+    key: "revenue" | "bookings",
+  ) => rows.reduce((s, r) => s + r[key], 0);
+  const curRevenue = sum(cur, "revenue");
+  const prevRevenue = sum(prev, "revenue");
+  const curBookings = sum(cur, "bookings");
+  const prevBookings = sum(prev, "bookings");
+  const curAov = curBookings > 0 ? curRevenue / curBookings : 0;
+  const prevAov = prevBookings > 0 ? prevRevenue / prevBookings : 0;
+
+  const kpis: ReportKpi[] = [
+    {
+      label: "Total Revenue",
+      value: formatCurrency(curRevenue),
+      icon: DollarSign,
+      tone: "emerald",
+      delta: computeDelta(curRevenue, prevRevenue),
+      hint: "vs. prev. period",
+    },
+    {
+      label: "Total Bookings",
+      value: formatCount(curBookings),
+      icon: CalendarCheck,
+      tone: "indigo",
+      delta: computeDelta(curBookings, prevBookings),
+      hint: "vs. prev. period",
+    },
+    {
+      label: "Avg / Booking",
+      value: formatCurrency(curAov),
+      icon: DollarSign,
+      tone: "violet",
+      delta: computeDelta(curAov, prevAov),
+      hint: "vs. prev. period",
+    },
+  ];
+
+  const body = (
+    <div className="space-y-4">
+      <ReportChartCard
+        title="Revenue by Location"
+        subtitle="Booked revenue by branch in the selected period"
+        height={280}
+        isEmpty={cur.length === 0}
+        emptyMessage="No revenue in this period"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={cur}
+            margin={{ top: 8, right: 16, bottom: 24, left: 8 }}
+          >
+            <CartesianGrid {...gridProps} />
+            <XAxis
+              dataKey="location"
+              tick={axisTick}
+              label={axisLabel("Location", "x")}
+            />
+            <YAxis
+              tick={axisTick}
+              tickFormatter={tickFmt("compactCurrency")}
+              label={axisLabel("Revenue", "y")}
+            />
+            <Tooltip
+              cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
+              content={<ReportTooltip format="currency" />}
+            />
+            <Legend {...legendProps} />
+            <Bar dataKey="revenue" name="Revenue" radius={[4, 4, 0, 0]}>
+              {cur.map((row) => (
+                <Cell key={row.location} fill={row.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </ReportChartCard>
+    </div>
+  );
+
+  return {
+    kpis,
+    body,
+    exportData: cur.map((r) => ({
+      Location: r.location,
       Revenue: r.revenue,
       Bookings: r.bookings,
       "Avg / Booking": r.bookings > 0 ? r.revenue / r.bookings : 0,
@@ -709,6 +827,8 @@ function buildView(
       return buildTotalRevenueView(data as TotalRevenueData);
     case "revenue-by-service":
       return buildRevenueView(data as RevenueByServiceData);
+    case "revenue-by-location":
+      return buildRevenueByLocationView(data as RevenueByLocationData);
     case "occupancy-report":
       return buildOccupancyView(data as OccupancyData);
     case "cancelled-bookings":

@@ -104,6 +104,12 @@ const CATALOG: ReportCategory[] = [
         implemented: true,
       },
       {
+        id: "revenue-by-location",
+        name: "Revenue by Location",
+        description: "By branch",
+        implemented: true,
+      },
+      {
         id: "sales-summary",
         name: "Sales Summary",
         description: "Gross, net, discounts, refunds",
