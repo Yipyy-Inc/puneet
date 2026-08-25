@@ -50,6 +50,11 @@ export function LocationAccessGuard({
   }
 
   if (requireLocations && requireLocations.length > 0) {
+    // Locations load asynchronously now (real data, not a synchronous
+    // fixture) -- `accessibleLocationIds` is briefly empty while the fetch is
+    // in flight. Treat that as "not yet known," not "denied," so the guard
+    // doesn't flash a denial card on every navigation.
+    if (scope.isPending) return null;
     const hasAll = requireLocations.every((id) =>
       scope.accessibleLocationIds.includes(id),
     );

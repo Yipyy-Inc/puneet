@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import type { Location } from "@/types/location";
+import type { FacilityLocation } from "@/types/location";
 
 /**
  * Resolves what locations the current user can see and what
@@ -29,6 +29,7 @@ export function useLocationScope() {
     isHQView,
     isMultiLocation,
     settings,
+    isPending,
   } = useLocationContext();
 
   return useMemo(() => {
@@ -40,7 +41,7 @@ export function useLocationScope() {
     // Department manager: only the locations they're assigned to via
     //   user.departmentIds (treated as locationIds for the multi-location feature).
     // Everyone else: same as department manager.
-    const accessibleLocations: Location[] = (() => {
+    const accessibleLocations: FacilityLocation[] = (() => {
       if (isOwner || isGeneralManager) return locations;
       if (user.departmentIds.length === 0) {
         // No explicit assignments — show only the primary location.
@@ -99,6 +100,8 @@ export function useLocationScope() {
       // Misc
       isMultiLocation,
       settings,
+      /** True until the facility's locations have loaded at least once. */
+      isPending,
 
       // Helpers
       /** True if the given location is in scope right now. */
@@ -125,5 +128,6 @@ export function useLocationScope() {
     isHQView,
     isMultiLocation,
     settings,
+    isPending,
   ]);
 }
