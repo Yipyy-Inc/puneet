@@ -1999,6 +1999,52 @@ row moved, one ledger row exists, and a second attempt writes no second row.
    branch in `UnattachedPayments.tsx` is unreachable without a custom permission
    override — rare, not dead.
 
+### 🟡 The facility Reports page shows revenue that is not real
+
+`revenueByService()` and its neighbours in
+[report-data-sources.ts](src/lib/report-data-sources.ts) read
+`@/data/bookings`, `@/data/retail`, `@/data/grooming` — **fixtures**. So
+`/facility/dashboard/reports` renders invented figures, and it looks exactly
+like a working report.
+
+**Why it matters more from 2026-08-24:** the Yipyy Pay **Transactions** tab now
+reports the same kind of number from `public.payments`, which is real. The two
+screens disagree, and the new one is right. Anyone comparing them will trust the
+older, more established-looking one.
+
+**Do instead:** for any new money figure, read the ledger. `facility_takings()`
+already returns gross, net, refunds, tips, by-service, by-day, by-method and
+by-channel for a window, RLS-scoped and bucketed in the facility's own timezone.
+Converting the Reports page is a real job and was deliberately NOT done as part
+of the payments dashboard — but nobody should add a second fixture-backed
+revenue screen in the meantime.
+
+### 🟡 Two `DataTable` components whose names differ only by case
+
+`src/components/ui/DataTable.tsx` (88 importers) and
+`src/components/ui/data-table.tsx` (7) are **both tracked**, and they are
+different components:
+
+```
+DataTable.tsx   ColumnDef = { key, label, icon?, render?, sortable?, align? }
+data-table.tsx  ColumnDef = { accessorKey, header, cell? }
+```
+
+`DataTable.tsx` is the one CLAUDE.md means and the one with `emptyState`,
+`filters`, `selectable` and the rest.
+
+**On Windows and macOS the filesystem is case-insensitive, so only ONE of them
+can exist in the working tree at a time.** Reading `data-table.tsx` locally can
+therefore return the OTHER file's contents, and a `ColumnDef` written from that
+read uses `header` against a component that wants `label` — which typechecks
+locally and fails in CI, where Linux tells the two apart. That has already
+happened once here.
+
+**Do instead:** import `@/components/ui/DataTable`. If the working tree and your
+expectations ever disagree about which file you are looking at, settle it with
+`git show HEAD:src/components/ui/DataTable.tsx`, not the editor. Consolidating
+the two is worth doing and is not a passing job — it touches 95 files.
+
 ### 🔴 A Clover payment is not money until `result` says so
 
 `reconcile.ts` reads a payment from Clover and decides what to do with it. Until

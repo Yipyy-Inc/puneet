@@ -8542,6 +8542,15 @@ export type Database = {
         Args: { p_id: string; p_note: string };
         Returns: boolean;
       };
+      facility_takings: {
+        Args: {
+          p_facility_id: string;
+          p_from: string;
+          p_time_zone?: string;
+          p_to: string;
+        };
+        Returns: Json;
+      };
       record_clover_payment: {
         Args: {
           p_auth_code?: string;
