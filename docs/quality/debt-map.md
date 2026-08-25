@@ -989,6 +989,12 @@ if [ "$PREV" = "failure" ]; then raise; else don't; fi
 
 Fixed by granting `actions: read` **and** by splitting the third outcome out of the `else`: "the previous run passed" and "I could not find out" are different facts. Not being able to corroborate now RAISES, with a message saying that is why. A guard that fails into silence is worse than no guard, because it also supplies the confidence.
 
+**And that fix immediately exposed a third layer.** With the corroboration now raising, the next failing run got as far as `gh issue create` — and died on `fatal: not a git repository`. The job runs no `actions/checkout`, deliberately, so `gh` could not infer the repository from a git remote and **none of its three calls could ever have worked**: not the corroboration query, not the issue creation, and not `gh issue list` in the close step, which was swallowed by a `|| echo ""` and would have left a recovered outage's issue open for ever.
+
+`GH_REPO` is now set at the JOB level, so a gh call added later cannot be written without it. The close step no longer swallows its own failure — an error there looked exactly like "there is no open issue".
+
+**The sequence is the lesson.** The monitor needed `actions: read` AND repo context, and having only one of them still produced silence. Each fix revealed the next, and none of them would have been found by reading the file — only by making it fail and watching what it did.
+
 **The failure that exposed it was not an outage.** All three hosts answered 200 in under a second from a laptop at the same time, which is the Azure-region routing problem this workflow's own header already documents. That is the joke of it: the monitor was only ever tested by the failure mode it was designed to ignore, so the branch that matters had never once been reached.
 
 **Do instead:** when a check decides _not_ to alert, make it say which fact it decided on. And test an alerting path by making it fire, not by watching it stay quiet — quiet is what both a healthy system and a broken monitor look like.
