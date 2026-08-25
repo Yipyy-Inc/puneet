@@ -18,7 +18,6 @@ import {
   ArrowLeftRight,
   Wallet,
   Check,
-  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -251,7 +250,13 @@ export function PaymentCheckoutFlow({
             )}
             {depositPaid > 0 && (
               <p className="text-muted-foreground mt-1 text-xs">
-                Deposit paid: ${depositPaid.toFixed(2)} · Invoice total: $
+                {/* "Already paid", not "Deposit paid". This figure is
+                    `bookings.amount_paid` — everything the customer has handed
+                    over on this booking, which is a deposit only sometimes. It
+                    used to read the fixture invoice's `depositCollected`, and
+                    calling a part payment a deposit is the kind of small lie
+                    that makes somebody reconcile two numbers by hand. */}
+                Already paid: ${depositPaid.toFixed(2)} · Invoice total: $
                 {invoiceTotal.toFixed(2)}
               </p>
             )}
@@ -619,7 +624,7 @@ export function PaymentCheckoutFlow({
               </div>
               {depositPaid > 0 && (
                 <div className="flex justify-between text-emerald-600">
-                  <span>Deposit paid</span>
+                  <span>Already paid</span>
                   <span className="font-[tabular-nums]">
                     -${depositPaid.toFixed(2)}
                   </span>
@@ -683,28 +688,22 @@ export function PaymentCheckoutFlow({
               </p>
             </div>
             <Separator />
+            {/* ── EMAIL AND SMS ARE GONE, AND THAT IS THE HONEST STATE ────
+                Both were `toast.success("Receipt sent via email" | "via SMS")`
+                and nothing else. No route was called, nothing was sent, and
+                the customer standing at the counter was told their receipt was
+                on its way.
+
+                Emailing an itemised receipt IS built — `emailItemisedReceipt`
+                and `smsItemisedReceipt` in `lib/clover/receipt-delivery.ts`,
+                used for real by the terminal route when the customer picks a
+                channel on the device. What is missing is an API route that
+                lets a NON-terminal tender reach them. Until that exists this
+                dialog offers Print, which really prints. */}
             <p className="text-muted-foreground text-xs">
-              Send a receipt to the client?
+              Print a receipt for the client?
             </p>
             <div className="flex justify-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => toast.success("Receipt sent via email")}
-              >
-                <Mail className="size-3.5" />
-                Email
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => toast.success("Receipt sent via SMS")}
-              >
-                <Smartphone className="size-3.5" />
-                SMS
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -749,7 +748,7 @@ ${taxOnDue.lines
       `<div class="row sub"><span>${t.name} ${Number((t.rate * 100).toFixed(4))}%</span><span>$${(t.amountCents / 100).toFixed(2)}</span></div>`,
   )
   .join("")}
-${depositPaid > 0 ? `<div class="row sub"><span>Deposit Applied</span><span>-$${depositPaid.toFixed(2)}</span></div>` : ""}
+${depositPaid > 0 ? `<div class="row sub"><span>Already Paid</span><span>-$${depositPaid.toFixed(2)}</span></div>` : ""}
 ${tipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${tipAmount.toFixed(2)}</span></div>` : ""}
 ${otherTotal > 0 ? `<div class="row sub"><span>Other Invoices</span><span>$${otherTotal.toFixed(2)}</span></div>` : ""}
 <div class="row total"><span>Total Charged</span><span>$${remaining.toFixed(2)}</span></div>
