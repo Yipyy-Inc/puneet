@@ -41,6 +41,7 @@
     "check:success-claims": "bun scripts/check-success-claims.ts",
     "check:passkey-email-verified": "bun scripts/check-passkey-email-verified.ts",
     "check:migration-versions": "bun scripts/check-migration-versions.ts",
+    "measure:migration-drift": "bun scripts/measure-migration-drift.ts",
     "check:doc-counts": "bun scripts/check-doc-counts.ts",
     "shoot": "bun scripts/shoot.ts"
   },
