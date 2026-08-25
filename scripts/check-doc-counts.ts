@@ -88,14 +88,28 @@ function sqlFileCount(): number {
  * less the two leading words. Derived rather than hardcoded for the same
  * reason this file exists at all.
  */
-function ciSpecCount(): number {
+function specCountOf(scriptName: string): number {
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
     scripts: Record<string, string>;
   };
-  const script = pkg.scripts["test:e2e:ci"];
-  if (!script) throw new Error("package.json has no test:e2e:ci script.");
+  const script = pkg.scripts[scriptName];
+  if (!script) throw new Error(`package.json has no ${scriptName} script.`);
   return script.trim().split(/\s+/).length - 2;
 }
+
+/** The full suite — nightly, and by hand before anything that matters. */
+const ciSpecCount = () => specCountOf("test:e2e:ci");
+
+/**
+ * The subset that runs on every push.
+ *
+ * Split out on 2026-08-25: 59 specs is ~45 minutes, GitHub holds one pending
+ * run per branch, and two people pushing meant each new push cancelled the
+ * previously queued run — so nothing ever finished and commits went unverified.
+ * The prose has to say which number is which, or "the specs CI runs" becomes
+ * ambiguous in exactly the way this file exists to prevent.
+ */
+const gateSpecCount = () => specCountOf("test:e2e:gate");
 
 interface Claim {
   file: string;
@@ -120,13 +134,19 @@ const CLAIMS: Claim[] = [
   },
   {
     file: "AGENTS.md",
-    pattern: /The (\d+) specs CI runs on every PR/,
-    label: "specs in test:e2e:ci (command table)",
-    actual: ciSpecCount(),
+    pattern: /The (\d+) specs CI runs on every push/,
+    label: "specs in test:e2e:gate (command table)",
+    actual: gateSpecCount(),
   },
   {
     file: "AGENTS.md",
-    pattern: /It is \*\*(\d+)\*\* specs now, not 10/,
+    pattern: /the gate is \*\*(\d+)\*\* specs/,
+    label: "specs in test:e2e:gate (prose)",
+    actual: gateSpecCount(),
+  },
+  {
+    file: "AGENTS.md",
+    pattern: /the full suite is \*\*(\d+)\*\* specs/,
     label: "specs in test:e2e:ci (prose)",
     actual: ciSpecCount(),
   },
