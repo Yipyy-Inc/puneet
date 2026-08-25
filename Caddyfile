@@ -7,8 +7,16 @@
 # ============================================================================
 
 {
-	# Let's Encrypt expiry notices. Optional — Caddy registers without one.
-	email {$ACME_EMAIL}
+	# ── NO `email` DIRECTIVE, DELIBERATELY ────────────────────────────────
+	#
+	# Caddy registers an ACME account without a contact address and renews on
+	# its own; the address only buys expiry warnings for a renewal that is
+	# already automatic.
+	#
+	# It is NOT written as `email {$ACME_EMAIL}` with an empty default, because
+	# an unset variable expands to nothing and `email` with no argument is a
+	# PARSE error — which takes the whole proxy down rather than degrading. If
+	# you want the notices, add a real address here as a literal.
 
 	servers {
 		timeouts {
