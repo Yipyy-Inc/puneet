@@ -5514,6 +5514,92 @@ spec relying on another spec's org-chart rows, a teardown sweeping a list that
 only ever grows. In every case the local run passes for a reason that is not in
 any file.
 
+## Snapshot (2026-08-25, the migrations directory)
+
+### 🔴 `supabase/migrations/` cannot reproduce this database — it has never been the thing that built it — 2026-08-25
+
+Found while resolving a version collision between two sessions. The collision
+was real and got fixed; underneath it was something much larger that nobody had
+looked at, because nothing has ever needed to.
+
+Measured against production, joining the directory to
+`supabase_migrations.schema_migrations` **on migration name**:
+
+```
+files                    176
+recorded rows            203
+exact match (name+version) 8
+name matches, version does not 156
+file never recorded under its name 12
+recorded row with no file at all   39
+```
+
+Eight files out of 176 are stamped in the database under the version their
+filename claims. **Everything else was applied under a different number.**
+
+Examples, all three from different weeks and different authors:
+
+```
+file 20260818100000_a_membership_is_admin_or_staff       db 20260818122625
+file 20260824200000_a_roster_change_outlives_the_process db 20260824122318
+file 20260824190000_a_queue_row_can_actually_be_resolved db (no row at all)
+```
+
+**The mechanism.** Almost every migration in this project was applied through
+the Supabase MCP `apply_migration` tool, which stamps `schema_migrations` with
+**the moment it ran** unless a version is passed explicitly, and essentially
+nobody has passed one. The filename is chosen separately, by hand, usually as a
+round number. So the two have drifted apart from the beginning. The eight that
+agree are the ones somebody hand-numbered and applied under that exact version
+— three gift-card migrations and two Clover ones, all from the last three days.
+
+**Why it matters, and it is not the repeat-apply problem it looks like.**
+`supabase db push` applies files in **filename** order. This schema was built in
+**timestamp** order. Those are different orders over the same set:
+
+```
+files recorded under some version   164
+same rank in both orderings         104
+DIFFERENT rank                       60
+```
+
+Sixty files would be applied at a different point in the sequence than they
+originally ran. A migration that alters a table created three files later fails;
+one that recreates a function some later file already replaced silently reverts
+it. So the directory is **not currently a mechanism that can rebuild this
+database** — not for disaster recovery, not for a fresh staging environment, and
+not for the VPS move under discussion. It appears healthy only because nothing
+ever runs it end to end.
+
+**Do instead:**
+
+- **Do not "fix" this by renaming files to match the database.** Renaming one
+  makes it agree with 8 and disagree with 156; renaming all 176 rewrites the
+  history of a directory whose ordering is already wrong, and does not make the
+  order correct. Both were considered and rejected on 2026-08-25.
+- **When you write a new migration, pass the version explicitly** so the file
+  and the row agree from birth. That is the only cheap half of this, and it
+  stops the gap widening.
+- **Before anyone depends on `db push`** — a new environment, a restore drill,
+  the VPS — the directory needs a **squash to a baseline**: dump the current
+  schema, make it migration 0001, and keep the 176 as history. That is its own
+  piece of work with its own risk, and it should be scheduled deliberately, not
+  discovered during an outage.
+- **Never claim a migration "is in the repo" as evidence it can be replayed.**
+  In this project those are separate facts, and have been for four months.
+
+`bun run check:migration-versions` (added the same day) catches the narrower
+failure — two files claiming one version, which breaks `db push` outright. It is
+baselined against the two pre-existing pairs (`20260806160000`,
+`20260822700000`) and warns rather than fails on them. It deliberately does
+**not** check this, because a gate that fails on 168 of 176 files on the day it
+is written gets deleted rather than fixed.
+
+Every number above is re-runnable: `bun run measure:migration-drift` (add
+`--list` for the files whose version moved). It needs `SUPABASE_DB_URL`, it is
+not a gate, and it never fails. Re-derive rather than trusting these counts —
+they move with every migration written until the baseline squash happens.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
