@@ -55,15 +55,16 @@ import { deriveLocationId } from "@/data/locations";
 // Postgres. SAME FACILITY, SAME DAY, TWO ANSWERS. A stale screen is a
 // nuisance; two live screens that disagree is the thing people stop trusting.
 //
-// ── THREE SOURCES ARE REAL, TWO ARE NOT, AND THE SEAM IS DELIBERATE ───────
+// ── FOUR SOURCES ARE REAL, ONE IS NOT, AND THE SEAM IS DELIBERATE ─────────
 //
-// Boarding, daycare and grooming have tables and endpoints, so they are read
-// through them. Training and custom services have neither — no table, no API —
-// so they stay `useState` over a fixture and are marked as such at every point
-// they are used. Inventing tables for them to make this file tidy would be a
-// schema decision smuggled in as a refactor.
+// Boarding, daycare, grooming and training (added later, via
+// `useTrainingDay()` / `/api/training/attendance`) have tables and endpoints,
+// so they are read through them. Custom services have neither — no table, no
+// API — so they stay `useState` over a fixture and are marked as such at
+// every point they are used. Inventing a table for them to make this file
+// tidy would be a schema decision smuggled in as a refactor.
 //
-// The counts are therefore honest for three services and fictional for two,
+// The counts are therefore honest for four services and fictional for one,
 // which is worse-looking and better than one number that averages the two
 // kinds together without saying so.
 // ============================================================================
@@ -537,16 +538,19 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
     //
     // `deriveLocationId` is `trailingNumber % 3` — a fixture-era stand-in for a
     // location the mock data never carried. Applied to real rows it would hide
-    // two thirds of a facility's actual bookings, chosen by booking reference,
-    // the moment somebody picked a location from the selector. The rows that
-    // come from Postgres are already scoped by `facility_id`; they have no
-    // location to derive and must not be guessed at.
+    // most of a facility's actual bookings, chosen by booking reference, the
+    // moment somebody picked a location from the selector. Boarding, daycare,
+    // grooming and training all come from Postgres now and are already scoped
+    // by `facility_id`; they have no location to derive and must not be
+    // guessed at. `custom` is the only source still behind the fixture, so it
+    // is the only one still hashed here.
     if (!isHQView && currentLocationId) {
       return list.filter(
         (b) =>
           b.source === "boarding" ||
           b.source === "daycare" ||
           b.source === "grooming" ||
+          b.source === "training" ||
           deriveLocationId(b.rawId) === currentLocationId,
       );
     }
