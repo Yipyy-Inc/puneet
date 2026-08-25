@@ -255,9 +255,16 @@ const CATALOG: ReportCategory[] = [
       },
       {
         id: "no-shows",
+        // Marked unimplemented on 2026-08-25, having previously rendered from a
+        // fixture that INVENTED dates. There is no `no_show` booking status and
+        // no dated no-show event in the schema; `clients.no_show_count` is a
+        // lifetime counter with no date on any of its entries. Recording a
+        // no-show is a feature somebody has to build, and "Coming Soon" says
+        // that honestly where a converted report would have implied the data
+        // exists.
         name: "No-Shows",
         description: "Missed appointments tracking",
-        implemented: true,
+        implemented: false,
       },
       {
         id: "transport-route-report",
@@ -604,20 +611,19 @@ function CategorySection({
 export function ReportsHub({
   kpis,
   deltas,
-  facilityId,
   facilityName,
 }: {
   kpis: KPIs;
   deltas: KpiDeltas;
   /**
-   * The REAL facility, a uuid, resolved from the session by the page.
+   * The facility's NAME only.
    *
-   * It was `number` until 2026-08-25 and it was always `11` — a fixture id with
-   * no row behind it in Postgres. The KPI tiles above are now read from
-   * `facility_report_kpis` for this facility; the individual report sheets are
-   * not yet, and say so on their own faces until they are.
+   * There was a `facilityId: number` here until 2026-08-25 and it was always
+   * `11` — a fixture id with no row behind it in Postgres. It is gone rather
+   * than corrected to a uuid: every figure on this screen and in every report
+   * sheet now comes from the SESSION's facility, resolved server-side, so an id
+   * travelling through the browser would be one the server must not trust.
    */
-  facilityId: string;
   facilityName: string;
 }) {
   const [search, setSearch] = useState("");
@@ -790,7 +796,6 @@ export function ReportsHub({
       {/* ── Report detail sheet ── */}
       <ReportSheet
         report={openReport}
-        facilityId={facilityId}
         facilityName={facilityName}
         onClose={() => setOpenReportId(null)}
       />

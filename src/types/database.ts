@@ -8563,6 +8563,17 @@ export type Database = {
         Args: { p_id: string; p_note: string };
         Returns: boolean;
       };
+      facility_report_dataset: {
+        Args: {
+          p_facility_id: string;
+          p_from: string;
+          p_prev_from: string;
+          p_prev_to: string;
+          p_report: string;
+          p_to: string;
+        };
+        Returns: Json;
+      };
       facility_report_kpis: {
         Args: {
           p_facility_id: string;
