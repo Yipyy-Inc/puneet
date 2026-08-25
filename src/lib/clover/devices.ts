@@ -60,6 +60,8 @@ export interface Terminal {
   isDefault: boolean;
   /** Retired by the facility — kept out of pickers, keeps its payments. */
   isActive: boolean;
+  /** Which branch this reader is in. Null until somebody assigns it. */
+  locationId: string | null;
 }
 
 export type TerminalReadiness =
@@ -147,18 +149,24 @@ export async function facilityTerminals(
   // does not go through RLS. Nothing sensitive is being read: it is a name.
   const labels = new Map<
     string,
-    { label: string; isDefault: boolean; isActive: boolean }
+    {
+      label: string;
+      isDefault: boolean;
+      isActive: boolean;
+      locationId: string | null;
+    }
   >();
   if (hasServiceRoleKey()) {
     const { data: named } = await createAdminClient()
       .from("facility_terminals")
-      .select("serial, label, is_default, is_active")
+      .select("serial, label, is_default, is_active, location_id")
       .eq("facility_id", facilityId);
     for (const row of named ?? []) {
       labels.set(row.serial as string, {
         label: row.label as string,
         isDefault: row.is_default === true,
         isActive: row.is_active !== false,
+        locationId: (row.location_id as string | null) ?? null,
       });
     }
   }
@@ -180,6 +188,7 @@ export async function facilityTerminals(
         // Unnamed devices are ACTIVE. A facility that has not opened the
         // settings screen still has working terminals.
         isActive: named?.isActive ?? true,
+        locationId: named?.locationId ?? null,
       };
     }),
   };

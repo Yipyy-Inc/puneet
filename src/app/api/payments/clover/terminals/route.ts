@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
         isActive: t.isActive,
         supported: t.support !== "unsupported",
         support: t.support,
+        locationId: t.locationId,
       })),
   });
 }
@@ -100,6 +101,8 @@ interface PatchBody {
   isDefault?: unknown;
   /** Retire it, or bring it back. */
   isActive?: unknown;
+  /** Which branch it's in. Absent leaves it alone; `null` clears it. */
+  locationId?: string | null;
 }
 
 export async function PATCH(request: NextRequest) {
@@ -153,7 +156,43 @@ export async function PATCH(request: NextRequest) {
   const wantsDefault = body?.isDefault === true;
   const isActive = typeof body?.isActive === "boolean" ? body.isActive : true;
 
+  // Absent means "leave it alone" (Retire, Make default and Bring back never
+  // send this); `null` means "clear it". Distinguished from the key's own
+  // presence, not its value, since both are valid states of `locationId`.
+  const hasLocationId =
+    body !== null && Object.prototype.hasOwnProperty.call(body, "locationId");
+  const rawLocationId = body?.locationId;
+  if (
+    hasLocationId &&
+    rawLocationId !== null &&
+    typeof rawLocationId !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "That is not a location." },
+      { status: 422 },
+    );
+  }
+  const locationId = hasLocationId ? (rawLocationId ?? null) : undefined;
+
   const supabase = await createServerClient();
+
+  // The FK alone would not stop a location belonging to another facility from
+  // being written here — this is the check `check:facility-from-session`
+  // exists to catch, done explicitly since there is no RLS on `locations`
+  // that could refuse the value at the point it is merely used as an id.
+  if (typeof locationId === "string") {
+    const { data: location } = await supabase
+      .from("locations")
+      .select("facility_id")
+      .eq("id", locationId)
+      .maybeSingle();
+    if (!location || location.facility_id !== facilityId) {
+      return NextResponse.json(
+        { error: "That location doesn't belong to this business." },
+        { status: 422 },
+      );
+    }
+  }
 
   // ── The row, created if this terminal has never been named ─────────────
   //
@@ -165,18 +204,29 @@ export async function PATCH(request: NextRequest) {
   // default, so writing it inline would fail against whichever terminal
   // currently holds it — the RPC below clears the old one first, in one
   // transaction, which is the whole reason that function exists.
+  //
+  // `location_id` is only in this object when the caller actually sent it —
+  // Supabase's upsert only touches columns present in the payload on
+  // conflict, so an unrelated action (Retire, Make default) that never sends
+  // it leaves whatever location was already set untouched.
+  const upsertPayload: {
+    facility_id: string;
+    serial: string;
+    label: string;
+    is_active: boolean;
+    location_id?: string | null;
+  } = {
+    facility_id: facilityId,
+    serial,
+    label,
+    is_active: isActive,
+  };
+  if (locationId !== undefined) upsertPayload.location_id = locationId;
+
   const { data: written, error } = await supabase
     .from("facility_terminals")
-    .upsert(
-      {
-        facility_id: facilityId,
-        serial,
-        label,
-        is_active: isActive,
-      },
-      { onConflict: "facility_id,serial" },
-    )
-    .select("id, serial, label, is_default, is_active");
+    .upsert(upsertPayload, { onConflict: "facility_id,serial" })
+    .select("id, serial, label, is_default, is_active, location_id");
 
   if (error) {
     return writeFailure(error, {
@@ -219,5 +269,6 @@ export async function PATCH(request: NextRequest) {
     label: row.label,
     isDefault: wantsDefault ? true : row.is_default,
     isActive: row.is_active,
+    locationId: row.location_id,
   });
 }

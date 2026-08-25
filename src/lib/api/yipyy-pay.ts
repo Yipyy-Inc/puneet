@@ -171,6 +171,7 @@ export interface AdminTerminal {
   isActive: boolean;
   supported: boolean;
   support: "supported" | "unsupported" | "unknown";
+  locationId: string | null;
 }
 
 export type TerminalListResult =
@@ -207,6 +208,7 @@ export function useSaveTerminal() {
       label?: string;
       isDefault?: boolean;
       isActive?: boolean;
+      locationId?: string | null;
     }) => {
       const response = await fetch("/api/payments/clover/terminals", {
         method: "PATCH",
