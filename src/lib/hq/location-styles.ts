@@ -168,8 +168,8 @@ const SHORTCODE_FALLBACK: Record<string, LocationColorKey> = {
 };
 
 export function colorKeyFromLocation(loc: {
-  color?: string;
-  shortCode?: string;
+  color?: string | null;
+  shortCode?: string | null;
 }): LocationColorKey {
   if (loc.color) {
     const key = HEX_TO_KEY[loc.color.toLowerCase()];
@@ -182,8 +182,8 @@ export function colorKeyFromLocation(loc: {
 }
 
 export function locationStyles(loc: {
-  color?: string;
-  shortCode?: string;
+  color?: string | null;
+  shortCode?: string | null;
 }): LocationColorClasses {
   return PALETTE[colorKeyFromLocation(loc)];
 }
@@ -200,8 +200,8 @@ export function hexFromKey(key: LocationColorKey): string {
 
 /** Palette hex for a location — routes legacy colours through the new palette. */
 export function locationHex(loc: {
-  color?: string;
-  shortCode?: string;
+  color?: string | null;
+  shortCode?: string | null;
 }): string {
   return LOCATION_HEX[colorKeyFromLocation(loc)];
 }

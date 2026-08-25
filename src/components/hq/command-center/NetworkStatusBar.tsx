@@ -11,7 +11,6 @@ import {
   OPEN_STATE_META,
   liveCount,
 } from "@/lib/hq/location-status";
-import { useLocationContext } from "@/hooks/use-location-context";
 import { deriveLocationId } from "@/data/locations";
 import { incidents } from "@/data/incidents";
 
@@ -35,12 +34,15 @@ interface Props {
  */
 export function NetworkStatusBar({ locations }: Props) {
   const router = useRouter();
-  const { setLocation } = useLocationContext();
   // Snapshot "now" once at mount (avoids reading the clock during render).
   const [now] = useState(() => new Date());
 
-  function openLocation(id: string) {
-    setLocation(id);
+  function openLocation() {
+    // Not `setLocation(id)` -- these chips still render fixture data
+    // (`getLocationsByFacility(11)` on the HQ overview page), so their id
+    // would not match any real location once the shared context is fed by
+    // Postgres. Setting it would silently break location filtering for the
+    // rest of the session. Navigate only, until this page is converted too.
     router.push("/facility/dashboard");
   }
 
@@ -61,7 +63,7 @@ export function NetworkStatusBar({ locations }: Props) {
           <button
             key={loc.id}
             type="button"
-            onClick={() => openLocation(loc.id)}
+            onClick={() => openLocation()}
             aria-label={`Open ${loc.name} dashboard`}
             className="bg-card hover:border-primary/40 group flex min-w-60 shrink-0 flex-col gap-1.5 rounded-xl border p-3 text-left transition-colors hover:shadow-sm"
           >

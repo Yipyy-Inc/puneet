@@ -144,7 +144,9 @@ export function PetIncidentSafetyAlert({
                         "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white",
                         isOtherLocation && "ring-2 ring-amber-400",
                       )}
-                      style={{ backgroundColor: incLocation.color }}
+                      style={{
+                        backgroundColor: incLocation.color ?? undefined,
+                      }}
                       title={incLocation.name}
                     >
                       <MapPin className="size-2.5" />
