@@ -317,6 +317,37 @@ export const bookingRulesSchema = z.object({
 export type BookingRules = z.infer<typeof bookingRulesSchema>;
 
 // ============================================================================
+// Grooming scheduling — how appointment slots are OFFERED
+// ============================================================================
+//
+// These three decide what the booking dialog shows a member of staff: how the
+// time-slot grid is divided, and how much room is left either side of a groom.
+// They are consumed by `GroomingDetails` and `new-appointment-dialog`, so they
+// shape real appointments rather than just a settings page.
+//
+// They lived in `localStorage` under "settings-grooming-scheduling-v1" until
+// 2026-08-24, which meant they were per-BROWSER. A manager setting 60-minute
+// slots with a 30-minute buffer changed nothing for the receptionist taking the
+// calls, whose browser kept offering 30 and 15 — and a new device started from
+// the defaults again. A facility-owned rule cannot live on one device.
+
+export const slotGranularityEnum = z.union([
+  z.literal(15),
+  z.literal(30),
+  z.literal(60),
+]);
+
+export const groomingSchedulingSchema = z.object({
+  /** Highlights slots satisfying buffer constraints; others dim but pickable. */
+  smartSchedulingEnabled: z.boolean(),
+  /** Slot grid granularity in minutes. Drives the time-slot picker. */
+  slotGranularityMin: slotGranularityEnum,
+  /** Minutes kept either side of an appointment when smart scheduling is on. */
+  defaultBufferMin: z.number().int().min(0).max(240),
+});
+export type GroomingScheduling = z.infer<typeof groomingSchedulingSchema>;
+
+// ============================================================================
 // Evaluation Form Template (configurable by facility)
 // ============================================================================
 

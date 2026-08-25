@@ -1,125 +1,54 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback } from "react";
 
-// ─── Types & defaults ────────────────────────────────────────────────────────
+import { useSettings } from "@/hooks/use-settings";
+import type { GroomingScheduling } from "@/types/facility";
 
-export type SlotGranularityMin = 15 | 30 | 60;
+// ============================================================================
+// How grooming slots are offered — from the FACILITY, not the browser.
+//
+// ── WHAT THIS REPLACES ────────────────────────────────────────────────────
+//
+// A React context over `localStorage["settings-grooming-scheduling-v1"]`, with
+// a provider, a hydration effect and a JSON adapter — about 125 lines whose
+// whole job was to keep three facility-wide numbers on one device.
+//
+// That was not a settings-page problem. `slotGranularityMin` and
+// `defaultBufferMin` are read by `GroomingDetails` and
+// `new-appointment-dialog`, so they decide what times a member of staff is
+// OFFERED when booking a groom. A manager setting 60-minute slots with a
+// 30-minute buffer changed nothing for the receptionist taking the calls,
+// whose browser kept offering 30 and 15 — and every new device started from
+// the defaults again. Two people booking the same day booked different grids.
+//
+// ── NO PROVIDER ANY MORE ──────────────────────────────────────────────────
+//
+// `useSettings` already spans the facility portal and already holds twenty
+// domains, so a second context around a third of a screen's worth of state was
+// its own small tax. The hook keeps its name and its shape so callers did not
+// have to change.
+// ============================================================================
 
-export interface GroomingSchedulingSettings {
-  /**
-   * Master toggle for the booking dialog. When on, the time-slot grid
-   * highlights only slots that satisfy the per-groomer buffer constraints
-   * and don't conflict with existing appointments; everything else is
-   * dimmed but still pickable (staff has the final say). When off, every
-   * non-conflicting slot is treated equally.
-   */
-  smartSchedulingEnabled: boolean;
-  /** Slot grid granularity in minutes. Drives the time-slot picker. */
-  slotGranularityMin: SlotGranularityMin;
-  /**
-   * Default buffer added before and after each appointment in minutes when
-   * Smart Scheduling is on and no per-groomer override exists. Keeps the
-   * dialog functional even when the booking-rules screen hasn't been
-   * populated yet.
-   */
-  defaultBufferMin: number;
-}
+export type SlotGranularityMin = GroomingScheduling["slotGranularityMin"];
+export type GroomingSchedulingSettings = GroomingScheduling;
 
-const DEFAULT_SETTINGS: GroomingSchedulingSettings = {
-  smartSchedulingEnabled: true,
-  slotGranularityMin: 30,
-  defaultBufferMin: 15,
-};
-
-const STORAGE_KEY = "settings-grooming-scheduling-v1";
-
-// ─── localStorage adapter ────────────────────────────────────────────────────
-
-function loadStored(): GroomingSchedulingSettings {
-  if (typeof window === "undefined") return DEFAULT_SETTINGS;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    const parsed = JSON.parse(raw);
-    return {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-      // Coerce slot granularity to the allowed set so an old or hand-edited
-      // value can't break the slot grid.
-      slotGranularityMin: ([15, 30, 60] as SlotGranularityMin[]).includes(
-        parsed?.slotGranularityMin,
-      )
-        ? (parsed.slotGranularityMin as SlotGranularityMin)
-        : DEFAULT_SETTINGS.slotGranularityMin,
-    };
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
-
-// ─── Context ─────────────────────────────────────────────────────────────────
-
-interface GroomingSchedulingContextValue extends GroomingSchedulingSettings {
-  update: (patch: Partial<GroomingSchedulingSettings>) => void;
-}
-
-const GroomingSchedulingContext =
-  createContext<GroomingSchedulingContextValue | null>(null);
-
-export function GroomingSchedulingProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  // Avoid an SSR/CSR hydration mismatch — start with defaults, then
-  // hydrate from localStorage in an effect after mount.
-  const [settings, setSettings] =
-    useState<GroomingSchedulingSettings>(DEFAULT_SETTINGS);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setSettings(loadStored());
-    setHydrated(true);
-  }, []);
-
-  const update = useCallback(
-    (patch: Partial<GroomingSchedulingSettings>) => {
-      setSettings((prev) => {
-        const next = { ...prev, ...patch };
-        if (hydrated && typeof window !== "undefined") {
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-          } catch {
-            // ignore quota / private-mode failures
-          }
-        }
-        return next;
-      });
-    },
-    [hydrated],
-  );
-
-  return (
-    <GroomingSchedulingContext.Provider value={{ ...settings, update }}>
-      {children}
-    </GroomingSchedulingContext.Provider>
-  );
+export interface GroomingSchedulingContextValue extends GroomingScheduling {
+  update: (patch: Partial<GroomingScheduling>) => Promise<unknown>;
 }
 
 export function useGroomingScheduling(): GroomingSchedulingContextValue {
-  const ctx = useContext(GroomingSchedulingContext);
-  if (!ctx) {
-    throw new Error(
-      "useGroomingScheduling must be used inside GroomingSchedulingProvider",
-    );
-  }
-  return ctx;
+  const { groomingScheduling, updateGroomingScheduling } = useSettings();
+
+  // A PATCH, as before — callers change one field and expect the rest to
+  // stand. The merge happens against the value the server last returned, not
+  // against local state, so two people editing different fields do not
+  // overwrite each other with a stale copy of the third.
+  const update = useCallback(
+    (patch: Partial<GroomingScheduling>) =>
+      updateGroomingScheduling({ ...groomingScheduling, ...patch }),
+    [groomingScheduling, updateGroomingScheduling],
+  );
+
+  return { ...groomingScheduling, update };
 }

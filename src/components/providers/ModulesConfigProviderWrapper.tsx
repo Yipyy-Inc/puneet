@@ -8,7 +8,6 @@ import { DaycareAreasProvider } from "@/hooks/use-daycare-areas";
 import { GroomingStationsProvider } from "@/hooks/use-grooming-stations";
 import { MobileGroomingProvider } from "@/hooks/use-mobile-grooming";
 import { GroomingWaitlistProvider } from "@/hooks/use-grooming-waitlist";
-import { GroomingSchedulingProvider } from "@/hooks/use-grooming-scheduling";
 
 export function SettingsProviderWrapper({ children }: { children: ReactNode }) {
   return (
@@ -18,11 +17,7 @@ export function SettingsProviderWrapper({ children }: { children: ReactNode }) {
           <DaycareAreasProvider>
             <GroomingStationsProvider>
               <MobileGroomingProvider>
-                <GroomingWaitlistProvider>
-                  <GroomingSchedulingProvider>
-                    {children}
-                  </GroomingSchedulingProvider>
-                </GroomingWaitlistProvider>
+                <GroomingWaitlistProvider>{children}</GroomingWaitlistProvider>
               </MobileGroomingProvider>
             </GroomingStationsProvider>
           </DaycareAreasProvider>

@@ -39,6 +39,7 @@ import type {
   TipConfig,
   Integration,
   ModuleAddon,
+  GroomingScheduling,
 } from "@/types/facility";
 import type { CalendarColorOverrides } from "@/lib/operations-calendar";
 
@@ -81,6 +82,8 @@ interface SettingsContextValue {
   updateHours: (hours: BusinessHours) => Promise<unknown>;
   updateProfile: (profile: BusinessProfile) => Promise<unknown>;
   updateRules: (rules: BookingRules) => Promise<unknown>;
+  groomingScheduling: GroomingScheduling;
+  updateGroomingScheduling: (config: GroomingScheduling) => Promise<unknown>;
   updateBookingFlow: (config: FacilityBookingFlowConfig) => Promise<unknown>;
   updateReportCards: (config: ReportCardConfig) => Promise<unknown>;
   updateServiceDateBlocks: (blocks: ServiceDateBlock[]) => Promise<unknown>;
@@ -157,6 +160,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const saveSetting = useSaveFacilitySetting();
   const hours = facilitySettings.settings.business_hours.value;
   const rules = facilitySettings.settings.booking_rules.value;
+  const groomingScheduling =
+    facilitySettings.settings.grooming_scheduling.value;
   // ── WHAT A CUSTOMER MAY BOOK ────────────────────────────────────────────
   //
   // The four module configs, the booking flow and the evaluation rules. These
@@ -263,6 +268,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
   const updateRules = (rules: BookingRules) =>
     saveSetting.mutateAsync({ domain: "booking_rules", value: rules });
+  const updateGroomingScheduling = (config: GroomingScheduling) =>
+    saveSetting.mutateAsync({ domain: "grooming_scheduling", value: config });
   const updateBookingFlow = (config: FacilityBookingFlowConfig) =>
     saveSetting.mutateAsync({ domain: "booking_flow", value: config });
   const updateReportCards = (config: ReportCardConfig) =>
@@ -365,6 +372,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateDropOffPickUpOverrides,
         updateNotifications,
         updateServiceNotifDefaults,
+        groomingScheduling,
+        updateGroomingScheduling,
         updateTipConfig,
         updateIntegrations,
         updateAddons,
