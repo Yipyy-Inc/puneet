@@ -1,0 +1,137 @@
+name: uptime
+
+# ============================================================================
+# Does yipyy.com answer, and will its certificates still be valid next month?
+#
+# ── WHY THIS EXISTS ───────────────────────────────────────────────────────
+#
+# Vercel watched the deployment for us. Self-hosted, nothing did — and that was
+# the quietest thing the migration gave up. The container healthcheck restarts a
+# sick app but cannot TELL anyone it happened; a certificate that fails to renew
+# in November announces itself to customers, in their browsers, before it
+# announces itself to us.
+#
+# ── AND WHY IT RUNS HERE RATHER THAN ON THE BOX ───────────────────────────
+#
+# A watchdog on the machine it is watching cannot report that the machine is
+# gone. GitHub is infrastructure this project already depends on and already
+# pays nothing for, and it is somewhere else, which is the only property that
+# matters for this job.
+#
+# ── WHAT IT CANNOT DO ─────────────────────────────────────────────────────
+#
+# GitHub's scheduler is best-effort: a 15-minute cron can arrive 20 minutes
+# late under load, and scheduled workflows are disabled automatically after 60
+# days with no repository activity. So this catches "down for a while" and
+# "certificate about to expire", not "down for ninety seconds". If per-minute
+# alerting is ever needed, it needs a real monitoring service — and this file is
+# not a reason to think that box is ticked.
+# ============================================================================
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+# A slow check must never pile up behind an earlier slow check.
+concurrency:
+  group: uptime
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: is the site up
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Every host answers
+        id: hosts
+        run: |
+          fail=""
+          for host in yipyy.com www.yipyy.com pawradise.yipyy.com; do
+            # Three attempts before calling it down: a single timeout across the
+            # public internet is weather, not an outage, and an alert that cries
+            # wolf is one nobody reads by the second week.
+            ok=""
+            for attempt in 1 2 3; do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://${host}/api/health" || echo 000)
+              if [ "$code" = "200" ]; then ok="yes"; break; fi
+              echo "  ${host} attempt ${attempt}: HTTP ${code}"
+              sleep 10
+            done
+            if [ -z "$ok" ]; then
+              echo "::error::${host} did not answer 200 after three attempts."
+              fail="${fail} ${host}"
+            else
+              echo "${host}: OK"
+            fi
+          done
+          if [ -n "$fail" ]; then
+            echo "down=${fail}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Certificates have time left
+        run: |
+          # 14 days. Caddy renews at 30 days remaining, so anything under 14
+          # means renewal has been failing for a fortnight — which is the shape
+          # of the failure that only shows up in a customer's browser.
+          fail=""
+          for host in yipyy.com pawradise.yipyy.com; do
+            end=$(echo | openssl s_client -connect "${host}:443" -servername "${host}" 2>/dev/null \
+                  | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
+            if [ -z "$end" ]; then
+              echo "::error::${host}: could not read a certificate at all."
+              fail="${fail} ${host}"
+              continue
+            fi
+            left=$(( ( $(date -d "$end" +%s) - $(date +%s) ) / 86400 ))
+            echo "${host}: ${left} days left (${end})"
+            if [ "$left" -lt 14 ]; then
+              echo "::error::${host} certificate expires in ${left} days; renewal is not happening."
+              fail="${fail} ${host}"
+            fi
+          done
+          [ -z "$fail" ] || exit 1
+
+      # ── ONE ISSUE, REOPENED, NOT A NEW ONE EVERY FIFTEEN MINUTES ────────
+      #
+      # A check that opens an issue per run buries the first one, which is the
+      # only one anybody would have read. This keeps a single issue and comments
+      # on it, so the history of an outage is in one place.
+      - name: Raise it
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="Uptime check failing"
+          NUM=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number' || echo "")
+          BODY="The scheduled uptime check failed at $(date -u +%Y-%m-%dT%H:%M:%SZ).
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          First things to look at, in order:
+          - \`ssh root@<box> docker ps\` — are both colours healthy and is Caddy up?
+          - \`ssh root@<box> docker logs --since 30m yipyy-caddy\` — certificate or ACME errors?
+          - \`ssh root@<box> /opt/yipyy/rollback.sh\` — if a deploy is the suspect.
+          - DNS: does the apex still resolve to the box?"
+          if [ -n "$NUM" ] && [ "$NUM" != "null" ]; then
+            gh issue comment "$NUM" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" --label "" || \
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
+
+      - name: Close it out
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NUM=$(gh issue list --state open --search "Uptime check failing in:title" --json number --jq '.[0].number' || echo "")
+          if [ -n "$NUM" ] && [ "$NUM" != "null" ]; then
+            gh issue close "$NUM" --comment "Recovered: the uptime check passed at $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+          fi

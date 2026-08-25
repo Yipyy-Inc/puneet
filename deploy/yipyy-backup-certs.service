@@ -1,0 +1,11 @@
+[Unit]
+Description=Yipyy — back up Caddy's certificate store
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/yipyy-backup-certs
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true

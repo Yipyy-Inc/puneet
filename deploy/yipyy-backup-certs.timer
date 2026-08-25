@@ -1,0 +1,18 @@
+[Unit]
+Description=Yipyy — daily certificate-store backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+
+# An hour before the nightly e2e suite, and well clear of the Clover sweep's
+# quarter-hourly slots.
+RandomizedDelaySec=300
+
+# A backup missed while the box was off is taken on the next boot rather than
+# silently skipped for a day.
+Persistent=true
+
+Unit=yipyy-backup-certs.service
+
+[Install]
+WantedBy=timers.target
