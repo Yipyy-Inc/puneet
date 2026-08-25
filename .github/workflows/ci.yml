@@ -101,6 +101,7 @@ jobs:
             link-origin \
             success-claims \
             passkey-email-verified \
+            migration-versions \
             doc-counts
           do
             echo "::group::check:$script"
