@@ -39,6 +39,31 @@ const nextConfig: NextConfig = {
   },
   reactCompiler: true,
 
+  // ── THE DEV SERVER WAS PRINTING PASSWORDS ─────────────────────────────────
+  //
+  // Next logs every Server Function call in development with its NAME AND ITS
+  // ARGUMENTS. `signInWithPassword(email, password)` takes the password as a
+  // positional argument, so every sign-in during `bun run dev` wrote a real
+  // credential to stdout:
+  //
+  //   POST /sign-in 303 in 2.0s
+  //     └─ ƒ signInWithPassword("owner@yipyy.dev", "<the actual password>")
+  //
+  // Found on 2026-08-25 in a `bun run shoot` log. The account was a dev
+  // identity, so this was not an incident — but stdout is not a private place.
+  // It reaches scrollback, task output files, CI artefacts and anything pasted
+  // into an issue, and the next credential logged that way might not be a test
+  // one.
+  //
+  // There is no redaction option; Next offers the whole switch or nothing, and
+  // the arguments are logged whatever shape they are in, so moving the password
+  // into an object would not have helped. What is lost is the action name and
+  // its duration in dev, which is a real but small convenience. A password in a
+  // log file is neither.
+  logging: {
+    serverFunctions: false,
+  },
+
   // ── RETIRED PORTALS ───────────────────────────────────────────────────────
   //
   // The first redirects() block in this project. `/groomer` was a one-page
