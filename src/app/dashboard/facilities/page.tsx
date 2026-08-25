@@ -61,7 +61,7 @@ import {
 /**
  * What /api/facilities/domains answers.
  *
- * Declared here rather than imported: `src/lib/vercel/domains.ts` is
+ * Declared here rather than imported: `src/lib/facility-domains.ts` is
  * `server-only`, and this screen is a client component -- the same reason
  * AdminFacilityRow lives in its own file. FacilityWebAddress does likewise.
  *

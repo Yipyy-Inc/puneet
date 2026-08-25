@@ -5,7 +5,7 @@ import { getFacilityForAdmin } from "@/lib/api/admin-facilities";
 import {
   attachFacilityDomain,
   facilityDomainStatus,
-} from "@/lib/vercel/domains";
+} from "@/lib/facility-domains";
 
 // ============================================================================
 // Is this facility's own web address live, and attach it if not.
