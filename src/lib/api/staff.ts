@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   taskTemplates,
@@ -147,5 +147,48 @@ export function useUpdateStaff() {
     }) => liveWrite<StaffProfile>(`/api/staff/${staffId}`, "PATCH", patch),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["staff", "profiles"] }),
+  });
+}
+
+interface StaffHomeLocation {
+  homeLocationId: string | null;
+  /** False for a hired-but-not-yet-claimed staff row: there is no membership
+   *  yet for a location to live on. */
+  claimed: boolean;
+}
+
+/** The branch a staff member is based at. Lives on their membership, not the
+ *  staff row, so it has its own read/write pair rather than riding `details`. */
+export function useStaffHomeLocation(staffId: string) {
+  return useQuery({
+    queryKey: ["staff", "profiles", staffId, "home-location"] as const,
+    queryFn: () =>
+      liveFetch<StaffHomeLocation>(
+        `/api/staff/${staffId}/home-location`,
+        () => ({ homeLocationId: null, claimed: false }),
+        "staff-home-location",
+      ),
+  });
+}
+
+export function useUpdateStaffHomeLocation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      staffId,
+      homeLocationId,
+    }: {
+      staffId: string;
+      homeLocationId: string | null;
+    }) =>
+      liveWrite<StaffHomeLocation>(
+        `/api/staff/${staffId}/home-location`,
+        "PATCH",
+        { homeLocationId },
+      ),
+    onSuccess: (_, { staffId }) =>
+      queryClient.invalidateQueries({
+        queryKey: ["staff", "profiles", staffId, "home-location"],
+      }),
   });
 }

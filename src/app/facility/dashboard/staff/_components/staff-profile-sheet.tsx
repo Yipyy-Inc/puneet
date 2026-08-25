@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -13,10 +14,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Mail,
   Phone,
   CalendarDays,
   MapPin,
+  Building2,
   Clock,
   Bell,
   Wallet,
@@ -40,6 +49,11 @@ import { WarningsTab } from "./warnings-tab";
 import { EmployeeFilesTab } from "./employee-files-tab";
 import { StaffAuditTrail } from "./staff-audit-trail";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { useLocationContext } from "@/hooks/use-location-context";
+import {
+  useStaffHomeLocation,
+  useUpdateStaffHomeLocation,
+} from "@/lib/api/staff";
 import { FACILITY_LOCATIONS } from "@/data/facility-staff";
 import {
   RolePill,
@@ -429,6 +443,7 @@ function OverviewTab({ profile }: { profile: StaffProfile }) {
               : `${locationLabels.length} of ${FACILITY_LOCATIONS.length}`
           }
         />
+        <HomeLocationTile staffId={profile.id} />
       </div>
 
       <div className="bg-muted/40 border-border/60 rounded-xl border p-4">
@@ -446,6 +461,75 @@ function OverviewTab({ profile }: { profile: StaffProfile }) {
           value={profile.showOnCalendar ? "Yes" : "No"}
         />
       </div>
+    </div>
+  );
+}
+
+/** No location, as opposed to "not answered yet" -- Radix Select crashes on
+ *  a `""` item value, so this stands in for null in the picker. */
+const UNASSIGNED = "__unassigned__";
+
+/**
+ * The real branch a staff member is based at -- `facility_memberships.
+ * home_location_id`, separate from `Locations` above (the older
+ * `assignedLocations` fixture field, unrelated). Renders nothing on a
+ * single-location facility: there is nothing to choose.
+ */
+function HomeLocationTile({ staffId }: { staffId: string }) {
+  const { locations, isMultiLocation } = useLocationContext();
+  const { can } = useFacilityRbac();
+  const canEdit = can("scheduling_view_all");
+  const { data, isPending } = useStaffHomeLocation(staffId);
+  const update = useUpdateStaffHomeLocation();
+
+  if (!isMultiLocation) return null;
+
+  const current = locations.find((l) => l.id === data?.homeLocationId);
+
+  return (
+    <div className="border-border/60 bg-card rounded-xl border p-3">
+      <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
+        <Building2 className="size-3" />
+        Home location
+      </div>
+      {isPending ? (
+        <div className="mt-1 text-sm">…</div>
+      ) : !data?.claimed ? (
+        <div className="mt-1 truncate text-sm font-semibold">
+          Pending invite
+        </div>
+      ) : !canEdit ? (
+        <div className="mt-1 truncate text-sm font-semibold">
+          {current?.name ?? "Not set"}
+        </div>
+      ) : (
+        <Select
+          value={data.homeLocationId ?? UNASSIGNED}
+          disabled={update.isPending}
+          onValueChange={(next) => {
+            const homeLocationId = next === UNASSIGNED ? null : next;
+            update.mutate(
+              { staffId, homeLocationId },
+              {
+                onSuccess: () => toast.success("Home location saved"),
+                onError: (error: Error) => toast.error(error.message),
+              },
+            );
+          }}
+        >
+          <SelectTrigger className="mt-1 h-7 w-full border-0 bg-transparent p-0 text-sm font-semibold shadow-none">
+            <SelectValue placeholder="Not set" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={UNASSIGNED}>Not set</SelectItem>
+            {locations.map((loc) => (
+              <SelectItem key={loc.id} value={loc.id}>
+                {loc.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 }
