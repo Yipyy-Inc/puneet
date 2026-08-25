@@ -148,6 +148,12 @@ export async function PATCH(
       ? scope.eq("location_id", locationId)
       : scope.is("location_id", null));
 
+    // rls-write-ok: the rows ARE counted first (`existingPrices` above) and the
+    // delete DOES select them back — but `.select("service_id")` is applied to
+    // the awaited ternary a few lines down rather than chained onto `.delete()`
+    // here, which is the one shape the guard cannot follow.
+    // `deleteWasRefused(existingPrices, clearedPrices)` below is exactly the
+    // check it is asking for.
     const clear = supabase
       .from("grooming_service_size_prices")
       .delete()
