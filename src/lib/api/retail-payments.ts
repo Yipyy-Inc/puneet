@@ -1,0 +1,192 @@
+import type { FiservPaymentResponse } from "@/types/payments";
+import type { CloverPaymentResponse } from "@/lib/clover-terminal-service";
+
+// ============================================================================
+// The counter's card reader, connected to the real one.
+//
+// `processFiservPayment` and `processCloverPayment` both simulated a charge —
+// a 500ms sleep, `Math.random()` for the outcome, an invented transaction id —
+// and the retail checkout called them at four places. This is what those call
+// sites use now: one POST to `/api/payments/retail/charge`, which runs the same
+// `lib/clover/charge.ts` and `lib/clover/terminal.ts` that charge a booking.
+//
+// ── IT ANSWERS IN THE SHAPE THE OLD ONES DID, DELIBERATELY ────────────────
+//
+// The checkout branches on `success`, reads `error.message`, and stores
+// `transactionId` / `cloverTransactionId` on the transaction it records. Those
+// keys are kept so the swap is one line per call site, in a 5,000-line file
+// where a wider edit is how a split-payment loop quietly starts settling the
+// wrong instalment.
+//
+// The ids are real now: `transactionId` is the `payments` row's uuid and
+// `cloverTransactionId` is Clover's own payment id, so a figure on this screen
+// can be traced to a row in the ledger and a transaction in the merchant's
+// dashboard. The simulators produced `txn_<timestamp>_<random>`, which could be
+// traced to nothing.
+// ============================================================================
+
+export interface RetailChargeInput {
+  amountCents: number;
+  taxCents?: number;
+  tipCents?: number;
+  /** The customer's ref, when the till knows who is buying. */
+  clientRef?: number | null;
+  /** Card-not-present: the `clv_` token from the hosted fields. */
+  source?: string;
+  /** Card-present: the terminal's SERIAL. Exactly one of the two. */
+  deviceSerial?: string;
+  lines?: { name: string; unitPriceCents: number; quantity: number }[];
+  note?: string;
+}
+
+interface RetailChargeOk {
+  paymentId: string;
+  processorPaymentId: string;
+  amountCents: number;
+  cardBrand: string | null;
+  cardLast4: string | null;
+}
+
+/**
+ * Take a retail payment. Never throws — the checkout reads `success`.
+ *
+ * A thrown error here would abandon a split-payment loop midway with earlier
+ * instalments already charged, so a failure is returned as a value the same way
+ * the functions this replaced did.
+ */
+export async function chargeRetail(
+  input: RetailChargeInput,
+): Promise<FiservPaymentResponse & { cloverTransactionId: string }> {
+  const at = new Date().toISOString();
+  const failed = (
+    code: string,
+    message: string,
+    status: FiservPaymentResponse["status"] = "failed",
+  ) =>
+    ({
+      success: false,
+      transactionId: "",
+      fiservTransactionId: "",
+      cloverTransactionId: "",
+      amount: input.amountCents / 100,
+      currency: "CAD" as const,
+      status,
+      error: { code, message },
+      processedAt: at,
+    }) satisfies FiservPaymentResponse & { cloverTransactionId: string };
+
+  let response: Response;
+  try {
+    response = await fetch("/api/payments/retail/charge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subtotalCents: Math.round(input.amountCents),
+        taxCents: Math.round(input.taxCents ?? 0),
+        tipCents: Math.round(input.tipCents ?? 0),
+        clientRef: input.clientRef ?? null,
+        ...(input.source ? { source: input.source } : {}),
+        ...(input.deviceSerial ? { deviceSerial: input.deviceSerial } : {}),
+        lines: input.lines ?? [],
+        ...(input.note ? { note: input.note } : {}),
+      }),
+    });
+  } catch {
+    // The card may or may not have been charged. Said plainly rather than
+    // reported as a decline, which would invite somebody to charge again.
+    return failed(
+      "unreachable",
+      "The payment could not be sent. Check the terminal before charging again.",
+    );
+  }
+
+  const body = (await response.json().catch(() => null)) as
+    | (Partial<RetailChargeOk> & { error?: string; code?: string })
+    | null;
+
+  if (!response.ok || !body?.paymentId) {
+    return failed(
+      body?.code ?? "refused",
+      body?.error ?? `The payment did not go through (${response.status}).`,
+      response.status === 402 ? "declined" : "failed",
+    );
+  }
+
+  return {
+    success: true,
+    // The ledger row, not an invented string.
+    transactionId: body.paymentId,
+    fiservTransactionId: body.processorPaymentId ?? "",
+    cloverTransactionId: body.processorPaymentId ?? "",
+    amount: (body.amountCents ?? input.amountCents) / 100,
+    currency: "CAD",
+    status: "completed",
+    cardBrand: body.cardBrand ?? undefined,
+    cardLast4: body.cardLast4 ?? undefined,
+    processedAt: at,
+  };
+}
+
+/** The same call, answering in the Clover terminal shape the checkout expects. */
+export async function chargeRetailOnTerminal(
+  input: RetailChargeInput & { deviceSerial: string },
+): Promise<CloverPaymentResponse> {
+  const out = await chargeRetail(input);
+  const total = (input.amountCents + (input.tipCents ?? 0)) / 100;
+  return {
+    success: out.success,
+    transactionId: out.transactionId,
+    cloverTransactionId: out.cloverTransactionId,
+    amount: input.amountCents / 100,
+    tipAmount: (input.tipCents ?? 0) / 100,
+    totalAmount: total,
+    currency: "CAD",
+    // The device reports how the card was read; this shape wants one of three
+    // and the ledger keeps the real value on `payments.entry_method`. "tap" is
+    // the common case and is only ever shown as a label.
+    paymentMethod: "tap",
+    cardBrand: out.cardBrand,
+    cardLast4: out.cardLast4,
+    status: out.success ? "completed" : "failed",
+    // The terminal route prints its own receipt; this one does not, and says so
+    // rather than claiming a slip nobody produced.
+    receiptPrinted: false,
+    error: out.error,
+    processedAt: out.processedAt,
+  } as CloverPaymentResponse;
+}
+
+/**
+ * The answer for a card somebody typed into the till.
+ *
+ * There isn't one, and this says so rather than simulating it. Charging a card
+ * card-not-present needs a `clv_` token from Clover's hosted fields, and the
+ * retail checkout does not mount them. Sending the digits from
+ * `newCardDetails` to a server instead would put the PAN in our logs and this
+ * deployment inside PCI scope — the single thing the hosted iframe exists to
+ * prevent.
+ *
+ * Returned as a normal failed response, in the shape the checkout already
+ * handles, so the refusal travels the same path a decline would: no throw, no
+ * abandoned split-payment loop, and the message reaches the operator.
+ *
+ * The terminal path IS real. This names it.
+ */
+export function typedCardUnavailable(
+  amountCents: number,
+): FiservPaymentResponse {
+  return {
+    success: false,
+    transactionId: "",
+    fiservTransactionId: "",
+    amount: amountCents / 100,
+    currency: "CAD",
+    status: "failed",
+    error: {
+      code: "typed_card_unsupported",
+      message:
+        "A typed card cannot be charged from this screen. Take it on the Clover terminal — that path reaches the real merchant. Cash, store credit and gift cards are unaffected.",
+    },
+    processedAt: new Date().toISOString(),
+  };
+}
