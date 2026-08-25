@@ -56,6 +56,25 @@ export async function PATCH(
     return NextResponse.json({ error: "Booking not found." }, { status: 404 });
   }
 
+  // The FK alone would not stop a location belonging to another facility
+  // being written here -- checked explicitly, same as the staff and terminal
+  // location routes, since `check:facility-from-session` exists for exactly
+  // this class of bug and there is no RLS on `locations` that could refuse
+  // the value at the point it is merely used as an id.
+  if (typeof input.locationId === "string") {
+    const { data: location } = await supabase
+      .from("locations")
+      .select("facility_id")
+      .eq("id", input.locationId)
+      .maybeSingle();
+    if (!location || location.facility_id !== facility.facilityId) {
+      return NextResponse.json(
+        { error: "That location doesn't belong to this business." },
+        { status: 422 },
+      );
+    }
+  }
+
   const existing = rowToBooking(current);
   const merged = { ...existing, ...input } as Partial<NewBooking>;
 
