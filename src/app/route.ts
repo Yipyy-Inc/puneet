@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
 import { facilitySlugFromHost } from "@/lib/facility-host";
+import { redirectUrl } from "@/lib/request-origin";
 
 // ============================================================================
 // The front door. It resolves where you belong ONCE, and answers with a REAL
@@ -149,13 +150,22 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // `nextUrl.clone()` rather than `new URL(dest, request.url)`: it carries the
-  // origin Next itself resolved, which is what keeps this pointing at
-  // www.yipyy.com behind Vercel's proxy instead of at the deployment hostname.
-  // The query is cleared because `/` takes none and forwarding an arbitrary one
+  // ── BUILT FROM THE HOST HEADER, NOT FROM nextUrl ──────────────────────────
+  //
+  // This was `request.nextUrl.clone()`, on the stated grounds that it "carries
+  // the origin Next itself resolved, which is what keeps this pointing at
+  // www.yipyy.com behind Vercel's proxy". That was true on Vercel and ONLY
+  // there. Self-hosted, Next resolves that origin from the address the server
+  // is listening on, so this redirected every sign-in to
+  // `https://0.0.0.0:3000/sign-in` — not a wrong host, not an address at all.
+  //
+  // `requestOrigin()` uses the same `host` header that decided the facility
+  // slug fifty lines above, so the visitor is returned to precisely the host
+  // they arrived on and their session cookie follows them.
+  //
+  // The query is still cleared: `/` takes none, and forwarding an arbitrary one
   // into a portal is a surprise nobody asked for.
-  const url = request.nextUrl.clone();
-  url.pathname = destination;
+  const url = redirectUrl(request, destination);
   url.search = "";
 
   // 307 rather than 308: this is a decision about the current session, not a
