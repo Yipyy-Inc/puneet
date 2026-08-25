@@ -968,17 +968,32 @@ The reachable one is now wired; the unreachable one is deleted. Its `amountPaid`
 
 **Do instead:** when two components do the same job, check which one is mounted before improving either.
 
-### 🟡 Two report families disagree about a refund, on the same screen
+### 🟢 A kept cancellation fee is revenue, and a refund is not spend (fixed 2026-08-25)
 
-Found 2026-08-25 while tracing where refunds land. Neither is fixed; both are decisions rather than bugs, and they should be taken deliberately.
+Two faults in `facility_report_dataset`, found while tracing where refunds land.
 
-**1. `facility_takings` counts money on cancelled bookings; the revenue reports do not.** The RPC filters `payments` by `facility_id` and `created_at` and nothing else, so a deposit a facility KEEPS on a cancellation is takings — which is right, the money is theirs. But `revenue-by-service`, `revenue-by-location` and `service-mix-by-location` (20260825170000) join `and b.status <> 'cancelled'`, which drops **both** signs on that booking. So a retained cancellation fee is real money those three reports cannot see, and the Yipyy Pay tile and the Reports tile disagree by exactly the fees kept that period.
+**1. Three reports could not see money on a cancelled booking.** `revenue-by-service`, `revenue-by-location` and `service-mix-by-location` joined `and b.status <> 'cancelled'`. Payments hang off the booking, so that one line dropped both signs — the fee a facility KEEPS when somebody cancels, and any refund against it. Measured on the demo facility before the fix:
 
-Note the shape of the error before reasoning about it: the join excludes the ORIGINAL payment as well as the refund, so it **understates** revenue by whatever was kept. It does not, as it first appears, leave a refund uncancelled.
+```
+300 cancelled bookings carrying payments
+$35,760.00 gross · -$6,344.00 refunded · $29,416.00 NET kept — invisible
+```
 
-**2. They disagree about WHEN, too.** `facility_takings` buckets by `p.created_at` — cash basis, the day the money moved. The revenue reports bucket by `b.start_at` — accrual, the day the service happened. A September refund on an August booking therefore lands in different months on two tiles a manager reads side by side. Both are defensible; having both unlabelled is not.
+Meanwhile `facility_takings`, which filters payments by facility and date and nothing else, counted every cent. Two tiles on the same screen disagreeing by exactly the money that was kept. On a 90-day window, boarding read **$325.00**; it is **$28,235.00**.
 
-**Do instead:** decide which basis each report is on and say so in its subtitle, before somebody reconciles the two by hand and files a bug against the difference.
+Fixed with `or p.id is not null` rather than deleting the filter — a cancellation nobody paid for should still contribute nothing, or the report grows zero-value rows. **The booking COUNTS still exclude cancellations**, via `filter (where b.status <> 'cancelled')`: a cancellation is not a booking served, while the fee charged for it is revenue earned, and one row now answers both honestly.
+
+**2. `customer-value` ranked customers by what they paid before refunds.**
+
+```sql
+'totalSpent', coalesce(sum(p.grand_total) filter (where p.grand_total > 0), 0)
+```
+
+Positive rows only. A customer who paid $800 and was given $200 back read as having spent $800, and one who returned everything still ranked as a top customer — on the figure the list is SORTED by. Every other figure in that function nets. Now `sum(p.grand_total)`.
+
+Guarded by `supabase/tests/report-cancelled-and-refunds.sql`: its own facility, four bookings (kept fee, part-refunded then cancelled, cancelled and never paid, ordinary), and **exact** expected totals rather than inequalities — all three faults hide comfortably inside a "greater than".
+
+**Still open, and deliberately not guessed at:** these reports bucket by `b.start_at`, the day the service happened; `facility_takings` buckets by `p.created_at`, the day the money moved. A September refund on an August booking lands in different months on two tiles read side by side. Both bases are defensible; having both unlabelled is not. That is a product decision about what each report says it measures.
 
 ### 🔴 The checkout offered to charge the PRICE on a part-paid booking (fixed 2026-08-25)
 
