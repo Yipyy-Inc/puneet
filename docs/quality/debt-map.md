@@ -4978,6 +4978,39 @@ announcing it, and never format a file you do not own to "fix" it. Gates that
 take explicit paths (`bunx prettier --check <path>`) are worth preferring when
 you only want to know about your own change.
 
+**Amended 2026-08-25 — the TREE is split; the BRANCH is not.** On the product
+owner's instruction, concurrent sessions now take a `git worktree` each rather
+than sharing `c:\dev\puneet`:
+
+```
+C:/dev/puneet                                     [main]
+C:/dev/puneet/.claude/worktrees/<name>            [worktree-<name>]
+```
+
+That fixes the two failures above and only those. Each tree has its own working
+files, index and `HEAD`, so `git status`, `format:check` and every other
+whole-repo gate now read **only your own work**, and `git push origin main` from
+the primary tree ships only what that tree committed.
+
+**What has NOT changed, and is the part that still bites:**
+
+- **There is still one `origin/main` and one CI.** `.github/workflows/ci.yml`
+  sets `cancel-in-progress: true`, so a push from either tree still cancels the
+  other's running e2e job — skipping its `afterAll` and leaking rows into shared
+  production Postgres. The announce-before-you-push rule survives the split
+  intact.
+- **One `.git`, so branches and refs are still shared.** A worktree cannot check
+  out a branch another worktree holds; `main` belongs to the primary tree. A
+  worktree session pushes with `git push origin HEAD:main` after
+  `git fetch && git rebase origin/main`. That is still straight to `main` with no
+  PR, per CLAUDE.md — the branch is a checkout mechanism, not a review step.
+- **Gitignored files do not come with the worktree.** A new tree has no
+  `.env.local` and no `node_modules`: copy the first, `bun install` the second
+  (~107s, 709 packages). Without `.env.local` the SQL suite and
+  `measure:migration-drift` fail in a way that looks like a credentials problem.
+- **Port 3000 is not shared.** Two dev servers or two Playwright runs collide;
+  `E2E_BASE_URL` and `--port` exist for this.
+
 ### 🔴 A domain word that is already taken is not available, and typecheck cannot tell you — 2026-08-23
 
 `boarding` means **dogs** in this repo. `src/lib/api/boarding.ts` is the kennels
