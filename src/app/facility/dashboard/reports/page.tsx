@@ -132,7 +132,6 @@ export default async function ReportsPage() {
     <ReportsHub
       kpis={kpis}
       deltas={deltas}
-      facilityId={active.facility.id}
       facilityName={active.facility.name}
     />
   );

@@ -32,24 +32,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { BUILTIN_SERVICE_COLORS } from "@/lib/operations-calendar";
 import {
-  generateNoShowReport,
-  generateCancellationReport,
-  getTopCustomers,
-} from "@/data/reports";
-import { getStaffTimeByService } from "@/lib/analytics-utils";
-import {
-  revenueByService,
-  occupancy,
-  clientMetrics,
-  revenueSummary,
-} from "@/lib/report-data-sources";
-import {
-  RevenueReportBody,
-  revenueKpis,
-  revenueDailyRows,
-} from "@/components/financial/RevenueReport";
-import type { DateRange } from "@/types/facility-analytics";
+  useFacilityReport,
+  type CancelledData,
+  type CustomerValueData,
+  type OccupancyData,
+  type ReportDataset,
+  type RevenueByServiceData,
+  type TotalRevenueData,
+} from "@/lib/api/facility-reports";
 import { ExportReportModal } from "@/components/reports/ExportReportModal";
 import { ReportShell, type ReportKpi } from "@/components/reports/report-shell";
 import {
@@ -63,7 +55,6 @@ import {
 } from "@/components/reports/chart-kit";
 import {
   defaultReportRange,
-  previousWindow,
   type ReportRange,
 } from "@/components/reports/report-range-picker";
 import {
@@ -88,7 +79,23 @@ interface ReportView {
   emptyTitle: string;
 }
 
-const toDR = (r: ReportRange): DateRange => ({ from: r.from, to: r.to });
+/**
+ * A service's chart colour.
+ *
+ * The fixture selectors returned `color` on every row because they looked it up
+ * through `getAllServiceModules()`. Postgres returns data, not presentation, so
+ * the same lookup happens here against the one map the calendar already uses -
+ * which keeps a service the same colour on both screens rather than by
+ * coincidence.
+ */
+function withColor<T extends { service: string }>(
+  row: T,
+): T & { color: string } {
+  return {
+    ...row,
+    color: BUILTIN_SERVICE_COLORS[row.service] ?? "#6b7280",
+  };
+}
 
 // ── Coming Soon ───────────────────────────────────────────────────────────────
 
@@ -121,10 +128,10 @@ function ComingSoon({
 
 // ── Revenue by Service / Total Revenue ──────────────────────────────────────
 
-function buildRevenueView(range: ReportRange, facilityId: number): ReportView {
-  const cur = revenueByService(toDR(range));
-  const prev = revenueByService(previousWindow(range));
-  const staffData = getStaffTimeByService(facilityId, range.from, range.to);
+function buildRevenueView(d: RevenueByServiceData): ReportView {
+  const cur = d.current.map(withColor);
+  const prev = d.previous.map(withColor);
+  const staffData = d.hours.map(withColor);
 
   const sum = (rows: typeof cur, key: "revenue" | "bookings") =>
     rows.reduce((s, r) => s + r[key], 0);
@@ -204,18 +211,17 @@ function buildRevenueView(range: ReportRange, facilityId: number): ReportView {
       {/* Staff time by service */}
       <div>
         <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-widest uppercase">
-          Staff Time by Service
+          Booked Hours by Service
         </p>
         <div className="space-y-0.5">
-          <div className="text-muted-foreground grid grid-cols-4 gap-3 border-b px-2 pb-2 text-xs font-semibold">
+          <div className="text-muted-foreground grid grid-cols-3 gap-3 border-b px-2 pb-2 text-xs font-semibold">
             <span className="col-span-2">Service</span>
             <span className="text-right">Hours</span>
-            <span className="text-right">Staff</span>
           </div>
           {staffData.map((row) => (
             <div
               key={row.service}
-              className="hover:bg-muted/30 grid grid-cols-4 items-center gap-3 rounded-md px-2 py-2.5"
+              className="hover:bg-muted/30 grid grid-cols-3 items-center gap-3 rounded-md px-2 py-2.5"
             >
               <div className="col-span-2 flex items-center gap-2">
                 <span
@@ -226,9 +232,6 @@ function buildRevenueView(range: ReportRange, facilityId: number): ReportView {
               </div>
               <span className="text-right text-sm tabular-nums">
                 {formatCount(row.hours)}h
-              </span>
-              <span className="text-muted-foreground text-right text-sm">
-                {formatCount(row.staffCount)}
               </span>
             </div>
           ))}
@@ -245,7 +248,8 @@ function buildRevenueView(range: ReportRange, facilityId: number): ReportView {
       Revenue: r.revenue,
       Bookings: r.bookings,
       "Avg / Booking": r.bookings > 0 ? r.revenue / r.bookings : 0,
-      "Share %": r.percentage,
+      "Share %":
+        curRevenue > 0 ? Math.round((r.revenue / curRevenue) * 1000) / 10 : 0,
     })),
     isEmpty: cur.length === 0,
     emptyTitle: "No revenue in this period",
@@ -254,9 +258,9 @@ function buildRevenueView(range: ReportRange, facilityId: number): ReportView {
 
 // ── Occupancy ────────────────────────────────────────────────────────────────
 
-function buildOccupancyView(range: ReportRange): ReportView {
-  const data = occupancy(toDR(range));
-  const prev = occupancy(previousWindow(range));
+function buildOccupancyView(d: OccupancyData): ReportView {
+  const data = d.current;
+  const prev = d.previous;
 
   const avg = (rows: typeof data) =>
     rows.length > 0
@@ -397,91 +401,22 @@ function buildOccupancyView(range: ReportRange): ReportView {
   };
 }
 
-// ── No-Shows / Cancellations (shared table shape) ───────────────────────────
+// ── Cancellations ────────────────────────────────────────────
+//
+// `buildNoShowView` used to live here and shared this table's shape. It is
+// GONE rather than converted, and the report is marked unimplemented: there is
+// no `no_show` booking status and no dated no-show event anywhere in the
+// schema. `clients.no_show_count` is a lifetime counter - three, across two
+// clients - with no date on any of them, so "no-shows in this period" cannot
+// be asked. The fixture answered it by inventing dates.
+//
+// Recording a no-show is a feature somebody has to build. Marking it
+// unimplemented says that; converting it would have said the opposite.
 
-function buildNoShowView(range: ReportRange, facilityId: number): ReportView {
-  const data = generateNoShowReport(facilityId, range.from, range.to);
-  const prevWin = previousWindow(range);
-  const prev = generateNoShowReport(facilityId, prevWin.from, prevWin.to);
-  const totalLost = data.reduce((s, d) => s + d.revenue, 0);
-  const prevLost = prev.reduce((s, d) => s + d.revenue, 0);
-
-  const kpis: ReportKpi[] = [
-    {
-      label: "No-Shows",
-      value: formatCount(data.length),
-      icon: CalendarCheck,
-      tone: "rose",
-      delta: computeDelta(data.length, prev.length),
-      hint: "vs. prev. period",
-    },
-    {
-      label: "Lost Revenue",
-      value: formatCurrency(totalLost),
-      icon: DollarSign,
-      tone: "amber",
-      delta: computeDelta(totalLost, prevLost),
-      hint: "vs. prev. period",
-    },
-  ];
-
-  const columns: ColumnDef<(typeof data)[number]>[] = [
-    {
-      accessorKey: "date",
-      header: "Date",
-      cell: ({ row }) => new Date(row.original.date).toLocaleDateString(),
-    },
-    { accessorKey: "clientName", header: "Client" },
-    { accessorKey: "petName", header: "Pet" },
-    {
-      accessorKey: "service",
-      header: "Service",
-      cell: ({ row }) => (
-        <Badge variant="outline" className="capitalize">
-          {row.original.service}
-        </Badge>
-      ),
-    },
-    { accessorKey: "scheduledTime", header: "Time" },
-    {
-      accessorKey: "revenue",
-      header: "Lost Revenue",
-      cell: ({ row }) => formatCurrency(row.original.revenue),
-    },
-  ];
-
-  return {
-    kpis,
-    body: (
-      <DataTable
-        columns={columns}
-        data={data}
-        searchColumn="clientName"
-        searchPlaceholder="Search by client..."
-      />
-    ),
-    exportData: data.map((d) => ({
-      Date: d.date,
-      Client: d.clientName,
-      Pet: d.petName,
-      Service: d.service,
-      Time: d.scheduledTime,
-      "Lost Revenue": d.revenue,
-    })),
-    isEmpty: data.length === 0,
-    emptyTitle: "No no-shows in this period",
-  };
-}
-
-function buildCancellationView(
-  range: ReportRange,
-  facilityId: number,
-): ReportView {
-  const data = generateCancellationReport(facilityId, range.from, range.to);
-  const prevWin = previousWindow(range);
-  const prev = generateCancellationReport(facilityId, prevWin.from, prevWin.to);
-  const totalRefunds = data.reduce((s, d) => s + d.refundAmount, 0);
-  const prevRefunds = prev.reduce((s, d) => s + d.refundAmount, 0);
+function buildCancellationView(d: CancelledData): ReportView {
+  const data = d.current;
+  const totalRefunds = data.reduce((sum, r) => sum + r.refundAmount, 0);
+  const prevRefunds = d.previousRefunds;
 
   const kpis: ReportKpi[] = [
     {
@@ -489,7 +424,7 @@ function buildCancellationView(
       value: formatCount(data.length),
       icon: CalendarCheck,
       tone: "amber",
-      delta: computeDelta(data.length, prev.length),
+      delta: computeDelta(data.length, d.previousCount),
       hint: "vs. prev. period",
     },
     {
@@ -519,7 +454,6 @@ function buildCancellationView(
         </Badge>
       ),
     },
-    { accessorKey: "advanceNotice", header: "Notice" },
     {
       accessorKey: "reason",
       header: "Reason",
@@ -551,7 +485,6 @@ function buildCancellationView(
       Client: d.clientName,
       Pet: d.petName,
       Service: d.service,
-      Notice: d.advanceNotice,
       Reason: d.reason ?? "",
       Refund: d.refundAmount,
     })),
@@ -562,47 +495,53 @@ function buildCancellationView(
 
 // ── Customer Value ────────────────────────────────────────────────────────────
 
-function buildCustomerView(range: ReportRange, facilityId: number): ReportView {
-  const data = getTopCustomers(facilityId, 20, range.from, range.to);
-  const cm = clientMetrics(toDR(range));
-  const cmPrev = clientMetrics(previousWindow(range));
+function buildCustomerView(d: CustomerValueData): ReportView {
+  // Average order value is DERIVED here rather than returned, so it cannot
+  // disagree with the two numbers it comes from.
+  const data = d.customers.map((c) => ({
+    ...c,
+    averageOrderValue: c.totalBookings > 0 ? c.totalSpent / c.totalBookings : 0,
+  }));
+  const avgLtv =
+    data.length > 0
+      ? data.reduce((sum, c) => sum + c.totalSpent, 0) / data.length
+      : 0;
 
   const kpis: ReportKpi[] = [
     {
       label: "Active Clients",
-      value: formatCount(cm.activeClients),
+      value: formatCount(d.activeClients),
       icon: Users,
       tone: "indigo",
-      delta: computeDelta(cm.activeClients, cmPrev.activeClients),
+      delta: computeDelta(d.activeClients, d.prevActiveClients),
       hint: "vs. prev. period",
     },
     {
       label: "New Clients",
-      value: formatCount(cm.newClients),
+      value: formatCount(d.newClients),
       icon: Users,
       tone: "emerald",
-      delta: computeDelta(cm.newClients, cmPrev.newClients),
+      delta: computeDelta(d.newClients, d.prevNewClients),
       hint: "vs. prev. period",
     },
     {
-      label: "Avg LTV",
-      value: formatCurrency(cm.avgLtv),
+      label: "Avg Spend",
+      value: formatCurrency(avgLtv),
       icon: DollarSign,
       tone: "violet",
-      delta: computeDelta(cm.avgLtv, cmPrev.avgLtv),
-      hint: "vs. prev. period",
+      hint: "per active client",
     },
   ];
 
   const columns: ColumnDef<(typeof data)[number]>[] = [
     {
-      accessorKey: "client.name",
+      accessorKey: "name",
       header: "Client",
       cell: ({ row }) => (
         <div>
-          <p className="text-sm font-medium">{row.original.client.name}</p>
+          <p className="text-sm font-medium">{row.original.name}</p>
           <p className="text-muted-foreground text-xs">
-            {row.original.client.email}
+            {row.original.email ?? ""}
           </p>
         </div>
       ),
@@ -619,20 +558,11 @@ function buildCustomerView(range: ReportRange, facilityId: number): ReportView {
       cell: ({ row }) => formatCurrency(row.original.averageOrderValue),
     },
     {
-      accessorKey: "clv",
-      header: "CLV (Est.)",
-      cell: ({ row }) => (
-        <span className="text-primary font-semibold">
-          {formatCurrency(row.original.clv)}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "lastBookingDate",
+      accessorKey: "lastVisit",
       header: "Last Visit",
       cell: ({ row }) =>
-        row.original.lastBookingDate
-          ? new Date(row.original.lastBookingDate).toLocaleDateString()
+        row.original.lastVisit
+          ? new Date(row.original.lastVisit).toLocaleDateString()
           : "N/A",
     },
   ];
@@ -643,18 +573,17 @@ function buildCustomerView(range: ReportRange, facilityId: number): ReportView {
       <DataTable
         columns={columns}
         data={data}
-        searchColumn="client.name"
+        searchColumn="name"
         searchPlaceholder="Search clients..."
       />
     ),
-    exportData: data.map((d) => ({
-      Client: d.client.name,
-      Email: d.client.email,
-      Bookings: d.totalBookings,
-      "Total Spent": d.totalSpent,
-      AOV: d.averageOrderValue,
-      CLV: d.clv,
-      "Last Visit": d.lastBookingDate ?? "",
+    exportData: data.map((c) => ({
+      Client: c.name,
+      Email: c.email ?? "",
+      Bookings: c.totalBookings,
+      "Total Spent": c.totalSpent,
+      AOV: c.averageOrderValue,
+      "Last Visit": c.lastVisit ?? "",
     })),
     isEmpty: data.length === 0,
     emptyTitle: "No client activity in this period",
@@ -663,98 +592,154 @@ function buildCustomerView(range: ReportRange, facilityId: number): ReportView {
 
 // ── Total Revenue (full financial report) ───────────────────────────────────
 
-function buildTotalRevenueView(range: ReportRange): ReportView {
-  const dr = toDR(range);
-  const summary = revenueSummary(dr);
+function buildTotalRevenueView(d: TotalRevenueData): ReportView {
+  // It used to delegate the whole view to `RevenueReportBody` from
+  // components/financial, which reads `@/data/*` and is shared with two other
+  // screens. Converting THAT is a separate job with its own blast radius, so
+  // this view is built here from the ledger instead.
+  const net = d.gross - d.refunded;
+
+  const kpis: ReportKpi[] = [
+    {
+      label: "Gross Takings",
+      value: formatCurrency(d.gross),
+      icon: DollarSign,
+      tone: "emerald",
+      delta: computeDelta(d.gross, d.prevGross),
+      hint: "vs. prev. period",
+    },
+    {
+      label: "Refunded",
+      value: formatCurrency(d.refunded),
+      icon: DollarSign,
+      tone: d.refunded > 0 ? "amber" : "slate",
+      hint: "returned to customers",
+    },
+    {
+      // Net is what the Reports KPI tile shows, so the two agree by
+      // construction rather than by coincidence. Gross alone would disagree
+      // with the tile above and both would be right, which is worse than one
+      // of them being wrong.
+      label: "Net",
+      value: formatCurrency(net),
+      icon: DollarSign,
+      tone: "indigo",
+      hint: `${formatCount(d.transactions)} payments`,
+    },
+  ];
+
+  const body = (
+    <ReportChartCard
+      title="Takings by Day"
+      subtitle="Gross taken and refunded, per day"
+      height={300}
+      isEmpty={d.daily.length === 0}
+      emptyMessage="No payments in this period"
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={d.daily}
+          margin={{ top: 8, right: 16, bottom: 24, left: 8 }}
+        >
+          <CartesianGrid {...gridProps} />
+          <XAxis
+            dataKey="date"
+            tick={axisTick}
+            label={axisLabel("Date", "x")}
+          />
+          <YAxis
+            tick={axisTick}
+            tickFormatter={tickFmt("compactCurrency")}
+            label={axisLabel("Amount", "y")}
+          />
+          <Tooltip content={<ReportTooltip format="currency" />} />
+          <Legend {...legendProps} />
+          <Area
+            type="monotone"
+            dataKey="gross"
+            name="Taken"
+            stroke="#10b981"
+            fill="#10b981"
+            fillOpacity={0.18}
+          />
+          <Area
+            type="monotone"
+            dataKey="refunded"
+            name="Refunded"
+            stroke="#f59e0b"
+            fill="#f59e0b"
+            fillOpacity={0.18}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </ReportChartCard>
+  );
+
   return {
-    kpis: revenueKpis(dr),
-    body: <RevenueReportBody range={dr} />,
-    exportData: revenueDailyRows(dr),
-    isEmpty: summary.transactions === 0,
+    kpis,
+    body,
+    exportData: d.daily.map((row) => ({
+      Date: row.date,
+      Gross: row.gross,
+      Refunded: row.refunded,
+      Net: row.net,
+      Payments: row.transactions,
+    })),
+    isEmpty: d.transactions === 0,
     emptyTitle: "No transactions in this period",
   };
 }
 
+/**
+ * The dataset arrives as `ReportDataset`, a union. Each case narrows it to the
+ * shape its own builder needs.
+ *
+ * The cast is contained to this one function ON PURPOSE: the RPC returns
+ * `jsonb`, so there is no type the database can hand back that TypeScript would
+ * narrow on its own. Doing it here means exactly one place has to be right, and
+ * every builder below is fully typed.
+ */
 function buildView(
   reportId: string,
-  range: ReportRange,
-  facilityId: number,
+  data: ReportDataset | null,
 ): ReportView | null {
+  if (!data) return null;
   switch (reportId) {
     case "total-revenue":
-      return buildTotalRevenueView(range);
+      return buildTotalRevenueView(data as TotalRevenueData);
     case "revenue-by-service":
-      return buildRevenueView(range, facilityId);
+      return buildRevenueView(data as RevenueByServiceData);
     case "occupancy-report":
-      return buildOccupancyView(range);
-    case "no-shows":
-      return buildNoShowView(range, facilityId);
+      return buildOccupancyView(data as OccupancyData);
     case "cancelled-bookings":
-      return buildCancellationView(range, facilityId);
+      return buildCancellationView(data as CancelledData);
     case "customer-value":
-      return buildCustomerView(range, facilityId);
+      return buildCustomerView(data as CustomerValueData);
     default:
       return null;
   }
 }
 
-/**
- * Says, on the report's own face, that its figures are not this facility's.
- *
- * The KPI tiles on the hub behind this sheet ARE real now - they come from
- * `facility_report_kpis` over `bookings`, `payments` and `facility_rooms`. The
- * views in this file are not yet, and a screen where some numbers are real and
- * some are invented, with nothing distinguishing them, is worse than one where
- * all of them are invented. So it is stated rather than left to be discovered
- * by somebody comparing this against Yipyy Pay.
- *
- * This component is deleted when the last `buildXView` stops importing from
- * `@/data/*`. It is not decoration; it is a debt marker with a removal
- * condition.
- */
-function SampleNotice({ facilityName }: { facilityName: string }) {
-  return (
-    <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
-      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-      <div className="space-y-0.5">
-        <p className="text-sm font-medium">
-          This report shows sample figures, not {facilityName}&apos;s.
-        </p>
-        <p className="text-muted-foreground text-xs/relaxed">
-          The totals on the Reports page behind this are real. This particular
-          report has not been connected to your data yet — for takings you can
-          rely on, use Settings → Yipyy Pay → Transactions.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ── Sheet ─────────────────────────────────────────────────────────────────────
-
-/**
- * The fixture facility, kept HERE and nowhere else.
- *
- * Every `buildXView` below still reads `src/data/*` through
- * `report-data-sources` and `analytics-utils`, and those selectors key on a
- * numeric id that only exists in the fixtures. Until each view is converted,
- * the honest thing is to confine the fake id to the fake data rather than let
- * it travel through props that now carry a real facility uuid.
- *
- * When the last view converts, this constant and every `@/data/*` import in
- * this file go with it.
- */
-const FIXTURE_FACILITY_ID = 11;
+// ── Sheet ──────────────────────────────────────────────────────
+//
+// `SampleNotice` and `FIXTURE_FACILITY_ID` used to live here. Both are gone,
+// and their removal condition was stated when they were added: the notice went
+// when the last `buildXView` stopped importing `@/data/*`, and the constant
+// went with the last fixture call. There is no `@/data/*` import left in this
+// file.
 
 export function ReportSheet({
   report,
-  facilityId,
   facilityName,
   onClose,
 }: {
   report: ReportWithCategory | null;
-  /** The real facility. Not yet used by the views below - see SampleNotice. */
-  facilityId: string;
+  /**
+   * The facility's NAME, for the error message. Not its id - the route resolves
+   * that from the SESSION, so a report cannot be asked for on behalf of a
+   * business the viewer does not administer. Passing the id here would have
+   * been an id the server must not trust.
+   */
   facilityName: string;
   onClose: () => void;
 }) {
@@ -763,10 +748,17 @@ export function ReportSheet({
   );
   const [showExport, setShowExport] = useState(false);
 
-  const view =
-    report?.implemented && report
-      ? buildView(report.id, range, FIXTURE_FACILITY_ID)
-      : null;
+  // `enabled` inside the hook rather than a conditional call: the sheet is
+  // mounted with `report === null` whenever it is closed.
+  const { data, isPending, error } = useFacilityReport(
+    report?.implemented ? report.id : null,
+    range.from,
+    range.to,
+  );
+
+  const view = report?.implemented
+    ? buildView(report.id, data?.data ?? null)
+    : null;
 
   return (
     <>
@@ -786,22 +778,39 @@ export function ReportSheet({
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto px-6 py-5">
-            {!report ? null : !view ? (
+            {!report ? null : !report.implemented ? (
               <ComingSoon name={report.name} description={report.description} />
+            ) : error ? (
+              // Said, not swallowed. An empty report and a report that could not
+              // be read look identical, and only one of them means "no business
+              // in this period".
+              <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">
+                    This report could not be read for {facilityName}.
+                  </p>
+                  <p className="text-muted-foreground text-xs/relaxed">
+                    {error.message}
+                  </p>
+                </div>
+              </div>
+            ) : isPending || !view ? (
+              <div
+                data-slot="skeleton"
+                className="bg-muted/50 h-[420px] animate-pulse rounded-xl"
+              />
             ) : (
-              <>
-                <SampleNotice facilityName={facilityName} />
-                <ReportShell
-                  range={range}
-                  onRangeChange={setRange}
-                  onExport={() => setShowExport(true)}
-                  kpis={view.kpis}
-                  isEmpty={view.isEmpty}
-                  emptyTitle={view.emptyTitle}
-                >
-                  {view.body}
-                </ReportShell>
-              </>
+              <ReportShell
+                range={range}
+                onRangeChange={setRange}
+                onExport={() => setShowExport(true)}
+                kpis={view.kpis}
+                isEmpty={view.isEmpty}
+                emptyTitle={view.emptyTitle}
+              >
+                {view.body}
+              </ReportShell>
             )}
           </div>
         </DialogContent>
