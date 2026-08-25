@@ -50,8 +50,26 @@
 	}
 }
 
-# Shared upstream. Imported by both site blocks so the apex and the facility
-# subdomains cannot drift apart in how they proxy.
+# ── WHICH COLOUR IS LIVE LIVES IN ITS OWN FILE ────────────────────────────
+#
+# `upstream.caddy` defines (upstream) as a single `reverse_proxy app_blue:3000`
+# or `app_green:3000`, and it is the ONE line a deploy rewrites. Keeping it
+# separate is what makes the swap a `caddy reload` rather than a container
+# restart: graceful, in-flight requests finish on the old configuration, and
+# the certificate store is never touched. A card payment mid-tap survives a
+# deploy because of this file.
+#
+# The whole DIRECTORY is mounted, not these two files individually. Docker
+# bind-mounts a single file by INODE, so anything that REPLACES rather than
+# rewrites it — scp, `sed -i`, most editors' save — leaves the container reading
+# the old content while the new content sits on disk. That cost an hour on
+# 2026-08-25, with Caddy reporting a parse error on a line already deleted.
+import /etc/caddy/upstream.caddy
+
+# Shared behaviour for every site. The upstream TARGET — and every setting that
+# governs how we talk to it — is in the imported snippet above, so the apex and
+# the facility subdomains cannot drift apart, and a deploy changes only WHICH
+# container is answering.
 (yipyy_upstream) {
 	encode zstd gzip
 
@@ -62,56 +80,7 @@
 	}
 
 	handle {
-		reverse_proxy app:3000 {
-			# ── HOST IS PRESERVED, AND THAT IS CADDY'S DEFAULT ────────────
-			#
-			# There is deliberately NO `header_up Host` line here. Caddy passes
-			# the incoming Host through unchanged (unlike nginx, which rewrites
-			# it to the upstream address), and writing the directive out is how
-			# somebody later "helpfully" sets it to {upstream_hostport} and
-			# breaks all three of these at once:
-			#
-			#   src/proxy.ts:70        facilitySlugFromHost(host) → x-facility-slug
-			#   workos-actions.ts:44   the OAuth redirect_uri and signOut returnTo
-			#   passkeys.ts:66         the WebAuthn origin, compared byte for byte
-			#
-			# Note it reads `host` and never `x-forwarded-host`. Do not add one.
-
-			# ── PROTO IS A FACT HERE, NOT A CLIENT ASSERTION ──────────────
-			# This block only ever serves TLS, so the value is pinned rather
-			# than forwarded. header_up with a single value REPLACES, so a
-			# browser sending its own `X-Forwarded-Proto: http` cannot downgrade
-			# the origin that passkeys.ts compares against.
-			header_up X-Forwarded-Proto https
-			header_up X-Real-IP {remote_host}
-
-			transport http {
-				dial_timeout 5s
-
-				# ── THE INTERMITTENT 502 YOU WOULD SPEND A WEEK ON ────────
-				# Node's default server.keepAliveTimeout is 5 seconds. Caddy's
-				# default upstream idle keep-alive is TWO MINUTES. So Caddy
-				# keeps pooled connections that Node has already closed, and
-				# reuse loses the race: a few 502s per thousand requests,
-				# correlated with nothing. Shorter than Node's, so Caddy always
-				# closes first.
-				keepalive 3s
-				keepalive_idle_conns 32
-
-				# The real ceiling on a handler now that `maxDuration` is dead
-				# code off Vercel — nothing else bounds one. 180s sits above
-				# terminal.ts's own 150s budget, so its AbortSignal fires first
-				# and the app returns a real error instead of Caddy cutting the
-				# socket underneath a card payment.
-				response_header_timeout 180s
-				read_timeout 200s
-			}
-
-			# Retry only a connection that was never established. Never one that
-			# was accepted — /api/payments/* is not idempotent.
-			lb_try_duration 3s
-			lb_try_interval 250ms
-		}
+		import upstream
 	}
 }
 

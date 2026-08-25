@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Deploy one image tag to the VPS. Run by the `deploy` job over SSH.
+# Deploy one image tag to the VPS, without interrupting anybody.
 #
 #   /opt/yipyy/deploy.sh <commit-sha>
 #
-# The box does not build. It pulls an image GitHub Actions already built with
-# the six NEXT_PUBLIC_* values baked in, which is why a rollback is
+#   1. pull the image GitHub Actions built
+#   2. start the IDLE colour on it
+#   3. wait for its container healthcheck
+#   4. prove it with a real request, through Caddy's own network namespace
+#   5. rewrite one token in caddy/upstream.caddy and `caddy reload`
+#   6. LEAVE THE OLD COLOUR RUNNING
 #
-#   /opt/yipyy/deploy.sh <previous-sha>
+# Step 5 is the whole design. `caddy reload` is graceful — in-flight requests
+# finish on the old configuration and the process is never restarted — so a
+# card-present payment that has been waiting 90 seconds for somebody to tap
+# survives a deploy. Nothing here ever sends SIGTERM to a container holding a
+# live Clover call.
 #
-# and takes as long as a pull, not as long as a compile.
+# Step 6 is the rollback. `rollback.sh` flips the token back and reloads: under
+# a second, no pull, no image, and it works when GHCR is down.
 #
-# ── WHAT THIS DOES NOT DO YET ─────────────────────────────────────────────
-#
-# It recreates the single app container rather than swapping between two. That
-# means a short gap, bounded below by how fast Node starts. `stop_grace_period`
-# is 200s in the compose file, so a card-present payment already in flight is
-# allowed to FINISH rather than being severed — but a request arriving during
-# the gap gets a 502 from Caddy.
-#
-# That is acceptable for the staging host and for the first facility. It is NOT
-# acceptable once every facility is behind the apex, and blue/green — two app
-# services, one Caddy, swapped with `caddy reload` — is required before the
-# final DNS flip. Written down here rather than discovered then.
+# The box never builds. `next build` once SIGKILLed an 8 GB Vercel builder on
+# this repo and this box has 7.8 GB — so the artifact is built on a GitHub
+# runner with 16 GB and pulled here.
 # ============================================================================
 set -Eeuo pipefail
 umask 077
@@ -30,48 +30,48 @@ cd /opt/yipyy
 
 TAG="${1:?usage: deploy.sh <image-tag>}"
 IMAGE="ghcr.io/yipyy-inc/puneet:${TAG}"
+UPSTREAM=caddy/upstream.caddy
 
 log() { printf '\n==> %s\n' "$*"; }
 
-PREVIOUS=$(grep -m1 '^IMAGE_TAG=' .env | cut -d= -f2- || echo "")
-log "current=${PREVIOUS:-none}  target=${TAG}"
+# Which colour is serving right now, read from the file that decides it rather
+# than from anything that could disagree with it.
+CURRENT=$(grep -oE 'reverse_proxy app_(blue|green):3000' "$UPSTREAM" | grep -oE 'app_(blue|green)')
+if [ "$CURRENT" = "app_blue" ]; then NEW=green; else NEW=blue; fi
+NEWSVC="app_${NEW}"
+UPPER=$(printf '%s' "$NEW" | tr '[:lower:]' '[:upper:]')
 
-log "pulling ${IMAGE}"
+log "current=${CURRENT}  target=${NEWSVC}  image=${IMAGE}"
+
+log "pulling"
 docker pull "$IMAGE"
 
-# Written before the swap so a failure can put it back.
-sed -i -E "s|^IMAGE_TAG=.*|IMAGE_TAG=${TAG}|" .env
-grep -q "^IMAGE_TAG=${TAG}$" .env || {
+# Only ever touches the IDLE colour's tag, so a failed deploy cannot change what
+# is currently serving traffic.
+if grep -q "^IMAGE_TAG_${UPPER}=" .env; then
+	sed -i -E "s|^IMAGE_TAG_${UPPER}=.*|IMAGE_TAG_${UPPER}=${TAG}|" .env
+else
+	echo "IMAGE_TAG_${UPPER}=${TAG}" >>.env
+fi
+grep -q "^IMAGE_TAG_${UPPER}=${TAG}$" .env || {
 	echo "FATAL: .env rewrite failed; nothing was swapped."
 	exit 1
 }
 
-revert() {
-	if [ -n "$PREVIOUS" ]; then
-		log "reverting to ${PREVIOUS}"
-		sed -i -E "s|^IMAGE_TAG=.*|IMAGE_TAG=${PREVIOUS}|" .env
-		docker compose up -d app || true
-	fi
-}
+log "starting ${NEWSVC}"
+docker compose --profile "$NEW" up -d --force-recreate "$NEWSVC"
 
-log "starting the new container"
-docker compose up -d app || {
-	revert
-	echo "FATAL: the new container would not start."
-	exit 1
-}
-
-log "waiting for the healthcheck"
+log "waiting for ${NEWSVC} to report healthy"
 for i in $(seq 1 40); do
-	st=$(docker inspect -f '{{.State.Health.Status}}' yipyy-app 2>/dev/null || echo starting)
-	if [ "$st" = healthy ]; then
+	st=$(docker inspect -f '{{.State.Health.Status}}' "yipyy-app-${NEW}" 2>/dev/null || echo starting)
+	if [ "$st" = "healthy" ]; then
 		echo "healthy after $((i * 5))s"
 		break
 	fi
-	if [ "$st" = unhealthy ] || [ "$i" = 40 ]; then
-		echo "FATAL: never became healthy (status=${st})"
-		docker logs --tail 200 yipyy-app || true
-		revert
+	if [ "$st" = "unhealthy" ] || [ "$i" = 40 ]; then
+		echo "FATAL: ${NEWSVC} never became healthy (status=${st})"
+		docker logs --tail 200 "yipyy-app-${NEW}" || true
+		docker compose --profile "$NEW" stop "$NEWSVC" || true
 		exit 1
 	fi
 	sleep 5
@@ -79,19 +79,39 @@ done
 
 # ── THE SMOKE TEST THAT PROVES THE MOST ───────────────────────────────────
 #
-# Through Caddy's own network namespace, with a real Host header, so it walks
-# the same path `facilitySlugFromHost` sees. /sign-in rendering means the
-# container reached Supabase from this box's egress IP and Next server-rendered
-# a page — far more than /api/health can tell you, because that endpoint's
-# "Data Layer" check reads a TypeScript fixture rather than the database.
+# From inside Caddy's network namespace, with a real Host header, so it walks
+# the same path facilitySlugFromHost sees. A branded sign-in page rendering
+# means the new container reached Supabase from this box's egress IP and Next
+# server-rendered a page — far more than /api/health can tell you, because that
+# endpoint's "Data Layer" check reads a TypeScript fixture, not the database.
 log "smoke test"
-docker exec yipyy-caddy wget -q -O /dev/null -T 20 \
-	--header="Host: ${SMOKE_HOST:-yipyy.com}" \
-	"http://app:3000/sign-in" || {
-	echo "FATAL: /sign-in did not render from the new container."
-	revert
+SMOKE_HOST="${SMOKE_HOST:-yipyy.com}"
+docker exec yipyy-caddy wget -q -O /dev/null -T 25 \
+	--header="Host: ${SMOKE_HOST}" "http://${NEWSVC}:3000/sign-in" || {
+	echo "FATAL: /sign-in did not render from ${NEWSVC}; leaving ${CURRENT} serving."
+	docker compose --profile "$NEW" stop "$NEWSVC" || true
 	exit 1
 }
 
-log "live on ${TAG}"
+log "pointing Caddy at ${NEWSVC}"
+cp "$UPSTREAM" "${UPSTREAM}.prev"
+sed -i -E "s|reverse_proxy app_(blue\|green):3000|reverse_proxy ${NEWSVC}:3000|" "$UPSTREAM"
+
+# Validate BEFORE reloading. A bad config on reload leaves the old one running,
+# which is safe — but failing here says what is wrong instead of leaving a
+# rejected reload to be noticed later.
+docker exec yipyy-caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1 || {
+	cp "${UPSTREAM}.prev" "$UPSTREAM"
+	echo "FATAL: Caddyfile did not validate; reverted, ${CURRENT} still serving."
+	exit 1
+}
+
+docker exec yipyy-caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile || {
+	cp "${UPSTREAM}.prev" "$UPSTREAM"
+	docker exec yipyy-caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile || true
+	echo "FATAL: reload failed; reverted to ${CURRENT}."
+	exit 1
+}
+
+log "live on ${NEWSVC} (${TAG}). ${CURRENT} left running — rollback.sh is one reload away."
 docker image prune -f --filter 'until=168h' >/dev/null 2>&1 || true
