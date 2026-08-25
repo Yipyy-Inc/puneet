@@ -3,6 +3,7 @@
 // data-layer read probe, and real config checks — never hard-coded statuses.
 
 import os from "node:os";
+import v8 from "node:v8";
 
 import type { HealthComponent, HealthResponse, HealthStatus } from "./types";
 
@@ -44,11 +45,22 @@ export async function runHealthChecks(): Promise<HealthResponse> {
   const mem = process.memoryUsage();
   // Heap utilisation is the actionable memory-pressure signal for a Node
   // process; RSS over total host memory is always a tiny, meaningless fraction.
-  const heapPercent = Math.round((mem.heapUsed / mem.heapTotal) * 1000) / 10;
+  //
+  // Against `heapTotal`, not `heap_size_limit`: heapTotal is V8's CURRENTLY
+  // allocated heap, which starts small and only grows on demand. A quiet
+  // process (low traffic, nothing forcing the heap to grow) sits near 95%+
+  // of its own small heapTotal indefinitely -- that read "degraded" on every
+  // fresh deploy here, confirmed by two readings 6 minutes apart both >95%
+  // while CPU sat at 0.1% and RSS was 2% of host memory. heap_size_limit is
+  // the real ceiling V8 will let the heap grow to before it starts refusing
+  // allocations -- distance from THAT is what "memory pressure" means.
+  const heapPercent =
+    Math.round((mem.heapUsed / v8.getHeapStatistics().heap_size_limit) * 1000) /
+    10;
   const rssPercent = Math.round((mem.rss / os.totalmem()) * 1000) / 10;
   const memoryPercent = heapPercent;
   const appStatus: HealthStatus =
-    cpuPercent > 92 || heapPercent > 95 ? "degraded" : "operational";
+    cpuPercent > 92 || heapPercent > 90 ? "degraded" : "operational";
   components.push({
     id: "app-server",
     name: "Application Server",
@@ -63,7 +75,7 @@ export async function runHealthChecks(): Promise<HealthResponse> {
       { label: "CPU", value: `${cpuPercent}%` },
       {
         label: "Heap utilisation",
-        value: `${fmtBytes(mem.heapUsed)} / ${fmtBytes(mem.heapTotal)} · ${heapPercent}%`,
+        value: `${fmtBytes(mem.heapUsed)} / ${fmtBytes(v8.getHeapStatistics().heap_size_limit)} · ${heapPercent}%`,
       },
       { label: "RSS", value: `${fmtBytes(mem.rss)} · ${rssPercent}% of host` },
       { label: "Node", value: process.version },
