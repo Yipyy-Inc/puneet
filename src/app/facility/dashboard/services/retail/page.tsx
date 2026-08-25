@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  chargeRetailOnTerminal,
+  typedCardUnavailable,
+} from "@/lib/api/retail-payments";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -118,21 +123,16 @@ import {
   getFiservConfig,
   getTokenizedCardsByClient,
   getDefaultTokenizedCard,
-  getCloverTerminal,
-  getCloverTerminalsByFacility,
   getYipyyPayConfig,
   getYipyyPayDevicesByFacility,
   getYipyyPayDevice,
   type TokenizedCard,
 } from "@/data/fiserv-payments";
-import {
-  processFiservPayment,
-  type FiservPaymentRequest,
-} from "@/lib/fiserv-payment-service";
-import {
-  processCloverPayment,
-  type CloverPaymentRequest,
-} from "@/lib/clover-terminal-service";
+// The simulators are gone; only the request TYPES remain, because
+// `fiservRequest` / `cloverRequest` are still assembled for the fields the
+// recorded transaction reads and for whatever tokenises a card properly later.
+import type { FiservPaymentRequest } from "@/lib/fiserv-payment-service";
+import type { CloverPaymentRequest } from "@/lib/clover-terminal-service";
 import {
   processYipyyPay,
   type YipyyPayRequest,
@@ -158,6 +158,15 @@ function recordSale(
 interface CartItemWithId extends CartItem {
   id: string;
   imageUrl?: string;
+}
+
+/** One row of `GET /api/payments/clover/terminals` — the merchant's own devices. */
+interface RealTerminal {
+  serial: string;
+  label: string | null;
+  model: string | null;
+  isActive: boolean;
+  supported: boolean;
 }
 
 export default function POSPage() {
@@ -302,9 +311,43 @@ export default function POSPage() {
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  // Clover terminal state
+  // Clover terminal state. `cloverTerminalId` holds the device's SERIAL now —
+  // which is what `X-Clover-Device-Id` actually wants, a trap the debt map has
+  // paid for once already — and not the fixture's invented id.
   const [useCloverTerminal, setUseCloverTerminal] = useState(false);
   const [cloverTerminalId, setCloverTerminalId] = useState<string | null>(null);
+
+  // ── THE FACILITY'S REAL TERMINALS ────────────────────────────────────────
+  //
+  // `getCloverTerminalsByFacility` returned `mockCloverTerminals`: invented ids
+  // for devices that do not exist, so a charge naming one would reach no
+  // hardware. This asks the merchant's own device list, through the same route
+  // the Yipyy Pay settings screen uses.
+  //
+  // Mapped into the fixture's field names so the pickers below did not have to
+  // be rewritten. `terminalId` IS the serial. `isOnline` means "this model can
+  // take a cloud payment at all" — whether it is awake right now is a claim
+  // this list cannot make, and the charge answers it with Clover's own 503 when
+  // Cloud Pay Display is closed.
+  const { data: realTerminals } = useQuery({
+    queryKey: ["clover", "terminals"],
+    queryFn: async () => {
+      const empty: RealTerminal[] = [];
+      const response = await fetch("/api/payments/clover/terminals");
+      if (!response.ok) return empty;
+      const body = (await response.json()) as { terminals?: RealTerminal[] };
+      return body.terminals ?? empty;
+    },
+    staleTime: 60_000,
+  });
+
+  const cloverTerminals = (realTerminals ?? [])
+    .filter((t) => t.isActive)
+    .map((t) => ({
+      terminalId: t.serial,
+      terminalName: t.label || t.model || t.serial,
+      isOnline: t.supported,
+    }));
 
   // Yipyy Pay / Tap to Pay state
   const [useYipyyPay, setUseYipyyPay] = useState(false);
@@ -965,9 +1008,8 @@ export default function POSPage() {
               payment.useCloverTerminal &&
               payment.cloverTerminalId
             ) {
-              const terminal = getCloverTerminal(
-                facilityId,
-                payment.cloverTerminalId,
+              const terminal = cloverTerminals.find(
+                (t) => t.terminalId === payment.cloverTerminalId,
               );
 
               if (!terminal || !terminal.isOnline) {
@@ -992,7 +1034,21 @@ export default function POSPage() {
                 printMerchantCopy: true,
               };
 
-              const cloverResponse = await processCloverPayment(cloverRequest);
+              // Real hardware, real merchant. `cloverRequest` is kept for
+              // the fields the recorded transaction still reads.
+              const cloverResponse = await chargeRetailOnTerminal({
+                amountCents: Math.round(payment.amount * 100),
+                deviceSerial: payment.cloverTerminalId,
+                clientRef: customerId ? Number(customerId) : null,
+                lines: cart.map((item) => ({
+                  name: item.variantName
+                    ? `${item.productName} — ${item.variantName}`
+                    : item.productName,
+                  unitPriceCents: Math.round(item.unitPrice * 100),
+                  quantity: item.quantity,
+                })),
+                note: cloverRequest.description,
+              });
 
               if (cloverResponse.success) {
                 processedPayments.push({
@@ -1050,7 +1106,17 @@ export default function POSPage() {
                 bookingId: selectedBookingId || undefined,
               };
 
-              const fiservResponse = await processFiservPayment(fiservRequest);
+              // A typed card cannot be charged here: that needs a `clv_`
+              // token from Clover's hosted fields, which this screen does not
+              // mount, and forwarding `newCardDetails.number` would put the PAN
+              // in our logs and this deployment inside PCI scope. What answered
+              // before was a simulator — a sleep and `Math.random() > 0.1`.
+              // `fiservRequest` stays: it is what a hosted-fields implementation
+              // will tokenise, and it carries the save-card logic already.
+              void fiservRequest;
+              const fiservResponse = typedCardUnavailable(
+                Math.round(payment.amount * 100),
+              );
 
               if (fiservResponse.success) {
                 processedPayments.push({
@@ -1149,7 +1215,9 @@ export default function POSPage() {
         fiservConfig?.cloverTerminal?.enabled &&
         (paymentForm.method === "credit" || paymentForm.method === "debit")
       ) {
-        const terminal = getCloverTerminal(facilityId, cloverTerminalId);
+        const terminal = cloverTerminals.find(
+          (t) => t.terminalId === cloverTerminalId,
+        );
 
         if (!terminal || !terminal.isOnline) {
           alert(
@@ -1176,7 +1244,22 @@ export default function POSPage() {
         };
 
         // Process payment through Clover terminal
-        const cloverResponse = await processCloverPayment(cloverRequest);
+        const cloverResponse = await chargeRetailOnTerminal({
+          amountCents: Math.round(
+            (grandTotal - (calculatedTipAmount || 0)) * 100,
+          ),
+          tipCents: Math.round((calculatedTipAmount || 0) * 100),
+          deviceSerial: cloverTerminalId,
+          clientRef: customerId ? Number(customerId) : null,
+          lines: cart.map((item) => ({
+            name: item.variantName
+              ? `${item.productName} — ${item.variantName}`
+              : item.productName,
+            unitPriceCents: Math.round(item.unitPrice * 100),
+            quantity: item.quantity,
+          })),
+          note: cloverRequest.description,
+        });
 
         if (!cloverResponse.success) {
           alert(
@@ -1343,7 +1426,11 @@ export default function POSPage() {
         };
 
         // Process payment through Fiserv
-        const fiservResponse = await processFiservPayment(fiservRequest);
+        // Same refusal as the split branch above, for the same reason.
+        void fiservRequest;
+        const fiservResponse = typedCardUnavailable(
+          Math.round((grandTotal - (calculatedTipAmount || 0)) * 100),
+        );
 
         if (!fiservResponse.success) {
           alert(
@@ -4064,8 +4151,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                                     useCloverTerminal: checked,
                                   };
                                   if (checked) {
-                                    const terminals =
-                                      getCloverTerminalsByFacility(facilityId);
+                                    const terminals = cloverTerminals;
                                     if (terminals.length > 0) {
                                       newPayments[index].cloverTerminalId =
                                         terminals[0].terminalId;
@@ -4103,9 +4189,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                                     <SelectValue placeholder="Select terminal" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {getCloverTerminalsByFacility(
-                                      facilityId,
-                                    ).map((terminal) => (
+                                    {cloverTerminals.map((terminal) => (
                                       <SelectItem
                                         key={terminal.terminalId}
                                         value={terminal.terminalId}
@@ -4274,8 +4358,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                                 setYipyyPayDeviceId(null);
                                 setSelectedTokenizedCard(null);
                                 // Auto-select first terminal if available
-                                const terminals =
-                                  getCloverTerminalsByFacility(facilityId);
+                                const terminals = cloverTerminals;
                                 if (terminals.length > 0) {
                                   const defaultTerminalId =
                                     fiservConfig?.cloverTerminal?.terminalId ||
@@ -4459,7 +4542,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                     const facilityId = 11; // TODO: Get from context
                     const fiservConfig = getFiservConfig(facilityId);
                     const terminals = fiservConfig?.cloverTerminal?.enabled
-                      ? getCloverTerminalsByFacility(facilityId)
+                      ? cloverTerminals
                       : [];
 
                     if (terminals.length > 0) {
@@ -4514,26 +4597,20 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                               </Select>
                               {cloverTerminalId &&
                                 (() => {
-                                  const terminal = getCloverTerminal(
-                                    facilityId,
-                                    cloverTerminalId,
+                                  const terminal = cloverTerminals.find(
+                                    (t) => t.terminalId === cloverTerminalId,
                                   );
                                   if (!terminal) return null;
                                   return (
                                     <div className="text-muted-foreground mt-1 text-xs">
-                                      {terminal.location && (
-                                        <span>
-                                          Location: {terminal.location} •{" "}
-                                        </span>
-                                      )}
-                                      Supports:{" "}
-                                      {[
-                                        terminal.supportsTap && "Tap",
-                                        terminal.supportsChip && "Chip",
-                                        terminal.supportsSwipe && "Swipe",
-                                      ]
-                                        .filter(Boolean)
-                                        .join(", ")}
+                                      {/* The fixture claimed a location and
+                                          which of tap/chip/swipe the device
+                                          supported. Clover's device list says
+                                          none of that, so this shows what it
+                                          DOES know — the serial the charge will
+                                          name — rather than three capability
+                                          badges nobody ever checked. */}
+                                      Serial: {terminal.terminalId}
                                       {fiservConfig?.cloverTerminal
                                         ?.autoPrintReceipts && (
                                         <span> • Auto-print enabled</span>

@@ -7,9 +7,7 @@
 
 import {
   CloverTerminalConfig,
-  CloverTerminalTransaction,
   getCloverTerminal,
-  addCloverTransaction,
 } from "@/data/fiserv-payments";
 
 export interface CloverPaymentRequest {
@@ -55,177 +53,17 @@ export interface CloverPaymentResponse {
 }
 
 /**
- * Process payment through Clover terminal
+ * There is no `processCloverPayment` here, and there should not be one.
+ *
+ * It lived in this file until 2026-08-25 and it never contacted Clover: a
+ * sleep, a random "payment method detected", and a `clover_txn_<timestamp>` id.
+ * It sat beside a REAL Clover integration (`src/lib/clover/`) sharing its name,
+ * which is the worst place for a pretender to stand.
+ *
+ * A card-present sale is `chargeOnTerminal` in `src/lib/clover/terminal.ts`,
+ * reached from retail through `/api/payments/retail/charge`. It needs the
+ * device's SERIAL, which this file's fixture terminals never had.
  */
-export async function processCloverPayment(
-  request: CloverPaymentRequest,
-): Promise<CloverPaymentResponse> {
-  const terminal = getCloverTerminal(request.facilityId, request.terminalId);
-
-  if (!terminal) {
-    return {
-      success: false,
-      transactionId: "",
-      cloverTransactionId: "",
-      amount: request.amount,
-      totalAmount: request.amount + (request.tipAmount || 0),
-      currency: request.currency,
-      paymentMethod: "chip",
-      status: "failed",
-      receiptPrinted: false,
-      error: {
-        code: "TERMINAL_NOT_FOUND",
-        message: "Clover terminal not found or not active",
-      },
-      processedAt: new Date().toISOString(),
-    };
-  }
-
-  if (!terminal.isOnline) {
-    return {
-      success: false,
-      transactionId: "",
-      cloverTransactionId: "",
-      amount: request.amount,
-      totalAmount: request.amount + (request.tipAmount || 0),
-      currency: request.currency,
-      paymentMethod: "chip",
-      status: "failed",
-      receiptPrinted: false,
-      error: {
-        code: "TERMINAL_OFFLINE",
-        message: "Clover terminal is offline",
-      },
-      processedAt: new Date().toISOString(),
-    };
-  }
-
-  // Simulate Clover terminal payment processing
-  // In production, this would communicate with the Clover device via API
-  const transactionId = `clover_txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const cloverTransactionId = `clv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  // Simulate processing delay (terminal interaction)
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-
-  // Simulate payment method detection (random for demo)
-  const paymentMethods: ("tap" | "chip" | "swipe")[] = ["tap", "chip", "swipe"];
-  const paymentMethod =
-    paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
-
-  // Simulate success/failure (90% success rate)
-  const success = Math.random() > 0.1;
-
-  if (!success) {
-    const failedTransaction: CloverTerminalTransaction = {
-      id: transactionId,
-      facilityId: request.facilityId,
-      terminalId: request.terminalId,
-      terminalName: terminal.terminalName,
-      cloverTransactionId,
-      amount: request.amount,
-      currency: request.currency,
-      tipAmount: request.tipAmount,
-      totalAmount: request.amount + (request.tipAmount || 0),
-      paymentMethod,
-      status: "failed",
-      receiptPrinted: false,
-      invoiceId: request.invoiceId,
-      customerId: request.customerId,
-      bookingId: request.bookingId,
-      processedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      errorMessage: "Payment was declined",
-    };
-    addCloverTransaction(failedTransaction);
-
-    return {
-      success: false,
-      transactionId,
-      cloverTransactionId,
-      amount: request.amount,
-      tipAmount: request.tipAmount,
-      totalAmount: request.amount + (request.tipAmount || 0),
-      currency: request.currency,
-      paymentMethod,
-      status: "failed",
-      receiptPrinted: false,
-      error: {
-        code: "DECLINED",
-        message: "Payment was declined by the card issuer",
-      },
-      processedAt: new Date().toISOString(),
-    };
-  }
-
-  // Generate receipt data
-  const receiptData = generateReceiptData({
-    transactionId,
-    amount: request.amount,
-    tipAmount: request.tipAmount,
-    totalAmount: request.amount + (request.tipAmount || 0),
-    paymentMethod,
-    description: request.description,
-    terminalName: terminal.terminalName,
-    customerId: request.customerId,
-    invoiceId: request.invoiceId,
-    bookingId: request.bookingId,
-  });
-
-  // Print receipt on terminal if requested
-  let receiptPrinted = false;
-  if (request.printReceipt) {
-    receiptPrinted = await printReceiptOnTerminal(terminal, receiptData, {
-      printCustomerCopy:
-        request.printCustomerCopy ?? terminal.printCustomerCopy,
-      printMerchantCopy:
-        request.printMerchantCopy ?? terminal.printMerchantCopy,
-    });
-  }
-
-  // Record successful transaction
-  const transaction: CloverTerminalTransaction = {
-    id: transactionId,
-    facilityId: request.facilityId,
-    terminalId: request.terminalId,
-    terminalName: terminal.terminalName,
-    cloverTransactionId,
-    amount: request.amount,
-    currency: request.currency,
-    tipAmount: request.tipAmount,
-    totalAmount: request.amount + (request.tipAmount || 0),
-    paymentMethod,
-    cardBrand: "visa", // Mock - would come from terminal
-    cardLast4: "4242", // Mock - would come from terminal
-    status: "completed",
-    receiptPrinted,
-    receiptPrintedAt: receiptPrinted ? new Date().toISOString() : undefined,
-    receiptData,
-    invoiceId: request.invoiceId,
-    customerId: request.customerId,
-    bookingId: request.bookingId,
-    processedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-  };
-  addCloverTransaction(transaction);
-
-  return {
-    success: true,
-    transactionId,
-    cloverTransactionId,
-    amount: request.amount,
-    tipAmount: request.tipAmount,
-    totalAmount: request.amount + (request.tipAmount || 0),
-    currency: request.currency,
-    paymentMethod,
-    cardBrand: "visa",
-    cardLast4: "4242",
-    status: "completed",
-    receiptPrinted,
-    receiptData,
-    processedAt: new Date().toISOString(),
-  };
-}
 
 /**
  * Print receipt on Clover terminal

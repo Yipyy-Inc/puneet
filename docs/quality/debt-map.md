@@ -1090,6 +1090,38 @@ Deleted rather than repaired — the real refund is on the booking, one click fr
 
 **Why `check:success-claims` did not catch it:** it did — the file is in its baseline. A baseline entry is a record that something is known, not that it is acceptable.
 
+### 🟢 Retail took money through a simulator, and now takes it through Clover (fixed 2026-08-25)
+
+Two fakes, four call sites, on the screen a shop assistant uses to charge a customer.
+
+```ts
+// lib/fiserv-payment-service.ts        lib/clover-terminal-service.ts
+await new Promise((r) => setTimeout(r, 500));
+const success = Math.random() > 0.1; //  ...and a `clover_txn_<ts>` id
+```
+
+`processFiservPayment` and `processCloverPayment` contacted nothing. A facility could ring up a $200 bag of food, be told "approved", and have taken nothing — and **one sale in ten was declined on behalf of a processor that does not exist**. There is no Fiserv account. The second one sat beside a real Clover integration wearing its name, which is the worst place for a pretender to stand.
+
+**Card-present is real now.** `/api/payments/retail/charge` runs the same `lib/clover/charge.ts` and `lib/clover/terminal.ts` that charge a booking. A counter sale is an ordinary `payments` row with a client and a null `booking_id` — nothing needed inventing; `open_payment_intent` already took a null booking. The cart travels to Clover as line items, so the merchant's dashboard shows what was sold, and `transactionId` is now the ledger row's uuid instead of `txn_<timestamp>_<random>`, which could be traced to nothing.
+
+**The terminal picker was fixture too**, and that mattered more than it looks: `mockCloverTerminals` had invented ids, and `X-Clover-Device-Id` wants the **serial**. Retail now reads the merchant's own device list through `/api/payments/clover/terminals`, so the id it hands the charge names real hardware.
+
+### 🟡 A typed card cannot be charged in retail, and now says so
+
+The card-not-present half could NOT be made real, and the reason is worth keeping: charging a card without one present needs a `clv_` token from Clover's **hosted fields**, and the retail checkout does not mount them. It collects `newCardDetails.number` — a raw PAN — which must never reach a server here: forwarding it would put the number in our logs and this deployment inside PCI scope, the single thing the hosted iframe exists to prevent.
+
+So that path refuses, in the shape the checkout already handles, and names the terminal. `fiservRequest` is deliberately left assembled: it carries the save-card and default-card logic, which is correct and is what a hosted-fields implementation will tokenise.
+
+**Do instead:** mount Clover's hosted fields in the retail checkout, the way `components/payments/clover-checkout.tsx` does for a booking. Until then, a card at the counter goes on the terminal.
+
+### 🟡 The retail charge takes its amount from the browser, and that is the price of this
+
+Every other money route derives what to charge server-side, and `/api/payments/clover/charge` says why in as many words: _"a body that could name its own amount is a body that can pay a $200 boarding stay with one cent."_
+
+Retail cannot do that. Products, prices and the cart are fixtures in `src/data/retail.ts` — there is no row that knows what the sale is worth. The choice was between continuing to simulate money, building the retail data layer first, or taking the money for real from a figure a member of staff typed at a till. The third was judged best, and the limit is bounded rather than hidden: `financial_take_payment` is required **before** Clover is called, the facility comes from the session, the amount is capped at $5,000, and `tests/e2e/retail-charge.spec.ts` asserts every one of those refusals on each push.
+
+**Do instead:** when retail sales become rows, derive the total from them and delete the cap. Until then, do not copy this pattern to a route that has a server-side total available.
+
 ### 🔴 Retail refunds ran through a simulator with a 5% failure rate (fixed 2026-08-25)
 
 `processFiservRefund` in `lib/fiserv-payment-service.ts`, called by the retail returns screen:
@@ -1105,7 +1137,7 @@ Worse, there was nothing to refund: retail transactions are `const transactions:
 
 The simulator is deleted and the function is gone. **The business-rule ladder is kept** — enabled refund methods, `managerApprovalThreshold`, per-item reasons, required notes, split-payment allocation — because that is real facility policy and is what a real return will need. A card return is now recorded as `pending` and says plainly that the card has not been refunded; cash, store credit and a gift card are settled honestly, because those really do happen in the room.
 
-**Do instead:** retail cannot refund until retail SALES are rows. Build the sale first. And note `retail/page.tsx` still calls `processFiservPayment`, the same simulator for CHARGES — untouched here, and the same problem pointing the other way.
+**Do instead:** retail cannot refund until retail SALES are rows. Build the sale first. (The CHARGE half was fixed later the same day — see the entry above — so a card-present retail sale now produces a real `payments` row. A refund still cannot reverse it, because the return screen has no processor payment id to name: closing that gap means carrying `processor_payment_id` onto the return, not another simulator.)
 
 ### 🟢 The dialog charged the price; the mutation charges the balance
 

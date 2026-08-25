@@ -10,8 +10,6 @@ import {
   FiservPaymentResponse,
   FiservRefundRequest,
   FiservRefundResponse,
-  getFiservConfig,
-  addTokenizedCard,
 } from "@/data/fiserv-payments";
 
 // Re-export types for convenience
@@ -23,145 +21,19 @@ export type {
 };
 
 /**
- * Process a payment through Fiserv
+ * There is no `processFiservPayment`, and there should not be one.
+ *
+ * It lived here until 2026-08-25 and it was a simulator: a 500 ms sleep,
+ * `Math.random() > 0.1` for the outcome, and an invented
+ * `fiserv_<timestamp>` id. Its callers were the retail checkout, which told
+ * facilities a card had been charged when nothing had been contacted — and
+ * declined one sale in ten on behalf of a processor that does not exist.
+ *
+ * There is no Fiserv account. Real card payments are Clover:
+ * `/api/payments/retail/charge` for a counter sale, `/api/payments/clover/*`
+ * for a booking. Card-not-present needs a `clv_` token from the hosted fields;
+ * a card number must never reach a server here.
  */
-export async function processFiservPayment(
-  request: FiservPaymentRequest,
-): Promise<FiservPaymentResponse> {
-  const config = getFiservConfig(request.facilityId);
-
-  if (!config) {
-    return {
-      success: false,
-      transactionId: "",
-      fiservTransactionId: "",
-      amount: request.amount,
-      currency: request.currency,
-      status: "failed",
-      error: {
-        code: "CONFIG_NOT_FOUND",
-        message: "Fiserv payment configuration not found for this facility",
-      },
-      processedAt: new Date().toISOString(),
-    };
-  }
-
-  // Check if payment method is enabled
-  if (
-    request.paymentSource === "new_card" ||
-    request.paymentSource === "tokenized_card"
-  ) {
-    if (!config.enabledPaymentMethods.card) {
-      return {
-        success: false,
-        transactionId: "",
-        fiservTransactionId: "",
-        amount: request.amount,
-        currency: request.currency,
-        status: "failed",
-        error: {
-          code: "METHOD_DISABLED",
-          message: "Card payments are not enabled for this facility",
-        },
-        processedAt: new Date().toISOString(),
-      };
-    }
-  }
-
-  // Simulate Fiserv API call
-  // In production, this would make actual API calls to Fiserv
-  const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const fiservTransactionId = `fiserv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  // Simulate processing delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  // Simulate success/failure (90% success rate for demo)
-  const success = Math.random() > 0.1;
-
-  if (!success) {
-    return {
-      success: false,
-      transactionId,
-      fiservTransactionId,
-      amount: request.amount,
-      currency: request.currency,
-      status: "declined",
-      error: {
-        code: "DECLINED",
-        message: "Payment was declined by the card issuer",
-      },
-      processedAt: new Date().toISOString(),
-    };
-  }
-
-  // Handle tokenization if saving card
-  let tokenizedCardId: string | undefined;
-  let fiservToken: string | undefined;
-
-  if (request.paymentSource === "new_card" && request.newCard?.saveToAccount) {
-    // Tokenize and save card
-    fiservToken = `fiserv_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    const newTokenizedCard = addTokenizedCard({
-      facilityId: request.facilityId,
-      clientId: request.clientId,
-      fiservToken,
-      cardBrand: detectCardBrand(request.newCard.number),
-      cardLast4: request.newCard.number.slice(-4),
-      cardExpMonth: request.newCard.expMonth,
-      cardExpYear: request.newCard.expYear,
-      cardholderName: request.newCard.cardholderName,
-      isDefault: request.newCard.setAsDefault ?? false,
-      isActive: true,
-      isExpired: false,
-      autoPayEnabled: false,
-      autoPayServices: [],
-      billingAddress: request.newCard.billingAddress,
-    });
-
-    tokenizedCardId = newTokenizedCard.id;
-  } else if (
-    request.paymentSource === "tokenized_card" &&
-    request.tokenizedCardId
-  ) {
-    // Use existing tokenized card
-    tokenizedCardId = request.tokenizedCardId;
-    // In production, retrieve fiservToken from database
-    fiservToken = `fiserv_token_existing_${request.tokenizedCardId}`;
-  }
-
-  // Extract card info for response
-  let cardBrand: string | undefined;
-  let cardLast4: string | undefined;
-
-  if (request.paymentSource === "new_card" && request.newCard) {
-    cardBrand = detectCardBrand(request.newCard.number);
-    cardLast4 = request.newCard.number.slice(-4);
-  } else if (
-    request.paymentSource === "tokenized_card" &&
-    request.tokenizedCardId
-  ) {
-    // In production, retrieve from database
-    cardBrand = "visa"; // Mock
-    cardLast4 = "4242"; // Mock
-  }
-
-  return {
-    success: true,
-    transactionId,
-    fiservTransactionId,
-    amount: request.amount + (request.tipAmount || 0),
-    currency: request.currency,
-    status: "completed",
-    cardBrand,
-    cardLast4,
-    tokenizedCardId,
-    fiservToken,
-    receiptUrl: `/receipts/${transactionId}.pdf`,
-    processedAt: new Date().toISOString(),
-  };
-}
 
 /**
  * There is no `processFiservRefund`, and there should not be one.
