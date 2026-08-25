@@ -47,7 +47,6 @@ import { clientQueries } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings } from "@/hooks/use-settings";
 import { facilities } from "@/data/facilities";
-import { getLocationsByFacility, getPrimaryLocation } from "@/data/locations";
 import { boardingGuests, type BoardingGuest } from "@/data/boarding";
 import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-card-print";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -99,7 +98,7 @@ import {
   computeLatePickupFee,
   type LateFeeResult,
 } from "@/lib/late-pickup-fee";
-import { BookingTransferModal } from "@/components/bookings/modals/BookingTransferModal";
+import { MoveBookingLocationDialog } from "@/components/bookings/modals/MoveBookingLocationDialog";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -464,12 +463,6 @@ export default function ClientBookingDetailPage({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const { locations } = useLocationContext();
-  // `BookingTransferModal` is still the fixture-era transfer wizard (writes to
-  // `location-transfers.ts`, reads per-location pricing/services that only the
-  // fixture shape carries) -- out of scope here. It gets the fixture list, not
-  // the real one, so it keeps working exactly as it did before this page's
-  // `locations` above became real.
-  const transferModalLocations = getLocationsByFacility(11);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [earlyCheckoutOpen, setEarlyCheckoutOpen] = useState(false);
   const [tipSplitOpen, setTipSplitOpen] = useState(false);
@@ -1932,22 +1925,11 @@ export default function ClientBookingDetailPage({
             );
           }}
         />
-        <BookingTransferModal
+        <MoveBookingLocationDialog
           open={transferOpen}
           onOpenChange={setTransferOpen}
           bookingId={booking.id}
-          currentLocationId={
-            getPrimaryLocation(11)?.id ??
-            transferModalLocations[0]?.id ??
-            "loc-dv-main"
-          }
-          service={booking.service}
-          basePrice={booking.basePrice}
-          petName={pet?.name ?? "Pet"}
-          clientName={client.name}
-          startDate={booking.startDate}
-          endDate={booking.endDate}
-          locations={transferModalLocations}
+          currentLocationId={booking.locationId}
         />
         {unifiedForEarlyCheckout && (
           <CheckOutDialog

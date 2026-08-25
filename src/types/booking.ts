@@ -168,6 +168,10 @@ export const newBookingSchema = z.object({
   clientId: z.number(),
   petId: z.union([z.number(), z.array(z.number())]),
   facilityId: z.number(),
+  /** Which branch this booking belongs to. Ignored at creation -- the
+   * session resolves it, same as `facilityId` -- and only takes effect on an
+   * existing booking, moving it to another of the facility's own locations. */
+  locationId: z.string().optional(),
   service: z.string(),
   serviceType: z.string().optional(),
   startDate: z.string(),

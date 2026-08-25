@@ -51,6 +51,7 @@ export function rowToBooking(row: BookingRow): BookingWithRowId {
 
     rowId: row.id,
     id: row.ref,
+    locationId: row.location_id ?? undefined,
     clientId: row.clients?.ref ?? 0,
     // Single pet stays a number: `petId` is `number | number[]` and plenty of
     // callers assume the scalar form when there is only one.
@@ -133,6 +134,7 @@ const COLUMN_FIELDS = [
   "tipAmount",
   "specialRequests",
   "assignedStaff",
+  "locationId",
 ];
 
 /**
@@ -158,7 +160,16 @@ export function bookingToRow(
   const row: Partial<TablesInsert<"bookings">> = {};
 
   if (context.clientRowId) row.client_id = context.clientRowId;
-  if (context.locationId !== undefined) row.location_id = context.locationId;
+  // Creation always resolves the location from the session (context) and
+  // ignores anything the caller sent -- the same treatment `facilityId`
+  // already gets. `input.locationId` only takes effect when context does not
+  // supply one, which is exactly the PATCH path: moving an EXISTING booking
+  // to another branch, the only place a caller is allowed to name a location.
+  if (context.locationId !== undefined) {
+    row.location_id = context.locationId;
+  } else if (input.locationId !== undefined) {
+    row.location_id = input.locationId;
+  }
   row.facility_id = context.facilityId;
 
   if (input.service !== undefined) row.service = input.service;

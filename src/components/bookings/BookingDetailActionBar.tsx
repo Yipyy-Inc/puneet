@@ -177,7 +177,9 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
     booking.status === "checked_in" ||
     booking.status === "in_progress";
   const showFinishWithoutPayment = !isPaid && !isCancelled && !isCompleted;
-  const showTransfer = multiLocation && !isCancelled && !isCompleted;
+  // Moving a booking's branch is a real write now, not a fixture wizard --
+  // gated the same way every other write action on this bar already is.
+  const showTransfer = multiLocation && !isCancelled && !isCompleted && canEdit;
   const showEarlyCheckout =
     booking.status === "confirmed" ||
     booking.status === "checked_in" ||

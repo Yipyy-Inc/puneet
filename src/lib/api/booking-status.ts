@@ -68,3 +68,23 @@ export function useUpdateBookingStatus() {
     },
   });
 }
+
+/**
+ * Move a booking to another of the facility's own branches.
+ *
+ * The route validates the target location belongs to this facility and
+ * records the move in the audit trail (20260825150000); this hook is just
+ * the write and the refetch.
+ */
+export function useMoveBookingLocation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { id: number; locationId: string }) =>
+      bookingMutations.update(input.id, { locationId: input.locationId }),
+
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
+}
