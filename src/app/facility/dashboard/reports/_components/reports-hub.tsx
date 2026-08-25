@@ -605,10 +605,20 @@ export function ReportsHub({
   kpis,
   deltas,
   facilityId,
+  facilityName,
 }: {
   kpis: KPIs;
   deltas: KpiDeltas;
-  facilityId: number;
+  /**
+   * The REAL facility, a uuid, resolved from the session by the page.
+   *
+   * It was `number` until 2026-08-25 and it was always `11` — a fixture id with
+   * no row behind it in Postgres. The KPI tiles above are now read from
+   * `facility_report_kpis` for this facility; the individual report sheets are
+   * not yet, and say so on their own faces until they are.
+   */
+  facilityId: string;
+  facilityName: string;
 }) {
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<"all" | ReportTier>("all");
@@ -781,6 +791,7 @@ export function ReportsHub({
       <ReportSheet
         report={openReport}
         facilityId={facilityId}
+        facilityName={facilityName}
         onClose={() => setOpenReportId(null)}
       />
     </div>
