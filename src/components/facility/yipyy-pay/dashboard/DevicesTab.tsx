@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   CircleDot,
   Loader2,
+  MapPin,
   Pencil,
   RotateCcw,
   Signal,
@@ -29,6 +30,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   useAdminTerminals,
@@ -231,6 +239,15 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
                         </span>
                       </p>
 
+                      {overview.locations.length > 1 && (
+                        <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                          <MapPin className="size-3" />
+                          {overview.locations.find(
+                            (l) => l.id === terminal.locationId,
+                          )?.name ?? "Unassigned"}
+                        </p>
+                      )}
+
                       {/* Only ever states what was actually asked. A card that
                           has not been checked says so — it does not show a
                           hopeful green dot. */}
@@ -373,12 +390,17 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
 
       <RenameDialog
         terminal={renaming}
+        locations={overview.locations}
         onClose={() => setRenaming(null)}
-        onSave={async (label) => {
+        onSave={async (label, locationId) => {
           if (!renaming) return;
           try {
-            await saveTerminal.mutateAsync({ serial: renaming.serial, label });
-            toast.success("Renamed.");
+            await saveTerminal.mutateAsync({
+              serial: renaming.serial,
+              label,
+              locationId,
+            });
+            toast.success("Saved.");
             setRenaming(null);
           } catch (error) {
             toast.error(
@@ -472,18 +494,30 @@ function ConnectDeviceHelp({ compact }: { compact?: boolean }) {
   );
 }
 
+/** No location, as opposed to "not answered yet" -- Radix Select crashes on
+ *  a `""` item value, so this stands in for null in the picker. */
+const UNASSIGNED = "__unassigned__";
+
 function RenameDialog({
   terminal,
+  locations,
   onClose,
   onSave,
   saving,
 }: {
   terminal: AdminTerminal | null;
+  locations: { id: string; name: string; isPrimary: boolean }[];
   onClose: () => void;
-  onSave: (label: string) => void;
+  onSave: (label: string, locationId: string | null) => void;
   saving: boolean;
 }) {
   const [value, setValue] = useState("");
+  // `undefined` means "not touched" (send the current value back unchanged),
+  // distinct from `null` meaning "the person picked Unassigned" -- both are
+  // reachable via the same Select, so a two-state type can't tell them apart.
+  const [locationId, setLocationId] = useState<string | null | undefined>(
+    undefined,
+  );
 
   // Seeded when the dialog opens rather than on every render — the dialog is
   // mounted only while a terminal is selected, so `key` gives each one its own
@@ -516,6 +550,30 @@ function RenameDialog({
           </p>
         </div>
 
+        {locations.length > 1 && (
+          <div className="space-y-2">
+            <Label htmlFor="terminal-location">Location</Label>
+            <Select
+              defaultValue={terminal?.locationId ?? UNASSIGNED}
+              onValueChange={(next) =>
+                setLocationId(next === UNASSIGNED ? null : next)
+              }
+            >
+              <SelectTrigger id="terminal-location" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
@@ -524,11 +582,16 @@ function RenameDialog({
             disabled={saving}
             className="bg-emerald-600 hover:bg-emerald-700"
             onClick={() =>
-              onSave((value || terminal?.label || terminal?.model || "").trim())
+              onSave(
+                (value || terminal?.label || terminal?.model || "").trim(),
+                locationId !== undefined
+                  ? locationId
+                  : (terminal?.locationId ?? null),
+              )
             }
           >
             {saving && <Loader2 className="size-4 animate-spin" />}
-            Save name
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>
