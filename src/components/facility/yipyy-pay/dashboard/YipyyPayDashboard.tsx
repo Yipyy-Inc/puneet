@@ -27,6 +27,13 @@ const PreferencesTab = dynamic(
   () => import("./PreferencesTab").then((m) => m.PreferencesTab),
   { loading: () => <Skeleton className="h-64 w-full" /> },
 );
+// Transactions carries a table, a paginated query and its own date arithmetic,
+// and Overview is what loads first. Dynamic for the same reason as the other
+// two, not because it is slow to run.
+const TransactionsTab = dynamic(
+  () => import("./TransactionsTab").then((m) => m.TransactionsTab),
+  { loading: () => <Skeleton className="h-64 w-full" /> },
+);
 
 // ============================================================================
 // What a facility sees for the years after the five minutes of setup.
@@ -46,10 +53,11 @@ const PreferencesTab = dynamic(
 // customer can pay.
 // ============================================================================
 
-type TabKey = "overview" | "devices" | "preferences";
+type TabKey = "overview" | "transactions" | "devices" | "preferences";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "Overview" },
+  { key: "transactions", label: "Transactions" },
   { key: "devices", label: "Devices" },
   { key: "preferences", label: "Preferences" },
 ];
@@ -162,6 +170,11 @@ export function YipyyPayDashboard({
 
         <TabsContent value="overview" className="mt-6">
           <OverviewTab overview={overview} />
+        </TabsContent>
+        <TabsContent value="transactions" className="mt-6">
+          {/* Mounted only when open: it fires a paginated query with an
+              aggregate behind it, which should not run behind a closed tab. */}
+          {tab === "transactions" && <TransactionsTab />}
         </TabsContent>
         <TabsContent value="devices" className="mt-6">
           {/* Mounted only when open: the tab lists hardware and each card can
