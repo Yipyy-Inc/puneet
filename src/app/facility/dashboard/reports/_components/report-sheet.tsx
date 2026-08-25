@@ -21,6 +21,7 @@ import {
   CalendarCheck,
   Users,
   BedDouble,
+  TriangleAlert,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
@@ -697,15 +698,64 @@ function buildView(
   }
 }
 
+/**
+ * Says, on the report's own face, that its figures are not this facility's.
+ *
+ * The KPI tiles on the hub behind this sheet ARE real now - they come from
+ * `facility_report_kpis` over `bookings`, `payments` and `facility_rooms`. The
+ * views in this file are not yet, and a screen where some numbers are real and
+ * some are invented, with nothing distinguishing them, is worse than one where
+ * all of them are invented. So it is stated rather than left to be discovered
+ * by somebody comparing this against Yipyy Pay.
+ *
+ * This component is deleted when the last `buildXView` stops importing from
+ * `@/data/*`. It is not decoration; it is a debt marker with a removal
+ * condition.
+ */
+function SampleNotice({ facilityName }: { facilityName: string }) {
+  return (
+    <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+      <div className="space-y-0.5">
+        <p className="text-sm font-medium">
+          This report shows sample figures, not {facilityName}&apos;s.
+        </p>
+        <p className="text-muted-foreground text-xs/relaxed">
+          The totals on the Reports page behind this are real. This particular
+          report has not been connected to your data yet — for takings you can
+          rely on, use Settings → Yipyy Pay → Transactions.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── Sheet ─────────────────────────────────────────────────────────────────────
+
+/**
+ * The fixture facility, kept HERE and nowhere else.
+ *
+ * Every `buildXView` below still reads `src/data/*` through
+ * `report-data-sources` and `analytics-utils`, and those selectors key on a
+ * numeric id that only exists in the fixtures. Until each view is converted,
+ * the honest thing is to confine the fake id to the fake data rather than let
+ * it travel through props that now carry a real facility uuid.
+ *
+ * When the last view converts, this constant and every `@/data/*` import in
+ * this file go with it.
+ */
+const FIXTURE_FACILITY_ID = 11;
 
 export function ReportSheet({
   report,
   facilityId,
+  facilityName,
   onClose,
 }: {
   report: ReportWithCategory | null;
-  facilityId: number;
+  /** The real facility. Not yet used by the views below - see SampleNotice. */
+  facilityId: string;
+  facilityName: string;
   onClose: () => void;
 }) {
   const [range, setRange] = useState<ReportRange>(() =>
@@ -715,7 +765,7 @@ export function ReportSheet({
 
   const view =
     report?.implemented && report
-      ? buildView(report.id, range, facilityId)
+      ? buildView(report.id, range, FIXTURE_FACILITY_ID)
       : null;
 
   return (
@@ -739,16 +789,19 @@ export function ReportSheet({
             {!report ? null : !view ? (
               <ComingSoon name={report.name} description={report.description} />
             ) : (
-              <ReportShell
-                range={range}
-                onRangeChange={setRange}
-                onExport={() => setShowExport(true)}
-                kpis={view.kpis}
-                isEmpty={view.isEmpty}
-                emptyTitle={view.emptyTitle}
-              >
-                {view.body}
-              </ReportShell>
+              <>
+                <SampleNotice facilityName={facilityName} />
+                <ReportShell
+                  range={range}
+                  onRangeChange={setRange}
+                  onExport={() => setShowExport(true)}
+                  kpis={view.kpis}
+                  isEmpty={view.isEmpty}
+                  emptyTitle={view.emptyTitle}
+                >
+                  {view.body}
+                </ReportShell>
+              </>
             )}
           </div>
         </DialogContent>
