@@ -103,8 +103,42 @@ jobs:
       # A check that opens an issue per run buries the first one, which is the
       # only one anybody would have read. This keeps a single issue and comments
       # on it, so the history of an outage is in one place.
-      - name: Raise it
+      # ── TWO CONSECUTIVE FAILURES, NOT ONE ───────────────────────────────
+      #
+      # Measured 2026-08-25: this check failed on all three hostnames from a
+      # runner in Azure **eastus2** while the box was demonstrably fine — 0
+      # container restarts, load 0.03, and the same hosts answering 200 from a
+      # laptop and from the box's own loopback. Nine minutes later the identical
+      # check passed from **westus**, and a port probe from **westcentralus**
+      # found 443, 80 and 22 all open with a clean TLS handshake.
+      #
+      # So there is a broken path between at least one Azure region and
+      # 2.25.134.220, and which region a run lands in is not ours to choose. A
+      # monitor that pages on one bad draw is a monitor people learn to ignore,
+      # which is worse than not having one.
+      #
+      # Requiring the PREVIOUS run to have failed too means an alert needs two
+      # independent draws to agree. It costs up to 15 minutes of detection time
+      # and buys an alert worth reading.
+      - name: Did the previous run fail as well?
         if: failure()
+        id: corroborate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREV=$(gh run list --workflow=uptime.yml --limit 5 \
+                  --json databaseId,conclusion,status \
+                  --jq "[.[] | select(.databaseId != ${{ github.run_id }}) | select(.status==\"completed\")][0].conclusion" || echo "")
+          echo "previous conclusion: ${PREV:-none}"
+          if [ "$PREV" = "failure" ]; then
+            echo "raise=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "raise=no" >> "$GITHUB_OUTPUT"
+            echo "::warning::Check failed, but the previous run did not. Not raising yet — one bad runner path is not an outage. If the next run fails too, an issue is opened."
+          fi
+
+      - name: Raise it
+        if: failure() && steps.corroborate.outputs.raise == 'yes'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
