@@ -221,7 +221,7 @@ to their terms where they apply to you:
 | --------------------- | --------------------------------------------------- |
 | **WorkOS**            | Identity and sign-in                                |
 | **Supabase**          | Database and file storage                           |
-| **Vercel**            | Hosting and delivery                                |
+| **Hostinger**         | Hosting and delivery                                |
 | **Anthropic**         | AI text generation (section 9)                      |
 | **Resend**            | Transactional email (invitations, security notices) |
 | **Google**            | Optional sign-in provider                           |

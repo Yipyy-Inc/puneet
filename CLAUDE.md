@@ -38,15 +38,21 @@ Always use **bun** as the package manager (not npm, yarn, or pnpm).
   explicitly asked. `main` is protected but `enforce_admins` is false, so the
   push is accepted. Decided 2026-08-19: the review round trip was costing more
   than it caught on a single-maintainer project.
-  - **Run the green sequence locally BEFORE pushing.** Vercel deploys production
-    from `main` on push, so a bad commit reaches customers before CI reports it —
-    the required checks become a post-mortem rather than a gate. `bun run typecheck && bun run lint && bun run format:check`, plus `bun run build` for
-    anything structural.
-    **And confirm the deployment reached READY**, rather than assuming the push
-    made one. On 2026-08-24 fourteen commits produced no deployment at all for
-    six hours with every gate green, because `vercel.json` and an environment
-    variable were each broken in a way that fails BEFORE any build — so there
-    was no failed build to notice. `gh api repos/Yipyy-Inc/puneet/deployments --jq '.[0].sha'`.
+  - **Run the green sequence locally BEFORE pushing** — `bun run typecheck && bun run lint && bun run format:check`, plus `bun run build` for anything
+    structural. It is faster to find a broken build here than to wait for CI,
+    and CI is now what stands between a push and production.
+  - **The pipeline gates the deploy, since 2026-08-25.** Vercel used to deploy
+    from `main` on push, so CI reported after customers had the code. Now the
+    container image is built only once typecheck, lint, format, checks, sql and
+    build have passed, and the deploy job SSHes to the VPS and swaps colours
+    with a graceful `caddy reload` — nobody mid-request is interrupted,
+    including somebody 90 seconds into tapping a card.
+    **Do not infer the deploy from the push.** That lesson outlived its cause:
+    on 2026-08-24 fourteen commits produced no deployment at all for six hours
+    with every gate green. Confirm with `gh run list --limit 1` and
+    `curl -sS -o /dev/null -w '%{http_code}' https://yipyy.com/api/health`.
+    Rollback is `ssh root@<box> /opt/yipyy/rollback.sh` — one reload, under a
+    second, because the previous colour is still running.
   - Touching auth, a portal gate, a permission or an identity — or bookings,
     boarding, daycare, rooms, the care log, the calendar or the roster? Run
     `bun run test:e2e:ci` locally too — the whole suite, by hand, before you

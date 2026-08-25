@@ -39,7 +39,7 @@ There **is** a test runner: Playwright, 91 spec files under [tests/e2e/](tests/e
 | `bun run test:e2e`                     | The whole Playwright suite (91 files, ~45 min, one worker — see the debt map before trusting a run)                 |
 | `bun run test:e2e:gate`                | The 12 specs CI runs on every push — the authorisation boundary, and money                                          |
 | `bun run test:e2e:ci`                  | The full suite CI runs NIGHTLY — auth & access, daily operations, scheduling, payroll, loyalty, report cards, tasks |
-| `bun run test:sql`                     | The 53 SQL files — RLS, grants, database invariants. Runs in CI. ~90s; needs `SUPABASE_DB_URL`                      |
+| `bun run test:sql`                     | The 56 SQL files — RLS, grants, database invariants. Runs in CI. ~90s; needs `SUPABASE_DB_URL`                      |
 | `bun run check:pricing`                | Project-specific pricing-consistency script                                                                         |
 | `bun run check:settings-wiring`        | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                                          |
 | `bun run check:rls-writes`             | Fails if an API update/delete cannot tell an RLS refusal from a no-op                                               |
@@ -100,26 +100,47 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
   2026-08-19 — the review round trip cost more than it caught here. `main` is
   protected with four required checks but `enforce_admins` is false, so the push
   goes through.
-  **The gates move to your side of the fence.** Vercel deploys production from
-  `main` on push, so CI now reports _after_ customers have the code. Run the
-  green sequence before every push, and `bun run test:e2e:ci` as well for
-  anything touching auth, a portal gate, a permission or an identity.
-  **But do not infer the deploy from the push.** On 2026-08-24 fourteen commits
-  in a row produced no deployment at all, silently, with every local gate and
-  every CI check green — two unrelated `vercel.json`/env faults stacked, the
-  first hiding the second. Confirm, and confirm **READY**, not merely created:
+  **The gates are back in front of the fence, and that is new.** Until
+  2026-08-25 Vercel deployed production from `main` on push, so CI reported
+  _after_ customers already had the code and the required checks were a
+  post-mortem. Self-hosted, the pipeline is the other way round: the image is
+  built only once `typecheck`, `lint`, `format`, `checks`, `sql` and `build`
+  have passed, and only then does anything deploy.
+
+  **How a change reaches production now:**
+  1. Push to `main`. CI runs the 12-spec gate, the SQL tests and the checks.
+  2. On green, the `image` job builds a container and pushes it to GHCR tagged
+     with the commit sha.
+  3. The `deploy` job SSHes to the VPS and runs `/opt/yipyy/deploy.sh <sha>`,
+     which starts the idle colour, waits for its healthcheck, proves it with a
+     real request, and points Caddy at it with a graceful `caddy reload`. The
+     previous colour is left running.
+
+  **Do not infer the deploy from the push** — that lesson survived the move
+  even though its cause did not. On 2026-08-24 fourteen commits produced no
+  deployment at all, silently, with every gate green. Confirm:
 
   ```
-  gh api repos/Yipyy-Inc/puneet/deployments --jq '.[0] | "\(.created_at) \(.sha[0:8])"'
+  gh run list --limit 1 --json headSha,conclusion --jq '.[0]'
+  curl -sS -o /dev/null -w '%{http_code}
+  ' https://yipyy.com/api/health
   ```
 
-  If that sha is not the one you just pushed, you have not shipped. See the
-  Hobby-plan entry in the debt map.
+  **If a deploy went wrong:** `ssh root@<box> /opt/yipyy/rollback.sh` — one
+  Caddy reload, under a second, no pull and no rebuild, because the previous
+  colour never stopped running. It refuses if that colour is not healthy, in
+  which case use `deploy.sh <previous-sha>`.
+
+  **The deploy job can fail to connect and it is not always your fault.**
+  Measured 2026-08-25: a runner in Azure `eastus2` could not reach the VPS at
+  all — TCP timeouts on every port — while `westus` and `westcentralus` reached
+  it fine and the box sat at load 0.03. Re-run the job before investigating
+  anything on the server.
 
 - **Never weaken a gate** (a lint rule, the tsconfig `strict` flag, a CI step, a husky hook) to make work pass. Propose gate changes explicitly and separately.
 - **Manual verification against the touched journey is still mandatory** — the suite covers authorisation and identity, not every screen. What it does cover, CI now enforces: `bun run test:e2e:gate` runs on every push and the full suite nightly, so a loosened gate fails the build instead of shipping.
 - A spec added to either suite **must clean up after itself**. There is one Postgres and CI writes to it; see the `afterAll` in [role-editor-writes.spec.ts](tests/e2e/role-editor-writes.spec.ts).
-- **Touched a migration, a policy, a grant or a `SECURITY DEFINER` function? Run `bun run test:sql`.** It is 53 files and ~90 seconds, it runs in CI on every push, and it is the only thing that reads the database back rather than trusting that a migration applied. Until 2026-08-22 nothing ran it at all: `rpc-session-required.sql` had been failing unread, naming eleven anon-callable functions, while the rule it enforces was broken a fifth time. A test nobody runs is worse than no test — it is the appearance of a gate.
+- **Touched a migration, a policy, a grant or a `SECURITY DEFINER` function? Run `bun run test:sql`.** It is 56 files and ~90 seconds, it runs in CI on every push, and it is the only thing that reads the database back rather than trusting that a migration applied. Until 2026-08-22 nothing ran it at all: `rpc-session-required.sql` had been failing unread, naming eleven anon-callable functions, while the rule it enforces was broken a fifth time. A test nobody runs is worse than no test — it is the appearance of a gate.
 - **A revoke is not verified by having been written.** One naming a privilege the role does not hold succeeds silently and looks identical to one that worked. Assert it against `has_function_privilege(...)` afterwards. `revoke ... from public` and `revoke ... from anon` are _different grants_ and you almost always need **both** — see the two debt-map entries and 20260822610000, which exists only because the first attempt named one of them.
 - Boy-scout cleanup is **opt-in** — only refactor adjacent legacy code when explicitly asked.
 
