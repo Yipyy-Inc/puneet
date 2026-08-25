@@ -126,6 +126,12 @@ services:
 
     environment:
       ACME_EMAIL: ${ACME_EMAIL:-}
+      # Which hostnames get a certificate AT STARTUP rather than on demand.
+      # During the parallel run this is `staging.yipyy.com`, because naming a
+      # host whose DNS still points at Vercel makes Caddy fail HTTP-01 in a
+      # retry loop against a 5-failures-per-hour limit. It becomes
+      # `yipyy.com, www.yipyy.com` at the flip.
+      PRIMARY_HOSTS: ${PRIMARY_HOSTS:-yipyy.com, www.yipyy.com}
       TZ: UTC
 
     networks:

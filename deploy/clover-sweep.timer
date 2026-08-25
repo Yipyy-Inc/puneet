@@ -1,0 +1,21 @@
+[Unit]
+Description=Yipyy — Clover reconciliation sweep, every 15 minutes
+
+[Timer]
+OnCalendar=*:00/15
+
+# Not cosmetic. Every facility's sweep starting on the same second of every
+# quarter hour, on two vCPUs, is a self-inflicted spike — and it would land on
+# Clover's API as one too, against a documented 16 requests/second ceiling.
+RandomizedDelaySec=90
+
+# A window missed during a reboot or a deploy fires once on the next start,
+# rather than waiting up to another 15 minutes. systemd fires it ONCE — this is
+# not a catch-up storm.
+Persistent=true
+
+AccuracySec=1s
+Unit=clover-sweep.service
+
+[Install]
+WantedBy=timers.target

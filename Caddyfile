@@ -107,11 +107,24 @@
 	}
 }
 
-# ── The apex and www ───────────────────────────────────────────────────────
-# Named explicitly so their certificates are obtained at startup and renewed
-# regardless of app health. These two carry the Clover webhook, the platform
-# admin and customer sign-in; none should wait on an ACME round trip.
-yipyy.com, www.yipyy.com {
+# ── The primary hosts ──────────────────────────────────────────────────────
+#
+# Named explicitly so their certificates are obtained AT STARTUP and renewed
+# regardless of app health. The apex carries the Clover webhook, the platform
+# admin and customer sign-in; none of it should wait on an ACME round trip.
+#
+# ── AND THAT IS EXACTLY WHY IT IS A VARIABLE ─────────────────────────────
+#
+# Caddy tries to obtain a certificate for a NAMED site the moment it starts. If
+# `yipyy.com` is named here while yipyy.com's DNS still points at Vercel, the
+# HTTP-01 challenge is answered by Vercel, validation fails, and Caddy retries —
+# against Let's Encrypt's failed-validation limit of 5 per hostname per hour.
+# Repeat that through a parallel run and the ACME account is rate-limited before
+# the cutover it was supposed to make safe.
+#
+# So during the parallel run PRIMARY_HOSTS is `staging.yipyy.com`, whose DNS
+# does point here, and it becomes `yipyy.com, www.yipyy.com` at the flip.
+{$PRIMARY_HOSTS:yipyy.com, www.yipyy.com} {
 	import yipyy_upstream
 }
 

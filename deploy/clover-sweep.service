@@ -1,0 +1,25 @@
+[Unit]
+Description=Yipyy — Clover reconciliation sweep
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/clover-sweep
+
+# systemd will not start a second instance of a service that is still running,
+# so a sweep that overran its 15-minute window queues rather than overlapping
+# two reconciliations against the same merchant. --max-time 840 in the script
+# means that queue should never form in the first place.
+TimeoutStartSec=900
+
+# It is background reconciliation. It must never compete with a customer
+# checking out or a card reader waiting on a response.
+Nice=5
+IOSchedulingClass=idle
+
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
