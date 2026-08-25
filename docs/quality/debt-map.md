@@ -5683,6 +5683,33 @@ which a queue row could ever be resolved. Two in one day makes it a family:
 trigger that re-enters itself; an index checked mid-write; a policy that
 excludes the row its own predicate was meant to judge.
 
+**And the worst member of the family is the one that does NOT deadlock.**
+Amended 2026-08-25 after the `accounting_structure` conversion later the same
+day. Moving `multiLocationMode` out of `localStorage` into `facility_settings`
+while leaving `location-scopes.multiLocationMode()` still reading the old store
+would have left **two sources of truth for one answer** — and both paths would
+have kept working, returning different values. The stale copy was the one on the
+sync path, deciding **which company a sale posts to**.
+
+Rank the family by how loudly it fails:
+
+| Shape                               | How it presents             | When you find out                                                  |
+| ----------------------------------- | --------------------------- | ------------------------------------------------------------------ |
+| Unsatisfiable invariants            | Nothing works               | First use                                                          |
+| Refused write that returns success  | Screen lies, data safe      | When somebody re-reads                                             |
+| **Half-migration: two live copies** | **Both work, and disagree** | **The day they diverge — as an accounting discrepancy, not a bug** |
+
+**Knip caught the orphaned component. Nothing in this repo catches the
+duplicate.** `bun run prune` finds a copy NOBODY reads; there is no gate
+anywhere that finds a copy somebody DOES read, from the wrong place. That gap is
+why this has to be a habit rather than a check: **when you move a value, grep
+for every reader of the old home in the same change** and either repoint it or
+make it take the value as an argument. `syncScopeForTransaction` takes it as an
+argument now, and the field was deleted from the old type so a second copy
+cannot be read back into existence by accident.
+
+_A half-migration is how you get two answers to one question._
+
 **Do instead:** a new invariant is not verified by the migration applying. It
 raises on USE, not on DDL, and `apply_migration` returned `{"success": true}`
 for this one. Before calling it done, drive the FIRST THING THE SCREEN WILL DO
