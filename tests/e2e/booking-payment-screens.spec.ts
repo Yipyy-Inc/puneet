@@ -138,7 +138,7 @@ test.describe("the payment button reaches the ledger", () => {
       `/facility/dashboard/clients/${created.clientId}/bookings/${created.id}`,
     );
 
-    // The button that opens ProcessPaymentModal. Before this change it opened a
+    // The button that opens the checkout. Before this change it opened a
     // dialog whose Confirm closed it and toasted.
     const openPayment = page
       .getByRole("button", { name: /accept payment/i })
@@ -151,8 +151,27 @@ test.describe("the payment button reaches the ledger", () => {
     // The dialog names the amount it is about to take.
     await expect(dialog).toContainText(`$${AMOUNT.toFixed(2)}`);
 
+    // ── TAKING MONEY IS TWO PRESSES, AND THE TEST HAS TO MAKE BOTH ────────
+    //
+    // `PaymentCheckoutFlow` arms on the first press ("Checkout & Charge") and
+    // charges on the second ("Confirm & Charge"), which is deliberate: the
+    // button that moves real money is not the one under a cursor that was
+    // already heading there.
+    //
+    // This spec looked for `/confirm payment/i`, a label from the dialog this
+    // flow REPLACED, and so it clicked nothing and timed out waiting. It runs
+    // in neither `test:e2e:gate` nor `test:e2e:ci`, so nothing executed it and
+    // the rot was invisible. Matching on `/charge/i` now — the word both
+    // presses share and the one that actually describes what happens.
+    const charge = dialog.getByRole("button", { name: /charge \$/i }).first();
+    await expect(charge).toBeVisible();
+    await charge.click();
+    // Same locator, second press: the label changes, the button does not.
+    await expect(
+      dialog.getByRole("button", { name: /confirm & charge \$/i }),
+    ).toBeVisible();
     await dialog
-      .getByRole("button", { name: /confirm payment/i })
+      .getByRole("button", { name: /confirm & charge \$/i })
       .first()
       .click();
 
@@ -246,9 +265,18 @@ test.describe("the payment button reaches the ledger", () => {
     await expect(dialog).toContainText(`$${(AMOUNT - part).toFixed(2)}`);
     await expect(dialog).toContainText(/already paid/i);
 
+    // Two presses, as above — and here the SECOND one is the assertion that
+    // matters: its label carries the figure, so `Confirm & Charge $48.00`
+    // proves the button about to move money names the balance and not the
+    // price. That is the whole point of this test.
     await dialog
-      .getByRole("button", { name: /confirm payment/i })
+      .getByRole("button", { name: /charge \$/i })
       .first()
+      .click();
+    await dialog
+      .getByRole("button", {
+        name: `Confirm & Charge $${(AMOUNT - part).toFixed(2)}`,
+      })
       .click();
 
     await expect

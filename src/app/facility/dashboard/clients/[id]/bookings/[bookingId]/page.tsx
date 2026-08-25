@@ -1996,16 +1996,38 @@ export default function ClientBookingDetailPage({
               ? [{ label: "Late pickup fee", amount: pendingLateFee.amount }]
               : []),
           ]}
+          // ── THE LEDGER, NOT THE INVOICE BLOB, AND NEVER THE PRICE ────────
+          //
+          // This read `invoice?.remainingDue ?? booking.totalCost`. That blob
+          // exists only on the 26 migrated fixture bookings, so every booking
+          // made since fell through to `totalCost` — the PRICE — and the
+          // checkout offered to charge the whole bill again on a booking that
+          // had already been part-paid. A $16 deposit against $64 opened a
+          // dialog headed "Amount Due $64.00", and taking it would have
+          // collected $80 for a $64 booking.
+          //
+          // It is the same mistake the debt map records for `RefundModal`,
+          // whose `amountPaid` fell back to the price and so capped a refund at
+          // what the customer was BILLED rather than what they handed over.
+          //
+          // `balanceOf` is what `BookingPaymentBreakdown` shows and what
+          // `useTakeBookingPayment` charges, so all three agree by construction
+          // instead of by coincidence. `amount_paid` and `amount_due` are
+          // derived by the database from the payments ledger for every booking,
+          // fixture ones included — the blob was never the better source.
+          //
+          // Incident care and a pending late fee ARE added on top: neither is a
+          // row yet, so neither is inside `amount_due`.
           amountDue={
-            (invoice?.remainingDue ?? booking.totalCost) +
-            addedSubtotal +
+            balanceOf(booking) +
             incidentCareTotal +
             (pendingLateFee?.amount ?? 0)
           }
-          depositPaid={invoice?.depositCollected ?? 0}
+          // What they actually handed over, so "Amount Due" and the deduction
+          // above it reconcile to the balance rather than to two sources.
+          depositPaid={booking.amountPaid ?? 0}
           invoiceTotal={
-            (invoice?.total ?? booking.totalCost) +
-            addedSubtotal +
+            (booking.amountDue ?? booking.totalCost + addedSubtotal) +
             incidentCareTotal +
             (pendingLateFee?.amount ?? 0)
           }

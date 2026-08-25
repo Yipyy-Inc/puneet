@@ -980,18 +980,58 @@ Note the shape of the error before reasoning about it: the join excludes the ORI
 
 **Do instead:** decide which basis each report is on and say so in its subtitle, before somebody reconciles the two by hand and files a bug against the difference.
 
-### 🟡 `booking-payment-screens.spec.ts` fails on main, and the booking detail page loops
+### 🔴 The checkout offered to charge the PRICE on a part-paid booking (fixed 2026-08-25)
 
-Two separate things, found together on 2026-08-25 while checking something else. Both are recorded rather than fixed, because neither belongs to the change that tripped over them.
+`PaymentCheckoutFlow` on the booking detail page took its figures from the fixture invoice blob:
 
-**1. The spec fails on `main` today.** `taking the payment through the dialog moves the booking` clicks "Accept payment" and the dialog never appears. Verified pre-existing: the identical failure occurs with the working tree reverted to `HEAD` for the touched component. It is nobody's regression — the spec runs in **neither** `test:e2e:gate` nor `test:e2e:ci`, so nothing has executed it in a long time and it rotted unwatched.
+```tsx
+amountDue={(invoice?.remainingDue ?? booking.totalCost) + …}
+depositPaid={invoice?.depositCollected ?? 0}
+```
 
-**2. The page it drives spams "Maximum update depth exceeded"** — twelve times on a single load, again at `HEAD`. That is a component setting state in an effect whose dependency changes every render, and it is the likely cause of (1): React tears down a component stuck in that loop, so the dialog it was about to mount never arrives. `bun run lint` reports a large family of `react-hooks/set-state-in-effect` warnings; this is one of them, on a money screen.
+That blob exists only on the 26 migrated fixture bookings. **Every booking created since fell through to `booking.totalCost` — the price — and `amount_paid` was never consulted at all.** A $16 deposit against a $64 booking opened a dialog headed "Amount Due $64.00" with a button reading "Checkout & Charge $64.00". Pressing it collects $80 for a $64 booking.
 
-**Two traps for whoever picks this up**, both of which cost time here:
+It is the same mistake the entry above records for `RefundModal`, whose `amountPaid` fell back to the price and capped a refund at what the customer was BILLED rather than what they handed over. Same file family, same fallback, live again.
 
-- **A dev server on port 3000 outlives your edits.** Playwright's `webServer` block reuses an already-running one. A stale server served old chunks (`ChunkLoadError`, which surfaces as the app's own "Oops!" error boundary) AND old route handlers — a new `?bookingRef=` filter appeared to be ignored, returning every payment, when in fact the running code predated it. Before believing any e2e failure, confirm the server is running the code you just wrote: `E2E_BASE_URL=http://localhost:<fresh port>` against one you started yourself.
-- **"Is this mine?" is answerable in five minutes.** Copy the file aside, `git checkout` it, re-run, compare. Do that before reading a line of your own diff.
+**Two things make it worse than a slip.** The other button on the same screen — "Pay by card — $48.00" — already used `balanceOf(booking)`, so the page told the operator two different numbers depending on which control they used. And the OTHER caller of the same dialog, `booking-card.tsx`, was already correct. One of three call sites was wrong, and it was the main one.
+
+Fixed by reading the ledger everywhere: `balanceOf(booking)` (what `BookingPaymentBreakdown` shows and `useTakeBookingPayment` charges) plus incident care and a pending late fee, which are genuinely not rows yet. `depositPaid` is now `booking.amountPaid`, and the label says **"Already paid"** rather than "Deposit paid", because a part payment is not a deposit.
+
+**Do instead:** `amount_paid` and `amount_due` are derived by the database from the payments ledger for EVERY booking, fixtures included. `booking.invoice` is decorative. Never `?? booking.totalCost` on a money screen — the price is not the balance, and the fallback only fires on real bookings, so it survives every test done with fixture data.
+
+### 🟡 A spec nobody runs rots, and then it lies about what it found
+
+`booking-payment-screens.spec.ts` was failing on `main`, and it is the spec that would have caught the bug above on the day it landed. It runs in **neither** `test:e2e:gate` nor `test:e2e:ci`, so nothing had executed it in months. Two separate rots:
+
+- It clicked `/confirm payment/i`, a label from the dialog `PaymentCheckoutFlow` **replaced**. Taking money is two presses now — "Checkout & Charge $X" arms it, "Confirm & Charge $X" does it, deliberately, so the button that moves money is not the one a cursor was already heading for.
+- It asserted `/already paid/i` against a dialog that said "Deposit paid".
+
+Both fixed, and both specs added to `test:e2e:ci` so they run nightly instead of never. The second press is now asserted **by its full label** — `Confirm & Charge $48.00` — so the test fails if the figure on the button that charges is ever the price again.
+
+**Three traps that cost real time here, in the order they bit:**
+
+- **A dev server on port 3000 outlives your edits.** Playwright's `webServer` block reuses an already-running one. A stale server served old chunks — which surface as the app's own "Oops!" error boundary, not as anything mentioning staleness — AND old route handlers, so a newly added `?bookingRef=` filter looked like it was being ignored and returning every payment in the facility.
+- **That same stale server invented a bug that did not exist.** It produced twelve "Maximum update depth exceeded" errors per page load, which is a real React error and reads exactly like an infinite render loop on a money screen. It was written into this map as one. Against a clean `bun run build && bun run start` there are **zero**. `bun run dev` on this codebase also dies mid-compile under Playwright often enough to matter.
+- **"Is this mine?" is answerable in five minutes**, and answering it wrongly is expensive in both directions: copy the file aside, `git checkout` it, re-run, compare. Do that before reading a line of your own diff — and then do it again against a BUILT server before writing anything down.
+
+**Do instead:** run e2e against a built server, as AGENTS.md already says: `bun run build && bun run start --port 3100`, then `E2E_BASE_URL=http://localhost:3100`. Treat any failure seen only under `bun run dev` as unproven.
+
+### 🟡 "Receipt sent" is said in nine places and meant in two
+
+The checkout dialog's Email and SMS buttons were `toast.success("Receipt sent via email")` and `"…via SMS"` with no call behind either — removed 2026-08-25, leaving Print, which really opens a print window. But the phrase is a family, and the rest of it is still there:
+
+```
+app/customer/bookings/_components/PastBookingCard.tsx:45   toast.success("Receipt sent to your email.")
+app/facility/dashboard/services/retail/page.tsx:5642       alert("Receipt sent via email")
+app/facility/dashboard/services/retail/page.tsx:5654       alert("Receipt sent via SMS")
+components/facility/grooming/appointment-detail-page.tsx   "Receipt sent · $X charged"
+components/facility/grooming/appointment-panel.tsx         "Receipt sent · $X charged"
+lib/grooming/check-in-actions.ts:601                       "Receipt sent to <owner> (<channel>)"
+```
+
+**Sending one is built.** `emailItemisedReceipt` and `smsItemisedReceipt` (`lib/clover/receipt-delivery.ts`) work, are used for real by `/api/payments/clover/terminal`, and compose the itemised copy rather than Clover's unitemised one. What does not exist is an **API route** that lets any non-terminal tender reach them — so today a receipt is emailed only when a customer picks a channel on the physical device.
+
+**Do instead:** the gap worth closing is one route — resolve the booking under the caller's RLS, compose `ReceiptInput` the way `receiptInputFor` does for the terminal but from the `payments` row rather than a live charge outcome, and call the existing library. Then wire the surfaces above to it and delete the toasts that are left. Until that exists, do not add another button that says a receipt was sent.
 
 ### 🟢 There was a THIRD refund dialog, and it was the fake one (fixed 2026-08-25)
 
