@@ -54,10 +54,13 @@ export interface QuickBooksSettings {
   /** Optional contra-revenue account for package-pass redemptions. Must be an
    *  income account — see documents/package.ts. */
   packageRedemptionAccountId?: string;
-  /** How a multi-location facility maps onto QuickBooks companies (Phase 8).
-   *  Facility-scoped: it decides which scope every other record lives under, so
-   *  it is read from `{facilityId}` even in per-location mode. */
-  multiLocationMode?: "single_company" | "company_per_location";
+  // REMOVED 2026-08-25: `multiLocationMode` lived here and is now the
+  // `accounting_structure` facility settings domain. One company or one per
+  // branch describes how the business is INCORPORATED — it survived a browser
+  // change no better than the grooming slot rules did, and the bookkeeper and
+  // the owner could hold different answers. It is deliberately not read from
+  // this module any more; `syncScopeForTransaction` takes it as an argument so
+  // there cannot be a second copy on the sync path.
   /** Tag every document with the QuickBooks Class for its Yipyy location, so
    *  one company's books can still be read per branch (Phase 8). Requires a
    *  plan with Class tracking. */
