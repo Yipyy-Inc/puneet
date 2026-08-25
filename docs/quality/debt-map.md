@@ -968,6 +968,18 @@ The reachable one is now wired; the unreachable one is deleted. Its `amountPaid`
 
 **Do instead:** when two components do the same job, check which one is mounted before improving either.
 
+### 🟡 Two report families disagree about a refund, on the same screen
+
+Found 2026-08-25 while tracing where refunds land. Neither is fixed; both are decisions rather than bugs, and they should be taken deliberately.
+
+**1. `facility_takings` counts money on cancelled bookings; the revenue reports do not.** The RPC filters `payments` by `facility_id` and `created_at` and nothing else, so a deposit a facility KEEPS on a cancellation is takings — which is right, the money is theirs. But `revenue-by-service`, `revenue-by-location` and `service-mix-by-location` (20260825170000) join `and b.status <> 'cancelled'`, which drops **both** signs on that booking. So a retained cancellation fee is real money those three reports cannot see, and the Yipyy Pay tile and the Reports tile disagree by exactly the fees kept that period.
+
+Note the shape of the error before reasoning about it: the join excludes the ORIGINAL payment as well as the refund, so it **understates** revenue by whatever was kept. It does not, as it first appears, leave a refund uncancelled.
+
+**2. They disagree about WHEN, too.** `facility_takings` buckets by `p.created_at` — cash basis, the day the money moved. The revenue reports bucket by `b.start_at` — accrual, the day the service happened. A September refund on an August booking therefore lands in different months on two tiles a manager reads side by side. Both are defensible; having both unlabelled is not.
+
+**Do instead:** decide which basis each report is on and say so in its subtitle, before somebody reconciles the two by hand and files a bug against the difference.
+
 ### 🟡 `booking-payment-screens.spec.ts` fails on main, and the booking detail page loops
 
 Two separate things, found together on 2026-08-25 while checking something else. Both are recorded rather than fixed, because neither belongs to the change that tripped over them.
