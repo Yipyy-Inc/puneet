@@ -41,6 +41,11 @@ concurrency:
 permissions:
   contents: read
   issues: write
+  # `gh run list` in the corroboration step reads the Actions API. Without this
+  # it 403s, the error is swallowed, and the step concludes "no previous
+  # failure" every single time — so the alert below can never fire. That is
+  # exactly what it did, silently, until 2026-08-25.
+  actions: read
 
 jobs:
   check:
@@ -58,7 +63,9 @@ jobs:
             # wolf is one nobody reads by the second week.
             ok=""
             for attempt in 1 2 3; do
-              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://${host}/api/health" || echo 000)
+              # No `|| echo 000`: curl already writes 000 on failure, and the
+            # fallback appended a second one, so a timeout logged "HTTP 000000".
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://${host}/api/health") || true
               if [ "$code" = "200" ]; then ok="yes"; break; fi
               echo "  ${host} attempt ${attempt}: HTTP ${code}"
               sleep 10
@@ -126,12 +133,27 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PREV=$(gh run list --workflow=uptime.yml --limit 5 \
-                  --json databaseId,conclusion,status \
-                  --jq "[.[] | select(.databaseId != ${{ github.run_id }}) | select(.status==\"completed\")][0].conclusion" || echo "")
+          # THREE outcomes, not two. "The previous run passed" and "I could not
+          # find out" are different facts, and collapsing them into `else` is
+          # what made this monitor unable to alert at all: the query 403'd for
+          # want of `actions: read`, `|| echo ""` swallowed the error, and every
+          # failure looked like a first failure. Two real consecutive outages
+          # would have raised nothing.
+          if ! PREV=$(gh run list --workflow=uptime.yml --limit 5 \
+                       --json databaseId,conclusion,status \
+                       --jq "[.[] | select(.databaseId != ${{ github.run_id }}) | select(.status==\"completed\")][0].conclusion"); then
+            echo "raise=yes" >> "$GITHUB_OUTPUT"
+            echo "::warning::Could not read the previous run. Raising anyway — a check that cannot corroborate is not a reason to stay quiet about a check that failed."
+            exit 0
+          fi
           echo "previous conclusion: ${PREV:-none}"
           if [ "$PREV" = "failure" ]; then
             echo "raise=yes" >> "$GITHUB_OUTPUT"
+          elif [ -z "$PREV" ] || [ "$PREV" = "null" ]; then
+            # Nothing completed to compare against — the first run after an edit
+            # or after a long gap. Same reasoning: silence is not the safe default.
+            echo "raise=yes" >> "$GITHUB_OUTPUT"
+            echo "::warning::No previous run to corroborate against. Raising anyway."
           else
             echo "raise=no" >> "$GITHUB_OUTPUT"
             echo "::warning::Check failed, but the previous run did not. Not raising yet — one bad runner path is not an outage. If the next run fails too, an issue is opened."

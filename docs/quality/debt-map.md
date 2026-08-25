@@ -968,6 +968,31 @@ The reachable one is now wired; the unreachable one is deleted. Its `amountPaid`
 
 **Do instead:** when two components do the same job, check which one is mounted before improving either.
 
+### 🔴 The uptime monitor could not raise an alarm, and looked fine doing it (fixed 2026-08-25)
+
+The `uptime` workflow checks three hostnames every 15 minutes and opens a GitHub issue when two consecutive runs fail — two draws, so one bad runner path is not an outage. The corroboration step:
+
+```yaml
+permissions:
+  contents: read
+  issues: write # and nothing else
+```
+
+```bash
+PREV=$(gh run list --workflow=uptime.yml … || echo "")
+if [ "$PREV" = "failure" ]; then raise; else don't; fi
+```
+
+`gh run list` reads the **Actions** API, which needs `actions: read`. It did not have it, so the call 403'd on every run, `|| echo ""` swallowed the error, `PREV` was empty, and the `else` branch concluded "the previous run passed — not raising yet."
+
+**Every failure looked like a first failure.** Observed on 2026-08-25: two consecutive failing runs, 20:28 and 20:57, all three hostnames timing out, and the second one printed `previous conclusion: none` and stayed quiet. A real outage of any length would have raised nothing, and the workflow's green history would have been the reason nobody looked.
+
+Fixed by granting `actions: read` **and** by splitting the third outcome out of the `else`: "the previous run passed" and "I could not find out" are different facts. Not being able to corroborate now RAISES, with a message saying that is why. A guard that fails into silence is worse than no guard, because it also supplies the confidence.
+
+**The failure that exposed it was not an outage.** All three hosts answered 200 in under a second from a laptop at the same time, which is the Azure-region routing problem this workflow's own header already documents. That is the joke of it: the monitor was only ever tested by the failure mode it was designed to ignore, so the branch that matters had never once been reached.
+
+**Do instead:** when a check decides _not_ to alert, make it say which fact it decided on. And test an alerting path by making it fire, not by watching it stay quiet — quiet is what both a healthy system and a broken monitor look like.
+
 ### 🟢 A kept cancellation fee is revenue, and a refund is not spend (fixed 2026-08-25)
 
 Two faults in `facility_report_dataset`, found while tracing where refunds land.
