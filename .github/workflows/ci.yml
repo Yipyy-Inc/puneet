@@ -613,7 +613,14 @@ jobs:
             set -e
             trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-            SMOKE_HOST="$SMOKE_HOST" /opt/yipyy/deploy.sh ${{ needs.image.outputs.tag }}
+            # ${{ github.sha }}, NOT the metadata-action `version` output.
+            # That output resolved to `latest` on the first real deploy, so the
+            # box recorded IMAGE_TAG_BLUE=latest and stopped knowing which
+            # commit it was running — which quietly breaks the whole rollback
+            # story, since `deploy.sh <previous-sha>` needs a sha to go back to
+            # and `latest` is a moving target. The image is tagged
+            # `type=sha,format=long,prefix=`, so the full sha is always there.
+            SMOKE_HOST="$SMOKE_HOST" /opt/yipyy/deploy.sh ${{ github.sha }}
 
       # From the public internet, not from inside the box — the deploy script
       # already checked it from in there, and that cannot see a broken
