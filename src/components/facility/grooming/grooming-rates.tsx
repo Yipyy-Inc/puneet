@@ -57,6 +57,11 @@ import type { ServiceAddOn } from "@/types/facility";
 import { defaultServiceAddOns } from "@/data/service-addons";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
 import { ServiceDialog } from "./service-dialog";
+import { useLocationContext } from "@/hooks/use-location-context";
+
+/** No branch, as opposed to "not answered yet" -- Radix Select crashes on a
+ *  `""` item value, so this stands in for the facility-wide scope. */
+const FACILITY_WIDE = "__facility_wide__";
 
 function loadGroomingAddOns(): ServiceAddOn[] {
   if (typeof window === "undefined") return defaultServiceAddOns;
@@ -393,10 +398,18 @@ function ChargeEditorDialog({
 // ─────────────────────────────────────────────────────────────────────────
 
 export function GroomingRates() {
+  // Which branch's prices are showing. Facility-wide (the default) unless a
+  // multi-location facility picks one -- see `effectiveSizePricing` for what
+  // a branch scope actually returns (its own overrides, falling back to the
+  // facility-wide price for anything it hasn't set).
+  const { locations, isMultiLocation } = useLocationContext();
+  const [priceScope, setPriceScope] = useState(FACILITY_WIDE);
+  const scopeLocationId = priceScope === FACILITY_WIDE ? null : priceScope;
+
   // The menu, from Postgres. RLS decides what comes back — staff see drafts, a
   // signed-in client sees only live services — so this list is not re-filtered
   // here.
-  const { data: services = [] } = useGroomingServices();
+  const { data: services = [] } = useGroomingServices(scopeLocationId);
   const { mutate: deleteService } = useDeleteGroomingService();
   // Section 3B / Table 4 — pricing mutations require grooming_edit_pricing
   // (all-access fallback keeps them for admin outside the RBAC provider).
@@ -579,10 +592,41 @@ export function GroomingRates() {
 
         {/* ── Services tab ── */}
         <TabsContent value="services" className="mt-0 space-y-4">
+          {isMultiLocation && (
+            <div className="flex items-center gap-2">
+              <Label htmlFor="price-scope" className="text-xs font-normal">
+                Pricing for
+              </Label>
+              <Select value={priceScope} onValueChange={setPriceScope}>
+                <SelectTrigger id="price-scope" className="w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FACILITY_WIDE}>
+                    All locations (facility-wide)
+                  </SelectItem>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
               Each service has size-based pricing (S/M/L/XL) and an optional
               duration.
+              {scopeLocationId && (
+                <>
+                  {" "}
+                  Showing{" "}
+                  {locations.find((l) => l.id === scopeLocationId)?.name}
+                  &apos;s prices — a size left unset here still uses the
+                  facility-wide price.
+                </>
+              )}
             </p>
             {canEditPricing && (
               <Button size="sm" onClick={handleServiceNew}>
@@ -726,6 +770,7 @@ export function GroomingRates() {
         open={serviceDialogOpen}
         onOpenChange={setServiceDialogOpen}
         editingPackage={editingService}
+        locationId={scopeLocationId}
       />
 
       {/* Charge editor */}

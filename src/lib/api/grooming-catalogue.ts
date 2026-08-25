@@ -44,18 +44,32 @@ async function json<T>(
 
 export const groomingCatalogueKeys = {
   all: ["grooming-catalogue"] as const,
-  services: () => [...groomingCatalogueKeys.all, "services"] as const,
+  services: (locationId?: string | null) =>
+    [
+      ...groomingCatalogueKeys.all,
+      "services",
+      locationId ?? "facility-wide",
+    ] as const,
 };
 
 export const groomingCatalogueQueries = {
-  services: () => ({
-    queryKey: groomingCatalogueKeys.services(),
-    queryFn: () => json<GroomingPackage[]>(BASE),
+  /** `locationId` omitted (the default) returns facility-wide prices only --
+   *  unchanged from before branch pricing existed. Passed, it returns each
+   *  service's EFFECTIVE price for that branch (its own override where set,
+   *  the facility-wide price otherwise) -- see `effectiveSizePricing`. */
+  services: (locationId?: string | null) => ({
+    queryKey: groomingCatalogueKeys.services(locationId),
+    queryFn: () =>
+      json<GroomingPackage[]>(
+        locationId
+          ? `${BASE}?locationId=${encodeURIComponent(locationId)}`
+          : BASE,
+      ),
   }),
 };
 
-export function useGroomingServices() {
-  return useQuery(groomingCatalogueQueries.services());
+export function useGroomingServices(locationId?: string | null) {
+  return useQuery(groomingCatalogueQueries.services(locationId));
 }
 
 /**
@@ -76,7 +90,13 @@ interface ServiceWriteResult {
 export function useSaveGroomingService() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (service: Partial<GroomingPackage> & { id?: string }) =>
+    mutationFn: (
+      service: Partial<GroomingPackage> & {
+        id?: string;
+        /** Which branch `sizePricing` is FOR. Absent/null = facility-wide. */
+        locationId?: string | null;
+      },
+    ) =>
       service.id
         ? json<ServiceWriteResult>(
             `${BASE}/${encodeURIComponent(service.id)}`,
@@ -87,8 +107,12 @@ export function useSaveGroomingService() {
           )
         : json<ServiceWriteResult>(BASE, { method: "POST", body: service }),
     onSuccess: () => {
+      // The whole prefix, not one location's key -- a price saved for one
+      // branch has to be visible the next time anyone reads that branch's
+      // view, and invalidating only the scope just written would leave every
+      // OTHER branch's cached view (including "facility-wide") stale.
       void queryClient.invalidateQueries({
-        queryKey: groomingCatalogueKeys.services(),
+        queryKey: groomingCatalogueKeys.all,
       });
     },
   });
@@ -101,7 +125,7 @@ export function useDeleteGroomingService() {
       json<void>(`${BASE}/${encodeURIComponent(id)}`, { method: "DELETE" }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: groomingCatalogueKeys.services(),
+        queryKey: groomingCatalogueKeys.all,
       });
     },
   });

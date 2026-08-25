@@ -45,13 +45,16 @@ export const SERVICE_SELECT = `
   eligible_pet_sizes, eligible_coat_types, eligible_breeds,
   required_skill_level, min_booking_notice_hours, max_per_day,
   display_order, color, image_url, created_at,
-  grooming_service_size_prices ( size_label, price, duration_min )
+  grooming_service_size_prices ( size_label, price, duration_min, location_id )
 ` as const;
 
 interface SizePriceRow {
   size_label: string;
   price: number;
   duration_min: number | null;
+  /** Null = the facility-wide price. A branch's own row for the same size
+   *  replaces it, for that branch only -- see 20260825180000. */
+  location_id: string | null;
 }
 
 export interface ServiceRow {
@@ -92,13 +95,36 @@ function appId(row: { legacy_id: string | null; id: string }): string {
   return row.legacy_id ?? row.id;
 }
 
-export function rowToService(row: ServiceRow): GroomingPackage {
-  // The four size keys the type declares. A tier the facility has not priced is
-  // LEFT OUT rather than defaulted to base_price: `sizePricing.large`
-  // being absent means "no large price", and filling it with the base price
-  // would quietly invent one.
+/**
+ * The four size keys the type declares. A tier the facility has not priced is
+ * LEFT OUT rather than defaulted to base_price: `sizePricing.large` being
+ * absent means "no large price", and filling it with the base price would
+ * quietly invent one.
+ *
+ * `locationId` picks the EFFECTIVE view for one branch: that branch's own
+ * row for a size wins where it exists, the facility-wide row (location_id
+ * null) fills every size it doesn't override. Omitted (the default, every
+ * caller except the rates editor's branch selector) returns the
+ * facility-wide prices only, unchanged from before branch pricing existed.
+ */
+function effectiveSizePricing(
+  rows: SizePriceRow[],
+  locationId?: string | null,
+): Partial<Record<PetSize, number>> {
+  const facilityWide = new Map(
+    rows.filter((p) => p.location_id === null).map((p) => [p.size_label, p]),
+  );
+  const branchOverrides = locationId
+    ? new Map(
+        rows
+          .filter((p) => p.location_id === locationId)
+          .map((p) => [p.size_label, p]),
+      )
+    : new Map<string, SizePriceRow>();
+  const effective = new Map([...facilityWide, ...branchOverrides]);
+
   const sizePricing: Partial<Record<PetSize, number>> = {};
-  for (const p of row.grooming_service_size_prices ?? []) {
+  for (const p of effective.values()) {
     if (
       p.size_label === "small" ||
       p.size_label === "medium" ||
@@ -108,6 +134,17 @@ export function rowToService(row: ServiceRow): GroomingPackage {
       sizePricing[p.size_label] = Number(p.price);
     }
   }
+  return sizePricing;
+}
+
+export function rowToService(
+  row: ServiceRow,
+  opts?: { locationId?: string | null },
+): GroomingPackage {
+  const sizePricing = effectiveSizePricing(
+    row.grooming_service_size_prices ?? [],
+    opts?.locationId,
+  );
 
   return {
     id: appId(row),

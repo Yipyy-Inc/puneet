@@ -491,12 +491,18 @@ interface ServiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingPackage: GroomingPackage | null;
+  /** Which branch is being priced, from the rates screen's own selector.
+   *  Null/"All locations" edits the facility-wide price. Only applies when
+   *  editing an existing service -- a brand-new one is always created
+   *  facility-wide first. */
+  locationId?: string | null;
 }
 
 export function ServiceDialog({
   open,
   onOpenChange,
   editingPackage,
+  locationId,
 }: ServiceDialogProps) {
   const isEditing = !!editingPackage;
   const queryClient = useQueryClient();
@@ -812,7 +818,11 @@ export function ServiceDialog({
     // response, because a save that says "updated" before the server agrees is
     // exactly what this replaces.
     saveService(
-      { ...next, id: isEditing ? editingPackage?.id : undefined },
+      {
+        ...next,
+        id: isEditing ? editingPackage?.id : undefined,
+        locationId: isEditing ? (locationId ?? null) : undefined,
+      },
       {
         onSuccess: (result) => {
           if (result.pricesWritten) {

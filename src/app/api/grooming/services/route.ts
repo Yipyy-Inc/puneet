@@ -28,11 +28,18 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const user = await getCurrentUser().catch(() => null);
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
+
+  // Absent: every caller except the rates editor's branch selector, and the
+  // response is exactly what it always was -- facility-wide prices only. When
+  // present, each service's sizePricing becomes that branch's EFFECTIVE view
+  // (its own override where it set one, the facility-wide price elsewhere) --
+  // see `effectiveSizePricing`.
+  const locationId = request.nextUrl.searchParams.get("locationId");
 
   const supabase = await createServerClient();
   const { data, error } = await supabase
@@ -44,7 +51,11 @@ export async function GET() {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json((data as unknown as ServiceRow[]).map(rowToService));
+  return NextResponse.json(
+    (data as unknown as ServiceRow[]).map((row) =>
+      rowToService(row, { locationId }),
+    ),
+  );
 }
 
 export async function POST(request: NextRequest) {

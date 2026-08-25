@@ -73,7 +73,12 @@ export async function PATCH(
 
   const { id } = await params;
   const input = (await request.json().catch(() => null)) as
-    | (Record<string, unknown> & { sizePricing?: Record<string, number> })
+    | (Record<string, unknown> & {
+        sizePricing?: Record<string, number>;
+        /** Which branch these sizePricing values are FOR, when set. Absent
+         *  (or null) means the facility-wide price -- unchanged behaviour. */
+        locationId?: string | null;
+      })
     | null;
   if (!input) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 422 });
@@ -86,6 +91,25 @@ export async function PATCH(
       { error: "That service does not exist, or is not yours." },
       { status: 404 },
     );
+  }
+
+  // The FK alone would not stop a location belonging to another facility
+  // being written here -- checked explicitly, same as every other location
+  // write this session, since there is no RLS on `locations` that could
+  // refuse the value at the point it is merely used as an id.
+  const locationId = input.locationId ?? null;
+  if (locationId) {
+    const { data: location } = await supabase
+      .from("locations")
+      .select("facility_id")
+      .eq("id", locationId)
+      .maybeSingle();
+    if (!location || location.facility_id !== resolved.facilityId) {
+      return NextResponse.json(
+        { error: "That location doesn't belong to this business." },
+        { status: 422 },
+      );
+    }
   }
 
   const patch = serviceToRow(input);
@@ -108,26 +132,31 @@ export async function PATCH(
     if (denied) return denied;
   }
 
-  // Prices are REPLACED, not merged: the editor sends the whole size table, and
-  // a merge would leave a tier the manager deleted still priced. Deleting first
-  // also means removing a tier is expressible at all.
+  // Prices are REPLACED, not merged: the editor sends the whole size table,
+  // and a merge would leave a tier the manager deleted still priced. Scoped
+  // to ONE location (or the facility-wide row, when locationId is absent) --
+  // editing one branch's prices must never touch another branch's, or the
+  // facility-wide row every unset branch still falls back to.
   let pricesWritten = true;
   if (input.sizePricing !== undefined) {
     const rows = sizePricesToRows(input.sizePricing);
-    // Counted first. With rows to insert, a refused delete surfaces on the
-    // insert that follows; with NONE -- the caller clearing every size price --
-    // there is no later statement to fail, so a refusal would report success
-    // and leave the old prices in place while the response said they were gone.
-    const { count: existingPrices } = await supabase
+    const scope = supabase
       .from("grooming_service_size_prices")
       .select("service_id", { count: "exact", head: true })
       .eq("service_id", resolved.id);
+    const { count: existingPrices } = await (locationId
+      ? scope.eq("location_id", locationId)
+      : scope.is("location_id", null));
 
-    const { data: clearedPrices, error: delError } = await supabase
+    const clear = supabase
       .from("grooming_service_size_prices")
       .delete()
-      .eq("service_id", resolved.id)
-      .select("service_id");
+      .eq("service_id", resolved.id);
+    const { data: clearedPrices, error: delError } = await (
+      locationId
+        ? clear.eq("location_id", locationId)
+        : clear.is("location_id", null)
+    ).select("service_id");
     if (delError) {
       pricesWritten = false;
     } else if (deleteWasRefused(existingPrices, clearedPrices)) {
@@ -142,6 +171,7 @@ export async function PATCH(
             ...p,
             service_id: resolved.id,
             facility_id: resolved.facilityId,
+            location_id: locationId,
           })) as never,
         );
       if (insError) pricesWritten = false;
@@ -162,7 +192,7 @@ export async function PATCH(
   }
 
   return NextResponse.json({
-    service: rowToService(full as unknown as ServiceRow),
+    service: rowToService(full as unknown as ServiceRow, { locationId }),
     pricesWritten,
   });
 }
