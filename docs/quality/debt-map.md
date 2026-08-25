@@ -5958,6 +5958,74 @@ narrow and real: stop the screen lying about the facility it is showing, move
 any genuine BUSINESS fact it holds into `facility_settings`, delete the controls
 that cannot work, and say so on the page.
 
+### 🔴 Five HQ screens have no substrate to convert onto — measured before assuming — 2026-08-25
+
+Same trap as the QuickBooks entry above, found by running its own advice
+("measure the substrate, not the screen") against everything else still on
+`src/data/hq-analytics.ts` after `useLocationContext` went real. The
+measurement is the migration's own words:
+
+```
+supabase/migrations/20260825095825_a_location_is_a_branch_and_a_branch_has_an_address.sql:8-12
+  "Three rows exist — one primary location per facility, and no facility
+   has ever had a second."
+supabase/seed/dev-accounts.sql:33,48-50   -- exactly ONE `locations` row inserted
+```
+
+Every facility in this app, seeded or real, has exactly one location row. Every
+`*byLocation` field, every cross-location comparison, on every HQ screen, has
+had nothing to differ against since the day the table was created. That is a
+**data** gap, not primarily a schema one — `bookings.location_id` and
+`facility_memberships.home_location_id` are both real, FK'd, and populated —
+but three other gaps ARE schema-shaped and block real per-location analytics
+even once a facility has a second branch:
+
+```
+public.clients    -- no location column at all (20260801120000)
+public.staff      -- no location column at all (20260801150000)
+public.payments   -- no location column; booking_id is "an identifier, NOT a
+                      reference" per its own comment (20260806220000:107)
+```
+
+Five screens sit on top of this, each needing something that plainly does not
+exist yet, not a rewire:
+
+- **`/facility/hq/overview` + Command Center** — `src/data/hq-analytics.ts`
+  (912 lines, hand-typed) backs `HQOverviewClient`, `CommandCenterKpis`,
+  `NetworkStatusBar`, `HQAnalyticsPanel`. NPS, `avgClientRating`, `revPAK`,
+  `staffUtilization` have no table anywhere — not "not joined yet," invented.
+- **`/facility/hq/reports`** (client-activity, staff-performance,
+  transfer-impact) and **`/facility/hq/clients`** — same fixture, plus
+  `loyaltyTier` bronze/silver/gold/platinum on `crossLocationClients`, which a
+  real loyalty-points ledger exists for (`20260821260000`) but no "tier"
+  concept does.
+- **`/facility/hq/services`** — `src/data/service-catalog.ts`'s per-location
+  price overrides have no destination: `grooming_services`/`room_categories`
+  are `facility_id`-scoped only, no `location_id` column, anywhere.
+- **`/facility/hq/staff`** — reads `sharedStaffPool` (fixture), not
+  `public.staff`, which has no location column to read from if it did.
+- **`/facility/hq/transfers`** + `BookingTransferModal` — `addTransfer()`
+  writes to a **module-level array** (`src/data/location-transfers.ts`) that
+  resets on every reload/deploy. No transfer/log table exists; `bookings` only
+  ever records where a booking currently is, never where it moved from.
+
+**What was done instead (2026-08-25):** the two pieces that WERE real columns
+with no writer — `facility_memberships.home_location_id` (which branch a staff
+member works from) and `facility_terminals.location_id` (which branch a card
+reader sits in) — now have one each: `PATCH /api/staff/[id]/home-location` and
+the extended `PATCH /api/payments/clover/terminals`. Both were previously
+`Bucket B` (column exists, nothing writes it) rather than `Bucket C` (no
+concept exists) — that distinction is what made them worth doing without a
+schema change, and it's the same test to apply before touching anything above.
+
+**Do instead:** before scoping ANY of these five as "convert the screen," get a
+second real location into a facility (`POST /api/locations` already exists)
+and check whether the fact you want to show has ANY column to read `location_id`
+off — `clients`/`staff`/`payments` currently do not. If it doesn't, this is a
+product decision (does pricing vary by branch? does a transfer need an audit
+trail? what does a review/NPS system look like?) that needs an owner, not an
+engineering pass.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
