@@ -1,4 +1,4 @@
-import type { HQSettings } from "@/types/location";
+import type { NetworkPolicy } from "@/types/facility";
 
 /**
  * Centralized redemption rules — every loyalty / gift-card redemption
@@ -12,7 +12,10 @@ export interface RedemptionContext {
   /** Where the points were earned / gift card was purchased */
   originLocationId: string;
   /** HQ settings */
-  settings: Pick<HQSettings, "crossLocationLoyalty" | "crossLocationGiftCards">;
+  settings: Pick<
+    NetworkPolicy,
+    "crossLocationLoyalty" | "crossLocationGiftCards"
+  >;
 }
 
 export interface RedemptionResult {

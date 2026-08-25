@@ -41,6 +41,7 @@ import type {
   ModuleAddon,
   GroomingScheduling,
   AccountingStructure,
+  NetworkPolicy,
 } from "@/types/facility";
 import type { CalendarColorOverrides } from "@/lib/operations-calendar";
 
@@ -87,6 +88,8 @@ interface SettingsContextValue {
   updateGroomingScheduling: (config: GroomingScheduling) => Promise<unknown>;
   accountingStructure: AccountingStructure;
   updateAccountingStructure: (config: AccountingStructure) => Promise<unknown>;
+  networkPolicy: NetworkPolicy;
+  updateNetworkPolicy: (config: NetworkPolicy) => Promise<unknown>;
   updateBookingFlow: (config: FacilityBookingFlowConfig) => Promise<unknown>;
   updateReportCards: (config: ReportCardConfig) => Promise<unknown>;
   updateServiceDateBlocks: (blocks: ServiceDateBlock[]) => Promise<unknown>;
@@ -167,6 +170,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     facilitySettings.settings.grooming_scheduling.value;
   const accountingStructure =
     facilitySettings.settings.accounting_structure.value;
+  const networkPolicy = facilitySettings.settings.network_policy.value;
   // ── WHAT A CUSTOMER MAY BOOK ────────────────────────────────────────────
   //
   // The four module configs, the booking flow and the evaluation rules. These
@@ -278,6 +282,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const updateAccountingStructure = (config: AccountingStructure) =>
     saveSetting.mutateAsync({ domain: "accounting_structure", value: config });
+  const updateNetworkPolicy = (config: NetworkPolicy) =>
+    saveSetting.mutateAsync({ domain: "network_policy", value: config });
   const updateBookingFlow = (config: FacilityBookingFlowConfig) =>
     saveSetting.mutateAsync({ domain: "booking_flow", value: config });
   const updateReportCards = (config: ReportCardConfig) =>
@@ -384,6 +390,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateGroomingScheduling,
         accountingStructure,
         updateAccountingStructure,
+        networkPolicy,
+        updateNetworkPolicy,
         updateTipConfig,
         updateIntegrations,
         updateAddons,

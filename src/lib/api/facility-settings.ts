@@ -22,6 +22,7 @@ import type {
   TipConfig,
   GroomingScheduling,
   AccountingStructure,
+  NetworkPolicy,
 } from "@/types/facility";
 import type { PricingRules } from "@/lib/settings/pricing";
 import type { TaxConfig } from "@/lib/settings/tax";
@@ -56,6 +57,8 @@ export interface FacilitySettings {
   grooming_scheduling: SettingState<GroomingScheduling>;
   /** One set of books for the business, or one per branch. */
   accounting_structure: SettingState<AccountingStructure>;
+  /** The cross-location toggles HQ Settings edits. */
+  network_policy: SettingState<NetworkPolicy>;
   tip_config: SettingState<TipConfig>;
   tax_config: SettingState<TaxConfig>;
   /** Overtime rule + statutory holidays. `configured: false` = nobody has said. */

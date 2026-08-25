@@ -1,8 +1,4 @@
-import type {
-  Location,
-  HQSettings,
-  LocationWeeklyHours,
-} from "@/types/location";
+import type { Location, LocationWeeklyHours } from "@/types/location";
 
 const standardHours: LocationWeeklyHours = {
   monday: { open: "07:00", close: "19:00" },
@@ -275,32 +271,12 @@ export const locations: Location[] = [
   },
 ];
 
-export const hqSettings: HQSettings = {
-  facilityId: 11,
-  sharedStaffPool: true,
-  centralizedCustomerData: true,
-  pricingModel: "per_location",
-  agreementsScope: "global",
-  tagsScope: "global",
-  paymentMethodsScope: "global",
-  internalNotesScope: "per_location",
-  transferRequiresCustomerApproval: false,
-  transferPricingPolicy: "staff_choice",
-  sharedEmailTemplates: true,
-  sharedAutomations: false,
-  sharedServices: ["daycare", "boarding", "grooming", "training"],
-  locations: ["loc-dv-main", "loc-dv-ouest", "loc-dv-laval"],
-  crossLocationLoyalty: true,
-  crossLocationGiftCards: false,
-  sharedWaivers: true,
-  sharedIncidentHistory: true,
-  sharedMedicalRecords: true,
-  primaryLocationId: "loc-dv-main",
-  delegatedHqAccess: [],
-  brandingNameScope: "both",
-  brandingLogoScope: "global",
-  brandingColorScope: "global",
-};
+// `hqSettings` (the toggle values above) was deleted 2026-08-25: every
+// consumer now reads the real `network_policy` facility-settings domain via
+// `useLocationContext()`/`useSettings()`. The `HQSettings` type stays (still
+// typing the unused parameter on `fire-with-location.ts`'s dead
+// `resolveAutomationFiring`), but nothing constructs one from this file
+// anymore.
 
 export function getLocationById(id: string): Location | undefined {
   return locations.find((l) => l.id === id);
