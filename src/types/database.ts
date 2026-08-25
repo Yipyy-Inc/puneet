@@ -3473,32 +3473,53 @@ export type Database = {
       };
       locations: {
         Row: {
+          address: Json | null;
+          capacity: Json;
+          color: string | null;
           created_at: string;
+          email: string | null;
           facility_id: string;
           id: string;
           is_primary: boolean;
           legacy_id: string | null;
           name: string;
+          phone: string | null;
+          short_code: string | null;
+          status: string;
           timezone: string | null;
           updated_at: string;
         };
         Insert: {
+          address?: Json | null;
+          capacity?: Json;
+          color?: string | null;
           created_at?: string;
+          email?: string | null;
           facility_id: string;
           id?: string;
           is_primary?: boolean;
           legacy_id?: string | null;
           name: string;
+          phone?: string | null;
+          short_code?: string | null;
+          status?: string;
           timezone?: string | null;
           updated_at?: string;
         };
         Update: {
+          address?: Json | null;
+          capacity?: Json;
+          color?: string | null;
           created_at?: string;
+          email?: string | null;
           facility_id?: string;
           id?: string;
           is_primary?: boolean;
           legacy_id?: string | null;
           name?: string;
+          phone?: string | null;
+          short_code?: string | null;
+          status?: string;
           timezone?: string | null;
           updated_at?: string;
         };

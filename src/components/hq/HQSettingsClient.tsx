@@ -57,7 +57,6 @@ import {
   styleFromKey,
   type LocationColorKey,
 } from "@/lib/hq/location-styles";
-import { AddLocationDialog } from "@/components/hq/AddLocationDialog";
 import { networkBilling } from "@/data/network-billing";
 
 interface Props {
@@ -329,8 +328,7 @@ export function HQSettingsClient({
 }: Props) {
   const [s, setS] = useState(settings);
   const [dirty, setDirty] = useState(false);
-  const [locations, setLocations] = useState(initialLocations);
-  const [addOpen, setAddOpen] = useState(false);
+  const [locations] = useState(initialLocations);
   const [confirmDisableAutomations, setConfirmDisableAutomations] =
     useState(false);
 
@@ -342,20 +340,6 @@ export function HQSettingsClient({
   const save = () => {
     setDirty(false);
     toast.success("HQ settings saved");
-  };
-
-  const handleAddLocation = (loc: Location) => {
-    setLocations((prev) => {
-      // If the new one is primary, unset the previous primary
-      const next = loc.isPrimary
-        ? prev.map((l) => ({ ...l, isPrimary: false }))
-        : prev;
-      return [...next, loc];
-    });
-    update({
-      locations: [...s.locations, loc.id],
-      ...(loc.isPrimary ? { primaryLocationId: loc.id } : {}),
-    });
   };
 
   return (
@@ -411,14 +395,19 @@ export function HQSettingsClient({
                 {locations.length} branches in this network
               </CardDescription>
             </div>
+            {/* One screen creates a location, and it is not this one. This
+                card still lists fixture branches; sending the real dialog here
+                would create a row the list underneath could not show. */}
             <Button
+              asChild
               variant="outline"
               size="sm"
               className="gap-1.5 text-xs"
-              onClick={() => setAddOpen(true)}
             >
-              <Plus className="size-3.5" />
-              Add Location
+              <Link href="/facility/hq/locations">
+                <Plus className="size-3.5" />
+                Add Location
+              </Link>
             </Button>
           </div>
         </CardHeader>
@@ -1050,12 +1039,6 @@ export function HQSettingsClient({
           Save HQ Settings
         </Button>
       </div>
-
-      <AddLocationDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        onCreate={handleAddLocation}
-      />
 
       <AlertDialog
         open={confirmDisableAutomations}
