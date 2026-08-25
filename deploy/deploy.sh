@@ -43,8 +43,24 @@ UPPER=$(printf '%s' "$NEW" | tr '[:lower:]' '[:upper:]')
 
 log "current=${CURRENT}  target=${NEWSVC}  image=${IMAGE}"
 
+# ── A PULL FAILURE IS NOT ALWAYS FATAL ────────────────────────────────────
+#
+# If the image is already on this box, an unreachable or unauthorised registry
+# must not stop the deploy — otherwise the rollback this script advertises
+# ("works when GHCR is down") does not, because rolling back re-runs this line.
+# A registry problem with NO local copy is still fatal, because there would be
+# nothing to start.
 log "pulling"
-docker pull "$IMAGE"
+if ! docker pull "$IMAGE"; then
+	if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+		echo "WARNING: could not reach the registry; using the copy already on this box."
+	else
+		echo "FATAL: cannot pull ${IMAGE} and there is no local copy."
+		echo "If this is an authentication failure, the deploy job logs in to GHCR"
+		echo "with a token it mints per run; check that step before adding a PAT here."
+		exit 1
+	fi
+fi
 
 # Only ever touches the IDLE colour's tag, so a failed deploy cannot change what
 # is currently serving traffic.

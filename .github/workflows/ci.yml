@@ -547,17 +547,36 @@ jobs:
     concurrency:
       group: deploy-production
       cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
     steps:
+      # ── THE BOX HOLDS NO REGISTRY CREDENTIAL ────────────────────────────
+      #
+      # GITHUB_TOKEN is minted for this run and expires with it, so the login
+      # is ephemeral and there is no PAT on disk to leak or to rotate. The
+      # logout at the end runs even if the deploy fails, because leaving a
+      # registry credential in root's docker config is exactly the kind of
+      # thing nobody notices until it is old.
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          SMOKE_HOST: ${{ vars.SMOKE_HOST || 'yipyy.com' }}
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: deploy
+          username: root
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           command_timeout: 15m
           script_stop: true
-          script: /opt/yipyy/deploy.sh ${{ needs.image.outputs.tag }}
+          envs: GHCR_TOKEN,GHCR_USER,SMOKE_HOST
+          script: |
+            set -e
+            trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            SMOKE_HOST="$SMOKE_HOST" /opt/yipyy/deploy.sh ${{ needs.image.outputs.tag }}
 
       # From the public internet, not from inside the box — the deploy script
       # already checked it from in there, and that cannot see a broken
