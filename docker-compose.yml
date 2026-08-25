@@ -115,6 +115,18 @@ services:
       - "443:443/udp"
 
     volumes:
+      # ── EDITING THIS FILE IS NOT ENOUGH ─────────────────────────────────
+      #
+      # Docker bind-mounts a single FILE by inode. Anything that REPLACES the
+      # file rather than writing it in place — scp, most editors' save-by-
+      # rename, `mv` — leaves the container reading the old inode, so the new
+      # config is on disk and invisible to Caddy. The symptom is a config error
+      # that names a line you have already deleted.
+      #
+      # After changing it: `docker compose up -d --force-recreate caddy`, or
+      # better `docker exec yipyy-caddy caddy reload --config /etc/caddy/Caddyfile
+      # --adapter caddyfile`, which is graceful and does not drop in-flight
+      # requests — including a card payment mid-tap.
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       # ── DO NOT LOSE THIS ────────────────────────────────────────────────
       # Every issued certificate AND the ACME account key. Recreate this volume
