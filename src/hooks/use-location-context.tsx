@@ -9,20 +9,25 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import type { FacilityLocation, HQSettings } from "@/types/location";
-import { hqSettings } from "@/data/locations";
+import type { FacilityLocation } from "@/types/location";
+import type { NetworkPolicy } from "@/types/facility";
 import { useFacilityLocations } from "@/lib/api/locations";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
 
 // ============================================================================
 // The branches this business actually has, shared app-wide.
 //
 // `locations`/`currentLocation` come from `useFacilityLocations()` (real
 // `public.locations` rows) -- the same data `/facility/hq/locations` reads and
-// writes. `settings` (HQSettings) stays on the fixture deliberately: none of
-// its scope/shared/cross-location toggles has a real table behind it yet
-// (`facility_settings` has no location dimension to hang a "per_location"
-// value on), so there is nothing real to swap it for. See
-// `LocationDetailView.tsx` for the same kind of deliberate boundary.
+// writes. `settings` reads the real `network_policy` facility-settings
+// domain -- the cross-location toggles HQ Settings edits. No migration: a new
+// domain is an INSERT (`facility_settings` is keyed by (facility_id, domain),
+// see lib/settings/domains.ts). Converted HERE, not only on the settings
+// screen, for the same reason business hours were: `RedeemGiftCardModal`,
+// `DigitalWaiversManager` and `PetIncidentSafetyAlert` all read
+// `crossLocationGiftCards`/`sharedWaivers`/`sharedIncidentHistory` through
+// this context, and fixing the editor alone would have left every one of
+// them enforcing a value nobody could change.
 // ============================================================================
 
 const STORAGE_KEY = "yipyy-location-ctx";
@@ -33,7 +38,7 @@ interface LocationContextValue {
   currentLocation: FacilityLocation | null;
   isHQView: boolean;
   locations: FacilityLocation[];
-  settings: HQSettings;
+  settings: NetworkPolicy;
   isMultiLocation: boolean;
   /** True until the facility's locations have loaded at least once. */
   isPending: boolean;
@@ -45,6 +50,11 @@ const LocationContext = createContext<LocationContextValue | null>(null);
 
 export function LocationContextProvider({ children }: { children: ReactNode }) {
   const { data, isPending } = useFacilityLocations();
+  // Not `useSettings()` -- that context wraps this provider in some portals
+  // (dashboard, employee, staff), so calling it here would throw "must be
+  // used within a SettingsProvider". `useFacilitySettings()` is the plain
+  // query hook underneath it and needs nothing but QueryClientProvider.
+  const networkPolicy = useFacilitySettings().settings.network_policy.value;
   const locs = useMemo(() => data ?? [], [data]);
   const isMultiLocation = locs.length > 1;
   const primary = locs.find((l) => l.isPrimary) ?? locs[0] ?? null;
@@ -100,7 +110,7 @@ export function LocationContextProvider({ children }: { children: ReactNode }) {
         currentLocation,
         isHQView,
         locations: locs,
-        settings: hqSettings,
+        settings: networkPolicy,
         isMultiLocation,
         isPending,
         setLocation,
@@ -117,7 +127,7 @@ const FALLBACK: LocationContextValue = {
   currentLocation: null,
   isHQView: false,
   locations: [],
-  settings: {} as HQSettings,
+  settings: {} as NetworkPolicy,
   isMultiLocation: false,
   isPending: false,
   setLocation: () => {},

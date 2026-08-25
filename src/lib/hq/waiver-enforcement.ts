@@ -1,4 +1,4 @@
-import type { HQSettings } from "@/types/location";
+import type { NetworkPolicy } from "@/types/facility";
 
 /**
  * Decide whether a waiver signed for one client at one location is still
@@ -20,7 +20,7 @@ export interface WaiverContext {
   currentVersion: string;
   attemptingLocationId: string;
   signature: WaiverSignature | null;
-  settings: Pick<HQSettings, "sharedWaivers">;
+  settings: Pick<NetworkPolicy, "sharedWaivers">;
 }
 
 export interface WaiverCheckResult {

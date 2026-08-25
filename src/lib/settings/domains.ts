@@ -15,6 +15,7 @@ import {
   bookingRulesSchema,
   groomingSchedulingSchema,
   accountingStructureSchema,
+  networkPolicySchema,
   dropOffPickUpOverrideSchema,
   evaluationFormTemplateSchema,
   moduleAddonSchema,
@@ -70,6 +71,7 @@ import type {
   TipConfig,
   GroomingScheduling,
   AccountingStructure,
+  NetworkPolicy,
 } from "@/types/facility";
 
 // ============================================================================
@@ -151,6 +153,33 @@ const DEFAULT_ACCOUNTING_STRUCTURE: AccountingStructure = {
   multiLocationMode: "single_company",
 };
 
+// Every toggle "not shared" and every scope "per_location" -- a facility that
+// never opens this screen keeps its branches isolated from each other rather
+// than being told its customer data, gift cards or loyalty points are pooled
+// on a choice nobody made. `staff_choice` for transfer pricing is the same
+// idea for a one-shot decision: defer to a human instead of picking a side.
+const DEFAULT_NETWORK_POLICY: NetworkPolicy = {
+  sharedStaffPool: false,
+  centralizedCustomerData: false,
+  pricingModel: "per_location",
+  agreementsScope: "per_location",
+  tagsScope: "per_location",
+  paymentMethodsScope: "per_location",
+  internalNotesScope: "per_location",
+  transferRequiresCustomerApproval: false,
+  transferPricingPolicy: "staff_choice",
+  sharedEmailTemplates: false,
+  sharedAutomations: false,
+  crossLocationLoyalty: false,
+  crossLocationGiftCards: false,
+  sharedWaivers: false,
+  sharedIncidentHistory: false,
+  sharedMedicalRecords: false,
+  brandingNameScope: "per_location",
+  brandingLogoScope: "per_location",
+  brandingColorScope: "per_location",
+};
+
 export const SETTING_DOMAINS = {
   business_hours: { schema: businessHoursSchema, fallback: DEFAULT_HOURS },
   booking_rules: { schema: bookingRulesSchema, fallback: DEFAULT_RULES },
@@ -171,6 +200,18 @@ export const SETTING_DOMAINS = {
   accounting_structure: {
     schema: accountingStructureSchema,
     fallback: DEFAULT_ACCOUNTING_STRUCTURE,
+  },
+  // ── HQ NETWORK POLICY ────────────────────────────────────────────────────
+  //
+  // The cross-location toggles on HQ Settings: what data is pooled across
+  // branches (customers, staff, agreements, tags, payment methods, notes,
+  // loyalty, gift cards, waivers, incident history, medical records), how
+  // pricing and branding are scoped, and what happens when a booking
+  // transfers between locations. Multi-location-only, but it is a fact about
+  // the business, so it belongs here rather than in a browser.
+  network_policy: {
+    schema: networkPolicySchema,
+    fallback: DEFAULT_NETWORK_POLICY,
   },
   // Money. `enabled`, the percentage options and the preferred index decide
   // what a customer is asked to add to their bill, so a facility running one

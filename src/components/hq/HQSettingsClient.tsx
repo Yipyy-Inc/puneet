@@ -51,16 +51,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import type { HQSettings, Location } from "@/types/location";
+import type { Location } from "@/types/location";
+import type { NetworkPolicy } from "@/types/facility";
 import {
   locationStyles,
   styleFromKey,
   type LocationColorKey,
 } from "@/lib/hq/location-styles";
 import { networkBilling } from "@/data/network-billing";
+import { useSettings } from "@/hooks/use-settings";
 
 interface Props {
-  settings: HQSettings;
   locations: Location[];
 }
 
@@ -322,24 +323,42 @@ function LocationOnboardingRow({ loc }: { loc: Location }) {
   );
 }
 
-export function HQSettingsClient({
-  settings,
-  locations: initialLocations,
-}: Props) {
-  const [s, setS] = useState(settings);
-  const [dirty, setDirty] = useState(false);
+export function HQSettingsClient({ locations: initialLocations }: Props) {
+  const { networkPolicy, updateNetworkPolicy } = useSettings();
+  // A draft only exists once the owner starts editing -- `null` means "show
+  // the real, saved policy". Mirrors HQIntegrationsClient's read (no loading
+  // guard needed: useFacilitySettings falls back to the domain's default
+  // synchronously), but keeps THIS screen's existing review-before-committing
+  // shape, which many toggles with real cross-location consequences warrants.
+  const [draft, setDraft] = useState<NetworkPolicy | null>(null);
+  const [saving, setSaving] = useState(false);
   const [locations] = useState(initialLocations);
   const [confirmDisableAutomations, setConfirmDisableAutomations] =
     useState(false);
 
-  const update = (patch: Partial<typeof s>) => {
-    setS((prev) => ({ ...prev, ...patch }));
-    setDirty(true);
+  const s = draft ?? networkPolicy;
+  const dirty = draft !== null;
+
+  const update = (patch: Partial<NetworkPolicy>) => {
+    setDraft({ ...s, ...patch });
   };
 
   const save = () => {
-    setDirty(false);
-    toast.success("HQ settings saved");
+    if (!draft) return;
+    setSaving(true);
+    void updateNetworkPolicy(draft).then(
+      () => {
+        setDraft(null);
+        setSaving(false);
+        toast.success("HQ settings saved");
+      },
+      (error: unknown) => {
+        setSaving(false);
+        toast.error(
+          error instanceof Error ? error.message : "Could not save that.",
+        );
+      },
+    );
   };
 
   return (
@@ -369,9 +388,14 @@ export function HQSettingsClient({
             </p>
           </div>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={save} disabled={!dirty}>
+        <Button
+          size="sm"
+          className="gap-1.5"
+          onClick={save}
+          disabled={!dirty || saving}
+        >
           <Save className="size-3.5" />
-          Save Changes
+          {saving ? "Saving…" : "Save Changes"}
         </Button>
       </div>
 
@@ -1034,9 +1058,14 @@ export function HQSettingsClient({
 
       <Separator />
       <div className="flex justify-end">
-        <Button size="sm" className="gap-1.5" onClick={save} disabled={!dirty}>
+        <Button
+          size="sm"
+          className="gap-1.5"
+          onClick={save}
+          disabled={!dirty || saving}
+        >
           <Save className="size-3.5" />
-          Save HQ Settings
+          {saving ? "Saving…" : "Save HQ Settings"}
         </Button>
       </div>
 

@@ -378,6 +378,64 @@ export const accountingStructureSchema = z.object({
 export type AccountingStructure = z.infer<typeof accountingStructureSchema>;
 
 // ============================================================================
+// Network-wide policy — the cross-location toggles HQ Settings edits.
+//
+// These lived on `HQSettings` in `src/data/locations.ts`, a fixture keyed to
+// three fictional Montreal branches. The values were never a business's
+// choice; they were a seed file's opinion, and every network-scale facility
+// on the platform was silently handed the same one.
+//
+// ── DEFAULTS ARE ALL "NOT SHARED / NOT DECIDED" ────────────────────────────
+//
+// A facility that has never opened this screen keeps every location's data
+// scoped to itself: no toggle here can be read as "the owner agreed to pool
+// customer data, gift cards or loyalty points across branches" until they
+// actually say so. That mirrors NO_TAX / NO_PRICING_RULES / NO_LOYALTY_PROGRAM
+// below — a default is not a stored value, and money/safety-adjacent sharing
+// especially is never assumed. `staff_choice` for transfer pricing is the same
+// idea for a one-shot decision: defer to a human rather than silently pick a
+// side.
+//
+// ── WHAT STAYS ON THE FIXTURE ──────────────────────────────────────────────
+//
+// The branch list itself, the per-location onboarding checklist (needs
+// per-location hours/staff/taxes that exist nowhere real yet) and network
+// billing (no facility-pays-Yipyy subscription table exists anywhere in this
+// codebase) are NOT part of this domain — converting them would either show a
+// second, contradictory location list on the same page or invent numbers for
+// a billing system that was never built. See HQSettingsClient.tsx.
+// ============================================================================
+
+const scopeSchema = z.enum(["global", "per_location"]);
+
+export const networkPolicySchema = z.object({
+  sharedStaffPool: z.boolean(),
+  centralizedCustomerData: z.boolean(),
+  pricingModel: z.enum(["centralized", "per_location"]),
+  agreementsScope: scopeSchema,
+  tagsScope: scopeSchema,
+  paymentMethodsScope: scopeSchema,
+  internalNotesScope: scopeSchema,
+  transferRequiresCustomerApproval: z.boolean(),
+  transferPricingPolicy: z.enum([
+    "keep_original",
+    "apply_destination",
+    "staff_choice",
+  ]),
+  sharedEmailTemplates: z.boolean(),
+  sharedAutomations: z.boolean(),
+  crossLocationLoyalty: z.boolean(),
+  crossLocationGiftCards: z.boolean(),
+  sharedWaivers: z.boolean(),
+  sharedIncidentHistory: z.boolean(),
+  sharedMedicalRecords: z.boolean(),
+  brandingNameScope: z.enum(["network", "per_location", "both"]),
+  brandingLogoScope: scopeSchema,
+  brandingColorScope: scopeSchema,
+});
+export type NetworkPolicy = z.infer<typeof networkPolicySchema>;
+
+// ============================================================================
 // Evaluation Form Template (configurable by facility)
 // ============================================================================
 
