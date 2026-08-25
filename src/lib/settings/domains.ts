@@ -13,6 +13,7 @@ import { NO_YIPYY_PAY, yipyyPayConfigSchema } from "@/lib/settings/yipyy-pay";
 
 import {
   bookingRulesSchema,
+  groomingSchedulingSchema,
   dropOffPickUpOverrideSchema,
   evaluationFormTemplateSchema,
   moduleAddonSchema,
@@ -66,6 +67,7 @@ import type {
   FacilityBookingFlowConfig,
   ModuleConfig,
   TipConfig,
+  GroomingScheduling,
 } from "@/types/facility";
 
 // ============================================================================
@@ -131,9 +133,25 @@ const DEFAULT_HOURS: BusinessHours = businessHours;
 const DEFAULT_RULES: BookingRules = bookingRules;
 const DEFAULT_TIPS: TipConfig = tipConfig;
 
+// The shipped defaults, kept as the fallback rather than seeded into every
+// facility: a facility that has never opened the screen behaves exactly as it
+// did before this domain existed.
+const DEFAULT_GROOMING_SCHEDULING: GroomingScheduling = {
+  smartSchedulingEnabled: true,
+  slotGranularityMin: 30,
+  defaultBufferMin: 15,
+};
+
 export const SETTING_DOMAINS = {
   business_hours: { schema: businessHoursSchema, fallback: DEFAULT_HOURS },
   booking_rules: { schema: bookingRulesSchema, fallback: DEFAULT_RULES },
+  // How grooming slots are offered. Read by the booking dialog, so a facility
+  // running one granularity while a colleague's browser runs another is not a
+  // display bug — the two book different things.
+  grooming_scheduling: {
+    schema: groomingSchedulingSchema,
+    fallback: DEFAULT_GROOMING_SCHEDULING,
+  },
   // Money. `enabled`, the percentage options and the preferred index decide
   // what a customer is asked to add to their bill, so a facility running one
   // set of tip tiers while the payment screen offers another is not a display

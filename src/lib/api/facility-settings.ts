@@ -20,6 +20,7 @@ import type {
   FacilityBookingFlowConfig,
   ModuleConfig,
   TipConfig,
+  GroomingScheduling,
 } from "@/types/facility";
 import type { PricingRules } from "@/lib/settings/pricing";
 import type { TaxConfig } from "@/lib/settings/tax";
@@ -51,6 +52,7 @@ export interface SettingState<T> {
 export interface FacilitySettings {
   business_hours: SettingState<BusinessHours>;
   booking_rules: SettingState<BookingRules>;
+  grooming_scheduling: SettingState<GroomingScheduling>;
   tip_config: SettingState<TipConfig>;
   tax_config: SettingState<TaxConfig>;
   /** Overtime rule + statutory holidays. `configured: false` = nobody has said. */
