@@ -9,6 +9,12 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  # The full 59-spec suite, nightly. 03:00 UTC is after the working day in both
+  # timezones this is developed in and before the Clover sweep's busiest window.
+  schedule:
+    - cron: "0 3 * * *"
+  # And on demand, for the push you want the whole suite to see before it lands.
+  workflow_dispatch:
 
 # ── A RUN ON `main` IS NEVER CANCELLED ──────────────────────────────────────
 #
@@ -304,8 +310,20 @@ jobs:
   # and role overrides were identical before and after a full run. Anything
   # added to `test:e2e:ci` must clean up after itself the way
   # role-editor-writes.spec.ts does.
+  # ── SPLIT 2026-08-25: THE GATE RUNS ON EVERY PUSH, THE REST NIGHTLY ──────
+  #
+  # 59 specs is ~45 minutes, and GitHub holds only ONE pending run per branch —
+  # so with two people pushing to main, each new push cancelled the previously
+  # QUEUED run and nothing finished. Commits went unverified and production
+  # drifted from main, not because a test failed but because no test ever got
+  # to run. The suite length was the cause; everything else was a symptom.
+  #
+  # So this job now runs the 12 specs that guard the two things worth blocking
+  # a push over: the authorisation boundary, and money. The other 47 still run,
+  # nightly and on demand, in the e2e-full job below — the coverage is not
+  # dropped, it is rescheduled.
   e2e:
-    name: e2e (auth, access & operations)
+    name: e2e (access & money; full suite nightly)
     runs-on: ubuntu-latest
     # 21 specs now, not 10. Measured locally: auth ~4 min, operations ~8 min,
     # plus install and a build. 30 left no room for a slow runner.
@@ -313,7 +331,7 @@ jobs:
     # NOTE this job is NOT one of the four required status checks (typecheck,
     # lint, format, build). It reports; it does not gate — and pushes go
     # straight to main anyway. Run `bun run test:e2e:ci` BEFORE pushing.
-    timeout-minutes: 45
+    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 50 || 25 }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -409,7 +427,26 @@ jobs:
           WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-        run: bun run test:e2e:ci
+        # ── ONE JOB, TWO SUITES, CHOSEN BY WHAT TRIGGERED IT ──────────────
+        #
+        # A push or a PR runs the 12-spec gate: the authorisation boundary and
+        # money, the two things worth blocking a push over, in minutes rather
+        # than three quarters of an hour.
+        #
+        # The nightly schedule and a manual workflow_dispatch run all 59. The
+        # coverage is not dropped, it is rescheduled — and `bun run test:e2e:ci`
+        # is still the command to run by hand before anything that matters.
+        #
+        # A second job would have meant duplicating ~100 lines of preflight,
+        # server build and purge, and the two would have drifted.
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Full suite (59 specs)."
+            bun run test:e2e:ci
+          else
+            echo "Gate (12 specs: access & money). The full suite runs nightly."
+            bun run test:e2e:gate
+          fi
 
       # ── THE SUITE TAKES ITS BOOKINGS BACK OUT ───────────────────────────
       #

@@ -28,31 +28,38 @@ Every task follows: **Ground → Plan → Implement → Verify → Encode.**
 
 There **is** a test runner: Playwright, 91 spec files under [tests/e2e/](tests/e2e/), driving a real browser against a real server. It was described here as absent long after it existed. "Green" = the CI gates, the auth & access specs, and a look at the touched journey.
 
-| Command                                | Purpose                                                                                                               |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `bun run dev`                          | Dev server (webpack); `bun run dev:turbo` for turbo                                                                   |
-| `bun run typecheck`                    | `tsc --noEmit` — the primary gate (also runs on pre-commit & pre-push)                                                |
-| `bun run lint`                         | ESLint (cached); `bun run lint:fix` to autofix                                                                        |
-| `bun run format:check`                 | Prettier check; `bun run format` to write                                                                             |
-| `bun run build`                        | `next build` — full production build (CI runs this)                                                                   |
-| `bun run prune`                        | Knip — dead-code / unused-export report                                                                               |
-| `bun run test:e2e`                     | The whole Playwright suite (91 files, ~45 min, one worker — see the debt map before trusting a run)                   |
-| `bun run test:e2e:ci`                  | The 59 specs CI runs on every PR — auth & access, daily operations, scheduling, payroll, loyalty, report cards, tasks |
-| `bun run test:sql`                     | The 53 SQL files — RLS, grants, database invariants. Runs in CI. ~90s; needs `SUPABASE_DB_URL`                        |
-| `bun run check:pricing`                | Project-specific pricing-consistency script                                                                           |
-| `bun run check:settings-wiring`        | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                                            |
-| `bun run check:rls-writes`             | Fails if an API update/delete cannot tell an RLS refusal from a no-op                                                 |
-| `bun run check:grooming-menu`          | Fails if a screen reads the grooming menu from the fixture, not Postgres                                              |
-| `bun run check:facility-from-session`  | Fails if an API route takes the facility from the request rather than the session or a parent row                     |
-| `bun run check:success-claims`         | Fails if a screen claims an action succeeded with nothing that could perform it                                       |
-| `bun run check:settings-fixture`       | Fails if a screen reads a facility-owned value (name, hours, rules, tips) from `src/data/settings`                    |
-| `bun run check:passkey-email-verified` | Fails if the magic-auth bridge escapes its one file, or a passkey verify route drops its `emailVerified` check        |
-| `bun run check:migration-versions`     | Fails if two migrations share a version number, so `db push` cannot pick its own order                                |
-| `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                     |
+| Command                                | Purpose                                                                                                             |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `bun run dev`                          | Dev server (webpack); `bun run dev:turbo` for turbo                                                                 |
+| `bun run typecheck`                    | `tsc --noEmit` — the primary gate (also runs on pre-commit & pre-push)                                              |
+| `bun run lint`                         | ESLint (cached); `bun run lint:fix` to autofix                                                                      |
+| `bun run format:check`                 | Prettier check; `bun run format` to write                                                                           |
+| `bun run build`                        | `next build` — full production build (CI runs this)                                                                 |
+| `bun run prune`                        | Knip — dead-code / unused-export report                                                                             |
+| `bun run test:e2e`                     | The whole Playwright suite (91 files, ~45 min, one worker — see the debt map before trusting a run)                 |
+| `bun run test:e2e:gate`                | The 12 specs CI runs on every push — the authorisation boundary, and money                                          |
+| `bun run test:e2e:ci`                  | The full suite CI runs NIGHTLY — auth & access, daily operations, scheduling, payroll, loyalty, report cards, tasks |
+| `bun run test:sql`                     | The 53 SQL files — RLS, grants, database invariants. Runs in CI. ~90s; needs `SUPABASE_DB_URL`                      |
+| `bun run check:pricing`                | Project-specific pricing-consistency script                                                                         |
+| `bun run check:settings-wiring`        | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                                          |
+| `bun run check:rls-writes`             | Fails if an API update/delete cannot tell an RLS refusal from a no-op                                               |
+| `bun run check:grooming-menu`          | Fails if a screen reads the grooming menu from the fixture, not Postgres                                            |
+| `bun run check:facility-from-session`  | Fails if an API route takes the facility from the request rather than the session or a parent row                   |
+| `bun run check:success-claims`         | Fails if a screen claims an action succeeded with nothing that could perform it                                     |
+| `bun run check:settings-fixture`       | Fails if a screen reads a facility-owned value (name, hours, rules, tips) from `src/data/settings`                  |
+| `bun run check:passkey-email-verified` | Fails if the magic-auth bridge escapes its one file, or a passkey verify route drops its `emailVerified` check      |
+| `bun run check:migration-versions`     | Fails if two migrations share a version number, so `db push` cannot pick its own order                              |
+| `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                   |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
 
-**Touching auth, a portal gate, a permission or an identity — or bookings, boarding, daycare, rooms, the care log, the calendar or the roster?** Run `bun run test:e2e:ci` too. It is **59** specs now, not 10 — and this number went stale FOUR times before `bun run check:doc-counts` started deriving it from `package.json`, so let the gate count it rather than trusting the prose (or count it yourself with (`bun -e 'console.log(require("./package.json").scripts["test:e2e:ci"].split(/\s+/).length-2)'`) rather than trusting the prose. Roughly: 24 auth & access and daily operations, 9 scheduling, 2 payroll, 8 loyalty, 1 report cards, 1 task templates. Each batch earned its place on its first run — the operations set found a production 500 on booking creation, a checkout that priced with no late fee while settings loaded, and an empty board caused by reading a PostgREST to-one relation as an array; the scheduling set found a UTC window that dropped every night shift out of its own day, a wage that could be read but never written, and a groomer told they could see labour cost. `passkey-auth` joined on 2026-08-22 and drives a CDP virtual authenticator, so it is Chromium-only by construction.
+**Touching auth, a portal gate, a permission or an identity — or bookings, boarding, daycare, rooms, the care log, the calendar or the roster?** Run `bun run test:e2e:ci` too — the whole thing, by hand, before you push.
+
+**The suite was split on 2026-08-25**, and it is worth knowing why before deciding which to run. 59 specs is roughly 45 minutes; GitHub holds only ONE pending run per branch; so with two people pushing to `main`, each new push cancelled the previously QUEUED run and nothing ever finished. Commits went unverified and production drifted from `main` — not because a test failed, but because no test got to run. The suite length was the cause and everything else was a symptom.
+
+So the gate is **12** specs, and it runs on every push: the authorisation boundary (`admin-portal-enforced`, `facility-access-level`, `facility-identity`, `employee-identity`, `server-permissions`, `staff-field-exposure`, `role-editor-writes`, `staff-invite-gate`, `passkey-auth`) and money (`yipyy-pay`, `gift-cards`), plus `booking-write-integrity`, which is where a production 500 was once found. And the full suite is **59** specs, running nightly at 03:00 UTC, on `workflow_dispatch`, and whenever you run it yourself. The coverage is not dropped — it is rescheduled.
+
+Let `bun run check:doc-counts` keep both numbers honest rather than trusting this paragraph: they went stale FOUR times before it started deriving them from `package.json`. Each batch earned its place on its first run — the operations set found a production 500 on booking creation, a checkout that priced with no late fee while settings loaded, and an empty board caused by reading a PostgREST to-one relation as an array; the scheduling set found a UTC window that dropped every night shift out of its own day, a wage that could be read but never written, and a groomer told they could see labour cost. `passkey-auth` drives a CDP virtual authenticator, so it is Chromium-only by construction.
 
 CI runs exactly that command, but **the e2e job is not one of the four required status checks** — it reports, it does not gate, and pushes go straight to `main` regardless. Running it locally first is the only thing that actually stops a bad commit. Fastest locally against a built server rather than the dev one:
 
@@ -110,8 +117,8 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
   Hobby-plan entry in the debt map.
 
 - **Never weaken a gate** (a lint rule, the tsconfig `strict` flag, a CI step, a husky hook) to make work pass. Propose gate changes explicitly and separately.
-- **Manual verification against the touched journey is still mandatory** — the suite covers authorisation and identity, not every screen. What it does cover, CI now enforces: `bun run test:e2e:ci` runs on every PR, so a loosened gate fails the build instead of shipping.
-- A spec added to `test:e2e:ci` **must clean up after itself**. There is one Postgres and CI writes to it; see the `afterAll` in [role-editor-writes.spec.ts](tests/e2e/role-editor-writes.spec.ts).
+- **Manual verification against the touched journey is still mandatory** — the suite covers authorisation and identity, not every screen. What it does cover, CI now enforces: `bun run test:e2e:gate` runs on every push and the full suite nightly, so a loosened gate fails the build instead of shipping.
+- A spec added to either suite **must clean up after itself**. There is one Postgres and CI writes to it; see the `afterAll` in [role-editor-writes.spec.ts](tests/e2e/role-editor-writes.spec.ts).
 - **Touched a migration, a policy, a grant or a `SECURITY DEFINER` function? Run `bun run test:sql`.** It is 53 files and ~90 seconds, it runs in CI on every push, and it is the only thing that reads the database back rather than trusting that a migration applied. Until 2026-08-22 nothing ran it at all: `rpc-session-required.sql` had been failing unread, naming eleven anon-callable functions, while the rule it enforces was broken a fifth time. A test nobody runs is worse than no test — it is the appearance of a gate.
 - **A revoke is not verified by having been written.** One naming a privilege the role does not hold succeeds silently and looks identical to one that worked. Assert it against `has_function_privilege(...)` afterwards. `revoke ... from public` and `revoke ... from anon` are _different grants_ and you almost always need **both** — see the two debt-map entries and 20260822610000, which exists only because the first attempt named one of them.
 - Boy-scout cleanup is **opt-in** — only refactor adjacent legacy code when explicitly asked.
