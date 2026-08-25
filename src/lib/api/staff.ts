@@ -192,3 +192,25 @@ export function useUpdateStaffHomeLocation() {
       }),
   });
 }
+
+export interface StaffHomeLocationSummary {
+  staffId: string;
+  name: string;
+  claimed: boolean;
+  homeLocationId: string | null;
+}
+
+/** Every staff member's home branch in one request -- for grouping a whole
+ *  roster by location, where `useStaffHomeLocation` (one id at a time) would
+ *  mean a request per row. */
+export function useStaffHomeLocations() {
+  return useQuery({
+    queryKey: ["staff", "home-locations"] as const,
+    queryFn: () =>
+      liveFetch<StaffHomeLocationSummary[]>(
+        "/api/staff/home-locations",
+        () => [],
+        "staff-home-locations",
+      ),
+  });
+}
