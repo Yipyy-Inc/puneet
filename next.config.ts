@@ -27,6 +27,25 @@ const supabaseHost = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  // ── SELF-HOSTED: A SERVER THAT CARRIES ITS OWN DEPENDENCIES ─────────────
+  //
+  // Emits `.next/standalone` — a `server.js` plus only the traced subset of
+  // node_modules, so the production image does not ship the whole install.
+  //
+  // ONLY the container build asks for it. Gated on an env var rather than set
+  // outright so that Vercel keeps building precisely as it does today for the
+  // duration of the migration — which is what makes rolling back to Vercel a
+  // real fallback rather than a second thing to debug under pressure.
+  //
+  // This interacts with `outputFileTracingIncludes` below, and the interaction
+  // is the point: traced files land at `.next/standalone/src/lib/clover/fonts/`
+  // and `receipt-image.ts` resolves them as
+  // `process.cwd() + "src/lib/clover/fonts"`. So the container's WORKDIR must
+  // be the standalone root, or the receipt prints boxes instead of glyphs. The
+  // Dockerfile copies the fonts explicitly and probes them rather than trusting
+  // any of this.
+  output: process.env.BUILD_STANDALONE === "1" ? "standalone" : undefined,
+
   // ── THE RECEIPT RENDERER NEEDS ITS FONT IN THE BUNDLE ──────────────────
   //
   // Vercel's serverless runtime ships no system fonts, so librsvg rendered

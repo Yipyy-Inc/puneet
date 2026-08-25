@@ -10,9 +10,25 @@ on:
   pull_request:
     branches: [main, develop]
 
+# ── A RUN ON `main` IS NEVER CANCELLED ──────────────────────────────────────
+#
+# `cancel-in-progress: true` everywhere was actively dangerous once `main`
+# started deploying, and it was already costing something before that:
+#
+#   1. It would kill the deploy job MID-SSH — quite possibly between "started
+#      the new container" and "pointed Caddy at it" — leaving the box in a state
+#      no script knows how to describe.
+#   2. It cancels the e2e job, which skips `afterAll`, which leaks rows into the
+#      one shared production Postgres. The next run's failure then looks like an
+#      application bug. That has happened twice.
+#
+# With `false`, a second push to `main` QUEUES behind the first rather than
+# killing it — runs stay serialised, which is what the shared database needs,
+# and no job is ever interrupted halfway. Feature branches still cancel, because
+# there the only cost is CI minutes.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   typecheck:
