@@ -1,0 +1,149 @@
+# ============================================================================
+# Yipyy — what runs on the VPS.
+#
+# Two containers. The app never binds a host port: the ONLY way in is through
+# Caddy on 80/443. That matters more than it looks — Docker publishes ports by
+# writing iptables rules directly, bypassing ufw entirely, so a published app
+# port would be reachable from the internet whatever the firewall says.
+#
+# ── DEPLOY AND ROLLBACK ────────────────────────────────────────────────────
+#
+#   IMAGE_TAG=<sha> docker compose up -d
+#
+# and rollback is the same line with an earlier SHA. Every commit's image stays
+# in GHCR, so going back is a pull, not a rebuild.
+#
+# ── KNOWN LIMIT: THIS RECREATES, IT DOES NOT ROLL ─────────────────────────
+#
+# A single app container means `up -d` stops the old one before starting the
+# new: a short gap, and `stop_grace_period` below means a card payment in
+# flight is allowed to finish rather than being severed. That is acceptable for
+# the staging host and for the first facility, and it is NOT acceptable for the
+# apex once every facility is behind it. Blue/green — two app services, one
+# Caddy, swapped with `caddy reload` — is required BEFORE the final DNS flip.
+# Recorded here rather than discovered then.
+# ============================================================================
+
+services:
+  app:
+    image: ghcr.io/yipyy-inc/puneet:${IMAGE_TAG:?set IMAGE_TAG to a commit sha}
+    container_name: yipyy-app
+    restart: unless-stopped
+
+    # Runtime secrets live in a root-owned .env beside this file — never in the
+    # image, never in GitHub Actions. The six NEXT_PUBLIC_* values are NOT here:
+    # they were inlined at build time and setting them now does nothing at all.
+    #
+    # WORKOS_COOKIE_DOMAIN must be `.yipyy.com` WITH the leading dot, or
+    # sign-in appears to succeed and bounces straight back to the login page.
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      # The box has 7.8 GB and its swap is insurance, not headroom. An uncapped
+      # Node heap gets the container OOM-killed with no log line anywhere; a
+      # capped one garbage-collects instead.
+      NODE_OPTIONS: "--max-old-space-size=2048"
+      # The facility_takings RPC does its own timezone bucketing. A box-local
+      # timezone would silently reinterpret it.
+      TZ: UTC
+
+    # PID 1 in a container neither reaps children nor forwards signals the way
+    # an init does. Without this, SIGTERM never reaches Node and every stop
+    # waits out the full grace period.
+    init: true
+
+    # Longer than the 150 seconds `src/lib/clover/terminal.ts` will wait for a
+    # human to tap a card. A deploy must not sever a card-present payment.
+    stop_grace_period: 200s
+
+    # Deliberately no `ports:`. See the header.
+    expose:
+      - "3000"
+
+    # `receipt-image.ts` sets XDG_CACHE_HOME=/tmp before loading sharp, so
+    # fontconfig writes its cache here. tmpfs keeps it off disk and writable by
+    # the unprivileged uid the image runs as.
+    tmpfs:
+      - /tmp:size=256m,mode=1777,uid=10001,gid=10001
+
+    volumes:
+      # next/image now transcodes on 2 vCPU rather than at Vercel's edge.
+      # Without this the cache is empty after every deploy and the first page
+      # load re-optimises every Supabase-hosted facility logo.
+      - next_image_cache:/app/.next/cache
+
+    networks:
+      # Caddy reaches the TLS gate at `http://app:3000`, so this name is part of
+      # the Caddyfile's contract.
+      - edge
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 4
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: yipyy-caddy
+    restart: unless-stopped
+    init: true
+    depends_on:
+      - app
+
+    ports:
+      - "80:80"
+      - "443:443"
+      # HTTP/3. Harmless if unused; browsers increasingly use it.
+      - "443:443/udp"
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # ── DO NOT LOSE THIS ────────────────────────────────────────────────
+      # Every issued certificate AND the ACME account key. Recreate this volume
+      # and every host re-issues at once, against a limit of 50 certificates per
+      # registered domain per week. It is the only stateful thing on an
+      # otherwise stateless box, so it is the one thing worth snapshotting.
+      - caddy_data:/data
+      - caddy_config:/config
+
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      TZ: UTC
+
+    networks:
+      - edge
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  caddy_data:
+  caddy_config:
+  next_image_cache:
+
+networks:
+  edge:
+    driver: bridge
+    # NOT `internal`: the app needs egress to Supabase, WorkOS, Clover, Resend,
+    # Twilio and Anthropic, and Caddy needs it for ACME.

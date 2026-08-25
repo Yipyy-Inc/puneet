@@ -85,6 +85,14 @@ export const config = {
      *   api/twilio, api/health     — machine-to-machine; Twilio signs its own
      *                                webhooks and carries no session, so
      *                                establishing one would be pure latency
+     *   api/internal              — the TLS `ask` endpoint. Caddy calls it
+     *                                DURING A TLS HANDSHAKE, before the
+     *                                certificate exists, to decide whether to
+     *                                issue one. There is no session and cannot
+     *                                be one; running authkit() here would put a
+     *                                WorkOS token refresh on the handshake
+     *                                critical path of every first-time visitor
+     *                                to a facility subdomain.
      *
      * api/webhooks is NOT excluded: the user-sync webhook wants the proxy to run
      * (it verifies by signature, not by session), and adding exclusions here is
@@ -93,6 +101,6 @@ export const config = {
      * /auth/callback is NOT excluded either — it must run so AuthKit can set the
      * session cookie it just earned.
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/twilio|api/health|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/twilio|api/health|api/internal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

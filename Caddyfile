@@ -1,0 +1,144 @@
+# ============================================================================
+# Yipyy — TLS termination and reverse proxy.
+#
+# Replaces what Vercel's edge did, and replaces `src/lib/vercel/domains.ts`
+# entirely: a facility subdomain no longer needs an API call to acquire a
+# certificate, because Caddy issues one on the first request to it.
+# ============================================================================
+
+{
+	# Let's Encrypt expiry notices. Optional — Caddy registers without one.
+	email {$ACME_EMAIL}
+
+	servers {
+		timeouts {
+			read_header 15s
+			read_body 30s
+			idle 620s
+			# ── `write` IS DELIBERATELY NOT SET ─────────────────────────────
+			# It caps the entire response. `src/lib/clover/terminal.ts` waits up
+			# to 150 seconds for a human to tap a card on a Clover Flex, and
+			# calls that "not tuning, a correctness requirement". A write
+			# timeout below it severs the connection mid-payment: the customer
+			# is charged and Yipyy records nothing. The default is unlimited.
+			# Leave it that way.
+		}
+	}
+
+	# ── ON-DEMAND TLS ──────────────────────────────────────────────────────
+	#
+	# Caddy asks this endpoint before issuing for a hostname it has not seen:
+	# GET ...?domain=<host>, and 2xx authorises it.
+	#
+	# MANDATORY, not a refinement. DNS keeps a wildcard record, so every
+	# conceivable *.yipyy.com name resolves here, and without this gate anyone
+	# opening TLS connections with random SNIs makes us request certificates for
+	# them. Let's Encrypt allows 50 per registered domain per week — exhaust it
+	# and a REAL new facility cannot get a certificate for seven days.
+	#
+	# Reached at the container alias, so it never passes through a site block.
+	on_demand_tls {
+		ask http://app:3000/api/internal/tls-ask
+	}
+}
+
+# Shared upstream. Imported by both site blocks so the apex and the facility
+# subdomains cannot drift apart in how they proxy.
+(yipyy_upstream) {
+	encode zstd gzip
+
+	# The TLS gate is Caddy→app over the container network. Answering it
+	# publicly would let anyone enumerate which facility slugs exist.
+	handle /api/internal/* {
+		abort
+	}
+
+	handle {
+		reverse_proxy app:3000 {
+			# ── HOST IS PRESERVED, AND THAT IS CADDY'S DEFAULT ────────────
+			#
+			# There is deliberately NO `header_up Host` line here. Caddy passes
+			# the incoming Host through unchanged (unlike nginx, which rewrites
+			# it to the upstream address), and writing the directive out is how
+			# somebody later "helpfully" sets it to {upstream_hostport} and
+			# breaks all three of these at once:
+			#
+			#   src/proxy.ts:70        facilitySlugFromHost(host) → x-facility-slug
+			#   workos-actions.ts:44   the OAuth redirect_uri and signOut returnTo
+			#   passkeys.ts:66         the WebAuthn origin, compared byte for byte
+			#
+			# Note it reads `host` and never `x-forwarded-host`. Do not add one.
+
+			# ── PROTO IS A FACT HERE, NOT A CLIENT ASSERTION ──────────────
+			# This block only ever serves TLS, so the value is pinned rather
+			# than forwarded. header_up with a single value REPLACES, so a
+			# browser sending its own `X-Forwarded-Proto: http` cannot downgrade
+			# the origin that passkeys.ts compares against.
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+
+			transport http {
+				dial_timeout 5s
+
+				# ── THE INTERMITTENT 502 YOU WOULD SPEND A WEEK ON ────────
+				# Node's default server.keepAliveTimeout is 5 seconds. Caddy's
+				# default upstream idle keep-alive is TWO MINUTES. So Caddy
+				# keeps pooled connections that Node has already closed, and
+				# reuse loses the race: a few 502s per thousand requests,
+				# correlated with nothing. Shorter than Node's, so Caddy always
+				# closes first.
+				keepalive 3s
+				keepalive_idle_conns 32
+
+				# The real ceiling on a handler now that `maxDuration` is dead
+				# code off Vercel — nothing else bounds one. 180s sits above
+				# terminal.ts's own 150s budget, so its AbortSignal fires first
+				# and the app returns a real error instead of Caddy cutting the
+				# socket underneath a card payment.
+				response_header_timeout 180s
+				read_timeout 200s
+			}
+
+			# Retry only a connection that was never established. Never one that
+			# was accepted — /api/payments/* is not idempotent.
+			lb_try_duration 3s
+			lb_try_interval 250ms
+		}
+	}
+}
+
+# ── The apex and www ───────────────────────────────────────────────────────
+# Named explicitly so their certificates are obtained at startup and renewed
+# regardless of app health. These two carry the Clover webhook, the platform
+# admin and customer sign-in; none should wait on an ACME round trip.
+yipyy.com, www.yipyy.com {
+	import yipyy_upstream
+}
+
+# ── Every facility subdomain ───────────────────────────────────────────────
+# A bare `https://` is a catch-all: it matches any SNI the block above does not
+# claim. It cannot be written `*.yipyy.com`, because a wildcard SITE address
+# makes Caddy try to obtain a wildcard CERTIFICATE, which needs DNS-01, which
+# needs the nameservers — the whole reason this is on-demand instead.
+https:// {
+	tls {
+		on_demand
+	}
+
+	# Defence in depth ONLY, and it is important to know why: by the time any
+	# matcher runs, the handshake is complete and the certificate has ALREADY
+	# been issued. This stops the app from seeing a foreign request; it does not
+	# stop issuance. `/api/internal/tls-ask` is what stops issuance.
+	@foreign not host *.yipyy.com yipyy.com
+	abort @foreign
+
+	import yipyy_upstream
+}
+
+# ── Plain HTTP ─────────────────────────────────────────────────────────────
+# Named sites get an automatic redirect; the catch-all above does not, so it is
+# spelled out. Caddy binds its ACME HTTP-01 handler ahead of these routes, so
+# certificate validation still completes.
+http:// {
+	redir https://{host}{uri} 308
+}

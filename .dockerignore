@@ -1,0 +1,70 @@
+# ============================================================================
+# What never enters the Docker build context.
+#
+# This file is load-bearing, not hygiene. `.claude/worktrees/` holds TWO
+# complete checkouts of this repository, each with its own `node_modules` and
+# its own `.next`. Without the exclusions below, `docker build` uploads several
+# gigabytes to the daemon before it runs a single instruction, and does it on
+# every build because the context hash changes whenever either worktree does.
+#
+# The rule for adding to this file: if the production image does not read it at
+# runtime and `next build` does not read it at build time, it does not belong in
+# the context.
+# ============================================================================
+
+# ── Agent worktrees: two full duplicate checkouts ──────────────────────────
+.claude/
+
+# ── Dependencies and build output (reinstalled/rebuilt inside the image) ───
+node_modules
+.next
+out
+build
+dist
+
+# ── Secrets. `.env.example` is deliberately NOT excluded: it documents the
+#    variable names and carries no values. Every other .env holds real keys and
+#    must never reach an image layer, where it would survive deletion.
+.env
+.env.*
+!.env.example
+
+# ── Version control and CI ────────────────────────────────────────────────
+.git
+.gitignore
+.github
+.husky
+
+# ── Tests and their artifacts. The image serves the app; it never runs them.
+tests
+playwright-report
+test-results
+blob-report
+.playwright
+
+# ── Database work. Migrations are applied against Supabase, never from the
+#    running container.
+supabase
+
+# ── Editor, OS and tooling noise ──────────────────────────────────────────
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.swp
+.eslintcache
+.turbo
+.vercel
+
+# ── Documentation and planning ────────────────────────────────────────────
+docs
+*.md
+!README.md
+
+# ── Container files themselves: including them would invalidate the build
+#    cache on every edit to the Caddyfile, which the app image never reads.
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+Caddyfile
