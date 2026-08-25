@@ -337,4 +337,13 @@ export const auditLogQueries = {
     queryFn: () =>
       readTrail(`?entityTypes=${SCHEDULING_ENTITY_TYPES.join(",")}`),
   }),
+
+  /** Everything recorded against a booking -- today that's only branch
+   *  transfers (`bookings_audit_location`, 20260825150000), but scoped by
+   *  entity type rather than by action so a future booking-audit trigger
+   *  shows up here too without a query change. */
+  bookings: () => ({
+    queryKey: ["audit-logs", "bookings"] as const,
+    queryFn: () => readTrail(`?entityTypes=booking`),
+  }),
 };
