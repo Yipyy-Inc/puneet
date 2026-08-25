@@ -1,8 +1,8 @@
-import { sharedStaffPool } from "@/data/hq-analytics";
-import { getLocationsByFacility } from "@/data/locations";
 import { StaffPoolClient } from "@/components/hq/StaffPoolClient";
 
+// The roster comes from Postgres now, grouped by real home-branch
+// assignments -- it used to be `sharedStaffPool`, ten fixture staff who
+// belonged to three branches nobody's business actually has.
 export default function HQStaffPage() {
-  const locations = getLocationsByFacility(11);
-  return <StaffPoolClient staff={sharedStaffPool} locations={locations} />;
+  return <StaffPoolClient />;
 }
