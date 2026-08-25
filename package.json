@@ -38,6 +38,7 @@
     "check:customer-identity": "bun scripts/check-customer-identity.ts",
     "check:facility-from-session": "bun scripts/check-facility-from-session.ts",
     "check:link-origin": "bun scripts/check-link-origin.ts",
+    "check:redirect-origin": "bun scripts/check-redirect-origin.ts",
     "check:success-claims": "bun scripts/check-success-claims.ts",
     "check:passkey-email-verified": "bun scripts/check-passkey-email-verified.ts",
     "check:migration-versions": "bun scripts/check-migration-versions.ts",

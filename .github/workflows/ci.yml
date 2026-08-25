@@ -115,6 +115,7 @@ jobs:
             customer-identity \
             facility-from-session \
             link-origin \
+            redirect-origin \
             success-claims \
             passkey-email-verified \
             migration-versions \
@@ -135,7 +136,10 @@ jobs:
             echo "Each of these runs locally with: bun run check:<name>"
             exit 1
           fi
-          echo "All 14 checks passed."
+          # Deliberately not a number. It said "14" while the loop above ran
+          # 15, which is the same stale-count problem check:doc-counts exists
+          # to end — and a count nobody derives is a count that drifts.
+          echo "Every check above passed."
 
   build:
     runs-on: ubuntu-latest
