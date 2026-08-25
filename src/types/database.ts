@@ -2929,6 +2929,7 @@ export type Database = {
           duration_min: number | null;
           facility_id: string;
           id: string;
+          location_id: string | null;
           price: number;
           service_id: string;
           size_label: string;
@@ -2939,6 +2940,7 @@ export type Database = {
           duration_min?: number | null;
           facility_id: string;
           id?: string;
+          location_id?: string | null;
           price: number;
           service_id: string;
           size_label: string;
@@ -2949,6 +2951,7 @@ export type Database = {
           duration_min?: number | null;
           facility_id?: string;
           id?: string;
+          location_id?: string | null;
           price?: number;
           service_id?: string;
           size_label?: string;
@@ -2960,6 +2963,13 @@ export type Database = {
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grooming_service_size_prices_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
             referencedColumns: ["id"];
           },
           {
