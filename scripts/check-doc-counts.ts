@@ -164,9 +164,17 @@ const CLAIMS: Claim[] = [
   },
   {
     file: "CLAUDE.md",
-    pattern: /It is (\d+) specs, not 10/,
+    // Reworded when the suite was split: the sentence used to be "It is 59
+    // specs, not 10", which stopped being true of what CI runs on a push.
+    pattern: /because (\d+) specs is ~45\s+minutes/,
     label: "specs in test:e2e:ci",
     actual: ciSpecCount(),
+  },
+  {
+    file: "CLAUDE.md",
+    pattern: /the (\d+)-spec gate on a push/,
+    label: "specs in test:e2e:gate",
+    actual: gateSpecCount(),
   },
 ];
 

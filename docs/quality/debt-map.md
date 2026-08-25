@@ -1755,7 +1755,31 @@ telling a facility their hardware will not work is a claim worth being sure of.
 It searches `productName`, `model` AND `deviceTypeName`, because reading `model`
 alone reported a supported Flex 4 (`Clover_C406`) as unknown on a live screen.
 
-### 🔴 Two deploy blockers stacked, and the first hid the second
+### 🟢 RESOLVED 2026-08-25 — Two deploy blockers stacked, and the first hid the second
+
+> **This entry is closed because the platform it describes is gone.** Yipyy moved
+> off Vercel to a self-hosted VPS on 2026-08-25 (see
+> [ADR 0006](../architecture/decisions/0006-self-hosted-vps-replaces-vercel.md)).
+> There is no `vercel.json`, no Hobby plan and no deploy-time contract that can
+> fail before a build exists. The cron that could not run more than once a day
+> now runs every fifteen minutes on a systemd timer, which is the difference
+> between a refund issued in Clover's dashboard reaching the booking in minutes
+> rather than in up to a day.
+>
+> **What did NOT go away, and is the reason to keep reading:** the shape of the
+> failure. A deployment that was never created still looks exactly like one you
+> have not checked on. The instruction survives the platform — confirm the
+> deploy, never infer it from the push — and it is now in AGENTS.md against
+> `gh run list` and a live health check rather than against Vercel's API.
+>
+> The second lesson survives too, and is worth more: the entry below was
+> rewritten twice before it was right, because a generic documentation search
+> found nothing and the answer was in a link Vercel had already put in the
+> failure status that nobody clicked.
+
+---
+
+#### Original entry (historical)
 
 Found 2026-08-24, after four hours of believing a push had shipped when nothing
 had. `bun run typecheck && lint && format:check` were green, CI was green
