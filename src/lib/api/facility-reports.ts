@@ -3,7 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 // ============================================================================
-// The five facility reports that have a real source.
+// The six facility reports that have a real source.
 //
 // Each shape below mirrors what the fixture selector it replaces used to
 // return, deliberately: the chart and table JSX in `report-sheet.tsx` is ~700
@@ -35,6 +35,12 @@ export interface ServiceRevenue {
 export interface ServiceHours {
   service: string;
   hours: number;
+}
+
+export interface LocationRevenue {
+  location: string;
+  revenue: number;
+  bookings: number;
 }
 
 export interface OccupancyDay {
@@ -79,6 +85,12 @@ export interface RevenueByServiceData {
   hours: ServiceHours[];
 }
 
+/** No `hours` key -- booked hours per BRANCH isn't a number anyone asked for. */
+export interface RevenueByLocationData {
+  current: LocationRevenue[];
+  previous: LocationRevenue[];
+}
+
 export interface OccupancyData {
   current: OccupancyDay[];
   previous: OccupancyDay[];
@@ -111,6 +123,7 @@ export interface TotalRevenueData {
 
 export type ReportDataset =
   | RevenueByServiceData
+  | RevenueByLocationData
   | OccupancyData
   | CancelledData
   | CustomerValueData

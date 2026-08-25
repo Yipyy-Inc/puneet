@@ -31,6 +31,7 @@ import { createServerClient } from "@/lib/supabase/server";
 /** Exactly the reports that have a real source. Anything else is refused. */
 const REPORTS = new Set([
   "revenue-by-service",
+  "revenue-by-location",
   "occupancy-report",
   "cancelled-bookings",
   "customer-value",
