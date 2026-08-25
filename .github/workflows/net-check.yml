@@ -1,0 +1,58 @@
+name: net-check
+
+# ============================================================================
+# Can a GitHub runner reach the VPS at all?
+#
+# TEMPORARY, and manual only. The uptime check failed from GitHub's runners on
+# all three hostnames with curl exit 000 — a TCP timeout, not a refusal — while
+# the same hosts answered 200 from a laptop and 200 from the box's own loopback.
+# Something between Azure and 2.25.134.220 is dropping packets.
+#
+# This matters far beyond monitoring: the deploy job SSHes from a runner to the
+# same address and has never once executed. If runners cannot reach the box,
+# automated deploys were never going to work either, and the monitoring failure
+# is the symptom that happened to surface first.
+#
+# Separates the possibilities: DNS vs routing, port 443 vs port 22, and whether
+# ICMP gets through when TCP does not.
+# ============================================================================
+
+on:
+  workflow_dispatch:
+
+jobs:
+  reach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Runner egress address
+        run: curl -sS --max-time 20 https://api.ipify.org || echo "(could not determine)"
+
+      - name: DNS
+        run: |
+          getent hosts yipyy.com || echo "getent found nothing"
+          getent ahostsv4 yipyy.com || true
+
+      - name: TCP by IP, bypassing DNS entirely
+        run: |
+          for port in 443 80 22; do
+            printf 'port %s: ' "$port"
+            if timeout 15 bash -c "cat < /dev/null > /dev/tcp/2.25.134.220/${port}" 2>/dev/null; then
+              echo "OPEN"
+            else
+              echo "no answer within 15s"
+            fi
+          done
+
+      - name: TLS handshake by IP
+        run: |
+          timeout 25 openssl s_client -connect 2.25.134.220:443 -servername yipyy.com </dev/null 2>&1 \
+            | grep -E "CONNECTED|subject=|verify|no peer" | head -5 || echo "handshake failed"
+
+      - name: ICMP
+        run: ping -c 3 -W 5 2.25.134.220 || echo "no ICMP reply (often blocked and harmless on its own)"
+
+      - name: Where it stops
+        run: |
+          sudo apt-get install -y -qq traceroute >/dev/null 2>&1 || true
+          timeout 60 traceroute -T -p 443 -m 20 -w 2 2.25.134.220 2>&1 | tail -20 || echo "traceroute unavailable"
