@@ -52,6 +52,20 @@ jobs:
     name: is the site up
     runs-on: ubuntu-latest
     timeout-minutes: 6
+    # ── `gh` NEEDS TO BE TOLD WHICH REPO, BECAUSE NOTHING IS CHECKED OUT ────
+    #
+    # This job has no `actions/checkout` — deliberately, it only makes HTTP
+    # requests — so `gh` cannot infer the repository from a git remote and every
+    # call died with "fatal: not a git repository". That was the THIRD layer of
+    # the same defect: the corroboration query failed on it, `gh issue create`
+    # failed on it, and `gh issue list` in the close step failed on it too,
+    # swallowed by a `|| echo ""`.
+    #
+    # Set at the JOB level rather than per step, so a gh call added later cannot
+    # be written without it.
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: Every host answers
         id: hosts
@@ -130,8 +144,6 @@ jobs:
       - name: Did the previous run fail as well?
         if: failure()
         id: corroborate
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # THREE outcomes, not two. "The previous run passed" and "I could not
           # find out" are different facts, and collapsing them into `else` is
@@ -161,10 +173,12 @@ jobs:
 
       - name: Raise it
         if: failure() && steps.corroborate.outputs.raise == 'yes'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TITLE="Uptime check failing"
+          # The `|| echo ""` IS wanted here, unlike in the close step: if the
+          # lookup fails we fall through to `gh issue create`, which errs toward
+          # raising. Losing an alert is the failure that matters; a duplicate
+          # issue is not.
           NUM=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number' || echo "")
           BODY="The scheduled uptime check failed at $(date -u +%Y-%m-%dT%H:%M:%SZ).
 
@@ -184,10 +198,11 @@ jobs:
 
       - name: Close it out
         if: success()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NUM=$(gh issue list --state open --search "Uptime check failing in:title" --json number --jq '.[0].number' || echo "")
+          # No `|| echo ""`. A failure here used to look identical to "there is
+          # no open issue", so a recovered outage would have left its issue open
+          # for ever and nobody would have known why.
+          NUM=$(gh issue list --state open --search "Uptime check failing in:title" --json number --jq '.[0].number')
           if [ -n "$NUM" ] && [ "$NUM" != "null" ]; then
             gh issue close "$NUM" --comment "Recovered: the uptime check passed at $(date -u +%Y-%m-%dT%H:%M:%SZ)."
           fi
