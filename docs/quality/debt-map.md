@@ -5774,6 +5774,70 @@ in this file. When the owner/manager split needs to be real, it belongs on
 `facility_memberships` beside `access_level`, with RLS reading it — not in a
 hook.
 
+### 🔴 QuickBooks is 27 modules with ZERO backend — do not "convert" a screen on top of it — 2026-08-25
+
+Scoped as a small screen conversion. It is not, and the measurement is the
+whole entry:
+
+```
+src/lib/quickbooks/                27 modules
+localStorage stores in them         8   (connection, settings, mappings,
+                                         setup, sync-queue, synced-documents,
+                                         data-cache, catalog-watch)
+API routes mentioning quickbooks    0
+Postgres tables                     0
+```
+
+One of the modules is literally `oauth-mock.ts`. **No QuickBooks company can be
+connected by anybody, today.** The design is real and careful — money rules,
+document rules, Class tracking gated on the QuickBooks plan tier, a tested
+`bun run check:quickbooks` — but nothing behind it exists. Converting one screen
+onto a real backend would mean building the entire accounting integration:
+Intuit OAuth, server-side token storage in Vault, connection/mapping/sync-log
+tables, and the Accounting API. That needs Intuit app credentials.
+
+**What was actually wrong, and got fixed instead:**
+
+- `/facility/hq/integrations/page.tsx` opened with `const FACILITY_ID = "11"`
+  and rendered `getLocationsByFacility(11)` — the fixture's three Montreal
+  branches. Since `public.locations` became real the same day, this screen was
+  telling every business its branches were Plateau / Laval / Mile End while the
+  Locations screen one click away showed their actual ones.
+- The one-company-or-one-per-branch choice lived in
+  `localStorage["yipyy-quickbooks-settings"]`. It is a fact about how the
+  company is **incorporated** — the bookkeeper and the owner could hold
+  different answers, on two laptops. It is the `accounting_structure` facility
+  settings domain now (no migration; `facility_settings` is keyed
+  `(facility_id, domain)` with no CHECK on `domain`).
+- `QuickBooksLocationCards` — 304 lines offering a per-branch "Connect
+  QuickBooks" button that wrote a mock token to localStorage and reported
+  success — is **deleted**, with the five `location-scopes` helpers that fed it.
+  A connect flow that cannot connect is worse on an accounting screen than
+  anywhere else: the person clicking it will believe their books are being kept.
+  The screen states plainly that QuickBooks cannot be connected yet.
+
+**The trap that nearly got introduced:** moving the mode into
+`facility_settings` while leaving `multiLocationMode()` in `location-scopes.ts`
+reading localStorage would have made **two sources of truth for one answer**,
+and the copy on the sync path — the one that decides which company a sale posts
+to — would have been the wrong one. `syncScopeForTransaction` takes the mode as
+an argument now, and the field is gone from the QuickBooks settings type, so a
+second copy cannot be read back into existence by accident.
+
+**Do instead:** before scoping a screen conversion, measure the substrate, not
+the screen. Two commands settle it:
+
+```
+grep -rl "<feature>" src/app/api/ | wc -l
+select table_name from information_schema.tables where table_name ilike '%<feature>%';
+```
+
+Zero and zero means the feature is designed, not half-built, and "convert the
+screen" is the wrong unit of work. What is still worth doing in that case is
+narrow and real: stop the screen lying about the facility it is showing, move
+any genuine BUSINESS fact it holds into `facility_settings`, delete the controls
+that cannot work, and say so on the page.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

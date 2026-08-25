@@ -348,6 +348,36 @@ export const groomingSchedulingSchema = z.object({
 export type GroomingScheduling = z.infer<typeof groomingSchedulingSchema>;
 
 // ============================================================================
+// How the business is incorporated, for accounting purposes.
+//
+// One QuickBooks company for the whole business, or one per branch? That is not
+// a preference — it is a description of how the business is legally structured,
+// and it is decided once by whoever does the books.
+//
+// It lived in `localStorage` under "yipyy-quickbooks-settings", so the answer
+// was whatever the browser in front of you remembered, and the bookkeeper and
+// the owner could hold different ones.
+//
+// ── WHAT IS DELIBERATELY *NOT* HERE ───────────────────────────────────────
+//
+// Everything else in `src/lib/quickbooks/` — the connection, the OAuth grant,
+// the account mappings, the sync queue. That module is 27 files, 8 localStorage
+// stores, ZERO API routes and ZERO tables, and it contains `oauth-mock.ts`: the
+// integration is designed but not built, and no QuickBooks company can actually
+// be connected today.
+//
+// This one field is here because it is a fact about the BUSINESS that is true
+// whether or not the integration ever ships. The rest waits for the integration
+// itself, and the screen says so rather than implying otherwise.
+// ============================================================================
+
+export const accountingStructureSchema = z.object({
+  /** One set of books for the business, or one per branch. */
+  multiLocationMode: z.enum(["single_company", "company_per_location"]),
+});
+export type AccountingStructure = z.infer<typeof accountingStructureSchema>;
+
+// ============================================================================
 // Evaluation Form Template (configurable by facility)
 // ============================================================================
 

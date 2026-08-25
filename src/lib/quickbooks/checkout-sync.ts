@@ -13,7 +13,10 @@ import {
 } from "./documents/gift-card";
 import { buildServiceSalesReceipt } from "./documents/sales-receipt";
 import { facilityLocations } from "./location-classes";
-import { syncScopeForTransaction } from "./location-scopes";
+import {
+  syncScopeForTransaction,
+  type MultiLocationMode,
+} from "./location-scopes";
 import { syncInvoiceToQuickBooks } from "./document-sync";
 import { getQuickBooksMappings } from "./mappings-store";
 import {
@@ -103,6 +106,16 @@ export function syncCheckoutToQuickBooks(
     creditMemoNumber?: string;
     /** The gift card this sale was tendered against, when known. */
     giftCardCode?: string;
+    /**
+     * From the facility's `accounting_structure` setting.
+     *
+     * Passed in rather than read, because it moved out of this module's
+     * localStorage into `facility_settings` on 2026-08-25 and only a component
+     * can read it. Defaults to one company, which is what a facility that has
+     * never answered gets — never per-location, which would route a sale to a
+     * branch company nobody has set up.
+     */
+    multiLocationMode?: MultiLocationMode;
   } = {},
 ): CheckoutSyncOutcome {
   try {
@@ -113,7 +126,11 @@ export function syncCheckoutToQuickBooks(
 
     // In per-location mode the sale belongs to its branch's own QuickBooks
     // company, which is a different scope with a different token set.
-    const routed = syncScopeForTransaction(scope.facilityId, txn.locationId);
+    const routed = syncScopeForTransaction(
+      scope.facilityId,
+      txn.locationId,
+      options.multiLocationMode ?? "single_company",
+    );
     if (!routed.scope) {
       return { skipped: "nothing_to_sync", warnings: [routed.problem!] };
     }

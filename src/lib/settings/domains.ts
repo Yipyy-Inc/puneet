@@ -14,6 +14,7 @@ import { NO_YIPYY_PAY, yipyyPayConfigSchema } from "@/lib/settings/yipyy-pay";
 import {
   bookingRulesSchema,
   groomingSchedulingSchema,
+  accountingStructureSchema,
   dropOffPickUpOverrideSchema,
   evaluationFormTemplateSchema,
   moduleAddonSchema,
@@ -68,6 +69,7 @@ import type {
   ModuleConfig,
   TipConfig,
   GroomingScheduling,
+  AccountingStructure,
 } from "@/types/facility";
 
 // ============================================================================
@@ -142,6 +144,13 @@ const DEFAULT_GROOMING_SCHEDULING: GroomingScheduling = {
   defaultBufferMin: 15,
 };
 
+// One set of books for the business is the ordinary case, and the safe one: a
+// facility that never opens the screen keeps every branch in one company rather
+// than being told to connect several.
+const DEFAULT_ACCOUNTING_STRUCTURE: AccountingStructure = {
+  multiLocationMode: "single_company",
+};
+
 export const SETTING_DOMAINS = {
   business_hours: { schema: businessHoursSchema, fallback: DEFAULT_HOURS },
   booking_rules: { schema: bookingRulesSchema, fallback: DEFAULT_RULES },
@@ -151,6 +160,17 @@ export const SETTING_DOMAINS = {
   grooming_scheduling: {
     schema: groomingSchedulingSchema,
     fallback: DEFAULT_GROOMING_SCHEDULING,
+  },
+  // Whether the business keeps one set of books or one per branch. A fact about
+  // how the company is incorporated, so it belongs to the facility rather than
+  // to whoever's browser last answered it.
+  //
+  // The QuickBooks CONNECTION is deliberately not a settings domain and is not
+  // stored anywhere: src/lib/quickbooks/ has 27 files, zero API routes and zero
+  // tables. See the note on `accountingStructureSchema` in types/facility.ts.
+  accounting_structure: {
+    schema: accountingStructureSchema,
+    fallback: DEFAULT_ACCOUNTING_STRUCTURE,
   },
   // Money. `enabled`, the percentage options and the preferred index decide
   // what a customer is asked to add to their bill, so a facility running one

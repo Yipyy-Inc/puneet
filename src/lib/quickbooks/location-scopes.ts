@@ -1,18 +1,6 @@
 "use client";
 
-import type { Location } from "@/types/location";
-
-import {
-  getQuickBooksConnection,
-  isQuickBooksSyncPaused,
-  quickBooksSyncPauseReason,
-  type QuickBooksConnection,
-  type QuickBooksPauseReason,
-  type QuickBooksScope,
-} from "./connection-store";
-import { facilityLocations } from "./location-classes";
-import { getQuickBooksSettings } from "./settings-store";
-import { getQuickBooksSetup } from "./setup-store";
+import type { QuickBooksScope } from "./connection-store";
 
 // ============================================================================
 // One QuickBooks company PER LOCATION (Phase 8 / Section 6B).
@@ -37,11 +25,17 @@ import { getQuickBooksSetup } from "./setup-store";
 
 export type MultiLocationMode = "single_company" | "company_per_location";
 
-export function multiLocationMode(facilityId: string): MultiLocationMode {
-  return (
-    getQuickBooksSettings({ facilityId }).multiLocationMode ?? "single_company"
-  );
-}
+// ── WHERE THE MODE LIVES, AND WHY IT IS NOT READ HERE ─────────────────────
+//
+// It used to be `getQuickBooksSettings({facilityId}).multiLocationMode` — one
+// of eight localStorage stores in this module. On 2026-08-25 it moved into the
+// `accounting_structure` facility settings domain, because "are our branches
+// separate legal entities" is a fact about the company, not about a browser.
+//
+// This module cannot read it: `useSettings` is a hook and these are plain
+// functions on the sync path. So the mode is a PARAMETER now. That is the
+// point — leaving a reader here would have made two sources of truth for one
+// answer, and the one on the sync path would have been the wrong one.
 
 /** The scope a location's own QuickBooks company lives under. */
 export function scopeForLocation(
@@ -63,8 +57,10 @@ export function scopeForLocation(
 export function syncScopeForTransaction(
   facilityId: string,
   locationId: string | undefined,
+  /** From `accounting_structure`. See the note above — it is not read here. */
+  mode: MultiLocationMode,
 ): { scope?: QuickBooksScope; problem?: string } {
-  if (multiLocationMode(facilityId) === "single_company") {
+  if (mode === "single_company") {
     return { scope: { facilityId } };
   }
 
@@ -78,76 +74,18 @@ export function syncScopeForTransaction(
   return { scope: scopeForLocation(facilityId, locationId) };
 }
 
-export interface LocationConnectionState {
-  location: Location;
-  scope: QuickBooksScope;
-  connection: QuickBooksConnection;
-  /** Setup finished for THIS location's company. */
-  setupComplete: boolean;
-  /** True when this location's queue is holding. */
-  paused: boolean;
-  pauseReason?: QuickBooksPauseReason;
-}
-
-/** Every branch and the state of its own QuickBooks connection. */
-export function locationConnectionStates(
-  facilityId: string,
-): LocationConnectionState[] {
-  return facilityLocations(facilityId).map((location) => {
-    const scope = scopeForLocation(facilityId, location.id);
-    const connection = getQuickBooksConnection(scope);
-    return {
-      location,
-      scope,
-      connection,
-      setupComplete: getQuickBooksSetup(scope).setupComplete,
-      paused:
-        connection.status !== "disconnected" &&
-        isQuickBooksSyncPaused(connection),
-      pauseReason: quickBooksSyncPauseReason(connection) ?? undefined,
-    };
-  });
-}
-
-export interface LocationRollup {
-  connected: number;
-  needsAttention: number;
-  notConnected: number;
-  total: number;
-}
-
-/** The one-line summary above the cards. */
-export function rollupLocationConnections(
-  states: LocationConnectionState[],
-): LocationRollup {
-  return {
-    connected: states.filter(
-      (s) => s.connection.status === "connected" && s.setupComplete,
-    ).length,
-    // Connected but expired/unreachable, or connected but never finished setup:
-    // both are "this branch is not syncing and someone has to do something".
-    needsAttention: states.filter(
-      (s) =>
-        s.connection.status !== "disconnected" &&
-        (s.paused || !s.setupComplete),
-    ).length,
-    notConnected: states.filter((s) => s.connection.status === "disconnected")
-      .length,
-    total: states.length,
-  };
-}
-
-/**
- * The isolation guarantee, as something checkable.
- *
- * Returns the branches still syncing when `locationId`'s token has expired. If
- * this ever returns fewer than "all the healthy ones", the scope keying has
- * been broken somewhere.
- */
-export function locationsStillSyncing(
-  states: LocationConnectionState[],
-): LocationConnectionState[] {
-  return states.filter(
-    (s) => s.connection.status === "connected" && s.setupComplete,
-  );
-}
+// ── REMOVED 2026-08-25: the per-location connection state helpers ─────────
+//
+// `LocationConnectionState`, `locationConnectionStates`, `LocationRollup`,
+// `rollupLocationConnections` and `locationsStillSyncing` all existed to feed
+// `QuickBooksLocationCards`, which offered a "Connect QuickBooks" button per
+// branch. That button wrote a mock token to localStorage and reported success.
+//
+// There is no QuickBooks backend — 27 files in this directory, zero API routes,
+// zero tables, and `oauth-mock.ts`. A connect flow that cannot connect is worse
+// on an accounting screen than anywhere else, because the person clicking it
+// will believe their books are being kept. The cards are deleted and the
+// helpers with them; git has them when the integration is actually built.
+//
+// What stays is what the sync path uses: `scopeForLocation` and
+// `syncScopeForTransaction`.

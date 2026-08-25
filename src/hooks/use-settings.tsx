@@ -40,6 +40,7 @@ import type {
   Integration,
   ModuleAddon,
   GroomingScheduling,
+  AccountingStructure,
 } from "@/types/facility";
 import type { CalendarColorOverrides } from "@/lib/operations-calendar";
 
@@ -84,6 +85,8 @@ interface SettingsContextValue {
   updateRules: (rules: BookingRules) => Promise<unknown>;
   groomingScheduling: GroomingScheduling;
   updateGroomingScheduling: (config: GroomingScheduling) => Promise<unknown>;
+  accountingStructure: AccountingStructure;
+  updateAccountingStructure: (config: AccountingStructure) => Promise<unknown>;
   updateBookingFlow: (config: FacilityBookingFlowConfig) => Promise<unknown>;
   updateReportCards: (config: ReportCardConfig) => Promise<unknown>;
   updateServiceDateBlocks: (blocks: ServiceDateBlock[]) => Promise<unknown>;
@@ -162,6 +165,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const rules = facilitySettings.settings.booking_rules.value;
   const groomingScheduling =
     facilitySettings.settings.grooming_scheduling.value;
+  const accountingStructure =
+    facilitySettings.settings.accounting_structure.value;
   // ── WHAT A CUSTOMER MAY BOOK ────────────────────────────────────────────
   //
   // The four module configs, the booking flow and the evaluation rules. These
@@ -270,6 +275,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveSetting.mutateAsync({ domain: "booking_rules", value: rules });
   const updateGroomingScheduling = (config: GroomingScheduling) =>
     saveSetting.mutateAsync({ domain: "grooming_scheduling", value: config });
+
+  const updateAccountingStructure = (config: AccountingStructure) =>
+    saveSetting.mutateAsync({ domain: "accounting_structure", value: config });
   const updateBookingFlow = (config: FacilityBookingFlowConfig) =>
     saveSetting.mutateAsync({ domain: "booking_flow", value: config });
   const updateReportCards = (config: ReportCardConfig) =>
@@ -374,6 +382,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateServiceNotifDefaults,
         groomingScheduling,
         updateGroomingScheduling,
+        accountingStructure,
+        updateAccountingStructure,
         updateTipConfig,
         updateIntegrations,
         updateAddons,
