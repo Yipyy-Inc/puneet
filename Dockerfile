@@ -161,11 +161,15 @@ RUN mkdir -p /app/fontconfig .next/cache \
  && chown -R nextjs:nodejs /app/fontconfig /app/.next
 
 # ── TWO GATES THAT TURN RUNTIME FAILURES INTO BUILD FAILURES ──────────────
-COPY docker/font-probe.mjs /tmp/font-probe.mjs
+# The probe must live INSIDE /app, not in /tmp. Node's ESM resolver looks for
+# node_modules relative to the IMPORTING FILE, not the working directory, so a
+# probe at /tmp/font-probe.mjs searches /tmp/node_modules and dies with
+# ERR_MODULE_NOT_FOUND before it can test a single glyph.
+COPY docker/font-probe.mjs ./font-probe.mjs
 RUN node -e "const s=require('sharp'); if(!s.versions||!s.versions.vips) throw new Error('sharp has no libvips'); console.log('sharp ok — libvips '+s.versions.vips);" \
  && FONTCONFIG_PATH=/app/src/lib/clover/fonts XDG_CACHE_HOME=/tmp \
-    node /tmp/font-probe.mjs \
- && rm -f /tmp/font-probe.mjs
+    node ./font-probe.mjs \
+ && rm -f ./font-probe.mjs
 
 USER nextjs:nodejs
 EXPOSE 3000
