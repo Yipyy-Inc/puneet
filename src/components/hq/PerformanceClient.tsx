@@ -14,7 +14,6 @@ import {
   DollarSign,
   CalendarCheck,
   Activity,
-  Heart,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -28,6 +27,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { locationStyles } from "@/lib/hq/location-styles";
 import { HqKpiTile } from "@/components/hq/HqKpiTile";
@@ -38,133 +38,62 @@ import {
 } from "@/components/hq/HqComparisonTable";
 import { formatMetricCell } from "@/lib/hq/metrics-format";
 import { PerformanceTrendCharts } from "@/components/hq/PerformanceTrendCharts";
+import { useFacilityLocations } from "@/lib/api/locations";
+import { useStaffHomeLocations } from "@/lib/api/staff";
+import {
+  useFacilityReport,
+  type RevenueByLocationData,
+  type ServiceMixByLocationData,
+} from "@/lib/api/facility-reports";
+import type { FacilityLocation } from "@/types/location";
 
-type CompRow = {
+// ============================================================================
+// Real revenue, bookings, service mix and headcount per location. Was a
+// 26-metric catalogue over a fixture; most of it had nowhere real to read
+// from -- occupancy (`facility_rooms` has no `location_id`), NPS (no column
+// anywhere), staff utilization/avg client rating/reviews (no source),
+// cancellation/no-show rate and lead time (no `cancelled_at`, no `no_show`
+// status). What's left is what the database can actually answer: revenue,
+// bookings, service mix by branch, and real headcount from home-location.
+// ============================================================================
+
+type LocationRow = {
   locationId: string;
-  name: string;
-  shortCode: string;
-  color: string;
+  location: FacilityLocation;
   revenue: number;
   revenueGrowth: number;
   bookings: number;
   bookingsGrowth: number;
-  newCustomers: number;
-  returningCustomers: number;
-  occupancyRate: number;
-  staffUtilization: number;
   avgBookingValue: number;
-  cancellationRate: number;
-  daycareAttendance: number;
-  groomingVolume: number;
-  boardingNights: number;
-  trainingSessionsCompleted: number;
   staffCount: number;
-  activeServices: number;
-  topService: string;
-  nps: number;
-  newBookings: number;
-  noShowRate: number;
-  avgLeadTimeDays: number;
-  boardingOccupancy: number;
-  daycareOccupancy: number;
-  retentionRate: number;
-  reviewCount: number;
-  avgClientRating: number;
-  outstandingInvoices: number;
-  revPAK: number;
-  servicesPerStaffHour: number;
+  groomingBookings: number;
+  boardingBookings: number;
+  daycareBookings: number;
+  trainingBookings: number;
 };
 
-interface Props {
-  data: CompRow[];
-}
-
-type MetricCategory =
-  | "bookings"
-  | "financial"
-  | "operational"
-  | "customer"
-  | "staff";
+type MetricCategory = "financial" | "bookings" | "operational" | "staff";
 
 type Metric = {
-  key: keyof CompRow;
+  key: keyof LocationRow;
   label: string;
   category: MetricCategory;
   format: (v: number) => string;
   higherIsBetter: boolean;
-  /** Volume/currency metric that accumulates over the period (scales with the
-   *  period selector). Rates and structural counts stay constant. */
-  scales: boolean;
-  growth?: keyof CompRow;
-  /** Suppress the "% change vs last period" sub-line (e.g. the growth row). */
-  hideChange?: boolean;
+  growth?: keyof LocationRow;
 };
 
-const pct = (v: number) => `${v}%`;
+const money = (v: number) => `$${v.toLocaleString()}`;
 const count = (v: number) => v.toLocaleString();
 
-// Metric catalogue, per spec Table 27, grouped by category.
 const METRICS: Metric[] = [
-  // ── Bookings ──
-  {
-    key: "bookings",
-    label: "Total Bookings",
-    category: "bookings",
-    format: count,
-    higherIsBetter: true,
-    scales: true,
-    growth: "bookingsGrowth",
-  },
-  {
-    key: "newBookings",
-    label: "New Bookings",
-    category: "bookings",
-    format: count,
-    higherIsBetter: true,
-    scales: true,
-  },
-  {
-    key: "cancellationRate",
-    label: "Cancellation Rate",
-    category: "bookings",
-    format: pct,
-    higherIsBetter: false,
-    scales: false,
-  },
-  {
-    key: "noShowRate",
-    label: "No-Show Rate",
-    category: "bookings",
-    format: pct,
-    higherIsBetter: false,
-    scales: false,
-  },
-  {
-    key: "avgLeadTimeDays",
-    label: "Avg Lead Time",
-    category: "bookings",
-    format: (v) => `${v.toFixed(1)} days`,
-    higherIsBetter: true,
-    scales: false,
-  },
-  // ── Financial ──
   {
     key: "revenue",
     label: "Revenue",
     category: "financial",
-    format: (v) => `$${v.toLocaleString()}`,
+    format: money,
     higherIsBetter: true,
-    scales: true,
     growth: "revenueGrowth",
-  },
-  {
-    key: "revenueGrowth",
-    label: "Revenue Growth",
-    category: "financial",
-    format: (v) => `${v >= 0 ? "+" : ""}${v}%`,
-    higherIsBetter: true,
-    scales: false,
-    hideChange: true,
   },
   {
     key: "avgBookingValue",
@@ -172,138 +101,49 @@ const METRICS: Metric[] = [
     category: "financial",
     format: (v) => `$${v.toFixed(2)}`,
     higherIsBetter: true,
-    scales: false,
   },
   {
-    key: "revPAK",
-    label: "Revenue / Kennel-Night",
-    category: "financial",
-    format: (v) => `$${v.toFixed(0)}`,
-    higherIsBetter: true,
-    scales: false,
-  },
-  {
-    key: "outstandingInvoices",
-    label: "Outstanding Invoices",
-    category: "financial",
+    key: "bookings",
+    label: "Total Bookings",
+    category: "bookings",
     format: count,
-    higherIsBetter: false,
-    scales: false,
-  },
-  // ── Operations ──
-  {
-    key: "boardingOccupancy",
-    label: "Boarding Occupancy",
-    category: "operational",
-    format: pct,
     higherIsBetter: true,
-    scales: false,
+    growth: "bookingsGrowth",
   },
   {
-    key: "daycareOccupancy",
-    label: "Daycare Occupancy",
-    category: "operational",
-    format: pct,
-    higherIsBetter: true,
-    scales: false,
-  },
-  {
-    key: "groomingVolume",
-    label: "Grooming Appointments",
+    key: "groomingBookings",
+    label: "Grooming Bookings",
     category: "operational",
     format: count,
     higherIsBetter: true,
-    scales: true,
   },
   {
-    key: "trainingSessionsCompleted",
-    label: "Training Sessions",
+    key: "boardingBookings",
+    label: "Boarding Bookings",
     category: "operational",
     format: count,
     higherIsBetter: true,
-    scales: true,
   },
   {
-    key: "boardingNights",
-    label: "Boarding Nights",
+    key: "daycareBookings",
+    label: "Daycare Bookings",
     category: "operational",
     format: count,
     higherIsBetter: true,
-    scales: true,
   },
-  // ── Customer ──
   {
-    key: "newCustomers",
-    label: "New Clients",
-    category: "customer",
+    key: "trainingBookings",
+    label: "Training Bookings",
+    category: "operational",
     format: count,
     higherIsBetter: true,
-    scales: true,
   },
-  {
-    key: "returningCustomers",
-    label: "Returning Clients",
-    category: "customer",
-    format: count,
-    higherIsBetter: true,
-    scales: true,
-  },
-  {
-    key: "retentionRate",
-    label: "Retention Rate",
-    category: "customer",
-    format: pct,
-    higherIsBetter: true,
-    scales: false,
-  },
-  {
-    key: "nps",
-    label: "NPS Score",
-    category: "customer",
-    format: (v) => String(v),
-    higherIsBetter: true,
-    scales: false,
-  },
-  {
-    key: "reviewCount",
-    label: "Reviews",
-    category: "customer",
-    format: count,
-    higherIsBetter: true,
-    scales: true,
-  },
-  // ── Staff ──
   {
     key: "staffCount",
     label: "Staff Headcount",
     category: "staff",
     format: count,
     higherIsBetter: true,
-    scales: false,
-  },
-  {
-    key: "staffUtilization",
-    label: "Staff Utilization",
-    category: "staff",
-    format: pct,
-    higherIsBetter: true,
-    scales: false,
-  },
-  {
-    key: "avgClientRating",
-    label: "Avg Client Rating",
-    category: "staff",
-    format: (v) => `${v.toFixed(1)} ★`,
-    higherIsBetter: true,
-    scales: false,
-  },
-  {
-    key: "servicesPerStaffHour",
-    label: "Services / Staff-Hour",
-    category: "staff",
-    format: (v) => v.toFixed(2),
-    higherIsBetter: true,
-    scales: false,
   },
 ];
 
@@ -312,10 +152,9 @@ const CATEGORY_TABS: {
   label: string;
   icon: LucideIcon;
 }[] = [
-  { key: "bookings", label: "Bookings", icon: CalendarCheck },
   { key: "financial", label: "Financial", icon: DollarSign },
+  { key: "bookings", label: "Bookings", icon: CalendarCheck },
   { key: "operational", label: "Operations", icon: Activity },
-  { key: "customer", label: "Customer", icon: Heart },
   { key: "staff", label: "Staff", icon: Users },
 ];
 
@@ -329,24 +168,7 @@ const PERIODS: { key: PeriodKey; label: string }[] = [
   { key: "custom", label: "Custom" },
 ];
 
-// Monthly figures are the source data; other periods scale by their share of a
-// ~30-day month (quarter = 3 months, year = 12).
-function periodFactor(period: PeriodKey, customDays: number): number {
-  switch (period) {
-    case "week":
-      return 7 / 30;
-    case "month":
-      return 1;
-    case "quarter":
-      return 3;
-    case "year":
-      return 12;
-    case "custom":
-      return Math.max(1, customDays) / 30;
-  }
-}
-
-function periodLabel(period: PeriodKey, customDays: number): string {
+function periodLabel(period: PeriodKey, customFrom: string, customTo: string) {
   switch (period) {
     case "week":
       return "This Week";
@@ -357,45 +179,60 @@ function periodLabel(period: PeriodKey, customDays: number): string {
     case "year":
       return "Last 12 Months";
     case "custom":
-      return customDays > 0
-        ? `Custom · ${customDays} day${customDays === 1 ? "" : "s"}`
+      return customFrom && customTo
+        ? `${customFrom} – ${customTo}`
         : "Custom range";
   }
 }
 
-// Inclusive day count between two YYYY-MM-DD strings; 0 if unset/invalid.
-function inclusiveDays(from: string, to: string): number {
-  if (!from || !to) return 0;
-  const a = new Date(`${from}T00:00:00`).getTime();
-  const b = new Date(`${to}T00:00:00`).getTime();
-  if (Number.isNaN(a) || Number.isNaN(b) || b < a) return 0;
-  return Math.round((b - a) / 86_400_000) + 1;
-}
-
-// A value is "not offered" when a higher-is-better metric reads zero.
-function scaledValue(metric: Metric, row: CompRow, factor: number): number {
-  const base = Number(row[metric.key]);
-  return metric.scales ? Math.round(base * factor) : base;
-}
-function isOffered(metric: Metric, row: CompRow): boolean {
-  return !(Number(row[metric.key]) === 0 && metric.higherIsBetter);
-}
-
-// Best/worst location for a metric across the (offered) locations.
-function leaders(metric: Metric, data: CompRow[], factor: number) {
-  const entries = data
-    .filter((d) => isOffered(metric, d))
-    .map((d) => ({ loc: d, value: scaledValue(metric, d, factor) }));
-  if (entries.length === 0) return { best: null, worst: null };
-  let best = entries[0];
-  let worst = entries[0];
-  for (const e of entries) {
-    if (metric.higherIsBetter ? e.value > best.value : e.value < best.value)
-      best = e;
-    if (metric.higherIsBetter ? e.value < worst.value : e.value > worst.value)
-      worst = e;
+/** The real report window for the period selector. Unlike the fixture this
+ *  replaced (a monthly baseline scaled by a factor), this is the ACTUAL date
+ *  range sent to `facility_report_dataset` -- the server derives the previous
+ *  window of the same length itself, so growth is a real comparison, not an
+ *  invented one. */
+function periodWindow(
+  period: PeriodKey,
+  customFrom: string,
+  customTo: string,
+): { from: string; to: string } {
+  const now = new Date();
+  switch (period) {
+    case "week": {
+      const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const from = new Date(to);
+      from.setDate(from.getDate() - 7);
+      return { from: from.toISOString(), to: to.toISOString() };
+    }
+    case "month": {
+      const from = new Date(now.getFullYear(), now.getMonth(), 1);
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return { from: from.toISOString(), to: to.toISOString() };
+    }
+    case "quarter": {
+      const qStart = Math.floor(now.getMonth() / 3) * 3;
+      const from = new Date(now.getFullYear(), qStart, 1);
+      const to = new Date(now.getFullYear(), qStart + 3, 1);
+      return { from: from.toISOString(), to: to.toISOString() };
+    }
+    case "year": {
+      const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const from = new Date(to);
+      from.setFullYear(from.getFullYear() - 1);
+      return { from: from.toISOString(), to: to.toISOString() };
+    }
+    case "custom": {
+      if (!customFrom || !customTo) return periodWindow("month", "", "");
+      return {
+        from: new Date(`${customFrom}T00:00:00`).toISOString(),
+        to: new Date(`${customTo}T23:59:59`).toISOString(),
+      };
+    }
   }
-  return { best, worst: entries.length > 1 ? worst : null };
+}
+
+function pctChange(current: number, previous: number): number {
+  if (previous === 0) return current === 0 ? 0 : 100;
+  return +(((current - previous) / previous) * 100).toFixed(1);
 }
 
 function ChangeChip({
@@ -433,72 +270,121 @@ function ChangeChip({
   );
 }
 
-// A metric×location cell: value in large text (scaled to the period), an
-// optional "% change vs last period" beneath, best (green) / worst (red).
 function MetricCell({
   metric,
-  loc,
+  row,
   data,
-  factor,
 }: {
   metric: Metric;
-  loc: CompRow;
-  data: CompRow[];
-  factor: number;
+  row: LocationRow;
+  data: LocationRow[];
 }) {
-  const offered = isOffered(metric, loc);
-  const value = scaledValue(metric, loc, factor);
-  const values = data.map((d) =>
-    isOffered(metric, d) ? scaledValue(metric, d, factor) : NaN,
-  );
-  const highlight = offered
-    ? bestWorstClass(value, values, metric.higherIsBetter)
-    : "";
-  const growth = metric.growth ? Number(loc[metric.growth]) : undefined;
+  const value = Number(row[metric.key]);
+  const values = data.map((d) => Number(d[metric.key]));
+  const highlight = bestWorstClass(value, values, metric.higherIsBetter);
+  const growth = metric.growth ? Number(row[metric.growth]) : undefined;
 
   return (
     <div className="flex flex-col items-end gap-0.5">
       <span className={cn("text-lg font-bold tabular-nums", highlight)}>
-        {formatMetricCell(offered ? value : undefined, metric.format)}
+        {formatMetricCell(value, metric.format)}
       </span>
-      {!metric.hideChange &&
-        (growth !== undefined ? (
-          <ChangeChip value={growth} higherIsBetter={metric.higherIsBetter} />
-        ) : (
-          <span className="text-muted-foreground text-[10px] tabular-nums">
-            vs last period —
-          </span>
-        ))}
+      {growth !== undefined && (
+        <ChangeChip value={growth} higherIsBetter={metric.higherIsBetter} />
+      )}
     </div>
   );
 }
 
-export function PerformanceClient({ data }: Props) {
+function leaders(metric: Metric, data: LocationRow[]) {
+  const entries = data.map((d) => ({ loc: d, value: Number(d[metric.key]) }));
+  if (entries.length === 0) return { best: null, worst: null };
+  let best = entries[0];
+  let worst = entries[0];
+  for (const e of entries) {
+    if (metric.higherIsBetter ? e.value > best.value : e.value < best.value)
+      best = e;
+    if (metric.higherIsBetter ? e.value < worst.value : e.value > worst.value)
+      worst = e;
+  }
+  return { best, worst: entries.length > 1 ? worst : null };
+}
+
+export function PerformanceClient() {
   const [category, setCategory] = useState<MetricCategory>("financial");
   const [period, setPeriod] = useState<PeriodKey>("month");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(data.map((d) => d.locationId)),
-  );
+  const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null);
 
-  const customDays = inclusiveDays(customFrom, customTo);
-  const factor = periodFactor(period, customDays);
-  const label = periodLabel(period, customDays);
+  const { data: locations, isPending: locationsPending } =
+    useFacilityLocations();
+  const { data: staff } = useStaffHomeLocations();
 
-  // Selected locations drive every table + the KPI tiles. At least one is kept.
-  const activeData = useMemo(
-    () => data.filter((d) => selectedIds.has(d.locationId)),
-    [data, selectedIds],
+  const { from, to } = useMemo(
+    () => periodWindow(period, customFrom, customTo),
+    [period, customFrom, customTo],
   );
-  const allSelected = selectedIds.size === data.length;
+  const { data: revenueReport } = useFacilityReport(
+    "revenue-by-location",
+    from,
+    to,
+  );
+  const { data: mixReport } = useFacilityReport(
+    "service-mix-by-location",
+    from,
+    to,
+  );
+  const revenueData = revenueReport?.data as RevenueByLocationData | undefined;
+  const mixData = mixReport?.data as ServiceMixByLocationData | undefined;
+
+  const label = periodLabel(period, customFrom, customTo);
+
+  // Selected locations drive every table + the KPI tiles. Defaults to all
+  // once the real list has loaded; `null` beforehand means "not decided yet".
+  const activeIds = useMemo(
+    () => selectedIds ?? new Set((locations ?? []).map((l) => l.id)),
+    [selectedIds, locations],
+  );
+  const activeLocations = (locations ?? []).filter((l) => activeIds.has(l.id));
+
+  const data: LocationRow[] = activeLocations.map((loc) => {
+    const cur = revenueData?.current.find((r) => r.locationId === loc.id);
+    const prev = revenueData?.previous.find((r) => r.locationId === loc.id);
+    const revenue = cur?.revenue ?? 0;
+    const bookings = cur?.bookings ?? 0;
+    const mixRows = (mixData?.current ?? []).filter(
+      (r) => r.locationId === loc.id,
+    );
+    const bookingsFor = (service: string) =>
+      mixRows.find((r) => r.service === service)?.bookings ?? 0;
+    return {
+      locationId: loc.id,
+      location: loc,
+      revenue,
+      revenueGrowth: pctChange(revenue, prev?.revenue ?? 0),
+      bookings,
+      bookingsGrowth: pctChange(bookings, prev?.bookings ?? 0),
+      avgBookingValue: bookings > 0 ? revenue / bookings : 0,
+      staffCount: (staff ?? []).filter(
+        (s) => s.claimed && s.homeLocationId === loc.id,
+      ).length,
+      groomingBookings: bookingsFor("grooming"),
+      boardingBookings: bookingsFor("boarding"),
+      daycareBookings: bookingsFor("daycare"),
+      trainingBookings: bookingsFor("training"),
+    };
+  });
+
+  const allSelected = activeIds.size === (locations ?? []).length;
   const locationLabel = allSelected
     ? "All Locations"
-    : `${selectedIds.size} location${selectedIds.size === 1 ? "" : "s"}`;
+    : `${activeIds.size} location${activeIds.size === 1 ? "" : "s"}`;
 
   function toggleLocation(id: string) {
     setSelectedIds((prev) => {
-      const next = new Set(prev);
+      const base = prev ?? new Set((locations ?? []).map((l) => l.id));
+      const next = new Set(base);
       if (next.has(id)) {
         if (next.size > 1) next.delete(id);
       } else {
@@ -508,31 +394,24 @@ export function PerformanceClient({ data }: Props) {
     });
   }
 
-  // ── Network highlight KPIs (scaled to period, across selected locations) ──
   const kpis = useMemo(() => {
-    const n = activeData.length || 1;
-    const sum = (f: (d: CompRow) => number) =>
-      activeData.reduce((acc, d) => acc + f(d), 0);
-    const leaderBy = (f: (d: CompRow) => number) =>
-      activeData.reduce(
-        (best, d) => (f(d) > f(best) ? d : best),
-        activeData[0],
-      );
+    const revenueLeader = data.reduce(
+      (best, d) => (d.revenue > (best?.revenue ?? -1) ? d : best),
+      data[0] as LocationRow | undefined,
+    );
+    const bookingsLeader = data.reduce(
+      (best, d) => (d.bookings > (best?.bookings ?? -1) ? d : best),
+      data[0] as LocationRow | undefined,
+    );
     return {
-      revenue: Math.round(sum((d) => d.revenue) * factor),
-      revenueGrowth: +(sum((d) => d.revenueGrowth) / n).toFixed(1),
-      revenueLeader: leaderBy((d) => d.revenue),
-      bookings: Math.round(sum((d) => d.bookings) * factor),
-      bookingsGrowth: +(sum((d) => d.bookingsGrowth) / n).toFixed(1),
-      bookingsLeader: leaderBy((d) => d.bookings),
-      occupancy: Math.round(sum((d) => d.occupancyRate) / n),
-      occupancyLeader: leaderBy((d) => d.occupancyRate),
-      nps: Math.round(sum((d) => d.nps) / n),
-      npsLeader: leaderBy((d) => d.nps),
+      revenue: data.reduce((sum, d) => sum + d.revenue, 0),
+      bookings: data.reduce((sum, d) => sum + d.bookings, 0),
+      staff: data.reduce((sum, d) => sum + d.staffCount, 0),
+      revenueLeader,
+      bookingsLeader,
     };
-  }, [activeData, factor]);
+  }, [data]);
 
-  // Columns: Metric + one per selected location + Best + Worst.
   const metricColumns = useMemo<ColumnDef<Metric>[]>(
     () => [
       {
@@ -548,24 +427,26 @@ export function PerformanceClient({ data }: Props) {
           </div>
         ),
       },
-      ...activeData.map<ColumnDef<Metric>>((loc) => ({
-        key: loc.locationId,
-        label: `${loc.shortCode} · ${loc.name}`,
+      ...data.map<ColumnDef<Metric>>((row) => ({
+        key: row.locationId,
+        label: `${(row.location.shortCode ?? row.location.name).slice(0, 3)} · ${row.location.name}`,
         align: "right",
-        render: (m) => (
-          <MetricCell metric={m} loc={loc} data={activeData} factor={factor} />
-        ),
+        render: (m) => <MetricCell metric={m} row={row} data={data} />,
       })),
       {
         key: "__best",
         label: "Best",
         align: "left",
         render: (m) => {
-          const { best } = leaders(m, activeData, factor);
+          const { best } = leaders(m, data);
           if (!best) return <span className="text-muted-foreground">—</span>;
           return (
             <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              {best.loc.shortCode} · {m.format(best.value)}
+              {(best.loc.location.shortCode ?? best.loc.location.name).slice(
+                0,
+                3,
+              )}{" "}
+              · {m.format(best.value)}
             </span>
           );
         },
@@ -575,23 +456,36 @@ export function PerformanceClient({ data }: Props) {
         label: "Worst",
         align: "left",
         render: (m) => {
-          const { worst } = leaders(m, activeData, factor);
+          const { worst } = leaders(m, data);
           if (!worst) return <span className="text-muted-foreground">—</span>;
           return (
             <span className="text-xs font-semibold text-red-600 dark:text-red-400">
-              {worst.loc.shortCode} · {m.format(worst.value)}
+              {(worst.loc.location.shortCode ?? worst.loc.location.name).slice(
+                0,
+                3,
+              )}{" "}
+              · {m.format(worst.value)}
             </span>
           );
         },
       },
     ],
-    [activeData, factor],
+    [data],
   );
 
   const categoryRows = useMemo(
     () => METRICS.filter((m) => m.category === category),
     [category],
   );
+
+  if (locationsPending) {
+    return (
+      <div className="space-y-6 p-4 pt-6 md:p-8">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-7 p-4 pt-6 md:p-8">
@@ -618,8 +512,8 @@ export function PerformanceClient({ data }: Props) {
               Location Performance
             </h1>
             <p className="text-muted-foreground text-sm">
-              Metric-by-metric comparison · {label} · {activeData.length} of{" "}
-              {data.length} locations
+              Metric-by-metric comparison · {label} · {activeLocations.length}{" "}
+              of {(locations ?? []).length} locations
             </p>
           </div>
         </div>
@@ -696,22 +590,22 @@ export function PerformanceClient({ data }: Props) {
               <Checkbox
                 checked={allSelected}
                 onCheckedChange={() =>
-                  setSelectedIds(new Set(data.map((d) => d.locationId)))
+                  setSelectedIds(new Set((locations ?? []).map((l) => l.id)))
                 }
               />
               All Locations
             </label>
             <Separator className="my-1" />
-            {data.map((loc) => {
+            {(locations ?? []).map((loc) => {
               const ls = locationStyles(loc);
               return (
                 <label
-                  key={loc.locationId}
+                  key={loc.id}
                   className="hover:bg-muted/60 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
                 >
                   <Checkbox
-                    checked={selectedIds.has(loc.locationId)}
-                    onCheckedChange={() => toggleLocation(loc.locationId)}
+                    checked={activeIds.has(loc.id)}
+                    onCheckedChange={() => toggleLocation(loc.id)}
                   />
                   <span
                     className={cn(
@@ -719,7 +613,7 @@ export function PerformanceClient({ data }: Props) {
                       ls.badge,
                     )}
                   >
-                    {loc.shortCode}
+                    {(loc.shortCode ?? loc.name).slice(0, 3)}
                   </span>
                   <span className="truncate">{loc.name}</span>
                 </label>
@@ -730,29 +624,28 @@ export function PerformanceClient({ data }: Props) {
       </div>
 
       {/* ── Highlight KPI tiles ── */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <HqKpiTile
           label={`Network Revenue · ${label}`}
           value={`$${kpis.revenue.toLocaleString()}`}
-          delta={kpis.revenueGrowth}
-          sublabel={`Top: ${kpis.revenueLeader.name}`}
+          sublabel={
+            kpis.revenueLeader
+              ? `Top: ${kpis.revenueLeader.location.name}`
+              : undefined
+          }
         />
         <HqKpiTile
           label={`Total Bookings · ${label}`}
           value={kpis.bookings.toLocaleString()}
-          delta={kpis.bookingsGrowth}
-          sublabel={`Top: ${kpis.bookingsLeader.name}`}
+          sublabel={
+            kpis.bookingsLeader
+              ? `Top: ${kpis.bookingsLeader.location.name}`
+              : undefined
+          }
         />
         <HqKpiTile
-          label="Avg Occupancy"
-          value={kpis.occupancy}
-          unit="%"
-          sublabel={`Best: ${kpis.occupancyLeader.name} ${kpis.occupancyLeader.occupancyRate}%`}
-        />
-        <HqKpiTile
-          label="Avg NPS"
-          value={kpis.nps}
-          sublabel={`Best: ${kpis.npsLeader.name} ${kpis.npsLeader.nps}`}
+          label="Staff Headcount"
+          value={kpis.staff.toLocaleString()}
         />
       </div>
 
@@ -780,17 +673,12 @@ export function PerformanceClient({ data }: Props) {
       {/* ── Metric table for the selected category ── */}
       <HqComparisonTable data={categoryRows} columns={metricColumns} />
 
-      {/* ── Tabbed trend charts ── */}
-      <PerformanceTrendCharts
-        period={period}
-        customDays={customDays}
-        selectedIds={selectedIds}
-      />
+      {/* ── Revenue trend chart ── */}
+      <PerformanceTrendCharts locations={activeLocations} />
 
       <p className="text-muted-foreground text-[11px]">
-        Best-performing location per metric is green, worst is red · &ldquo;Not
-        offered at this location&rdquo; marks a service not available at a
-        branch.
+        Best-performing location per metric is green, worst is red · figures are
+        real, read live from bookings and payments.
       </p>
     </div>
   );
