@@ -25,7 +25,6 @@ import {
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { cn } from "@/lib/utils";
 import { TakePaymentModal } from "@/components/billing/TakePaymentModal";
-import { ProcessRefundModal } from "@/components/billing/ProcessRefundModal";
 import { IssueGiftCardModal } from "@/components/billing/IssueGiftCardModal";
 import { AddCustomerCreditModal } from "@/components/billing/AddCustomerCreditModal";
 import {
@@ -44,7 +43,6 @@ import {
   AlertCircle,
   CheckCircle,
   Send,
-  RefreshCw,
   ExternalLink,
   Vault,
   Coins,
@@ -112,12 +110,8 @@ export default function FacilityBillingPage() {
     (typeof giftCards)[0] | null
   >(null);
   const [showTakePayment, setShowTakePayment] = useState(false);
-  const [showProcessRefund, setShowProcessRefund] = useState(false);
   const [showIssueGiftCard, setShowIssueGiftCard] = useState(false);
   const [showAddCredit, setShowAddCredit] = useState(false);
-  const [refundPayment, setRefundPayment] = useState<
-    (typeof payments)[0] | null
-  >(null);
 
   if (!facility) {
     return <div>Facility not found</div>;
@@ -1246,21 +1240,18 @@ export default function FacilityBillingPage() {
                           Download Receipt
                         </Button>
                       )}
-                      {selectedTransaction.status === "completed" &&
-                        !selectedTransaction.refundAmount && (
-                          <Button
-                            variant="destructive"
-                            className="flex-1"
-                            onClick={() => {
-                              setRefundPayment(selectedTransaction);
-                              setShowProcessRefund(true);
-                              setSelectedTransaction(null);
-                            }}
-                          >
-                            <RefreshCw className="mr-2 size-4" />
-                            Process Refund
-                          </Button>
-                        )}
+                      {/* ── NO REFUND BUTTON HERE, DELIBERATELY ──────────
+                          There was one, and it was a lie: it called
+                          `console.log` and then toasted "processed
+                          successfully", on a page whose payments are
+                          fixtures behind a hardcoded facility id. Nobody
+                          checking a statement would have found the money.
+
+                          The real refund lives on the booking —
+                          `RefundModal` → `/api/payments/clover/refund` →
+                          Clover → a negative `payments` row written from
+                          what Clover says happened. "View Booking" above
+                          is one click from it. */}
                     </div>
                   </div>
                 );
@@ -1453,19 +1444,6 @@ export default function FacilityBillingPage() {
             alert(
               `Payment of $${payment.totalAmount.toFixed(2)} processed successfully!`,
             );
-          }}
-        />
-
-        <ProcessRefundModal
-          open={showProcessRefund}
-          onOpenChange={setShowProcessRefund}
-          payment={refundPayment}
-          onSuccess={(refund) => {
-            console.log("Refund processed:", refund);
-            alert(
-              `Refund of $${refund.amount.toFixed(2)} processed successfully!`,
-            );
-            setRefundPayment(null);
           }}
         />
 

@@ -164,62 +164,17 @@ export async function processFiservPayment(
 }
 
 /**
- * Process a refund through Fiserv
+ * There is no `processFiservRefund`, and there should not be one.
+ *
+ * It lived here until 2026-08-25 and it was a simulator: a 500 ms sleep,
+ * `Math.random() > 0.05` for the outcome, and an invented
+ * `fiserv_refund_<timestamp>` id. Its one caller — the retail returns screen —
+ * printed "Return processed successfully" on the strength of it.
+ *
+ * Real refunds are `src/app/api/payments/clover/refund/route.ts`, against a
+ * real merchant, reconciled from what Clover says happened. Do not add a
+ * stand-in beside it: a fake that answers is harder to notice than a gap.
  */
-export async function processFiservRefund(
-  request: FiservRefundRequest,
-): Promise<FiservRefundResponse> {
-  const config = getFiservConfig(request.facilityId);
-
-  if (!config) {
-    return {
-      success: false,
-      refundId: "",
-      fiservRefundId: "",
-      amount: request.amount,
-      status: "failed",
-      error: {
-        code: "CONFIG_NOT_FOUND",
-        message: "Fiserv payment configuration not found for this facility",
-      },
-      processedAt: new Date().toISOString(),
-    };
-  }
-
-  // Simulate Fiserv refund API call
-  const refundId = `refund_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const fiservRefundId = `fiserv_refund_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  // Simulate processing delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  // Simulate success (95% success rate for refunds)
-  const success = Math.random() > 0.05;
-
-  if (!success) {
-    return {
-      success: false,
-      refundId,
-      fiservRefundId,
-      amount: request.amount,
-      status: "failed",
-      error: {
-        code: "REFUND_FAILED",
-        message: "Refund could not be processed",
-      },
-      processedAt: new Date().toISOString(),
-    };
-  }
-
-  return {
-    success: true,
-    refundId,
-    fiservRefundId,
-    amount: request.amount,
-    status: "completed",
-    processedAt: new Date().toISOString(),
-  };
-}
 
 /**
  * Detect card brand from card number

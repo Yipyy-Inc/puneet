@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
   }
 
   const clientRef = request.nextUrl.searchParams.get("clientRef");
+  const bookingRef = request.nextUrl.searchParams.get("bookingRef");
   const supabase = await createServerClient();
 
   // The client's uuid, resolved separately rather than through a PostgREST
@@ -86,18 +87,49 @@ export async function GET(request: NextRequest) {
     clientId = client.id;
   }
 
+  // ── ONE BOOKING'S OWN ROWS ────────────────────────────────────────────────
+  //
+  // Same shape as the client filter above, and the same reasoning: `ref` is the
+  // number people quote, the uuid is what the ledger holds, and `bookings_read`
+  // — not this lookup — is what decides whether the caller may see it. A
+  // booking they cannot read returns an empty list rather than a 404, because a
+  // 404 would tell them the booking exists.
+  //
+  // The breakdown on a booking needs this to show GROSS and REFUNDED, not just
+  // the net. `bookings.amount_paid` sums signed rows, so $800 taken and $200
+  // given back reads "Paid $600" — indistinguishable from a customer who only
+  // ever paid $600, and one of those has a refund to explain.
+  let bookingId: string | null = null;
+  if (bookingRef) {
+    const ref = Number(bookingRef);
+    if (!Number.isInteger(ref)) {
+      return NextResponse.json(
+        { error: "bookingRef must be a number." },
+        { status: 422 },
+      );
+    }
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("ref", ref)
+      .maybeSingle();
+    if (!booking) return NextResponse.json([]);
+    bookingId = booking.id;
+  }
+
   let query = supabase
     .from("payments")
     // ONE STRING LITERAL, not a concatenation. supabase-js infers the row type
     // from the select at the type level; `"a, b" + "c"` is just `string` to the
     // compiler, and every column silently becomes an error type.
     .select(
-      "id, booking_id, client_id, method, grand_total, tip, amount_charged, card_brand, card_last4, entry_method, processor, author_name, created_at, refund_of_payment_id",
+      "id, booking_id, client_id, method, grand_total, tip, amount_charged, card_brand, card_last4, entry_method, processor, author_name, note, created_at, refund_of_payment_id",
     )
     .order("created_at", { ascending: false })
     .limit(200);
 
   if (clientId) query = query.eq("client_id", clientId);
+  if (bookingId) query = query.eq("booking_id", bookingId);
 
   const { data, error } = await query;
   if (error) {
@@ -121,6 +153,9 @@ export async function GET(request: NextRequest) {
       entryMethod: row.entry_method,
       processor: row.processor,
       authorName: row.author_name,
+      // Why it happened, when somebody said (20260825190000). Null on an
+      // ordinary sale, and on a reversal that came back from Clover.
+      note: row.note,
       createdAt: row.created_at,
       isRefund: row.refund_of_payment_id !== null,
     })),
@@ -148,6 +183,10 @@ interface PaymentInput {
   packagePassId?: string;
   receiptChannels?: string[];
   creditNote?: string;
+  /** Why this happened, in the operator's words — the refund reason, mostly.
+   *  Distinct from `creditNote`, which annotates the store-credit ENTRY and
+   *  only exists when credit moved. This lands on the payment row itself. */
+  note?: string;
   customerPackageId?: string;
   /** WHICH POOL the pass comes from. A multi-service bundle has one pool per
    *  service (20260806320000, Decision 2), so a redemption that does not name
@@ -266,6 +305,7 @@ export async function POST(request: NextRequest) {
     p_package_pass_id: body.packagePassId ?? null,
     p_receipt_channels: body.receiptChannels ?? [],
     p_credit_note: body.creditNote ?? "",
+    p_note: body.note ?? null,
     p_customer_package_id: customerPackageId,
     p_package_service_id: body.packageServiceId ?? null,
     p_pet_name: body.petName ?? null,

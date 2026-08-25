@@ -7,6 +7,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { cloverConfig } from "@/lib/clover/config";
 import { validAccessToken } from "@/lib/clover/connection";
 import { reconcilePayment } from "@/lib/clover/reconcile";
+import { refundOnTerminal } from "@/lib/clover/terminal";
 
 // ============================================================================
 // Giving the money back — actually giving it back.
@@ -62,6 +63,9 @@ interface PaymentRow {
   processor_payment_id: string;
   grand_total: number;
   created_at: string;
+  /** Set only on a card-present sale — and it decides which Clover this row
+   *  has to be reversed at. See the branch below. */
+  processor_device_serial: string | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -103,7 +107,9 @@ export async function POST(request: NextRequest) {
   // and the same "nothing to refund" answer as a booking that was never paid.
   const { data: rows } = await supabase
     .from("payments")
-    .select("id, facility_id, processor_payment_id, grand_total, created_at")
+    .select(
+      "id, facility_id, processor_payment_id, grand_total, created_at, processor_device_serial",
+    )
     .eq("booking_id", booking.id)
     .eq("processor", "clover")
     .gt("grand_total", 0)
@@ -220,24 +226,73 @@ export async function POST(request: NextRequest) {
     // is a different key and goes through.
     const idempotencyKey = `refund:${payment.id}:${remaining}:${slice}`;
 
-    const send = () =>
-      fetch(new URL("/v1/refunds", config.ecommerceOrigin), {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${active.accessToken}`,
-          "Content-Type": "application/json",
-          "idempotency-key": idempotencyKey,
-          "X-Clover-Merchant-Id": active.merchantId,
-        },
-        // Amount OMITTED only for an untouched payment being reversed whole.
-        // On a same-day charge Clover then reverses the authorisation outright,
-        // which is cheaper for the merchant and lands as result=VOIDED.
-        body: JSON.stringify({
-          charge: payment.processor_payment_id,
-          ...(full ? {} : { amount: slice }),
-        }),
-        signal: AbortSignal.timeout(30_000),
-      });
+    // ── WHICH CLOVER GIVES IT BACK DEPENDS ON HOW IT WAS TAKEN ─────────────
+    //
+    // A card-present sale carries the serial of the device that took it, and
+    // that device is the only thing that can partially reverse it. This route
+    // sent every refund to the ecommerce endpoint until 2026-08-25, and the
+    // debt map called the terminal case an open question. It is answered, in
+    // the sandbox, and the answer is no:
+    //
+    //   POST /v1/refunds {charge: <a terminal payment>, amount: 1}
+    //   -> 400 processing_error
+    //      "Partial refund for order with multiple line items/tip/convenience
+    //       fee is not supported by this api"
+    //
+    // A TIP is enough to trigger that, and the terminal asks for a tip. The
+    // endpoint Clover's own error recommends — /v1/orders/{id}/returns — is
+    // worse than useless here: it answers 200 and refunds the WHOLE order
+    // while echoing the amount you asked for back at you. See the note on
+    // `refundOnTerminal`, which is where that is written down at length.
+    const onDevice = payment.processor_device_serial;
+
+    const send = onDevice
+      ? async () =>
+          refundOnTerminal({
+            facilityId: booking.facility_id,
+            processorPaymentId: payment.processor_payment_id,
+            deviceSerial: onDevice,
+            amountCents: full ? undefined : slice,
+            idempotencyKey,
+          })
+      : async () => {
+          const response = await fetch(
+            new URL("/v1/refunds", config.ecommerceOrigin),
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${active.accessToken}`,
+                "Content-Type": "application/json",
+                "idempotency-key": idempotencyKey,
+                "X-Clover-Merchant-Id": active.merchantId,
+              },
+              // Amount OMITTED only for an untouched payment being reversed
+              // whole. On a same-day charge Clover then reverses the
+              // authorisation outright, which is cheaper for the merchant and
+              // lands as result=VOIDED.
+              body: JSON.stringify({
+                charge: payment.processor_payment_id,
+                ...(full ? {} : { amount: slice }),
+              }),
+              signal: AbortSignal.timeout(30_000),
+            },
+          );
+          const body = (await response.json().catch(() => null)) as {
+            id?: string;
+            message?: string;
+            error?: { message?: string };
+          } | null;
+          return response.ok && Boolean(body?.id)
+            ? ({ ok: true, refundId: body?.id ?? null } as const)
+            : ({
+                ok: false,
+                code: "refused",
+                message:
+                  body?.error?.message ??
+                  body?.message ??
+                  `Clover refused the refund (${response.status}).`,
+              } as const);
+        };
 
     // ── A THROW IS NOT A FAILURE, IT IS AN UNKNOWN ────────────────────────
     //
@@ -252,19 +307,12 @@ export async function POST(request: NextRequest) {
     let detail = "";
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const response = await send();
-        const body = (await response.json().catch(() => null)) as {
-          id?: string;
-          message?: string;
-          error?: { message?: string };
-        } | null;
-
-        ok = response.ok && Boolean(body?.id);
-        detail = ok
-          ? ""
-          : (body?.error?.message ??
-            body?.message ??
-            `Clover refused the refund (${response.status}).`);
+        const outcome = await send();
+        ok = outcome.ok;
+        detail = outcome.ok ? "" : outcome.message;
+        // A REFUSAL is an answer, and asking twice will not change it — only a
+        // throw is worth retrying. Retrying a 400 would double the wait before
+        // the operator is told what Clover said.
         break;
       } catch {
         detail =
@@ -279,6 +327,10 @@ export async function POST(request: NextRequest) {
     const reconciled = await reconcilePayment(
       booking.facility_id,
       payment.processor_payment_id,
+      // The operator's reason, so the row it writes can say why. Parsed since
+      // the first version of this route and dropped on the floor until
+      // 20260825190000 gave `payments` somewhere to put it.
+      parsed.data.reason,
     );
 
     if (!ok && reconciled.kind !== "reversed") {
