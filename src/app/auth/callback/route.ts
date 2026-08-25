@@ -1,6 +1,8 @@
 import { getWorkOS, saveSession } from "@workos-inc/authkit-nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { redirectUrl } from "@/lib/request-origin";
+
 // ============================================================================
 // Where Google and Apple return a browser after a social sign-in.
 //
@@ -31,7 +33,10 @@ const OAUTH_STATE_COOKIE = "workos-oauth-state";
 
 /** Back to the branded sign-in page with something the form can explain. */
 function refuse(request: NextRequest, reason: string) {
-  const url = new URL("/sign-in", request.url);
+  // `redirectUrl` rather than `new URL(..., request.url)`: self-hosted, Next
+  // resolves request.url from the address the server LISTENS on, so this sent
+  // people to https://0.0.0.0:3000/sign-in. See src/lib/request-origin.ts.
+  const url = redirectUrl(request, "/sign-in");
   url.searchParams.set("error", reason);
   const response = NextResponse.redirect(url);
   response.cookies.delete(OAUTH_STATE_COOKIE);
@@ -72,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     // `/` routes on to the portal chosen by landingPathFor(viewer) from the
     // token, rather than being guessed here. One sign-in serves every account.
-    response = NextResponse.redirect(new URL("/", request.url));
+    response = NextResponse.redirect(redirectUrl(request, "/"));
   } catch {
     return refuse(request, "exchange");
   }
