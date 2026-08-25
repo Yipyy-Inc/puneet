@@ -1,73 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import type { Location } from "@/types/location";
 import { locationStyles } from "@/lib/hq/location-styles";
-import {
-  deriveOpenState,
-  OPEN_STATE_META,
-  liveCount,
-} from "@/lib/hq/location-status";
-import { deriveLocationId } from "@/data/locations";
-import { incidents } from "@/data/incidents";
+import { useFacilityLocations } from "@/lib/api/locations";
+import { useStaffHomeLocations } from "@/lib/api/staff";
+import { useLocationContext } from "@/hooks/use-location-context";
 
-// Locations with an unresolved incident right now → red alert dot.
-const ALERT_LOCATION_IDS = new Set(
-  incidents
-    .filter((i) => i.status === "open" || i.status === "investigating")
-    .map((i) => deriveLocationId(i.id)),
-);
+const STATUS_META: Record<string, { label: string; className: string }> = {
+  active: {
+    label: "Open",
+    className:
+      "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  },
+  inactive: {
+    label: "Closed",
+    className: "bg-muted text-muted-foreground border-transparent",
+  },
+  coming_soon: {
+    label: "Coming soon",
+    className:
+      "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  },
+};
 
-interface Props {
-  locations: Location[];
-}
+// ============================================================================
+// Network Status Bar — a row of compact chips, one per branch.
+//
+// Open/closed hours, occupancy, today's revenue and the incident-derived
+// alert dot are gone, not converted: `FacilityLocation` (the real row) has no
+// hours field, occupancy was dropped app-wide (no real per-location source),
+// and the alert dot read a fixture incidents array hashed onto a location
+// with no real relationship. Real staff-on-site now comes from
+// `useStaffHomeLocations()`. Clicking a chip switches the shared location
+// context for real -- it used to navigate only, because the ids it had were
+// fixture ids that would not have matched anything.
+// ============================================================================
 
-/**
- * Network Status Bar — a single horizontal row of compact, at-a-glance status
- * chips (one per location) at the very top of the HQ Command Center. Pure live
- * status: open/closed, occupancy as raw numbers, staff in, today's revenue, and
- * an alert dot. Clicking a chip switches location context and opens that
- * location's individual dashboard. No charts.
- */
-export function NetworkStatusBar({ locations }: Props) {
+export function NetworkStatusBar() {
   const router = useRouter();
-  // Snapshot "now" once at mount (avoids reading the clock during render).
-  const [now] = useState(() => new Date());
+  const { data: locations } = useFacilityLocations();
+  const { data: staff } = useStaffHomeLocations();
+  const { setLocation } = useLocationContext();
 
-  function openLocation() {
-    // Not `setLocation(id)` -- these chips still render fixture data
-    // (`getLocationsByFacility(11)` on the HQ overview page), so their id
-    // would not match any real location once the shared context is fed by
-    // Postgres. Setting it would silently break location filtering for the
-    // rest of the session. Navigate only, until this page is converted too.
+  const staffCountByLocation = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of staff ?? []) {
+      if (!s.homeLocationId) continue;
+      counts.set(s.homeLocationId, (counts.get(s.homeLocationId) ?? 0) + 1);
+    }
+    return counts;
+  }, [staff]);
+
+  function openLocation(id: string) {
+    setLocation(id);
     router.push("/facility/dashboard");
   }
 
   return (
     <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
-      {locations.map((loc) => {
+      {(locations ?? []).map((loc) => {
         const s = locationStyles(loc);
-        const state = deriveOpenState(loc.hours, now);
-        const meta = OPEN_STATE_META[state];
-        const occupancyRate = loc.metrics?.occupancyRate ?? 0;
-        const boarding = liveCount(loc.capacity.boarding, occupancyRate);
-        const daycare = liveCount(loc.capacity.daycare, occupancyRate);
-        const staffIn = loc.staffAssignments.length;
-        const todayRevenue = Math.round((loc.metrics?.revenue ?? 0) / 30);
-        const hasAlert = ALERT_LOCATION_IDS.has(loc.id);
+        const status = STATUS_META[loc.status] ?? STATUS_META.active;
+        const staffIn = staffCountByLocation.get(loc.id) ?? 0;
 
         return (
           <button
             key={loc.id}
             type="button"
-            onClick={() => openLocation()}
+            onClick={() => openLocation(loc.id)}
             aria-label={`Open ${loc.name} dashboard`}
-            className="bg-card hover:border-primary/40 group flex min-w-60 shrink-0 flex-col gap-1.5 rounded-xl border p-3 text-left transition-colors hover:shadow-sm"
+            className="bg-card hover:border-primary/40 group flex min-w-52 shrink-0 flex-col gap-1.5 rounded-xl border p-3 text-left transition-colors hover:shadow-sm"
           >
-            {/* Name + open state + alert */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-2">
                 <span
@@ -76,73 +82,27 @@ export function NetworkStatusBar({ locations }: Props) {
                     s.bg,
                   )}
                 >
-                  {loc.shortCode}
+                  {(loc.shortCode ?? loc.name).slice(0, 3)}
                 </span>
                 <span className="truncate text-xs font-semibold">
                   {loc.name}
                 </span>
               </div>
-              {hasAlert && (
-                <span
-                  role="status"
-                  aria-label="Active alert"
-                  title="Active alert at this location"
-                  className="size-2.5 shrink-0 rounded-full bg-red-500 ring-2 ring-red-500/20"
-                />
-              )}
             </div>
 
             <span
               className={cn(
                 "inline-flex w-fit items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
-                meta.className,
+                status.className,
               )}
             >
-              {meta.label}
+              {status.label}
             </span>
 
-            {/* Occupancy as raw numbers (not percentages) */}
             <p className="text-muted-foreground text-[11px] tabular-nums">
-              {boarding === null && daycare === null ? (
-                <span className="italic">No occupancy tracked</span>
-              ) : (
-                <>
-                  {boarding !== null && (
-                    <span className="text-foreground font-medium">
-                      {boarding}/{loc.capacity.boarding}{" "}
-                      <span className="text-muted-foreground font-normal">
-                        boarding
-                      </span>
-                    </span>
-                  )}
-                  {boarding !== null && daycare !== null && (
-                    <span className="px-1">·</span>
-                  )}
-                  {daycare !== null && (
-                    <span className="text-foreground font-medium">
-                      {daycare}/{loc.capacity.daycare}{" "}
-                      <span className="text-muted-foreground font-normal">
-                        daycare
-                      </span>
-                    </span>
-                  )}
-                </>
-              )}
+              <span className="text-foreground font-medium">{staffIn}</span>{" "}
+              staff based here
             </p>
-
-            {/* Staff in + today's revenue */}
-            <div className="text-muted-foreground flex items-center justify-between text-[11px]">
-              <span className="tabular-nums">
-                <span className="text-foreground font-medium">{staffIn}</span>{" "}
-                staff in
-              </span>
-              <span className="tabular-nums">
-                <span className="text-foreground font-semibold">
-                  ${todayRevenue.toLocaleString()}
-                </span>{" "}
-                today
-              </span>
-            </div>
           </button>
         );
       })}

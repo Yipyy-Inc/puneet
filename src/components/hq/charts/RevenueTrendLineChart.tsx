@@ -10,7 +10,6 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import type { Location } from "@/types/location";
 import { locationHex } from "@/lib/hq/location-styles";
 import {
   ReportTooltip,
@@ -21,9 +20,16 @@ import {
   tickFmt,
 } from "@/components/reports/chart-kit";
 
+interface ChartLocation {
+  id: string;
+  name: string;
+  color?: string | null;
+  shortCode?: string | null;
+}
+
 interface Props {
   data: { month: string; [locationId: string]: number | string }[];
-  locations: Location[];
+  locations: ChartLocation[];
   height?: number;
 }
 

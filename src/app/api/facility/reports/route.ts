@@ -32,6 +32,7 @@ import { createServerClient } from "@/lib/supabase/server";
 const REPORTS = new Set([
   "revenue-by-service",
   "revenue-by-location",
+  "service-mix-by-location",
   "occupancy-report",
   "cancelled-bookings",
   "customer-value",

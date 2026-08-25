@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -13,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import type { HQOverviewMetrics, Location } from "@/types/location";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   locationStyles,
   styleFromKey,
@@ -23,26 +24,60 @@ import { StackedDistribution } from "@/components/hq/charts/StackedDistribution"
 import { NetworkStatusBar } from "@/components/hq/command-center/NetworkStatusBar";
 import { CommandCenterKpis } from "@/components/hq/command-center/CommandCenterKpis";
 import { LocationCard } from "@/components/hq/command-center/LocationCard";
-import { NetworkActivityFeed } from "@/components/hq/command-center/NetworkActivityFeed";
-import { LastUpdated } from "@/components/hq/LastUpdated";
 import { usePermission } from "@/hooks/use-facility-rbac";
+import { useFacilityLocations } from "@/lib/api/locations";
+import { useStaffHomeLocations } from "@/lib/api/staff";
+import {
+  useFacilityReport,
+  type RevenueByLocationData,
+} from "@/lib/api/facility-reports";
 
-interface Props {
-  metrics: HQOverviewMetrics;
-  locations: Location[];
+// ============================================================================
+// HQ Command Center — real branches, real revenue, real headcount.
+//
+// The Network Activity Feed is gone, not converted: there is no real
+// activity-stream table, and `hqActivityFeed` was a hand-authored event log
+// anchored to a fixed month. Everything else here now reads either
+// `useFacilityLocations()` or the same `facility_report_dataset` RPC the
+// Reports page uses, via `useFacilityReport`.
+// ============================================================================
+
+function thisMonthWindow(): { from: string; to: string } {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return { from: from.toISOString(), to: to.toISOString() };
 }
 
-export function HQOverviewClient({ metrics, locations }: Props) {
-  // Revenue figures are Manager+ only (spec A5 / F0.2). TODO: also strip
-  // server-side when a backend exists.
+export function HQOverviewClient() {
   const canSeeRevenue = usePermission("financial_view_revenue");
+  const { data: locations, isPending: locationsPending } =
+    useFacilityLocations();
+  const { data: staff } = useStaffHomeLocations();
+
+  const { from, to } = useMemo(() => thisMonthWindow(), []);
+  const { data: revenueReport } = useFacilityReport(
+    "revenue-by-location",
+    from,
+    to,
+  );
+  const revenue = (revenueReport?.data as RevenueByLocationData | undefined)
+    ?.current;
+  const revenueTotal = (revenue ?? []).reduce((s, r) => s + r.revenue, 0);
+
+  if (locationsPending) {
+    return (
+      <div className="space-y-6 p-4 pt-6 md:p-8">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-48 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-7 p-4 pt-6 md:p-8">
-      {/* Network status bar — live per-location status at the very top */}
-      <NetworkStatusBar locations={locations} />
+      <NetworkStatusBar />
 
-      {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <div className="flex size-10 items-center justify-center rounded-xl bg-linear-to-br from-sky-500 to-violet-500 shadow-md">
@@ -53,25 +88,14 @@ export function HQOverviewClient({ metrics, locations }: Props) {
               HQ Command Center
             </h1>
             <p className="text-muted-foreground text-sm">
-              Network overview · {locations.length} locations · April 2026
+              Network overview · {(locations ?? []).length} locations
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <LastUpdated label="Last updated" />
-          <Link href="/facility/hq/comparison">
-            <Button size="sm" className="gap-1.5">
-              <BarChart3 className="size-3.5" />
-              Compare
-            </Button>
-          </Link>
-        </div>
       </div>
 
-      {/* KPI tiles + date-range selector */}
-      <CommandCenterKpis locations={locations} />
+      <CommandCenterKpis />
 
-      {/* Revenue distribution — Manager+ only (financial_view_revenue) */}
       {canSeeRevenue && (
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="overflow-hidden">
@@ -84,56 +108,71 @@ export function HQOverviewClient({ metrics, locations }: Props) {
               </p>
             </CardHeader>
             <CardContent className="space-y-3">
-              <StackedDistribution
-                segments={metrics.revenueByLocation.map((r) => {
-                  const loc = locations.find((l) => l.id === r.locationId);
-                  const s = loc ? locationStyles(loc) : styleFromKey("sky");
-                  return {
-                    key: r.locationId,
-                    value: r.revenue,
-                    className: s.bg,
-                    label: `${r.locationName}: $${r.revenue.toLocaleString()}`,
-                  };
-                })}
-                size="md"
-              />
-              <ul className="space-y-1.5">
-                {metrics.revenueByLocation.map((r) => {
-                  const loc = locations.find((l) => l.id === r.locationId);
-                  const s = loc ? locationStyles(loc) : styleFromKey("sky");
-                  return (
-                    <li
-                      key={r.locationId}
-                      className="flex items-center justify-between gap-2 text-[11px]"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={cn("size-2.5 rounded-sm", s.bg)} />
-                        <span className="font-semibold">{r.locationName}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground tabular-nums">
-                          ${r.revenue.toLocaleString()}
-                        </span>
-                        <span className={cn("font-bold tabular-nums", s.text)}>
-                          {r.percentage.toFixed(1)}%
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              {!revenue || revenue.length === 0 ? (
+                <p className="text-muted-foreground text-xs">
+                  No revenue this month yet.
+                </p>
+              ) : (
+                <>
+                  <StackedDistribution
+                    segments={revenue.map((r) => {
+                      const loc = (locations ?? []).find(
+                        (l) => l.id === r.locationId,
+                      );
+                      const s = loc ? locationStyles(loc) : styleFromKey("sky");
+                      return {
+                        key: r.locationId ?? r.location,
+                        value: r.revenue,
+                        className: s.bg,
+                        label: `${r.location}: $${r.revenue.toLocaleString()}`,
+                      };
+                    })}
+                    size="md"
+                  />
+                  <ul className="space-y-1.5">
+                    {revenue.map((r) => {
+                      const loc = (locations ?? []).find(
+                        (l) => l.id === r.locationId,
+                      );
+                      const s = loc ? locationStyles(loc) : styleFromKey("sky");
+                      const pct =
+                        revenueTotal > 0 ? (r.revenue / revenueTotal) * 100 : 0;
+                      return (
+                        <li
+                          key={r.locationId ?? r.location}
+                          className="flex items-center justify-between gap-2 text-[11px]"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={cn("size-2.5 rounded-sm", s.bg)} />
+                            <span className="font-semibold">{r.location}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground tabular-nums">
+                              ${r.revenue.toLocaleString()}
+                            </span>
+                            <span
+                              className={cn("font-bold tabular-nums", s.text)}
+                            >
+                              {pct.toFixed(1)}%
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Location grid */}
       <div>
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold">Locations</h2>
             <p className="text-muted-foreground text-xs">
-              Live performance per branch
+              This month&apos;s revenue and bookings per branch
             </p>
           </div>
           <Link href="/facility/hq/settings">
@@ -143,13 +182,21 @@ export function HQOverviewClient({ metrics, locations }: Props) {
           </Link>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {locations.map((loc) => (
-            <LocationCard key={loc.id} location={loc} />
-          ))}
+          {(locations ?? []).map((loc) => {
+            const row = revenue?.find((r) => r.locationId === loc.id);
+            return (
+              <LocationCard
+                key={loc.id}
+                location={loc}
+                staff={staff ?? []}
+                revenue={row?.revenue}
+                bookings={row?.bookings}
+              />
+            );
+          })}
         </div>
       </div>
 
-      {/* Quick links */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {[
           {
@@ -157,13 +204,6 @@ export function HQOverviewClient({ metrics, locations }: Props) {
             icon: BarChart3,
             label: "HQ Analytics",
             sub: "Consolidated & per-location charts",
-            tone: "sky" as LocationColorKey,
-          },
-          {
-            href: "/facility/hq/comparison",
-            icon: BarChart3,
-            label: "Location Comparison",
-            sub: "Side-by-side metrics",
             tone: "sky" as LocationColorKey,
           },
           {
@@ -177,7 +217,7 @@ export function HQOverviewClient({ metrics, locations }: Props) {
             href: "/facility/hq/staff",
             icon: Users,
             label: "Staff Pool",
-            sub: "Shared staff management",
+            sub: "Roster by home branch",
             tone: "violet" as LocationColorKey,
           },
           {
@@ -227,12 +267,9 @@ export function HQOverviewClient({ metrics, locations }: Props) {
         })}
       </div>
 
-      {/* Network activity feed */}
-      <NetworkActivityFeed />
-
       <Separator />
       <p className="text-muted-foreground text-center text-xs">
-        Data reflects April 2026 · Auto-refreshes every 5 minutes
+        Figures are real, read live from bookings and payments.
       </p>
     </div>
   );

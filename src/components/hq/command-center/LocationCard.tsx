@@ -1,104 +1,69 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, Users } from "lucide-react";
+import { ArrowRight, Users } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { Location } from "@/types/location";
+import type { FacilityLocation } from "@/types/location";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { MetricBar } from "@/components/hq/charts/MetricBar";
 import { locationStyles } from "@/lib/hq/location-styles";
-import {
-  deriveOpenState,
-  OPEN_STATE_META,
-  liveCount,
-} from "@/lib/hq/location-status";
-import {
-  getUpcomingBookings,
-  getLocationAlerts,
-  formatAlertBanner,
-} from "@/lib/hq/command-center-cards";
+import type { StaffHomeLocationSummary } from "@/lib/api/staff";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { useRouter } from "next/navigation";
 
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-// Format "2026-04-01" → "Apr 1" without reading the clock (lint-safe).
-function shortDate(iso: string): string {
-  const [, m, d] = iso.split("-").map(Number);
-  return `${MONTHS[(m ?? 1) - 1]} ${d ?? 1}`;
-}
-
-function prettyRole(role: string): string {
-  return role
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-const SERVICE_LABEL: Record<string, string> = {
-  boarding: "Boarding",
-  daycare: "Daycare",
-  grooming: "Grooming",
-  training: "Training",
+const STATUS_META: Record<string, { label: string; className: string }> = {
+  active: {
+    label: "Open",
+    className:
+      "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  },
+  inactive: {
+    label: "Closed",
+    className: "bg-muted text-muted-foreground border-transparent",
+  },
+  coming_soon: {
+    label: "Coming soon",
+    className:
+      "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  },
 };
 
 interface Props {
-  location: Location;
+  location: FacilityLocation;
+  /** The whole roster, filtered to this branch here rather than by the
+   *  parent -- there's only ever a handful of locations, so N small filters
+   *  beat threading a pre-grouped map through. */
+  staff: StaffHomeLocationSummary[];
+  /** This branch's revenue in whatever window the page's KPI tiles are
+   *  currently showing -- passed down so the grid shares ONE report fetch
+   *  rather than each card making its own. */
+  revenue: number | undefined;
+  bookings: number | undefined;
 }
 
-/**
- * Operational location card for the HQ Command Center grid. Shows live status,
- * today's occupancy, revenue (today vs. month), staff on site, the next few
- * bookings, and an alerts banner — all in the professional location palette.
- */
-export function LocationCard({ location }: Props) {
+// ============================================================================
+// Operational location card for the HQ Command Center grid.
+//
+// Occupancy, the alerts banner and "Next up" booking chips are gone, not
+// converted: none has a real per-location source (occupancy was dropped
+// app-wide; alerts and upcoming-bookings both read the fixture incidents/
+// bookings arrays through `deriveLocationId`, a hash with no real
+// relationship to a location). Staff-on-site now shows real names.
+// ============================================================================
+
+export function LocationCard({ location, staff, revenue, bookings }: Props) {
   const router = useRouter();
-  // Snapshot "now" once at mount (avoids reading the clock during render).
-  const [now] = useState(() => new Date());
-
+  const { setLocation } = useLocationContext();
   const s = locationStyles(location);
-  const state = deriveOpenState(location.hours, now);
-  const stateMeta = OPEN_STATE_META[state];
-
-  const occupancyRate = location.metrics?.occupancyRate ?? 0;
-  const boarding = liveCount(location.capacity.boarding, occupancyRate);
-  const daycare = liveCount(location.capacity.daycare, occupancyRate);
-  const occupancyRows = [
-    { key: "boarding", count: boarding, cap: location.capacity.boarding },
-    { key: "daycare", count: daycare, cap: location.capacity.daycare },
-  ].filter((r) => r.count !== null);
-
-  const monthRevenue = location.metrics?.revenue ?? 0;
-  const todayRevenue = Math.round(monthRevenue / 30);
-
-  const staff = location.staffAssignments;
-  const upcoming = getUpcomingBookings(location.id, 3);
-  const alerts = getLocationAlerts(location.id);
+  const status = STATUS_META[location.status] ?? STATUS_META.active;
+  const onSite = staff.filter((m) => m.homeLocationId === location.id);
 
   function openDashboard() {
-    // Not `setLocation(location.id)` -- this card's data still comes from the
-    // fixture (`getLocationsByFacility(11)` on the HQ overview page), so its
-    // id would not match any real location once the shared context is fed by
-    // Postgres. Setting it would silently break location filtering for the
-    // rest of the session. Navigate only, until this page is converted too.
+    setLocation(location.id);
     router.push("/facility/dashboard");
   }
 
@@ -106,7 +71,6 @@ export function LocationCard({ location }: Props) {
     <div className="bg-card flex flex-col overflow-hidden rounded-xl border">
       <div className={cn("h-0.5", s.bg)} />
       <div className="flex flex-1 flex-col gap-3 p-4">
-        {/* Name + status badge */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <span
@@ -115,72 +79,40 @@ export function LocationCard({ location }: Props) {
                 s.bg,
               )}
             >
-              {location.shortCode}
+              {(location.shortCode ?? location.name).slice(0, 3)}
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{location.name}</p>
               <p className="text-muted-foreground truncate text-[11px]">
-                {location.city}
+                {location.address?.city ?? "No address yet"}
               </p>
             </div>
           </div>
           <span
             className={cn(
               "inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
-              stateMeta.className,
+              status.className,
             )}
           >
-            {stateMeta.label}
+            {status.label}
           </span>
         </div>
 
-        {/* Today's occupancy — compact progress bars */}
-        <div className="space-y-1.5">
-          <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-            Today&apos;s occupancy
-          </p>
-          {occupancyRows.length === 0 ? (
-            <p className="text-muted-foreground text-[11px] italic">
-              No occupancy tracked
-            </p>
-          ) : (
-            occupancyRows.map((r) => (
-              <div key={r.key}>
-                <div className="mb-0.5 flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground">
-                    {SERVICE_LABEL[r.key]}
-                  </span>
-                  <span className="font-semibold tabular-nums">
-                    {r.count}/{r.cap}
-                  </span>
-                </div>
-                <MetricBar
-                  percent={occupancyRate}
-                  fillClassName={s.bg}
-                  size="xs"
-                />
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Revenue today vs. this month */}
         <div className="grid grid-cols-2 gap-2">
           <div className={cn("rounded-lg px-2.5 py-1.5", s.bgSofter)}>
-            <p className="text-muted-foreground text-[10px]">Revenue today</p>
+            <p className="text-muted-foreground text-[10px]">Revenue</p>
             <p className="text-sm font-bold tabular-nums">
-              ${todayRevenue.toLocaleString()}
+              ${(revenue ?? 0).toLocaleString()}
             </p>
           </div>
           <div className="bg-muted/40 rounded-lg px-2.5 py-1.5">
-            <p className="text-muted-foreground text-[10px]">This month</p>
+            <p className="text-muted-foreground text-[10px]">Bookings</p>
             <p className="text-sm font-bold tabular-nums">
-              ${monthRevenue.toLocaleString()}
+              {(bookings ?? 0).toLocaleString()}
             </p>
           </div>
         </div>
 
-        {/* Staff in — click to see who */}
         <Popover>
           <PopoverTrigger asChild>
             <button
@@ -188,60 +120,32 @@ export function LocationCard({ location }: Props) {
               className="hover:bg-muted/50 flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium transition-colors"
             >
               <Users className={cn("size-3.5", s.text)} />
-              {staff.length} staff in
+              {onSite.length} staff based here
             </button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-56 p-2">
             <p className="text-muted-foreground mb-1.5 px-1 text-[10px] font-semibold tracking-wider uppercase">
-              On site · {location.shortCode}
+              Based at {location.shortCode ?? location.name}
             </p>
-            <ul className="space-y-0.5">
-              {staff.map((m) => (
-                <li
-                  key={m.staffId}
-                  className="flex items-center justify-between gap-2 rounded-md px-1 py-1 text-xs"
-                >
-                  <span className="truncate font-medium">{m.staffName}</span>
-                  <span className="text-muted-foreground shrink-0 text-[10px]">
-                    {prettyRole(m.role)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {onSite.length === 0 ? (
+              <p className="text-muted-foreground px-1 py-1 text-xs italic">
+                Nobody&apos;s home branch is set to this one yet.
+              </p>
+            ) : (
+              <ul className="space-y-0.5">
+                {onSite.map((m) => (
+                  <li
+                    key={m.staffId}
+                    className="truncate rounded-md px-1 py-1 text-xs font-medium"
+                  >
+                    {m.name}
+                  </li>
+                ))}
+              </ul>
+            )}
           </PopoverContent>
         </Popover>
 
-        {/* Next upcoming bookings — mini chips */}
-        <div className="space-y-1.5">
-          <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-            Next up
-          </p>
-          {upcoming.length === 0 ? (
-            <p className="text-muted-foreground text-[11px] italic">
-              No upcoming bookings
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {upcoming.map((b) => (
-                <span
-                  key={b.id}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium",
-                    s.borderSoft,
-                  )}
-                >
-                  <span className="truncate">{b.petName}</span>
-                  <span className="text-muted-foreground">
-                    · {SERVICE_LABEL[b.service] ?? b.service} ·{" "}
-                    {shortDate(b.startDate)}
-                  </span>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* View Location */}
         <Button
           variant="outline"
           size="sm"
@@ -252,14 +156,6 @@ export function LocationCard({ location }: Props) {
           <ArrowRight className="size-3.5" />
         </Button>
       </div>
-
-      {/* Active-alerts banner */}
-      {alerts.total > 0 && (
-        <div className="flex items-center gap-1.5 bg-red-500/10 px-4 py-2 text-[11px] font-medium text-red-700 dark:text-red-400">
-          <AlertTriangle className="size-3.5 shrink-0" />
-          {formatAlertBanner(alerts)}
-        </div>
-      )}
     </div>
   );
 }

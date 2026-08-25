@@ -8,11 +8,16 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import type { ServiceMixRow } from "@/data/hq-analytics";
 import { ReportTooltip } from "@/components/reports/chart-kit";
 
+interface ServiceMixSlice {
+  service: string;
+  total: number;
+  color: string;
+}
+
 interface Props {
-  data: ServiceMixRow[];
+  data: ServiceMixSlice[];
   height?: number;
 }
 
