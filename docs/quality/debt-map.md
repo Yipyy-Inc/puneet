@@ -5610,9 +5610,16 @@ ever runs it end to end.
   makes it agree with 8 and disagree with 156; renaming all 176 rewrites the
   history of a directory whose ordering is already wrong, and does not make the
   order correct. Both were considered and rejected on 2026-08-25.
-- **When you write a new migration, pass the version explicitly** so the file
-  and the row agree from birth. That is the only cheap half of this, and it
-  stops the gap widening.
+- **After applying through MCP, rename your file to the version the database
+  recorded.** Corrected 2026-08-25, same day: the first version of this entry
+  said "pass the version explicitly", and **`apply_migration` has no version
+  parameter** — it stamps the moment it ran and there is no argument that
+  changes that. So the sequence is apply, then
+  `select version from supabase_migrations.schema_migrations order by version
+desc limit 1`, then `mv` the file to match. Round hand-chosen numbers are the
+  thing to give up; `supabase migration new` stamps clock timestamps for exactly
+  this reason. Done for 20260825095825, which took the exact-match count from 8
+  to 9. That is the only cheap half of this, and it stops the gap widening.
 - **Before anyone depends on `db push`** — a new environment, a restore drill,
   the VPS — the directory needs a **squash to a baseline**: dump the current
   schema, make it migration 0001, and keep the 176 as history. That is its own
@@ -5632,6 +5639,140 @@ Every number above is re-runnable: `bun run measure:migration-drift` (add
 `--list` for the files whose version moved). It needs `SUPABASE_DB_URL`, it is
 not a gate, and it never fails. Re-derive rather than trusting these counts —
 they move with every migration written until the baseline squash happens.
+
+## Snapshot (2026-08-25, HQ locations)
+
+### 🔴 Two individually correct invariants can admit NO legal order — 2026-08-25
+
+`20260825095825` gave `public.locations` two guarantees, both obviously right:
+
+- a **partial unique index** — `on locations (facility_id) where is_primary` —
+  so two primaries cannot coexist, even under concurrent writes;
+- a **trigger** refusing to clear the last primary, because
+  `getFacilityContext` resolves a facility's primary on every request and
+  cannot resolve nothing.
+
+The trigger also demotes the incumbent when a new primary is named, so the two
+were meant to cooperate. They did not. Promoting a second branch was
+**impossible**:
+
+```
+ERROR: 23001: A facility must have a primary location.
+CONTEXT: SQL statement "update public.locations set is_primary = false ..."
+         PL/pgSQL function private.locations_single_primary() line 4
+```
+
+The demote UPDATE re-enters the same trigger. At that instant the promoted row
+has not been written — it is still inside its own BEFORE trigger — so "is there
+another primary?" is _correctly_ false, and the guard refuses the demotion the
+promotion depends on.
+
+**Neither piece is wrong. The SET is unsatisfiable.** And there was no
+rearrangement that fixed it: an AFTER trigger cannot demote first, because a
+partial unique index is checked as the row is written, and Postgres has no
+deferrable partial unique **constraint** to defer it with. Fixed in
+`20260825101500` with a transaction-local
+`set_config('yipyy.locations_demoting', '1', true)` that tells the recursive
+fire "this demotion is my own bookkeeping, not a person clearing the last one".
+
+**A sibling shipped the same morning, from the other session:** an
+`unattached_payments` queue with RLS on, one SELECT policy and two
+`security invoker` functions — every piece defensible, and together no order in
+which a queue row could ever be resolved. Two in one day makes it a family:
+**invariants compose into deadlocks that no single definition contains.** A
+trigger that re-enters itself; an index checked mid-write; a policy that
+excludes the row its own predicate was meant to judge.
+
+**Do instead:** a new invariant is not verified by the migration applying. It
+raises on USE, not on DDL, and `apply_migration` returned `{"success": true}`
+for this one. Before calling it done, drive the FIRST THING THE SCREEN WILL DO
+against it — here, "add a branch and make it the main one" — in a transaction
+you abort:
+
+```sql
+do $$ declare r text := ''; begin
+  -- ... exercise it, appending outcomes to r ...
+  raise exception 'PROBE(rolled back): %', r;
+end $$;
+```
+
+Raising with the results in the message is what makes this work through MCP:
+one call is one transaction, so the exception both reports and rolls back.
+`supabase/tests/locations-branch-invariants.sql` T3 is now the regression test,
+and it caught a second instance of the same thinking in its own first draft —
+the test demoted the incumbent before promoting the challenger, which is the one
+order the guard forbids.
+
+### 🔴 `ON DELETE SET NULL` is a SILENT success, and it eats history — 2026-08-25
+
+`bookings_location_id_fkey`, `facility_memberships_home_location_id_fkey` and
+`facility_terminals_location_id_fkey` are all `ON DELETE SET NULL`. So deleting
+a branch used to succeed. Measured on production before the guard existed:
+
+```
+Main Location   is_primary=true   423 bookings
+```
+
+Removing that row from the HQ screen would have returned 204, shown a tidy
+toast, and permanently erased the answer to "which branch did this happen at"
+for 423 real bookings. Nothing errors. Nothing logs. The damage is visible only
+to somebody who asks the question months later and gets null.
+
+This is the third member of a family already in this file: the facility-delete
+entry (`audit_log.facility_id` SET NULL vs the append-only trigger) and the
+`SELECT ... FOR UPDATE` returning zero rows under a failing UPDATE policy. **The
+common shape is a destructive outcome that presents as success.**
+
+**Do instead:** when a table is referenced by `ON DELETE SET NULL`, "can this be
+deleted" is a PRODUCT question, not a schema one. A branch that has traded
+closes; it does not cease to have existed. `private.guard_location_delete()`
+refuses it and its message names the thing to do instead — `status = 'inactive'`
+— and the route forwards that message rather than flattening it to "delete
+failed". The screen also disables the button when `bookingCount > 0`, but that
+is the explanation, not the guard: the database refuses either way.
+
+Check the delete rule before you build a delete button:
+
+```sql
+select tc.constraint_name, tc.table_name, rc.delete_rule
+  from information_schema.table_constraints tc
+  join information_schema.referential_constraints rc using (constraint_name)
+  join information_schema.constraint_column_usage ccu using (constraint_name)
+ where ccu.table_name = '<the table>' and tc.constraint_type = 'FOREIGN KEY';
+```
+
+### 🟡 `/facility/hq` is gated by a role held in `localStorage` — 2026-08-25
+
+`LocationAccessGuard requireHq` reads `useLocationScope().canViewHq`, which
+reads `useCurrentUser().user.role === "owner"`. That role comes from:
+
+```ts
+const STORAGE_KEY = "scheduling-current-user-role";
+const DEFAULT_USER = { id: "emp-1", name: "Sarah Johnson", role: "owner", ... };
+// and, outside the provider:
+return { user: DEFAULT_USER, setRole: () => {}, can: () => true };
+```
+
+A hardcoded default of `owner`, overridable from the browser console, and a
+fallback that grants every permission when the provider is absent. So the HQ
+guard is **decorative**.
+
+**It is amber rather than red because the real boundary is upstream and does
+hold.** `src/app/facility/layout.tsx` calls
+`guardPortal({ allow: canAccessFacilityPortal })`, which requires
+`access_level = 'admin'` from the signed JWT (ADR 0005, migration
+`20260818122625`). Everybody who reaches `/facility/hq` at all is already a
+facility admin, and `/api/locations` is scoped by RLS regardless of what any
+hook believes. What the localStorage role decides is only the _owner vs general
+manager_ distinction inside the admin portal — a distinction the database does
+not currently make at all.
+
+**Do instead:** do not add a NEW capability behind `canViewHq` or
+`canManageHq`, and do not read `useCurrentUser().role` for anything that must be
+true. It is the client HQ half of the two-role-systems problem already recorded
+in this file. When the owner/manager split needs to be real, it belongs on
+`facility_memberships` beside `access_level`, with RLS reading it — not in a
+hook.
 
 ## How to add to this map
 

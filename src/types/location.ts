@@ -219,3 +219,73 @@ export interface HQSettings {
   /** Primary brand colour policy: one global colour, or per-location. */
   brandingColorScope: "global" | "per_location";
 }
+
+// ============================================================================
+// The branch, as Postgres holds it.
+//
+// Everything above this line describes `src/data/locations.ts` — three
+// fictional Montreal branches with their own pricing tables, tax tables, staff
+// assignments and a 30-field metrics block, none of which is stored anywhere.
+// It still backs the HQ screens that have not been converted, so it stays.
+//
+// `FacilityLocation` is the row in `public.locations`, and it is deliberately
+// much smaller. Most of what the fixture bundles into a location already has a
+// real home and a real editor:
+//
+//   pricing / pricingOverride  ->  grooming_services, room_categories rates
+//   taxes                      ->  facility_settings tax_config
+//   staffAssignments           ->  staff + facility_memberships.home_location_id
+//   hours                      ->  facility_settings business hours
+//   metrics                    ->  derived from bookings and payments
+//
+// Copying those onto the branch record would create the disagreement this
+// project keeps finding: two screens editing one fact, only one of them
+// writing. So this type carries what makes a branch a branch, and nothing else.
+// ============================================================================
+
+/** Same shape as `facilities.address`, deliberately — one shape, one renderer. */
+export interface LocationAddress {
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
+export const LOCATION_STATUSES = ["active", "inactive", "coming_soon"] as const;
+export type LocationStatus = (typeof LOCATION_STATUSES)[number];
+
+/** The services a branch can state a headcount for. */
+export const LOCATION_CAPACITY_KEYS = [
+  "daycare",
+  "boarding",
+  "grooming",
+  "training",
+] as const;
+export type LocationCapacityKey = (typeof LOCATION_CAPACITY_KEYS)[number];
+
+export interface FacilityLocation {
+  id: string;
+  name: string;
+  shortCode: string | null;
+  address: LocationAddress | null;
+  email: string | null;
+  phone: string | null;
+  status: LocationStatus;
+  isPrimary: boolean;
+  /** Null means "inherit the facility's timezone", which is the common case. */
+  timezone: string | null;
+  /** An absent key means no stated limit, which is not the same as zero. */
+  capacity: Partial<Record<LocationCapacityKey, number>>;
+  color: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /**
+   * How many bookings name this branch.
+   *
+   * Carried so the screen can say WHY a branch cannot be removed before the
+   * click, rather than offering a button whose only outcome is a refusal. The
+   * database refuses it either way — this is the explanation, not the guard.
+   */
+  bookingCount: number;
+}
