@@ -5,7 +5,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { writeFailure } from "@/lib/api/write-failure";
 import { listFacilitiesForAdmin } from "@/lib/api/admin-facilities";
-import { attachFacilityDomain } from "@/lib/vercel/domains";
+import { attachFacilityDomain } from "@/lib/facility-domains";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 // ============================================================================

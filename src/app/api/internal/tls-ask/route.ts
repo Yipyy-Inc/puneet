@@ -12,7 +12,8 @@ import { facilitySlugFromHost } from "@/lib/facility-host";
 //
 // ── THIS ENDPOINT IS WHY THE VERCEL DOMAIN CLIENT CAN BE DELETED ──────────
 //
-// `src/lib/vercel/domains.ts` exists for one reason: Vercel will not issue
+// `src/lib/vercel/domains.ts` (deleted 2026-08-25) existed for one reason:
+// Vercel would not issue
 // `*.yipyy.com` without holding the nameservers, so every facility subdomain
 // had to be registered individually through `POST /v10/projects/{id}/domains`
 // just to get a certificate. Caddy issues one on first request instead, and

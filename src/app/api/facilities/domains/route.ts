@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { attachedProjectHosts } from "@/lib/vercel/domains";
+import { attachedProjectHosts } from "@/lib/facility-domains";
 import { getViewer } from "@/lib/auth/viewer";
 
 // ============================================================================

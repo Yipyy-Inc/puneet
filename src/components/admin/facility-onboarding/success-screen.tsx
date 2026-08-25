@@ -31,7 +31,7 @@ export interface OwnerInviteOutcome {
   alreadyRegistered?: boolean;
 }
 
-/** What happened to `<slug>.yipyy.com` — see lib/vercel/domains.ts. */
+/** What happened to `<slug>.yipyy.com` — see lib/facility-domains.ts. */
 /** What the route reports about the self-registration switch. */
 export interface CustomerSignupOutcome {
   enabled: boolean;
