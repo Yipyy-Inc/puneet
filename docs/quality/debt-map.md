@@ -5983,9 +5983,14 @@ even once a facility has a second branch:
 ```
 public.clients    -- no location column at all (20260801120000)
 public.staff      -- no location column at all (20260801150000)
-public.payments   -- no location column; booking_id is "an identifier, NOT a
-                      reference" per its own comment (20260806220000:107)
+public.payments   -- no location column of its own
 ```
+
+(`payments.booking_id` was believed uncertain here — its own migration comment
+calls it "an identifier, NOT a reference" — but `20260807160000` made it a
+real, enforced FK (`on delete restrict`) after that comment was written. The
+comment is stale; the join to `bookings.location_id` is sound. Confirmed
+below, where it is what makes the sixth report real.)
 
 Five screens sit on top of this, each needing something that plainly does not
 exist yet, not a rewire:
@@ -6004,27 +6009,43 @@ exist yet, not a rewire:
   are `facility_id`-scoped only, no `location_id` column, anywhere.
 - **`/facility/hq/staff`** — reads `sharedStaffPool` (fixture), not
   `public.staff`, which has no location column to read from if it did.
-- **`/facility/hq/transfers`** + `BookingTransferModal` — `addTransfer()`
-  writes to a **module-level array** (`src/data/location-transfers.ts`) that
-  resets on every reload/deploy. No transfer/log table exists; `bookings` only
-  ever records where a booking currently is, never where it moved from.
+- **`/facility/hq/transfers`** + `TransferCenterClient` (1022 lines) — still
+  reads `getAllTransfers()` from `src/data/location-transfers.ts`, a
+  **module-level array** that resets on every reload/deploy, built around a
+  request/approval workflow (pricing policy, customer approval, availability
+  check) nothing in Postgres backs. Left untouched. **But the ACTION this
+  screen's `BookingTransferModal` used to imitate is now real** — see below.
 
-**What was done instead (2026-08-25):** the two pieces that WERE real columns
-with no writer — `facility_memberships.home_location_id` (which branch a staff
-member works from) and `facility_terminals.location_id` (which branch a card
-reader sits in) — now have one each: `PATCH /api/staff/[id]/home-location` and
-the extended `PATCH /api/payments/clover/terminals`. Both were previously
-`Bucket B` (column exists, nothing writes it) rather than `Bucket C` (no
-concept exists) — that distinction is what made them worth doing without a
-schema change, and it's the same test to apply before touching anything above.
+**What was done instead (2026-08-25, two passes):**
 
-**Do instead:** before scoping ANY of these five as "convert the screen," get a
-second real location into a facility (`POST /api/locations` already exists)
-and check whether the fact you want to show has ANY column to read `location_id`
-off — `clients`/`staff`/`payments` currently do not. If it doesn't, this is a
-product decision (does pricing vary by branch? does a transfer need an audit
-trail? what does a review/NPS system look like?) that needs an owner, not an
-engineering pass.
+First pass — the two pieces that WERE real columns with no writer —
+`facility_memberships.home_location_id` (which branch a staff member works
+from) and `facility_terminals.location_id` (which branch a card reader sits
+in) — now have one each: `PATCH /api/staff/[id]/home-location` and the
+extended `PATCH /api/payments/clover/terminals`. Both were `Bucket B` (column
+exists, nothing writes it) rather than `Bucket C` (no concept exists) — that
+distinction is what made them worth doing without a schema change.
+
+Second pass, same test applied twice more and both times it paid off:
+`bookings.location_id` was writable only at creation (never on an existing
+booking) and unaudited — also `Bucket B`. `bookingToRow`'s input-driven branch
+now accepts it on a PATCH (facility-checked, same as the two above), and a new
+trigger mirroring `audit_subscription_status` records "Booking transferred" —
+no new table, the existing audit trail was enough. `MoveBookingLocationDialog`
+replaced `BookingTransferModal` for the one real thing it needs to do; the
+request/approval workflow stays a separate, unbuilt feature, not faked here.
+And `payments.booking_id` turning out to be a real FK (the stale-comment
+correction above) meant "Revenue by Location" — a sixth report, mirroring
+`revenue-by-service`'s existing join — needed no new schema either.
+
+**Do instead:** before scoping anything ELSE here as "convert the screen," get
+a second real location into a facility (`POST /api/locations` already exists)
+and check the actual bucket: does a real column already exist with nothing
+writing it (`Bucket B` — cheap, do it), or does the fact you want to show have
+no column to read `location_id` off at all (`Bucket C` — `clients`/`staff` for
+their OWN fields still qualify, service pricing overrides still qualify) — that
+one is a product decision (does pricing vary by branch? what does a review/NPS
+system look like?) that needs an owner, not an engineering pass.
 
 ## How to add to this map
 
