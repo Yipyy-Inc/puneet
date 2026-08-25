@@ -1999,25 +1999,118 @@ row moved, one ledger row exists, and a second attempt writes no second row.
    branch in `UnattachedPayments.tsx` is unreachable without a custom permission
    override — rare, not dead.
 
-### 🟡 The facility Reports page shows revenue that is not real
+### 🟢 An estimate nobody can check is an invented number with a disclaimer
 
-`revenueByService()` and its neighbours in
-[report-data-sources.ts](src/lib/report-data-sources.ts) read
-`@/data/bookings`, `@/data/retail`, `@/data/grooming` — **fixtures**. So
-`/facility/dashboard/reports` renders invented figures, and it looks exactly
-like a working report.
+The facility Customer Value report had a column headed **"CLV (Est.)"**. It was
+computed from a fixture by a formula nobody had written down, and the `(Est.)`
+made it feel honest. It is not: an estimate with no stated model cannot be
+checked, cannot be argued with, and cannot be wrong in a way anybody can
+demonstrate. That is the same property as a number somebody made up.
 
-**Why it matters more from 2026-08-24:** the Yipyy Pay **Transactions** tab now
-reports the same kind of number from `public.payments`, which is real. The two
-screens disagree, and the new one is right. Anyone comparing them will trust the
-older, more established-looking one.
+**Deleted on 2026-08-25 rather than reconnected.** `totalSpent` sits where it
+was — what that client has actually paid — and average order value divides out
+of it and the booking count. Both are checkable against `payments`.
 
-**Do instead:** for any new money figure, read the ledger. `facility_takings()`
-already returns gross, net, refunds, tips, by-service, by-day, by-method and
-by-channel for a window, RLS-scoped and bucketed in the facility's own timezone.
-Converting the Reports page is a real job and was deliberately NOT done as part
-of the payments dashboard — but nobody should add a second fixture-backed
-revenue screen in the meantime.
+Three siblings went the same way in the same change, all with no source at all:
+
+```
+advanceNotice     the literal string "2 days" on every row, // Mock beside it
+cancellationTime  the booking's own start date
+staffCount        a head count invented next to hours ESTIMATED from duration
+```
+
+**The rule is stronger than the existing "nothing invents a rating" one**,
+because that one is satisfiable by relabelling. Calling a figure "est." feels
+like a disclosure and functions as a licence. **If you cannot say what a number
+is computed from, delete the column — do not soften its title.**
+
+### 🟢 A column reporting an absence that was never true (the same bug, sign flipped)
+
+Found in the same conversion, and it is the more dangerous half. The
+cancellation report's `refundAmount` read a field that **does not exist on a
+booking**:
+
+```ts
+const bookingAny = booking as typeof booking & { refundAmount?: number };
+// ...
+refundAmount: bookingAny.refundAmount || 0,
+```
+
+So it was always `0`, rendered as `$0.00`, and looked like a fact. **Nobody
+files a bug against a zero.** The facility's own refunds were real the whole
+time — 150 of them carry a `booking_id`.
+
+Everything else found on 2026-08-24/25 was a screen claiming something it could
+not do. This is a screen **reporting an absence that was never true**, which is
+quieter: a false claim invites a contradiction, and a false zero invites
+nothing. **A cast to `any`-shaped access on a typed row is where this lives** —
+`as typeof x & { maybe?: T }` silences the one check that would have said the
+field is not there.
+
+### 🔴 In a shared live database, a number you wrote down is not a constant
+
+Hit twice on 2026-08-25, from opposite ends, within an hour.
+
+Reconciling the Total Revenue report against the Reports KPI tile:
+`33,323.25 gross − 5,386.00 refunded = 27,937.25`, against a tile screenshotted
+an hour earlier reading **27,277.25**. A **$660 discrepancy** between two
+functions that should agree by construction — and it was chased as a bug in one
+of them. It was $660 of real payments landing in the intervening hour.
+
+The other session hit the same shape from a `bookings` count: **423** in a probe
+at 10:15, **392** an hour later, and spent queries deciding whether its own
+aborted transaction had eaten 31 rows. It had not.
+
+**Why this project in particular:** there is ONE Postgres. CI writes to it, two
+sessions write to it, `bun run shoot` signs in against it, and the e2e suite
+creates and removes rows continuously — `bookings.ref` has reached 13,814
+against ~400 live rows, so roughly 34 rows have existed for every one that
+still does. Nothing here is quiet enough for a remembered figure to survive.
+
+**Do instead: reconcile in ONE statement, at one instant.** Never against a
+value captured earlier, and never against a screenshot. The query that settled
+the $660 computed both functions AND a direct `sum(grand_total)` in a single
+select:
+
+```sql
+select k.kpi_net, (t.j->>'gross')::numeric - (t.j->>'refunded')::numeric as derived,
+       raw.direct_net, k.kpi_net = raw.direct_net as agrees
+  from k, t, raw;   -- all three from the same snapshot
+```
+
+All three returned `27937.25`. There was never a bug.
+
+### 🟢 The facility Reports page counts what happened (was 🟡 invented figures)
+
+`/facility/dashboard/reports` opened with `const facilityId = 11` — a fixture id
+with no row behind it — and read `revenueByService()`, `bookingsByPeriod()`,
+`occupancy()` and `clientMetrics()` from
+[report-data-sources.ts](src/lib/report-data-sources.ts), which walks
+`@/data/bookings` and friends. Every figure was invented, and the page's own
+comment called them "derived from the real stores".
+
+It became urgent on 2026-08-24, when the Yipyy Pay Transactions tab began
+reporting the same kind of number from `public.payments`. Two screens, one
+right, and the wrong one looked older and more established.
+
+**Converted 2026-08-25, in two steps.** `facility_report_kpis` for the six
+tiles; `facility_report_dataset` for five of the six report sheets. There is no
+`@/data/*` import left in `report-sheet.tsx`, and the facility comes from the
+SESSION on both.
+
+**Three things worth carrying forward:**
+
+- **`report-data-sources.ts` is still fixture-backed and still has ~20 other
+  importers** — the platform dashboard, the analytics components, the financial
+  components. Only the facility Reports page was converted. Anything else
+  reading those selectors is still showing invented numbers.
+- **No-Shows was marked unimplemented rather than converted.** No `no_show`
+  status, no dated event, `clients.no_show_count` a lifetime counter with no
+  dates. Recording a no-show is a feature, not a conversion.
+- **Total Revenue no longer delegates to `RevenueReportBody`**
+  (`components/financial/RevenueReport`), which reads `@/data/*` and is shared
+  with two other screens. That is the next conversion in this area and it has a
+  wider blast radius than this one did.
 
 ### 🟡 Two `DataTable` components whose names differ only by case
 
