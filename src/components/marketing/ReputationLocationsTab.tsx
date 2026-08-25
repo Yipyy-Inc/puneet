@@ -197,7 +197,7 @@ export function ReputationLocationsTab() {
                     <div className="flex items-center gap-2">
                       <span
                         className="size-2.5 rounded-full"
-                        style={{ backgroundColor: row.loc.color }}
+                        style={{ backgroundColor: row.loc.color ?? undefined }}
                       />
                       <p className="text-sm font-semibold">{row.loc.name}</p>
                       {isBottom && (

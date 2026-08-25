@@ -72,7 +72,7 @@ export function LocationFilterBanner() {
                 )}
               />
               <span className="max-w-[140px] truncate">{loc.name}</span>
-              {!loc.isActive && (
+              {loc.status !== "active" && (
                 <span className="text-[9px] opacity-70">· Inactive</span>
               )}
             </button>

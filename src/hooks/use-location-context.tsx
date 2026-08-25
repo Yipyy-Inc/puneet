@@ -6,25 +6,37 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
-import type { Location, HQSettings } from "@/types/location";
-import {
-  getLocationsByFacility,
-  getPrimaryLocation,
-  hqSettings,
-} from "@/data/locations";
+import type { FacilityLocation, HQSettings } from "@/types/location";
+import { hqSettings } from "@/data/locations";
+import { useFacilityLocations } from "@/lib/api/locations";
+
+// ============================================================================
+// The branches this business actually has, shared app-wide.
+//
+// `locations`/`currentLocation` come from `useFacilityLocations()` (real
+// `public.locations` rows) -- the same data `/facility/hq/locations` reads and
+// writes. `settings` (HQSettings) stays on the fixture deliberately: none of
+// its scope/shared/cross-location toggles has a real table behind it yet
+// (`facility_settings` has no location dimension to hang a "per_location"
+// value on), so there is nothing real to swap it for. See
+// `LocationDetailView.tsx` for the same kind of deliberate boundary.
+// ============================================================================
 
 const STORAGE_KEY = "yipyy-location-ctx";
 const HQ_SENTINEL = "__hq__";
 
 interface LocationContextValue {
   currentLocationId: string | null;
-  currentLocation: Location | null;
+  currentLocation: FacilityLocation | null;
   isHQView: boolean;
-  locations: Location[];
+  locations: FacilityLocation[];
   settings: HQSettings;
   isMultiLocation: boolean;
+  /** True until the facility's locations have loaded at least once. */
+  isPending: boolean;
   setLocation: (locationId: string | null) => void;
   setHQView: () => void;
 }
@@ -32,29 +44,34 @@ interface LocationContextValue {
 const LocationContext = createContext<LocationContextValue | null>(null);
 
 export function LocationContextProvider({ children }: { children: ReactNode }) {
-  const facilityId = 11;
-  const locs = getLocationsByFacility(facilityId);
+  const { data, isPending } = useFacilityLocations();
+  const locs = useMemo(() => data ?? [], [data]);
   const isMultiLocation = locs.length > 1;
-  const primary = getPrimaryLocation(facilityId);
+  const primary = locs.find((l) => l.isPrimary) ?? locs[0] ?? null;
 
-  // Deterministic default (same on server + first client paint, so the selector
-  // shows "All Locations" immediately for multi-location facilities instead of
-  // flashing an unresolved state). A persisted choice is restored in the effect.
-  const [locationId, setLocationId] = useState<string | null>(
-    isMultiLocation ? HQ_SENTINEL : (primary?.id ?? locs[0]?.id ?? null),
-  );
-  const [mounted, setMounted] = useState(false);
+  const [locationId, setLocationId] = useState<string | null>(null);
+  const [restored, setRestored] = useState(false);
 
+  // Real locations arrive asynchronously, so there is no synchronous default
+  // to seed a useState initializer from any more (that trick only worked
+  // because the fixture was a plain array available at import time). Once the
+  // fetch resolves, restore a saved choice if it still names a real location,
+  // else fall back to HQ (multi-location) or the primary location -- the same
+  // default the old initializer computed, just one tick later. Runs once:
+  // later refetches (e.g. after adding a branch) must not silently override
+  // what the person is currently looking at.
   useEffect(() => {
-    setMounted(true);
+    if (isPending || restored) return;
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === HQ_SENTINEL) {
+    if (saved === HQ_SENTINEL && isMultiLocation) {
       setLocationId(HQ_SENTINEL);
     } else if (saved && locs.some((l) => l.id === saved)) {
       setLocationId(saved);
+    } else {
+      setLocationId(isMultiLocation ? HQ_SENTINEL : (primary?.id ?? null));
     }
-    // else: keep the deterministic default from useState above.
-  }, []);
+    setRestored(true);
+  }, [isPending, restored, isMultiLocation, primary, locs]);
 
   const setLocation = useCallback(
     (id: string | null) => {
@@ -72,7 +89,7 @@ export function LocationContextProvider({ children }: { children: ReactNode }) {
 
   const isHQView = locationId === HQ_SENTINEL;
   const currentLocation =
-    mounted && !isHQView
+    restored && !isHQView
       ? (locs.find((l) => l.id === locationId) ?? null)
       : null;
 
@@ -85,6 +102,7 @@ export function LocationContextProvider({ children }: { children: ReactNode }) {
         locations: locs,
         settings: hqSettings,
         isMultiLocation,
+        isPending,
         setLocation,
         setHQView,
       }}
@@ -101,6 +119,7 @@ const FALLBACK: LocationContextValue = {
   locations: [],
   settings: {} as HQSettings,
   isMultiLocation: false,
+  isPending: false,
   setLocation: () => {},
   setHQView: () => {},
 };

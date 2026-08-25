@@ -24,7 +24,6 @@ import {
   getLocationAlerts,
   formatAlertBanner,
 } from "@/lib/hq/command-center-cards";
-import { useLocationContext } from "@/hooks/use-location-context";
 
 const MONTHS = [
   "Jan",
@@ -72,7 +71,6 @@ interface Props {
  */
 export function LocationCard({ location }: Props) {
   const router = useRouter();
-  const { setLocation } = useLocationContext();
   // Snapshot "now" once at mount (avoids reading the clock during render).
   const [now] = useState(() => new Date());
 
@@ -96,7 +94,11 @@ export function LocationCard({ location }: Props) {
   const alerts = getLocationAlerts(location.id);
 
   function openDashboard() {
-    setLocation(location.id);
+    // Not `setLocation(location.id)` -- this card's data still comes from the
+    // fixture (`getLocationsByFacility(11)` on the HQ overview page), so its
+    // id would not match any real location once the shared context is fed by
+    // Postgres. Setting it would silently break location filtering for the
+    // rest of the session. Navigate only, until this page is converted too.
     router.push("/facility/dashboard");
   }
 

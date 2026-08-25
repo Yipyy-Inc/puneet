@@ -36,7 +36,7 @@ export function LocationStatusBadge() {
     >
       <span className={cn("size-2 rounded-full", s.bg)} />
       <span className={cn("text-[11px] font-semibold", s.text)}>
-        {currentLocation.shortCode} · {currentLocation.city}
+        {currentLocation.shortCode} · {currentLocation.address?.city ?? ""}
       </span>
     </div>
   );

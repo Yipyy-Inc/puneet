@@ -3,10 +3,18 @@
 import { Globe, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { Location } from "@/types/location";
+
+// Structural, not `Location`/`FacilityLocation` -- this picker only ever reads
+// id/shortCode/color, and both the fixture and the real location shape carry
+// those (the real one just allows null for shortCode/color).
+interface ScopeLocation {
+  id: string;
+  shortCode?: string | null;
+  color?: string | null;
+}
 
 interface Props {
-  locations: Location[];
+  locations: ScopeLocation[];
   /**
    * Selected location IDs. Empty array = all locations / global scope.
    */
@@ -73,8 +81,8 @@ export function LocationScopePicker({
             style={
               active
                 ? {
-                    borderColor: loc.color,
-                    backgroundColor: loc.color,
+                    borderColor: loc.color ?? undefined,
+                    backgroundColor: loc.color ?? undefined,
                   }
                 : undefined
             }
@@ -82,7 +90,7 @@ export function LocationScopePicker({
             <span
               className="size-1.5 rounded-full"
               style={{
-                backgroundColor: active ? "white" : loc.color,
+                backgroundColor: active ? "white" : (loc.color ?? undefined),
               }}
             />
             {loc.shortCode}
@@ -98,7 +106,7 @@ export function LocationScopeBadge({
   locations,
 }: {
   locationIds: string[] | undefined;
-  locations: Location[];
+  locations: ScopeLocation[];
 }) {
   if (!locationIds || locationIds.length === 0) {
     return (
@@ -115,7 +123,10 @@ export function LocationScopeBadge({
       <Badge
         variant="outline"
         className="gap-1 text-[10px]"
-        style={{ borderColor: loc.color, color: loc.color }}
+        style={{
+          borderColor: loc.color ?? undefined,
+          color: loc.color ?? undefined,
+        }}
       >
         <MapPin className="size-3" />
         {loc.shortCode}

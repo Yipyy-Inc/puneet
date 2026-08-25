@@ -78,7 +78,7 @@ export function LocationContextSelector() {
                 <p className="text-muted-foreground text-[10px]/tight">
                   {isHQView
                     ? `${locations.length} locations`
-                    : (currentLocation?.city ?? "")}
+                    : (currentLocation?.address?.city ?? "")}
                 </p>
               </div>
               <ChevronDown
@@ -136,7 +136,7 @@ export function LocationContextSelector() {
                   s.bg,
                 )}
               >
-                {loc.shortCode.slice(0, 3)}
+                {(loc.shortCode ?? loc.name).slice(0, 3)}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -149,8 +149,8 @@ export function LocationContextSelector() {
                 </div>
                 <p className="text-muted-foreground flex items-center gap-1 text-[10px]">
                   <MapPin className="size-2.5" />
-                  {loc.city}
-                  {!loc.isActive && (
+                  {loc.address?.city ?? "No address yet"}
+                  {loc.status !== "active" && (
                     <span className="ml-1 text-rose-400">· Inactive</span>
                   )}
                 </p>
