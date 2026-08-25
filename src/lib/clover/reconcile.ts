@@ -100,10 +100,20 @@ function cents(value: unknown): number {
  *
  * Service role throughout: this runs from a webhook, where there is no caller
  * and therefore nobody for RLS to be evaluated against.
+ *
+ * ── `reason` IS ONLY EVER THE OPERATOR'S ──────────────────────────────────
+ *
+ * Optional, and optional in a way that matters. `/api/payments/clover/refund`
+ * has one — somebody typed it into the dialog — and passes it so the row can
+ * say why. The sweep and the webhook do NOT: they are looking at a reversal
+ * that happened at Clover, where nobody here was asked anything, and inventing
+ * a reason for it would be worse than leaving the field empty. `author_name`
+ * already says "Refunded at Clover" in that case, which is the whole truth.
  */
 export async function reconcilePayment(
   facilityId: string,
   cloverPaymentId: string,
+  reason?: string,
 ): Promise<PaymentReconciliation> {
   if (!hasServiceRoleKey()) {
     return { kind: "unreadable", detail: "Clover is not configured here." };
@@ -257,12 +267,14 @@ export async function reconcilePayment(
     card_brand: original.card_brand,
     card_last4: original.card_last4,
     entry_method: original.entry_method,
-    // `payments` has no note column, so the author line is the only place the
-    // reason survives on the row itself. The full detail — Clover's void
-    // reason, the amounts on both sides — is on the webhook event.
     author_name: voided
       ? `Voided at Clover (${payment.voidReason ?? "no reason given"})`
       : "Refunded at Clover",
+    // WHY, when somebody was there to say. Null from the sweep and the webhook
+    // on purpose — see the note on this function's signature. Clover's own
+    // void reason is not it: that is a processor code, and it is already in
+    // `author_name` and on the webhook event.
+    note: reason?.trim() || null,
   });
 
   if (error) {

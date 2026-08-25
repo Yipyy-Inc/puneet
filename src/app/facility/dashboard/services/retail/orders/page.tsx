@@ -98,15 +98,13 @@ import {
   type InventoryMovement,
   type Product,
   type ProductVariant,
-  type PaymentMethod,
   type PricingMethod,
 } from "@/data/retail";
-import { processFiservRefund } from "@/lib/fiserv-payment-service";
-import {
-  getYipyyPayTransactionByTransactionId,
-  getCloverTerminalTransactionByTransactionId,
-  getFiservConfig,
-} from "@/data/fiserv-payments";
+// `processFiservRefund` and the two transaction lookups that fed it are gone
+// with the simulated refund — see the note in `handleProcessReturn`.
+// `getFiservConfig` stays: the refund RULES it carries (enabled methods,
+// approval threshold, required reasons and notes) are real facility policy.
+import { getFiservConfig } from "@/data/fiserv-payments";
 import { sellingFromMargin } from "@/lib/retail-pricing";
 import { resolveBrandRule } from "@/lib/api/retail";
 import { retailConfig } from "@/data/retail-config";
@@ -425,399 +423,27 @@ export default function OrdersPage() {
       );
       if (!proceed) return;
     }
-    let fiservRefundId: string | undefined;
-    let refundProcessed = false;
-    let refundError: string | undefined;
-
-    // Process refund via original payment method if applicable
-    if (returnForm.refundMethod === "original_payment") {
-      // Handle split payments - refund proportionally or last payment first
-      if (
-        selectedTransaction.paymentMethod === "split" &&
-        selectedTransaction.payments &&
-        selectedTransaction.payments.length > 1
-      ) {
-        // Get refund policy from facility settings
-        const fiservConfig = getFiservConfig(facilityId);
-        const refundPolicy =
-          fiservConfig?.processingSettings?.splitPaymentRefundPolicy ||
-          "last_payment_first";
-
-        if (refundPolicy === "last_payment_first") {
-          // Refund from last payment first, then work backwards
-          let remainingRefund = refundTotal;
-          const refunds: Array<{
-            method: PaymentMethod;
-            amount: number;
-            transactionId?: string;
-          }> = [];
-
-          for (
-            let i = selectedTransaction.payments.length - 1;
-            i >= 0 && remainingRefund > 0;
-            i--
-          ) {
-            const payment = selectedTransaction.payments[i];
-            const refundAmount = Math.min(remainingRefund, payment.amount);
-
-            // Process refund based on payment method
-            if (
-              (payment.method === "credit" || payment.method === "debit") &&
-              selectedTransaction.yipyyPayTransactionId
-            ) {
-              // Refund via Yipyy Pay (iPhone)
-              const yipyyPayTxn = getYipyyPayTransactionByTransactionId(
-                selectedTransaction.yipyyPayTransactionId,
-              );
-              if (yipyyPayTxn) {
-                const fiservRefundRequest = {
-                  facilityId,
-                  originalTransactionId: selectedTransaction.id,
-                  fiservTransactionId: yipyyPayTxn.yipyyTransactionId,
-                  amount: refundAmount,
-                  reason:
-                    returnForm.notes || "Refund for return (split payment)",
-                  metadata: {
-                    returnReason:
-                      returnForm.items[0]?.reason || "customer_request",
-                    splitPaymentIndex: i,
-                    refundPolicy: "last_payment_first",
-                  },
-                };
-
-                try {
-                  const fiservRefundResponse =
-                    await processFiservRefund(fiservRefundRequest);
-                  if (fiservRefundResponse.success) {
-                    refunds.push({
-                      method: payment.method,
-                      amount: refundAmount,
-                      transactionId: fiservRefundResponse.fiservRefundId,
-                    });
-                    remainingRefund -= refundAmount;
-                    refundProcessed = true;
-                  } else {
-                    refundError = `Payment ${i + 1} refund failed: ${fiservRefundResponse.error?.message || "Unknown error"}`;
-                    if (!canOverrideRefund) {
-                      alert(
-                        `Refund failed: ${refundError}. Please contact a manager for override options.`,
-                      );
-                      return;
-                    }
-                  }
-                } catch (error) {
-                  refundError = `Payment ${i + 1} refund error: ${error instanceof Error ? error.message : "Unknown error"}`;
-                  if (!canOverrideRefund) {
-                    alert(
-                      `Refund failed: ${refundError}. Please contact a manager for override options.`,
-                    );
-                    return;
-                  }
-                }
-              }
-            } else if (
-              (payment.method === "credit" || payment.method === "debit") &&
-              selectedTransaction.cloverTransactionId
-            ) {
-              // Refund via Clover Terminal
-              const cloverTxn = getCloverTerminalTransactionByTransactionId(
-                selectedTransaction.cloverTransactionId,
-              );
-              if (cloverTxn) {
-                const fiservRefundRequest = {
-                  facilityId,
-                  originalTransactionId: selectedTransaction.id,
-                  fiservTransactionId: cloverTxn.cloverTransactionId, // Clover transaction ID is used as Fiserv transaction ID
-                  amount: refundAmount,
-                  reason:
-                    returnForm.notes || "Refund for return (split payment)",
-                  metadata: {
-                    returnReason:
-                      returnForm.items[0]?.reason || "customer_request",
-                    splitPaymentIndex: i,
-                    refundPolicy: "last_payment_first",
-                  },
-                };
-
-                try {
-                  const fiservRefundResponse =
-                    await processFiservRefund(fiservRefundRequest);
-                  if (fiservRefundResponse.success) {
-                    refunds.push({
-                      method: payment.method,
-                      amount: refundAmount,
-                      transactionId: fiservRefundResponse.fiservRefundId,
-                    });
-                    remainingRefund -= refundAmount;
-                    refundProcessed = true;
-                  } else {
-                    refundError = `Payment ${i + 1} refund failed: ${fiservRefundResponse.error?.message || "Unknown error"}`;
-                    if (!canOverrideRefund) {
-                      alert(
-                        `Refund failed: ${refundError}. Please contact a manager for override options.`,
-                      );
-                      return;
-                    }
-                  }
-                } catch (error) {
-                  refundError = `Payment ${i + 1} refund error: ${error instanceof Error ? error.message : "Unknown error"}`;
-                  if (!canOverrideRefund) {
-                    alert(
-                      `Refund failed: ${refundError}. Please contact a manager for override options.`,
-                    );
-                    return;
-                  }
-                }
-              }
-            } else if (
-              (payment.method === "credit" || payment.method === "debit") &&
-              selectedTransaction.fiservTransactionId
-            ) {
-              // Refund via Fiserv
-              const fiservRefundRequest = {
-                facilityId,
-                originalTransactionId: selectedTransaction.id,
-                fiservTransactionId: selectedTransaction.fiservTransactionId,
-                amount: refundAmount,
-                reason: returnForm.notes || "Refund for return (split payment)",
-                metadata: {
-                  returnReason:
-                    returnForm.items[0]?.reason || "customer_request",
-                  splitPaymentIndex: i,
-                  refundPolicy: "last_payment_first",
-                },
-              };
-
-              try {
-                const fiservRefundResponse =
-                  await processFiservRefund(fiservRefundRequest);
-                if (fiservRefundResponse.success) {
-                  refunds.push({
-                    method: payment.method,
-                    amount: refundAmount,
-                    transactionId: fiservRefundResponse.fiservRefundId,
-                  });
-                  remainingRefund -= refundAmount;
-                  refundProcessed = true;
-                } else {
-                  refundError = `Payment ${i + 1} refund failed: ${fiservRefundResponse.error?.message || "Unknown error"}`;
-                  if (!canOverrideRefund) {
-                    alert(
-                      `Refund failed: ${refundError}. Please contact a manager for override options.`,
-                    );
-                    return;
-                  }
-                }
-              } catch (error) {
-                refundError = `Payment ${i + 1} refund error: ${error instanceof Error ? error.message : "Unknown error"}`;
-                if (!canOverrideRefund) {
-                  alert(
-                    `Refund failed: ${refundError}. Please contact a manager for override options.`,
-                  );
-                  return;
-                }
-              }
-            } else if (
-              payment.method === "cash" ||
-              payment.method === "store_credit" ||
-              payment.method === "gift_card"
-            ) {
-              // Cash/store credit/gift card - no processing needed
-              refunds.push({
-                method: payment.method,
-                amount: refundAmount,
-              });
-              remainingRefund -= refundAmount;
-              refundProcessed = true;
-            }
-          }
-
-          // Update audit notes with split payment refund details
-          if (refunds.length > 0) {
-            fiservRefundId = refunds
-              .map((r) => r.transactionId)
-              .filter(Boolean)
-              .join(", ");
-          }
-        } else {
-          // Proportional refund - refund each payment method proportionally
-          const totalOriginal = selectedTransaction.payments.reduce(
-            (sum, p) => sum + p.amount,
-            0,
-          );
-          const refunds: Array<{
-            method: PaymentMethod;
-            amount: number;
-            transactionId?: string;
-          }> = [];
-
-          for (let i = 0; i < selectedTransaction.payments.length; i++) {
-            const payment = selectedTransaction.payments[i];
-            const proportionalRefund =
-              (payment.amount / totalOriginal) * refundTotal;
-
-            // Process refund based on payment method (similar logic as above)
-            // ... (similar to last_payment_first logic but proportional)
-            // For brevity, using same logic structure
-            refunds.push({
-              method: payment.method,
-              amount: proportionalRefund,
-            });
-            refundProcessed = true;
-          }
-
-          if (refunds.length > 0) {
-            fiservRefundId = refunds
-              .map((r) => r.transactionId)
-              .filter(Boolean)
-              .join(", ");
-          }
-        }
-      }
-      // Check if original payment was via Yipyy Pay (iPhone) - single payment
-      else if (selectedTransaction.yipyyPayTransactionId) {
-        const yipyyPayTxn = getYipyyPayTransactionByTransactionId(
-          selectedTransaction.yipyyPayTransactionId,
-        );
-        if (yipyyPayTxn) {
-          // Process refund through Fiserv (Yipyy Pay uses Fiserv backend)
-          const fiservRefundRequest = {
-            facilityId,
-            originalTransactionId: selectedTransaction.id,
-            fiservTransactionId: yipyyPayTxn.yipyyTransactionId,
-            amount: refundTotal,
-            reason: returnForm.notes || "Refund for return",
-            metadata: {
-              returnReason: returnForm.items[0]?.reason || "customer_request",
-              yipyyPayTransactionId: selectedTransaction.yipyyPayTransactionId,
-            },
-          };
-
-          try {
-            const fiservRefundResponse =
-              await processFiservRefund(fiservRefundRequest);
-            if (fiservRefundResponse.success) {
-              fiservRefundId = fiservRefundResponse.fiservRefundId;
-              refundProcessed = true;
-            } else {
-              refundError =
-                fiservRefundResponse.error?.message || "Fiserv refund failed";
-              // If refund fails and user is manager, allow override
-              if (!canOverrideRefund) {
-                alert(
-                  `Refund failed: ${refundError}. Please contact a manager for override options.`,
-                );
-                return;
-              }
-            }
-          } catch {
-            refundError = "Error processing Fiserv refund";
-            if (!canOverrideRefund) {
-              alert(
-                `Refund failed: ${refundError}. Please contact a manager for override options.`,
-              );
-              return;
-            }
-          }
-        }
-      }
-      // Check if original payment was via Clover Terminal
-      else if (selectedTransaction.cloverTransactionId) {
-        const cloverTxn = getCloverTerminalTransactionByTransactionId(
-          selectedTransaction.cloverTransactionId,
-        );
-        if (cloverTxn) {
-          // Process refund through Fiserv
-          const fiservRefundRequest = {
-            facilityId,
-            originalTransactionId: selectedTransaction.id,
-            fiservTransactionId: cloverTxn.cloverTransactionId, // Clover transaction ID is used as Fiserv transaction ID
-            amount: refundTotal,
-            reason: returnForm.notes || "Refund for return",
-            metadata: {
-              returnReason: returnForm.items[0]?.reason || "customer_request",
-              cloverTransactionId: selectedTransaction.cloverTransactionId,
-            },
-          };
-
-          try {
-            const fiservRefundResponse =
-              await processFiservRefund(fiservRefundRequest);
-            if (fiservRefundResponse.success) {
-              fiservRefundId = fiservRefundResponse.fiservRefundId;
-              refundProcessed = true;
-            } else {
-              refundError =
-                fiservRefundResponse.error?.message || "Fiserv refund failed";
-              if (!canOverrideRefund) {
-                alert(
-                  `Refund failed: ${refundError}. Please contact a manager for override options.`,
-                );
-                return;
-              }
-            }
-          } catch {
-            refundError = "Error processing Fiserv refund";
-            if (!canOverrideRefund) {
-              alert(
-                `Refund failed: ${refundError}. Please contact a manager for override options.`,
-              );
-              return;
-            }
-          }
-        }
-      }
-      // Check if original payment was via Fiserv (saved card or new card)
-      else if (selectedTransaction.fiservTransactionId) {
-        const fiservRefundRequest = {
-          facilityId,
-          originalTransactionId: selectedTransaction.id,
-          fiservTransactionId: selectedTransaction.fiservTransactionId,
-          amount: refundTotal,
-          reason: returnForm.notes || "Refund for return",
-          metadata: {
-            returnReason: returnForm.items[0]?.reason || "customer_request",
-            tokenizedCardId: selectedTransaction.tokenizedCardId,
-          },
-        };
-
-        try {
-          const fiservRefundResponse =
-            await processFiservRefund(fiservRefundRequest);
-          if (fiservRefundResponse.success) {
-            fiservRefundId = fiservRefundResponse.fiservRefundId;
-            refundProcessed = true;
-          } else {
-            refundError =
-              fiservRefundResponse.error?.message || "Fiserv refund failed";
-            if (!canOverrideRefund) {
-              alert(
-                `Refund failed: ${refundError}. Please contact a manager for override options.`,
-              );
-              return;
-            }
-          }
-        } catch {
-          refundError = "Error processing Fiserv refund";
-          if (!canOverrideRefund) {
-            alert(
-              `Refund failed: ${refundError}. Please contact a manager for override options.`,
-            );
-            return;
-          }
-        }
-      }
-      // For cash payments, refund is immediate
-      else if (selectedTransaction.paymentMethod === "cash") {
-        refundProcessed = true;
-      }
-    }
-
-    // Handle cash refund override (when refund method is explicitly set to cash)
-    if (returnForm.refundMethod === "cash") {
-      refundProcessed = true;
-      // Cash refunds are immediate - no processing needed
-    }
+    // ── NOTHING HERE CONTACTS A PAYMENT PROCESSOR, AND THAT IS THE FIX ────
+    //
+    // ~390 lines used to sit here calling `processFiservRefund`, which was a
+    // simulator: a 500 ms sleep, `Math.random() > 0.05` for the outcome, and an
+    // invented `fiserv_refund_<timestamp>` id. It reported a 5% failure rate to
+    // look convincing. There is no Fiserv account, and the transaction being
+    // returned is a row in `src/data/retail.ts` that does not survive a page
+    // refresh — so there was never a payment for any of it to reverse.
+    //
+    // The rules ABOVE are real and stay: which refund methods the facility
+    // enables, the manager-approval threshold, per-item reasons, required
+    // notes. What follows is real too — it records the return, issues store
+    // credit or a gift card, and syncs to QuickBooks.
+    //
+    // What none of it does is put money back on a card. A retail sale is not a
+    // row in Postgres and carries no processor payment id, so nothing here can
+    // be reversed at Clover the way a BOOKING payment can, via
+    // `/api/payments/clover/refund`. Until retail sales are recorded, returning
+    // money to a card is an act somebody performs in the room — and this
+    // screen's job is to say so, not to claim it already happened.
+    const cardRefundIsManual = returnForm.refundMethod === "original_payment";
 
     // Log method override if not original payment
     if (returnForm.refundMethod !== "original_payment" && canOverrideRefund) {
@@ -850,31 +476,29 @@ export default function OrdersPage() {
       amount: refundTotal,
       paymentMethod: returnForm.refundMethod,
       originalPaymentMethod: selectedTransaction.paymentMethod,
-      processorTransactionId: fiservRefundId,
+      // No processor transaction id, because no processor was called. It used
+      // to carry an invented one, which is worse than carrying none.
       staffId: currentUserId,
       staffName: "Staff",
       staffRole: facilityRole,
       customerId: selectedTransaction.customerId,
       customerName: selectedTransaction.customerName,
       reason: returnForm.notes || "Customer return",
-      notes: `Refund processed: ${refundProcessed ? "Success" : "Failed"}`,
+      notes: cardRefundIsManual
+        ? "Return recorded. The card refund has NOT been made — do it at the terminal."
+        : `Return recorded and settled by ${returnForm.refundMethod.replace("_", " ")}.`,
       metadata: {
-        refundError: refundError,
         itemsReturned: returnForm.items.length,
         isOverride: returnForm.refundMethod !== "original_payment",
+        cardRefundIsManual,
       },
     });
 
     // Create return with audit trail
     const auditNotes = [
       `Refund Method: ${returnForm.refundMethod}`,
-      returnForm.refundMethod === "original_payment" &&
-      refundProcessed &&
-      fiservRefundId
-        ? `Fiserv Refund ID: ${fiservRefundId}`
-        : null,
-      returnForm.refundMethod === "original_payment" && refundError
-        ? `Refund Error: ${refundError}${canOverrideRefund ? " (Manager Override)" : ""}`
+      cardRefundIsManual
+        ? "Card refund NOT made by Yipyy — settle it at the terminal"
         : null,
       returnForm.refundMethod !== "original_payment" && canOverrideRefund
         ? `Manager Override: ${returnForm.refundMethod}`
@@ -901,20 +525,20 @@ export default function OrdersPage() {
         returnForm.refundMethod === "gift_card"
           ? returnForm.giftCardNumber
           : undefined,
-      status:
-        refundProcessed || returnForm.refundMethod !== "original_payment"
-          ? "completed"
-          : "pending",
+      // A card return is `pending` until a human gives the money back, and it
+      // stays that way — the old code marked it `completed` on a coin flip from
+      // the simulator. Cash, store credit and a gift card really are settled
+      // here: the drawer opened, or the balance below was written.
+      status: cardRefundIsManual ? "pending" : "completed",
       customerId: selectedTransaction.customerId,
       customerName: selectedTransaction.customerName,
       customerEmail: selectedTransaction.customerEmail,
       processedBy: "current-user-id", // TODO: Get from auth
       processedByName: "Current User", // TODO: Get from auth
       notes: auditNotes,
-      completedAt:
-        refundProcessed || returnForm.refundMethod !== "original_payment"
-          ? new Date().toISOString().slice(0, 19)
-          : undefined,
+      completedAt: cardRefundIsManual
+        ? undefined
+        : new Date().toISOString().slice(0, 19),
     });
 
     // Create store credit if applicable
@@ -929,7 +553,7 @@ export default function OrdersPage() {
         amount: refundTotal,
         balance: refundTotal,
         issuedFrom: newReturn.id,
-        notes: `Issued from return ${newReturn.returnNumber}${refundError ? ` (Override due to: ${refundError})` : ""}`,
+        notes: `Issued from return ${newReturn.returnNumber}`,
       });
     }
 
@@ -942,7 +566,7 @@ export default function OrdersPage() {
         customerId: selectedTransaction.customerId,
         customerName: selectedTransaction.customerName,
         isActive: true,
-        notes: `Issued from return ${newReturn.returnNumber}${refundError ? ` (Override due to: ${refundError})` : ""}`,
+        notes: `Issued from return ${newReturn.returnNumber}`,
       });
     }
 
@@ -986,12 +610,15 @@ export default function OrdersPage() {
     setSelectedTransaction(null);
     setReturnForm({ items: [], refundMethod: "original_payment" });
 
-    // Show success message
-    const successMessage =
-      refundProcessed || returnForm.refundMethod !== "original_payment"
-        ? `Return processed successfully: ${newReturn.returnNumber}`
-        : `Return created but refund pending: ${newReturn.returnNumber}. ${refundError || "Please process refund manually."}`;
-    alert(successMessage);
+    // Say which of the two happened, and never blur them. "Return processed
+    // successfully" was printed for a card refund that had not been made.
+    alert(
+      cardRefundIsManual
+        ? `Return ${newReturn.returnNumber} recorded for $${refundTotal.toFixed(2)}.\n\n` +
+            `The card has NOT been refunded — Yipyy cannot refund a retail sale. ` +
+            `Give the money back at the terminal, then the return is done.`
+        : `Return ${newReturn.returnNumber} processed: $${refundTotal.toFixed(2)} by ${returnForm.refundMethod.replace("_", " ")}.`,
+    );
   };
 
   const handleSaveOrder = () => {

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { balanceOf } from "@/lib/api/booking-money";
+import { bookingMoney, paymentQueries } from "@/lib/api/payments";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
@@ -34,6 +35,14 @@ import type { Booking } from "@/types/booking";
 //                    booking 569 carries amount_paid 200 AND amount_due 200.
 //   paid             bookings.amount_paid, derived by the database from the
 //                    payments ledger (20260806680000) — never computed here
+//   refunded         the booking's own negative ledger rows, GET /api/payments
+//                    ?bookingRef=<ref>. Shown SEPARATELY and above the net,
+//                    because `amount_paid` sums signed rows: $800 taken and
+//                    $200 given back reads "Paid $600", which is exactly what
+//                    a booking that only ever paid $600 reads, and one of the
+//                    two has a refund somebody has to account for. This is the
+//                    same reason `facility_takings` reports gross, refunded
+//                    AND net rather than the last one alone.
 //   balance          balanceOf(), the same helper the "Pay by card" button
 //                    uses, so the two figures on this screen cannot disagree
 //
@@ -118,6 +127,13 @@ export function BookingPaymentBreakdown({
     },
     staleTime: 30_000,
   });
+
+  // The booking's own ledger rows, only so the panel can separate what was
+  // taken from what was given back. It never replaces `booking.amountPaid` as
+  // the balance figure — that stays the database's, so this panel and the "Pay
+  // by card" button cannot disagree about what is owed.
+  const { data: ledger } = useQuery(paymentQueries.byBooking(booking.id));
+  const money = bookingMoney(ledger ?? []);
 
   const settings = useFacilitySettings();
   const taxConfig = settings.settings.tax_config.value as TaxConfig;
@@ -251,10 +267,48 @@ export function BookingPaymentBreakdown({
             />
           </div>
 
-          {paid > 0 && (
-            <div className="py-1">
-              <Line label="Paid" value={-paid} tone="text-emerald-600" />
+          {/* GROSS, REFUNDED, NET — never the net on its own. `paid` is the
+              database's netted figure and stays the one the balance is built
+              from; these two lines only say what it is made of. When nothing
+              was refunded the middle line is absent and this reads exactly as
+              it always did. */}
+          {money.refunded > 0 ? (
+            <div className="space-y-0.5 py-1">
+              <Line label="Paid" value={-money.gross} tone="text-emerald-600" />
+              <Line
+                label={
+                  money.refunds.length > 1
+                    ? `Refunded (${money.refunds.length})`
+                    : "Refunded"
+                }
+                value={money.refunded}
+                tone="text-rose-600"
+              />
+              {/* The reason, where there is one. It is the whole point of
+                  asking for it — a refund a year old that cannot say why is
+                  a number somebody has to go and reconstruct. */}
+              {money.refunds
+                .filter((refund) => refund.note)
+                .map((refund) => (
+                  <p
+                    key={refund.id}
+                    className="text-muted-foreground pl-1 text-xs italic"
+                  >
+                    {refund.note}
+                  </p>
+                ))}
+              <Line
+                label="Net paid"
+                value={-money.net}
+                tone="text-emerald-700"
+              />
             </div>
+          ) : (
+            paid > 0 && (
+              <div className="py-1">
+                <Line label="Paid" value={-paid} tone="text-emerald-600" />
+              </div>
+            )
           )}
 
           <div className="pt-1">

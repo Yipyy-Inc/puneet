@@ -888,6 +888,22 @@ Found by writing `supabase/tests/booking-payment-derivation.sql`, not by reading
 
 **Do instead:** when a derived status collapses several histories into one number, check whether two different histories can produce the same number. If they can, the number is not the whole input.
 
+**And the screen had the same bug for four more months.** The database learned to tell the two apart in August; `BookingPaymentBreakdown` went on rendering one netted line, `<Line label="Paid" value={-paid} />`, straight off `amount_paid`. So a booking paid $800 and refunded $200 read **"Paid $600"** — which is exactly what a booking that only ever paid $600 reads. `payment_status` is no help on a PARTIAL refund either: it only reaches `'refunded'` when `amount_paid <= 0`, so that booking says `pending` with no trace of the $200.
+
+Fixed 2026-08-25 by showing gross, refunded and net whenever a negative row exists — the same triple, for the same reason, that `facility_takings` reports rather than net alone. The rows come from `GET /api/payments?bookingRef=<ref>` (`paymentQueries.byBooking`); `booking.amountPaid` is still the figure the balance is built from, so the panel and the "Pay by card" button cannot disagree.
+
+Two other screens had the mirror of it: the client billing tab hardcoded the label `"Payment"` and ignored `isRefund`, so a refund appeared as a row headed "Payment" with a negative figure. The client OVERVIEW tab had always done it correctly. **When a fix lands in the database, go and look at what reads it** — three readers here were still wrong long after the write side was right.
+
+### 🟢 A refund can say why it happened (fixed 2026-08-25)
+
+`RefundModal` has asked for a reason since it was built. It printed it on the receipt and sent it to `/api/payments/clover/refund`, whose Zod schema parsed `reason` and then never read it again. The cash path was no better: `reason` became `p_credit_note`, which lands on `store_credit_entries` — a table that only gets a row when the refund goes back AS credit. So on a card refund, and on a cash refund, the reason was gone the moment the dialog closed.
+
+The ledger could say a facility gave $200 back and could not say why, which is the first question anyone asks about a refund and the only one the amounts cannot answer. `audit_log` could not help: it is written by triggers from the ROW, and the reason was not a column.
+
+`payments.note` now exists (20260825190000), written at insert and never updated — the table's contract is unaffected. `record_payment` gained a 23rd argument, which meant DROPPING the 22-argument version first: `create or replace` with a different arity creates an overload, not a replacement, and dropping a function drops its ACL, so every grant had to be restated. Verified afterwards with `has_function_privilege`, not by having written the revokes.
+
+**Do instead:** if a dialog asks for something, follow it all the way to a column before shipping the dialog. A field that is collected and discarded is worse than one that was never asked for — somebody typed it believing it mattered.
+
 ### 🟡 The cashier is not a booking editor, and three separate pieces make that work
 
 `retail` holds `financial_take_payment` and **not** `edit_bookings` — a shipped preset, not a hypothetical. `accountant` is the same with `process_refund` on top. So the trigger that moves a booking when a payment lands runs as someone who cannot edit bookings, on a booking that is checked-in.
@@ -951,6 +967,53 @@ Fixed in 20260806760000 with no new parameter: `grand_total < 0` plus `method = 
 The reachable one is now wired; the unreachable one is deleted. Its `amountPaid` prop was `invoice?.depositCollected ?? booking.totalCost` — falling back to the **price**, which caps a refund at what the customer was billed rather than what they handed over. It reads `booking.amountPaid` now.
 
 **Do instead:** when two components do the same job, check which one is mounted before improving either.
+
+### 🟡 `booking-payment-screens.spec.ts` fails on main, and the booking detail page loops
+
+Two separate things, found together on 2026-08-25 while checking something else. Both are recorded rather than fixed, because neither belongs to the change that tripped over them.
+
+**1. The spec fails on `main` today.** `taking the payment through the dialog moves the booking` clicks "Accept payment" and the dialog never appears. Verified pre-existing: the identical failure occurs with the working tree reverted to `HEAD` for the touched component. It is nobody's regression — the spec runs in **neither** `test:e2e:gate` nor `test:e2e:ci`, so nothing has executed it in a long time and it rotted unwatched.
+
+**2. The page it drives spams "Maximum update depth exceeded"** — twelve times on a single load, again at `HEAD`. That is a component setting state in an effect whose dependency changes every render, and it is the likely cause of (1): React tears down a component stuck in that loop, so the dialog it was about to mount never arrives. `bun run lint` reports a large family of `react-hooks/set-state-in-effect` warnings; this is one of them, on a money screen.
+
+**Two traps for whoever picks this up**, both of which cost time here:
+
+- **A dev server on port 3000 outlives your edits.** Playwright's `webServer` block reuses an already-running one. A stale server served old chunks (`ChunkLoadError`, which surfaces as the app's own "Oops!" error boundary) AND old route handlers — a new `?bookingRef=` filter appeared to be ignored, returning every payment, when in fact the running code predated it. Before believing any e2e failure, confirm the server is running the code you just wrote: `E2E_BASE_URL=http://localhost:<fresh port>` against one you started yourself.
+- **"Is this mine?" is answerable in five minutes.** Copy the file aside, `git checkout` it, re-run, compare. Do that before reading a line of your own diff.
+
+### 🟢 There was a THIRD refund dialog, and it was the fake one (fixed 2026-08-25)
+
+`ProcessRefundModal`, mounted on `/facility/dashboard/billing`, reachable, and gated by no permission at all. Its submit handler was:
+
+```ts
+console.log("Refund processed:", refund);
+if (onSuccess) onSuccess(refund);
+```
+
+and the page then toasted _"Refund of $X processed successfully!"_. The dialog also reassured the operator the money "may take 5–10 business days to appear", which is the sentence that makes it worse than a stub: it explains away the absence of any evidence for up to a fortnight. Its payments came from `src/data/payments` behind a hardcoded `facilityId = 11`.
+
+Deleted rather than repaired — the real refund is on the booking, one click from "View Booking" in the same drawer.
+
+**The rest of that page is the same shape and is deliberately still there:** `TakePaymentModal`, `IssueGiftCardModal` and `AddCustomerCreditModal` all `alert(...successfully!)` over fixtures. Converting the page is a separate job; it is named here so the next person does not have to rediscover it.
+
+**Why `check:success-claims` did not catch it:** it did — the file is in its baseline. A baseline entry is a record that something is known, not that it is acceptable.
+
+### 🔴 Retail refunds ran through a simulator with a 5% failure rate (fixed 2026-08-25)
+
+`processFiservRefund` in `lib/fiserv-payment-service.ts`, called by the retail returns screen:
+
+```ts
+await new Promise((resolve) => setTimeout(resolve, 500));
+const success = Math.random() > 0.05;
+```
+
+A fake latency, an invented `fiserv_refund_<timestamp>` id, and a **random 5% failure** so it would look real. There is no Fiserv account. The screen printed "Return processed successfully".
+
+Worse, there was nothing to refund: retail transactions are `const transactions: Transaction[]` in `src/data/retail.ts` and returns are pushed onto `const returns: Return[] = []`. Both die on page refresh. A retail sale is not a row in Postgres and carries no processor payment id, so no refund of one could ever have reached a processor.
+
+The simulator is deleted and the function is gone. **The business-rule ladder is kept** — enabled refund methods, `managerApprovalThreshold`, per-item reasons, required notes, split-payment allocation — because that is real facility policy and is what a real return will need. A card return is now recorded as `pending` and says plainly that the card has not been refunded; cash, store credit and a gift card are settled honestly, because those really do happen in the room.
+
+**Do instead:** retail cannot refund until retail SALES are rows. Build the sale first. And note `retail/page.tsx` still calls `processFiservPayment`, the same simulator for CHARGES — untouched here, and the same problem pointing the other way.
 
 ### 🟢 The dialog charged the price; the mutation charges the balance
 
@@ -1737,10 +1800,64 @@ and then quoted onward as a reason not to do other work (it was, verbatim, in
 the “no order is ever created” entry). **Before citing this map as evidence that
 something has never happened, go and count.**
 
-**Refunding a terminal payment is untested.** The refund path calls the
-ecommerce `/v1/refunds`, and whether that reverses a card-PRESENT payment is an
-open question — Clover may require the same device. Do not describe terminal
-refunds as working until somebody has done one.
+**Refunding a terminal payment went to the wrong API, and that is now answered**
+(was: "untested… an open question"). Measured against the sandbox 2026-08-25.
+The route sent every refund to the ecommerce `/v1/refunds`, card-present
+included. On a terminal payment a PARTIAL refund there is refused outright:
+
+```
+POST /v1/refunds {"charge":"QHQPNNR0EV7Q8","amount":1}   (of 8278 + 2160 tip)
+-> 400 processing_error
+   "Partial refund for order with multiple line items/tip/convenience fee is
+    not supported by this api, Please use /v1/orders/{id}/returns api."
+```
+
+A **tip alone** triggers it, and the terminal asks for a tip. So partial refunds
+of card-present sales never worked. Card-NOT-present is fine — a `/v1/charges`
+payment gets a one-line-item order with no tip, and `{charge, amount: 40}` of
+113 refunded exactly 40, verified by reading the payment back.
+
+The fix is `POST /connect/v1/payments/{id}/refunds` with
+`X-Clover-Device-Id: <SERIAL>` — the REST Pay Display family `terminal.ts` and
+`print.ts` already speak. It behaves like taking a payment does, including
+answering **503** when Cloud Pay Display is closed. `refundOnTerminal()` in
+`lib/clover/terminal.ts`; the route branches on `processor_device_serial`.
+
+**Still not done on hardware.** The sandbox proves the endpoint, the headers and
+the failure modes; it has not proved a card-present refund completing, because
+that needs a device with Cloud Pay Display running. Do not describe terminal
+refunds as _finished_ until somebody has done one on the Flex.
+
+### 🔴 `/v1/orders/{id}/returns` refunds everything and reports what you asked for
+
+The endpoint Clover's own error message above recommends. Do not use it. Both
+forms were measured on 2026-08-25 and both refunded the WHOLE order:
+
+```
+POST /v1/orders/AAGSVRXQJNA2M/returns {"amount":1}
+  -> 200  {"amount":88,"amount_returned":88,"status":"returned"}
+
+POST /v1/orders/0FNBTW3B4MPKE/returns {"items":[{"parent":"…","amount":100,…}]}
+  -> 200  {"amount":4714,"amount_returned":4714,
+           "items":[{"amount":100,…}],"status":"returned"}
+```
+
+Read the second one carefully. It answers 200, it **echoes `"amount": 100` back
+inside `items`**, and it refunded **4714**. Every field a caller would naturally
+check agrees that a $1.00 partial refund succeeded. Only `amount_returned` —
+which no reasonable person reads on a 200 — says $47.14 left the merchant.
+
+**Why it matters:** wire this to the refund dialog and "refund $200 of this
+$800 booking" returns the customer **$800**, with a success response that reads
+like a partial refund. `reconcilePayment` would then correctly write a −$800
+ledger row, so the books would be right and the facility would be $600 down with
+nothing to point at.
+
+**Do instead:** partial card-present refunds go through the device
+(`/connect/v1/payments/{id}/refunds`); partial card-not-present refunds go
+through `/v1/refunds`, which honours its `amount`. If `/v1/orders/{id}/returns`
+is ever reconsidered, assert `amount_returned` against what was asked for and
+fail loudly on a mismatch — a 200 from it is not evidence of anything.
 
 **The contract is unobvious and every part of it was learned from an error:**
 `X-Clover-Device-Id` takes the SERIAL, not the device id; `Idempotency-Key` is a

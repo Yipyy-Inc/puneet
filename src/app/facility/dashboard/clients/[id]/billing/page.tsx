@@ -235,13 +235,34 @@ export default function ClientBillingPage({
                   className="flex items-center justify-between rounded-md border px-3 py-2"
                 >
                   <div>
-                    <p className="text-sm font-medium">Payment</p>
+                    {/* "Payment" was hardcoded here, so a refund rendered as a
+                        row headed Payment with a negative figure beside it —
+                        the one thing on this screen a customer might query.
+                        The overview tab has always distinguished the two; this
+                        now says the same thing. */}
+                    <p className="text-sm font-medium">
+                      {p.amount < 0 ? "Refund" : "Payment"}
+                    </p>
                     <p className="text-muted-foreground text-xs">
                       {formatDate(p.createdAt)} · {String(p.method)}
                     </p>
+                    {/* Why, when somebody said so (20260825190000). */}
+                    {p.note && (
+                      <p className="text-muted-foreground text-xs italic">
+                        {p.note}
+                      </p>
+                    )}
                   </div>
-                  <span className="text-sm font-semibold">
-                    ${p.amount.toFixed(2)}
+                  <span
+                    className={
+                      p.amount < 0
+                        ? "text-sm font-semibold text-rose-600"
+                        : "text-sm font-semibold"
+                    }
+                  >
+                    {/* No manufactured minus: a refund is STORED negative, so
+                        prefixing one renders "-$-52.50". */}
+                    {p.amount < 0 ? "−" : ""}${Math.abs(p.amount).toFixed(2)}
                   </span>
                 </div>
               ))}

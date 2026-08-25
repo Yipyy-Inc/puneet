@@ -23,8 +23,45 @@ export interface ClientPayment {
   entryMethod: string | null;
   processor: string | null;
   authorName: string;
+  /** Why it happened, in the operator's words. Null on an ordinary sale, and
+   *  on a reversal that came back from Clover with nobody here to ask. */
+  note: string | null;
   createdAt: string;
   isRefund: boolean;
+}
+
+/**
+ * What a booking took, what it gave back, and the difference.
+ *
+ * All three, always — the same reason `facility_takings` reports gross, refunded
+ * and net rather than just the last one: a booking paid $800 and refunded $200
+ * nets to $600 and reads identically to one that only ever paid $600. The sum
+ * cannot tell those apart, and one of them has a refund to account for.
+ */
+export interface BookingMoney {
+  gross: number;
+  refunded: number;
+  net: number;
+  refunds: ClientPayment[];
+}
+
+export function bookingMoney(payments: ClientPayment[]): BookingMoney {
+  let gross = 0;
+  let refunded = 0;
+  for (const payment of payments) {
+    // The SIGN decides, not `isRefund`. A reversal always carries a negative
+    // `grand_total`, but a row can be negative without pointing at an original
+    // — a refund to store credit against a booking with no card payment is one.
+    // Reading the flag would have missed those and overstated the net.
+    if (payment.amount < 0) refunded += -payment.amount;
+    else gross += payment.amount;
+  }
+  return {
+    gross,
+    refunded,
+    net: gross - refunded,
+    refunds: payments.filter((p) => p.amount < 0),
+  };
 }
 
 export const paymentQueries = {
@@ -42,6 +79,29 @@ export const paymentQueries = {
     queryFn: async (): Promise<ClientPayment[]> => {
       const response = await fetch(
         `/api/payments?clientRef=${encodeURIComponent(String(clientRef))}`,
+      );
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(detail?.error ?? `Failed (${response.status})`);
+      }
+      return (await response.json()) as ClientPayment[];
+    },
+  }),
+
+  /**
+   * One booking's payments, newest first — including the negative rows.
+   *
+   * Separate from `byClient` rather than filtered out of it: a client with two
+   * years of history would be 200 rows fetched to show three, and the booking
+   * screen would silently go wrong once a client passed the route's limit.
+   */
+  byBooking: (bookingRef: number) => ({
+    queryKey: ["payments", "by-booking", bookingRef] as const,
+    queryFn: async (): Promise<ClientPayment[]> => {
+      const response = await fetch(
+        `/api/payments?bookingRef=${encodeURIComponent(String(bookingRef))}`,
       );
       if (!response.ok) {
         const detail = (await response.json().catch(() => null)) as {

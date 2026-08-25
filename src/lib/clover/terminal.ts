@@ -504,3 +504,149 @@ export async function chargeOnTerminal(
     cardLast4: payment.cardTransaction?.last4 ?? null,
   };
 }
+
+// ============================================================================
+// Giving a card-present payment back, on the device that took it.
+//
+// ── WHY THIS EXISTS AT ALL ────────────────────────────────────────────────
+//
+// `/api/payments/clover/refund` sent EVERY refund to the ecommerce
+// `/v1/refunds`, card-present ones included, and the debt map recorded that as
+// an open question. It is not open any more. Measured against the sandbox on
+// 2026-08-25, a partial refund of a terminal payment there is refused:
+//
+//   HTTP 400 processing_error
+//   "Partial refund for order with multiple line items/tip/convenience fee is
+//    not supported by this api, Please use /v1/orders/{id}/returns api."
+//
+// A tip is enough to trigger it, and the terminal asks for a tip. So on a real
+// card-present sale the ecommerce endpoint cannot do a partial refund at all.
+//
+// ── AND WHY NOT THE ENDPOINT THE ERROR RECOMMENDS ─────────────────────────
+//
+// Because it does not do what it says. Measured the same afternoon:
+//
+//   POST /v1/orders/{id}/returns  {"amount": 1}         -> 200, refunded 88 of 88
+//   POST /v1/orders/{id}/returns  {"items":[{...100}]}  -> 200, refunded 4714 of 4714
+//
+// Both answered 200. The second ECHOED `"amount": 100` back inside `items`,
+// while `amount_returned` said 4714 — it refunds the whole order and reports
+// your request back to you. Ask it for $200 of an $800 booking and the customer
+// gets $800, with a success response that reads like a partial refund.
+//
+// `/v1/orders/{id}/returns` is a FULL return wearing a partial's clothes. Do
+// not reach for it, whatever Clover's own error message suggests.
+//
+// ── SO: THE DEVICE, THE WAY THE SALE WENT ─────────────────────────────────
+//
+// `POST /connect/v1/payments/{id}/refunds` is the documented partial path, and
+// it is real: without the serial it answers
+// `"Request missing required header: X-Clover-Device-Id"` with
+// `requestType: REFUND`, which is Clover confirming the route exists and what
+// it wants. With the serial it behaves exactly like taking a payment does —
+// including answering 503 when Cloud Pay Display is not running:
+//
+//   "A connection to your Clover device C0... could not be established. Please
+//    manually start (or restart) the Cloud Pay Display application"
+//
+// That is a real operational condition, not a bug, and it is worth saying
+// plainly to whoever is standing at the counter.
+// ============================================================================
+
+export type TerminalRefundOutcome =
+  | { ok: true; refundId: string | null }
+  | { ok: false; code: string; message: string };
+
+/**
+ * Refund a payment on the terminal that took it.
+ *
+ * `amountCents` omitted means the whole thing. Clover treats a full refund of a
+ * same-day sale as a VOID, which is cheaper for the merchant — and the ledger
+ * learns which of the two happened from `reconcilePayment` reading the payment
+ * back, never from what was asked for here.
+ */
+export async function refundOnTerminal(input: {
+  facilityId: string;
+  processorPaymentId: string;
+  deviceSerial: string;
+  amountCents?: number;
+  idempotencyKey: string;
+}): Promise<TerminalRefundOutcome> {
+  const active = await validAccessToken(input.facilityId);
+  if (!active) {
+    return {
+      ok: false,
+      code: "not_connected",
+      message: "The connection to Clover could not be used.",
+    };
+  }
+  const config = cloverConfig(active.environment);
+  if (!config) {
+    return {
+      ok: false,
+      code: "not_configured",
+      message: `Clover is not configured for ${active.environment}.`,
+    };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(
+      new URL(
+        `/connect/v1/payments/${encodeURIComponent(input.processorPaymentId)}/refunds`,
+        config.apiOrigin,
+      ),
+      {
+        method: "POST",
+        headers: {
+          ...payHeaders(
+            active.accessToken,
+            active.merchantId,
+            input.deviceSerial,
+          ),
+          "Content-Type": "application/json",
+          "Idempotency-Key": input.idempotencyKey,
+        },
+        // `fullRefund` and `amount` are alternatives, not companions. Sending
+        // both is asking two questions at once.
+        body: JSON.stringify(
+          input.amountCents == null
+            ? { fullRefund: true }
+            : { amount: input.amountCents },
+        ),
+        // Shorter than the 150s a SALE gets: a linked refund needs no card
+        // presented, only a device awake enough to answer. Long enough that a
+        // busy device is not mistaken for an absent one.
+        signal: AbortSignal.timeout(60_000),
+      },
+    );
+  } catch {
+    return {
+      ok: false,
+      code: "unreachable",
+      message:
+        "The terminal did not answer. The outcome of this refund is unknown until it is checked.",
+    };
+  }
+
+  const body = (await response.json().catch(() => null)) as {
+    refund?: { id?: string };
+    id?: string;
+    message?: string;
+    type?: string;
+  } | null;
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      // 503 here is Cloud Pay Display being closed, which somebody at the
+      // counter can fix in ten seconds if they are told that is the problem.
+      code: response.status === 503 ? "device_asleep" : "refused",
+      message:
+        body?.message ??
+        `The terminal refused the refund (${response.status}).`,
+    };
+  }
+
+  return { ok: true, refundId: body?.refund?.id ?? body?.id ?? null };
+}

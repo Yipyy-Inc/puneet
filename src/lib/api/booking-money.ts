@@ -76,6 +76,7 @@ interface PaymentRow {
   cashReceived?: number;
   receiptChannels: string[];
   creditNote: string;
+  note?: string;
 }
 
 /**
@@ -118,7 +119,12 @@ function paymentRow(input: {
     // Only cash carries a tender, and the CHECK refuses it on anything else.
     ...(input.method === "cash" ? { cashReceived: grandTotal } : {}),
     receiptChannels: [],
+    // Both, and they are not the same sentence. `creditNote` annotates the
+    // store-credit entry and exists only when credit moved; `note` is on the
+    // payment row itself, so a refund's reason survives whichever tender it
+    // went back on (20260825190000).
     creditNote: input.note ?? "",
+    note: input.note,
   };
 }
 
@@ -165,6 +171,10 @@ function useSettleInvalidation() {
     void queryClient.invalidateQueries({ queryKey: ["bookings"] });
     void queryClient.invalidateQueries({ queryKey: ["store-credit"] });
     void queryClient.invalidateQueries({ queryKey: ["clients"] });
+    // The ledger rows themselves, which the payment breakdown reads to tell
+    // gross from net. Without this a refund moves the balance on screen and
+    // leaves "Paid $800" beside it until the page is reloaded.
+    void queryClient.invalidateQueries({ queryKey: ["payments"] });
   };
 }
 

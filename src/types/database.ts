@@ -5284,6 +5284,7 @@ export type Database = {
           id: string;
           loyalty_discount_applied: number;
           method: string;
+          note: string | null;
           package_pass_applied: number;
           package_pass_id: string | null;
           processor: string | null;
@@ -5316,6 +5317,7 @@ export type Database = {
           id?: string;
           loyalty_discount_applied?: number;
           method: string;
+          note?: string | null;
           package_pass_applied?: number;
           package_pass_id?: string | null;
           processor?: string | null;
@@ -5348,6 +5350,7 @@ export type Database = {
           id?: string;
           loyalty_discount_applied?: number;
           method?: string;
+          note?: string | null;
           package_pass_applied?: number;
           package_pass_id?: string | null;
           processor?: string | null;
@@ -8669,6 +8672,7 @@ export type Database = {
           p_grand_total: number;
           p_loyalty_discount_applied?: number;
           p_method: string;
+          p_note?: string;
           p_package_pass_applied?: number;
           p_package_pass_id?: string;
           p_package_service_id?: string;
