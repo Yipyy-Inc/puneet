@@ -95,18 +95,12 @@ export function facilityParentHost(
   return apex ? `app.${apex}` : null;
 }
 
-/**
- * Where the application lives, as an absolute origin.
- *
- * Returns `null` when the app domain is unset, and every caller must treat that
- * as "do not send anybody anywhere" rather than falling back to a guess — a
- * wrong origin here signs people out, because the session cookie is scoped to
- * `.yipyy.com` and would not follow them off it.
- */
-export function appOrigin(appDomain: string | null | undefined): string | null {
-  const apex = apexOf(appDomain);
-  return apex ? `https://app.${apex}` : null;
-}
+// `appOrigin()` lived here until 2026-08-26 — `https://app.<apex>`, the bare
+// software host with no facility named. Its only caller was the sign-in link on
+// the coming-soon page, which was removed, so it went with it rather than being
+// left as an accessor nobody calls. `facilityStaffOrigin` and
+// `facilityCustomerOrigin` below are what a link to a real facility needs; if
+// you ever want the bare host again, `facilityParentHost()` already returns it.
 
 /**
  * The host Yipyy's own staff run the platform from — `hq.<apex>`.

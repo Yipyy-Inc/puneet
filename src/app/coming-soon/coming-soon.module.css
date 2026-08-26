@@ -690,39 +690,3 @@
   color: #1668e3;
   font-weight: 600;
 }
-
-/* ── THE WAY BACK INTO THE APP ─────────────────────────────────────────────
-   yipyy.com is the marketing site from 2026-08-26 and app.yipyy.com is the
-   software, so anybody who bookmarked the apex lands here. Quiet, next to the
-   status pill — it is for the few who already have an account, not the many
-   this page is written for. */
-
-.headerRight {
-  display: flex;
-  align-items: center;
-  gap: clamp(10px, 1.6vw, 16px);
-  flex: none;
-}
-
-.signIn {
-  font-size: clamp(13px, 1.4vw, 14.5px);
-  font-weight: 500;
-  color: #1668e3;
-  text-decoration: none;
-  padding: 9px 4px;
-  white-space: nowrap;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.18s ease;
-}
-
-@media (hover: hover) {
-  .signIn:hover {
-    border-bottom-color: #1668e3;
-  }
-}
-
-.signIn:focus-visible {
-  outline: 2px solid #1668e3;
-  outline-offset: 3px;
-  border-radius: 4px;
-}
