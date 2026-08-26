@@ -8,6 +8,7 @@ import {
   rowToService,
   serviceToRow,
   sizePricesToRows,
+  perLocationSizePricing,
   type ServiceRow,
 } from "@/lib/api/mappers/grooming";
 
@@ -51,10 +52,19 @@ export async function GET(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  // `locationPricing` rides along on every response -- cheap, since the rows
+  // are already fetched above, and additive, so it changes nothing for a
+  // caller that only reads the fields it already knew about. HQ Services is
+  // the one reader that needs the full cross-location breakdown; everyone
+  // else keeps using `sizePricing`, resolved for the one location they asked
+  // about (or the facility-wide default, when they didn't).
   return NextResponse.json(
-    (data as unknown as ServiceRow[]).map((row) =>
-      rowToService(row, { locationId }),
-    ),
+    (data as unknown as ServiceRow[]).map((row) => ({
+      ...rowToService(row, { locationId }),
+      locationPricing: perLocationSizePricing(
+        row.grooming_service_size_prices ?? [],
+      ),
+    })),
   );
 }
 

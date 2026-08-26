@@ -13,7 +13,7 @@ import {
   TrendingUp,
   AlertTriangle,
   Clock,
-  Mail,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,12 +27,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { Location } from "@/types/location";
-import type { CrossLocationClient } from "@/data/hq-analytics";
+import type { FacilityLocation } from "@/types/location";
+import type {
+  HqClientNetworkValue,
+  HqLoyaltyTierSummary,
+} from "@/types/hq-clients";
 import { HqKpiTile } from "@/components/hq/HqKpiTile";
 import { locationStyles } from "@/lib/hq/location-styles";
+
+// ============================================================================
+// Real client network value -- see supabase/migrations/20260826120000.
+//
+// `locationsVisited` is derived from real bookings, sorted by visit count by
+// the RPC itself, so the client's PRIMARY location is simply its first entry
+// -- there is no stored "primary location" attribute to fake.
+//
+// "Multi-Location Clients" used to assume its input was already the
+// pre-filtered cross-location cohort (the mock fixture only ever contained
+// 2+-location clients). Real `clients` here is every client with at least one
+// real booking -- the whole network, not a curated subset -- so this tile now
+// reports that total, and "Visiting 2+ Locations" is the meaningful subset.
+// ============================================================================
 
 type SegmentKey = "champions" | "loyalists" | "growing" | "atRisk";
 
@@ -83,7 +99,6 @@ const SEGMENTS: {
   },
 ];
 
-// Assign every client to one segment by their network-wide spend percentile.
 function segmentForPercentile(p: number): SegmentKey {
   if (p < 0.1) return "champions";
   if (p < 0.3) return "loyalists";
@@ -91,7 +106,7 @@ function segmentForPercentile(p: number): SegmentKey {
   return "atRisk";
 }
 
-function shortName(loc: Location): string {
+function shortName(loc: FacilityLocation): string {
   return loc.name.split("–")[1]?.trim() ?? loc.name;
 }
 
@@ -105,20 +120,55 @@ function daysSince(iso: string, nowMs: number): number {
 const RISK_THRESHOLDS = [60, 90, 120] as const;
 type RiskThreshold = (typeof RISK_THRESHOLDS)[number];
 
-const TIER_COLORS: Record<CrossLocationClient["loyaltyTier"], string> = {
-  bronze: "bg-amber-100 text-amber-800 border-amber-300",
-  silver: "bg-slate-100 text-slate-800 border-slate-300",
-  gold: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  platinum:
-    "bg-linear-to-r from-violet-100 to-fuchsia-100 text-violet-800 border-violet-300",
-};
-
-interface Props {
-  clients: CrossLocationClient[];
-  locations: Location[];
+function primaryLocationId(c: HqClientNetworkValue): string | null {
+  return c.locationsVisited[0]?.locationId ?? null;
 }
 
-export function ClientsHqClient({ clients, locations }: Props) {
+/** RFC 4180 enough for names/numbers: quote and double up embedded quotes. */
+function csvCell(value: string | number): string {
+  const s = String(value);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadClientsCsv(clients: HqClientNetworkValue[]) {
+  const header = [
+    "Client",
+    "Pets",
+    "Locations Visited",
+    "Total Visits",
+    "Total Spend",
+    "First Visit",
+    "Last Visit",
+  ];
+  const rows = clients.map((c) => [
+    c.clientName,
+    c.petNames.join("; "),
+    String(c.locationsVisited.length),
+    String(c.totalVisits),
+    c.totalSpend.toFixed(2),
+    c.firstVisitedAt.slice(0, 10),
+    c.lastVisitedAt.slice(0, 10),
+  ]);
+  const csv = [header, ...rows]
+    .map((r) => r.map(csvCell).join(","))
+    .join("\r\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `hq-clients-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+interface Props {
+  clients: HqClientNetworkValue[];
+  tiers: HqLoyaltyTierSummary[];
+  locations: FacilityLocation[];
+}
+
+export function ClientsHqClient({ clients, tiers, locations }: Props) {
   const [search, setSearch] = useState("");
   const [minLocations, setMinLocations] = useState<string>("2");
   const [tier, setTier] = useState<string>("all");
@@ -128,8 +178,8 @@ export function ClientsHqClient({ clients, locations }: Props) {
   const [nowMs] = useState(() => Date.now());
 
   const getLocation = (id: string) => locations.find((l) => l.id === id);
+  const tierById = useMemo(() => new Map(tiers.map((t) => [t.id, t])), [tiers]);
 
-  // clientId → value segment, by descending network-wide spend percentile.
   const segmentByClient = useMemo(() => {
     const sorted = [...clients].sort((a, b) => b.totalSpend - a.totalSpend);
     const n = sorted.length;
@@ -167,15 +217,15 @@ export function ClientsHqClient({ clients, locations }: Props) {
       ) {
         return false;
       }
-      if (tier !== "all" && c.loyaltyTier !== tier) return false;
+      if (tier !== "all" && c.loyaltyTierId !== tier) return false;
       if (segment !== "all" && segmentByClient.get(c.clientId) !== segment)
         return false;
       return true;
     });
   }, [clients, search, minLocations, tier, segment, segmentByClient]);
 
-  // Location discovery: where clients started (their primary location) and which
-  // other locations they went on to visit.
+  // Location discovery: where clients started (their primary location) and
+  // which other locations they went on to visit.
   const discovery = useMemo(() => {
     const m: Record<string, { started: number; also: Record<string, number> }> =
       {};
@@ -184,14 +234,12 @@ export function ClientsHqClient({ clients, locations }: Props) {
       locations.forEach((d) => (m[o.id].also[d.id] = 0));
     });
     clients.forEach((c) => {
-      const row = m[c.primaryLocationId];
+      const primary = primaryLocationId(c);
+      const row = primary ? m[primary] : undefined;
       if (!row) return;
       row.started += 1;
       c.locationsVisited.forEach((v) => {
-        if (
-          v.locationId !== c.primaryLocationId &&
-          row.also[v.locationId] !== undefined
-        ) {
+        if (v.locationId !== primary && row.also[v.locationId] !== undefined) {
           row.also[v.locationId] += 1;
         }
       });
@@ -199,8 +247,6 @@ export function ClientsHqClient({ clients, locations }: Props) {
     return m;
   }, [clients, locations]);
 
-  // Retention risk: clients not seen in at least the selected threshold, most
-  // stale first.
   const atRisk = useMemo(
     () =>
       clients
@@ -211,7 +257,7 @@ export function ClientsHqClient({ clients, locations }: Props) {
   );
 
   // Aggregates
-  const multiLocationClients = clients.length;
+  const totalClients = clients.length;
   const visiting2Plus = clients.filter(
     (c) => c.locationsVisited.length >= 2,
   ).length;
@@ -245,8 +291,8 @@ export function ClientsHqClient({ clients, locations }: Props) {
             Clients HQ
           </h1>
           <p className="text-muted-foreground text-sm">
-            Cross-location clients — your most valuable cohort, spending across
-            the whole network.
+            Every client with a real booking, and where across the network they
+            spend.
           </p>
         </div>
       </div>
@@ -254,14 +300,14 @@ export function ClientsHqClient({ clients, locations }: Props) {
       {/* KPI tiles */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <HqKpiTile
-          label="Multi-Location Clients"
-          value={multiLocationClients}
-          sublabel="Tracked cross-location cohort"
+          label="Network Clients"
+          value={totalClients}
+          sublabel="All clients across the network"
         />
         <HqKpiTile
           label="Visiting 2+ Locations"
           value={visiting2Plus}
-          sublabel={`${pct2Plus}% of the cohort`}
+          sublabel={`${pct2Plus}% of the client base`}
         />
         <HqKpiTile
           label="Network Revenue"
@@ -287,6 +333,7 @@ export function ClientsHqClient({ clients, locations }: Props) {
           </div>
           {segment !== "all" && (
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               className="text-xs"
@@ -344,8 +391,8 @@ export function ClientsHqClient({ clients, locations }: Props) {
         <div className="mb-3">
           <h2 className="text-base font-semibold">Location Discovery</h2>
           <p className="text-muted-foreground text-xs">
-            Where clients first visit and which locations they discover next —
-            revealing which branches drive cross-location growth.
+            Where clients first visit (their highest-volume branch) and which
+            other locations they went on to visit.
           </p>
         </div>
         <Card>
@@ -426,7 +473,6 @@ export function ClientsHqClient({ clients, locations }: Props) {
               </table>
             </div>
 
-            {/* Roll-up sentences */}
             <ul className="space-y-1.5">
               {locations.map((origin) => {
                 const row = discovery[origin.id];
@@ -467,42 +513,27 @@ export function ClientsHqClient({ clients, locations }: Props) {
               Retention Risk
             </h2>
             <p className="text-muted-foreground text-xs">
-              Clients not seen in {riskThreshold}+ days — win them back before
-              they lapse.
+              Clients not seen in {riskThreshold}+ days.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="bg-muted/60 flex items-center gap-1 rounded-xl border p-1">
-              {RISK_THRESHOLDS.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setRiskThreshold(t)}
-                  data-active={riskThreshold === t}
-                  className={cn(
-                    "rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
-                    riskThreshold === t
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {t}
-                  {t === 120 ? "+" : ""}d
-                </button>
-              ))}
-            </div>
-            <Button
-              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-              disabled={atRisk.length === 0}
-              onClick={() =>
-                toast.success(
-                  `Re-engagement campaign created — targeting ${atRisk.length} client${atRisk.length === 1 ? "" : "s"} not seen in ${riskThreshold}+ days`,
-                )
-              }
-            >
-              <Mail className="size-4" />
-              Send Re-engagement
-            </Button>
+          <div className="bg-muted/60 flex items-center gap-1 rounded-xl border p-1">
+            {RISK_THRESHOLDS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setRiskThreshold(t)}
+                data-active={riskThreshold === t}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
+                  riskThreshold === t
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t}
+                {t === 120 ? "+" : ""}d
+              </button>
+            ))}
           </div>
         </div>
         <Card>
@@ -530,7 +561,8 @@ export function ClientsHqClient({ clients, locations }: Props) {
                   </thead>
                   <tbody className="divide-y">
                     {atRisk.map(({ client: c, days }) => {
-                      const loc = getLocation(c.primaryLocationId);
+                      const locId = primaryLocationId(c);
+                      const loc = locId ? getLocation(locId) : undefined;
                       const ls = loc ? locationStyles(loc) : null;
                       const tone =
                         days >= 120
@@ -619,28 +651,38 @@ export function ClientsHqClient({ clients, locations }: Props) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="2">2+ locations</SelectItem>
-              <SelectItem value="3">All 3 locations</SelectItem>
+              {locations.length > 2 && (
+                <SelectItem value={String(locations.length)}>
+                  All {locations.length} locations
+                </SelectItem>
+              )}
               <SelectItem value="all">Any</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={tier} onValueChange={setTier}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All tiers</SelectItem>
-              <SelectItem value="platinum">Platinum</SelectItem>
-              <SelectItem value="gold">Gold</SelectItem>
-              <SelectItem value="silver">Silver</SelectItem>
-              <SelectItem value="bronze">Bronze</SelectItem>
-            </SelectContent>
-          </Select>
+          {tiers.length > 0 && (
+            <Select value={tier} onValueChange={setTier}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All tiers</SelectItem>
+                {tiers.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.icon} {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button
+            type="button"
             variant="outline"
             size="sm"
-            className="ml-auto"
-            onClick={() => toast.success("Client report exported as CSV")}
+            className="ml-auto gap-1.5"
+            disabled={filtered.length === 0}
+            onClick={() => downloadClientsCsv(filtered)}
           >
+            <Download className="size-3.5" />
             Export CSV
           </Button>
         </CardContent>
@@ -679,94 +721,121 @@ export function ClientsHqClient({ clients, locations }: Props) {
                   <th className="px-4 py-2 text-right font-semibold">
                     Total Spend
                   </th>
-                  <th className="px-4 py-2 text-center font-semibold">Tier</th>
+                  {tiers.length > 0 && (
+                    <th className="px-4 py-2 text-center font-semibold">
+                      Tier
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filtered.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5 + locations.length}
+                      colSpan={
+                        4 + locations.length + (tiers.length > 0 ? 1 : 0)
+                      }
                       className="text-muted-foreground px-4 py-10 text-center text-sm"
                     >
                       No clients match your filters.
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((c) => (
-                    <tr key={c.clientId} className="hover:bg-muted/30">
-                      <td className="px-4 py-3">
-                        <p className="font-semibold">{c.clientName}</p>
-                        <p className="text-muted-foreground text-[11px]">
-                          First visit{" "}
-                          {new Date(c.firstVisitedAt).toLocaleDateString(
-                            undefined,
-                            { month: "short", year: "numeric" },
-                          )}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3 text-xs">
-                        {c.petNames.join(", ")}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge variant="outline" className="gap-1 text-[11px]">
-                          <MapPin className="size-3" />
-                          {c.locationsVisited.length}
-                        </Badge>
-                      </td>
-                      {locations.map((loc) => {
-                        const visit = c.locationsVisited.find(
-                          (v) => v.locationId === loc.id,
-                        );
-                        const isPrimary = c.primaryLocationId === loc.id;
-                        const ls = locationStyles(loc);
-                        return (
-                          <td
-                            key={loc.id}
-                            className={cn(
-                              "px-3 py-3 text-right tabular-nums",
-                              visit ? "" : "text-muted-foreground/40",
+                  filtered.map((c) => {
+                    const primary = primaryLocationId(c);
+                    const clientTier = c.loyaltyTierId
+                      ? tierById.get(c.loyaltyTierId)
+                      : null;
+                    return (
+                      <tr key={c.clientId} className="hover:bg-muted/30">
+                        <td className="px-4 py-3">
+                          <p className="font-semibold">{c.clientName}</p>
+                          <p className="text-muted-foreground text-[11px]">
+                            First visit{" "}
+                            {new Date(c.firstVisitedAt).toLocaleDateString(
+                              undefined,
+                              { month: "short", year: "numeric" },
                             )}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {c.petNames.join(", ")}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Badge
+                            variant="outline"
+                            className="gap-1 text-[11px]"
                           >
-                            {visit ? (
-                              <div>
-                                <p
-                                  className={cn(
-                                    "text-sm font-semibold",
-                                    isPrimary ? "text-foreground" : ls.text,
-                                  )}
-                                >
-                                  {visit.visits}
-                                  {isPrimary && (
-                                    <span className="ml-0.5 text-[9px]">★</span>
-                                  )}
-                                </p>
-                                <p className="text-muted-foreground text-[10px]">
-                                  ${visit.spend.toLocaleString()}
-                                </p>
-                              </div>
+                            <MapPin className="size-3" />
+                            {c.locationsVisited.length}
+                          </Badge>
+                        </td>
+                        {locations.map((loc) => {
+                          const visit = c.locationsVisited.find(
+                            (v) => v.locationId === loc.id,
+                          );
+                          const isPrimary = primary === loc.id;
+                          const ls = locationStyles(loc);
+                          return (
+                            <td
+                              key={loc.id}
+                              className={cn(
+                                "px-3 py-3 text-right tabular-nums",
+                                visit ? "" : "text-muted-foreground/40",
+                              )}
+                            >
+                              {visit ? (
+                                <div>
+                                  <p
+                                    className={cn(
+                                      "text-sm font-semibold",
+                                      isPrimary ? "text-foreground" : ls.text,
+                                    )}
+                                  >
+                                    {visit.visits}
+                                    {isPrimary && (
+                                      <span className="ml-0.5 text-[9px]">
+                                        ★
+                                      </span>
+                                    )}
+                                  </p>
+                                  <p className="text-muted-foreground text-[10px]">
+                                    ${visit.spend.toLocaleString()}
+                                  </p>
+                                </div>
+                              ) : (
+                                <span className="text-[11px]">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                          ${c.totalSpend.toLocaleString()}
+                        </td>
+                        {tiers.length > 0 && (
+                          <td className="px-4 py-3 text-center">
+                            {clientTier ? (
+                              <Badge
+                                variant="outline"
+                                className="gap-1 text-[10px]"
+                                style={{
+                                  backgroundColor: `${clientTier.color}1a`,
+                                  color: clientTier.color,
+                                  borderColor: `${clientTier.color}40`,
+                                }}
+                              >
+                                {clientTier.icon} {clientTier.name}
+                              </Badge>
                             ) : (
-                              <span className="text-[11px]">—</span>
+                              <span className="text-muted-foreground text-[10px]">
+                                —
+                              </span>
                             )}
                           </td>
-                        );
-                      })}
-                      <td className="px-4 py-3 text-right font-semibold tabular-nums">
-                        ${c.totalSpend.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px] capitalize",
-                            TIER_COLORS[c.loyaltyTier],
-                          )}
-                        >
-                          {c.loyaltyTier}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))
+                        )}
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -775,8 +844,9 @@ export function ClientsHqClient({ clients, locations }: Props) {
       </Card>
 
       <p className="text-muted-foreground text-[11px]">
-        ★ marks the client&apos;s primary location. Cross-location clients are
-        ideal targets for cross-sell campaigns — segment them in Marketing.
+        ★ marks the client&apos;s highest-volume location. Cross-location
+        clients are ideal targets for cross-sell campaigns — segment them in
+        Marketing.
       </p>
     </div>
   );

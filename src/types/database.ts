@@ -7917,6 +7917,39 @@ export type Database = {
           },
         ];
       };
+      waitlist_signups: {
+        Row: {
+          contact_name: string;
+          created_at: string;
+          email: string;
+          facility_name: string;
+          id: string;
+          note: string | null;
+          phone: string | null;
+          source: string;
+        };
+        Insert: {
+          contact_name: string;
+          created_at?: string;
+          email: string;
+          facility_name: string;
+          id?: string;
+          note?: string | null;
+          phone?: string | null;
+          source?: string;
+        };
+        Update: {
+          contact_name?: string;
+          created_at?: string;
+          email?: string;
+          facility_name?: string;
+          id?: string;
+          note?: string | null;
+          phone?: string | null;
+          source?: string;
+        };
+        Relationships: [];
+      };
       waiver_signatures: {
         Row: {
           client_id: string;
@@ -8645,6 +8678,10 @@ export type Database = {
           p_profile_id: string;
           p_role: Database["public"]["Enums"]["platform_role"];
         };
+        Returns: Json;
+      };
+      hq_client_network_value: {
+        Args: { p_facility_id: string };
         Returns: Json;
       };
       invite_facility_owner: {
