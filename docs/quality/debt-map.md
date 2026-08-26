@@ -1143,7 +1143,27 @@ Worse, there was nothing to refund: retail transactions are `const transactions:
 
 The simulator is deleted and the function is gone. **The business-rule ladder is kept** — enabled refund methods, `managerApprovalThreshold`, per-item reasons, required notes, split-payment allocation — because that is real facility policy and is what a real return will need. A card return is now recorded as `pending` and says plainly that the card has not been refunded; cash, store credit and a gift card are settled honestly, because those really do happen in the room.
 
-**Do instead:** retail cannot refund until retail SALES are rows. Build the sale first. (The CHARGE half was fixed later the same day — see the entry above — so a card-present retail sale now produces a real `payments` row. A refund still cannot reverse it, because the return screen has no processor payment id to name: closing that gap means carrying `processor_payment_id` onto the return, not another simulator.)
+**This is finished — and the diagnosis above was wrong, which is the part worth keeping.** It said a refund could not reverse a retail sale "because the return screen has no processor payment id to name". That had stopped being true the same day: `/api/payments/retail/charge` writes a real `payments` row with a real `processor_payment_id`, so the id existed and the sale was reversible. What was actually missing was that the screen could not SEE it — `getAllTransactions()` reads a module array that is empty on every page load, so a sale rung up a minute earlier was already invisible. The fix was a list, not a column. See the entry below.
+
+**The lesson, not the fix:** "there is no id" and "nothing here can reach the id" produce identical symptoms and take opposite work to solve. Check which one before planning against it.
+
+### 🟢 Retail can give money back (fixed 2026-08-26)
+
+The counter could take money for a day and not return a penny of it. Closing that needed three pieces, and only one of them was about Clover.
+
+**1. The refund engine was extracted, not copied.** `lib/clover/refund.ts` now holds what `/api/payments/clover/refund` used to hold inline: draining newest-first, the deterministic idempotency key, the card-present-vs-ecommerce branch, retrying a throw but never a refusal, and writing the ledger row from what Clover says happened rather than from what was asked for. The booking route shrank from 381 lines to 173 and kept its behaviour exactly. **Every comment in that file marks a trap paid for once** — the `slice === remaining` bug that asked Clover to reverse $62.50 when $32.50 was left, the tip that makes `/v1/refunds` refuse a partial, the `/v1/orders/{id}/returns` endpoint that refunds the whole order while echoing your amount back. A second copy of that loop would be a second place to pay for the next one.
+
+**2. `GET /api/payments/retail/sales` is the piece that was actually missing.** A counter sale is a `payments` row with `booking_id is null` — that is the whole definition, and it needs no `source` column to distinguish it. Each row carries what is still refundable after anything already given back. A fully-refunded sale stays in the list showing zero rather than disappearing, so somebody looking for yesterday's return finds it done instead of finding nothing.
+
+**3. `POST /api/payments/retail/refund` reverses one.** `process_refund` is checked **before** Clover, not only by `payments_insert` when the negative row is written — that policy fires after the money has moved. The facility comes from the session. The one refusal worth reading twice: **a payment attached to a booking is not refundable here.** `booking_id is null` is part of the row MATCH rather than a check afterwards, so naming a booking's payment returns the same "no counter sale" as naming a stranger's. Refunding one through this door would move the money correctly and leave `bookings.amount_paid` and `payment_status` derived from a ledger the booking screen never learns changed.
+
+**The order in the handler is load-bearing.** The refund is asked for first and the return is recorded only if it lands. A return row written before the money moves is a promise the books cannot keep — and it is precisely the shape the deleted simulator used to produce.
+
+**Unlike the charge, the amount is NOT taken from the request.** A refund has a row to measure against, so the ceiling is computed and an over-refund is refused with the figure that was really available. Do not read the charge route's compromise as a pattern.
+
+**What is still open — one item, and it is a UI limit, not a money one.** A sale's cart went to Clover as order line items and was never written to a table here; `payments` records what was taken, not what was sold. So a real sale offers ONE return line covering what is refundable, and returning it refunds the sale. **Returning a single item off a multi-item sale needs the Clover order read back through `processor_order_id`** — real work, deliberately not faked with invented products. The route already accepts a partial `amountCents`; only the screen cannot ask for one.
+
+`tests/e2e/retail-refund.spec.ts` (gate + nightly) asserts every refusal without moving money: signed out, a groomer, an empty till for anyone without `financial_view_amounts`, a malformed id, a zero and a negative amount, a body naming another facility, and a booking's payment refused. A completed reversal still needs a real sale on real hardware.
 
 ### 🟢 The dialog charged the price; the mutation charges the balance
 

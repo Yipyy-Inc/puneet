@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   ChevronDown,
@@ -105,6 +106,13 @@ import {
 // `getFiservConfig` stays: the refund RULES it carries (enabled methods,
 // approval threshold, required reasons and notes) are real facility policy.
 import { getFiservConfig } from "@/data/fiserv-payments";
+// The counter sales that are REAL — rows in `payments`, not the module array in
+// `src/data/retail.ts` that empties on refresh — and the call that reverses one.
+import {
+  refundRetailSale,
+  retailSaleQueries,
+  type RetailSale,
+} from "@/lib/api/retail-payments";
 import { sellingFromMargin } from "@/lib/retail-pricing";
 import { resolveBrandRule } from "@/lib/api/retail";
 import { retailConfig } from "@/data/retail-config";
@@ -118,6 +126,90 @@ import {
   getLocationName,
 } from "@/lib/payment-method-utils";
 import { logPaymentAction } from "@/lib/payment-audit";
+
+/** A real counter sale, wearing the shape this screen already knows how to
+ *  render and return.
+ *
+ *  ── THE ONE LINE ITEM IS DELIBERATE, AND IT IS A LIMIT ──────────────────
+ *
+ *  A sale's cart travelled to Clover as order line items and was never written
+ *  to a table here — `payments` records what was taken, not what was sold. So
+ *  the return offers ONE line covering what is still refundable, and a return
+ *  of it refunds the sale. Returning a single item off a multi-item sale needs
+ *  the Clover order read back through `processor_order_id`, which is a real
+ *  piece of work and not this one. It is in the debt map rather than faked
+ *  here with invented products.
+ */
+function saleAsTransaction(sale: RetailSale): Transaction {
+  const refundable = sale.refundableCents / 100;
+  const settled = sale.refundableCents <= 0;
+  // A cash counter sale has no Clover payment behind it, so there is no id to
+  // print and nothing for `original_payment` to reverse. Falls back to the
+  // ledger row's own id rather than crashing on a null slice().
+  const ref = (sale.processorPaymentId ?? sale.paymentId.replace(/-/g, ""))
+    .slice(-8)
+    .toUpperCase();
+  const line: CartItem = {
+    itemType: "product",
+    // REQUIRED, and not decoration: the return modal's checkbox is guarded by
+    // `e.target.checked && item.productId`, so a line without one ticks and
+    // adds nothing — leaving "Process Return" disabled forever with no visible
+    // reason. There is no product row behind a counter sale, so this names
+    // what it is rather than borrowing an id from something real.
+    productId: "counter-sale",
+    productName: settled ? "Counter sale (refunded)" : "Counter sale",
+    sku: ref,
+    quantity: 1,
+    unitPrice: refundable,
+    discount: 0,
+    discountType: "fixed",
+    total: refundable,
+  };
+
+  return {
+    // Prefixed so it can never collide with a fixture id, and so the return
+    // handler can tell a real sale from one by looking at the object it holds.
+    id: `sale-${sale.paymentId}`,
+    paymentId: sale.paymentId,
+    refundableCents: sale.refundableCents,
+    onDevice: sale.onDevice,
+    transactionNumber: `SALE-${ref}`,
+    items: [line],
+    subtotal: sale.subtotalCents / 100,
+    discountTotal: 0,
+    taxTotal: sale.taxCents / 100,
+    tipAmount: sale.tipCents / 100,
+    total: sale.amountCents / 100,
+    // The card brand is on the row; this enum only distinguishes credit from
+    // debit and the till does not record which, so the honest bucket is credit.
+    // A sale with nothing at a processor is not a card sale at all, and saying
+    // so is what stops the screen offering to reverse one.
+    paymentMethod: sale.refundableToCard ? "credit" : "cash",
+    payments: [
+      {
+        method: sale.refundableToCard ? "credit" : "cash",
+        amount: sale.amountCents / 100,
+      },
+    ],
+    status: settled ? "refunded" : "completed",
+    customerId: sale.clientId ?? undefined,
+    customerName: sale.clientName ?? undefined,
+    cashierId: "",
+    cashierName: sale.soldBy ?? "Counter",
+    receiptSent: false,
+    notes: [
+      sale.cardBrand && sale.cardLast4
+        ? `${sale.cardBrand} ****${sale.cardLast4}`
+        : null,
+      sale.onDevice ? "Taken on the terminal" : null,
+      sale.note,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    createdAt: sale.createdAt,
+    cloverTransactionId: sale.processorPaymentId ?? undefined,
+  };
+}
 
 type PurchaseOrderWithRecord = PurchaseOrder & Record<string, unknown>;
 type SupplierWithRecord = Supplier & Record<string, unknown>;
@@ -140,6 +232,11 @@ export default function OrdersPage() {
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  // A refund is in flight. The idempotency key means a second click cannot
+  // double-refund at Clover, but the button must not invite one either — the
+  // card-present path waits on the device and can take the better part of a
+  // minute, which reads exactly like a screen that ignored the click.
+  const [isRefunding, setIsRefunding] = useState(false);
   const [isReceiveOrderModalOpen, setIsReceiveOrderModalOpen] = useState(false);
   const [isInvoiceImportOpen, setIsInvoiceImportOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
@@ -223,7 +320,28 @@ export default function OrdersPage() {
 
   const activeSuppliers = getActiveSuppliers();
   const pendingOrders = getPendingOrders();
-  const allTransactions = getAllTransactions();
+  // ── THE SALES THAT ACTUALLY HAPPENED ──────────────────────────────────
+  //
+  // `getAllTransactions()` reads a module array in `src/data/retail.ts` that is
+  // empty on every page load, so nothing sold through this till was EVER
+  // selectable here a moment later. That, not the absence of a processor id,
+  // is why retail returns could not refund: since 2026-08-25 a counter sale is
+  // a real `payments` row with a real Clover payment behind it — the screen
+  // just could not see it. These are those rows.
+  const queryClient = useQueryClient();
+  const { data: realSales = [] } = useQuery(retailSaleQueries.all());
+
+  const realTransactions = useMemo(
+    () => realSales.map(saleAsTransaction),
+    [realSales],
+  );
+
+  // Real first: a sale somebody can actually give money back for outranks a
+  // fixture that will vanish on refresh.
+  const allTransactions = useMemo(
+    () => [...realTransactions, ...getAllTransactions()],
+    [realTransactions],
+  );
 
   const handleCreateOrder = () => {
     setOrderForm({
@@ -423,27 +541,60 @@ export default function OrdersPage() {
       );
       if (!proceed) return;
     }
-    // ── NOTHING HERE CONTACTS A PAYMENT PROCESSOR, AND THAT IS THE FIX ────
+    // ── THE CARD IS REFUNDED HERE, BEFORE ANYTHING IS RECORDED ───────────
     //
-    // ~390 lines used to sit here calling `processFiservRefund`, which was a
-    // simulator: a 500 ms sleep, `Math.random() > 0.05` for the outcome, and an
-    // invented `fiserv_refund_<timestamp>` id. It reported a 5% failure rate to
-    // look convincing. There is no Fiserv account, and the transaction being
-    // returned is a row in `src/data/retail.ts` that does not survive a page
-    // refresh — so there was never a payment for any of it to reverse.
+    // ~390 lines used to sit here calling `processFiservRefund`: a 500 ms
+    // sleep, `Math.random() > 0.05` for the outcome, an invented
+    // `fiserv_refund_<timestamp>` id, and a 5% failure rate to look convincing.
+    // It was deleted rather than repaired, and for a while this screen said so
+    // plainly — record the return, and tell the operator to walk to the
+    // terminal, because a retail sale had nothing at a processor behind it.
     //
-    // The rules ABOVE are real and stay: which refund methods the facility
-    // enables, the manager-approval threshold, per-item reasons, required
-    // notes. What follows is real too — it records the return, issues store
-    // credit or a gift card, and syncs to QuickBooks.
+    // It does now. A sale rung up through this till is a real `payments` row
+    // with a real Clover payment, so `original_payment` means what it says.
     //
-    // What none of it does is put money back on a card. A retail sale is not a
-    // row in Postgres and carries no processor payment id, so nothing here can
-    // be reversed at Clover the way a BOOKING payment can, via
-    // `/api/payments/clover/refund`. Until retail sales are recorded, returning
-    // money to a card is an act somebody performs in the room — and this
-    // screen's job is to say so, not to claim it already happened.
-    const cardRefundIsManual = returnForm.refundMethod === "original_payment";
+    // ORDER MATTERS. The refund is asked for FIRST and the return is recorded
+    // only if it lands: a return row written before the money moves is a
+    // promise the books cannot keep, and it is exactly the shape the simulator
+    // used to produce. A refusal leaves the dialog open with nothing recorded,
+    // so the operator can pick another refund method or try again.
+    //
+    // A fixture sale still cannot be reversed — there is no payment — and gets
+    // the manual answer it always got.
+    const realSale = (
+      selectedTransaction as Transaction & { paymentId?: string }
+    ).paymentId;
+    const wantsCardBack = returnForm.refundMethod === "original_payment";
+
+    let refundedAtClover: { refundedCents: number } | null = null;
+    if (wantsCardBack && realSale) {
+      setIsRefunding(true);
+      const outcome = await refundRetailSale({
+        paymentId: realSale,
+        amountCents: Math.round(refundTotal * 100),
+        // The reason the operator typed, which `payments.note` is now able to
+        // keep. It is the question an accountant asks a year later and the one
+        // the ledger could not answer until 20260825190000.
+        reason:
+          returnForm.notes ||
+          returnForm.items.find((item) => item.reason)?.reason ||
+          "Retail return",
+      });
+      setIsRefunding(false);
+
+      if (!outcome.ok) {
+        alert(`The refund was not made.
+
+${outcome.message}`);
+        return;
+      }
+      refundedAtClover = { refundedCents: outcome.refundedCents };
+      // The sale's refundable balance has changed; the list must not keep
+      // offering money that has already gone back.
+      void queryClient.invalidateQueries({ queryKey: ["retail", "sales"] });
+    }
+
+    const cardRefundIsManual = wantsCardBack && !refundedAtClover;
 
     // Log method override if not original payment
     if (returnForm.refundMethod !== "original_payment" && canOverrideRefund) {
@@ -476,17 +627,23 @@ export default function OrdersPage() {
       amount: refundTotal,
       paymentMethod: returnForm.refundMethod,
       originalPaymentMethod: selectedTransaction.paymentMethod,
-      // No processor transaction id, because no processor was called. It used
-      // to carry an invented one, which is worse than carrying none.
+      // The real Clover payment that was reversed, when one was. Absent when
+      // no processor was called — it used to carry an INVENTED id, which is
+      // worse than carrying none.
+      ...(refundedAtClover
+        ? { processorTransactionId: selectedTransaction.cloverTransactionId }
+        : {}),
       staffId: currentUserId,
       staffName: "Staff",
       staffRole: facilityRole,
       customerId: selectedTransaction.customerId,
       customerName: selectedTransaction.customerName,
       reason: returnForm.notes || "Customer return",
-      notes: cardRefundIsManual
-        ? "Return recorded. The card refund has NOT been made — do it at the terminal."
-        : `Return recorded and settled by ${returnForm.refundMethod.replace("_", " ")}.`,
+      notes: refundedAtClover
+        ? `Refunded to the card at Clover: $${(refundedAtClover.refundedCents / 100).toFixed(2)}.`
+        : cardRefundIsManual
+          ? "Return recorded. The card refund has NOT been made — do it at the terminal."
+          : `Return recorded and settled by ${returnForm.refundMethod.replace("_", " ")}.`,
       metadata: {
         itemsReturned: returnForm.items.length,
         isOverride: returnForm.refundMethod !== "original_payment",
@@ -497,9 +654,11 @@ export default function OrdersPage() {
     // Create return with audit trail
     const auditNotes = [
       `Refund Method: ${returnForm.refundMethod}`,
-      cardRefundIsManual
-        ? "Card refund NOT made by Yipyy — settle it at the terminal"
-        : null,
+      refundedAtClover
+        ? `Refunded to the card at Clover: $${(refundedAtClover.refundedCents / 100).toFixed(2)}`
+        : cardRefundIsManual
+          ? "Card refund NOT made by Yipyy — settle it at the terminal"
+          : null,
       returnForm.refundMethod !== "original_payment" && canOverrideRefund
         ? `Manager Override: ${returnForm.refundMethod}`
         : null,
@@ -610,14 +769,20 @@ export default function OrdersPage() {
     setSelectedTransaction(null);
     setReturnForm({ items: [], refundMethod: "original_payment" });
 
-    // Say which of the two happened, and never blur them. "Return processed
-    // successfully" was printed for a card refund that had not been made.
+    // Say which of the THREE happened, and never blur them. "Return processed
+    // successfully" was once printed for a card refund that had not been made,
+    // which is the whole reason these messages are kept apart.
     alert(
-      cardRefundIsManual
-        ? `Return ${newReturn.returnNumber} recorded for $${refundTotal.toFixed(2)}.\n\n` +
-            `The card has NOT been refunded — Yipyy cannot refund a retail sale. ` +
-            `Give the money back at the terminal, then the return is done.`
-        : `Return ${newReturn.returnNumber} processed: $${refundTotal.toFixed(2)} by ${returnForm.refundMethod.replace("_", " ")}.`,
+      refundedAtClover
+        ? `Return ${newReturn.returnNumber}: $${(refundedAtClover.refundedCents / 100).toFixed(2)} refunded to the card.\n\n` +
+            `It can take a few days to reach the customer's statement — the money ` +
+            `has already left the merchant account.`
+        : cardRefundIsManual
+          ? `Return ${newReturn.returnNumber} recorded for $${refundTotal.toFixed(2)}.\n\n` +
+            `The card has NOT been refunded — this sale was not rung up through ` +
+            `this till, so there is no payment for Yipyy to reverse. Give the ` +
+            `money back at the terminal, then the return is done.`
+          : `Return ${newReturn.returnNumber} processed: $${refundTotal.toFixed(2)} by ${returnForm.refundMethod.replace("_", " ")}.`,
     );
   };
 
@@ -2929,9 +3094,9 @@ export default function OrdersPage() {
             </Button>
             <Button
               onClick={handleProcessReturn}
-              disabled={returnForm.items.length === 0}
+              disabled={returnForm.items.length === 0 || isRefunding}
             >
-              Process Return
+              {isRefunding ? "Refunding…" : "Process Return"}
             </Button>
           </DialogFooter>
         </DialogContent>

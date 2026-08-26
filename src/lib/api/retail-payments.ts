@@ -190,3 +190,113 @@ export function typedCardUnavailable(
     processedAt: new Date().toISOString(),
   };
 }
+
+// ============================================================================
+// Giving it back.
+//
+// The return screen could apply every refund rule the facility has and then not
+// refund anything — it recorded the return and told the operator to walk to the
+// terminal. That was honest while a retail sale was a fixture with nothing at a
+// processor behind it. It has not been true since `/api/payments/retail/charge`
+// started writing real `payments` rows, so these two close it: one lists the
+// sales that actually exist, the other reverses one.
+// ============================================================================
+
+export interface RetailSale {
+  paymentId: string;
+  /** Null on a cash or store-credit sale — nothing at a processor to reverse. */
+  processorPaymentId: string | null;
+  /** Whether this could go back on a card at all. */
+  refundableToCard: boolean;
+  amountCents: number;
+  subtotalCents: number;
+  taxCents: number;
+  tipCents: number;
+  /** What is left after anything already given back. Zero means done. */
+  refundableCents: number;
+  method: string | null;
+  cardBrand: string | null;
+  cardLast4: string | null;
+  entryMethod: string | null;
+  /** Card-present: it has to go back through the device that took it. */
+  onDevice: boolean;
+  soldBy: string | null;
+  note: string | null;
+  clientId: string | null;
+  clientRef: number | null;
+  clientName: string | null;
+  createdAt: string;
+}
+
+export const retailSaleQueries = {
+  all: () => ({
+    queryKey: ["retail", "sales"] as const,
+    queryFn: async (): Promise<RetailSale[]> => {
+      const response = await fetch("/api/payments/retail/sales");
+      if (!response.ok) return [];
+      const body = (await response.json()) as { sales?: RetailSale[] };
+      return body.sales ?? [];
+    },
+  }),
+};
+
+export type RetailRefundOutcome =
+  | { ok: true; refundedCents: number; shortfallCents: number }
+  | { ok: false; message: string };
+
+/**
+ * Reverse a counter sale at Clover. Never throws — the caller reads `ok`.
+ *
+ * The same discipline `chargeRetail` follows and for the same reason: a return
+ * handler that throws mid-way abandons the store-credit and gift-card steps
+ * after the card has already been credited.
+ */
+export async function refundRetailSale(input: {
+  paymentId: string;
+  amountCents?: number;
+  reason?: string;
+}): Promise<RetailRefundOutcome> {
+  let response: Response;
+  try {
+    response = await fetch("/api/payments/retail/refund", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        paymentId: input.paymentId,
+        ...(input.amountCents
+          ? { amountCents: Math.round(input.amountCents) }
+          : {}),
+        ...(input.reason ? { reason: input.reason } : {}),
+      }),
+    });
+  } catch {
+    // The refund may or may not have been made. Said plainly, because the one
+    // thing that must not happen next is somebody refunding it a second time.
+    return {
+      ok: false,
+      message:
+        "The refund could not be sent. Check Clover before refunding this sale again.",
+    };
+  }
+
+  const body = (await response.json().catch(() => null)) as {
+    refunded?: boolean;
+    refundedCents?: number;
+    shortfallCents?: number;
+    error?: string;
+  } | null;
+
+  if (!response.ok || !body?.refunded) {
+    return {
+      ok: false,
+      message:
+        body?.error ?? `The refund did not go through (${response.status}).`,
+    };
+  }
+
+  return {
+    ok: true,
+    refundedCents: body.refundedCents ?? 0,
+    shortfallCents: body.shortfallCents ?? 0,
+  };
+}
