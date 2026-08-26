@@ -1167,6 +1167,36 @@ The simulator is deleted and the function is gone. **The business-rule ladder is
 
 **Not covered by a test.** `tls-ask.spec.ts` asserts what the gate answers, which is necessary and was not sufficient — the gate was correct and was being asked of the wrong process. Verifying that would mean asserting against deployment topology, which the suite has no access to.
 
+### 🟢 Four addresses, four audiences (2026-08-26)
+
+| Host                   | Audience                      | Portal                                                       |
+| ---------------------- | ----------------------------- | ------------------------------------------------------------ |
+| `yipyy.com`, `www`     | the public                    | marketing (`/coming-soon`)                                   |
+| `hq.yipyy.com`         | Yipyy's own staff             | `/dashboard/*`                                               |
+| `app.yipyy.com`        | staff, no facility named      | resolved by identity                                         |
+| `<slug>.app.yipyy.com` | that facility's staff         | `/facility/*`, `/employee/*`, `/staff/*`                     |
+| `<slug>.yipyy.com`     | that facility's **customers** | `/customer/*`, `/join`, `/book`, `/review`, `/forms`, `/pay` |
+
+**The customer portal was already built for this.** `src/app/customer/layout.tsx`, `api/clients/me`, `api/clients/register` and `app/join/page.tsx` have always read `x-facility-slug` — the header the proxy stamps from the Host. The code assumed a customer arrives on their facility's own subdomain long before the routing said so.
+
+**`resolveHost()` in `lib/app-host.ts` is the ONE place a hostname is decoded.** It answers both questions — which facility, and which audience — and everything else consumes it. `facilitySlugFromHost` is unchanged: it still demands exactly one label before whatever parent it is given, so `<slug>.app.<apex>` and `<slug>.<apex>` are simply two different parents.
+
+**`NEXT_PUBLIC_APP_DOMAIN` is still the APEX.** One variable, several questions: `isMarketingHost` measures the apex with it, `facilityParentHost` derives `app.<apex>`, `platformHost` derives `hq.<apex>`. Setting it to any of the derived hosts breaks the other two.
+
+**`hq` is reserved in BOTH places** — `RESERVED` in `facility-host.ts` and `facilities_slug_not_reserved` in Postgres (20260826140000). Verified by insert, with a positive control proving an ordinary slug still passes. It was NOT reserved before, so a facility could have taken the slug and shadowed the super-admin host.
+
+**Enforcement is in `src/proxy.ts`, and it has to be.** `guardPortal` redirects from a _layout_, which is a soft redirect — for a cross-ORIGIN target that is the MPA navigation that produced React error #310 in production (documented at length in `src/app/route.ts`). The proxy renders nothing and issues a genuine 307.
+
+**Three rules that are easy to break later:**
+
+1. **`/sign-in` must answer on every host.** Each audience signs in at its own address; redirecting it locks an audience out of its only door.
+2. **`/api/*` must never be redirected.** A machine caller does not follow a 307 the way a browser does — it would turn an authenticated POST into a silent no-op.
+3. **A host that names no facility must not guess one.** `/customer/*` on bare `app.yipyy.com` falls through to `guardPortal` rather than inventing a slug, which could send somebody to a stranger's business.
+
+**The cross-host hop is guarded on `WORKOS_COOKIE_DOMAIN` starting with a dot.** Without it the AuthKit cookie is host-only and moving somebody between hosts signs them out — the trap this repo has documented since `route.ts` was written. A deployment without it degrades to routing-only rather than logging everyone out. CI now sets `.yipyy.test` so the rules are actually exercised; `host-routing.spec.ts` fails loudly rather than passing over inert assertions.
+
+**Verified locally by `Host:` header on all five shapes** — the method that caught two of my own regressions in this change: a `*.test` short-circuit that silently disabled every host rule in development, and a redirect that pointed at `https://` on an http dev server.
+
 ### 🟢 A facility is `<slug>.app.yipyy.com` (moved 2026-08-26)
 
 Facilities hung off the apex (`pawradise.yipyy.com`) until the marketing split; they hang off the app host now.

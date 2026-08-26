@@ -26,6 +26,9 @@
 const RESERVED = new Set([
   "www",
   "app",
+  // The platform super-admin portal, from 2026-08-26. Reserved in Postgres by
+  // 20260826140000 as well — this copy must stay a superset of that one.
+  "hq",
   "api",
   "admin",
   "dashboard",

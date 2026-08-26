@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { getFacilityContext } from "@/lib/api/facility-context";
-import { facilityParentHost } from "@/lib/app-host";
 
 // ============================================================================
 // Whether this facility takes customers who arrive on their own.
@@ -48,8 +47,14 @@ export async function GET() {
   return NextResponse.json({
     facilityName: context.name,
     slug: data?.slug ?? null,
-    // The host the facility's own sign-up page lives on: `<slug>.app.yipyy.com`.
-    appDomain: facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN),
+    // ── THE CUSTOMER ADDRESS, NOT THE STAFF ONE ──────────────────────────
+    //
+    // The screen renders `<slug>.<appDomain>` as the address this facility
+    // hands to its CUSTOMERS to sign up on — `/join` lives there. That is the
+    // apex (`doggieville-mtl.yipyy.com`), not `app.yipyy.com`, which is where
+    // the facility's own staff work. Briefly the staff parent, on 2026-08-26,
+    // between facilities moving hosts and customers getting their own.
+    appDomain: process.env.NEXT_PUBLIC_APP_DOMAIN ?? null,
     allowCustomerSignup: data?.allow_customer_signup === true,
   });
 }

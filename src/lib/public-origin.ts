@@ -1,6 +1,10 @@
 import "server-only";
 
-import { facilityParentHost } from "@/lib/app-host";
+import {
+  facilityCustomerOrigin,
+  facilityStaffOrigin,
+  platformOriginFor,
+} from "@/lib/app-host";
 
 // ============================================================================
 // Where a link we PUT IN AN EMAIL should point.
@@ -57,8 +61,14 @@ export function platformOrigin(request: Request): string {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (configured) return configured.replace(/\/+$/, "");
 
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN?.trim();
-  if (appDomain) return `https://${appDomain}`;
+  // ── hq.yipyy.com, NOT THE APEX ──────────────────────────────────────────
+  //
+  // This returned `https://yipyy.com`, which was right until the apex became
+  // the marketing site. An administrator invitation pointing there sends
+  // somebody to a coming-soon page to accept an invitation. Yipyy's own staff
+  // work from `hq.yipyy.com`, so that is where platform mail points.
+  const platform = platformOriginFor(process.env.NEXT_PUBLIC_APP_DOMAIN);
+  if (platform) return platform;
 
   return fromRequest(request);
 }
@@ -73,14 +83,41 @@ export function platformOrigin(request: Request): string {
  * per-facility hosts exist) or no slug. A link to the apex is a working link;
  * a link to a subdomain that was never configured is not.
  */
-export function facilityOrigin(
+export function facilityStaffLinkOrigin(
   slug: string | null | undefined,
   request: Request,
 ): string {
-  // `<slug>.app.yipyy.com`. A link in an email outlives the redirect that
-  // rescues the old shape, so mail sent from today names the new host directly.
-  const parent = facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN);
+  // `<slug>.app.yipyy.com` — where that facility's STAFF work. Owner and staff
+  // invitations land here.
   const trimmed = slug?.trim().toLowerCase();
-  if (parent && trimmed) return `https://${trimmed}.${parent}`;
-  return platformOrigin(request);
+  const origin = trimmed
+    ? facilityStaffOrigin(trimmed, process.env.NEXT_PUBLIC_APP_DOMAIN)
+    : null;
+  return origin ?? platformOrigin(request);
+}
+
+/**
+ * A facility's address for its CUSTOMERS — `<slug>.yipyy.com`.
+ *
+ * ── WHY THIS IS A SEPARATE FUNCTION ───────────────────────────────────────
+ *
+ * A facility has two addresses now and they serve different people. One
+ * `facilityOrigin()` answering both questions is a function whose result
+ * depends on which caller you are, and the next person to add a booking
+ * confirmation would have got the staff host without noticing — the link would
+ * work, redirect, and land a pet owner on a staff sign-in page.
+ *
+ * The same rule as the staff version: `slug` comes from the FACILITY ROW, never
+ * from the request. The point of these functions is defeated entirely if the
+ * caller can name the host.
+ */
+export function facilityCustomerLinkOrigin(
+  slug: string | null | undefined,
+  request: Request,
+): string {
+  const trimmed = slug?.trim().toLowerCase();
+  const origin = trimmed
+    ? facilityCustomerOrigin(trimmed, process.env.NEXT_PUBLIC_APP_DOMAIN)
+    : null;
+  return origin ?? platformOrigin(request);
 }
