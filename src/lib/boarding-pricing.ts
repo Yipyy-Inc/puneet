@@ -33,6 +33,12 @@ export interface BoardingPriceInput {
    * own and before any kennel has been chosen.
    */
   fallbackNightlyRate: number;
+  /**
+   * The branch this stay is at. A class's own `locationPricing` override for
+   * this branch wins over its `defaultBasePrice` -- absent or no override,
+   * this resolves exactly as before.
+   */
+  locationId?: string | null;
 }
 
 /**
@@ -47,6 +53,7 @@ export function boardingNightlyRate({
   rooms,
   roomAssignments,
   fallbackNightlyRate,
+  locationId,
 }: Omit<BoardingPriceInput, "nights">): number {
   const categoryById = new Map(categories.map((c) => [c.id, c]));
   const roomById = new Map(rooms.map((r) => [r.id, r]));
@@ -55,11 +62,17 @@ export function boardingNightlyRate({
   return distinctRooms.reduce((sum, roomId) => {
     const room = roomById.get(roomId);
     const category = room ? categoryById.get(room.categoryId) : undefined;
-    // A class with no price set falls back to the service rate rather than to
-    // nothing — a free night is never the right guess. `check:pricing` should
-    // be the thing that stops a class existing without a price; this is the
-    // last line of defence, not the plan.
-    return sum + (category?.defaultBasePrice ?? fallbackNightlyRate);
+    // A branch's own price for this class wins, then the class's own price,
+    // then the service rate rather than nothing — a free night is never the
+    // right guess. `check:pricing` should be the thing that stops a class
+    // existing without a price; this is the last line of defence, not the plan.
+    const branchPrice = locationId
+      ? category?.locationPricing.find((p) => p.locationId === locationId)
+          ?.price
+      : undefined;
+    return (
+      sum + (branchPrice ?? category?.defaultBasePrice ?? fallbackNightlyRate)
+    );
   }, 0);
 }
 

@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
-import { deniedIfUntouched } from "@/lib/api/rls-write";
+import {
+  deniedIfExpectedRowsSurvived,
+  deniedIfUntouched,
+} from "@/lib/api/rls-write";
 import type { RoomCategory } from "@/types/rooms";
 
 // ============================================================================
@@ -33,9 +36,13 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const input = (await request
-    .json()
-    .catch(() => null)) as Partial<RoomCategory> | null;
+  const input = (await request.json().catch(() => null)) as
+    | (Partial<RoomCategory> & {
+        /** Which branch `defaultBasePrice` is FOR, when set. Absent (or
+         *  null) means the facility-wide default -- unchanged behaviour. */
+        locationId?: string | null;
+      })
+    | null;
   if (!input) {
     return NextResponse.json({ error: "Nothing to save." }, { status: 422 });
   }
@@ -54,8 +61,56 @@ export async function PATCH(
 
   const supabase = await createServerClient();
 
+  const locationId = input.locationId ?? null;
+  let categoryUuid: string | null = null;
+  let categoryFacilityId: string | null = null;
+
+  // A branch-scoped price write needs the real row -- its uuid, to key the
+  // location table, and its facility, to check the location actually belongs
+  // here. The FK alone would not stop a location from another facility being
+  // named, same as every other location write this session.
+  if (locationId) {
+    const { data: category } = await supabase
+      .from("room_categories")
+      .select("id, facility_id, service")
+      .eq("legacy_id", id)
+      .maybeSingle();
+    if (!category) {
+      return NextResponse.json(
+        { error: "That category does not exist, or is not yours." },
+        { status: 404 },
+      );
+    }
+    if (category.service !== "boarding") {
+      return NextResponse.json(
+        {
+          error:
+            "Only boarding kennel classes can be priced per branch. Daycare has no per-branch rate.",
+        },
+        { status: 422 },
+      );
+    }
+    const { data: location } = await supabase
+      .from("locations")
+      .select("facility_id")
+      .eq("id", locationId)
+      .maybeSingle();
+    if (!location || location.facility_id !== category.facility_id) {
+      return NextResponse.json(
+        { error: "That location doesn't belong to this business." },
+        { status: 422 },
+      );
+    }
+    categoryUuid = category.id;
+    categoryFacilityId = category.facility_id;
+  }
+
   // Only what was sent. A full mapping would blank every column the caller
   // left out, which is what makes PATCH different from PUT.
+  //
+  // `defaultBasePrice` is EXCLUDED here when locationId is set -- it goes to
+  // room_category_location_prices below instead of the shared row, the same
+  // redirection grooming's [id] route does for sizePricing.
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.description !== undefined)
@@ -64,7 +119,7 @@ export async function PATCH(
   if (input.sortOrder !== undefined) patch.sort_order = input.sortOrder;
   if (input.defaultCapacity !== undefined)
     patch.default_capacity = input.defaultCapacity;
-  if (input.defaultBasePrice !== undefined) {
+  if (input.defaultBasePrice !== undefined && !locationId) {
     patch.default_base_price = input.defaultBasePrice ?? null;
   }
   if (input.visibleToClients !== undefined) {
@@ -75,29 +130,91 @@ export async function PATCH(
   // Closing a daycare play area for the season. Boarding never sends it.
   if (input.active !== undefined) patch.active = input.active;
 
-  if (Object.keys(patch).length === 0) {
+  if (Object.keys(patch).length === 0 && !locationId) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 422 });
   }
-  patch.updated_at = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from("room_categories")
-    .update(patch as never)
-    .eq("legacy_id", id)
-    .select("legacy_id");
+  if (Object.keys(patch).length > 0) {
+    patch.updated_at = new Date().toISOString();
 
-  if (error) {
-    return writeFailure(error, {
-      denied: "Not allowed to manage rooms at this facility.",
-      duplicate: "A category with that name already exists.",
-    });
+    const { data, error } = await supabase
+      .from("room_categories")
+      .update(patch as never)
+      .eq("legacy_id", id)
+      .select("legacy_id");
+
+    if (error) {
+      return writeFailure(error, {
+        denied: "Not allowed to manage rooms at this facility.",
+        duplicate: "A category with that name already exists.",
+      });
+    }
+
+    const denied = deniedIfUntouched(
+      data,
+      "Not allowed to change this category.",
+    );
+    if (denied) return denied;
   }
 
-  const denied = deniedIfUntouched(
-    data,
-    "Not allowed to change this category.",
-  );
-  if (denied) return denied;
+  // The branch price itself -- one row per (category, location). A number
+  // upserts it; null/absent (with locationId still set) clears it, falling
+  // back to the facility-wide default.
+  if (locationId && categoryUuid && categoryFacilityId) {
+    if (input.defaultBasePrice != null) {
+      const { data: upserted, error: upsertError } = await supabase
+        .from("room_category_location_prices")
+        .upsert(
+          {
+            category_id: categoryUuid,
+            facility_id: categoryFacilityId,
+            location_id: locationId,
+            price: input.defaultBasePrice,
+            updated_at: new Date().toISOString(),
+          } as never,
+          { onConflict: "category_id,location_id" },
+        )
+        .select("id");
+      if (upsertError) {
+        return writeFailure(upsertError, {
+          denied: "Not allowed to price rooms at this facility.",
+          duplicate: "That branch already has a price for this class.",
+        });
+      }
+      const denied = deniedIfUntouched(
+        upserted,
+        "Not allowed to price rooms at this facility.",
+      );
+      if (denied) return denied;
+    } else {
+      // defaultBasePrice explicitly null (or omitted) with locationId set --
+      // clear this branch's price back to the facility-wide default.
+      const { count: existing } = await supabase
+        .from("room_category_location_prices")
+        .select("id", { count: "exact", head: true })
+        .eq("category_id", categoryUuid)
+        .eq("location_id", locationId);
+
+      const { data: cleared, error: clearError } = await supabase
+        .from("room_category_location_prices")
+        .delete()
+        .eq("category_id", categoryUuid)
+        .eq("location_id", locationId)
+        .select("id");
+      if (clearError) {
+        return writeFailure(clearError, {
+          denied: "Not allowed to price rooms at this facility.",
+          duplicate: "That price could not be cleared.",
+        });
+      }
+      const denied = deniedIfExpectedRowsSurvived(
+        existing,
+        cleared,
+        "Not allowed to price rooms at this facility.",
+      );
+      if (denied) return denied;
+    }
+  }
 
   return new NextResponse(null, { status: 204 });
 }

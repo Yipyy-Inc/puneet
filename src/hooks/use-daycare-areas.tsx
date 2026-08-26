@@ -140,6 +140,7 @@ export function DaycareAreasProvider({ children }: { children: ReactNode }) {
       visibleToClients: true,
       imageUrl: a.imageUrl,
       active: a.isActive,
+      locationPricing: [],
     }),
     [],
   );

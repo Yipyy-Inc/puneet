@@ -150,6 +150,8 @@ function toDaycareCategories(areas: DaycarePlayArea[]): RoomCategory[] {
       imageUrl: a.imageUrl,
       // Everything reaching here passed the `isActive` filter above.
       active: true,
+      // Daycare has no per-location price table -- see RoomCategory's doc.
+      locationPricing: [],
     }));
 }
 

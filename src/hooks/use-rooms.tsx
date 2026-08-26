@@ -66,7 +66,7 @@ interface RoomsContextValue {
 
 const RoomsContext = createContext<RoomsContextValue | null>(null);
 
-const ROOMS_KEY = ["rooms", "catalogue"] as const;
+export const ROOMS_KEY = ["rooms", "catalogue"] as const;
 
 async function json<T>(
   url: string,
