@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { unfinishedBookings } from "@/data/unfinished-bookings";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { useLocationContext } from "@/hooks/use-location-context";
 import { buildResumePreselection } from "@/lib/resume-booking";
 import { clientDocuments } from "@/data/documents";
 import { clientCommunications, clientCallHistory } from "@/data/communications";
@@ -159,6 +160,7 @@ export default function ClientDetailPage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { openBookingModal } = useBookingModal();
+  const { currentLocationId } = useLocationContext();
   // Field masking (spec Table 21): hide contact info, LTV, and financial amounts
   // from staff without the required permission. TODO: also strip server-side.
   const { maskContact, maskAmount, canSee } = useFieldMask();
@@ -244,7 +246,7 @@ export default function ClientDetailPage({
    */
   const persistBooking = async (booking: NewBooking) => {
     try {
-      const created = await bookingMutations.create(booking);
+      const created = await bookingMutations.create(booking, currentLocationId);
       await queryClient.invalidateQueries({ queryKey: ["bookings"] });
       toast.success(`Booking #${created.id} created`);
     } catch (error) {

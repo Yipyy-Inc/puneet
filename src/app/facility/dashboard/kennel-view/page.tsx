@@ -33,6 +33,7 @@ import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 import { COLOR_HEX_MAP } from "@/data/custom-services";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
+import { useLocationContext } from "@/hooks/use-location-context";
 import type {
   RoomCategory,
   DaycarePlayArea,
@@ -326,6 +327,7 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
   const [serviceType, setServiceType] = useState<ServiceType>("boarding");
 
   const { openBookingModal } = useBookingModal();
+  const { currentLocationId } = useLocationContext();
 
   // Generic move handler that works for both boarding and daycare — the calendar
   // calls it with the same kennel-id shape regardless of service.
@@ -402,7 +404,10 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
           // grid", newBooking)`. The wizard closed, the operator believed a
           // kennel was booked, and nothing had happened.
           try {
-            const created = await bookingMutations.create(newBooking);
+            const created = await bookingMutations.create(
+              newBooking,
+              currentLocationId,
+            );
             // The board itself is derived from the occupancy read, so it has
             // to be refetched or the new guest does not appear in the kennel
             // that was just clicked.
@@ -440,7 +445,10 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
           // never booked. The SECTIONS on this half are still fixtures — there
           // is no daycare-areas table — but the BOOKING it creates is real.
           try {
-            const created = await bookingMutations.create(newBooking);
+            const created = await bookingMutations.create(
+              newBooking,
+              currentLocationId,
+            );
             await queryClient.invalidateQueries({ queryKey: ["bookings"] });
             toast.success(`Booking #${created.id} created`);
           } catch (error) {

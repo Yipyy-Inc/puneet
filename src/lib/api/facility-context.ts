@@ -141,21 +141,54 @@ export async function getFacilityContext(
   if (!facility) return null;
 
   const legacyRef = Number(facility.legacy_id);
-
-  const { data: location } = await supabase
-    .from("locations")
-    .select("id")
-    .eq("facility_id", facility.id)
-    .eq("is_primary", true)
-    .maybeSingle();
+  const locationId = await resolveLocationId(supabase, facility.id);
 
   return {
     facilityId: facility.id,
-    locationId: location?.id ?? null,
+    locationId,
     timeZone: facility.timezone ?? DEFAULT_TIMEZONE,
     name: facility.name,
     legacyRef: Number.isFinite(legacyRef) ? legacyRef : null,
   };
+}
+
+/**
+ * Which of this facility's own locations a write should land on.
+ *
+ * `x-yipyy-location-id` carries the branch the caller has selected in
+ * `LocationTopNavSelector` (`useLocationContext`) — client-side state that,
+ * until now, never reached the server, so every booking landed on the
+ * primary location regardless of which branch was showing on screen. Never
+ * trusted blindly: it must name a location belonging to THIS facility, or it
+ * is ignored exactly like an absent header — the same "naming something you
+ * are not a member of buys a refusal, not access" posture `preferFacilityId`
+ * already has above.
+ */
+async function resolveLocationId(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  facilityId: string,
+): Promise<string | null> {
+  const requestHeaders = await headers();
+  const requestedLocationId = requestHeaders.get("x-yipyy-location-id");
+
+  if (requestedLocationId) {
+    const { data: requested } = await supabase
+      .from("locations")
+      .select("id")
+      .eq("id", requestedLocationId)
+      .eq("facility_id", facilityId)
+      .maybeSingle();
+    if (requested) return requested.id;
+  }
+
+  const { data: primary } = await supabase
+    .from("locations")
+    .select("id")
+    .eq("facility_id", facilityId)
+    .eq("is_primary", true)
+    .maybeSingle();
+
+  return primary?.id ?? null;
 }
 
 type FacilityRow = {
