@@ -1,0 +1,692 @@
+/* ============================================================================
+   The coming-soon page.
+
+   ── WHY THIS IS NOT THE PROTOTYPE'S LAYOUT ─────────────────────────────────
+
+   The Claude Design file lays everything on a fixed 1800x1024 stage and scales
+   it with `Math.min(innerWidth/1800, innerHeight/1024)`. That is the right
+   trick for a mockup — one set of coordinates, guaranteed to look identical in
+   a screenshot — and the wrong one for the page a phone actually loads: at
+   390px wide the scale is 0.21, so 17px body copy renders at about 3.6px and
+   the form cannot be typed into.
+
+   So the design's MEASUREMENTS are reproduced exactly, and its LAYOUT METHOD is
+   not. Above 1100px every value below is the number from the prototype. Below
+   it, the three columns become one, the type steps down through clamp(), and
+   the page scrolls like a page.
+
+   ── EVERY COLOUR HERE COMES FROM THE DESIGN ────────────────────────────────
+
+   #0A1B33 body text, #0E3A5C headings, #1668E3 primary, #0F58C6 its hover,
+   #F08A3C the status dot, #F6F9FF the base. They are written literally rather
+   than mapped onto the app's design tokens: this page is marketing, it is seen
+   by people who have never signed in, and it should not shift when the product
+   palette does.
+   ============================================================================ */
+
+.page {
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(
+      46% 52% at 47% 74%,
+      rgba(22, 104, 227, 0.16) 0%,
+      rgba(22, 104, 227, 0.05) 42%,
+      rgba(246, 249, 255, 0) 72%
+    ),
+    linear-gradient(150deg, #ffffff 0%, #fbfcff 34%, #f2f6fd 100%);
+  color: #0a1b33;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The prototype's inset vignette. Pointer-events off so it never eats a click
+   on the form underneath it. */
+.vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  box-shadow: inset 0 0 220px 60px rgba(14, 58, 92, 0.05);
+}
+
+/* ── PAW PRINTS ────────────────────────────────────────────────────────────
+   Decoration, and hidden from assistive technology at the markup level. They
+   sit behind everything and are dropped entirely on small screens, where they
+   would crowd the content rather than frame it. */
+.paws {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .paws {
+    display: block;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+.paw {
+  position: absolute;
+  display: flex;
+  color: rgba(22, 104, 227, 0.085);
+}
+
+.pawTopRight {
+  top: -70px;
+  right: -60px;
+  width: 320px;
+  height: 320px;
+  transform: rotate(22deg);
+}
+
+.pawTopLeft {
+  top: -40px;
+  left: 560px;
+  width: 150px;
+  height: 150px;
+  transform: rotate(-12deg);
+  color: rgba(22, 104, 227, 0.06);
+}
+
+.pawBottomLeft {
+  bottom: 30px;
+  left: -50px;
+  width: 240px;
+  height: 240px;
+  transform: rotate(-26deg);
+  color: rgba(22, 104, 227, 0.065);
+}
+
+.pawBottomRight {
+  bottom: -50px;
+  right: 180px;
+  width: 190px;
+  height: 190px;
+  transform: rotate(-8deg);
+  color: rgba(22, 104, 227, 0.05);
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vw, 26px);
+  padding: clamp(20px, 4vw, 44px) clamp(18px, 3.4vw, 48px)
+    clamp(28px, 3vw, 40px);
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.logo {
+  height: clamp(46px, 5.2vw, 76px);
+  width: auto;
+  flex: none;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(22, 104, 227, 0.14);
+  box-shadow: 0 10px 24px -16px rgba(10, 27, 51, 0.4);
+}
+
+.badgeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f08a3c;
+  flex: none;
+}
+
+.badgeText {
+  font-size: clamp(11px, 1.1vw, 13px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #1668e3;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── MAIN GRID ──────────────────────────────────────────────────────────────
+   One column until there is genuinely room for three. The order below is
+   deliberate on mobile: headline, then the mascot, then the FORM, and the
+   service cards last — the form is why the page exists, and it should not sit
+   under six cards on a phone. */
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 40px);
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── THE SERVICE CARDS ARE THEIR OWN GRID ITEM ──────────────────────────────
+   They read as part of the left-hand column and they are NOT nested inside it,
+   for one reason: `order` only moves an element among its own siblings. Nested
+   in `.copy`, the cards could never be pushed below the form on a phone — the
+   form ended up under all six of them, which is the opposite of what a
+   coming-soon page wants. As a sibling they can be ordered freely on mobile and
+   pinned back under the copy on desktop with a named area. */
+@media (min-width: 1100px) {
+  .main {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 500px;
+    grid-template-areas:
+      "copy     mascot form"
+      "services mascot form";
+    /* 18px is the copy column's own gap and 6px the cards' margin in the
+       design; as two grid rows that same 24px has to come from the row gap. */
+    column-gap: 40px;
+    row-gap: 24px;
+  }
+
+  .copy {
+    grid-area: copy;
+    align-self: end;
+  }
+
+  .services {
+    grid-area: services;
+    align-self: start;
+  }
+
+  .mascotWrap {
+    grid-area: mascot;
+  }
+
+  .formColumn {
+    grid-area: form;
+  }
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 1.6vw, 18px);
+  min-width: 0;
+  order: 1;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(48px, 8.2vw, 88px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #0e3a5c;
+  white-space: nowrap;
+}
+
+.titleAccent {
+  background: linear-gradient(100deg, #4a9be0, #1668e3 80%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: clamp(21px, 3vw, 31px);
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -0.015em;
+  color: #0e3a5c;
+  max-width: 22ch;
+}
+
+.subtitleAccent {
+  color: #1668e3;
+}
+
+.lede {
+  margin: 0;
+  font-size: clamp(15px, 1.7vw, 17px);
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(14, 58, 92, 0.62);
+  max-width: 38ch;
+  text-wrap: pretty;
+}
+
+/* ── SERVICE CARDS ────────────────────────────────────────────────────────
+   Two up on a phone, three from tablet. Last in the mobile order. */
+
+.services {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 1.4vw, 14px);
+  margin-top: 6px;
+  max-width: 560px;
+  order: 4;
+}
+
+@media (min-width: 640px) {
+  .services {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .services {
+    /* The 6px is the row gap now. */
+    margin-top: 0;
+  }
+}
+
+.service {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(13px, 1.6vw, 16px) clamp(14px, 1.8vw, 18px);
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(10, 27, 51, 0.06);
+  box-shadow: 0 12px 24px -18px rgba(10, 27, 51, 0.5);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+@media (hover: hover) {
+  .service:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 30px -18px rgba(10, 27, 51, 0.55);
+  }
+}
+
+.serviceIcon {
+  flex: none;
+  display: flex;
+  width: clamp(22px, 2.4vw, 26px);
+  height: clamp(22px, 2.4vw, 26px);
+  color: #1668e3;
+}
+
+.serviceLabel {
+  font-size: clamp(13px, 1.4vw, 14px);
+  font-weight: 500;
+  color: #0a1b33;
+}
+
+/* ── MASCOT ───────────────────────────────────────────────────────────────
+   Second on mobile, so the page reads headline -> character -> form. */
+
+.mascotWrap {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 0;
+  order: 2;
+}
+
+@media (min-width: 1100px) {
+  .mascotWrap {
+    align-self: stretch;
+  }
+}
+
+.mascotGlow {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, 90%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(22, 104, 227, 0.13) 0%,
+    rgba(22, 104, 227, 0) 66%
+  );
+}
+
+.mascot {
+  position: relative;
+  height: auto;
+  width: auto;
+  max-width: min(100%, 420px);
+  max-height: clamp(240px, 46vh, 620px);
+  object-fit: contain;
+  filter: drop-shadow(0 30px 44px rgba(10, 27, 51, 0.18));
+  animation: floaty 7s ease-in-out infinite;
+}
+
+@media (min-width: 1100px) {
+  .mascot {
+    max-height: 100%;
+    max-width: 100%;
+  }
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+/* Somebody who has asked for less motion gets a still mascot. The float is
+   decoration and costs nothing to drop. */
+@media (prefers-reduced-motion: reduce) {
+  .mascot {
+    animation: none;
+  }
+  .service {
+    transition: none;
+  }
+}
+
+/* ── THE FORM CARD ──────────────────────────────────────────────────────── */
+
+.formColumn {
+  min-width: 0;
+  order: 3;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.card {
+  border-radius: 24px;
+  padding: clamp(20px, 3vw, 28px);
+  background: #ffffff;
+  border: 1px solid rgba(10, 27, 51, 0.05);
+  box-shadow: 0 34px 64px -34px rgba(10, 27, 51, 0.4);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.formHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.formBadge {
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  background: rgba(22, 104, 227, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1668e3;
+}
+
+.formTitle {
+  margin: 0;
+  font-size: clamp(22px, 2.4vw, 26px);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #0a1b33;
+}
+
+.formLede {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.5;
+  color: rgba(10, 27, 51, 0.62);
+  max-width: 34ch;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0a1b33;
+}
+
+.input {
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: 11px;
+  border: 1px solid rgba(10, 27, 51, 0.12);
+  background: #fcfdff;
+  color: #0a1b33;
+  font-family: inherit;
+  /* 16px on small screens is not a style choice: iOS Safari zooms the whole
+     page when a focused input is under 16px, and the visitor is then stranded
+     mid-form on a viewport they did not ask for. */
+  font-size: 16px;
+  font-weight: 400;
+}
+
+@media (min-width: 1100px) {
+  .input {
+    font-size: 15px;
+  }
+}
+
+.input::placeholder {
+  color: rgba(10, 27, 51, 0.32);
+  font-weight: 300;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #1668e3;
+  box-shadow: 0 0 0 3px rgba(22, 104, 227, 0.12);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+/* The browser's own invalid styling is suppressed everywhere else in this app;
+   here the error is announced in prose below the button instead, so the field
+   only turns red once the server has actually refused it. */
+.inputProblem,
+.inputProblem:focus {
+  border-color: #d24545;
+  box-shadow: 0 0 0 3px rgba(210, 69, 69, 0.12);
+}
+
+.submit {
+  width: 100%;
+  padding: 15px 20px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  background: #1668e3;
+  box-shadow: 0 16px 30px -16px rgba(22, 104, 227, 0.85);
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+@media (hover: hover) {
+  .submit:hover:not(:disabled) {
+    background: #0f58c6;
+    transform: translateY(-1px);
+  }
+}
+
+.submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submit:disabled {
+  cursor: progress;
+  background: #6d9de8;
+  box-shadow: none;
+}
+
+.problem {
+  margin: 0;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: #b23b3b;
+}
+
+.privacy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(10, 27, 51, 0.45);
+}
+
+.privacyText {
+  font-size: 13px;
+  font-weight: 300;
+  color: rgba(10, 27, 51, 0.55);
+}
+
+/* ── THE DONE STATE ─────────────────────────────────────────────────────── */
+
+.done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: clamp(32px, 6vw, 56px) 0;
+}
+
+.doneMark {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(22, 104, 227, 0.1);
+  color: #1668e3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doneTitle {
+  margin: 0;
+  font-size: clamp(22px, 2.4vw, 26px);
+  font-weight: 600;
+  color: #0a1b33;
+}
+
+.doneLede {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(10, 27, 51, 0.62);
+  max-width: 32ch;
+}
+
+.again {
+  margin-top: 6px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(10, 27, 51, 0.14);
+  background: transparent;
+  color: rgba(10, 27, 51, 0.75);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+@media (hover: hover) {
+  .again:hover {
+    border-color: #1668e3;
+    color: #1668e3;
+  }
+}
+
+/* ── FOOTER ─────────────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  justify-content: center;
+}
+
+.footerPill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px clamp(16px, 2.4vw, 26px);
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(10, 27, 51, 0.06);
+  box-shadow: 0 16px 34px -24px rgba(10, 27, 51, 0.5);
+  max-width: 100%;
+}
+
+.footerLogo {
+  height: 26px;
+  width: auto;
+  flex: none;
+}
+
+.footerDivider {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  background: rgba(10, 27, 51, 0.12);
+}
+
+.footerText {
+  font-size: clamp(12.5px, 1.4vw, 14.5px);
+  font-weight: 300;
+  color: rgba(10, 27, 51, 0.7);
+  /* The prototype forbids wrapping because it lives on a 1800px stage. Here it
+     has to wrap, or the pill runs off a phone. */
+  text-wrap: pretty;
+}
+
+@media (min-width: 1100px) {
+  .footerText {
+    white-space: nowrap;
+  }
+}
+
+.footerAccent {
+  color: #1668e3;
+  font-weight: 600;
+}

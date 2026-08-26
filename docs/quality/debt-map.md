@@ -1155,6 +1155,28 @@ The simulator is deleted and the function is gone. **The business-rule ladder is
 
 **The lesson, not the fix:** "there is no id" and "nothing here can reach the id" produce identical symptoms and take opposite work to solve. Check which one before planning against it.
 
+### 🟡 The coming-soon page is built but is NOT yet the front door (2026-08-26)
+
+`/coming-soon` is the marketing page from Claude Design, implemented for real: a Server Component with one client island (the form), Poppins scoped to the route via `next/font` rather than added to the root layout, and `POST /api/waitlist` writing a genuine `waitlist_signups` row. **It is reachable at `/coming-soon` and nothing about the live domain has changed yet.**
+
+**The intended end state is a domain split** — `yipyy.com` serves this page, `app.yipyy.com` serves the software, `<slug>.yipyy.com` keeps serving facilities. It was deliberately NOT done in the same change, because the cutover touches authentication and the failure mode is silent:
+
+- **`WORKOS_COOKIE_DOMAIN`.** `src/app/route.ts` already documents this trap at length: the AuthKit cookie spans `yipyy.com` and `app.yipyy.com` only if the value is a leading-dot domain. Get it wrong and every signed-in user is quietly signed out on the first cross-host redirect.
+- **WorkOS redirect URIs** are registered against the current host and must gain the new one BEFORE the DNS moves, or sign-in breaks for everyone at once.
+- **`NEXT_PUBLIC_APP_DOMAIN`** is what `facilitySlugFromHost()` measures subdomains against. It stays `yipyy.com` — `app` is already in that file's `RESERVED` set, so `app.yipyy.com` cannot be mistaken for a facility. That part needs no change and should not be "tidied".
+- **Caddy** serves both hosts; on-demand TLS asks `/api/internal`, which is excluded from the proxy matcher for a reason spelled out there.
+- **`src/app/route.ts` stays a Route Handler.** It is not a page, and the header explains the production crash (React error #310) that made it one. Serving the coming-soon page at the apex means a host check, never converting that handler into `page.tsx`.
+
+**Do:** treat the cutover as its own change with a rollback, and confirm sign-in on all three host shapes before calling it done.
+
+### 🟡 The waitlist list is "people who typed an address", not a consented mailing list
+
+`POST /api/waitlist` is **the only public write in the application** — every other route starts with `getViewer()` and refuses an anonymous caller. It cannot, because the visitor has no account.
+
+What stands in for a session is written out in the route: `anon` holds no grant on `waitlist_signups` and there is no insert policy for anybody, so the service role behind that one route is the only writer. The tempting shortcut — a `SECURITY DEFINER` function granted to `anon` — is exactly the shape `supabase/tests/rpc-session-required.sql` exists to forbid. `supabase/tests/waitlist-signups.sql` asserts all nine properties including a positive control, so a table nobody can read cannot pass by being broken.
+
+**What is missing is double opt-in.** Nothing verifies the address belongs to the person who typed it, and it cannot without a confirmation link, a sending domain and a template. Until then the rows are leads, not subscribers — which matters the day somebody sends the launch email. The in-process throttle is honest about being per-instance and resetting on deploy; the durable bound is the unique index on `lower(email)` and the length caps.
+
 ### 🟢 Retail can give money back (fixed 2026-08-26)
 
 The counter could take money for a day and not return a penny of it. Closing that needed three pieces, and only one of them was about Clover.

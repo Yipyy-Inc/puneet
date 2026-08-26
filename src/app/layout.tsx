@@ -52,7 +52,20 @@ export default async function RootLayout({
   //
   // Free, as it happens: reading cookies for the locale above already opted
   // every route out of static rendering, so this header read costs nothing.
-  const onFacilityHost = Boolean((await headers()).get("x-facility-slug"));
+  const headerBag = await headers();
+  const onFacilityHost = Boolean(headerBag.get("x-facility-slug"));
+
+  // ── ONE PAGE PAINTS ITS OWN FOOTER ──────────────────────────────────────
+  //
+  // The coming-soon page is a full-bleed marketing page with its own footer
+  // pill in the design. The global bar below would stack a second, differently
+  // styled copyright line underneath it on a gradient background.
+  //
+  // `x-pathname` is stamped by proxy.ts on every request and is already what
+  // portal-gate.ts reads; using it here beats a route group, which would mean
+  // moving 266 routes to opt ONE of them out.
+  const ownsItsFooter =
+    headerBag.get("x-pathname")?.startsWith("/coming-soon") ?? false;
 
   return (
     <html
@@ -155,11 +168,13 @@ export default async function RootLayout({
                 overlaid content). It now only appears at the true end of the
                 page. Extra bottom padding on phones clears the facility mobile
                 bottom-nav (fixed, md:hidden); removed at md where no nav exists. */}
-            <footer className="bg-background text-muted-foreground flex items-center justify-center border-t px-4 py-4 pb-20 text-xs md:pb-4">
-              {onFacilityHost
-                ? "Powered by Yipyy"
-                : "© 2026 Yipyy. All rights reserved."}
-            </footer>
+            {!ownsItsFooter && (
+              <footer className="bg-background text-muted-foreground flex items-center justify-center border-t px-4 py-4 pb-20 text-xs md:pb-4">
+                {onFacilityHost
+                  ? "Powered by Yipyy"
+                  : "© 2026 Yipyy. All rights reserved."}
+              </footer>
+            )}
           </div>
           <Toaster />
         </AuthKitProvider>
