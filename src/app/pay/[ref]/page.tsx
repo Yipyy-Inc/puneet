@@ -4,6 +4,9 @@ import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
 import { cloverConfig } from "@/lib/clover/config";
 import { chargeableConnection } from "@/lib/clover/connection";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { tipConfigSchema, type TipConfig } from "@/types/facility";
+import { SETTING_DOMAINS } from "@/lib/settings/domains";
 
 import { PayBooking } from "./_components/pay-booking";
 import { PayNotice } from "./_components/pay-notice";
@@ -114,6 +117,18 @@ export default async function PayBookingPage({
   // Everything below is about whether a card CAN be taken. Each branch says
   // which part is missing rather than one blanket "unavailable", because the
   // person who can fix it is different in each case.
+  // ── THE TIPS THIS FACILITY OFFERS ───────────────────────────────────────
+  //
+  // Read with the ADMIN client for the same reason the connection below is:
+  // `facility_settings` is readable by facility members, and a customer paying
+  // their own booking is not one. An RLS-scoped read returns nothing here and
+  // the page would silently offer no tips at all.
+  //
+  // Safe to read this way because the booking above already came back — the
+  // caller has proved they may see it — and because tip suggestions are shown
+  // to this person anyway. Nothing else from the row is used.
+  const tipConfig = await tipsFor(booking.facility_id);
+
   const connection = await chargeableConnection(booking.facility_id);
   if (!connection) {
     return (
@@ -165,6 +180,41 @@ export default async function PayBookingPage({
       merchantId={connection.merchantId}
       publicApiKey={connection.publicApiKey}
       sdkUrl={config.checkoutSdkUrl}
+      tipConfig={tipConfig}
     />
   );
+}
+
+/**
+ * The facility's tip settings, or null when they offer none.
+ *
+ * Null covers three cases that are one case to the payer: tips switched off, a
+ * facility that never configured them, and a row that fails the schema. In all
+ * three the page shows no tip control rather than inventing percentages — this
+ * page hardcoded 10/15/20 until 2026-08-26, which is what it is replacing.
+ */
+async function tipsFor(facilityId: string): Promise<TipConfig | null> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("facility_settings")
+      .select("value")
+      .eq("facility_id", facilityId)
+      .eq("domain", "tip_config")
+      .maybeSingle();
+
+    // An unconfigured facility gets the SAME fallback the settings API would
+    // report and the Settings screen shows, taken from the domain registry
+    // rather than restated here. Restating it is how this page came to offer
+    // 10/15/20 while the checkout dialog offered its own three.
+    const stored = tipConfigSchema.safeParse(data?.value);
+    const config = stored.success
+      ? stored.data
+      : (SETTING_DOMAINS.tip_config.fallback as TipConfig);
+
+    return config.enabled ? config : null;
+  } catch {
+    // A tip is optional; a payment is not. Never let this stop the page.
+    return null;
+  }
 }

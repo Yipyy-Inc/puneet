@@ -5,6 +5,7 @@ import { Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { TipConfig } from "@/types/facility";
+import { activeTipTier } from "@/lib/tips";
 
 interface TipSelectorProps {
   tipConfig: TipConfig;
@@ -25,13 +26,10 @@ export function TipSelector({
   const [showCustom, setShowCustom] = useState(false);
   const [customValue, setCustomValue] = useState("");
 
-  // Determine active tier (smart mode respects threshold)
-  const tier =
-    tipConfig.mode === "smart"
-      ? subtotal < tipConfig.smart.thresholdAmount
-        ? tipConfig.smart.belowThreshold
-        : tipConfig.smart.aboveThreshold
-      : tipConfig.general;
+  // The same rule the Clover terminal uses — see lib/tips.ts. It moved out of
+  // here so a server route could reach it; a second copy would be a second
+  // thing to keep in step with this one.
+  const tier = activeTipTier(tipConfig, subtotal);
 
   const calcTip = (idx: number) => {
     const opt = tier.options[idx];

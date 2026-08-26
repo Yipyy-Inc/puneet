@@ -6,7 +6,8 @@ import { CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { CloverCheckout } from "@/components/payments/clover-checkout";
-import { cn } from "@/lib/utils";
+import { TipSelector } from "@/components/bookings/TipSelector";
+import type { TipConfig } from "@/types/facility";
 
 // ============================================================================
 // The paying half of /pay/[ref].
@@ -25,8 +26,6 @@ import { cn } from "@/lib/utils";
 // date — which is the right way round.
 // ============================================================================
 
-const TIP_PRESETS = [0.1, 0.15, 0.2] as const;
-
 export interface PayBookingProps {
   bookingId: string;
   bookingRef: number;
@@ -39,6 +38,13 @@ export interface PayBookingProps {
   merchantId: string;
   publicApiKey: string;
   sdkUrl: string;
+  /**
+   * The facility's own tips, or null when it offers none.
+   *
+   * Read on the server — a customer cannot see `facility_settings` under
+   * RLS, so this cannot be fetched from here.
+   */
+  tipConfig: TipConfig | null;
 }
 
 interface Paid {
@@ -74,6 +80,7 @@ export function PayBooking({
   merchantId,
   publicApiKey,
   sdkUrl,
+  tipConfig,
 }: PayBookingProps) {
   const [tipCents, setTipCents] = useState(0);
   const [paid, setPaid] = useState<Paid | null>(null);
@@ -140,46 +147,26 @@ export function PayBooking({
             </p>
           </div>
 
-          <div>
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
-              Add a tip (optional)
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              {TIP_PRESETS.map((multiplier) => {
-                const cents = Math.round(amountCents * multiplier);
-                return (
-                  <button
-                    key={multiplier}
-                    type="button"
-                    onClick={() => setTipCents(cents)}
-                    className={cn(
-                      "rounded-lg border px-2 py-2 text-center text-xs font-medium transition-all",
-                      tipCents === cents
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "hover:bg-muted/50",
-                    )}
-                  >
-                    <span className="block">{multiplier * 100}%</span>
-                    <span className="text-muted-foreground mt-0.5 block font-[tabular-nums] text-[10px]">
-                      {money(cents, currency)}
-                    </span>
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => setTipCents(0)}
-                className={cn(
-                  "rounded-lg border px-2 py-2 text-center text-xs font-medium transition-all",
-                  tipCents === 0
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "hover:bg-muted/50",
-                )}
-              >
-                None
-              </button>
+          {/* The facility's OWN tips — this page hardcoded 10/15/20 until
+              2026-08-26, so a customer paying by link was offered a different
+              set from the one the facility configured and from the one the
+              counter offered. Absent entirely when they offer no tips, rather
+              than shown as an empty row. */}
+          {tipConfig && (
+            <div>
+              <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
+                Add a tip (optional)
+              </p>
+              <TipSelector
+                tipConfig={tipConfig}
+                subtotal={amountCents / 100}
+                tipAmount={tipCents / 100}
+                onTipChange={(dollars) =>
+                  setTipCents(Math.round(dollars * 100))
+                }
+              />
             </div>
-          </div>
+          )}
 
           <Separator />
 

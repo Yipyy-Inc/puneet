@@ -2,6 +2,7 @@ import "server-only";
 
 import { cloverConfig } from "@/lib/clover/config";
 import { validAccessToken } from "@/lib/clover/connection";
+import type { CloverTipSuggestion } from "@/lib/tips";
 
 // ============================================================================
 // Commanding the terminal itself — its printer, its screen, its tip prompt.
@@ -268,13 +269,17 @@ export async function endTransactionScreen(
 // counter that takes money without a tip. The caller treats null as "no tip".
 // ============================================================================
 
-export interface TipSuggestion {
-  name: string;
-  /** A flat amount in cents. Mutually exclusive with `percentage`. */
-  amount?: number;
-  /** A whole percentage of `baseAmount`. Mutually exclusive with `amount`. */
-  percentage?: number;
-}
+/**
+ * Re-exported so callers of `readTipOnDevice` need only this module.
+ *
+ * The shape is DEFINED in `lib/tips.ts`, which is pure — the facility's tips
+ * have to be turned into this shape by a client component and by a server
+ * route, and `server-only` here would keep the components out. There was a
+ * second copy of this interface until 2026-08-26; it declared `name` required
+ * where Clover documents it optional, so a suggestion with no label could not
+ * be expressed at all.
+ */
+export type { CloverTipSuggestion as TipSuggestion } from "@/lib/tips";
 
 /**
  * Show the tip screen and wait for the customer.
@@ -289,7 +294,7 @@ export async function readTipOnDevice(
   facilityId: string,
   deviceSerial: string,
   baseAmountCents: number,
-  tipSuggestions?: TipSuggestion[],
+  tipSuggestions?: CloverTipSuggestion[],
 ): Promise<number | null> {
   if (baseAmountCents <= 0) return null;
 
