@@ -14,8 +14,8 @@ import {
   Trophy,
   ArrowLeftRight,
   ArrowRight,
+  Users,
 } from "lucide-react";
-import { getLocationsByFacility } from "@/data/locations";
 import { useFacilityLocations } from "@/lib/api/locations";
 import {
   useFacilityReport,
@@ -24,8 +24,6 @@ import {
   type ServiceMixByLocationData,
 } from "@/lib/api/facility-reports";
 import { formatCurrency } from "@/lib/format";
-import { HQStaffPerformanceReport } from "./reports/HQStaffPerformanceReport";
-import { HQClientActivityReport } from "./reports/HQClientActivityReport";
 
 const RevenueTrendLineChart = dynamic(
   () =>
@@ -82,14 +80,21 @@ function thisMonthWindow(): { from: string; to: string } {
 }
 
 // ============================================================================
-// HQ Analytics — real revenue trend, real revenue-by-location, real service
-// mix. Staff performance and client activity stay fixture (fed the old
-// `getLocationsByFacility(11)` locally, unrelated to the real `locations`
-// used everywhere else on this page) -- neither has anywhere real to read
-// from yet: `clients` carries no location column, and per-staff-per-location
-// revenue/hours isn't derivable from anything that exists. Weekly occupancy
-// and Transfer Impact are gone: occupancy has no real per-location source,
-// and transfer history is now the real page this links to instead.
+// HQ Analytics — fully real: revenue trend, revenue-by-location, service mix,
+// all from the same `facility_report_dataset` RPC the regular Reports page
+// uses. Staff Performance and Client Activity were dropped rather than
+// converted, not merged into a chart here:
+//   - Client Activity now belongs to /facility/hq/clients (20260826120000
+//     derives it from `bookings.location_id` for real). This panel links out
+//     to it instead of a second, poorer copy of the same table.
+//   - Staff Performance had no real metric left standing.
+//     `bookings.assigned_staff_id` exists but is set on ~1.5% of bookings
+//     (7 of 474, checked live) — not a population a report can be built on.
+//     Hours worked is real (staff_shifts / time-clock) but carries no
+//     location column. Per-staff rating has no real source anywhere in the
+//     schema. Five metrics, none of them standing up a report.
+// Weekly occupancy and Transfer Impact are gone too: occupancy has no real
+// per-location source, and transfer history is the real page linked below.
 // ============================================================================
 
 export function HQAnalyticsPanel() {
@@ -446,15 +451,26 @@ export function HQAnalyticsPanel() {
         </CardContent>
       </Card>
 
-      <HQStaffPerformanceReport
-        locations={getLocationsByFacility(11)}
-        selectedLocation={selected}
-      />
       <div className="grid gap-4 lg:grid-cols-2">
-        <HQClientActivityReport
-          locations={getLocationsByFacility(11)}
-          selectedLocation={selected}
-        />
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <Users className="size-4" />
+              Client Activity
+            </CardTitle>
+            <p className="text-muted-foreground text-xs">
+              Cross-location spend and visit history, per real client
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href="/facility/hq/clients">
+                Open Clients HQ
+                <ArrowRight className="size-3.5" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
