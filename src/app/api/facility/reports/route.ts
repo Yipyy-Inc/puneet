@@ -33,6 +33,7 @@ const REPORTS = new Set([
   "revenue-by-service",
   "revenue-by-location",
   "service-mix-by-location",
+  "training-attendance-by-location",
   "occupancy-report",
   "cancelled-bookings",
   "customer-value",
