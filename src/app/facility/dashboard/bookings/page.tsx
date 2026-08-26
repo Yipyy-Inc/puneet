@@ -215,7 +215,7 @@ export default function FacilityBookingsPage() {
     mutationFn: async (booking: Booking) =>
       bookings.some((b) => b.id === booking.id)
         ? bookingMutations.update(booking.id, booking)
-        : bookingMutations.create(booking),
+        : bookingMutations.create(booking, currentLocationId),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["bookings"] }),
   });

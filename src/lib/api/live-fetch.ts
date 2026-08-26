@@ -58,10 +58,11 @@ export async function liveWriteOptional<T>(
   path: string,
   method: "POST" | "PATCH" | "PUT",
   body: unknown,
+  headers?: Record<string, string>,
 ): Promise<T | null> {
   const response = await fetch(path, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
 
@@ -81,10 +82,11 @@ export async function liveWrite<T>(
   path: string,
   method: "POST" | "PATCH" | "PUT",
   body: unknown,
+  headers?: Record<string, string>,
 ): Promise<T> {
   const response = await fetch(path, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
 

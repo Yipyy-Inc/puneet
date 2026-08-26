@@ -23,6 +23,7 @@ import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { clientQueries, useCreateClient } from "@/lib/api/client";
 import { bookingMutations } from "@/lib/api/booking";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { useLocationContext } from "@/hooks/use-location-context";
 import { usePermission } from "@/hooks/use-facility-rbac";
 
 import type { AdditionalContact } from "@/types/client";
@@ -47,6 +48,7 @@ const SERVICE_SECTION_SLUGS: Record<string, string> = {
 
 export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
   const { openBookingModal } = useBookingModal();
+  const { currentLocationId } = useLocationContext();
   const { t } = useUiText();
   const pathname = usePathname();
 
@@ -158,7 +160,10 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
       // `max(existing ids) + 1` over the fixture array, so the number in the
       // toast belonged to nothing and collided with a real booking the moment
       // one existed.
-      const created = await bookingMutations.create(bookingData);
+      const created = await bookingMutations.create(
+        bookingData,
+        currentLocationId,
+      );
       await queryClient.invalidateQueries({ queryKey: ["bookings"] });
 
       // The Undo that used to be here spliced the booking out of local state.

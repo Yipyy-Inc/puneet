@@ -163,8 +163,24 @@ export const bookingQueries = {
 };
 
 export const bookingMutations = {
-  create: async (data: NewBooking): Promise<Booking> =>
-    liveWrite<Booking>("/api/bookings", "POST", data),
+  /**
+   * `locationId` is the caller's ACTIVELY SELECTED branch (`useLocationContext`),
+   * sent as a header rather than a body field — `NewBooking.locationId` is
+   * documented as ignored at creation, and that stays true. The server resolves
+   * where a new booking lands from this header via `getFacilityContext()`,
+   * falling back to the facility's primary location when it is absent or names
+   * a location outside this facility.
+   */
+  create: async (
+    data: NewBooking,
+    locationId?: string | null,
+  ): Promise<Booking> =>
+    liveWrite<Booking>(
+      "/api/bookings",
+      "POST",
+      data,
+      locationId ? { "x-yipyy-location-id": locationId } : undefined,
+    ),
 
   /**
    * `Partial<Booking>`, not `Partial<NewBooking>`.
