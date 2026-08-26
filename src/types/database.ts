@@ -966,6 +966,48 @@ export type Database = {
           },
         ];
       };
+      daycare_location_prices: {
+        Row: {
+          base_price: number;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          location_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          base_price: number;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          location_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          base_price?: number;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          location_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "daycare_location_prices_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "daycare_location_prices_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       facilities: {
         Row: {
           address: Json | null;
@@ -6119,6 +6161,75 @@ export type Database = {
             columns: ["location_id"];
             isOneToOne: false;
             referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      saved_cards: {
+        Row: {
+          card_brand: string | null;
+          card_last4: string | null;
+          client_id: string;
+          consent_at: string | null;
+          consent_by: string | null;
+          created_at: string;
+          created_by: string | null;
+          exp_month: number | null;
+          exp_year: number | null;
+          facility_id: string;
+          id: string;
+          processor: string;
+          processor_card_id: string | null;
+          processor_customer_id: string;
+          revoked_at: string | null;
+        };
+        Insert: {
+          card_brand?: string | null;
+          card_last4?: string | null;
+          client_id: string;
+          consent_at?: string | null;
+          consent_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          exp_month?: number | null;
+          exp_year?: number | null;
+          facility_id: string;
+          id?: string;
+          processor?: string;
+          processor_card_id?: string | null;
+          processor_customer_id: string;
+          revoked_at?: string | null;
+        };
+        Update: {
+          card_brand?: string | null;
+          card_last4?: string | null;
+          client_id?: string;
+          consent_at?: string | null;
+          consent_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          exp_month?: number | null;
+          exp_year?: number | null;
+          facility_id?: string;
+          id?: string;
+          processor?: string;
+          processor_card_id?: string | null;
+          processor_customer_id?: string;
+          revoked_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "saved_cards_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "saved_cards_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
             referencedColumns: ["id"];
           },
         ];

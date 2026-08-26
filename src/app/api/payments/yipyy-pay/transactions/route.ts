@@ -6,6 +6,7 @@ import {
 } from "@/lib/api/facility-context";
 import { holds, myPermissions } from "@/lib/auth/permissions";
 import { createServerClient } from "@/lib/supabase/server";
+import { paymentChannel } from "@/lib/payments/channel";
 
 // ============================================================================
 // The takings, and the transactions behind them.
@@ -206,12 +207,11 @@ export async function GET(request: NextRequest) {
         entryMethod: row.entry_method,
         authCode: row.auth_code,
         takenBy: row.author_name,
-        channel:
-          row.method === "terminal"
-            ? "in_person"
-            : row.method === "new-card" || row.method === "card-on-file"
-              ? "online"
-              : "other",
+        // One rule, in lib/payments/channel.ts, decided from what the
+        // PROCESSOR said rather than from our own label for the tender. The
+        // map that used to sit here reported 206 hand-recorded card rows as
+        // "Online" although none of them ever reached the Ecommerce API.
+        channel: paymentChannel(row),
         bookingRef: booking?.ref ?? null,
         service: booking?.service ?? null,
         clientName: booking?.clients?.name ?? null,
