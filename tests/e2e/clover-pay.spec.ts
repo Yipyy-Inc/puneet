@@ -78,12 +78,12 @@ let bookingRef = 0;
 /** Clover's documented decline Visa. Approved cards are NOT used here. */
 const DECLINE_CARD = "4264281511117771";
 
-const FIELDS = [
-  "clover-card-number",
-  "clover-card-date",
-  "clover-card-cvv",
-  "clover-card-postal",
-] as const;
+// The container divs, by their STABLE attribute. These were hardcoded ids
+// (`clover-card-number` and friends) until the fields moved into
+// `clover-card-fields.tsx`, where the id must be unique per instance and is
+// generated from useId(). A generated id cannot be written down here, so the
+// component carries `data-clover-field` for exactly this.
+const FIELDS = ["number", "date", "cvv", "postal"] as const;
 
 /**
  * Clover's hosted fields listen to KEYSTROKES, not to value assignment.
@@ -91,8 +91,10 @@ const FIELDS = [
  * number is required" — which looks like a broken payment form and is actually
  * a broken test.
  */
-async function typeInto(page: Page, id: string, value: string) {
-  const input = page.frameLocator(`#${id} iframe`).locator("input");
+async function typeInto(page: Page, field: string, value: string) {
+  const input = page
+    .frameLocator(`[data-clover-field="${field}"] iframe`)
+    .locator("input");
   await input.waitFor({ state: "visible", timeout: 30_000 });
   await input.click();
   await input.pressSequentially(value, { delay: 30 });
@@ -231,7 +233,9 @@ test.describe("paying a booking by card", () => {
 
     // The card fields are Clover's, on Clover's origin, inside divs we own.
     for (const id of FIELDS) {
-      await expect(page.locator(`#${id} iframe`)).toHaveCount(1, {
+      await expect(
+        page.locator(`[data-clover-field="${id}"] iframe`),
+      ).toHaveCount(1, {
         timeout: 30_000,
       });
     }
@@ -252,10 +256,10 @@ test.describe("paying a booking by card", () => {
     await signIn(page, CUSTOMER);
     await page.goto(`/pay/${bookingRef}`);
 
-    await typeInto(page, "clover-card-number", DECLINE_CARD);
-    await typeInto(page, "clover-card-date", "1227");
-    await typeInto(page, "clover-card-cvv", "123");
-    await typeInto(page, "clover-card-postal", "H2X1Y4");
+    await typeInto(page, "number", DECLINE_CARD);
+    await typeInto(page, "date", "1227");
+    await typeInto(page, "cvv", "123");
+    await typeInto(page, "postal", "H2X1Y4");
 
     await page.getByRole("button", { name: /^Pay \$/ }).click();
 

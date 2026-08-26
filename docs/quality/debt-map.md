@@ -1112,13 +1112,21 @@ const success = Math.random() > 0.1; //  ...and a `clover_txn_<ts>` id
 
 **The terminal picker was fixture too**, and that mattered more than it looks: `mockCloverTerminals` had invented ids, and `X-Clover-Device-Id` wants the **serial**. Retail now reads the merchant's own device list through `/api/payments/clover/terminals`, so the id it hands the charge names real hardware.
 
-### 🟡 A typed card cannot be charged in retail, and now says so
+### 🟢 A typed card IS charged in retail now, through Clover's own iframes (fixed 2026-08-26)
 
-The card-not-present half could NOT be made real, and the reason is worth keeping: charging a card without one present needs a `clv_` token from Clover's **hosted fields**, and the retail checkout does not mount them. It collects `newCardDetails.number` — a raw PAN — which must never reach a server here: forwarding it would put the number in our logs and this deployment inside PCI scope, the single thing the hosted iframe exists to prevent.
+The retail checkout used to collect `newCardDetails` — a raw PAN, expiry and CVV — into React state through four ordinary `<Input>`s, and then refuse to charge it. The refusal was right: forwarding those digits to our own server would put the number in the logs and this deployment inside PCI scope, which is the single thing a hosted iframe exists to prevent. But the form still asked a customer for their card and did nothing with it.
 
-So that path refuses, in the shape the checkout already handles, and names the terminal. `fiservRequest` is deliberately left assembled: it carries the save-card and default-card logic, which is correct and is what a hosted-fields implementation will tokenise.
+**The fields are Clover's now.** `components/payments/clover-card-fields.tsx` mounts four iframes served by Clover; the digits are typed in a different origin and this app only ever receives a `clv_` token, which goes to `/api/payments/retail/charge` as `source` — the route that already existed. **There is deliberately no state anywhere holding anything card-shaped, and there must not be.** A single "let me just read the value out of the field" undoes the whole arrangement.
 
-**Do instead:** mount Clover's hosted fields in the retail checkout, the way `components/payments/clover-checkout.tsx` does for a booking. Until then, a card at the counter goes on the terminal.
+**It was extracted, not written twice.** The mounting, the SDK load and `createToken()` were the body of `clover-checkout.tsx`, which pays a booking. One implementation, so there is one place where this can be got right or wrong. Two traps are recorded in it: `mount()` takes a **CSS selector, not a node** (passing the element fails the whole mount and the only evidence is a generic message), and the per-instance ids come from `useId()` with the punctuation **stripped** — a bare `#:r1:` is a selector syntax error.
+
+**`GET /api/payments/clover/checkout-config`** supplies the three values the browser needs. `/pay/[ref]` reads them server-side, but the retail checkout is a 5,900-line client component and converting it is a refactor of the till, not of card entry. The key it returns is Clover's public browser key: it tokenises and cannot charge, and the merchant's OAuth token never leaves the server. It is still gated on `financial_take_payment` — not for the key's secrecy, but because an open route would tell anybody which businesses have a live merchant account.
+
+**One token per instalment.** A Clover token is single-use, so a split across two cards calls `createToken()` inside the loop rather than once outside it.
+
+**Still refused, honestly: a card ON FILE.** The saved cards this screen offers come from `mockTokenizedCards` and carry a `fiservToken` — a fixture for a processor we have no account with. Charging a stored card at Clover is a different thing and needs the card vaulted **at Clover** when first taken; neither half exists. `savedCardUnavailable()` says so. The save-card checkbox was deleted rather than left: it only ever wrote to a fixture, so the operator believed a card had been kept when nothing had been.
+
+**Never proven end to end.** Every assertion in `tests/e2e/retail-charge.spec.ts` is a refusal, and the e2e facility has no connected merchant, so the config route answers 503 there. A completed typed-card sale needs a connected account and a real card.
 
 ### 🟡 The retail charge takes its amount from the browser, and that is the price of this
 

@@ -1,23 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { CreditCard, Loader2, Lock } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { CreditCard, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  CloverCardFields,
+  type CloverCardFieldsHandle,
+} from "@/components/payments/clover-card-fields";
 
 // ============================================================================
-// Clover's hosted card fields, inside our own checkout.
+// Paying a booking by card.
 //
-// ── THE CARD NUMBER NEVER TOUCHES THIS PAGE ───────────────────────────────
+// ── THE FIELDS ARE NOT HERE ANY MORE ──────────────────────────────────────
 //
-// Each field below is an IFRAME served by Clover, mounted into an empty div we
-// own. React renders the container; Clover renders what is inside it, and the
-// digits the customer types are in a different origin. `createToken()` returns
-// a `clv_` reference, and that is the only thing our code ever sees or sends.
-//
-// This is the whole reason Yipyy is not in full PCI scope. A single "let me
-// just read the value out of the field" would undo it, which is why there is no
-// state here holding anything card-shaped.
+// Mounting Clover's hosted iframes, loading their SDK and turning what is typed
+// into a `clv_` token now live in `clover-card-fields.tsx`, because the shop
+// counter needs exactly the same thing. What is left here is what is actually
+// about a booking: the button, the amount it displays, and the charge route it
+// posts the token to.
 //
 // ── THE AMOUNT IS DISPLAY ONLY ────────────────────────────────────────────
 //
@@ -25,43 +26,6 @@ import { Button } from "@/components/ui/button";
 // what is owed from the booking. If the two ever disagree, the server is right
 // and the customer is charged correctly regardless of what this said.
 // ============================================================================
-
-interface CloverElement {
-  /** A CSS SELECTOR, not a node — see the mount effect below. */
-  mount: (selector: string) => void;
-  addEventListener?: (
-    event: string,
-    handler: (payload: unknown) => void,
-  ) => void;
-}
-
-interface CloverElements {
-  create: (kind: string, styles?: Record<string, unknown>) => CloverElement;
-}
-
-interface CloverInstance {
-  elements: () => CloverElements;
-  createToken: () => Promise<{
-    token?: string;
-    errors?: Record<string, string>;
-  }>;
-}
-
-declare global {
-  interface Window {
-    Clover?: new (
-      apiAccessKey: string,
-      options?: { merchantId?: string },
-    ) => CloverInstance;
-  }
-}
-
-const FIELDS = [
-  { kind: "CARD_NUMBER", id: "clover-card-number", label: "Card number" },
-  { kind: "CARD_DATE", id: "clover-card-date", label: "Expiry" },
-  { kind: "CARD_CVV", id: "clover-card-cvv", label: "CVV" },
-  { kind: "CARD_POSTAL_CODE", id: "clover-card-postal", label: "Postal code" },
-] as const;
 
 export interface CloverCheckoutProps {
   bookingId: string;
@@ -102,73 +66,16 @@ export function CloverCheckout({
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const clover = useRef<CloverInstance | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    // Synchronising with an external system — Clover's SDK and the iframes it
-    // mounts. setState happens in the load callback, never in the effect body.
-    const mount = () => {
-      if (cancelled || !window.Clover || clover.current) return;
-      try {
-        const instance = new window.Clover(publicApiKey, { merchantId });
-        const elements = instance.elements();
-        for (const field of FIELDS) {
-          // A CSS SELECTOR, not the node. Clover's SDK resolves the target
-          // itself and throws on anything else — passing the HTMLElement (which
-          // reads more naturally, and is what this did first) fails the whole
-          // mount, so all four fields are missing and the only evidence is the
-          // generic message below.
-          elements.create(field.kind).mount(`#${field.id}`);
-        }
-        clover.current = instance;
-        setReady(true);
-      } catch (error) {
-        // The customer gets a sentence they can act on; whoever is looking at
-        // the console gets the reason. Without this the two are the same string
-        // and the actual fault is unknowable from outside.
-        console.error("Clover's card fields could not be mounted.", error);
-        setProblem(
-          "The payment form could not be loaded. Refresh and try again.",
-        );
-      }
-    };
-
-    if (window.Clover) {
-      mount();
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[src="${sdkUrl}"]`,
-    );
-    const script = existing ?? document.createElement("script");
-    script.src = sdkUrl;
-    script.async = true;
-    script.addEventListener("load", mount);
-    script.addEventListener("error", () =>
-      setProblem("Could not reach the payment provider."),
-    );
-    if (!existing) document.head.appendChild(script);
-
-    return () => {
-      cancelled = true;
-      script.removeEventListener("load", mount);
-    };
-  }, [publicApiKey, merchantId, sdkUrl]);
+  const fields = useRef<CloverCardFieldsHandle | null>(null);
 
   const pay = useCallback(async () => {
-    if (!clover.current) return;
+    if (!fields.current) return;
     setBusy(true);
     setProblem(null);
     try {
-      const result = await clover.current.createToken();
-      if (!result.token) {
-        const first = result.errors ? Object.values(result.errors)[0] : null;
-        setProblem(first ?? "Check the card details and try again.");
+      const tokenised = await fields.current.createToken();
+      if (!tokenised.ok) {
+        // Already shown against the offending field; nothing to add here.
         return;
       }
 
@@ -176,7 +83,7 @@ export function CloverCheckout({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // The token and the tip. Never an amount — the server owns that.
-        body: JSON.stringify({ bookingId, source: result.token, tipCents }),
+        body: JSON.stringify({ bookingId, source: tokenised.token, tipCents }),
       });
       const payload = (await response.json().catch(() => null)) as {
         paid?: boolean;
@@ -214,23 +121,13 @@ export function CloverCheckout({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {FIELDS.map((field) => (
-          <div
-            key={field.id}
-            className={field.kind === "CARD_NUMBER" ? "sm:col-span-2" : ""}
-          >
-            <label className="text-muted-foreground mb-1 block text-xs font-medium">
-              {field.label}
-            </label>
-            {/* Empty on purpose: Clover mounts an iframe here. */}
-            <div
-              id={field.id}
-              className="bg-background h-10 rounded-md border px-3 py-2"
-            />
-          </div>
-        ))}
-      </div>
+      <CloverCardFields
+        ref={fields}
+        publicApiKey={publicApiKey}
+        merchantId={merchantId}
+        sdkUrl={sdkUrl}
+        onReadyChange={setReady}
+      />
 
       {problem && (
         <p className="text-destructive text-sm" role="alert">
@@ -252,11 +149,6 @@ export function CloverCheckout({
           ? "Taking payment…"
           : `Pay ${money(amountCents + tipCents, currency)}`}
       </Button>
-
-      <p className="text-muted-foreground flex items-center justify-center gap-1.5 text-xs">
-        <Lock className="size-3" />
-        Card details go straight to Clover. They never reach Yipyy.
-      </p>
     </div>
   );
 }

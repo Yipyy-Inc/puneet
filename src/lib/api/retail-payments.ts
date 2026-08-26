@@ -157,23 +157,16 @@ export async function chargeRetailOnTerminal(
 }
 
 /**
- * The answer for a card somebody typed into the till.
+ * A refusal in the shape the checkout already handles.
  *
- * There isn't one, and this says so rather than simulating it. Charging a card
- * card-not-present needs a `clv_` token from Clover's hosted fields, and the
- * retail checkout does not mount them. Sending the digits from
- * `newCardDetails` to a server instead would put the PAN in our logs and this
- * deployment inside PCI scope — the single thing the hosted iframe exists to
- * prevent.
- *
- * Returned as a normal failed response, in the shape the checkout already
- * handles, so the refusal travels the same path a decline would: no throw, no
- * abandoned split-payment loop, and the message reaches the operator.
- *
- * The terminal path IS real. This names it.
+ * No throw, so a split-payment loop can stop without unwinding instalments that
+ * have already charged, and the message reaches the operator the same way a
+ * decline does.
  */
-export function typedCardUnavailable(
+export function refusedPayment(
   amountCents: number,
+  code: string,
+  message: string,
 ): FiservPaymentResponse {
   return {
     success: false,
@@ -182,13 +175,39 @@ export function typedCardUnavailable(
     amount: amountCents / 100,
     currency: "CAD",
     status: "failed",
-    error: {
-      code: "typed_card_unsupported",
-      message:
-        "A typed card cannot be charged from this screen. Take it on the Clover terminal — that path reaches the real merchant. Cash, store credit and gift cards are unaffected.",
-    },
+    error: { code, message },
     processedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * The answer for a card already ON FILE for this customer.
+ *
+ * There isn't one, and this says so rather than simulating it. The saved cards
+ * this screen offers come from `mockTokenizedCards` in `src/data/fiserv-
+ * payments.ts` and carry a `fiservToken` — a fixture string for a processor
+ * this deployment has no account with. There is nothing behind them to charge.
+ *
+ * Charging a stored card at Clover is a real thing, and a different one: the
+ * card has to have been vaulted AT CLOVER when it was first taken, and the
+ * charge names that stored id. Neither half exists yet. Until a saved card is a
+ * Clover customer's card rather than a fixture, this is the honest answer.
+ *
+ * TYPED cards are real now — `chargeRetail` with a `clv_` token from the hosted
+ * fields. This refusal is only about cards on file.
+ *
+ * Returned as a normal failed response, in the shape the checkout already
+ * handles, so the refusal travels the same path a decline would: no throw, no
+ * abandoned split-payment loop, and the message reaches the operator.
+ */
+export function savedCardUnavailable(
+  amountCents: number,
+): FiservPaymentResponse {
+  return refusedPayment(
+    amountCents,
+    "saved_card_unsupported",
+    "A card on file cannot be charged — those are not real stored cards. Ask for the card and enter it below, or take it on the terminal.",
+  );
 }
 
 // ============================================================================
