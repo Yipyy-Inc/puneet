@@ -239,9 +239,48 @@ export async function GET() {
     entry: row.method === "terminal" ? "card_present" : "card_not_present",
   }));
 
+  // ── Is reconciliation actually running? ─────────────────────────────────
+  //
+  // A refund a manager issues inside Clover's own dashboard reaches this
+  // facility one of two ways: a webhook, or the sweep that runs every fifteen
+  // minutes as the backup for a webhook that never came. Both were live and
+  // NEITHER was visible anywhere — `last_swept_at` has been written since the
+  // sweep was built and read by nothing, so a reconciler that stopped a week
+  // ago looked exactly like one that ran a minute ago.
+  //
+  // It cost something measurable: three deliveries sat unsettled from 8 August
+  // to 26 August, retried every fifteen minutes, and nobody could have known.
+  const { data: swept } = await supabase
+    .from("payment_connections")
+    .select("last_swept_at")
+    .eq("processor", "clover")
+    .eq("facility_id", facilityId)
+    .maybeSingle();
+
+  const { count: unsettled } = await supabase
+    .from("payment_webhook_events")
+    .select("id", { count: "exact", head: true })
+    .eq("facility_id", facilityId)
+    .in("status", ["received", "failed"]);
+
+  const lastSweptAt = swept?.last_swept_at ?? null;
+
   return NextResponse.json({
     configured,
     facility: { name: active.facility.name, slug: active.facility.slug },
+    reconciliation: {
+      lastSweptAt,
+      /**
+       * The timer fires every 15 minutes with up to 90s of jitter, so an hour
+       * without one is not a slow run — it is a sweep that is not happening.
+       * Null (never swept) is stale too: a connection nothing has ever
+       * reconciled is the same problem seen from the other end.
+       */
+      stale:
+        !lastSweptAt || Date.now() - Date.parse(lastSweptAt) > 60 * 60 * 1000,
+      /** Deliveries recorded and never finished. Should be 0. */
+      unsettled: unsettled ?? 0,
+    },
     connection,
     merchant,
     config,

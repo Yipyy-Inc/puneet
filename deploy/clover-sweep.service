@@ -4,6 +4,19 @@ After=network-online.target docker.service
 Wants=network-online.target
 Requires=docker.service
 
+# ── A NON-ZERO EXIT HAS TO REACH SOMEBODY ─────────────────────────────────
+#
+# clover-sweep.sh already distinguishes three outcomes: success, a failed call
+# (exit 1), and a 200 whose body carries a per-facility `problems` array
+# (exit 2, "completed WITH PROBLEMS"). Until 2026-08-26 all three looked
+# identical from outside, because nothing consumed the exit code — so a sweep
+# that had not actually reconciled anything for a week was indistinguishable
+# from one that ran a minute ago.
+#
+# systemd runs this unit on any non-zero exit. `%n` passes the failing unit's
+# name so one handler can serve several timers.
+OnFailure=yipyy-alert@%n.service
+
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/clover-sweep

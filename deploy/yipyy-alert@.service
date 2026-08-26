@@ -1,0 +1,59 @@
+[Unit]
+# ============================================================================
+# Where a failed timer goes.
+#
+# A template unit: `OnFailure=yipyy-alert@%n.service` on any unit passes the
+# FAILING unit's name in as %i, so one handler serves every timer on the box
+# rather than each growing its own.
+#
+# ── WHAT THIS IS, AND WHAT IT IS HONESTLY NOT ─────────────────────────────
+#
+# It is a breadcrumb for whoever is already on the box: a tagged journal entry
+# and a line in a file, so `journalctl -t yipyy-alert` answers "has anything
+# been failing" without needing to know which units exist.
+#
+# It is NOT a notification. Nothing pages anybody. That is deliberate rather
+# than forgotten — wiring this to email or Slack needs a credential and a
+# decision about who is on call, and inventing either here would produce the
+# worst outcome available: something that looks like alerting and delivers
+# nothing.
+#
+# The thing a human will actually notice is in the product, not here. When the
+# Clover sweep stops, `payment_connections.last_swept_at` goes stale and the
+# Yipyy Pay → Overview tab shows "Refunds made in Clover may not be reaching
+# Yipyy" to the people whose money it is.
+#
+# ── INSTALL BOTH OR NEITHER ───────────────────────────────────────────────
+#
+# `OnFailure=` naming a unit that is not installed makes systemd log a failure
+# to enqueue the job — noise that looks like the alert itself failing. Install
+# this alongside clover-sweep.service:
+#
+#   install -m644 yipyy-alert@.service /etc/systemd/system/
+#   systemctl daemon-reload
+#
+# Verify it fires, rather than assuming — a handler that has never run is not
+# known to work:
+#
+#   systemd-run --unit=alert-probe --service-type=oneshot \
+#     -p OnFailure=yipyy-alert@alert-probe.service /bin/false
+#   journalctl -t yipyy-alert -n 5
+# ============================================================================
+Description=Yipyy — record that %i failed
+
+[Service]
+Type=oneshot
+
+# `systemctl status` of the failed unit, not just its name: the exit code and
+# the last lines of its output are the whole reason anybody opens this.
+ExecStart=/bin/sh -c '\
+  { echo "=== $(date -uIseconds) %i FAILED ==="; \
+    systemctl status --no-pager --lines=20 "%i" || true; } \
+  | tee -a /var/log/yipyy-alerts.log \
+  | logger -t yipyy-alert'
+
+Nice=10
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true

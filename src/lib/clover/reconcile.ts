@@ -6,6 +6,13 @@ import { validAccessToken } from "./connection";
 import { facilityTerminals } from "./devices";
 import { fetchMerchantProfile } from "./merchant";
 import { cloverGet } from "./request";
+import {
+  allocate,
+  refundCents,
+  reversalsToRecord,
+  settledRefunds,
+  type Components,
+} from "./reversal";
 
 // ============================================================================
 // Acting on what a webhook named — after asking Clover what actually happened.
@@ -28,7 +35,9 @@ import { cloverGet } from "./request";
 // same-day reversal a facility ever made and reported the money as still taken.
 //
 // So "how much has Clover given back" is: the whole amount if the payment is
-// voided, otherwise the sum of its refunds.
+// voided, otherwise the sum of the refunds THAT SUCCEEDED — a listed refund
+// carrying `status` other than SUCCESS, or `voided: true`, is not money, in
+// exactly the way `payment.result` is checked one level up.
 //
 // ── IT RECONCILES THE GAP, NOT THE EVENT ──────────────────────────────────
 //
@@ -37,6 +46,15 @@ import { cloverGet } from "./request";
 // refund we issued ourselves through the app, and a manual reversal in Clover's
 // dashboard all reduce to the same arithmetic, and only the shortfall is
 // written. That is what makes this safe to run twice.
+//
+// ── AND IT IS WRITTEN ONE ROW PER REVERSAL ────────────────────────────────
+//
+// The shortfall says HOW MUCH is missing; it does not say what to call it. Each
+// row is keyed to the id of the individual Clover void or refund it records, so
+// two partial refunds on one payment are two rows with two identities. Keyed on
+// the first refund instead — which is what this did until 2026-08-26 — the
+// second one collided with the first on `payments_processor_identity` and was
+// refused, and the money was simply never recorded.
 // ============================================================================
 
 export type PaymentReconciliation =
@@ -73,7 +91,32 @@ interface CloverV3Payment {
   };
   /** Clover's id for the VOID itself — a real id, not one we invent. */
   voidPaymentRef?: { id?: string };
-  refunds?: { elements?: { id?: string; amount?: number }[] };
+  /**
+   * ── A REFUND ELEMENT IS NOT PROOF MONEY MOVED ───────────────────────────
+   *
+   * `status` and `voided` were both missing from this type and are both
+   * present in the payloads Clover actually sends — verified against a stored
+   * one: `{"id":"HNJGHGMPZ55BA","amount":40,"status":"SUCCESS","voided":false,…}`.
+   *
+   * This is the same trap that `payment.result === "SUCCESS"` exists to stop,
+   * one level down, and it was never applied here: summing every element
+   * counts a FAILED or subsequently VOIDED refund as money given back, so the
+   * ledger records a reversal that never happened and the facility appears to
+   * have returned money it still holds.
+   *
+   * There is deliberately NO taxAmount/tipAmount here, because Clover does not
+   * send them on a refund. The nested `payment` object carries the ORIGINAL
+   * payment's tax and tip, not this refund's share of them — which is why the
+   * split has to be derived. See `allocate()`.
+   */
+  refunds?: {
+    elements?: {
+      id?: string;
+      amount?: number;
+      status?: string;
+      voided?: boolean;
+    }[];
+  };
 }
 
 /** Clover's entryType vocabulary, mapped onto the column's CHECK. */
@@ -194,8 +237,9 @@ export async function reconcilePayment(
   }
 
   const voided = payment.result === "VOIDED";
-  const refunded = (payment.refunds?.elements ?? []).reduce(
-    (sum, refund) => sum + Math.max(0, Math.round(Number(refund.amount ?? 0))),
+  const refunds = settledRefunds(payment.refunds?.elements);
+  const refunded = refunds.reduce(
+    (sum, refund) => sum + refundCents(refund),
     0,
   );
   // Not added together: a void reverses the payment whole, and Clover leaves
@@ -204,12 +248,22 @@ export async function reconcilePayment(
 
   const { data: ours } = await admin
     .from("payments")
-    .select("grand_total")
+    .select("grand_total, processor_payment_id")
     .eq("refund_of_payment_id", original.id);
 
   const reversedInLedger = (ours ?? []).reduce(
     (sum, row) => sum + Math.abs(cents(row.grand_total)),
     0,
+  );
+
+  // Which of Clover's reversals the ledger can already name. A row written
+  // before this file recorded refunds individually carries an aggregate
+  // identity that matches none of them — which is exactly why the gap below
+  // stays as a ceiling rather than being replaced by this set.
+  const alreadyRecorded = new Set(
+    (ours ?? [])
+      .map((row) => row.processor_payment_id)
+      .filter((id): id is string => Boolean(id)),
   );
 
   const gap = reversedAtClover - reversedInLedger;
@@ -223,73 +277,113 @@ export async function reconcilePayment(
     };
   }
 
-  // A FULL reversal is mirrored exactly — every component negated, so tax and
-  // tip come back as they went out. A PARTIAL one cannot be split that way
-  // without inventing an allocation, so it lands on the subtotal and the event
-  // says so rather than quietly assigning somebody's tip.
-  const full = gap === cents(original.grand_total) && reversedInLedger === 0;
+  const of: Components = {
+    subtotal: cents(original.subtotal),
+    tax: cents(original.tax),
+    tip: cents(original.tip),
+    grandTotal: cents(original.grand_total),
+  };
 
-  const row = full
-    ? {
-        subtotal: -Number(original.subtotal),
-        tax: -Number(original.tax),
-        tip: -Number(original.tip),
-        grand_total: -Number(original.grand_total),
-        amount_charged: -Number(original.amount_charged),
-      }
-    : {
-        subtotal: -gap / 100,
-        tax: 0,
-        tip: 0,
-        grand_total: -gap / 100,
-        amount_charged: -gap / 100,
-      };
-
-  // Clover's own id for the reversal — the void's, or the refund's. Never one
-  // we invent: `payments_processor_identity` is unique on it, so a made-up
-  // value would be a made-up identity that a real delivery could then collide
-  // with. Falling back to the payment id keeps the row insertable if Clover
-  // ever omits both, and it will collide loudly rather than silently.
-  const reference =
-    (voided
-      ? payment.voidPaymentRef?.id
-      : payment.refunds?.elements?.[0]?.id) ?? cloverPaymentId;
-
-  const { error } = await admin.from("payments").insert({
-    facility_id: original.facility_id,
-    booking_id: original.booking_id,
-    client_id: original.client_id,
-    method: original.method,
-    ...row,
-    processor: "clover",
-    processor_payment_id: reference,
-    refund_of_payment_id: original.id,
-    card_brand: original.card_brand,
-    card_last4: original.card_last4,
-    entry_method: original.entry_method,
-    author_name: voided
-      ? `Voided at Clover (${payment.voidReason ?? "no reason given"})`
-      : "Refunded at Clover",
-    // WHY, when somebody was there to say. Null from the sweep and the webhook
-    // on purpose — see the note on this function's signature. Clover's own
-    // void reason is not it: that is a processor code, and it is already in
-    // `author_name` and on the webhook event.
-    note: reason?.trim() || null,
+  // One row per thing Clover actually did, each keyed to its own Clover id, and
+  // the gap kept as a ceiling so a legacy aggregate row is not double-counted.
+  // The reasoning, and the collision this replaced, are in `reversal.ts`.
+  const reversals = reversalsToRecord({
+    voided,
+    voidReference: payment.voidPaymentRef?.id,
+    paymentId: cloverPaymentId,
+    refunds,
+    gap,
+    alreadyRecorded,
   });
 
-  if (error) {
+  if (reversals.length === 0) {
     return {
-      kind: "unreadable",
-      detail: `Clover reversed ${gap} cents but the ledger refused the row: ${error.message}`,
+      kind: "settled",
+      detail: `Clover reports ${reversedAtClover} cents reversed and the ledger holds ${reversedInLedger}, but no reversal could be named to record the difference.`,
     };
   }
 
+  let recorded = 0;
+  const notes: string[] = [];
+
+  for (const reversal of reversals) {
+    const split = allocate(reversal.amount, of);
+    const whole = split.total >= of.grandTotal;
+
+    const { error } = await admin.from("payments").insert({
+      facility_id: original.facility_id,
+      booking_id: original.booking_id,
+      client_id: original.client_id,
+      method: original.method,
+      subtotal: -split.subtotal / 100,
+      tax: -split.tax / 100,
+      tip: -split.tip / 100,
+      grand_total: -split.total / 100,
+      // The whole payment coming back returns exactly what was charged; a part
+      // of it returns that part.
+      amount_charged: whole
+        ? -Number(original.amount_charged)
+        : -split.total / 100,
+      processor: "clover",
+      processor_payment_id: reversal.reference,
+      refund_of_payment_id: original.id,
+      card_brand: original.card_brand,
+      card_last4: original.card_last4,
+      entry_method: original.entry_method,
+      author_name: voided
+        ? `Voided at Clover (${payment.voidReason ?? "no reason given"})`
+        : "Refunded at Clover",
+      // WHY, when somebody was there to say. Null from the sweep and the webhook
+      // on purpose — see the note on this function's signature. Clover's own
+      // void reason is not it: that is a processor code, and it is already in
+      // `author_name` and on the webhook event.
+      note: reason?.trim() || null,
+    });
+
+    if (error) {
+      // A replay of a reversal already in the ledger. Normal, not a failure:
+      // the webhook and the sweep ask the same question and both are meant to
+      // be able to run twice.
+      //
+      // EXCEPT when the reference is the PAYMENT's own id. That is the last-
+      // resort identity used when Clover names neither a void nor a refund, and
+      // the row it collides with is then the original payment itself — not a
+      // reversal already recorded. Reading that as "already done" would report
+      // a reversal as settled while nothing was written and the booking still
+      // showed the money as held. It has to stay loud, which is what the
+      // previous single-row version promised and this nearly took away.
+      if (error.code === "23505" && reversal.reference !== cloverPaymentId) {
+        notes.push(`${reversal.reference}: already recorded`);
+        continue;
+      }
+      // Anything else is left OUTSTANDING on purpose — the rows written before
+      // it stand (the money did come back), and the gap arithmetic will bring
+      // the rest round again on the next sweep.
+      return {
+        kind: "unreadable",
+        detail: `Clover reversed ${gap} cents; recorded ${recorded} before the ledger refused ${reversal.reference}: ${error.message}`,
+      };
+    }
+
+    recorded += reversal.amount;
+    notes.push(`${reversal.reference}: ${reversal.amount}`);
+  }
+
+  if (recorded === 0) {
+    return {
+      kind: "settled",
+      detail: `Already reconciled: ${reversedAtClover} cents reversed, every reversal already in the ledger.`,
+    };
+  }
+
+  const mirrored = recorded === of.grandTotal && reversedInLedger === 0;
+
   return {
     kind: "reversed",
-    amountCents: gap,
-    detail: full
+    amountCents: recorded,
+    detail: mirrored
       ? `${voided ? "Voided" : "Refunded"} in full at Clover; ledger mirrored.`
-      : `Partial reversal of ${gap} cents recorded against the subtotal — Clover does not say how it splits across tax and tip.`,
+      : `Partial reversal of ${recorded} cents across ${reversals.length} reversal(s) — ${notes.join(", ")}. Tax and tip split in proportion to the original; Clover does not say how it splits them.`,
   };
 }
 

@@ -7,6 +7,7 @@ import {
   CreditCard,
   ExternalLink,
   Receipt,
+  TriangleAlert,
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
@@ -73,6 +74,52 @@ function formatWhen(iso: string) {
   });
 }
 
+/**
+ * Says something ONLY when reconciliation has stopped working.
+ *
+ * A refund a manager issues inside Clover's own dashboard reaches Yipyy by
+ * webhook, with a 15-minute sweep as the backup for the webhook that never
+ * came. When that stops, nothing else on this page changes: the figures simply
+ * quietly stop including refunds, which is the most expensive way for a number
+ * to be wrong — it still looks like a number.
+ *
+ * Silent when healthy, on purpose. This is an alarm, not a tile: a permanently
+ * green badge saying "reconciled" is exactly how people stop reading it.
+ */
+function ReconciliationAlert({
+  reconciliation,
+}: {
+  reconciliation: YipyyPayOverview["reconciliation"];
+}) {
+  const { lastSweptAt, stale, unsettled } = reconciliation;
+  if (!stale && unsettled === 0) return null;
+
+  return (
+    <Card className="border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40">
+      <CardContent className="flex items-start gap-3 p-5">
+        <TriangleAlert
+          className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400"
+          aria-hidden="true"
+        />
+        <div className="space-y-1 text-sm">
+          <p className="font-medium">
+            Refunds made in Clover may not be reaching Yipyy
+          </p>
+          <p className="text-muted-foreground">
+            {stale
+              ? lastSweptAt
+                ? `The last check for changes made at Clover was ${formatDay(lastSweptAt)}. It normally runs every 15 minutes.`
+                : "Nothing has ever checked this connection for changes made at Clover."
+              : `${unsettled} update${unsettled === 1 ? "" : "s"} from Clover ${unsettled === 1 ? "has" : "have"} been received but not applied.`}{" "}
+            Payment totals on this page may be missing refunds until this is
+            resolved.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
   const nav = useYipyyPayNav();
   const money = useMoney(overview.connection.currency);
@@ -88,6 +135,11 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
           the numbers it invalidates is one people find after they have already
           trusted them. It draws nothing at all when there is nothing waiting. */}
       <UnattachedPayments />
+
+      {/* Same reasoning, one step earlier: if reconciliation has stopped, the
+          queue below may be empty because nothing is looking, not because
+          there is nothing there. */}
+      <ReconciliationAlert reconciliation={overview.reconciliation} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <KpiTile
