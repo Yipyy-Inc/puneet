@@ -65,10 +65,12 @@ import {
   locationOnboardingSteps,
   type OnboardingStaffMember,
 } from "@/lib/hq/location-onboarding";
-import { networkBilling } from "@/data/network-billing";
 import { useSettings } from "@/hooks/use-settings";
 import { useFacilityLocations } from "@/lib/api/locations";
 import { useStaffHomeLocations, staffQueries } from "@/lib/api/staff";
+import { useHqNetworkSubscription } from "@/lib/api/hq-billing";
+import { formatCurrencyWhole } from "@/lib/format";
+import type { HqSubscriptionStatus } from "@/types/hq-billing";
 
 function ToggleSetting({
   label,
@@ -302,6 +304,35 @@ function LocationOnboardingRow({
   );
 }
 
+const SUBSCRIPTION_STATUS_STYLE: Record<
+  HqSubscriptionStatus,
+  { label: string; className: string }
+> = {
+  trialing: {
+    label: "Trialing",
+    className: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+  },
+  active: {
+    label: "Active",
+    className:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  },
+  past_due: {
+    label: "Past due",
+    className:
+      "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  },
+  suspended: {
+    label: "Suspended",
+    className:
+      "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400",
+  },
+  cancelled: {
+    label: "Cancelled",
+    className: "border-border bg-muted text-muted-foreground",
+  },
+};
+
 export function HQSettingsClient() {
   const { networkPolicy, updateNetworkPolicy } = useSettings();
   // A draft only exists once the owner starts editing -- `null` means "show
@@ -318,6 +349,8 @@ export function HQSettingsClient() {
     useFacilityLocations();
   const { data: staffHomeLocations } = useStaffHomeLocations();
   const { data: staffProfiles } = useQuery(staffQueries.profiles());
+  const { data: subscription, isPending: subscriptionPending } =
+    useHqNetworkSubscription();
   const locations = locationsData ?? [];
 
   // Every staff member currently claimed and living at that branch, by
@@ -688,22 +721,11 @@ export function HQSettingsClient() {
         const activeLocations = locations.filter(
           (l) => l.status === "active",
         ).length;
-        const extra = Math.max(
-          0,
-          activeLocations - networkBilling.includedLocations,
-        );
-        const cycleShort = {
+        const cycleShort: Record<string, string> = {
           monthly: "mo",
           quarterly: "qtr",
           yearly: "yr",
-        }[networkBilling.billingCycle];
-        const fmt = (n: number) =>
-          new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: networkBilling.currency,
-            maximumFractionDigits: 0,
-          }).format(n);
-        const bundle = networkBilling.billingMode === "network_bundle";
+        };
         return (
           <Card>
             <CardHeader>
@@ -712,96 +734,101 @@ export function HQSettingsClient() {
                 Network Billing
               </CardTitle>
               <CardDescription>
-                How your multi-location subscription is billed.
+                Your Yipyy subscription for this network.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Billing model */}
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">Billing model</p>
-                  <p className="text-muted-foreground text-xs">
-                    {bundle
-                      ? "One bundle covers your whole network."
-                      : "Each location is billed on its own subscription."}
-                  </p>
-                </div>
-                <span
-                  className={cn(
-                    "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
-                    bundle
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
-                  )}
-                >
-                  {bundle ? "Network bundle" : "Per location"}
-                </span>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="bg-muted/40 rounded-lg border p-3">
-                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                    Current plan
-                  </p>
-                  <p className="mt-0.5 text-sm font-bold">
-                    {networkBilling.planName}
-                  </p>
-                  <p className="text-muted-foreground text-[11px] tabular-nums">
-                    {fmt(networkBilling.baseCost)} / {cycleShort} ·{" "}
-                    {networkBilling.billingCycle}
-                  </p>
-                </div>
-                <div className="bg-muted/40 rounded-lg border p-3">
-                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                    Locations included
-                  </p>
-                  <p className="mt-0.5 text-sm font-bold tabular-nums">
-                    {activeLocations} / {networkBilling.includedLocations}
-                  </p>
-                  <p
-                    className={cn(
-                      "text-[11px]",
-                      extra > 0
-                        ? "font-semibold text-amber-600 dark:text-amber-400"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {extra > 0 ? `${extra} over plan` : "active · within plan"}
-                  </p>
-                </div>
-                <div className="bg-muted/40 rounded-lg border p-3">
-                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                    Per extra location
-                  </p>
-                  <p className="mt-0.5 text-sm font-bold tabular-nums">
-                    {fmt(networkBilling.costPerAdditionalLocation)}
-                  </p>
-                  <p className="text-muted-foreground text-[11px]">
-                    per location / {cycleShort}
-                  </p>
-                </div>
-              </div>
-
-              {extra > 0 && (
-                <p className="rounded-lg border border-amber-300/60 bg-amber-50/50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
-                  {activeLocations} active locations exceed your included{" "}
-                  {networkBilling.includedLocations} —{" "}
-                  <span className="font-semibold tabular-nums">
-                    +{fmt(extra * networkBilling.costPerAdditionalLocation)} /{" "}
-                    {cycleShort}
-                  </span>{" "}
-                  in surcharges.
+              {subscriptionPending ? (
+                <Skeleton className="h-24 rounded-lg" />
+              ) : !subscription ? (
+                <p className="text-muted-foreground text-sm">
+                  No subscription on file for this facility yet.
                 </p>
-              )}
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {subscription.tierName}
+                      </p>
+                      <p className="text-muted-foreground text-xs tabular-nums">
+                        {formatCurrencyWhole(subscription.amountCents / 100)} /{" "}
+                        {cycleShort[subscription.billingCycle] ??
+                          subscription.billingCycle}{" "}
+                        · {subscription.billingCycle}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
+                        SUBSCRIPTION_STATUS_STYLE[subscription.status]
+                          .className,
+                      )}
+                    >
+                      {SUBSCRIPTION_STATUS_STYLE[subscription.status].label}
+                    </span>
+                  </div>
 
-              <div className="flex justify-end">
-                <Link href="/facility/settings/billing">
-                  <Button variant="outline" size="sm" className="gap-1.5">
-                    <CreditCard className="size-3.5" />
-                    Manage subscription
-                  </Button>
-                </Link>
-              </div>
+                  {subscription.status === "trialing" &&
+                    subscription.trialEndsAt && (
+                      <p className="text-muted-foreground text-xs">
+                        Trial ends{" "}
+                        {new Date(subscription.trialEndsAt).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          },
+                        )}
+                      </p>
+                    )}
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="bg-muted/40 rounded-lg border p-3">
+                      <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                        Locations
+                      </p>
+                      <p className="mt-0.5 text-sm font-bold tabular-nums">
+                        {activeLocations} /{" "}
+                        {subscription.maxLocations ?? "Unlimited"}
+                      </p>
+                      {subscription.maxLocations !== null &&
+                        activeLocations > subscription.maxLocations && (
+                          <p className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                            over your plan&apos;s location limit
+                          </p>
+                        )}
+                    </div>
+                    <div className="bg-muted/40 rounded-lg border p-3">
+                      <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                        Renews
+                      </p>
+                      <p className="mt-0.5 text-sm font-bold tabular-nums">
+                        {subscription.periodEnd
+                          ? new Date(subscription.periodEnd).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
+                            )
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Link href="/facility/settings/billing">
+                      <Button variant="outline" size="sm" className="gap-1.5">
+                        <CreditCard className="size-3.5" />
+                        Manage subscription
+                      </Button>
+                    </Link>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         );
