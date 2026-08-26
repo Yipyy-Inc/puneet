@@ -77,6 +77,7 @@ import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { useRooms } from "@/hooks/use-rooms";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { boardingBasePrice } from "@/lib/boarding-pricing";
+import { useDaycareLocationPrices } from "@/lib/api/hq-services";
 import {
   autoAssignDaycareSection,
   autoAssignBoardingUnit,
@@ -295,6 +296,7 @@ export function BookingModal({
   const { sections: daycareSections } = useDaycareAreas();
   const { categories: roomCategories, rooms: facilityRooms } = useRooms();
   const { currentLocationId } = useLocationContext();
+  const { data: daycareLocationPrices = [] } = useDaycareLocationPrices();
   const queryClient = useQueryClient();
   const { mutate: redeemPass } = useRedeemPackagePass();
   const { data: customerPackagesData = [] } = useQuery(
@@ -1392,8 +1394,14 @@ export function BookingModal({
       [];
 
     if (selectedService === "daycare") {
+      // A branch's own full-day rate, falling back to the facility default —
+      // same resolution boarding uses, one level simpler (no kennel class,
+      // just the branch). Half day stays half of whichever rate applies.
+      const effectiveFullDay =
+        daycareLocationPrices.find((p) => p.locationId === currentLocationId)
+          ?.basePrice ?? daycare.basePrice;
       const pricePerDay =
-        serviceType === "half_day" ? daycare.basePrice / 2 : daycare.basePrice;
+        serviceType === "half_day" ? effectiveFullDay / 2 : effectiveFullDay;
       basePrice = pricePerDay * daycareSelectedDates.length;
     } else if (selectedService === "boarding") {
       // Priced by the KENNEL CLASS the pet is assigned to, not one flat rate.
@@ -1793,6 +1801,10 @@ export function BookingModal({
     roomCategories,
     facilityRooms,
     daycare.basePrice,
+    // Both branch-price resolutions (boarding's kennel class, daycare's flat
+    // rate) key off the caller's active branch, so a switch has to reprice.
+    currentLocationId,
+    daycareLocationPrices,
     grooming.basePrice,
     training.basePrice,
     getModuleBySlug,
