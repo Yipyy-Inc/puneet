@@ -4,9 +4,14 @@ import { useMemo } from "react";
 import { Boxes } from "lucide-react";
 import { ServiceCatalogClient } from "@/components/hq/ServiceCatalogClient";
 import { BoardingServiceCatalogClient } from "@/components/hq/BoardingServiceCatalogClient";
-import { useHqGroomingServices } from "@/lib/api/hq-services";
+import { DaycareServiceCatalogClient } from "@/components/hq/DaycareServiceCatalogClient";
+import {
+  useHqGroomingServices,
+  useDaycareLocationPrices,
+} from "@/lib/api/hq-services";
 import { useFacilityLocations } from "@/lib/api/locations";
 import { useRooms } from "@/hooks/use-rooms";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
 
 export default function HQServicesPage() {
   const { data: services = [], isPending: servicesPending } =
@@ -18,8 +23,17 @@ export default function HQServicesPage() {
     () => categories.filter((c) => c.service === "boarding"),
     [categories],
   );
+  const { settings, isPending: settingsPending } = useFacilitySettings();
+  const { data: daycareOverrides = [], isPending: daycarePending } =
+    useDaycareLocationPrices();
 
-  if (servicesPending || locationsPending || categoriesPending) {
+  if (
+    servicesPending ||
+    locationsPending ||
+    categoriesPending ||
+    settingsPending ||
+    daycarePending
+  ) {
     return (
       <div className="text-muted-foreground p-8 text-center text-sm">
         Loading…
@@ -41,6 +55,11 @@ export default function HQServicesPage() {
       <ServiceCatalogClient services={services} locations={locations} />
       <BoardingServiceCatalogClient
         categories={boardingCategories}
+        locations={locations}
+      />
+      <DaycareServiceCatalogClient
+        facilityDefault={settings.daycare_config.value.basePrice}
+        overrides={daycareOverrides}
         locations={locations}
       />
     </div>

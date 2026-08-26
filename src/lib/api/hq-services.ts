@@ -84,3 +84,73 @@ export function useSaveBoardingCategoryLocationPrice() {
       void queryClient.invalidateQueries({ queryKey: ROOMS_KEY }),
   });
 }
+
+// ============================================================================
+// Daycare has no catalog item either -- just one flat rate a branch can
+// override. `/api/daycare/location-prices` is the whole resource; no `[id]`
+// route, since (facility, location) already is the id.
+// ============================================================================
+
+export interface DaycareLocationPrice {
+  locationId: string;
+  basePrice: number;
+}
+
+const DAYCARE_LOCATION_PRICES_KEY = ["daycare", "location-prices"] as const;
+
+async function fetchDaycareLocationPrices(): Promise<DaycareLocationPrice[]> {
+  const response = await fetch("/api/daycare/location-prices");
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((b: { error?: string }) => b.error)
+      .catch(() => null);
+    throw new Error(
+      detail ?? `Could not load daycare pricing (${response.status})`,
+    );
+  }
+  return (await response.json()) as DaycareLocationPrice[];
+}
+
+export function useDaycareLocationPrices() {
+  return useQuery({
+    queryKey: DAYCARE_LOCATION_PRICES_KEY,
+    queryFn: fetchDaycareLocationPrices,
+  });
+}
+
+interface SaveDaycareLocationPrice {
+  locationId: string;
+  /** A price sets this branch's own rate; `null` clears it back to the
+   *  facility-wide default. */
+  basePrice: number | null;
+}
+
+async function saveDaycareLocationPrice({
+  locationId,
+  basePrice,
+}: SaveDaycareLocationPrice): Promise<void> {
+  const response = await fetch("/api/daycare/location-prices", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ locationId, basePrice }),
+  });
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((b: { error?: string }) => b.error)
+      .catch(() => null);
+    throw new Error(detail ?? `Could not save that price (${response.status})`);
+  }
+}
+
+export function useSaveDaycareLocationPrice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: saveDaycareLocationPrice,
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: DAYCARE_LOCATION_PRICES_KEY,
+      }),
+  });
+}
