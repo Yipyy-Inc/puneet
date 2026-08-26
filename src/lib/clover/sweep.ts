@@ -174,7 +174,7 @@ export async function sweepFacility(facilityId: string): Promise<SweepResult> {
     if (ids.length < PAGE_SIZE) break;
   }
 
-  result.drained = await drainUnsettled(admin, facilityId);
+  result.drained = await drainUnsettled(admin, facilityId, active.merchantId);
 
   // Only on a clean pass. Moving the watermark past a page Clover refused to
   // give us would turn a temporary failure into a permanent hole.
@@ -198,14 +198,31 @@ export async function sweepFacility(facilityId: string): Promise<SweepResult> {
  * The webhook route answers 200 even when processing fails — correctly, since
  * Clover would otherwise redeliver an unprocessable event forever. The cost of
  * that choice is a ledger of unfinished work that, until now, nothing read.
+ *
+ * ── A DELIVERY FROM A MERCHANT WE NO LONGER HOLD IS NOT WORK ──────────────
+ *
+ * Measured 2026-08-26, and it is why this needed the merchant argument. Three
+ * events had been sitting `failed` since 8 August and were being retried every
+ * fifteen minutes — roughly 1,700 attempts — with no possibility of ever
+ * succeeding: they name merchant `796PJWMTZZH01`, and the facility's live
+ * connection is `5ZQH512PQ0KP1`. `reconcilePayment` reads with the CURRENT
+ * merchant's token, Clover answers 404 for a payment belonging to a different
+ * estate, that returns `unreadable`, and `unreadable` was skipped and left for
+ * next time. Forever, invisibly, burning a Clover API call each pass.
+ *
+ * A facility that reconnected under a new merchant leaves its old deliveries
+ * behind by definition. They are closed as `ignored` — which is what they are,
+ * historically true and permanently unactionable — rather than retried until
+ * somebody happens to look.
  */
 async function drainUnsettled(
   admin: ReturnType<typeof createAdminClient>,
   facilityId: string,
+  merchantId: string,
 ): Promise<number> {
   const { data: stuck } = await admin
     .from("payment_webhook_events")
-    .select("id, object_kind, object_id")
+    .select("id, object_kind, object_id, merchant_id")
     .eq("facility_id", facilityId)
     .eq("object_kind", "P")
     .in("status", ["received", "failed"])
@@ -217,6 +234,18 @@ async function drainUnsettled(
 
   for (const event of stuck ?? []) {
     const objectId = event.object_id as string;
+
+    // Closed WITHOUT a Clover read: there is no token that could satisfy it.
+    if (event.merchant_id && event.merchant_id !== merchantId) {
+      await admin.rpc("close_payment_webhook", {
+        p_event_id: event.id as string,
+        p_status: "ignored",
+        p_outcome: `Merchant ${event.merchant_id} is no longer the one this facility has connected (${merchantId}); nothing here can read it.`,
+      });
+      drained += 1;
+      continue;
+    }
+
     const outcome = await reconcilePayment(facilityId, objectId);
 
     // Still unreadable. Leave it exactly as it is — a row that has failed twice

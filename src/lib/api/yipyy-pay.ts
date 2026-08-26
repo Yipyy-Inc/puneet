@@ -76,6 +76,20 @@ export interface YipyyPayOverview {
   payouts: YipyyPayPayout[];
   activity: YipyyPayActivity[];
   hasActivity: boolean;
+  /**
+   * Whether the thing that notices a refund made inside Clover is running.
+   *
+   * A manager can refund at the Clover dashboard instead of in Yipyy; a webhook
+   * carries that in real time and a 15-minute sweep is the backup for the
+   * webhook that never arrives. Both were live and neither was visible, so a
+   * reconciler that had stopped looked exactly like one that had just run.
+   */
+  reconciliation: {
+    lastSweptAt: string | null;
+    stale: boolean;
+    /** Deliveries recorded and never finished. Should be 0. */
+    unsettled: number;
+  };
 }
 
 /** The caller administers several facilities and the hostname named none. */
