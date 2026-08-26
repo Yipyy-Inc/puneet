@@ -1,15 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Building,
+  CheckCircle2,
   ChevronRight,
+  ClipboardCheck,
   Info,
   Star,
   Trash2,
@@ -39,6 +44,7 @@ import {
   useFacilityLocations,
   useUpdateLocation,
 } from "@/lib/api/locations";
+import { useStaffHomeLocations, staffQueries } from "@/lib/api/staff";
 import type { LocationPatchInput } from "@/lib/api/mappers/location";
 import {
   LOCATION_CAPACITY_KEYS,
@@ -47,6 +53,10 @@ import {
   type LocationCapacityKey,
   type LocationStatus,
 } from "@/types/location";
+import {
+  locationOnboardingSteps,
+  type OnboardingStaffMember,
+} from "@/lib/hq/location-onboarding";
 
 // ============================================================================
 // One branch — the record, edited for real.
@@ -106,13 +116,102 @@ const ELSEWHERE = [
   },
 ];
 
+/** Go-live readiness for this one branch — the same steps HQ Settings'
+ *  aggregate checklist shows, scoped to the branch you're looking at. */
+function LocationOnboardingCard({
+  location,
+  staffAtLocation,
+}: {
+  location: FacilityLocation;
+  staffAtLocation: OnboardingStaffMember[];
+}) {
+  const steps = locationOnboardingSteps(location, staffAtLocation);
+  const done = steps.filter((step) => step.done).length;
+  const missing = steps.filter((step) => !step.done);
+  const ready = missing.length === 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ClipboardCheck className="size-4" />
+          Onboarding checklist
+        </CardTitle>
+        <CardDescription>
+          What this branch needs before it can go live.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-xs tabular-nums">
+            {done}/{steps.length} steps
+          </span>
+          {ready ? (
+            <span className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="size-3.5" />
+              Ready to go live
+            </span>
+          ) : (
+            <span className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="size-3.5" />
+              {missing.length} step{missing.length === 1 ? "" : "s"} remaining
+            </span>
+          )}
+        </div>
+        <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all",
+              ready ? "bg-emerald-500" : "bg-amber-500",
+            )}
+            style={{ width: `${(done / steps.length) * 100}%` }}
+          />
+        </div>
+        <ul className="grid gap-1.5 sm:grid-cols-2">
+          {steps.map((step) => (
+            <li key={step.label} className="flex items-center gap-1.5 text-xs">
+              <CheckCircle2
+                className={cn(
+                  "size-3.5 shrink-0",
+                  step.done ? "text-emerald-500" : "text-muted-foreground/40",
+                )}
+              />
+              <span className={step.done ? "" : "text-muted-foreground"}>
+                {step.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function LocationDetailView({ locationId }: { locationId: string }) {
   const router = useRouter();
   const { data, isPending, error } = useFacilityLocations();
   const update = useUpdateLocation();
   const remove = useDeleteLocation();
+  const { data: staffHomeLocations } = useStaffHomeLocations();
+  const { data: staffProfiles } = useQuery(staffQueries.profiles());
 
   const location = data?.find((item) => item.id === locationId) ?? null;
+
+  // Real staff living at THIS branch -- same join HQ Settings' aggregate
+  // checklist uses, scoped to one location.
+  const staffAtLocation: OnboardingStaffMember[] = useMemo(() => {
+    if (!location) return [];
+    const profileByStaffId = new Map(
+      (staffProfiles ?? []).map((p) => [p.id, p]),
+    );
+    const result: OnboardingStaffMember[] = [];
+    for (const s of staffHomeLocations ?? []) {
+      if (!s.claimed || s.homeLocationId !== location.id) continue;
+      const profile = profileByStaffId.get(s.staffId);
+      if (profile) result.push({ primaryRole: profile.primaryRole });
+    }
+    return result;
+  }, [location, staffHomeLocations, staffProfiles]);
 
   if (isPending) return <DetailSkeleton />;
 
@@ -144,6 +243,7 @@ export function LocationDetailView({ locationId }: { locationId: string }) {
     <LocationEditor
       key={location.id}
       location={location}
+      staffAtLocation={staffAtLocation}
       onSave={(patch) =>
         update.mutateAsync({ id: location.id, patch }).then(() => {
           toast.success("Location saved");
@@ -173,12 +273,14 @@ export function LocationDetailView({ locationId }: { locationId: string }) {
 
 function LocationEditor({
   location,
+  staffAtLocation,
   onSave,
   saving,
   onRemove,
   removing,
 }: {
   location: FacilityLocation;
+  staffAtLocation: OnboardingStaffMember[];
   onSave: (patch: LocationPatchInput) => Promise<void>;
   saving: boolean;
   onRemove: () => void;
@@ -434,6 +536,11 @@ function LocationEditor({
           </div>
         </CardContent>
       </Card>
+
+      <LocationOnboardingCard
+        location={location}
+        staffAtLocation={staffAtLocation}
+      />
 
       <Card>
         <CardHeader className="pb-3">
