@@ -3,9 +3,15 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  chargeRetail,
   chargeRetailOnTerminal,
-  typedCardUnavailable,
+  refusedPayment,
+  savedCardUnavailable,
 } from "@/lib/api/retail-payments";
+import {
+  CloverCardFields,
+  type CloverCardFieldsHandle,
+} from "@/components/payments/clover-card-fields";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -131,7 +137,6 @@ import {
 // The simulators are gone; only the request TYPES remain, because
 // `fiservRequest` / `cloverRequest` are still assembled for the fields the
 // recorded transaction reads and for whatever tokenises a card properly later.
-import type { FiservPaymentRequest } from "@/lib/fiserv-payment-service";
 import type { CloverPaymentRequest } from "@/lib/clover-terminal-service";
 import {
   processYipyyPay,
@@ -301,14 +306,23 @@ export default function POSPage() {
   // Fiserv payment state
   const [selectedTokenizedCard, setSelectedTokenizedCard] =
     useState<TokenizedCard | null>(null);
-  const [saveCardToAccount, setSaveCardToAccount] = useState(false);
-  const [newCardDetails, setNewCardDetails] = useState({
-    number: "",
-    expMonth: "",
-    expYear: "",
-    cvv: "",
-    cardholderName: "",
-  });
+  // `saveCardToAccount` is gone with the checkbox that set it. Saving a card
+  // for real means vaulting it AT CLOVER when it is first taken, and nothing
+  // does that yet — a flag that only ever wrote to a fixture was worse than
+  // the absence, because the operator believed the card had been kept.
+  // ── THE CARD NUMBER USED TO LIVE HERE ────────────────────────────────────
+  //
+  // `newCardDetails` held a raw PAN, expiry and CVV in React state, typed into
+  // ordinary `<Input>`s. Nothing could be done with it: forwarding it to a
+  // server would have put the number in our logs and this deployment inside PCI
+  // scope, so the charge refused and the form collected a card for nobody.
+  //
+  // Clover's hosted fields replace it. The digits are typed into IFRAMES served
+  // by Clover, in a different origin, and the only thing this component ever
+  // sees is a `clv_` token. There is deliberately no state here holding
+  // anything card-shaped, and there must not be.
+  const cardFields = useRef<CloverCardFieldsHandle | null>(null);
+  const [cardFieldsReady, setCardFieldsReady] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Clover terminal state. `cloverTerminalId` holds the device's SERIAL now —
@@ -329,6 +343,32 @@ export default function POSPage() {
   // take a cloud payment at all" — whether it is awake right now is a claim
   // this list cannot make, and the charge answers it with Clover's own 503 when
   // Cloud Pay Display is closed.
+  // ── WHAT THE CARD FIELDS NEED TO MOUNT ───────────────────────────────────
+  //
+  // `/pay/[ref]` is a server component and reads these off the connection
+  // directly. This screen cannot: it is a client component, so the same three
+  // values come over the wire. `publicApiKey` is Clover's browser-side key — it
+  // tokenises a card and cannot charge one, and the merchant's OAuth token
+  // never leaves the server.
+  //
+  // Undefined means typed cards are unavailable here (no connected account, or
+  // this member of staff may not take payments). The form says so rather than
+  // rendering four empty boxes that will never tokenise.
+  const { data: cloverCheckout } = useQuery({
+    queryKey: ["clover", "checkout-config"],
+    queryFn: async () => {
+      const response = await fetch("/api/payments/clover/checkout-config");
+      if (!response.ok) return null;
+      return (await response.json()) as {
+        publicApiKey: string;
+        merchantId: string;
+        sdkUrl: string;
+        currency: string;
+      };
+    },
+    staleTime: 300_000,
+  });
+
   const { data: realTerminals } = useQuery({
     queryKey: ["clover", "terminals"],
     queryFn: async () => {
@@ -868,7 +908,10 @@ export default function POSPage() {
         !useCloverTerminal &&
         !useYipyyPay &&
         !selectedTokenizedCard &&
-        newCardDetails.number &&
+        // Was `newCardDetails.number` — "has something been typed". The hosted
+        // fields deliberately do not report that, so the question becomes the
+        // one actually being asked: is this a typed card rather than one on
+        // file? Same answer in every case that mattered.
         !hasPermission(
           facilityRole,
           "manual_card_entry",
@@ -928,8 +971,7 @@ export default function POSPage() {
           cartItems: cart.length,
           tipAmount: calculatedTipAmount,
           tipPercentage: tipPercentage,
-          isManualEntry:
-            !selectedTokenizedCard && newCardDetails.number ? true : false,
+          isManualEntry: !selectedTokenizedCard,
         },
       });
 
@@ -1081,42 +1123,41 @@ export default function POSPage() {
                 tokenizedCardId = selectedTokenizedCard.id;
               }
 
-              const fiservRequest: FiservPaymentRequest = {
-                facilityId,
-                clientId: customerId ? Number(customerId) : 0,
-                amount: payment.amount,
-                currency: "USD",
-                paymentSource,
-                tokenizedCardId,
-                newCard:
-                  paymentSource === "new_card" && newCardDetails.number
-                    ? {
-                        number: newCardDetails.number.replace(/\s/g, ""),
-                        expMonth: parseInt(newCardDetails.expMonth, 10),
-                        expYear: parseInt(newCardDetails.expYear, 10),
-                        cvv: newCardDetails.cvv,
-                        cardholderName:
-                          newCardDetails.cardholderName || name || "Customer",
-                        saveToAccount: saveCardToAccount && !!customerId,
-                        setAsDefault: saveCardToAccount && !!customerId,
-                      }
-                    : undefined,
-                description: `Split Payment ${i + 1}/${paymentForm.payments.length} - POS Transaction`,
-                context: "pos",
-                bookingId: selectedBookingId || undefined,
-              };
-
-              // A typed card cannot be charged here: that needs a `clv_`
-              // token from Clover's hosted fields, which this screen does not
-              // mount, and forwarding `newCardDetails.number` would put the PAN
-              // in our logs and this deployment inside PCI scope. What answered
-              // before was a simulator — a sleep and `Math.random() > 0.1`.
-              // `fiservRequest` stays: it is what a hosted-fields implementation
-              // will tokenise, and it carries the save-card logic already.
-              void fiservRequest;
-              const fiservResponse = typedCardUnavailable(
-                Math.round(payment.amount * 100),
-              );
+              // ── ONE TOKEN PER INSTALMENT ───────────────────────────────
+              //
+              // A Clover token is single-use, so a split across two cards is
+              // two `createToken()` calls against the same mounted fields —
+              // tokenised here, inside the loop, rather than once outside it.
+              // The operator re-enters the card between instalments; the
+              // iframes keep whatever is in them until they do.
+              //
+              // A card ON FILE is still refused: those are fixtures with a
+              // `fiservToken` for a processor we have no account with.
+              const instalmentCents = Math.round(payment.amount * 100);
+              let fiservResponse;
+              if (paymentSource === "tokenized_card") {
+                fiservResponse = savedCardUnavailable(instalmentCents);
+              } else {
+                const tokenised = await cardFields.current?.createToken();
+                fiservResponse = !tokenised?.ok
+                  ? refusedPayment(
+                      instalmentCents,
+                      "card_not_readable",
+                      tokenised?.message ??
+                        "Enter the card in the fields above, or take it on the terminal.",
+                    )
+                  : await chargeRetail({
+                      amountCents: instalmentCents,
+                      clientRef: customerId ? Number(customerId) : null,
+                      source: tokenised.token,
+                      lines: cart.map((item) => ({
+                        name: item.productName,
+                        unitPriceCents: Math.round(item.unitPrice * 100),
+                        quantity: item.quantity,
+                      })),
+                      note: `Split payment ${i + 1}/${paymentForm.payments.length}`,
+                    });
+              }
 
               if (fiservResponse.success) {
                 processedPayments.push({
@@ -1386,8 +1427,10 @@ export default function POSPage() {
         if (selectedTokenizedCard && customerId) {
           paymentSource = "tokenized_card";
           tokenizedCardId = selectedTokenizedCard.id;
-        } else if (customerId && !newCardDetails.number) {
-          // Try to use default card on file
+        } else if (customerId && !cardFieldsReady) {
+          // Fall back to a card on file only when there is no usable card form
+          // — with the fields mounted, the operator is entering a card and
+          // silently charging a stored one instead would be a surprise.
           const defaultCard = getDefaultTokenizedCard(
             facilityId,
             Number(customerId),
@@ -1398,39 +1441,42 @@ export default function POSPage() {
           }
         }
 
-        // Prepare Fiserv payment request
-        const fiservRequest: FiservPaymentRequest = {
-          facilityId,
-          clientId: customerId ? Number(customerId) : 0,
-          amount: grandTotal - (calculatedTipAmount || 0),
-          currency: "USD",
-          paymentSource,
-          tokenizedCardId,
-          newCard:
-            paymentSource === "new_card" && newCardDetails.number
-              ? {
-                  number: newCardDetails.number.replace(/\s/g, ""),
-                  expMonth: parseInt(newCardDetails.expMonth, 10),
-                  expYear: parseInt(newCardDetails.expYear, 10),
-                  cvv: newCardDetails.cvv,
-                  cardholderName:
-                    newCardDetails.cardholderName || name || "Customer",
-                  saveToAccount: saveCardToAccount && !!customerId,
-                  setAsDefault: saveCardToAccount && !!customerId,
-                }
-              : undefined,
-          tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
-          description: `POS Transaction - ${cart.length} item(s)`,
-          context: "pos",
-          bookingId: selectedBookingId || undefined,
-        };
-
-        // Process payment through Fiserv
-        // Same refusal as the split branch above, for the same reason.
-        void fiservRequest;
-        const fiservResponse = typedCardUnavailable(
-          Math.round((grandTotal - (calculatedTipAmount || 0)) * 100),
+        // ── THE REAL CHARGE ────────────────────────────────────────────────
+        //
+        // Tokenise what is in Clover's iframes, then send the `clv_` reference
+        // to `/api/payments/retail/charge` — the same route the terminal path
+        // uses, and the same `lib/clover/charge.ts` that charges a booking.
+        // Nothing card-shaped passes through this file.
+        const saleCents = Math.round(
+          (grandTotal - (calculatedTipAmount || 0)) * 100,
         );
+        let fiservResponse;
+        if (paymentSource === "tokenized_card") {
+          fiservResponse = savedCardUnavailable(saleCents);
+        } else {
+          const tokenised = await cardFields.current?.createToken();
+          if (!tokenised?.ok) {
+            fiservResponse = refusedPayment(
+              saleCents,
+              "card_not_readable",
+              tokenised?.message ??
+                "Enter the card in the fields above, or take it on the terminal.",
+            );
+          } else {
+            fiservResponse = await chargeRetail({
+              amountCents: saleCents,
+              tipCents: Math.round((calculatedTipAmount || 0) * 100),
+              clientRef: customerId ? Number(customerId) : null,
+              source: tokenised.token,
+              lines: cart.map((item) => ({
+                name: item.productName,
+                unitPriceCents: Math.round(item.unitPrice * 100),
+                quantity: item.quantity,
+              })),
+              note: `POS transaction - ${cart.length} item(s)`,
+            });
+          }
+        }
 
         if (!fiservResponse.success) {
           alert(
@@ -1568,14 +1614,8 @@ export default function POSPage() {
       setTipCustomAmount("");
       // Clear Fiserv state
       setSelectedTokenizedCard(null);
-      setSaveCardToAccount(false);
-      setNewCardDetails({
-        number: "",
-        expMonth: "",
-        expYear: "",
-        cvv: "",
-        cardholderName: "",
-      });
+      // Nothing card-shaped to clear: the digits live in Clover's iframes and
+      // are discarded with them when the dialog closes.
 
       setIsPaymentModalOpen(false);
       setIsReceiptModalOpen(true);
@@ -5015,132 +5055,47 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                         ) && (
                           <div className="space-y-3 rounded-lg border p-4">
                             <Label>Card Details</Label>
-                            <div className="grid gap-2">
-                              <Label className="text-xs">Card Number</Label>
-                              <Input
-                                type="text"
-                                placeholder="1234 5678 9012 3456"
-                                value={newCardDetails.number}
-                                onChange={(e) => {
-                                  const value = e.target.value.replace(
-                                    /\s/g,
-                                    "",
-                                  );
-                                  if (
-                                    /^\d*$/.test(value) &&
-                                    value.length <= 16
-                                  ) {
-                                    const formatted =
-                                      value.match(/.{1,4}/g)?.join(" ") ||
-                                      value;
-                                    setNewCardDetails({
-                                      ...newCardDetails,
-                                      number: formatted,
-                                    });
-                                  }
-                                }}
-                                maxLength={19}
+                            {/* ── THE FIELDS ARE CLOVER'S, NOT OURS ────────
+                             *
+                             * What stood here was four ordinary <Input>s
+                             * collecting a card number, expiry and CVV into
+                             * React state. Nothing could be done with them:
+                             * sending a PAN to our server would put the number
+                             * in the logs and this deployment inside PCI
+                             * scope, so the charge refused and the form
+                             * gathered a card for nobody.
+                             *
+                             * These are iframes served by Clover. The digits
+                             * are typed in a different origin and this page
+                             * only ever receives a `clv_` token.
+                             */}
+                            {cloverCheckout ? (
+                              <CloverCardFields
+                                ref={cardFields}
+                                publicApiKey={cloverCheckout.publicApiKey}
+                                merchantId={cloverCheckout.merchantId}
+                                sdkUrl={cloverCheckout.sdkUrl}
+                                onReadyChange={setCardFieldsReady}
                               />
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <div className="grid gap-2">
-                                <Label className="text-xs">Month</Label>
-                                <Input
-                                  type="text"
-                                  placeholder="MM"
-                                  value={newCardDetails.expMonth}
-                                  onChange={(e) => {
-                                    const value = e.target.value.replace(
-                                      /\D/g,
-                                      "",
-                                    );
-                                    if (value.length <= 2) {
-                                      setNewCardDetails({
-                                        ...newCardDetails,
-                                        expMonth: value,
-                                      });
-                                    }
-                                  }}
-                                  maxLength={2}
-                                />
-                              </div>
-                              <div className="grid gap-2">
-                                <Label className="text-xs">Year</Label>
-                                <Input
-                                  type="text"
-                                  placeholder="YYYY"
-                                  value={newCardDetails.expYear}
-                                  onChange={(e) => {
-                                    const value = e.target.value.replace(
-                                      /\D/g,
-                                      "",
-                                    );
-                                    if (value.length <= 4) {
-                                      setNewCardDetails({
-                                        ...newCardDetails,
-                                        expYear: value,
-                                      });
-                                    }
-                                  }}
-                                  maxLength={4}
-                                />
-                              </div>
-                              <div className="grid gap-2">
-                                <Label className="text-xs">CVV</Label>
-                                <Input
-                                  type="text"
-                                  placeholder="123"
-                                  value={newCardDetails.cvv}
-                                  onChange={(e) => {
-                                    const value = e.target.value.replace(
-                                      /\D/g,
-                                      "",
-                                    );
-                                    if (value.length <= 4) {
-                                      setNewCardDetails({
-                                        ...newCardDetails,
-                                        cvv: value,
-                                      });
-                                    }
-                                  }}
-                                  maxLength={4}
-                                />
-                              </div>
-                            </div>
-                            <div className="grid gap-2">
-                              <Label className="text-xs">Cardholder Name</Label>
-                              <Input
-                                type="text"
-                                placeholder="John Doe"
-                                value={newCardDetails.cardholderName}
-                                onChange={(e) =>
-                                  setNewCardDetails({
-                                    ...newCardDetails,
-                                    cardholderName: e.target.value,
-                                  })
-                                }
-                              />
-                            </div>
+                            ) : (
+                              <p className="text-muted-foreground text-sm">
+                                Typed cards are unavailable — this facility has
+                                no connected payment account, or you may not
+                                take payments here. Use the terminal, cash,
+                                store credit or a gift card.
+                              </p>
+                            )}
                             {selectedClientId &&
                               selectedClientId !== "__walk_in__" && (
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    id="saveCard"
-                                    checked={saveCardToAccount}
-                                    onChange={(e) =>
-                                      setSaveCardToAccount(e.target.checked)
-                                    }
-                                    className="rounded-sm border-gray-300"
-                                  />
-                                  <Label
-                                    htmlFor="saveCard"
-                                    className="text-sm font-normal"
-                                  >
-                                    Save card to customer account for future
-                                    payments
-                                  </Label>
-                                </div>
+                                <p className="text-muted-foreground text-xs">
+                                  {/* The old checkbox offered to save the card
+                                   * and wrote to a fixture. Saving one for
+                                   * real means vaulting it AT CLOVER when it
+                                   * is first taken, which nothing does yet —
+                                   * so this says so instead of offering it. */}
+                                  This card cannot be saved to the
+                                  customer&apos;s account yet.
+                                </p>
                               )}
                           </div>
                         )}

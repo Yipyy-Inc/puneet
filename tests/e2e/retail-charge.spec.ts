@@ -116,3 +116,51 @@ test.describe("the retail charge route", () => {
     expect((await response.json()).error).toMatch(/not a payment token/i);
   });
 });
+
+// ============================================================================
+// The keys that let a browser mount Clover's card fields.
+//
+// Until 2026-08-26 the retail checkout collected a raw card number into React
+// state and then refused to charge it, because sending a PAN to our own server
+// would put this deployment inside PCI scope. It mounts Clover's hosted iframes
+// now, and this route is what tells the browser which merchant to mount them
+// against.
+//
+// `publicApiKey` is Clover's browser-side key by design — it tokenises a card
+// and cannot charge one. The gate is not about its secrecy: an open route here
+// would tell anybody which businesses have a live merchant account.
+// ============================================================================
+
+test.describe("the card-field config route", () => {
+  const config = (page: Page): Promise<APIResponse> =>
+    page.request.get("/api/payments/clover/checkout-config");
+
+  test("refuses anyone who is not signed in", async ({ page }) => {
+    await page.context().clearCookies();
+    expect((await config(page)).status()).toBe(401);
+  });
+
+  test("refuses a groomer, who may not take payments", async ({ page }) => {
+    await signIn(page, ACCOUNTS.groomer);
+    const response = await config(page);
+    expect(response.status()).toBe(403);
+    // And says nothing about whether this facility can take cards at all.
+    expect(await response.text()).not.toContain("publicApiKey");
+  });
+
+  test("refuses, without leaking a key, when there is no merchant", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const response = await config(page);
+
+    // This facility has no connected Clover account, so the honest answer is a
+    // refusal — and the screen shows "typed cards are unavailable" rather than
+    // four boxes that would never tokenise.
+    expect(response.status()).toBe(503);
+
+    const body = await response.text();
+    expect(body).not.toContain("publicApiKey");
+    expect(body).not.toContain("merchantId");
+  });
+});
