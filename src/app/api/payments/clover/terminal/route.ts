@@ -17,6 +17,8 @@ import {
   receiptOptionsOnDevice,
 } from "@/lib/clover/print";
 import { buildReceiptLines, type ReceiptInput } from "@/lib/clover/receipt";
+import { cloverTipSuggestions } from "@/lib/tips";
+import { tipConfigSchema, type TipConfig } from "@/types/facility";
 import { renderReceiptPng } from "@/lib/clover/receipt-image";
 import {
   computeTax,
@@ -199,16 +201,36 @@ export async function POST(request: NextRequest) {
   // and a counter that cannot take money because a tip screen timed out is a
   // worse product than one that takes the money without a tip. `tipPrompted`
   // goes back on the response so staff are told which happened.
+  //
+  // ── AND THE FACILITY DECIDES WHAT IS OFFERED ────────────────────────────
+  //
+  // The three suggestions come from Settings → Tips and are sent to the device,
+  // so a facility configures its tips ONCE instead of also configuring the
+  // hardware. Clover adds "custom tip" and "no tip" itself — see lib/tips.ts.
+  //
+  // `enabled` is checked HERE, on the server, not at the call site. The booking
+  // screen passes `tipOnDevice: true` unconditionally, so a facility that
+  // switched tips off was still being asked for one on the terminal. A client
+  // flag is a preference; whether a customer is asked for money is not.
   let tipCents = parsed.data.tipCents;
   let tipPrompted = false;
-  if (parsed.data.tipOnDevice) {
+  const tipSettings = bill.tipConfig?.enabled ? bill.tipConfig : null;
+  if (parsed.data.tipOnDevice && tipSettings) {
     const chosen = await readTipOnDevice(
       booking.facility_id,
       parsed.data.deviceSerial,
       owedCents,
+      // Dollars, because the threshold that picks a smart tier is in dollars.
+      // `owedCents` is pre-tax, which is what a percentage here means.
+      cloverTipSuggestions(tipSettings, owedCents / 100),
     );
     tipPrompted = chosen !== null;
     tipCents = chosen ?? 0;
+  } else if (parsed.data.tipOnDevice) {
+    // Asked for a device tip, but the facility offers none. Charge the base
+    // amount rather than falling through to whatever the client sent: a tip
+    // typed on a back-office screen is not one the customer chose.
+    tipCents = 0;
   }
 
   const outcome = await chargeOnTerminal({
@@ -499,6 +521,15 @@ interface Bill {
   lines: { label: string; amountCents: number }[];
   discountCents: number;
   taxConfig: TaxConfig;
+  /**
+   * What this facility offers as a tip, or null when it has configured none.
+   *
+   * Read here rather than in a second query because it is decided at the same
+   * moment as the tax and from the same table — and because a tip prompt that
+   * asks for a facility's settings separately is one more read standing
+   * between a customer and a card reader.
+   */
+  tipConfig: TipConfig | null;
 }
 
 /**
@@ -520,21 +551,31 @@ async function billFor(
     Math.round(Number(v ?? 0) * 100);
 
   try {
-    const [{ data: rows }, { data: settingRow }] = await Promise.all([
-      supabase
-        .from("booking_line_items")
-        .select("name, price, unit_price, quantity")
-        .eq("booking_id", booking.id)
-        .order("created_at", { ascending: true }),
-      // The FACILITY's tax, not a fixture's. Nothing is added when they have
-      // not configured any — see the banner in lib/settings/tax.ts.
-      supabase
-        .from("facility_settings")
-        .select("value")
-        .eq("facility_id", booking.facility_id)
-        .eq("domain", "tax_config")
-        .maybeSingle(),
-    ]);
+    const [{ data: rows }, { data: settingRow }, { data: tipRow }] =
+      await Promise.all([
+        supabase
+          .from("booking_line_items")
+          .select("name, price, unit_price, quantity")
+          .eq("booking_id", booking.id)
+          .order("created_at", { ascending: true }),
+        // The FACILITY's tax, not a fixture's. Nothing is added when they have
+        // not configured any — see the banner in lib/settings/tax.ts.
+        supabase
+          .from("facility_settings")
+          .select("value")
+          .eq("facility_id", booking.facility_id)
+          .eq("domain", "tax_config")
+          .maybeSingle(),
+        // The tips this facility offers, so the DEVICE shows them. Without this
+        // Clover falls back to whatever was configured on the hardware, which is
+        // the separate-configuration problem the setting exists to remove.
+        supabase
+          .from("facility_settings")
+          .select("value")
+          .eq("facility_id", booking.facility_id)
+          .eq("domain", "tip_config")
+          .maybeSingle(),
+      ]);
 
     return {
       lines: [
@@ -561,6 +602,7 @@ async function billFor(
       ],
       discountCents: cents(booking.discount),
       taxConfig: parseTaxConfig(settingRow?.value),
+      tipConfig: parseTipConfig(tipRow?.value),
     };
   } catch (error) {
     // A bill that cannot be read must not stop a payment: the amount owed comes
@@ -578,6 +620,9 @@ async function billFor(
       ],
       discountCents: cents(booking.discount),
       taxConfig: NO_TAX,
+      // Unreadable settings must not invent a tip prompt. Null means "do not
+      // ask", which is the same answer as tips being switched off.
+      tipConfig: null,
     };
   }
 }
@@ -715,6 +760,18 @@ function formatAddress(
 function parseTaxConfig(value: unknown): TaxConfig {
   const parsed = taxConfigSchema.safeParse(value);
   return parsed.success ? parsed.data : NO_TAX;
+}
+
+/**
+ * The facility's tip settings, or null when they have none we can trust.
+ *
+ * A row that fails the schema is treated as absent rather than repaired. The
+ * consequence of guessing here is a card reader asking a customer for a tip the
+ * facility never configured, on money that is about to move.
+ */
+function parseTipConfig(value: unknown): TipConfig | null {
+  const parsed = tipConfigSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }
 
 /**

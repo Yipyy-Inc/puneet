@@ -31,6 +31,8 @@ import type { CustomerPackageRecord } from "@/data/customer-packages";
 import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
 import { toast } from "sonner";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { TipSelector } from "@/components/bookings/TipSelector";
 
 export type PaymentMethodKind =
   | "card-on-file"
@@ -88,8 +90,6 @@ interface PaymentDialogProps {
   onConfirm: (result: PaymentResult) => void;
 }
 
-const TIP_PRESETS = [0, 15, 18, 20];
-
 function brandLabel(brand: string): string {
   return (
     (
@@ -119,8 +119,11 @@ export function PaymentDialog({
   const [cashReceived, setCashReceived] = useState<string>("");
   const [applyPackagePassId, setApplyPackagePassId] = useState<string>("");
   const [storeCreditApplied, setStoreCreditApplied] = useState<number>(0);
-  const [tipPercent, setTipPercent] = useState<number>(15);
-  const [customTip, setCustomTip] = useState<string>("");
+  // An AMOUNT, not a percentage. The tips on offer are the facility's own
+  // (Settings → Tips) and may be fixed dollars rather than percentages, so a
+  // percent-shaped state cannot represent them. This dialog previously
+  // hardcoded 0/15/18/20 — a set nobody had chosen.
+  const [chosenTip, setChosenTip] = useState<number>(0);
   const [receiptSms, setReceiptSms] = useState(true);
   const [receiptEmail, setReceiptEmail] = useState(true);
 
@@ -137,8 +140,7 @@ export function PaymentDialog({
     setCashReceived("");
     setApplyPackagePassId("");
     setStoreCreditApplied(0);
-    setTipPercent(lockedTipAmount !== undefined ? -1 : 15);
-    setCustomTip(lockedTipAmount !== undefined ? String(lockedTipAmount) : "");
+    setChosenTip(lockedTipAmount ?? 0);
     setReceiptSms(true);
     setReceiptEmail(true);
   }, [open, apt?.id, defaultCard, lockedTipAmount]);
@@ -159,20 +161,19 @@ export function PaymentDialog({
       serviceType: "grooming",
     });
   const loyaltyDiscountAmount = loyaltyDiscount?.amount ?? 0;
+  // The facility's tips, so this dialog offers what every other paying
+  // surface offers. Falls back to the domain default when unconfigured.
+  const tipConfig = useFacilitySettings().settings.tip_config.value;
 
   if (!apt) return null;
 
   const taxAmount = preTaxSubtotal * taxRate;
 
   // Tip: locked from booking, or computed from the chosen preset / custom.
-  const tipAmount = (() => {
-    if (lockedTipAmount !== undefined) return lockedTipAmount;
-    if (tipPercent === -1) {
-      const v = Number(customTip);
-      return Number.isFinite(v) && v >= 0 ? Math.round(v * 100) / 100 : 0;
-    }
-    return Math.round(preTaxSubtotal * (tipPercent / 100) * 100) / 100;
-  })();
+  const tipAmount =
+    lockedTipAmount !== undefined
+      ? lockedTipAmount
+      : Math.round(chosenTip * 100) / 100;
 
   const grandTotal = preTaxSubtotal + taxAmount + tipAmount;
 
@@ -486,47 +487,17 @@ export function PaymentDialog({
               <strong>${lockedTipAmount.toFixed(2)}</strong> · locked from
               online booking. Customer chose this at scheduling.
             </p>
-          ) : (
-            <div className="grid grid-cols-5 gap-1.5">
-              {TIP_PRESETS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setTipPercent(p)}
-                  className={cn(
-                    "rounded-md border px-2 py-1.5 text-center text-xs transition-colors",
-                    tipPercent === p
-                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
-                      : "hover:bg-muted/60",
-                  )}
-                >
-                  {p === 0 ? "No tip" : `${p}%`}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setTipPercent(-1)}
-                className={cn(
-                  "rounded-md border px-2 py-1.5 text-center text-xs transition-colors",
-                  tipPercent === -1
-                    ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
-                    : "hover:bg-muted/60",
-                )}
-              >
-                Custom
-              </button>
-            </div>
-          )}
-          {tipPercent === -1 && lockedTipAmount === undefined && (
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={customTip}
-              onChange={(e) => setCustomTip(e.target.value)}
-              placeholder="0.00"
-              className="mt-2 h-8 text-sm tabular-nums"
+          ) : tipConfig.enabled ? (
+            <TipSelector
+              tipConfig={tipConfig}
+              subtotal={preTaxSubtotal}
+              tipAmount={chosenTip}
+              onTipChange={setChosenTip}
             />
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              Tips are switched off for this facility.
+            </p>
           )}
         </Section>
 

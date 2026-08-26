@@ -32,6 +32,7 @@ import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import { useResolvedTerminal } from "@/lib/api/terminals";
 import { TerminalPicker } from "./TerminalPicker";
+import { TipSelector } from "./TipSelector";
 
 /** One priced line on the printed receipt — the service, an item, a fee. */
 export interface ReceiptDetailLine {
@@ -95,12 +96,6 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   MoreHorizontal: CreditCard,
 };
 
-const TIP_PRESETS = [
-  { label: "10%", multiplier: 0.1 },
-  { label: "15%", multiplier: 0.15 },
-  { label: "20%", multiplier: 0.2 },
-];
-
 export function PaymentCheckoutFlow({
   open,
   onOpenChange,
@@ -130,6 +125,12 @@ export function PaymentCheckoutFlow({
   const [paymentNote, setPaymentNote] = useState("");
 
   const facilitySettings = useFacilitySettings();
+  // Always resolves: an unconfigured facility gets the domain's fallback
+  // (see DEFAULT_TIPS in lib/settings/domains.ts), which is the same set the
+  // Settings → Tips screen shows them. `.configured` says whether they have
+  // actually chosen; nothing here needs to know, since the fallback is a
+  // real answer rather than a placeholder.
+  const tipConfig = facilitySettings.settings.tip_config.value;
 
   const otherTotal = otherUnpaidInvoices
     .filter((i) => includedInvoices.has(i.invoiceId))
@@ -555,61 +556,28 @@ export function PaymentCheckoutFlow({
               The customer is asked for a tip on the terminal.
             </div>
           )}
-          {!isTerminal && method !== "cash" && method !== "custom" && (
-            <div>
-              <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
-                Add Tip (optional)
-              </p>
-              <div className="flex gap-2">
-                {TIP_PRESETS.map((t) => {
-                  const amt = Math.round(amountDue * t.multiplier * 100) / 100;
-                  const active = tipAmount === amt && !customTip;
-                  return (
-                    <button
-                      key={t.label}
-                      onClick={() => handleTipPreset(t.multiplier)}
-                      className={cn(
-                        "flex-1 rounded-lg border px-3 py-2 text-center text-xs font-medium transition-all",
-                        active
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "hover:bg-muted/50",
-                      )}
-                    >
-                      <p>{t.label}</p>
-                      <p className="text-muted-foreground mt-0.5 font-[tabular-nums] text-[10px]">
-                        ${amt.toFixed(2)}
-                      </p>
-                    </button>
-                  );
-                })}
-                <div className="flex-1">
-                  <Input
-                    type="number"
-                    value={customTip}
-                    onChange={(e) => handleCustomTip(e.target.value)}
-                    placeholder="Custom"
-                    min={0}
-                    step={0.01}
-                    className="h-full text-center text-xs"
-                  />
-                </div>
-                <button
-                  onClick={() => {
-                    setTipAmount(0);
-                    setCustomTip("");
-                  }}
-                  className={cn(
-                    "rounded-lg border px-3 py-2 text-xs font-medium transition-all",
-                    tipAmount === 0
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "hover:bg-muted/50",
-                  )}
-                >
-                  No Tip
-                </button>
+          {/* The facility's OWN tips, from Settings → Tips — not three
+              percentages hardcoded here. This dialog carried 10/15/20 while
+              the grooming dialog carried 0/15/18/20 and the pay-by-link page
+              carried another set again, so what a customer was offered
+              depended on which screen took the money. `TipSelector` draws the
+              presets, Custom and No Tip, and resolves the smart tier. */}
+          {!isTerminal &&
+            method !== "cash" &&
+            method !== "custom" &&
+            tipConfig.enabled && (
+              <div>
+                <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
+                  Add Tip (optional)
+                </p>
+                <TipSelector
+                  tipConfig={tipConfig}
+                  subtotal={netAmountDue}
+                  tipAmount={tipAmount}
+                  onTipChange={setTipAmount}
+                />
               </div>
-            </div>
-          )}
+            )}
 
           {/* Summary */}
           <div className="bg-muted/20 rounded-lg border p-3">
