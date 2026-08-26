@@ -4,10 +4,12 @@ import { z } from "zod";
 import { getViewer } from "@/lib/auth/viewer";
 import { holds, myPermissions } from "@/lib/auth/permissions";
 import { createServerClient } from "@/lib/supabase/server";
-import { cloverConfig } from "@/lib/clover/config";
-import { validAccessToken } from "@/lib/clover/connection";
-import { reconcilePayment } from "@/lib/clover/reconcile";
-import { refundOnTerminal } from "@/lib/clover/terminal";
+import {
+  refundableFor,
+  refundPayments,
+  totalRefundable,
+  type RefundablePayment,
+} from "@/lib/clover/refund";
 
 // ============================================================================
 // Giving the money back — actually giving it back.
@@ -26,26 +28,20 @@ import { refundOnTerminal } from "@/lib/clover/terminal";
 // the permission is asked for explicitly first. The policy remains the backstop
 // for every other path.
 //
-// ── THE LEDGER ROW IS NOT WRITTEN HERE ────────────────────────────────────
+// ── THIS ROUTE ONLY CHOOSES WHAT TO REFUND ────────────────────────────────
 //
-// `reconcilePayment` writes it, from what Clover says happened rather than from
-// what we asked for. That matters more than it looks:
+// Everything that actually reverses money lives in `lib/clover/refund.ts`:
+// draining newest-first, the idempotency key, the terminal-vs-ecommerce branch,
+// and writing the ledger row from what Clover says happened rather than from
+// what we asked for. The shop counter needs the identical machinery, so it was
+// extracted rather than copied — see that file for why each step is the shape
+// it is.
 //
-//   a full refund on a same-day charge becomes a VOID, and Clover reports it as
-//   result=VOIDED with an EMPTY refunds array — a different shape entirely from
-//   the partial case, which reports refundType=REFUND and populates refunds[].
-//
-// Writing the row from the request would record the shape we assumed. Writing
-// it from the read records the shape that happened. It is also gap-based and
-// idempotent, so the webhook that arrives seconds later finds nothing left to
-// do rather than double-refunding the books.
-//
-// ── NEWEST FIRST, AND IT SAYS WHAT IT DID ─────────────────────────────────
-//
-// A booking can carry more than one card payment — a deposit and a balance are
-// two. An amount is drained across them from the most recent backwards, and the
-// response reports each one, because "refund $30" against two payments is two
-// events at the processor and the operator should see both.
+// What stays here is the part that is genuinely about bookings: finding the
+// card payments on one, and refusing an amount larger than they still carry.
+// A booking can hold more than one — a deposit and a balance are two — so the
+// response reports each payment separately, because "refund $30" across two of
+// them is two events at the processor and the operator should see both.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -57,16 +53,10 @@ const RefundInput = z.object({
   reason: z.string().max(500).optional(),
 });
 
-interface PaymentRow {
-  id: string;
+type PaymentRow = RefundablePayment & {
   facility_id: string;
-  processor_payment_id: string;
-  grand_total: number;
   created_at: string;
-  /** Set only on a card-present sale — and it decides which Clover this row
-   *  has to be reversed at. See the branch below. */
-  processor_device_serial: string | null;
-}
+};
 
 export async function POST(request: NextRequest) {
   const viewer = await getViewer().catch(() => null);
@@ -124,247 +114,43 @@ export async function POST(request: NextRequest) {
   }
 
   // What each one still has left, after anything already given back.
-  const { data: reversals } = await supabase
-    .from("payments")
-    .select("refund_of_payment_id, grand_total")
-    .in(
-      "refund_of_payment_id",
-      payments.map((p) => p.id),
-    );
+  const refundable = await refundableFor(supabase, payments);
+  const totalCents = totalRefundable(refundable);
 
-  const reversedByPayment = new Map<string, number>();
-  for (const row of reversals ?? []) {
-    const key = row.refund_of_payment_id as string;
-    reversedByPayment.set(
-      key,
-      (reversedByPayment.get(key) ?? 0) +
-        Math.abs(Math.round(Number(row.grand_total) * 100)),
-    );
-  }
-
-  const refundable = payments.map((payment) => ({
-    payment,
-    remaining:
-      Math.round(Number(payment.grand_total) * 100) -
-      (reversedByPayment.get(payment.id) ?? 0),
-  }));
-
-  const totalRefundable = refundable.reduce(
-    (sum, entry) => sum + Math.max(0, entry.remaining),
-    0,
-  );
-  if (totalRefundable <= 0) {
+  if (totalCents <= 0) {
     return NextResponse.json(
       { error: "Everything on this booking has already been refunded." },
       { status: 409 },
     );
   }
 
-  const wanted = parsed.data.amountCents ?? totalRefundable;
-  if (wanted > totalRefundable) {
+  const wanted = parsed.data.amountCents ?? totalCents;
+  if (wanted > totalCents) {
     return NextResponse.json(
       {
-        error: `Only ${(totalRefundable / 100).toFixed(2)} is still refundable on this booking.`,
-        refundableCents: totalRefundable,
+        error: `Only ${(totalCents / 100).toFixed(2)} is still refundable on this booking.`,
+        refundableCents: totalCents,
       },
       { status: 409 },
     );
   }
 
-  const active = await validAccessToken(booking.facility_id);
-  if (!active) {
-    return NextResponse.json(
-      {
-        error:
-          "The connection to Clover could not be used. Reconnect the payment account.",
-      },
-      { status: 503 },
-    );
+  const outcome = await refundPayments({
+    facilityId: booking.facility_id,
+    refundable,
+    wantedCents: wanted,
+    reason: parsed.data.reason,
+  });
+
+  if (!outcome.ok) {
+    return NextResponse.json({ error: outcome.message }, { status: 503 });
   }
 
-  // The merchant's estate, resolved from the token we are about to use.
-  const config = cloverConfig(active.environment);
-  if (!config) {
+  if (outcome.refundedCents === 0) {
     return NextResponse.json(
       {
-        error: `Clover is not configured for ${active.environment}.`,
-      },
-      { status: 503 },
-    );
-  }
-
-  const results: {
-    processorPaymentId: string;
-    amountCents: number;
-    ok: boolean;
-    detail: string;
-  }[] = [];
-  let outstanding = wanted;
-
-  for (const { payment, remaining } of refundable) {
-    if (outstanding <= 0) break;
-    if (remaining <= 0) continue;
-
-    const slice = Math.min(outstanding, remaining);
-
-    // ── OMITTING THE AMOUNT MEANS THE WHOLE ORIGINAL CHARGE ────────────────
-    //
-    // Not "whatever is left". This read `slice === remaining`, which is true of
-    // the LAST slice of an already-part-refunded payment — so refunding the
-    // final $32.50 of a $62.50 charge asked Clover to reverse $62.50 and got
-    // back "Refund bigger than original payment".
-    //
-    // So the amount may only be omitted when nothing has been given back yet
-    // AND this slice covers all of it. Every other case names its figure.
-    const originalCents = Math.round(Number(payment.grand_total) * 100);
-    const full = remaining === originalCents && slice === remaining;
-
-    // Deterministic, and load-bearing twice over: a double-clicked button is
-    // ONE refund because Clover returns the original for a repeated key, and
-    // that same property is what makes the retry below safe. It includes what
-    // was already reversed, so a genuine second refund of the same amount later
-    // is a different key and goes through.
-    const idempotencyKey = `refund:${payment.id}:${remaining}:${slice}`;
-
-    // ── WHICH CLOVER GIVES IT BACK DEPENDS ON HOW IT WAS TAKEN ─────────────
-    //
-    // A card-present sale carries the serial of the device that took it, and
-    // that device is the only thing that can partially reverse it. This route
-    // sent every refund to the ecommerce endpoint until 2026-08-25, and the
-    // debt map called the terminal case an open question. It is answered, in
-    // the sandbox, and the answer is no:
-    //
-    //   POST /v1/refunds {charge: <a terminal payment>, amount: 1}
-    //   -> 400 processing_error
-    //      "Partial refund for order with multiple line items/tip/convenience
-    //       fee is not supported by this api"
-    //
-    // A TIP is enough to trigger that, and the terminal asks for a tip. The
-    // endpoint Clover's own error recommends — /v1/orders/{id}/returns — is
-    // worse than useless here: it answers 200 and refunds the WHOLE order
-    // while echoing the amount you asked for back at you. See the note on
-    // `refundOnTerminal`, which is where that is written down at length.
-    const onDevice = payment.processor_device_serial;
-
-    const send = onDevice
-      ? async () =>
-          refundOnTerminal({
-            facilityId: booking.facility_id,
-            processorPaymentId: payment.processor_payment_id,
-            deviceSerial: onDevice,
-            amountCents: full ? undefined : slice,
-            idempotencyKey,
-          })
-      : async () => {
-          const response = await fetch(
-            new URL("/v1/refunds", config.ecommerceOrigin),
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${active.accessToken}`,
-                "Content-Type": "application/json",
-                "idempotency-key": idempotencyKey,
-                "X-Clover-Merchant-Id": active.merchantId,
-              },
-              // Amount OMITTED only for an untouched payment being reversed
-              // whole. On a same-day charge Clover then reverses the
-              // authorisation outright, which is cheaper for the merchant and
-              // lands as result=VOIDED.
-              body: JSON.stringify({
-                charge: payment.processor_payment_id,
-                ...(full ? {} : { amount: slice }),
-              }),
-              signal: AbortSignal.timeout(30_000),
-            },
-          );
-          const body = (await response.json().catch(() => null)) as {
-            id?: string;
-            message?: string;
-            error?: { message?: string };
-          } | null;
-          return response.ok && Boolean(body?.id)
-            ? ({ ok: true, refundId: body?.id ?? null } as const)
-            : ({
-                ok: false,
-                code: "refused",
-                message:
-                  body?.error?.message ??
-                  body?.message ??
-                  `Clover refused the refund (${response.status}).`,
-              } as const);
-        };
-
-    // ── A THROW IS NOT A FAILURE, IT IS AN UNKNOWN ────────────────────────
-    //
-    // The first version had no catch at all, so a connect timeout to Clover
-    // — which happens — crashed the route and answered with no body, leaving
-    // the caller unable to tell a refused refund from a possible one.
-    //
-    // Retried ONCE, which is safe only because of the idempotency key above:
-    // if the first attempt never arrived the retry creates the refund, and if
-    // it did arrive the retry returns that same one. Exactly one either way.
-    let ok = false;
-    let detail = "";
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const outcome = await send();
-        ok = outcome.ok;
-        detail = outcome.ok ? "" : outcome.message;
-        // A REFUSAL is an answer, and asking twice will not change it — only a
-        // throw is worth retrying. Retrying a 400 would double the wait before
-        // the operator is told what Clover said.
-        break;
-      } catch {
-        detail =
-          "Clover did not answer. The outcome of this refund is unknown until it is checked.";
-      }
-    }
-
-    // Asked REGARDLESS of what happened above. reconcilePayment reads Clover's
-    // own state and writes only the gap, so it is both how the ledger row gets
-    // written on success and how an unknown outcome becomes a known one: if the
-    // refund did land despite the timeout, this finds it.
-    const reconciled = await reconcilePayment(
-      booking.facility_id,
-      payment.processor_payment_id,
-      // The operator's reason, so the row it writes can say why. Parsed since
-      // the first version of this route and dropped on the floor until
-      // 20260825190000 gave `payments` somewhere to put it.
-      parsed.data.reason,
-    );
-
-    if (!ok && reconciled.kind !== "reversed") {
-      results.push({
-        processorPaymentId: payment.processor_payment_id,
-        amountCents: slice,
-        ok: false,
-        detail: `${detail} ${reconciled.detail}`.trim(),
-      });
-      // Stop at the first refusal. Continuing would refund part of what was
-      // asked for while reporting the whole request as failed.
-      break;
-    }
-
-    results.push({
-      processorPaymentId: payment.processor_payment_id,
-      amountCents: slice,
-      ok: true,
-      detail: ok
-        ? reconciled.detail
-        : `Clover did not answer, but the refund had landed: ${reconciled.detail}`,
-    });
-    outstanding -= slice;
-  }
-
-  const refundedCents = results
-    .filter((r) => r.ok)
-    .reduce((sum, r) => sum + r.amountCents, 0);
-
-  if (refundedCents === 0) {
-    return NextResponse.json(
-      {
-        error: results[0]?.detail ?? "The refund did not go through.",
-        results,
+        error: outcome.results[0]?.detail ?? "The refund did not go through.",
+        results: outcome.results,
       },
       { status: 502 },
     );
@@ -372,10 +158,10 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     refunded: true,
-    refundedCents,
+    refundedCents: outcome.refundedCents,
     // Named when it happens rather than hidden: a partial success is a thing
     // the operator has to act on.
-    shortfallCents: wanted - refundedCents,
-    results,
+    shortfallCents: wanted - outcome.refundedCents,
+    results: outcome.results,
   });
 }
