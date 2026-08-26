@@ -26,7 +26,7 @@ Every task follows: **Ground → Plan → Implement → Verify → Encode.**
 
 ## Commands
 
-There **is** a test runner: Playwright, 92 spec files under [tests/e2e/](tests/e2e/), driving a real browser against a real server. It was described here as absent long after it existed. "Green" = the CI gates, the auth & access specs, and a look at the touched journey.
+There **is** a test runner: Playwright, 93 spec files under [tests/e2e/](tests/e2e/), driving a real browser against a real server. It was described here as absent long after it existed. "Green" = the CI gates, the auth & access specs, and a look at the touched journey.
 
 | Command                                | Purpose                                                                                                             |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -36,8 +36,8 @@ There **is** a test runner: Playwright, 92 spec files under [tests/e2e/](tests/e
 | `bun run format:check`                 | Prettier check; `bun run format` to write                                                                           |
 | `bun run build`                        | `next build` — full production build (CI runs this)                                                                 |
 | `bun run prune`                        | Knip — dead-code / unused-export report                                                                             |
-| `bun run test:e2e`                     | The whole Playwright suite (92 files, ~45 min, one worker — see the debt map before trusting a run)                 |
-| `bun run test:e2e:gate`                | The 13 specs CI runs on every push — the authorisation boundary, and money                                          |
+| `bun run test:e2e`                     | The whole Playwright suite (93 files, ~45 min, one worker — see the debt map before trusting a run)                 |
+| `bun run test:e2e:gate`                | The 14 specs CI runs on every push — the authorisation boundary, and money                                          |
 | `bun run test:e2e:ci`                  | The full suite CI runs NIGHTLY — auth & access, daily operations, scheduling, payroll, loyalty, report cards, tasks |
 | `bun run test:sql`                     | The 60 SQL files — RLS, grants, database invariants. Runs in CI. ~90s; needs `SUPABASE_DB_URL`                      |
 | `bun run check:pricing`                | Project-specific pricing-consistency script                                                                         |
@@ -55,9 +55,9 @@ There **is** a test runner: Playwright, 92 spec files under [tests/e2e/](tests/e
 
 **Touching auth, a portal gate, a permission or an identity — or bookings, boarding, daycare, rooms, the care log, the calendar or the roster?** Run `bun run test:e2e:ci` too — the whole thing, by hand, before you push.
 
-**The suite was split on 2026-08-25**, and it is worth knowing why before deciding which to run. 62 specs is roughly 45 minutes; GitHub holds only ONE pending run per branch; so with two people pushing to `main`, each new push cancelled the previously QUEUED run and nothing ever finished. Commits went unverified and production drifted from `main` — not because a test failed, but because no test got to run. The suite length was the cause and everything else was a symptom.
+**The suite was split on 2026-08-25**, and it is worth knowing why before deciding which to run. 63 specs is roughly 45 minutes; GitHub holds only ONE pending run per branch; so with two people pushing to `main`, each new push cancelled the previously QUEUED run and nothing ever finished. Commits went unverified and production drifted from `main` — not because a test failed, but because no test got to run. The suite length was the cause and everything else was a symptom.
 
-So the gate is **13** specs, and it runs on every push: the authorisation boundary (`admin-portal-enforced`, `facility-access-level`, `facility-identity`, `employee-identity`, `server-permissions`, `staff-field-exposure`, `role-editor-writes`, `staff-invite-gate`, `passkey-auth`) and money (`yipyy-pay`, `gift-cards`, `retail-charge`), plus `booking-write-integrity`, which is where a production 500 was once found. And the full suite is **62** specs, running nightly at 03:00 UTC, on `workflow_dispatch`, and whenever you run it yourself. The coverage is not dropped — it is rescheduled.
+So the gate is **14** specs, and it runs on every push: the authorisation boundary (`admin-portal-enforced`, `facility-access-level`, `facility-identity`, `employee-identity`, `server-permissions`, `staff-field-exposure`, `role-editor-writes`, `staff-invite-gate`, `passkey-auth`) and money (`yipyy-pay`, `gift-cards`, `retail-charge`), plus `booking-write-integrity`, which is where a production 500 was once found. And the full suite is **63** specs, running nightly at 03:00 UTC, on `workflow_dispatch`, and whenever you run it yourself. The coverage is not dropped — it is rescheduled.
 
 Let `bun run check:doc-counts` keep both numbers honest rather than trusting this paragraph: they went stale FOUR times before it started deriving them from `package.json`. Each batch earned its place on its first run — the operations set found a production 500 on booking creation, a checkout that priced with no late fee while settings loaded, and an empty board caused by reading a PostgREST to-one relation as an array; the scheduling set found a UTC window that dropped every night shift out of its own day, a wage that could be read but never written, and a groomer told they could see labour cost. `passkey-auth` drives a CDP virtual authenticator, so it is Chromium-only by construction. `booking-payment-ledger` and `booking-payment-screens` joined on 2026-08-25 having sat in NO suite since they were written: the day they were finally run they caught a checkout offering to charge the PRICE on a part-paid booking — $64 asked for on a $64 booking with $16 already paid. **A spec in no suite is not coverage, it is a file.**
 
@@ -108,7 +108,7 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
   have passed, and only then does anything deploy.
 
   **How a change reaches production now:**
-  1. Push to `main`. CI runs the 12-spec gate, the SQL tests and the checks.
+  1. Push to `main`. CI runs the 14-spec gate, the SQL tests and the checks.
   2. On green, the `image` job builds a container and pushes it to GHCR tagged
      with the commit sha.
   3. The `deploy` job SSHes to the VPS and runs `/opt/yipyy/deploy.sh <sha>`,
