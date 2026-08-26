@@ -193,7 +193,12 @@ begin
   begin  -- a saved card on a cash payment
     insert into public.payments (facility_id, method, subtotal, tax, tip, amount_charged,
                                  grand_total, cash_received, saved_card_id)
-    values ('00000000-0000-0000-0000-00000012d020', 'cash', 80, 10, 5, 95, 95, 100, 'card_x');
+    -- A uuid, since saved_card_id became one when saved_cards arrived
+    -- (20260826170000). The CHECK is what must refuse this row, so the value
+    -- has to be well-formed enough to REACH it — 'card_x' now fails at the
+    -- type cast instead, which would pass this test for the wrong reason.
+    values ('00000000-0000-0000-0000-00000012d020', 'cash', 80, 10, 5, 95, 95, 100,
+            '00000000-0000-0000-0000-00000012dfff');
     bad := bad + 1;
   exception when check_violation then null; end;
   -- Not vacuous: a correct cash payment with credit applied.

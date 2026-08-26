@@ -88,8 +88,33 @@ export interface ChargeRequest {
   subtotalCents: number;
   taxCents?: number;
   tipCents?: number;
-  /** The `clv_` token the browser produced. Never a card number. */
+  /**
+   * What to charge.
+   *
+   * Either the `clv_` token the browser produced — never a card number — or a
+   * Clover CUSTOMER id, when charging a card the cardholder stored earlier.
+   * Clover accepts both in the same field, which is why one engine serves both.
+   */
   source: string;
+  /**
+   * Set when `source` names a stored card rather than a fresh token.
+   *
+   * Clover requires a `stored_credentials` object on any charge against a
+   * credential the cardholder is not entering right now, and the card networks
+   * price and dispute those differently. Getting it wrong is not a technical
+   * detail: an unflagged merchant-initiated charge is one a customer can more
+   * easily claim they never authorised.
+   */
+  storedCard?: {
+    /**
+     * Who set this charge in motion. `merchant` for anything scheduled or
+     * taken without the customer present; `cardholder` when they are on the
+     * screen choosing to pay with a card they saved earlier.
+     */
+    initiator: "merchant" | "cardholder";
+    /** True only for a charge on a schedule the customer agreed to. */
+    scheduled: boolean;
+  };
   createdBy: string | null;
   authorName?: string;
   /**
@@ -293,6 +318,23 @@ export async function chargeCard(
           // Card not present, entered by the cardholder online.
           ecomind: "ecom",
           capture: true,
+          // ── A STORED CARD IS DECLARED AS ONE ──────────────────────────
+          //
+          // Omitted entirely for an ordinary token charge, because
+          // `sequence: FIRST` on a card nobody stored would be a claim about
+          // a credential that does not exist. Present only when the caller
+          // says this is a stored credential, and then it must be accurate:
+          // the networks treat merchant-initiated charges differently for
+          // pricing and for disputes.
+          ...(request.storedCard
+            ? {
+                stored_credentials: {
+                  initiator: request.storedCard.initiator,
+                  sequence: "SUBSEQUENT",
+                  is_scheduled: request.storedCard.scheduled,
+                },
+              }
+            : {}),
         }),
         signal: AbortSignal.timeout(30_000),
       },

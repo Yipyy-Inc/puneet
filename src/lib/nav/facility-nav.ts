@@ -264,6 +264,18 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Financial",
     items: [
       {
+        // Every payment, whichever channel took it — the same list that sits
+        // in Settings → Yipyy Pay → Transactions, given an address somebody
+        // would think to visit. `financial_view_amounts` rather than
+        // `financial_take_payment`: reading the day's takings is not the same
+        // permission as putting a card through, and the bookkeeper holds only
+        // the first.
+        title: "Payments",
+        url: "/facility/dashboard/payments",
+        icon: CreditCard,
+        permKey: "financial_view_amounts",
+      },
+      {
         title: "Payments & Billing",
         url: "/facility/dashboard/billing",
         icon: DollarSign,
