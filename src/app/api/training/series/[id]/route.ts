@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import { deniedIfUntouched } from "@/lib/api/rls-write";
+import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 import type {
   RealTrainingSeries,
   RealTrainingSeriesSession,
@@ -13,7 +15,7 @@ const SERIES_SELECT = `
   id, facility_id, location_id, staff_id, name, course_type_name,
   day_of_week, start_time, duration_minutes, start_date, number_of_sessions,
   capacity, total_price, status, created_at, updated_at,
-  locations(name), staff(first_name, last_name)
+  locations(name), staff(first_name, last_name), facilities(timezone)
 `;
 
 interface SeriesRow {
@@ -35,6 +37,7 @@ interface SeriesRow {
   updated_at: string;
   locations: { name: string } | null;
   staff: { first_name: string; last_name: string } | null;
+  facilities: { timezone: string } | null;
 }
 
 interface SessionRow {
@@ -119,18 +122,103 @@ export async function GET(
     updatedAt: row.updated_at,
   };
 
+  const timeZone = row.facilities?.timezone ?? DEFAULT_TIMEZONE;
   const sessions: RealTrainingSeriesSession[] = (
     (sessionRows ?? []) as SessionRow[]
-  ).map((s) => ({
-    id: s.id,
-    seriesId: s.series_id,
-    sessionNumber: s.session_number,
-    startAt: s.start_at,
-    endAt: s.end_at,
-    status: s.status,
-  }));
+  ).map((s) => {
+    const wallClock = wallClockParts(s.start_at, timeZone);
+    return {
+      id: s.id,
+      seriesId: s.series_id,
+      sessionNumber: s.session_number,
+      startAt: s.start_at,
+      endAt: s.end_at,
+      startDate: wallClock.date,
+      startTime: wallClock.time,
+      status: s.status,
+    };
+  });
 
   return NextResponse.json({ series, sessions });
+}
+
+interface SeriesPatchInput {
+  name?: string;
+  courseTypeName?: string;
+  locationId?: string | null;
+  staffId?: string | null;
+  capacity?: number;
+  totalPrice?: number;
+}
+
+/**
+ * Editing what's safe to edit after a series exists. The schedule (day, time,
+ * duration, start date, number of sessions) is deliberately not here --
+ * changing it would mean regenerating sessions that may already have real
+ * bookings against them, which is its own, later change (see the migration
+ * header). Cancelling the series and creating a new one is today's answer
+ * for a schedule change.
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+  const { id } = await params;
+
+  const input = (await request
+    .json()
+    .catch(() => null)) as SeriesPatchInput | null;
+  if (!input) {
+    return NextResponse.json({ error: "Nothing to save." }, { status: 422 });
+  }
+  if (input.capacity !== undefined && input.capacity < 0) {
+    return NextResponse.json(
+      { error: "Capacity cannot be negative." },
+      { status: 422 },
+    );
+  }
+  if (input.totalPrice !== undefined && input.totalPrice < 0) {
+    return NextResponse.json(
+      { error: "Price cannot be negative." },
+      { status: 422 },
+    );
+  }
+
+  const patch: Record<string, unknown> = {};
+  if (input.name !== undefined) patch.name = input.name.trim();
+  if (input.courseTypeName !== undefined) {
+    patch.course_type_name = input.courseTypeName;
+  }
+  if (input.locationId !== undefined) patch.location_id = input.locationId;
+  if (input.staffId !== undefined) patch.staff_id = input.staffId;
+  if (input.capacity !== undefined) patch.capacity = input.capacity;
+  if (input.totalPrice !== undefined) patch.total_price = input.totalPrice;
+
+  const supabase = await createServerClient();
+  const { data, error } = await supabase
+    .from("training_series")
+    .update(patch as never)
+    .eq("id", id)
+    .select("id");
+
+  if (error) {
+    return writeFailure(error, {
+      denied: "Not allowed to edit training classes at this facility.",
+      duplicate: "",
+    });
+  }
+
+  const denied = deniedIfUntouched(
+    data,
+    "Not allowed to edit training classes at this facility.",
+  );
+  if (denied) return denied;
+
+  return NextResponse.json({ ok: true });
 }
 
 /**
@@ -166,10 +254,11 @@ export async function DELETE(
     });
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("training_series")
     .update({ status: "cancelled" })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
 
   if (error) {
     return writeFailure(error, {
@@ -177,6 +266,12 @@ export async function DELETE(
       duplicate: "",
     });
   }
+
+  const denied = deniedIfUntouched(
+    data,
+    "Not allowed to cancel training classes at this facility.",
+  );
+  if (denied) return denied;
 
   return NextResponse.json({ ok: true });
 }
