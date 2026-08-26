@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { facilityParentHost } from "@/lib/app-host";
 
 // ============================================================================
 // Whether this facility takes customers who arrive on their own.
@@ -47,7 +48,8 @@ export async function GET() {
   return NextResponse.json({
     facilityName: context.name,
     slug: data?.slug ?? null,
-    appDomain: process.env.NEXT_PUBLIC_APP_DOMAIN ?? null,
+    // The host the facility's own sign-up page lives on: `<slug>.app.yipyy.com`.
+    appDomain: facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN),
     allowCustomerSignup: data?.allow_customer_signup === true,
   });
 }

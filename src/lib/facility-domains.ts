@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createServerClient } from "@/lib/supabase/server";
+import { facilityParentHost } from "@/lib/app-host";
 
 // ============================================================================
 // A facility's web address.
@@ -49,8 +50,13 @@ export function facilityHost(slug: string, appDomain: string): string {
   return `${slug.trim().toLowerCase()}.${appDomain.trim().toLowerCase()}`;
 }
 
+/**
+ * The host facilities hang off — `app.yipyy.com` since 2026-08-26, not the
+ * apex. Everything in this module builds `<slug>.<this>`, so it is the only
+ * line that had to move when facilities did.
+ */
 function appDomain(): string | null {
-  return process.env.NEXT_PUBLIC_APP_DOMAIN?.trim().toLowerCase() || null;
+  return facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN);
 }
 
 /**

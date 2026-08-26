@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
 import { facilitySlugFromHost } from "@/lib/facility-host";
-import { appOrigin } from "@/lib/app-host";
+import { appOrigin, facilityParentHost } from "@/lib/app-host";
 import { redirectUrl } from "@/lib/request-origin";
 
 // ============================================================================
@@ -107,7 +107,9 @@ export async function GET(request: NextRequest) {
   // which is the ordinary case this file was optimised for.
   const slug = facilitySlugFromHost(
     request.headers.get("host"),
-    process.env.NEXT_PUBLIC_APP_DOMAIN,
+    // `pawradise.app.yipyy.com`, not `pawradise.yipyy.com` — the old shape is
+    // redirected by the proxy before it reaches here.
+    facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN),
   );
 
   if (slug && viewer.source === "session" && viewer.memberships.length > 0) {
