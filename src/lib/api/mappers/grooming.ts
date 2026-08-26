@@ -48,7 +48,7 @@ export const SERVICE_SELECT = `
   grooming_service_size_prices ( size_label, price, duration_min, location_id )
 ` as const;
 
-interface SizePriceRow {
+export interface SizePriceRow {
   size_label: string;
   price: number;
   duration_min: number | null;
@@ -135,6 +135,43 @@ function effectiveSizePricing(
     }
   }
   return sizePricing;
+}
+
+/** One location's own size-price rows, for a cross-location comparison.
+ *
+ * Every row here is an OVERRIDE -- `location_id is null` (the facility-wide
+ * default) is excluded, because that is what `sizePricing` on the same
+ * service already carries. A location absent from this array charges the
+ * facility-wide price for every size, unchanged.
+ *
+ * For HQ Services only. The single-facility rates screen resolves ONE
+ * location's effective price via `effectiveSizePricing` above and has no use
+ * for the other branches' rows.
+ */
+export function perLocationSizePricing(
+  rows: SizePriceRow[],
+): { locationId: string; sizePricing: Partial<Record<PetSize, number>> }[] {
+  const byLocation = new Map<string, SizePriceRow[]>();
+  for (const row of rows) {
+    if (row.location_id === null) continue;
+    const list = byLocation.get(row.location_id) ?? [];
+    list.push(row);
+    byLocation.set(row.location_id, list);
+  }
+  return Array.from(byLocation.entries()).map(([locationId, locationRows]) => {
+    const sizePricing: Partial<Record<PetSize, number>> = {};
+    for (const p of locationRows) {
+      if (
+        p.size_label === "small" ||
+        p.size_label === "medium" ||
+        p.size_label === "large" ||
+        p.size_label === "giant"
+      ) {
+        sizePricing[p.size_label] = Number(p.price);
+      }
+    }
+    return { locationId, sizePricing };
+  });
 }
 
 export function rowToService(

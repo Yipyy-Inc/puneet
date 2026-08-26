@@ -1,16 +1,22 @@
+"use client";
+
 import { ServiceCatalogClient } from "@/components/hq/ServiceCatalogClient";
-import {
-  masterServices,
-  locationServiceOverrides,
-} from "@/data/service-catalog";
-import { getLocationsByFacility } from "@/data/locations";
+import { useHqGroomingServices } from "@/lib/api/hq-services";
+import { useFacilityLocations } from "@/lib/api/locations";
 
 export default function HQServicesPage() {
-  return (
-    <ServiceCatalogClient
-      masterServices={masterServices}
-      overrides={locationServiceOverrides}
-      locations={getLocationsByFacility(11)}
-    />
-  );
+  const { data: services = [], isPending: servicesPending } =
+    useHqGroomingServices();
+  const { data: locations = [], isPending: locationsPending } =
+    useFacilityLocations();
+
+  if (servicesPending || locationsPending) {
+    return (
+      <div className="text-muted-foreground p-8 text-center text-sm">
+        Loading…
+      </div>
+    );
+  }
+
+  return <ServiceCatalogClient services={services} locations={locations} />;
 }
