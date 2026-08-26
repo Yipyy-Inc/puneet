@@ -73,6 +73,19 @@ export async function GET(request: NextRequest) {
   // Clover webhook, the customer sign-in. Always allowed.
   if (domain === appDomain || domain === `www.${appDomain}`) return ALLOW;
 
+  // ── AND `app`, WHICH IS WHERE THE SOFTWARE LIVES ────────────────────────
+  //
+  // Named explicitly, because the check below would refuse it: `app` is one of
+  // the 37 RESERVED labels in `facility-host.ts`, so `facilitySlugFromHost`
+  // answers null for it exactly as it does for `mail` or `admin`. That is
+  // correct — no facility may ever be called `app` — but it also meant
+  // app.yipyy.com could not obtain a certificate at all, and the TLS handshake
+  // failed before any of it reached the application.
+  //
+  // Being reserved is what makes this safe rather than a hole: the name cannot
+  // collide with a tenant, so allowing it authorises exactly one hostname.
+  if (domain === `app.${appDomain}`) return ALLOW;
+
   // Everything else must be a facility subdomain of OUR domain. This is the
   // same pure function `src/proxy.ts` uses to decide which facility a request
   // is about, so a hostname that cannot name a facility cannot mint a
