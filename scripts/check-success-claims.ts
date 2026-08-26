@@ -77,7 +77,6 @@ const BASELINE = new Set<string>([
   "src/components/facility/ImpersonationBanner.tsx",
   "src/components/facility/grooming/appointment-detail-page.tsx",
   "src/components/facility/operations/OperationsCalendarEventDrawer.tsx",
-  "src/components/hq/clients/ClientsHqClient.tsx",
 ]);
 
 /**
