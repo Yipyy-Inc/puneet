@@ -46,6 +46,7 @@ export const EMPLOYEE_ROUTE_BY_FACILITY_URL: Record<string, string> = {
   "/facility/services/memberships": "/employee/memberships",
   "/facility/dashboard/petcams": "/employee/petcams",
   // Financial
+  "/facility/dashboard/payments": "/employee/payments",
   "/facility/dashboard/billing": "/employee/billing",
   "/facility/dashboard/billing/cash-drawer": "/employee/register",
   "/facility/dashboard/payroll": "/employee/payroll",
