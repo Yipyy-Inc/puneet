@@ -1155,6 +1155,18 @@ The simulator is deleted and the function is gone. **The business-rule ladder is
 
 **The lesson, not the fix:** "there is no id" and "nothing here can reach the id" produce identical symptoms and take opposite work to solve. Check which one before planning against it.
 
+### 🟢 The certificate gate was asking a retired container (fixed 2026-08-26)
+
+`on_demand_tls { ask http://app:3000/... }` in the Caddyfile. Both colours carry the `app` network alias — the previous one is deliberately **left running** so a rollback is one reload — so Docker DNS answered with either, and the decision about whether a hostname may have a certificate was a coin flip between the live code and the retired code.
+
+**Invisible for as long as both colours agree**, which is every deploy that does not change `/api/internal/tls-ask`. It surfaced the moment one did: facilities moved to `<slug>.app.yipyy.com`, `app_blue` (new) allowed the shape and `app_green` (still running, old) refused it, so a first visit to a facility failed its TLS handshake about half the time. Measured, not inferred — `app_blue` answered 200 and `app_green` 403 for the same hostname, at the same second.
+
+**Fixed on the box, not in this repo** (`/opt/yipyy/`): the Caddyfile now does `import ask.caddy`, and `deploy.sh` rewrites `caddy/ask.caddy` to name the colour it just made live, beside the `upstream.caddy` rewrite it already did. Both revert paths restore it too, so a failed deploy cannot leave the gate pointed at a container that is about to stop.
+
+**Why it is worth knowing beyond this one bug:** anything the app answers that Caddy consults during a handshake is subject to the same split brain. `tls-ask` is the only such endpoint today. If another is ever added, it must be asked of the live colour by name, never of the `app` alias.
+
+**Not covered by a test.** `tls-ask.spec.ts` asserts what the gate answers, which is necessary and was not sufficient — the gate was correct and was being asked of the wrong process. Verifying that would mean asserting against deployment topology, which the suite has no access to.
+
 ### 🟢 A facility is `<slug>.app.yipyy.com` (moved 2026-08-26)
 
 Facilities hung off the apex (`pawradise.yipyy.com`) until the marketing split; they hang off the app host now.
