@@ -11,8 +11,6 @@ import {
   Sun,
 } from "lucide-react";
 
-import { appOrigin } from "@/lib/app-host";
-
 import { WaitlistForm } from "./_components/waitlist-form";
 import styles from "./coming-soon.module.css";
 
@@ -67,16 +65,13 @@ const SERVICES = [
 ] as const;
 
 export default function ComingSoonPage() {
-  // ── THE WAY BACK IN, FOR PEOPLE WHO ALREADY HAVE AN ACCOUNT ─────────────
+  // ── NO WAY BACK INTO THE APP FROM HERE, DELIBERATELY ────────────────────
   //
-  // yipyy.com serves this page now and the software is app.yipyy.com, so
-  // somebody who has bookmarked the apex lands here. No session is read to
-  // decide that — the page is identical for everybody and stays cacheable —
-  // they simply get a link. Absent only if NEXT_PUBLIC_APP_DOMAIN is unset,
-  // where a guessed origin would send them somewhere their session cookie does
-  // not reach.
-  const signIn = appOrigin(process.env.NEXT_PUBLIC_APP_DOMAIN);
-
+  // This page is written for strangers. A sign-in link sat beside the status
+  // pill until 2026-08-26 and was removed on request: the apex is the public
+  // face of the product, and somebody who already has an account reaches the
+  // software at its own address. Everything on this page stays session-free
+  // and cacheable, which is what the removal preserves.
   return (
     <div className={`${poppins.variable} ${styles.page}`}>
       <div className={styles.vignette} aria-hidden="true" />
@@ -108,16 +103,9 @@ export default function ComingSoonPage() {
             className={styles.logo}
             priority
           />
-          <div className={styles.headerRight}>
-            {signIn && (
-              <a className={styles.signIn} href={signIn}>
-                Sign in
-              </a>
-            )}
-            <div className={styles.badge}>
-              <span className={styles.badgeDot} aria-hidden="true" />
-              <span className={styles.badgeText}>Launching 2026</span>
-            </div>
+          <div className={styles.badge}>
+            <span className={styles.badgeDot} aria-hidden="true" />
+            <span className={styles.badgeText}>Launching 2026</span>
           </div>
         </header>
 

@@ -1244,7 +1244,9 @@ Facilities hung off the apex (`pawradise.yipyy.com`) until the marketing split; 
 
 **Only `/` moved.** Every other path on the apex still serves the app, so no existing link or bookmark broke on the day of the split — `yipyy.com/sign-in` and `yipyy.com/dashboard` still work. Localhost and `*.test` never match, so `/` in development still opens the portal.
 
-**Still open:** the apex does not know whether you are signed in — deliberately, so the most cacheable URL on the site carries no session branch. Somebody with an account who opens `yipyy.com` gets the marketing page and a "Sign in" link to `app.yipyy.com`, which is what every marketing site does. If that is ever judged wrong, the cookie is already wide enough to decide it per-identity.
+**Still open:** the apex does not know whether you are signed in — deliberately, so the most cacheable URL on the site carries no session branch. Somebody with an account who opens `yipyy.com` gets the marketing page and nothing else: a quiet "Sign in" link to `app.yipyy.com` sat beside the status pill until **2026-08-26**, when it was removed on request. The page is for strangers, and people with accounts reach the software at its own address.
+
+Two things to know before adding one back. `/sign-in` still answers **200 on the apex** and on every other host, so nobody is locked out — the door was un-advertised, not closed. And `appOrigin()` in `lib/app-host.ts` went with the link, since it was the only caller; `facilityParentHost()` already returns the same host if a future caller needs it. If the decision is ever revisited per-identity, the cookie is already wide enough — but that would put a session branch on the most cacheable URL on the site, which is the thing this page was built to avoid.
 
 ### 🟡 The waitlist list is "people who typed an address", not a consented mailing list
 
