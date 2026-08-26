@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -355,6 +355,7 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"];
           tip_amount: number | null;
           total_cost: number;
+          training_series_session_id: string | null;
           updated_at: string;
         };
         Insert: {
@@ -381,6 +382,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"];
           tip_amount?: number | null;
           total_cost?: number;
+          training_series_session_id?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -407,6 +409,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"];
           tip_amount?: number | null;
           total_cost?: number;
+          training_series_session_id?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -443,6 +446,13 @@ export type Database = {
             columns: ["location_id"];
             isOneToOne: false;
             referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bookings_training_series_session_id_fkey";
+            columns: ["training_series_session_id"];
+            isOneToOne: false;
+            referencedRelation: "training_series_sessions";
             referencedColumns: ["id"];
           },
         ];
@@ -7507,6 +7517,205 @@ export type Database = {
           },
         ];
       };
+      training_series: {
+        Row: {
+          capacity: number;
+          course_type_name: string;
+          created_at: string;
+          day_of_week: number;
+          duration_minutes: number;
+          facility_id: string;
+          id: string;
+          location_id: string | null;
+          name: string;
+          number_of_sessions: number;
+          staff_id: string | null;
+          start_date: string;
+          start_time: string;
+          status: string;
+          total_price: number;
+          updated_at: string;
+        };
+        Insert: {
+          capacity?: number;
+          course_type_name?: string;
+          created_at?: string;
+          day_of_week: number;
+          duration_minutes: number;
+          facility_id: string;
+          id?: string;
+          location_id?: string | null;
+          name: string;
+          number_of_sessions: number;
+          staff_id?: string | null;
+          start_date: string;
+          start_time: string;
+          status?: string;
+          total_price?: number;
+          updated_at?: string;
+        };
+        Update: {
+          capacity?: number;
+          course_type_name?: string;
+          created_at?: string;
+          day_of_week?: number;
+          duration_minutes?: number;
+          facility_id?: string;
+          id?: string;
+          location_id?: string | null;
+          name?: string;
+          number_of_sessions?: number;
+          staff_id?: string | null;
+          start_date?: string;
+          start_time?: string;
+          status?: string;
+          total_price?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_series_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_series_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_series_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "training_series_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      training_series_enrollments: {
+        Row: {
+          client_id: string;
+          created_at: string;
+          enrolled_at: string;
+          facility_id: string;
+          id: string;
+          pet_id: string;
+          series_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          created_at?: string;
+          enrolled_at?: string;
+          facility_id: string;
+          id?: string;
+          pet_id: string;
+          series_id: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          created_at?: string;
+          enrolled_at?: string;
+          facility_id?: string;
+          id?: string;
+          pet_id?: string;
+          series_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_series_enrollments_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_series_enrollments_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_series_enrollments_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_series_enrollments_series_id_fkey";
+            columns: ["series_id"];
+            isOneToOne: false;
+            referencedRelation: "training_series";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      training_series_sessions: {
+        Row: {
+          created_at: string;
+          end_at: string;
+          facility_id: string;
+          id: string;
+          series_id: string;
+          session_number: number;
+          start_at: string;
+          status: string;
+        };
+        Insert: {
+          created_at?: string;
+          end_at: string;
+          facility_id: string;
+          id?: string;
+          series_id: string;
+          session_number: number;
+          start_at: string;
+          status?: string;
+        };
+        Update: {
+          created_at?: string;
+          end_at?: string;
+          facility_id?: string;
+          id?: string;
+          series_id?: string;
+          session_number?: number;
+          start_at?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_series_sessions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_series_sessions_series_id_fkey";
+            columns: ["series_id"];
+            isOneToOne: false;
+            referencedRelation: "training_series";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       training_trainer_profiles: {
         Row: {
           bio: string;
@@ -8259,6 +8468,46 @@ export type Database = {
           booking_ref: number;
         }[];
       };
+      create_training_series: {
+        Args: {
+          p_capacity?: number;
+          p_course_type_name?: string;
+          p_day_of_week: number;
+          p_duration_minutes: number;
+          p_facility_id: string;
+          p_location_id?: string;
+          p_name: string;
+          p_number_of_sessions: number;
+          p_staff_id?: string;
+          p_start_date: string;
+          p_start_time: string;
+          p_total_price?: number;
+        };
+        Returns: {
+          capacity: number;
+          course_type_name: string;
+          created_at: string;
+          day_of_week: number;
+          duration_minutes: number;
+          facility_id: string;
+          id: string;
+          location_id: string | null;
+          name: string;
+          number_of_sessions: number;
+          staff_id: string | null;
+          start_date: string;
+          start_time: string;
+          status: string;
+          total_price: number;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "training_series";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       disconnect_payment_connection: {
         Args: { p_facility_id: string; p_processor?: string; p_reason: string };
         Returns: {
@@ -8269,6 +8518,15 @@ export type Database = {
       dismiss_unattached_payment: {
         Args: { p_id: string; p_note: string };
         Returns: boolean;
+      };
+      enroll_in_training_series: {
+        Args: {
+          p_client_id: string;
+          p_join_waitlist?: boolean;
+          p_pet_id: string;
+          p_series_id: string;
+        };
+        Returns: Json;
       };
       facility_branding_by_slug: {
         Args: { p_slug: string };
@@ -9029,6 +9287,10 @@ export type Database = {
           shift_id: string;
           starts_at: string;
         }[];
+      };
+      withdraw_from_training_series: {
+        Args: { p_enrollment_id: string };
+        Returns: undefined;
       };
     };
     Enums: {
