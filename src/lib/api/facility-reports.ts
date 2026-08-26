@@ -3,12 +3,16 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 // ============================================================================
-// The six facility reports that have a real source.
+// The facility reports that have a real source.
 //
-// Each shape below mirrors what the fixture selector it replaces used to
+// Six shapes below mirror what the fixture selector they replace used to
 // return, deliberately: the chart and table JSX in `report-sheet.tsx` is ~700
 // lines of working code, and converting the DATA without rewriting the
-// rendering is what makes this a conversion rather than a rebuild.
+// rendering is what makes this a conversion rather than a rebuild. The
+// seventh, `training-attendance-by-location`, has no fixture counterpart to
+// mirror — it answers only what a training booking and its attendance record
+// can say (bookings, check-ins, check-outs, per branch). "Classes" and
+// "enrollments" have no real table and stay unanswered rather than invented.
 //
 // Two columns are absent on purpose and their absence is the finding:
 //
@@ -115,6 +119,19 @@ export interface ServiceMixByLocationData {
   previous: ServiceLocationRevenue[];
 }
 
+export interface TrainingAttendanceByLocation {
+  locationId: string | null;
+  location: string;
+  bookings: number;
+  checkedIn: number;
+  checkedOut: number;
+}
+
+export interface TrainingAttendanceByLocationData {
+  current: TrainingAttendanceByLocation[];
+  previous: TrainingAttendanceByLocation[];
+}
+
 export interface OccupancyData {
   current: OccupancyDay[];
   previous: OccupancyDay[];
@@ -149,6 +166,7 @@ export type ReportDataset =
   | RevenueByServiceData
   | RevenueByLocationData
   | ServiceMixByLocationData
+  | TrainingAttendanceByLocationData
   | OccupancyData
   | CancelledData
   | CustomerValueData

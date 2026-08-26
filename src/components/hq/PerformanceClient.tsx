@@ -30,6 +30,13 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { locationStyles } from "@/lib/hq/location-styles";
+import {
+  PERIODS,
+  periodLabel,
+  periodWindow,
+  pctChange,
+  type PeriodKey,
+} from "@/lib/hq/period-window";
 import { HqKpiTile } from "@/components/hq/HqKpiTile";
 import {
   HqComparisonTable,
@@ -157,83 +164,6 @@ const CATEGORY_TABS: {
   { key: "operational", label: "Operations", icon: Activity },
   { key: "staff", label: "Staff", icon: Users },
 ];
-
-type PeriodKey = "week" | "month" | "quarter" | "year" | "custom";
-
-const PERIODS: { key: PeriodKey; label: string }[] = [
-  { key: "week", label: "This Week" },
-  { key: "month", label: "This Month" },
-  { key: "quarter", label: "This Quarter" },
-  { key: "year", label: "Last 12 Months" },
-  { key: "custom", label: "Custom" },
-];
-
-function periodLabel(period: PeriodKey, customFrom: string, customTo: string) {
-  switch (period) {
-    case "week":
-      return "This Week";
-    case "month":
-      return "This Month";
-    case "quarter":
-      return "This Quarter";
-    case "year":
-      return "Last 12 Months";
-    case "custom":
-      return customFrom && customTo
-        ? `${customFrom} – ${customTo}`
-        : "Custom range";
-  }
-}
-
-/** The real report window for the period selector. Unlike the fixture this
- *  replaced (a monthly baseline scaled by a factor), this is the ACTUAL date
- *  range sent to `facility_report_dataset` -- the server derives the previous
- *  window of the same length itself, so growth is a real comparison, not an
- *  invented one. */
-function periodWindow(
-  period: PeriodKey,
-  customFrom: string,
-  customTo: string,
-): { from: string; to: string } {
-  const now = new Date();
-  switch (period) {
-    case "week": {
-      const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      const from = new Date(to);
-      from.setDate(from.getDate() - 7);
-      return { from: from.toISOString(), to: to.toISOString() };
-    }
-    case "month": {
-      const from = new Date(now.getFullYear(), now.getMonth(), 1);
-      const to = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      return { from: from.toISOString(), to: to.toISOString() };
-    }
-    case "quarter": {
-      const qStart = Math.floor(now.getMonth() / 3) * 3;
-      const from = new Date(now.getFullYear(), qStart, 1);
-      const to = new Date(now.getFullYear(), qStart + 3, 1);
-      return { from: from.toISOString(), to: to.toISOString() };
-    }
-    case "year": {
-      const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      const from = new Date(to);
-      from.setFullYear(from.getFullYear() - 1);
-      return { from: from.toISOString(), to: to.toISOString() };
-    }
-    case "custom": {
-      if (!customFrom || !customTo) return periodWindow("month", "", "");
-      return {
-        from: new Date(`${customFrom}T00:00:00`).toISOString(),
-        to: new Date(`${customTo}T23:59:59`).toISOString(),
-      };
-    }
-  }
-}
-
-function pctChange(current: number, previous: number): number {
-  if (previous === 0) return current === 0 ? 0 : 100;
-  return +(((current - previous) / previous) * 100).toFixed(1);
-}
 
 function ChangeChip({
   value,
