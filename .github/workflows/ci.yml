@@ -423,6 +423,12 @@ jobs:
         env:
           E2E_BASE_URL: http://localhost:3000
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          # The RUNNER needs this too, not just the build and the server.
+          # `tls-ask.spec.ts` asks the certificate gate about `<host>.<apex>`,
+          # and the gate compares against the apex the APP was built with — so
+          # the harness has to be told the same value or it asserts against a
+          # different domain than the server is answering for.
+          NEXT_PUBLIC_APP_DOMAIN: yipyy.test
           WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY }}
           WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
