@@ -391,11 +391,16 @@ jobs:
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_WORKOS_REDIRECT_URI: http://localhost:3000/auth/callback
           NEXT_PUBLIC_APP_DOMAIN: yipyy.test
-          # Mirrors production (`.yipyy.com`). The proxy refuses to move
-          # anybody between hosts without a leading-dot cookie domain,
-          # because a host-only cookie would sign them out — so without
-          # this the portal-per-host rules are simply inert in CI.
-          WORKOS_COOKIE_DOMAIN: .yipyy.test
+          # ── DO NOT ADD WORKOS_COOKIE_DOMAIN HERE ──────────────────────────
+          #
+          # It is tempting, to make `host-routing.spec.ts` exercise the
+          # cross-host redirects the way production does. It breaks the ENTIRE
+          # suite: AuthKit would set the session cookie for `.yipyy.test`, the
+          # browser visiting http://localhost:3000 rejects a cookie for a domain
+          # it is not under, and every sign-in ends in `/api/permissions -> 401`.
+          # Measured on 2026-08-26 — one run spent forty minutes retrying before
+          # the cause was found, and the same probe passes in 6 seconds without
+          # it.
         run: bun run build
 
       # Backgrounded with a readiness poll rather than a fixed sleep: the first
@@ -411,7 +416,6 @@ jobs:
           WORKOS_COOKIE_PASSWORD: ${{ secrets.WORKOS_COOKIE_PASSWORD }}
           NEXT_PUBLIC_WORKOS_REDIRECT_URI: http://localhost:3000/auth/callback
           NEXT_PUBLIC_APP_DOMAIN: yipyy.test
-          WORKOS_COOKIE_DOMAIN: .yipyy.test
         run: |
           bun run start --port 3000 > /tmp/server.log 2>&1 &
           for i in $(seq 1 60); do
@@ -435,11 +439,6 @@ jobs:
           # the harness has to be told the same value or it asserts against a
           # different domain than the server is answering for.
           NEXT_PUBLIC_APP_DOMAIN: yipyy.test
-          # `host-routing.spec.ts` asserts the cross-host redirects, which the
-          # proxy only performs when the session cookie spans hosts. The runner
-          # checks the same variable the app does, and fails loudly rather than
-          # passing over rules that were never exercised.
-          WORKOS_COOKIE_DOMAIN: .yipyy.test
           WORKOS_API_KEY: ${{ secrets.WORKOS_API_KEY }}
           WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

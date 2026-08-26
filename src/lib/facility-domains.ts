@@ -51,12 +51,28 @@ export function facilityHost(slug: string, appDomain: string): string {
 }
 
 /**
- * The host facilities hang off — `app.yipyy.com` since 2026-08-26, not the
- * apex. Everything in this module builds `<slug>.<this>`, so it is the only
- * line that had to move when facilities did.
+ * The two parents a facility hangs off, in the order they matter.
+ *
+ * ── A FACILITY HAS TWO ADDRESSES ──────────────────────────────────────────
+ *
+ * `<slug>.app.yipyy.com` is where its STAFF work; `<slug>.yipyy.com` is where
+ * its CUSTOMERS go. Both are served, both need a certificate, and warming only
+ * one leaves the other's first visitor paying the 5–7 second ACME round trip
+ * this module exists to spend in the background instead.
+ *
+ * The staff host is first because it is the one the platform screens print as
+ * "this facility's address" — the customer host is the business's own front
+ * door rather than something a Yipyy administrator manages.
  */
+function facilityParents(): string[] {
+  const apex = process.env.NEXT_PUBLIC_APP_DOMAIN?.trim().toLowerCase() || null;
+  const staff = facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN);
+  return [staff, apex].filter((value): value is string => Boolean(value));
+}
+
+/** The address the platform screens mean by "this facility's host". */
 function appDomain(): string | null {
-  return facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN);
+  return facilityParents()[0] ?? null;
 }
 
 /**
@@ -106,10 +122,19 @@ export async function attachFacilityDomain(
   }
 
   const host = facilityHost(slug, domain);
+
+  // BOTH addresses, in parallel. Warming only the staff host would leave the
+  // facility's first CUSTOMER waiting on ACME — the exact cost this function
+  // exists to move into the background.
+  //
   // Deliberately unawaited in spirit but awaited in fact: the caller runs this
   // post-commit and non-fatally, and an 8s ceiling is cheaper than explaining a
   // cold first visit.
-  const warmed = await serves(host);
+  const warmed = (
+    await Promise.all(
+      facilityParents().map((parent) => serves(facilityHost(slug, parent))),
+    )
+  ).every(Boolean);
 
   return {
     attached: true,
@@ -136,14 +161,20 @@ export async function facilityDomainStatus(
   }
 
   const host = facilityHost(slug, domain);
-  const live = await serves(host);
+  const live = (
+    await Promise.all(
+      facilityParents().map((parent) => serves(facilityHost(slug, parent))),
+    )
+  ).every(Boolean);
 
   if (!live) {
     return {
       attached: false,
       host,
       reason:
-        "The address did not answer. Check that the wildcard DNS record still points at this server.",
+        "One of this facility's two addresses did not answer — staff at " +
+        "<slug>.app or customers at <slug>. Check that the wildcard DNS record " +
+        "still points at this server.",
     };
   }
 
@@ -179,10 +210,15 @@ export async function attachedProjectHosts(): Promise<AttachedHosts> {
     };
   }
 
+  // Both addresses per facility, so a screen checking "is this one attached"
+  // against the set does not report a facility broken because it looked up the
+  // host the visitor is actually on rather than the one this list happened to
+  // pick.
+  const parents = facilityParents();
   const hosts = (data ?? [])
     .map((row) => (row.slug ?? "").trim().toLowerCase())
     .filter(Boolean)
-    .map((slug) => facilityHost(slug, domain));
+    .flatMap((slug) => parents.map((parent) => facilityHost(slug, parent)));
 
   return { configured: true, hosts };
 }

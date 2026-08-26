@@ -1167,6 +1167,18 @@ The simulator is deleted and the function is gone. **The business-rule ladder is
 
 **Not covered by a test.** `tls-ask.spec.ts` asserts what the gate answers, which is necessary and was not sufficient — the gate was correct and was being asked of the wrong process. Verifying that would mean asserting against deployment topology, which the suite has no access to.
 
+### 🔴 Never set WORKOS_COOKIE_DOMAIN in CI — it breaks every sign-in
+
+The cross-host redirects are guarded on `WORKOS_COOKIE_DOMAIN` starting with a dot, so the obvious way to exercise them in CI is to set it. **Do not.**
+
+CI serves the app at `http://localhost:3000`. With the variable set, AuthKit sets the session cookie for `.yipyy.test`, and a browser at `localhost` rejects a cookie for a domain it is not under. Every sign-in then ends in `/api/permissions -> 401` — not an error, just no session — so every authenticated spec retries to its timeout. One run spent **forty minutes** doing that before the cause was found.
+
+Confirmed by measurement rather than reasoning: the same probe against a local server fails with the variable set and passes in 6.6 seconds without it.
+
+**So the redirect assertions in `tests/e2e/host-routing.spec.ts` skip in CI, by design**, and the file says where they DO run — locally with the variable set, and against a deployment. The tests either side of that block need no cookie and run on every push: sign-in reachable on every host, `/api/*` never redirected, a facility's branding on both of its addresses, and marketing at the apex. Those are what catch a hostname being decoded wrongly, which is the likeliest regression.
+
+The workflow now carries a comment where the variable would be added, so the next person reaches the answer before the forty minutes.
+
 ### 🟢 Four addresses, four audiences (2026-08-26)
 
 | Host                   | Audience                      | Portal                                                       |
