@@ -66,15 +66,20 @@ test.describe("the certificate-issuance gate", () => {
   });
 
   test("allows the hosts the platform itself runs on", async ({ page }) => {
-    for (const host of [APEX, `www.${APEX}`, `app.${APEX}`]) {
+    // `hq` joined these on 2026-08-26 — Yipyy's own staff run the platform from
+    // there, and like `app` it is safe to allow by name precisely BECAUSE it is
+    // reserved: no facility can hold the slug, in TypeScript or in Postgres
+    // (20260826140000), so this authorises exactly one hostname.
+    for (const host of [APEX, `www.${APEX}`, `app.${APEX}`, `hq.${APEX}`]) {
       const response = await ask(page, host);
       expect(response.status(), `${host} should be allowed`).toBe(200);
     }
   });
 
   test("refuses a reserved label that is not one of them", async ({ page }) => {
-    // `app` is allowed by name above; every other reserved label must still be
-    // refused, or the carve-out has been written too wide. Checked under BOTH
+    // `app` and `hq` are allowed as THEMSELVES above; every reserved label
+    // must still be refused as a FACILITY, or the carve-out has been written
+    // too wide. `hq.app.yipyy.com` is nobody's business. Checked under BOTH
     // addresses, because a facility now hangs off `app.<apex>` and the reserved
     // list has to hold there too — `mail.app.yipyy.com` is no more a facility
     // than `mail.yipyy.com` was.
@@ -83,6 +88,15 @@ test.describe("the certificate-issuance gate", () => {
         const response = await ask(page, host);
         expect(response.status(), `${host} should be refused`).toBe(403);
       }
+    }
+
+    // `app` and `hq` are the two exceptions, and only as THEMSELVES. Under the
+    // facility parent they are ordinary reserved labels naming no business, so
+    // `hq.app.<apex>` and `app.app.<apex>` must be refused exactly as `mail` is
+    // — the carve-outs above are for one hostname each, not for a prefix.
+    for (const host of [`hq.app.${APEX}`, `app.app.${APEX}`]) {
+      const response = await ask(page, host);
+      expect(response.status(), `${host} should be refused`).toBe(403);
     }
   });
 

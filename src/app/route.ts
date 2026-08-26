@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
 import { facilitySlugFromHost } from "@/lib/facility-host";
-import { appOrigin, facilityParentHost } from "@/lib/app-host";
+import { facilityParentHost, platformOriginFor } from "@/lib/app-host";
 import { redirectUrl } from "@/lib/request-origin";
 
 // ============================================================================
@@ -144,18 +144,16 @@ export async function GET(request: NextRequest) {
       // and this is the kind of cookie trap that fails silently in production
       // and looks like a session bug.
       const cookieDomain = process.env.WORKOS_COOKIE_DOMAIN?.trim() ?? "";
-      // ── app.yipyy.com, NOT THE APEX ──────────────────────────────────────
+      // ── hq.yipyy.com — THE PLATFORM PORTAL'S OWN ADDRESS ─────────────────
       //
-      // This pointed at `https://${apex}/dashboard`, which was right until
-      // 2026-08-26. The apex serves the coming-soon page at `/` now, and
-      // sending a platform admin to the marketing site's domain to reach a
-      // portal is at best confusing — the software has its own address.
-      // `/dashboard` on the apex still works, so this is about naming the
-      // canonical host rather than about a broken path.
-      const app = appOrigin(process.env.NEXT_PUBLIC_APP_DOMAIN);
+      // This pointed at the apex, then at app.yipyy.com, and neither is right
+      // now: Yipyy's own staff run the platform from `hq.yipyy.com`. Sent here
+      // directly rather than left to the proxy's portal↔host redirect, which
+      // would reach the same place in two hops instead of one.
+      const platform = platformOriginFor(process.env.NEXT_PUBLIC_APP_DOMAIN);
 
-      if (cookieDomain.startsWith(".") && app) {
-        const away = new URL(`${app}/dashboard`);
+      if (cookieDomain.startsWith(".") && platform) {
+        const away = new URL(`${platform}/dashboard`);
         return NextResponse.redirect(away, 307);
       }
     }

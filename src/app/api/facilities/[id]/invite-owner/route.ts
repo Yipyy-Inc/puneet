@@ -4,7 +4,7 @@ import { z } from "zod";
 import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { buildOwnerInviteEmail } from "@/lib/facility-owner-invite-email";
-import { facilityOrigin } from "@/lib/public-origin";
+import { facilityStaffLinkOrigin } from "@/lib/public-origin";
 
 // ============================================================================
 // Inviting a facility's owner — sending, re-sending, withdrawing, and reading
@@ -135,7 +135,7 @@ export async function POST(
     .eq("id", facilityId)
     .maybeSingle();
 
-  const origin = facilityOrigin(facility?.slug, request);
+  const origin = facilityStaffLinkOrigin(facility?.slug, request);
 
   // Already registered means the grant was claimed inline and their access is
   // live now — so send them to sign IN, not to a sign-up screen that would

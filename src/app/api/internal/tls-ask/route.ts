@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getBrandingBySlug } from "@/lib/api/facility-branding";
 import { facilitySlugFromHost } from "@/lib/facility-host";
-import { facilityParentHost } from "@/lib/app-host";
+import { facilityParentHost, platformHost } from "@/lib/app-host";
 
 // ============================================================================
 // Which hostnames may have a TLS certificate issued for them.
@@ -87,13 +87,20 @@ export async function GET(request: NextRequest) {
   // collide with a tenant, so allowing it authorises exactly one hostname.
   if (domain === `app.${appDomain}`) return ALLOW;
 
-  // ── A FACILITY, UNDER EITHER ADDRESS ────────────────────────────────────
+  // ── AND `hq`, WHERE YIPYY'S OWN STAFF RUN THE PLATFORM ──────────────────
   //
-  // `pawradise.app.yipyy.com` is where facilities live from 2026-08-26. The old
-  // `pawradise.yipyy.com` is still allowed a certificate, and has to be: the
-  // proxy answers those names with a 308 to the new host, and a redirect cannot
-  // be served over a TLS connection that was never established. Booking
-  // confirmations and review invitations already sent carry the old shape.
+  // Same shape and same justification as `app` above: `hq` is RESERVED — in
+  // `facility-host.ts` and, since 20260826140000, in Postgres — so no facility
+  // can hold the slug and this authorises exactly one hostname.
+  if (domain === platformHost(appDomain)) return ALLOW;
+
+  // ── A FACILITY HAS TWO ADDRESSES, AND BOTH ARE REAL ─────────────────────
+  //
+  // `pawradise.app.yipyy.com` is where that facility's STAFF work.
+  // `pawradise.yipyy.com` is where its CUSTOMERS go. Both need a certificate
+  // because both are served — the second is not a legacy shape kept alive for a
+  // redirect, which is what it was for a few hours on 2026-08-26 before the
+  // customer portal was given its own host.
   //
   // Both go through the same pure function `src/proxy.ts` uses, so a hostname
   // that cannot name a facility cannot mint a certificate either — including
