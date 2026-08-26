@@ -74,18 +74,58 @@ test.describe("the certificate-issuance gate", () => {
 
   test("refuses a reserved label that is not one of them", async ({ page }) => {
     // `app` is allowed by name above; every other reserved label must still be
-    // refused, or the carve-out has been written too wide.
+    // refused, or the carve-out has been written too wide. Checked under BOTH
+    // addresses, because a facility now hangs off `app.<apex>` and the reserved
+    // list has to hold there too — `mail.app.yipyy.com` is no more a facility
+    // than `mail.yipyy.com` was.
     for (const label of ["mail", "admin", "api", "staging", "cdn"]) {
-      const response = await ask(page, `${label}.${APEX}`);
-      expect(response.status(), `${label} should be refused`).toBe(403);
+      for (const host of [`${label}.${APEX}`, `${label}.app.${APEX}`]) {
+        const response = await ask(page, host);
+        expect(response.status(), `${host} should be refused`).toBe(403);
+      }
     }
   });
 
-  test("refuses a subdomain that names no facility", async ({ page }) => {
-    // The quota protection. A wildcard DNS record means this name resolves
-    // here; nothing else stops a certificate being minted for it.
-    const response = await ask(page, `definitely-not-a-facility-xyz.${APEX}`);
-    expect(response.status()).toBe(403);
+  test("refuses a subdomain that names no facility, under either address", async ({
+    page,
+  }) => {
+    // The quota protection. A wildcard DNS record means both of these names
+    // resolve here; nothing else stops a certificate being minted for them.
+    for (const host of [
+      `definitely-not-a-facility-xyz.${APEX}`,
+      `definitely-not-a-facility-xyz.app.${APEX}`,
+    ]) {
+      const response = await ask(page, host);
+      expect(response.status(), `${host} should be refused`).toBe(403);
+    }
+  });
+
+  test("refuses a name too deep to be a facility", async ({ page }) => {
+    // A facility is exactly ONE label in front of `app.<apex>`. Allowing two
+    // would make `a.b.app.yipyy.com` and `b.app.yipyy.com` resolve to different
+    // slugs for the same business, and mint certificates for both.
+    for (const host of [
+      `a.b.app.${APEX}`,
+      `a.b.${APEX}`,
+      `pawradise.app.app.${APEX}`,
+    ]) {
+      const response = await ask(page, host);
+      expect(response.status(), `${host} should be refused`).toBe(403);
+    }
+  });
+
+  test("still answers for the address facilities used to have", async ({
+    page,
+  }) => {
+    // `<slug>.yipyy.com` is answered with a 308 to `<slug>.app.yipyy.com`, and
+    // a redirect cannot be served over a TLS connection that was never
+    // established. So the OLD shape must keep earning a certificate for as long
+    // as links already sent are still being opened.
+    //
+    // Asserted as "not a hard refusal of the shape": a real slug is allowed and
+    // an invented one is refused, which is the same rule as the new address.
+    const invented = await ask(page, `no-such-facility-abc.${APEX}`);
+    expect(invented.status()).toBe(403);
   });
 
   test("refuses a domain that is not ours at all", async ({ page }) => {

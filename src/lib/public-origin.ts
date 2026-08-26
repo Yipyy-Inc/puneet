@@ -1,5 +1,7 @@
 import "server-only";
 
+import { facilityParentHost } from "@/lib/app-host";
+
 // ============================================================================
 // Where a link we PUT IN AN EMAIL should point.
 //
@@ -75,8 +77,10 @@ export function facilityOrigin(
   slug: string | null | undefined,
   request: Request,
 ): string {
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN?.trim();
+  // `<slug>.app.yipyy.com`. A link in an email outlives the redirect that
+  // rescues the old shape, so mail sent from today names the new host directly.
+  const parent = facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN);
   const trimmed = slug?.trim().toLowerCase();
-  if (appDomain && trimmed) return `https://${trimmed}.${appDomain}`;
+  if (parent && trimmed) return `https://${trimmed}.${parent}`;
   return platformOrigin(request);
 }

@@ -4,7 +4,7 @@ import {
   partitionAuthkitHeaders,
 } from "@workos-inc/authkit-nextjs";
 import { facilitySlugFromHost } from "@/lib/facility-host";
-import { isMarketingHost } from "@/lib/app-host";
+import { facilityParentHost, isMarketingHost } from "@/lib/app-host";
 import { NextResponse, type NextRequest } from "next/server";
 
 // ============================================================================
@@ -85,7 +85,8 @@ export async function proxy(request: NextRequest) {
     "x-facility-slug",
     facilitySlugFromHost(
       request.headers.get("host"),
-      process.env.NEXT_PUBLIC_APP_DOMAIN,
+      // The APP host, not the apex: a facility is `pawradise.app.yipyy.com`.
+      facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN),
     ) ?? "",
   );
 
@@ -114,6 +115,56 @@ export async function proxy(request: NextRequest) {
   // it carries a "Sign in" link to app.yipyy.com for whoever already has an
   // account. Deciding it per-identity would put a session branch on the most
   // cacheable URL we have, to save one click.
+  // ── THE ADDRESS FACILITIES USED TO HAVE ─────────────────────────────────
+  //
+  // `pawradise.yipyy.com` was a facility's host until 2026-08-26 and
+  // `pawradise.app.yipyy.com` is now. Those old names are in booking
+  // confirmations, review invitations and staff invites that have already been
+  // sent, so they are redirected rather than dropped — a 308, because the move
+  // is permanent and the method must survive it (a POST to an old host is a
+  // form somebody is submitting, and 302 would turn it into a GET).
+  //
+  // Nobody is signed out by this: the session cookie is scoped to `.yipyy.com`,
+  // which spans both names.
+  //
+  // `app.yipyy.com` itself cannot match — `app` is a RESERVED label, so
+  // `facilitySlugFromHost` answers null for it — and neither can the apex.
+  const legacySlug = facilitySlugFromHost(
+    request.headers.get("host"),
+    process.env.NEXT_PUBLIC_APP_DOMAIN,
+  );
+  const parent = facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN);
+
+  if (legacySlug && parent) {
+    // ── BUILT FROM THE HOST HEADER, AND `hostname` NOT `host` ─────────────
+    //
+    // `request.url` is not usable here: self-hosted, Next resolves it from the
+    // address the server is LISTENING on, which is how a redirect once pointed
+    // at `https://0.0.0.0:3000` (see src/lib/request-origin.ts). The Host
+    // header is what the visitor actually typed.
+    //
+    // And `hostname`, because assigning `host` a value with no port RETAINS
+    // the existing one — the first version produced
+    // `https://pawradise.app.yipyy.test:3100/`. `hostname` leaves the port
+    // alone, which is what keeps this correct on :3100 in development and
+    // portless in production.
+    const rawHost = request.headers.get("host") ?? "";
+    const local =
+      rawHost.includes("localhost") ||
+      rawHost.startsWith("127.0.0.1") ||
+      rawHost.endsWith(".test") ||
+      rawHost.includes(".test:");
+    const proto =
+      request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
+      (local ? "http" : "https");
+
+    const moved = new URL(
+      `${proto}://${rawHost}${request.nextUrl.pathname}${request.nextUrl.search}`,
+    );
+    moved.hostname = `${legacySlug}.${parent}`;
+    return NextResponse.redirect(moved, 308);
+  }
+
   if (marketing) {
     const target = request.nextUrl.clone();
     target.pathname = "/coming-soon";

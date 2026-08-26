@@ -1155,6 +1155,23 @@ The simulator is deleted and the function is gone. **The business-rule ladder is
 
 **The lesson, not the fix:** "there is no id" and "nothing here can reach the id" produce identical symptoms and take opposite work to solve. Check which one before planning against it.
 
+### 🟢 A facility is `<slug>.app.yipyy.com` (moved 2026-08-26)
+
+Facilities hung off the apex (`pawradise.yipyy.com`) until the marketing split; they hang off the app host now.
+
+**`NEXT_PUBLIC_APP_DOMAIN` still holds the APEX, and must.** One variable answers two questions and only the second one moved: `isMarketingHost()` and the apex's own certificate are still measured against `yipyy.com`, while `facilityParentHost()` in `lib/app-host.ts` derives `app.yipyy.com` for everything facility-shaped. Setting the variable to `app.yipyy.com` — the obvious "fix" — makes the marketing domain foreign to its own deployment and costs it its certificate. There is one accessor; route new code through it.
+
+**`facilitySlugFromHost` did not change.** It still demands EXACTLY ONE label before whatever parent it is given, so `a.b.app.yipyy.com` resolves to nothing. Passing the parent instead of the apex was the entire change.
+
+**Old addresses are redirected, not dropped.** `<slug>.yipyy.com/*` answers 308 to `<slug>.app.yipyy.com/*` in `src/proxy.ts` — booking confirmations, review invitations and staff invites already sent carry the old shape. 308 rather than 302 so a POST survives as a POST. Nobody is signed out: the session cookie is `.yipyy.com`, which spans both. `/api/internal/tls-ask` therefore still issues certificates for the OLD shape too — a redirect cannot be served over a TLS connection that was never established.
+
+**Two ordering traps, both paid for here:**
+
+1. **Caddy first, code second.** Caddy's `@foreign` matcher used `*.yipyy.com`, and a Caddy `*` matches ONE label — so `pawradise.app.yipyy.com` was aborted as foreign. Deploying the code first would have started redirecting every facility to a host Caddy refused. The matcher now reads `*.yipyy.com *.app.yipyy.com yipyy.com`.
+2. **`url.hostname`, never `url.host`.** Assigning `host` a value with no port RETAINS the existing port, so the first redirect pointed at `https://…:3100/`. And the URL is built from the Host header, not `request.url`, for the reason `lib/request-origin.ts` documents at length.
+
+**Still open:** DNS resolves `*.app.yipyy.com` today only because the `*.yipyy.com` wildcard synthesises for it — there is no closer node. If anybody ever adds an explicit `app.yipyy.com` A record, every facility host under it becomes NXDOMAIN in one edit. Add `*.app.yipyy.com` explicitly before touching that zone.
+
 ### 🟢 yipyy.com is the marketing site; app.yipyy.com is the software (done 2026-08-26)
 
 `yipyy.com` and `www.yipyy.com` serve the coming-soon page at `/`. `app.yipyy.com` serves the application. `<slug>.yipyy.com` is unchanged.

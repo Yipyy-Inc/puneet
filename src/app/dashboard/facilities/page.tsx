@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/sheet";
 
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
+import { facilityParentHost } from "@/lib/app-host";
 import {
   Plus,
   Download,
@@ -272,7 +273,9 @@ export default function FacilitiesPage() {
   // reached. Both mean "do not claim anything" -- an unchecked facility must
   // not be badged as broken, which would send somebody to fix what is not wrong.
   const unattachedHost = useMemo(() => {
-    const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN;
+    // `app.yipyy.com`, not the apex — a facility is `<slug>.app.yipyy.com`
+    // since 2026-08-26, and `hostState.hosts` is built from the same accessor.
+    const appDomain = facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN);
     if (!hostState?.configured || !appDomain) return null;
     const attached = new Set(hostState.hosts.map((h) => h.toLowerCase()));
     return (slug: string) =>
@@ -415,7 +418,7 @@ export default function FacilitiesPage() {
             {unattachedHost?.(facility.slug) && (
               <span
                 className="flex items-center gap-1 text-xs font-normal text-amber-600"
-                title={`${facility.slug}.${process.env.NEXT_PUBLIC_APP_DOMAIN} is not attached, so this facility's own login page does not open. Fix it from their Overview tab.`}
+                title={`${facility.slug}.${facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN)} is not attached, so this facility's own login page does not open. Fix it from their Overview tab.`}
               >
                 <AlertTriangle className="size-3.5 shrink-0" />
                 no web address

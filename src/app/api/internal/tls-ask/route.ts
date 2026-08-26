@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getBrandingBySlug } from "@/lib/api/facility-branding";
 import { facilitySlugFromHost } from "@/lib/facility-host";
+import { facilityParentHost } from "@/lib/app-host";
 
 // ============================================================================
 // Which hostnames may have a TLS certificate issued for them.
@@ -86,12 +87,22 @@ export async function GET(request: NextRequest) {
   // collide with a tenant, so allowing it authorises exactly one hostname.
   if (domain === `app.${appDomain}`) return ALLOW;
 
-  // Everything else must be a facility subdomain of OUR domain. This is the
-  // same pure function `src/proxy.ts` uses to decide which facility a request
-  // is about, so a hostname that cannot name a facility cannot mint a
-  // certificate either — including the 37 reserved labels, so `admin.yipyy.com`
-  // and `mail.yipyy.com` are refused here as firmly as they are there.
-  const slug = facilitySlugFromHost(domain, appDomain);
+  // ── A FACILITY, UNDER EITHER ADDRESS ────────────────────────────────────
+  //
+  // `pawradise.app.yipyy.com` is where facilities live from 2026-08-26. The old
+  // `pawradise.yipyy.com` is still allowed a certificate, and has to be: the
+  // proxy answers those names with a 308 to the new host, and a redirect cannot
+  // be served over a TLS connection that was never established. Booking
+  // confirmations and review invitations already sent carry the old shape.
+  //
+  // Both go through the same pure function `src/proxy.ts` uses, so a hostname
+  // that cannot name a facility cannot mint a certificate either — including
+  // the 37 reserved labels, so `admin.yipyy.com` and `mail.yipyy.com` are
+  // refused here as firmly as they are there.
+  const parent = facilityParentHost(appDomain);
+  const slug =
+    (parent ? facilitySlugFromHost(domain, parent) : null) ??
+    facilitySlugFromHost(domain, appDomain);
   if (!slug) return DENY;
 
   // And the facility has to actually exist. A wildcard DNS record means every

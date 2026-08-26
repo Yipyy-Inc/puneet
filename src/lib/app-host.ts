@@ -54,6 +54,38 @@ export function isMarketingHost(
 }
 
 /**
+ * The host facilities live under — `app.<apex>`.
+ *
+ * ── THEY MOVED, AND `NEXT_PUBLIC_APP_DOMAIN` DID NOT ──────────────────────
+ *
+ * A facility was `pawradise.yipyy.com` until 2026-08-26 and is
+ * `pawradise.app.yipyy.com` now: the software has its own address, and the
+ * businesses running on it belong under that address rather than beside the
+ * marketing site.
+ *
+ * The variable still holds the APEX. It is tempting to "fix" it to
+ * `app.yipyy.com` and delete this function — do not. `isMarketingHost` above
+ * measures the apex with it, `/api/internal/tls-ask` decides the apex's own
+ * certificate with it, and setting it to the app host would make the marketing
+ * domain foreign to its own deployment. One variable, two questions, and this
+ * is the second one.
+ *
+ * `facilitySlugFromHost` still requires EXACTLY ONE label before whatever it is
+ * given, so passing this rather than the apex is the whole change:
+ * `pawradise.app.yipyy.com` has one label before `app.yipyy.com`, and
+ * `a.b.app.yipyy.com` still resolves to nothing.
+ */
+export function facilityParentHost(
+  appDomain: string | null | undefined,
+): string | null {
+  const apex = appDomain
+    ?.trim()
+    .toLowerCase()
+    .replace(/^\.|\.$/g, "");
+  return apex ? `app.${apex}` : null;
+}
+
+/**
  * Where the application lives, as an absolute origin.
  *
  * Returns `null` when the app domain is unset, and every caller must treat that
