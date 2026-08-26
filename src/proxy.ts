@@ -4,6 +4,7 @@ import {
   partitionAuthkitHeaders,
 } from "@workos-inc/authkit-nextjs";
 import { facilitySlugFromHost } from "@/lib/facility-host";
+import { isMarketingHost } from "@/lib/app-host";
 import { NextResponse, type NextRequest } from "next/server";
 
 // ============================================================================
@@ -51,7 +52,23 @@ export async function proxy(request: NextRequest) {
     authkitHeaders,
   );
 
-  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+  // ── WHICH PATH IS ACTUALLY BEING SERVED ─────────────────────────────────
+  //
+  // The apex rewrite below changes that, so this is computed first and stamped
+  // once. Setting the incoming `/` here and rewriting afterwards would leave
+  // every downstream reader — the portal gates, and the root layout deciding
+  // whether the page paints its own footer — believing it is serving `/`.
+  const marketing =
+    request.nextUrl.pathname === "/" &&
+    isMarketingHost(
+      request.headers.get("host"),
+      process.env.NEXT_PUBLIC_APP_DOMAIN,
+    );
+
+  requestHeaders.set(
+    "x-pathname",
+    marketing ? "/coming-soon" : request.nextUrl.pathname,
+  );
 
   // Which facility this hostname names (spec 002 D2: pawradise.yipyy.com).
   // `null` for the apex, www, localhost and previews — i.e. "this is Yipyy
@@ -71,6 +88,40 @@ export async function proxy(request: NextRequest) {
       process.env.NEXT_PUBLIC_APP_DOMAIN,
     ) ?? "",
   );
+
+  // ── THE APEX IS A MARKETING PAGE NOW ────────────────────────────────────
+  //
+  // yipyy.com and www.yipyy.com serve the coming-soon page at `/`; the software
+  // is app.yipyy.com. A REWRITE rather than a redirect, so the address bar
+  // still reads yipyy.com — a marketing front door that bounces to /coming-soon
+  // is a worse link to hand anybody.
+  //
+  // ── WHY HERE AND NOT IN src/app/route.ts ────────────────────────────────
+  //
+  // Because that file cannot do it. It is a Route Handler, and its header
+  // explains at length why: as a page calling redirect() it shipped React error
+  // #310 to production. A Route Handler renders nothing, so it cannot serve a
+  // page — and a page cannot share the segment with it. The proxy is the only
+  // place that sees the Host header before routing decides anything.
+  //
+  // ── ONLY `/`, AND ONLY THOSE TWO HOSTS ──────────────────────────────────
+  //
+  // Every other path on the apex still serves the app, so no existing link or
+  // bookmark breaks. Facility subdomains never match. Neither does localhost or
+  // `*.test`, so `/` in development still opens the portal.
+  //
+  // No session is read to decide this: the page is the same for everybody, and
+  // it carries a "Sign in" link to app.yipyy.com for whoever already has an
+  // account. Deciding it per-identity would put a session branch on the most
+  // cacheable URL we have, to save one click.
+  if (marketing) {
+    const target = request.nextUrl.clone();
+    target.pathname = "/coming-soon";
+    const rewritten = NextResponse.rewrite(target, {
+      request: { headers: requestHeaders },
+    });
+    return applyResponseHeaders(rewritten, responseHeaders);
+  }
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   return applyResponseHeaders(response, responseHeaders);

@@ -1155,19 +1155,25 @@ The simulator is deleted and the function is gone. **The business-rule ladder is
 
 **The lesson, not the fix:** "there is no id" and "nothing here can reach the id" produce identical symptoms and take opposite work to solve. Check which one before planning against it.
 
-### 🟡 The coming-soon page is built but is NOT yet the front door (2026-08-26)
+### 🟢 yipyy.com is the marketing site; app.yipyy.com is the software (done 2026-08-26)
 
-`/coming-soon` is the marketing page from Claude Design, implemented for real: a Server Component with one client island (the form), Poppins scoped to the route via `next/font` rather than added to the root layout, and `POST /api/waitlist` writing a genuine `waitlist_signups` row. **It is reachable at `/coming-soon` and nothing about the live domain has changed yet.**
+`yipyy.com` and `www.yipyy.com` serve the coming-soon page at `/`. `app.yipyy.com` serves the application. `<slug>.yipyy.com` is unchanged.
 
-**The intended end state is a domain split** — `yipyy.com` serves this page, `app.yipyy.com` serves the software, `<slug>.yipyy.com` keeps serving facilities. It was deliberately NOT done in the same change, because the cutover touches authentication and the failure mode is silent:
+**It turned out to need far less than the plan assumed, and the reasons are worth keeping:**
 
-- **`WORKOS_COOKIE_DOMAIN`.** `src/app/route.ts` already documents this trap at length: the AuthKit cookie spans `yipyy.com` and `app.yipyy.com` only if the value is a leading-dot domain. Get it wrong and every signed-in user is quietly signed out on the first cross-host redirect.
-- **WorkOS redirect URIs** are registered against the current host and must gain the new one BEFORE the DNS moves, or sign-in breaks for everyone at once.
-- **`NEXT_PUBLIC_APP_DOMAIN`** is what `facilitySlugFromHost()` measures subdomains against. It stays `yipyy.com` — `app` is already in that file's `RESERVED` set, so `app.yipyy.com` cannot be mistaken for a facility. That part needs no change and should not be "tidied".
-- **Caddy** serves both hosts; on-demand TLS asks `/api/internal`, which is excluded from the proxy matcher for a reason spelled out there.
-- **`src/app/route.ts` stays a Route Handler.** It is not a page, and the header explains the production crash (React error #310) that made it one. Serving the coming-soon page at the apex means a host check, never converting that handler into `page.tsx`.
+- **`WORKOS_COOKIE_DOMAIN` was ALREADY `.yipyy.com`** in production. The documented trap — a host-only cookie silently signing everyone out across hosts — did not apply, because the widened cookie was already there.
+- **WorkOS needed no change at all.** A wildcard redirect URI `https://*.yipyy.com/auth/callback` was already registered, and the app builds its redirect from `requestOrigin()` rather than from a pinned env var, so `app.yipyy.com` was covered before it existed.
+- **DNS needed no change.** A wildcard `*.yipyy.com` record already points every name at the VPS.
+- **Caddy needed no change.** `app.yipyy.com` matches the catch-all `https://` block and is not `@foreign`.
+- **`NEXT_PUBLIC_APP_DOMAIN` stays `yipyy.com`.** It is the apex that subdomains are MEASURED AGAINST, not where the app lives. Changing it to `app.yipyy.com` would make every facility resolve as `<slug>.app.yipyy.com` and none of them exist.
 
-**Do:** treat the cutover as its own change with a rollback, and confirm sign-in on all three host shapes before calling it done.
+**The one thing that did block it: the TLS certificate.** `app` is one of the 37 RESERVED labels, so `facilitySlugFromHost` answered null and `/api/internal/tls-ask` refused issuance — the handshake failed before anything reached the app. It is now allowed by name, which is safe precisely BECAUSE the label is reserved: no facility can ever be called `app`, so the carve-out authorises exactly one hostname. `tests/e2e/tls-ask.spec.ts` (gate + nightly) asserts the allow list, every other reserved label still refused, unknown subdomains refused, and foreign domains refused.
+
+**The rewrite lives in `src/proxy.ts`, and it has to.** `src/app/route.ts` is a Route Handler and cannot render a page — its header documents the React #310 crash that made it one, and a page cannot share the segment. The proxy is the only place that sees the Host header before routing. It is a REWRITE, not a redirect, so the address bar still reads `yipyy.com`.
+
+**Only `/` moved.** Every other path on the apex still serves the app, so no existing link or bookmark broke on the day of the split — `yipyy.com/sign-in` and `yipyy.com/dashboard` still work. Localhost and `*.test` never match, so `/` in development still opens the portal.
+
+**Still open:** the apex does not know whether you are signed in — deliberately, so the most cacheable URL on the site carries no session branch. Somebody with an account who opens `yipyy.com` gets the marketing page and a "Sign in" link to `app.yipyy.com`, which is what every marketing site does. If that is ever judged wrong, the cookie is already wide enough to decide it per-identity.
 
 ### 🟡 The waitlist list is "people who typed an address", not a consented mailing list
 
