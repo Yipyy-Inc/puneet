@@ -55,6 +55,13 @@ export interface RoomCategory {
    * are all active and nothing turns one off today.
    */
   active: boolean;
+  /**
+   * A branch's own nightly rate for this category, replacing
+   * `defaultBasePrice` for that branch only. Boarding only -- daycare shares
+   * this table but has no per-location price table backing it, so this is
+   * always `[]` for a daycare category.
+   */
+  locationPricing: { locationId: string; price: number }[];
 }
 
 export interface FacilityRoom {

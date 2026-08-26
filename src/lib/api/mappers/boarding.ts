@@ -19,7 +19,7 @@ import type {
 // ============================================================================
 
 export const ROOM_CATEGORY_SELECT =
-  "id, legacy_id, service, name, description, color, sort_order, default_capacity, default_base_price, visible_to_clients, image_url, rules, active";
+  "id, legacy_id, service, name, description, color, sort_order, default_capacity, default_base_price, visible_to_clients, image_url, rules, active, room_category_location_prices ( location_id, price )";
 
 export const FACILITY_ROOM_SELECT =
   "id, legacy_id, category_id, name, active, capacity, staff_notes, image_url, sort_order, description, color, rules";
@@ -38,6 +38,7 @@ export interface RoomCategoryRow {
   image_url: string | null;
   rules: RoomRule[] | null;
   active: boolean;
+  room_category_location_prices: { location_id: string; price: number }[];
 }
 
 export interface FacilityRoomRow {
@@ -101,6 +102,10 @@ export function rowToRoomCategory(
     visibleToClients: row.visible_to_clients,
     imageUrl: row.image_url ?? undefined,
     active: row.active,
+    locationPricing: (row.room_category_location_prices ?? []).map((p) => ({
+      locationId: p.location_id,
+      price: Number(p.price),
+    })),
   };
 }
 

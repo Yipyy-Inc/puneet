@@ -180,6 +180,7 @@ export default function BoardingRatesPage() {
           defaultBasePrice: rateForm.basePrice,
           visibleToClients: true,
           active: rateForm.isActive,
+          locationPricing: [],
         },
         0,
       );

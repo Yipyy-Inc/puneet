@@ -30,10 +30,12 @@ import { locationStyles } from "@/lib/hq/location-styles";
 // Real per-location grooming prices — see supabase migration 20260825180000
 // and src/lib/api/mappers/grooming.ts's `perLocationSizePricing`.
 //
-// GROOMING ONLY. Boarding/daycare (`room_categories`) has no per-location
-// price table yet, and training/spa/transport/custom have no shared,
-// per-facility priced-service catalog at all — see the plan for why those
-// stay out rather than being faked here.
+// GROOMING ONLY. Boarding has its own sibling component
+// (`BoardingServiceCatalogClient.tsx`, migration 20260826150000) — kept
+// separate rather than merged in here because the two price shapes differ
+// (four sizes vs. one nightly rate) and neither file should carry both.
+// Daycare and training/spa/transport/custom still have no real per-location
+// priced catalog at all — see the plan for why those stay out.
 //
 // SERVICES ARE CREATED FROM THE GROOMING RATES PAGE, not from here — this
 // screen manages PRICING across locations for services that already exist.
@@ -217,12 +219,12 @@ export function ServiceCatalogClient({ services, locations }: Props) {
   );
 
   return (
-    <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
+    <div className="space-y-4">
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <Boxes className="size-6 text-sky-600" />
-          Service Catalog
-        </h1>
+        <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+          <Boxes className="size-5 text-sky-600" />
+          Grooming
+        </h2>
         <p className="text-muted-foreground text-sm">
           Grooming prices across every branch. Click a branch&apos;s price to
           set its own, or reset it back to the base. New services are added from

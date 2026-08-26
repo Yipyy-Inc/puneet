@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -6067,6 +6067,58 @@ export type Database = {
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      room_category_location_prices: {
+        Row: {
+          category_id: string;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          location_id: string;
+          price: number;
+          updated_at: string;
+        };
+        Insert: {
+          category_id: string;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          location_id: string;
+          price: number;
+          updated_at?: string;
+        };
+        Update: {
+          category_id?: string;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          location_id?: string;
+          price?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "room_category_location_prices_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "room_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "room_category_location_prices_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "room_category_location_prices_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
             referencedColumns: ["id"];
           },
         ];

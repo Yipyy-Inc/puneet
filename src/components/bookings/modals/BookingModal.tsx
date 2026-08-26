@@ -75,6 +75,7 @@ import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { useRooms } from "@/hooks/use-rooms";
+import { useLocationContext } from "@/hooks/use-location-context";
 import { boardingBasePrice } from "@/lib/boarding-pricing";
 import {
   autoAssignDaycareSection,
@@ -293,6 +294,7 @@ export function BookingModal({
   const { getModuleBySlug } = useCustomServices();
   const { sections: daycareSections } = useDaycareAreas();
   const { categories: roomCategories, rooms: facilityRooms } = useRooms();
+  const { currentLocationId } = useLocationContext();
   const queryClient = useQueryClient();
   const { mutate: redeemPass } = useRedeemPackagePass();
   const { data: customerPackagesData = [] } = useQuery(
@@ -1404,6 +1406,7 @@ export function BookingModal({
         roomAssignments,
         nights: boardingNights,
         fallbackNightlyRate: boarding.basePrice,
+        locationId: currentLocationId,
       });
     } else if (selectedService === "grooming") {
       // Run each selected pet through the shared rate engine so Confirm

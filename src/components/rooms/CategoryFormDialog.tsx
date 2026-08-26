@@ -115,6 +115,7 @@ function blankCategory(facilityId: number): RoomCategory {
     defaultCapacity: 1,
     defaultBasePrice: undefined,
     visibleToClients: true,
+    locationPricing: [],
   };
 }
 
