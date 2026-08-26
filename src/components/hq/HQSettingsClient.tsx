@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Users,
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,19 +53,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import type { Location } from "@/types/location";
+import type { FacilityLocation } from "@/types/location";
 import type { NetworkPolicy } from "@/types/facility";
 import {
   locationStyles,
+  locationHex,
   styleFromKey,
   type LocationColorKey,
 } from "@/lib/hq/location-styles";
+import {
+  locationOnboardingSteps,
+  type OnboardingStaffMember,
+} from "@/lib/hq/location-onboarding";
 import { networkBilling } from "@/data/network-billing";
 import { useSettings } from "@/hooks/use-settings";
-
-interface Props {
-  locations: Location[];
-}
+import { useFacilityLocations } from "@/lib/api/locations";
+import { useStaffHomeLocations, staffQueries } from "@/lib/api/staff";
 
 function ToggleSetting({
   label,
@@ -237,40 +242,14 @@ function ChoiceCard({
   );
 }
 
-// Go-live readiness derived entirely from the Location record + related config.
-function onboardingSteps(loc: Location): { label: string; done: boolean }[] {
-  const capacityKeys = ["daycare", "boarding", "grooming", "training"] as const;
-  const hasCapacity = capacityKeys.some((k) => (loc.capacity[k] ?? 0) > 0);
-  const openSomeDay = Object.values(loc.hours).some((h) => !h.closed);
-  const hasManager = loc.staffAssignments.some(
-    (a) => a.isPrimary && a.role === "manager",
-  );
-  return [
-    {
-      label: "address & contact",
-      done: loc.address.trim() !== "" && loc.postalCode.trim() !== "",
-    },
-    {
-      label: "phone & email",
-      done: loc.phone.trim() !== "" && loc.email.trim() !== "",
-    },
-    { label: "services enabled", done: loc.services.length > 0 },
-    { label: "capacity configured", done: hasCapacity },
-    { label: "operating hours", done: openSomeDay },
-    {
-      label: "at least 1 staff member assigned",
-      done: loc.staffAssignments.length >= 1,
-    },
-    { label: "location manager designated", done: hasManager },
-    {
-      label: "taxes / payment configured",
-      done: loc.taxes.some((t) => t.enabled),
-    },
-  ];
-}
-
-function LocationOnboardingRow({ loc }: { loc: Location }) {
-  const steps = onboardingSteps(loc);
+function LocationOnboardingRow({
+  loc,
+  staffAtLocation,
+}: {
+  loc: FacilityLocation;
+  staffAtLocation: OnboardingStaffMember[];
+}) {
+  const steps = locationOnboardingSteps(loc, staffAtLocation);
   const done = steps.filter((step) => step.done).length;
   const missing = steps.filter((step) => !step.done);
   const total = steps.length;
@@ -286,7 +265,7 @@ function LocationOnboardingRow({ loc }: { loc: Location }) {
             s.bg,
           )}
         >
-          {loc.shortCode}
+          {(loc.shortCode ?? loc.name).slice(0, 3)}
         </span>
         <span className="text-sm font-semibold">{loc.name}</span>
         <span className="text-muted-foreground text-xs tabular-nums">
@@ -323,7 +302,7 @@ function LocationOnboardingRow({ loc }: { loc: Location }) {
   );
 }
 
-export function HQSettingsClient({ locations: initialLocations }: Props) {
+export function HQSettingsClient() {
   const { networkPolicy, updateNetworkPolicy } = useSettings();
   // A draft only exists once the owner starts editing -- `null` means "show
   // the real, saved policy". Mirrors HQIntegrationsClient's read (no loading
@@ -332,9 +311,33 @@ export function HQSettingsClient({ locations: initialLocations }: Props) {
   // shape, which many toggles with real cross-location consequences warrants.
   const [draft, setDraft] = useState<NetworkPolicy | null>(null);
   const [saving, setSaving] = useState(false);
-  const [locations] = useState(initialLocations);
   const [confirmDisableAutomations, setConfirmDisableAutomations] =
     useState(false);
+
+  const { data: locationsData, isPending: locationsPending } =
+    useFacilityLocations();
+  const { data: staffHomeLocations } = useStaffHomeLocations();
+  const { data: staffProfiles } = useQuery(staffQueries.profiles());
+  const locations = locationsData ?? [];
+
+  // Every staff member currently claimed and living at that branch, by
+  // primaryRole -- everything `locationOnboardingSteps` needs to judge
+  // "staff assigned" and "manager designated" for real.
+  const staffByLocation = useMemo(() => {
+    const profileByStaffId = new Map(
+      (staffProfiles ?? []).map((p) => [p.id, p]),
+    );
+    const map = new Map<string, OnboardingStaffMember[]>();
+    for (const s of staffHomeLocations ?? []) {
+      if (!s.claimed || !s.homeLocationId) continue;
+      const profile = profileByStaffId.get(s.staffId);
+      if (!profile) continue;
+      const existing = map.get(s.homeLocationId) ?? [];
+      existing.push({ primaryRole: profile.primaryRole });
+      map.set(s.homeLocationId, existing);
+    }
+    return map;
+  }, [staffHomeLocations, staffProfiles]);
 
   const s = draft ?? networkPolicy;
   const dirty = draft !== null;
@@ -360,6 +363,15 @@ export function HQSettingsClient({ locations: initialLocations }: Props) {
       },
     );
   };
+
+  if (locationsPending) {
+    return (
+      <div className="space-y-6 p-4 pt-6 md:p-8">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-7 p-4 pt-6 md:p-8">
@@ -419,9 +431,8 @@ export function HQSettingsClient({ locations: initialLocations }: Props) {
                 {locations.length} branches in this network
               </CardDescription>
             </div>
-            {/* One screen creates a location, and it is not this one. This
-                card still lists fixture branches; sending the real dialog here
-                would create a row the list underneath could not show. */}
+            {/* One screen creates a location, and it is not this one --
+                /facility/hq/locations owns the real Add Location dialog. */}
             <Button
               asChild
               variant="outline"
@@ -454,7 +465,7 @@ export function HQSettingsClient({ locations: initialLocations }: Props) {
                       ls.bg,
                     )}
                   >
-                    {loc.shortCode}
+                    {(loc.shortCode ?? loc.name).slice(0, 3)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
@@ -469,38 +480,35 @@ export function HQSettingsClient({ locations: initialLocations }: Props) {
                     </div>
                     <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
                       <MapPin className="size-3" />
-                      {loc.city}
+                      {loc.address?.city ?? "No address yet"}
                     </p>
                   </div>
                   <span
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                      loc.isActive
+                      loc.status === "active"
                         ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                        : "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
+                        : loc.status === "coming_soon"
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                          : "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
                     )}
                   >
                     <span
                       className={cn(
                         "size-1.5 rounded-full",
-                        loc.isActive ? "bg-emerald-500" : "bg-rose-500",
+                        loc.status === "active"
+                          ? "bg-emerald-500"
+                          : loc.status === "coming_soon"
+                            ? "bg-amber-500"
+                            : "bg-rose-500",
                       )}
                     />
-                    {loc.isActive ? "Live" : "Off"}
+                    {loc.status === "active"
+                      ? "Live"
+                      : loc.status === "coming_soon"
+                        ? "Coming soon"
+                        : "Closed"}
                   </span>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {loc.services.map((svc) => (
-                    <span
-                      key={svc}
-                      className={cn(
-                        "rounded-md px-1.5 py-0.5 text-[10px] capitalize",
-                        ls.badge,
-                      )}
-                    >
-                      {svc}
-                    </span>
-                  ))}
                 </div>
               </div>
             );
@@ -666,14 +674,20 @@ export function HQSettingsClient({ locations: initialLocations }: Props) {
         </CardHeader>
         <CardContent className="divide-y">
           {locations.map((loc) => (
-            <LocationOnboardingRow key={loc.id} loc={loc} />
+            <LocationOnboardingRow
+              key={loc.id}
+              loc={loc}
+              staffAtLocation={staffByLocation.get(loc.id) ?? []}
+            />
           ))}
         </CardContent>
       </Card>
 
       {/* Network Billing */}
       {(() => {
-        const activeLocations = locations.filter((l) => l.isActive).length;
+        const activeLocations = locations.filter(
+          (l) => l.status === "active",
+        ).length;
         const extra = Math.max(
           0,
           activeLocations - networkBilling.includedLocations,
@@ -953,7 +967,7 @@ export function HQSettingsClient({ locations: initialLocations }: Props) {
         </CardHeader>
         <CardContent className="divide-y">
           {locations.map((loc) => {
-            const slug = loc.shortCode.toLowerCase();
+            const slug = (loc.shortCode ?? loc.name).toLowerCase();
             const url = `/book/${slug}`;
             return (
               <div
@@ -962,7 +976,7 @@ export function HQSettingsClient({ locations: initialLocations }: Props) {
               >
                 <span
                   className="size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: loc.color }}
+                  style={{ backgroundColor: locationHex(loc) }}
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{loc.name}</p>
