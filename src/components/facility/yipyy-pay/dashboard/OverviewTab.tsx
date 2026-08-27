@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
 import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 import { UnattachedPayments } from "./UnattachedPayments";
+import { ConnectionCheck } from "./ConnectionCheck";
 
 // ============================================================================
 // Is my money moving, and where is it?
@@ -135,6 +136,8 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
           the numbers it invalidates is one people find after they have already
           trusted them. It draws nothing at all when there is nothing waiting. */}
       <UnattachedPayments />
+
+      <ConnectionCheck />
 
       {/* Same reasoning, one step earlier: if reconciliation has stopped, the
           queue below may be empty because nothing is looking, not because

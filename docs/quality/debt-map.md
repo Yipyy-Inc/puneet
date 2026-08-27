@@ -6467,6 +6467,80 @@ their OWN fields still qualify, service pricing overrides still qualify) — tha
 one is a product decision (does pricing vary by branch? what does a review/NPS
 system look like?) that needs an owner, not an engineering pass.
 
+### 🔴 Every Clover connection in this database is SANDBOX — 2026-08-27
+
+**What is true.** Measured, not inferred:
+
+```sql
+select environment, merchant_id, status, scopes from public.payment_connections;
+-- sandbox | 5ZQH512PQ0KP1 | connected | {}     -- one row, and only one
+```
+
+One facility (Pawradise) is connected, to the **sandbox** estate. So "live
+Clover card payments, real money" is not true of this deployment today. Every
+charge, refund, tip and saved card this codebase has taken has been a test
+transaction against a test merchant.
+
+**Why it is risky.** Not because anything is broken — the integration works —
+but because the documentation and several commit messages describe it as live.
+Somebody reading them will believe money is moving, and will make a decision
+(about reconciliation, about a refund, about a customer complaint) on that
+basis.
+
+**What going live actually needs**, in order:
+
+1. A **production Clover app** with its own App ID and secret. Sandbox
+   credentials are not accepted by `api.clover.com`; they are separate estates.
+2. The same permissions ticked on it, **including the Ecommerce section and its
+   API checkbox** — without them the hosted card fields cannot get a public key
+   and card-not-present fails at the first step.
+3. A production **Remote Application ID**, or every `/connect/v1/*` call answers
+   401 with that exact complaint. `src/lib/clover/config.ts` documents it.
+4. `CLOVER_ENVIRONMENT=production`, which changes only where NEW connections are
+   sent. Existing sandbox rows keep being served by sandbox, by design — see the
+   comment on `defaultCloverEnvironment()`. Going live cannot silently break
+   what already works.
+5. Each facility re-connects through OAuth against the production estate.
+
+**Do instead of assuming:** run `bun scripts/probe-clover-capabilities.ts
+<facilityId>`, or press **Check now** on Settings → Yipyy Pay → Overview. Both
+state the environment.
+
+### 🟠 Clover's sandbox turns any amount over $100 into an error — 2026-08-27
+
+**What is true.** From Clover's own test-card documentation: amounts **under
+$100 approve**, and amounts **over $100 return an error whose code is the last
+three digits of the amount** — $101.16 produces code 116.
+
+**Why it is risky.** It is invisible. Somebody testing card-not-present with a
+realistic booking — a $124.50 boarding stay — gets a decline that has nothing to
+do with the card, the token, the permissions or the code, and every instinct
+says to go and debug the integration.
+
+**What to do instead:** test with amounts under $100.
+
+- `4242 4242 4242 4242` approves
+- `4005 5717 0222 2222` declines
+- `4005 5780 0333 3335` approves partially
+
+Any future expiry, any three-digit CVV.
+
+### 🟠 Clover requires an email to store a card, and a client may not have one — 2026-08-27
+
+**What is true.** Measured against the sandbox: `POST /v1/customers` with no
+email answers `400 {"code":"email_invalid","message":"Please provide a valid
+email."}`. It is enforced, not merely documented.
+
+**Why it is risky.** `clients.email` is nullable, and a facility that takes
+bookings by phone will have clients without one. Sending that to Clover produces
+a payment-processor error message in front of a staff member, about a field in
+OUR database, with no indication of where to fix it.
+
+**What to do instead:** `vaultCard` returns `no_email` before contacting Clover
+and the route answers 409 with "Add an email to their profile and try again".
+Do not remove that guard in the belief that Clover will produce a usable message
+— it will not.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

@@ -68,6 +68,7 @@ export type VaultOutcome =
         | "not_connected"
         | "not_configured"
         | "not_enabled"
+        | "no_email"
         | "refused"
         | "unreachable";
       message: string;
@@ -109,6 +110,25 @@ export async function vaultCard(request: {
   firstName?: string | null;
   lastName?: string | null;
 }): Promise<VaultOutcome> {
+  // ── CLOVER REQUIRES AN EMAIL, AND SAYS SO ONLY AFTER YOU ASK ────────────
+  //
+  // Measured against the sandbox on 2026-08-27: POST /v1/customers with no
+  // email answers 400 `email_invalid` — "Please provide a valid email."
+  //
+  // Caught here rather than sent, because a customer with no email address is
+  // a fact about our own records that a round trip to Clover cannot change,
+  // and "Please provide a valid email" arriving from a payment processor is
+  // not a sentence that tells anybody where to go and fix it.
+  const email = request.email?.trim();
+  if (!email) {
+    return {
+      ok: false,
+      code: "no_email",
+      message:
+        "This customer has no email address, and the processor requires one to store a card. Add an email to their profile and try again.",
+    };
+  }
+
   const connection = await chargeableConnection(request.facilityId);
   if (!connection) {
     return {
@@ -150,7 +170,7 @@ export async function vaultCard(request: {
         },
         body: JSON.stringify({
           // Clover documents `email` as required on this call.
-          email: request.email ?? undefined,
+          email,
           firstName: request.firstName ?? undefined,
           lastName: request.lastName ?? undefined,
           // The single-use token becomes a multi-pay token on the customer.
