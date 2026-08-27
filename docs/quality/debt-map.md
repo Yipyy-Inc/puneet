@@ -6563,6 +6563,40 @@ and the route answers 409 with "Add an email to their profile and try again".
 Do not remove that guard in the belief that Clover will produce a usable message
 — it will not.
 
+### 🟠 REST Pay Display has no VOID endpoint — the refund button is the void — 2026-08-27
+
+**What is true.** Clover's documentation index contains no void page for REST
+Pay Display; the closest is refunding. Their voids-and-refunds page explains
+why: _"A void applies to cancel a sale for 25 minutes of the original
+transaction"_, and after that window Clover _"automatically processes it as a
+refund instead."_
+
+**And it works the other way too**, which this codebase measured before anybody
+read that page. `src/lib/clover/reconcile.ts` records that calling refund on a
+charge from the same batch comes back as:
+
+```json
+{
+  "result": "VOIDED",
+  "voidReason": "USER_CANCEL",
+  "refunds": { "elements": [] }
+}
+```
+
+— reversed in full, with an **EMPTY** refunds array.
+
+**Why it is risky.** Two ways. First, somebody will go looking for a void
+endpoint to build, and there isn't one: the refund we already send IS the void
+inside the window. Second, and worse, anything that measures "how much has been
+given back" by summing `refunds[]` reads a voided payment as **zero refunded**
+and would report the money as still taken. `reversalsToRecord` handles it —
+whole amount if voided, otherwise the sum of refunds — and that is not an
+implementation detail to be tidied away.
+
+**What to do instead:** to reverse a card-present payment, refund it. Clover
+decides whether that is a void based on settlement timing, and reconciliation
+reads either shape correctly. Do not add a void path.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

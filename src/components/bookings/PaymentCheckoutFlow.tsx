@@ -178,6 +178,8 @@ export function PaymentCheckoutFlow({
   // sort of thing a customer photographs.
   const [step, setStep] = useState<"pay" | "receipt">("pay");
   const [busy, setBusy] = useState(false);
+  /** Separate from `busy`: stopping the prompt is not taking the payment. */
+  const [stopping, setStopping] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   // The terminal this till reaches for. Resolved here rather than inside the
@@ -552,8 +554,42 @@ export function PaymentCheckoutFlow({
               staff select 20%, watch the customer choose nothing, and be handed
               a total that matches neither. */}
           {isTerminal && (
-            <div className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
-              The customer is asked for a tip on the terminal.
+            <div className="text-muted-foreground space-y-2 rounded-md border border-dashed p-3 text-xs">
+              <p>The customer is asked for a tip on the terminal.</p>
+
+              {/* ── STOPPING THE PROMPT ────────────────────────────────────
+                  Our request gives up after 150 seconds; THE DEVICE DOES NOT.
+                  Without this, a customer who decides to pay cash leaves the
+                  terminal asking and the only remedy is to walk over to it.
+
+                  The wording is deliberate. This stops a PROMPT — a card
+                  approved a moment earlier is still paid, and calling it
+                  "cancel payment" would tell somebody money came back. */}
+              {busy && terminal && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    setStopping(true);
+                    try {
+                      await fetch("/api/payments/clover/device", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          action: "cancel",
+                          deviceSerial: terminal.serial,
+                        }),
+                      });
+                    } finally {
+                      setStopping(false);
+                    }
+                  }}
+                  disabled={stopping}
+                >
+                  {stopping ? "Stopping…" : "Stop asking on the terminal"}
+                </Button>
+              )}
             </div>
           )}
           {/* The facility's OWN tips, from Settings → Tips — not three
