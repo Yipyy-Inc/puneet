@@ -2,7 +2,7 @@ import "server-only";
 
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { asCloverEnvironment, type CloverEnvironment } from "./config";
-import { refreshTokens, type CloverTokens } from "./oauth";
+import { recoverTokens, refreshTokens, type CloverTokens } from "./oauth";
 
 // ============================================================================
 // Recording a connection, and reading whether there is one.
@@ -235,9 +235,84 @@ export async function validAccessToken(
       };
     }
 
+    // ── NOBODY WON. THE TOKEN WE HOLD IS SPENT ───────────────────────────
+    //
+    // Which means a refresh already succeeded AT CLOVER and its result never
+    // reached this database — the RPC threw, the Vault write failed, or the
+    // process died between the two. Clover rotated; we did not.
+    //
+    // Without this branch that facility is finished: `chargeableConnection`
+    // refuses anything not `connected`, so every card payment starts failing,
+    // and the only way back is the merchant re-authorising from their own
+    // Clover dashboard. A stalled deploy at 6pm on a Friday would take a
+    // business's card payments down for the weekend.
+    //
+    // `/oauth/v2/recovery` is Clover's documented way out, and the token it
+    // wants is the one we are still holding — see `recoverTokens`. ONE
+    // attempt, on this request, no retry loop and no background job: if it
+    // fails the connection really is broken and the `error` status is the
+    // honest answer.
+    //
+    // It owns the error write, so there is exactly one — an outer write here
+    // would overwrite the more useful sentence with "token refresh failed".
+    return recoverConnection({
+      facilityId,
+      merchantId: row.merchant_id,
+      recoveryToken: row.refresh_token,
+      environment,
+      refreshFailure:
+        error instanceof Error ? error.message : "Token refresh failed.",
+    });
+  }
+}
+
+/**
+ * One attempt at `/oauth/v2/recovery`, and null when it does not work.
+ *
+ * Separate from `validAccessToken` because that function is already three
+ * failure branches deep, and because the interesting part here is the error
+ * text: a 401 can mean the app is not registered as high-trust in Clover's
+ * dashboard, which is a setting nobody would think to check from a message
+ * saying "token refresh failed".
+ */
+async function recoverConnection({
+  facilityId,
+  merchantId,
+  recoveryToken,
+  environment,
+  refreshFailure,
+}: {
+  facilityId: string;
+  merchantId: string;
+  recoveryToken: string;
+  environment: CloverEnvironment;
+  refreshFailure: string;
+}): Promise<ActiveToken | null> {
+  try {
+    const tokens = await recoverTokens(recoveryToken, environment);
+
+    // The connection's OWN estate and merchant, carried through from the row
+    // that failed — never `defaultCloverEnvironment()`. Restating where NEW
+    // connections go would move a sandbox merchant to production mid-repair,
+    // which is the bug `recordConnection` documents at its `environment` field.
+    await recordConnection({
+      facilityId,
+      merchantId,
+      tokens,
+      connectedBy: null,
+      environment,
+    });
+
+    return { accessToken: tokens.accessToken, merchantId, environment };
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "Token recovery failed.";
     await recordConnectionError(
       facilityId,
-      error instanceof Error ? error.message : "Token refresh failed.",
+      `${refreshFailure} Recovery was refused as well (${detail}), so this ` +
+        "merchant must reconnect. If recovery answers 401 for every facility, " +
+        "check that the Clover app is registered as high-trust — that is what " +
+        "permits /oauth/v2/recovery at all.",
     );
     return null;
   }

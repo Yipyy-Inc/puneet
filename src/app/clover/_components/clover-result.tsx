@@ -15,9 +15,14 @@ import { PoweredByClover } from "@/components/facility/yipyy-pay/YipyyPayBrand";
 // ============================================================================
 // What the facility sees when they come back from the consent screen.
 //
-// Five outcomes, and they are deliberately not collapsed into "worked" and
+// Eight outcomes, and they are deliberately not collapsed into "worked" and
 // "didn't". Each one has a different next action, and a page that says "an
-// error occurred" for all four failures makes the person guess which.
+// error occurred" for every failure makes the person guess which.
+//
+// Three of them exist only because the same URL is also where Clover drops a
+// merchant who LAUNCHED Yipyy from their dashboard. That arrival carries a
+// merchant id and no code, and all three used to render as "Sign in to manage
+// payments" — including to somebody already signed in.
 //
 // ── IT SAYS YIPYY PAY, BECAUSE THAT IS WHAT THEY BOUGHT ───────────────────
 //
@@ -48,7 +53,24 @@ export type CloverOutcome =
   | { kind: "not-connected"; lastError: string | null }
   | { kind: "failed"; title: string; detail: string }
   | { kind: "signed-out" }
-  | { kind: "unconfigured" };
+  | { kind: "unconfigured" }
+  // ── The three below only happen on a LAUNCH from Clover's own dashboard ──
+  //
+  // Clover sends a merchant to the registered Site URL with their merchant id
+  // and no authorisation code. Until now that arrival was indistinguishable
+  // from somebody typing the URL, so all three of these rendered as "Sign in to
+  // manage payments" — including to people who were already signed in.
+  | { kind: "launch-no-facility"; merchantId: string; signedIn: boolean }
+  | {
+      kind: "choose-facility";
+      merchantId: string;
+      choices: { id: string; name: string; href: string | null }[];
+    }
+  | {
+      kind: "connected-elsewhere";
+      connectedMerchantId: string;
+      launchedMerchantId: string;
+    };
 
 function Shell({
   icon,
@@ -161,6 +183,130 @@ export function CloverResult({ outcome }: { outcome: CloverOutcome }) {
         )}
         <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
           <Link href={RETRY_HREF}>Set up Yipyy Pay</Link>
+        </Button>
+      </Shell>
+    );
+  }
+
+  if (outcome.kind === "launch-no-facility") {
+    // ── SIGNED IN IS A DIFFERENT ANSWER FROM SIGNED OUT ─────────────────
+    //
+    // `activeAdminFacility()` says `none` for both, and collapsing them is
+    // exactly the defect this whole change is about: telling somebody who is
+    // already signed in to sign in. A groomer who clicks Yipyy in a merchant
+    // dashboard is signed in and simply administers nothing.
+    return (
+      <Shell
+        icon={<CreditCard className="size-5 text-white" />}
+        tone="bg-slate-600"
+        title={
+          outcome.signedIn
+            ? "This account cannot connect a merchant"
+            : "Sign in to finish connecting"
+        }
+        description="You have arrived from your Clover dashboard. Connecting a merchant account decides where a business's money lands, so it is limited to a facility's owner or administrator."
+      >
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Merchant</span>
+          <span className="font-mono">{outcome.merchantId}</span>
+        </div>
+        {outcome.signedIn ? (
+          <p className="text-muted-foreground text-xs/relaxed">
+            You are signed in, but you do not administer a facility here. Ask
+            whoever owns the business to connect the merchant above.
+          </p>
+        ) : (
+          <>
+            {/* Signing in does not come back here — the sign-in lands people in
+                whichever portal their token names, and adding a return path
+                would mean changing the auth callback. So say where to go
+                rather than promise a return that will not happen. */}
+            <p className="text-muted-foreground text-xs/relaxed">
+              After signing in, open <strong>Settings → Yipyy Pay</strong>.
+              Check the merchant above is the one you link.
+            </p>
+            <Button
+              asChild
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Link href="/sign-in">Sign in</Link>
+            </Button>
+          </>
+        )}
+      </Shell>
+    );
+  }
+
+  if (outcome.kind === "choose-facility") {
+    return (
+      <Shell
+        icon={<Plug className="size-5 text-white" />}
+        tone="bg-slate-600"
+        title="Which business is this account for?"
+        description="You administer more than one, and a merchant account can only belong to one of them. Open the one you mean at its own address."
+      >
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Merchant</span>
+          <span className="font-mono">{outcome.merchantId}</span>
+        </div>
+        {/* Each facility's OWN host, because that is what `/connect` reads to
+            decide which one it seals into the signed state. A link back to this
+            page would land on the same ambiguous hostname and ask again. */}
+        <div className="space-y-2">
+          {outcome.choices.map((choice) =>
+            choice.href ? (
+              <Button
+                key={choice.id}
+                asChild
+                variant="outline"
+                className="w-full justify-start"
+              >
+                <a href={choice.href}>{choice.name}</a>
+              </Button>
+            ) : (
+              <p key={choice.id} className="text-muted-foreground text-sm">
+                {choice.name}
+              </p>
+            ),
+          )}
+        </div>
+      </Shell>
+    );
+  }
+
+  if (outcome.kind === "connected-elsewhere") {
+    return (
+      <Shell
+        icon={<AlertTriangle className="size-5 text-white" />}
+        tone="bg-amber-600"
+        title="This is not the account that is connected"
+        description="You arrived from one Clover merchant, and this business is taking payments through a different one."
+      >
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Connected now</span>
+            <span className="font-mono">{outcome.connectedMerchantId}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">You came from</span>
+            <span className="font-mono">{outcome.launchedMerchantId}</span>
+          </div>
+        </div>
+        {/* The state worth naming. Before this, the page showed a connected
+            card carrying a merchant id that was not the account they had just
+            launched from, and nothing explained the mismatch. */}
+        <p className="text-muted-foreground text-xs/relaxed">
+          Nothing has changed. If the account you came from is the one you want
+          paying out, connect it — that replaces the account above for new
+          payments. Payments already taken stay where they were taken.
+        </p>
+        <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
+          <Link href="/api/payments/clover/connect">
+            Connect the account I came from
+          </Link>
+        </Button>
+        <Button asChild variant="outline" className="w-full">
+          <Link href={SETUP_HREF}>Leave it as it is</Link>
         </Button>
       </Shell>
     );
