@@ -9096,6 +9096,7 @@ export type Database = {
           p_entry_method?: string;
           p_intent_id: string;
           p_processor_payment_id: string;
+          p_saved_card_id?: string;
           p_subtotal_cents: number;
           p_tax_cents?: number;
           p_tip_cents?: number;
