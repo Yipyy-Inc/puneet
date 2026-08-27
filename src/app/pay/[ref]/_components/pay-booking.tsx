@@ -29,6 +29,11 @@ import type { TipConfig } from "@/types/facility";
 export interface PayBookingProps {
   bookingId: string;
   bookingRef: number;
+  /**
+   * Whose booking this is. Their saved cards are offered, and a card saved
+   * here is saved against them. Null means no card can be offered or kept.
+   */
+  clientId: string | null;
   facilityName: string;
   service: string | null;
   serviceType: string | null;
@@ -71,6 +76,7 @@ function serviceLabel(service: string | null, serviceType: string | null) {
 export function PayBooking({
   bookingId,
   bookingRef,
+  clientId,
   facilityName,
   service,
   serviceType,
@@ -172,6 +178,7 @@ export function PayBooking({
 
           <CloverCheckout
             bookingId={bookingId}
+            clientId={clientId}
             publicApiKey={publicApiKey}
             merchantId={merchantId}
             sdkUrl={sdkUrl}

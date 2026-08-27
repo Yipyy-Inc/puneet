@@ -52,6 +52,8 @@ interface BookingRow {
   id: string;
   ref: number;
   facility_id: string;
+  /** Whose booking it is — and therefore whose saved cards may be offered. */
+  client_id: string | null;
   service: string | null;
   service_type: string | null;
   start_at: string | null;
@@ -81,7 +83,7 @@ export default async function PayBookingPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, ref, facility_id, service, service_type, start_at, status, amount_due, amount_paid, facilities ( name )",
+      "id, ref, facility_id, client_id, service, service_type, start_at, status, amount_due, amount_paid, facilities ( name )",
     )
     .eq("ref", bookingRef)
     .maybeSingle();
@@ -171,6 +173,7 @@ export default async function PayBookingPage({
     <PayBooking
       bookingId={booking.id}
       bookingRef={booking.ref}
+      clientId={booking.client_id}
       facilityName={facilityName}
       service={booking.service}
       serviceType={booking.service_type}

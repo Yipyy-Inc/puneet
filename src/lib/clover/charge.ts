@@ -114,6 +114,14 @@ export interface ChargeRequest {
     initiator: "merchant" | "cardholder";
     /** True only for a charge on a schedule the customer agreed to. */
     scheduled: boolean;
+    /**
+     * Our `saved_cards.id`, written onto the ledger row.
+     *
+     * Without it the payment could not say WHICH stored card it used, and the
+     * foreign key added in 20260826170000 would have no writer — the same
+     * "column pointing at nothing" the vault migration existed to fix.
+     */
+    savedCardId: string;
   };
   createdBy: string | null;
   authorName?: string;
@@ -406,6 +414,9 @@ export async function chargeCard(
     p_auth_code: charge.auth_code ?? null,
     p_entry_method: "ecom",
     p_author_name: request.authorName ?? "Online payment",
+    // Names the stored card, and makes the ledger row `card-on-file` rather
+    // than `new-card` — which would describe the opposite of what happened.
+    p_saved_card_id: request.storedCard?.savedCardId ?? undefined,
   });
 
   if (recorded.error || !recorded.data) {

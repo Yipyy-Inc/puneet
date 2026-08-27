@@ -39,12 +39,28 @@ import { chargeCard } from "@/lib/clover/charge";
 
 export const dynamic = "force-dynamic";
 
-const ChargeInput = z.object({
-  bookingId: z.uuid(),
-  /** The `clv_` token from the browser. A card number here would be a bug. */
-  source: z.string().min(8).max(200),
-  tipCents: z.number().int().min(0).max(100_000).default(0),
-});
+// ── A CARD, OR A CARD THEY ALREADY GAVE US ────────────────────────────────
+//
+// Exactly one of the two. `source` is a fresh `clv_` token from the hosted
+// fields; `savedCardId` names a row in `saved_cards` the customer consented to
+// earlier. Modelled as a union rather than two optional fields so "neither" and
+// "both" are rejected by the schema instead of by a branch somebody has to
+// remember to write.
+const ChargeInput = z.union([
+  z.object({
+    bookingId: z.uuid(),
+    /** The `clv_` token from the browser. A card number here would be a bug. */
+    source: z.string().min(8).max(200),
+    savedCardId: z.undefined().optional(),
+    tipCents: z.number().int().min(0).max(100_000).default(0),
+  }),
+  z.object({
+    bookingId: z.uuid(),
+    source: z.undefined().optional(),
+    savedCardId: z.uuid(),
+    tipCents: z.number().int().min(0).max(100_000).default(0),
+  }),
+]);
 
 export async function POST(request: NextRequest) {
   const viewer = await getViewer().catch(() => null);
@@ -60,7 +76,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (parsed.data.source.startsWith("clv_") === false) {
+  if (
+    parsed.data.source !== undefined &&
+    !parsed.data.source.startsWith("clv_")
+  ) {
     // Refused loudly rather than forwarded. If a raw PAN ever reaches this
     // route, sending it to Clover would put the card number in our logs and
     // this server inside PCI scope — the one thing the hosted iframe exists to
@@ -103,13 +122,74 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── A STORED CARD IS RESOLVED HERE, AS THE CALLER ───────────────────────
+  //
+  // Read with the caller's own client, so `saved_cards_read` decides whether
+  // they may use it: its owner, or staff trusted with money at that facility.
+  // Enumerating that in TypeScript would restate a rule the database already
+  // holds, and eventually restate it differently.
+  let source: string | null = parsed.data.source ?? null;
+  let storedCard: Parameters<typeof chargeCard>[0]["storedCard"];
+
+  if (parsed.data.savedCardId) {
+    const { data: card } = await supabase
+      .from("saved_cards")
+      .select("id, processor_customer_id, consent_at, revoked_at, facility_id")
+      .eq("id", parsed.data.savedCardId)
+      .eq("facility_id", booking.facility_id)
+      .is("revoked_at", null)
+      .maybeSingle();
+
+    if (!card) {
+      return NextResponse.json(
+        { error: "That saved card is not available." },
+        { status: 404 },
+      );
+    }
+
+    // Consent is checked HERE, not trusted from the screen that stored it.
+    // Clover requires explicit cardholder agreement before a stored credential
+    // is charged, and a card whose consent was never recorded has none.
+    if (!card.consent_at) {
+      return NextResponse.json(
+        {
+          error:
+            "That card was saved without the cardholder's consent to charge it again.",
+        },
+        { status: 409 },
+      );
+    }
+
+    // Clover takes the CUSTOMER id as the source for a card-on-file charge.
+    source = card.processor_customer_id;
+    storedCard = {
+      // The customer is on the screen choosing this card, so the charge is
+      // cardholder-initiated and not scheduled. A recurring charge would say
+      // `merchant` and `scheduled: true`, and nothing here does that yet.
+      initiator: "cardholder",
+      scheduled: false,
+      savedCardId: card.id,
+    };
+  }
+
+  if (!source) {
+    // Unreachable through the schema, which requires one of the two. Asserted
+    // rather than forced with `!`, because the thing being asserted is what
+    // Clover is about to be told to charge.
+    return NextResponse.json(
+      { error: "No card was supplied." },
+      { status: 400 },
+    );
+  }
+
   const outcome = await chargeCard({
     facilityId: booking.facility_id,
     bookingId: booking.id,
     clientId: booking.client_id,
     subtotalCents: owedCents,
     tipCents: parsed.data.tipCents,
-    source: parsed.data.source,
+    source,
+    storedCard,
     createdBy: viewer.userId,
     authorName: viewer.email ?? "Online payment",
   });
