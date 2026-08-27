@@ -5,6 +5,7 @@ import { Boxes } from "lucide-react";
 import { ServiceCatalogClient } from "@/components/hq/ServiceCatalogClient";
 import { BoardingServiceCatalogClient } from "@/components/hq/BoardingServiceCatalogClient";
 import { DaycareServiceCatalogClient } from "@/components/hq/DaycareServiceCatalogClient";
+import { TrainingServiceCatalogClient } from "@/components/hq/TrainingServiceCatalogClient";
 import {
   useHqGroomingServices,
   useDaycareLocationPrices,
@@ -12,6 +13,7 @@ import {
 import { useFacilityLocations } from "@/lib/api/locations";
 import { useRooms } from "@/hooks/use-rooms";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { useTrainingSeriesList } from "@/lib/api/training-series";
 
 export default function HQServicesPage() {
   const { data: services = [], isPending: servicesPending } =
@@ -26,13 +28,16 @@ export default function HQServicesPage() {
   const { settings, isPending: settingsPending } = useFacilitySettings();
   const { data: daycareOverrides = [], isPending: daycarePending } =
     useDaycareLocationPrices();
+  const { data: trainingSeries = [], isPending: trainingPending } =
+    useTrainingSeriesList();
 
   if (
     servicesPending ||
     locationsPending ||
     categoriesPending ||
     settingsPending ||
-    daycarePending
+    daycarePending ||
+    trainingPending
   ) {
     return (
       <div className="text-muted-foreground p-8 text-center text-sm">
@@ -62,6 +67,7 @@ export default function HQServicesPage() {
         overrides={daycareOverrides}
         locations={locations}
       />
+      <TrainingServiceCatalogClient series={trainingSeries} />
     </div>
   );
 }
