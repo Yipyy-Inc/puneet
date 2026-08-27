@@ -71,6 +71,24 @@ export interface CloverConfig {
   remoteApplicationId: string | null;
 }
 
+/**
+ * ── TWO ESTATES, AND CLOVER PUBLISHES FOUR REGIONS ────────────────────────
+ *
+ * Sandbox and North America are the ones here. Clover also runs:
+ *
+ *   Europe         www.eu.clover.com   api.eu.clover.com
+ *   Latin America  www.la.clover.com   api.la.clover.com
+ *
+ * Not a bug today and not built on speculation: the merchant is Canadian, and
+ * Canada is served by the North America hosts. It becomes a bug the first time
+ * a European facility connects, and it will not look like one — a European
+ * merchant authorised on www.clover.com fails at the token exchange with an
+ * opaque 401, which reads exactly like a wrong App Secret.
+ *
+ * Adding a region means a THIRD dimension here, not a third entry: each region
+ * has its own sandbox as well. Whoever needs it should widen the key rather
+ * than bolt `europe` on beside `production`.
+ */
 const HOSTS: Record<
   CloverEnvironment,
   { authorize: string; api: string; ecommerce: string; sdk: string }

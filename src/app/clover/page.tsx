@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { activeAdminFacility } from "@/lib/api/facility-context";
+import { facilityStaffOrigin } from "@/lib/app-host";
 import { getViewer } from "@/lib/auth/viewer";
 import { cloverConfig, defaultCloverEnvironment } from "@/lib/clover/config";
 import {
@@ -196,19 +198,101 @@ export default async function CloverPage({
     return <CloverResult outcome={await completeConnection(params)} />;
   }
 
-  // A launch from the merchant's own Clover dashboard, or somebody typing the
-  // URL. Say where they stand — for the facility the HOSTNAME names, not for
-  // whichever membership sorted first.
+  // ── A LAUNCH FROM CLOVER'S OWN DASHBOARD ────────────────────────────────
+  //
+  // Clover documents that installing from the App Market, or clicking Yipyy in
+  // the merchant dashboard, sends the merchant to the registered Site URL with
+  // a `merchant_id` and NO authorisation code, and that the app is then the one
+  // that must start /oauth/v2/authorize.
+  //
+  // That arrival used to be indistinguishable from somebody typing the URL: the
+  // merchant id was ignored, and this hostname names no facility, so an admin
+  // of two businesses was shown "Sign in to manage payments" while signed in.
+  //
+  // The merchant id decides what to SAY and where to send them. It never
+  // decides what gets connected — the facility still comes from the session and
+  // is still sealed into the signed state by /connect, which is the whole
+  // security property of this flow (see the header of lib/clover/oauth.ts).
+  const launchedMerchantId = params.merchant_id?.trim() || null;
+
   const active = await activeAdminFacility();
 
-  if (active.kind !== "resolved") {
-    // "Ambiguous" lands here too, and deliberately so: this page is reached
-    // from Clover's dashboard with no facility in hand, so there is nothing to
-    // disambiguate with. Their own settings screen renders the choice.
-    return <CloverResult outcome={{ kind: "signed-out" }} />;
+  if (active.kind === "none") {
+    if (!launchedMerchantId) {
+      return <CloverResult outcome={{ kind: "signed-out" }} />;
+    }
+
+    // `none` covers two different people — signed out, and signed in with no
+    // admin access anywhere — and telling the second to sign in is the same
+    // defect this branch exists to fix, one layer down.
+    const viewer = await getViewer().catch(() => null);
+    return (
+      <CloverResult
+        outcome={{
+          kind: "launch-no-facility",
+          merchantId: launchedMerchantId,
+          signedIn: viewer?.source === "session",
+        }}
+      />
+    );
+  }
+
+  if (active.kind === "ambiguous") {
+    // Only answerable on a launch, where we can at least name the merchant they
+    // came from. Without one there is nothing to disambiguate WITH, so the old
+    // answer stands and their own settings screen renders the choice.
+    if (!launchedMerchantId) {
+      return <CloverResult outcome={{ kind: "signed-out" }} />;
+    }
+
+    const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN;
+    return (
+      <CloverResult
+        outcome={{
+          kind: "choose-facility",
+          merchantId: launchedMerchantId,
+          choices: active.choices.map((facility) => {
+            const origin = facilityStaffOrigin(facility.slug, appDomain);
+            return {
+              id: facility.id,
+              name: facility.name,
+              // Carry the merchant through, so the facility's own address can
+              // answer the same question with the same information.
+              href: origin
+                ? `${origin}/clover?merchant_id=${encodeURIComponent(launchedMerchantId)}`
+                : null,
+            };
+          }),
+        }}
+      />
+    );
   }
 
   const status = await connectionStatus(active.facility.id);
+
+  if (launchedMerchantId) {
+    // Not connected, and they have just come from a merchant account: start the
+    // authorise call Clover expects the app to make. One facility, resolved
+    // from their own membership — there is nothing to ask them.
+    if (!status.connected) {
+      redirect("/api/payments/clover/connect");
+    }
+
+    // Connected to something else. Worth its own screen: the connected card
+    // would otherwise show a merchant id that is not the account they launched
+    // from, with nothing explaining why.
+    if (status.merchantId && status.merchantId !== launchedMerchantId) {
+      return (
+        <CloverResult
+          outcome={{
+            kind: "connected-elsewhere",
+            connectedMerchantId: status.merchantId,
+            launchedMerchantId,
+          }}
+        />
+      );
+    }
+  }
 
   // Only asked once we know there IS a connection — reading devices needs the
   // merchant's token, and a facility that has not connected has none.

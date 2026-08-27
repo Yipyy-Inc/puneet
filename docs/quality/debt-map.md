@@ -6004,6 +6004,18 @@ The app path is closed too: the connection belongs to `pawradise`, whose only
 members are PRODUCTION identities, and a local run holds staging keys. So
 nothing local can hold a live Clover token for that merchant.
 
+**There is now a way back from a token we lost, and it is NOT a reason to
+hand-refresh.** `validAccessToken` calls `/oauth/v2/recovery` when a refresh
+fails and no concurrent request has just stored a good token — the case where
+Clover rotated and the new pair never reached this database. Clover's recovery
+token is the one we are _still holding_ (their worked example: Token A buys
+Token B, "if Token B is lost before your app is able to persist it, you can
+reuse Token A"), so there is no second credential stored anywhere and no
+migration behind this. It is ONE attempt, on that request. A script that
+refreshes outside the app still breaks the facility — recovery only covers the
+token the app itself failed to persist, and it stops working the moment the
+replacement is used by anybody.
+
 **Do instead:** to exercise anything against the sandbox, do it through the
 deployed app as somebody who can sign in there, or accept that the change is
 unverified and say so. Do not hand-refresh. Do not read the conclusion "401,
@@ -6506,6 +6518,53 @@ basis.
 <facilityId>`, or press **Check now** on Settings → Yipyy Pay → Overview. Both
 state the environment.
 
+### 🟠 A build made while the tree is moving fails as four unrelated red specs — 2026-08-27
+
+`bun run build` ran here while the other person working in this checkout was
+mid-change — seven `series-*.tsx` files deleted, replacements still untracked.
+The build **exited 0**. What it produced was missing a client reference
+manifest, and every request to that route answered:
+
+```
+⨯ Error [InvariantError]: Invariant: The client reference manifest for route
+   "/employee/select" does not exist. This is a bug in Next.js.
+```
+
+**The cost is that it does not look like a build problem.** The gate came back
+with four failures in three unrelated files — `employee-identity`,
+`facility-access-level` and two in `gift-cards` — plus three flaky and ten that
+never ran, in 23 minutes instead of 8. Every one of them looked like a real
+regression in somebody's feature, and the natural next move is to go reading the
+diff of a change that has nothing to do with it.
+
+**How to tell.** Read the SERVER log, not only the Playwright output. One
+`InvariantError` line names the whole thing. A spec failing on
+`locator.click: Test timeout` for a button that simply never mounted is the
+shape to be suspicious of — a half-built page renders, so nothing 500s
+visibly.
+
+**Do instead:** `rm -rf .next && bun run build`, then re-run. Here that took the
+same four specs from failing twice in a row to 46/46 and the gate from four red
+to 162 passed. And before trusting a long run, check `git status` — a build
+started against a tree somebody else is editing is not a build of anything.
+
+### 🟡 `CLOVER_HOSTS` covers two of Clover's four regions — 2026-08-27
+
+`src/lib/clover/config.ts` holds sandbox and **North America**. Clover also
+publishes **Europe** (`www.eu.clover.com` / `api.eu.clover.com`) and **Latin
+America** (`www.la.clover.com` / `api.la.clover.com`).
+
+**Not a bug today.** The one merchant here is Canadian and Canada is served by
+the North America hosts. It was left unbuilt deliberately rather than guessed
+at — a region table written against no merchant is a table nobody can check.
+
+**Why it is worth writing down.** The failure mode is invisible. A European
+merchant authorised on `www.clover.com` fails at the token exchange with an
+opaque 401, which reads exactly like a wrong App Secret — the same afternoon
+the `authorizeOrigin`/`apiOrigin` split already exists to prevent. And adding a
+region is not a third entry beside `production`: each region has its own
+sandbox too, so the key needs a second dimension.
+
 ### 🟠 Clover's sandbox uses the AMOUNT to choose an error — but only on some paths — 2026-08-27
 
 **What the documentation says**, verbatim, under "Testing tips valid for all
@@ -6596,6 +6655,123 @@ implementation detail to be tidied away.
 **What to do instead:** to reverse a card-present payment, refund it. Clover
 decides whether that is a void based on settlement timing, and reconciliation
 reads either shape correctly. Do not add a void path.
+
+## Snapshot (2026-08-27, Automations & Smart Workflows)
+
+### 🔴 The Automations module presented live counters for a system that had never sent anything
+
+`/facility/dashboard/automations` renders 18 rules, four KPI tiles, per-rule
+"Total Sent" figures and "Last Triggered" dates. None of it was real. The
+module was fixture-only end to end, and the screen gave no sign of it.
+
+**The measurement.** Three greps, all run 2026-08-27:
+
+```
+grep -rn 'create table.*\(automation\|workflow\|campaign\|message\|segment\)' supabase/migrations/   -> 0
+grep -ril vaccin supabase/migrations/                                                                -> 0
+ls src/app/api/automations/                                                                          -> no such directory
+```
+
+and the save path itself, `src/components/communications/AutomationRuleModal.tsx:88-91`:
+
+```ts
+const handleSave = () => {
+  console.log("Saving automation rule:", formData);
+  onClose();
+};
+```
+
+"Total Sent: 1,392" was a literal in `src/data/communications-hub.ts`.
+
+**Why it is risky.** Not because a prototype had fixtures — most of this repo
+did. Because this one was _indistinguishable from a working system while
+looking at it_. A facility could toggle a rule, watch the badge change, and
+reasonably conclude their customers were being emailed. `bun run
+check:success-claims` did not catch it: that gate looks for a file claiming
+success with nothing that performs one, and this file claimed nothing in
+words — the claim was the number.
+
+**What to do instead:** a counter is a claim. Derive per-rule send counts from
+`message_sends` rather than storing them, so a number that cannot be produced
+cannot be displayed. Where a trigger has no emitter wired yet, say so on the
+row ("Not yet delivering") and disable the toggle, rather than letting the rule
+look armed.
+
+### 🟡 `src/lib/api/communications.ts` was a query factory that never queried
+
+```ts
+automationRules: () => ({
+  queryKey: ["communications", "automation-rules"] as const,
+  queryFn: async (): Promise<AutomationRule[]> => automationRules,  // the fixture
+}),
+```
+
+**Why it is risky.** It has the exact shape the conventions doc prescribes for
+a real API layer — `queryKey`, `async queryFn`, a typed return — so it reads as
+converted at a glance, and a reviewer checking "does this screen use a query
+factory?" gets yes. The automations page did not even import it, so nothing
+would have failed if the file were deleted.
+
+**What to do instead:** an `async` function that awaits nothing is worth
+grepping for across `src/lib/api/`. A factory over a fixture should either
+fetch or be obviously named as a fixture; `queryFn: async () => <imported
+array>` is neither.
+
+### 🔴 A customer-facing origin was hardcoded where `check:link-origin` cannot see it
+
+`src/lib/template-variable-resolver.ts:211-224` resolved `{{portal_link}}`,
+`{{invoice_link}}` and `{{cancel_link}}` to literal `https://portal.yipyy.com`.
+
+**Why it is risky.** That is not where a facility's customers go — they go to
+`<slug>.yipyy.com`, and the slug comes from the facility row. This is the same
+defect `bun run check:link-origin` was written for after a facility owner was
+emailed the wrong host. The gate did not catch it because it walks only
+`src/app/api/**/route.ts` looking for `request.headers.get("origin")`, and this
+was a literal in a lib. Nothing had shipped through it yet only because nothing
+sent mail; every automation email would have carried it.
+
+**What to do instead:** `src/lib/messaging/render.ts` builds no URLs at all —
+links arrive on the data context, resolved by the caller through
+`facilityCustomerLinkOrigin()`. A caller supplying none gets the raw
+`{{portal_link}}` tag back, which is visibly broken on purpose: a wrong link
+that works is worse than a tag that obviously did not render. **Extending
+`check:link-origin` to flag `yipyy.com` literals outside `src/lib/public-origin.ts`
+is not done and is worth doing** — the gate currently cannot see any lib.
+
+### 🟡 Two different types were both called `AutomationRule`, both re-exported from one module
+
+`src/types/communications.ts` had the messaging rule (`trigger`, `templateId`,
+`messageType`); `src/types/tags.ts` had a tag-reaction rule (`tagId`,
+`triggerType`, `actionType`). **Both were re-exported from
+`src/data/tags-notes.ts`**, so "the automation rule type" meant different things
+depending on which import a file happened to have.
+
+**Why it is risky.** Renamed 2026-08-27 to `TagAutomationRule` before the
+`automation_rules` table existed, because after that the plain name is load-bearing
+and the rename stops being free.
+
+**What to do instead:** when adding a type whose name already exists in the repo,
+qualify the newcomer _or_ the incumbent — but do it before either one gets a table.
+
+### 🟡 Six hand-rolled Resend call sites and two Twilio ones, none of them shared
+
+`src/lib/messaging/send.ts` is now the sender for automations. The six existing
+`fetch("https://api.resend.com/emails")` call sites (`admin/invite`,
+`facilities/[id]/invite-owner`, `staff/[id]/invite`, `security/mfa-setup-email`,
+`status/subscribe`, `clover/receipt-delivery`) were **deliberately not**
+refactored onto it — boy-scout cleanup is opt-in here, and rewriting the invite
+emails to prove a point about automations is how unrelated things break.
+
+**Why it is risky.** Three things must be true of every automated send and
+cannot be re-implemented per caller: the address is checked against the
+suppression list, it is normalised by the _same_ function the suppression was
+written with, and the attempt is recorded either way. The older six do none of
+these, which is fine while every send is a one-off triggered by a human and
+stops being fine the moment one of them is called from a loop.
+
+**What to do instead:** anything sending unattended goes through
+`src/lib/messaging/send.ts`. If one of the six ever needs suppression, move it
+rather than adding a second check.
 
 ## How to add to this map
 

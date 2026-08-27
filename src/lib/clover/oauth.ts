@@ -122,6 +122,18 @@ export function authorizeUrl(state: string): string | null {
   const url = new URL("/oauth/v2/authorize", config.authorizeOrigin);
   url.searchParams.set("client_id", config.appId);
   url.searchParams.set("response_type", "code");
+  // ── `state` IS ECHOED, AND CLOVER DOES NOT DOCUMENT THAT ─────────────────
+  //
+  // Their high-trust page lists exactly three parameters on the return —
+  // `merchant_id`, `client_id`, `code` — and `state` is not among them. It
+  // comes back regardless: every connection in this database was made through
+  // a return leg that REFUSES without it (see the page at /clover), so its
+  // presence is measured rather than assumed.
+  //
+  // Which is why this stays fail-closed. If Clover ever stopped echoing it,
+  // connecting would break loudly instead of falling back to a facility read
+  // from somewhere a caller controls — and that fallback is the exact attack
+  // the state exists to prevent.
   url.searchParams.set("state", state);
   // Sent even though Clover returns to the registered Site URL regardless: if
   // it is honoured we get environment-specific returns for free, and if it is
@@ -219,8 +231,11 @@ async function postToken(
     // Never include the body verbatim: a token response that partially
     // succeeded can carry a live credential, and this string ends up in
     // payment_connections.last_error where a facility can read it.
+    // The path, so the sentence a facility reads in `last_error` says WHICH of
+    // the three calls was refused. All three arrive here, and "the token
+    // exchange" for a failed recovery sent somebody looking at the wrong one.
     throw new Error(
-      `Clover refused the token exchange (HTTP ${response.status})${
+      `Clover refused ${path} (HTTP ${response.status})${
         payload?.message ? `: ${payload.message}` : ""
       }`,
     );
@@ -284,6 +299,63 @@ export async function refreshTokens(
     {
       client_id: config.appId,
       refresh_token: refreshToken,
+    },
+    environment,
+  );
+}
+
+/**
+ * Repair a connection whose replacement token was never received.
+ *
+ * ── WHICH TOKEN THIS TAKES, BECAUSE IT READS BACKWARDS ────────────────────
+ *
+ * The one we still have. Clover's own worked example:
+ *
+ *   "When your app uses a refresh token Token A to obtain a new refresh token
+ *    Token B … Token A becomes the recovery token for Token B. If Token B is
+ *    LOST BEFORE YOUR APP IS ABLE TO PERSIST IT, you can reuse Token A."
+ *
+ * The lost token is the one that never reached storage, so the token in the
+ * vault IS Token A. There is nothing older to keep — an earlier draft of this
+ * work added a column to hold a "previous" refresh token and a Vault secret to
+ * put it in, which would have been a second live credential per facility
+ * guarding against a state that cannot occur.
+ *
+ * ── WHEN IT ACTUALLY HELPS ────────────────────────────────────────────────
+ *
+ * A refresh that succeeded at Clover and failed to persist here: the RPC threw,
+ * the service-role key went missing, the Vault write failed, or the process
+ * died in between. Clover has rotated; we are holding a spent token; and every
+ * card payment at that facility fails until the merchant re-authorises from
+ * their own dashboard. This is the documented way out.
+ *
+ * It does NOT help with the ordinary rotation race — two requests refreshing at
+ * once. There the winner has already stored a good token, and `validAccessToken`
+ * finds it by looking again, which costs nothing. Recovery is a round trip and
+ * runs only once that has come up empty.
+ *
+ * ── client_secret, WHICH /refresh DOES NOT TAKE ───────────────────────────
+ *
+ * Recovery is high-trust only. A 401 here can mean the token is genuinely
+ * spent, the credentials are wrong, OR that the app is not registered as
+ * high-trust in Clover's dashboard — the last being a setting, not a defect,
+ * and the caller says so rather than leaving somebody reading this file.
+ */
+export async function recoverTokens(
+  recoveryToken: string,
+  environment: CloverEnvironment,
+): Promise<CloverTokens> {
+  const config = cloverConfig(environment);
+  if (!config) {
+    throw new Error(`Clover is not configured for ${environment}.`);
+  }
+
+  return postToken(
+    "/oauth/v2/recovery",
+    {
+      client_id: config.appId,
+      client_secret: config.appSecret,
+      recovery_token: recoveryToken,
     },
     environment,
   );
