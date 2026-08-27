@@ -657,3 +657,174 @@ export async function printImageOnDevice(
     };
   }
 }
+
+// ============================================================================
+// Stopping the device asking.
+//
+// ── THE GAP THIS CLOSES ───────────────────────────────────────────────────
+//
+// A payment request holds the device until somebody presents a card or it gives
+// up. Our own request abandons after 150 seconds; THE DEVICE DOES NOT. So a
+// customer who decides to pay cash, or a total rung wrong, left the terminal
+// prompting with nothing in Yipyy able to clear it — the counter's only option
+// was to walk over and press the device.
+//
+// Clover names this case exactly: halting a payment flow when the customer
+// switches payment method or wants to add items.
+//
+// ── IT STOPS A PROMPT, IT DOES NOT UNDO A PAYMENT ─────────────────────────
+//
+// If the card was already approved, cancelling the prompt changes nothing about
+// the money — and the caller must never tell somebody a payment was cancelled
+// on that basis. What finds a payment taken in that race is reconciliation,
+// which matches on the externalPaymentId the sale carried.
+// ============================================================================
+
+/**
+ * Cancel whatever the device is currently asking for.
+ *
+ * The device returns to its welcome screen. Never throws: a cancel that fails
+ * must not become a second problem on top of the one being cancelled.
+ */
+export async function cancelOnDevice(
+  facilityId: string,
+  deviceSerial: string,
+): Promise<{ cancelled: boolean; detail?: string }> {
+  const active = await validAccessToken(facilityId);
+  if (!active) return { cancelled: false, detail: "no clover token" };
+
+  const config = cloverConfig(active.environment);
+  if (!config) return { cancelled: false, detail: "clover is not configured" };
+
+  try {
+    const response = await fetch(
+      new URL("/connect/v1/device/cancel", config.apiOrigin),
+      {
+        method: "POST",
+        headers: headers(active.accessToken, active.merchantId, deviceSerial),
+        // Documented as an empty POST. The device answers with an empty object.
+        body: "{}",
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.warn(
+        `[clover-print] cancel -> ${response.status} ${detail}`.slice(0, 300),
+      );
+      return { cancelled: false, detail: `${response.status}` };
+    }
+    return { cancelled: true };
+  } catch (error) {
+    console.warn("[clover-print] cancel failed:", error);
+    return { cancelled: false, detail: "unreachable" };
+  }
+}
+
+// ============================================================================
+// The cash drawer.
+//
+// A drawer is attached to the DEVICE, not to Yipyy, so opening one is a device
+// command like printing is. A facility with no drawer gets an empty list and a
+// button that says so — rather than one that fails when pressed, which is the
+// same defect as a button that claims to have worked.
+// ============================================================================
+
+export interface CashDrawer {
+  id: string;
+  name: string | null;
+  number: number | null;
+}
+
+/** The drawers this device can see. Empty when none is attached. */
+export async function cashDrawers(
+  facilityId: string,
+  deviceSerial: string,
+): Promise<CashDrawer[]> {
+  const active = await validAccessToken(facilityId);
+  if (!active) return [];
+
+  const config = cloverConfig(active.environment);
+  if (!config) return [];
+
+  try {
+    const response = await fetch(
+      new URL("/connect/v1/device/cash-drawers", config.apiOrigin),
+      {
+        headers: headers(active.accessToken, active.merchantId, deviceSerial),
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    if (!response.ok) return [];
+    const body = (await response.json().catch(() => null)) as {
+      drawers?: { id?: string; name?: string; number?: number }[];
+    } | null;
+    return (body?.drawers ?? [])
+      .filter((drawer): drawer is { id: string } => Boolean(drawer.id))
+      .map((drawer) => ({
+        id: drawer.id,
+        name: (drawer as { name?: string }).name ?? null,
+        number: (drawer as { number?: number }).number ?? null,
+      }));
+  } catch (error) {
+    console.warn("[clover-print] cash-drawers failed:", error);
+    return [];
+  }
+}
+
+/**
+ * Open a cash drawer.
+ *
+ * @param cashDrawerId which drawer. Omitted, Clover opens the FIRST one it
+ *   finds — the sane default for a counter with one drawer, and the reason this
+ *   does not force a caller to list them first.
+ */
+export async function openCashDrawer(
+  facilityId: string,
+  deviceSerial: string,
+  options: { cashDrawerId?: string | null; reason?: string } = {},
+): Promise<{ opened: boolean; detail?: string }> {
+  const active = await validAccessToken(facilityId);
+  if (!active) return { opened: false, detail: "no clover token" };
+
+  const config = cloverConfig(active.environment);
+  if (!config) return { opened: false, detail: "clover is not configured" };
+
+  try {
+    const response = await fetch(
+      new URL("/connect/v1/device/cash-drawer/open", config.apiOrigin),
+      {
+        method: "POST",
+        headers: headers(active.accessToken, active.merchantId, deviceSerial),
+        body: JSON.stringify(
+          options.cashDrawerId
+            ? {
+                cashDrawerId: options.cashDrawerId,
+                ...(options.reason ? { reason: options.reason } : {}),
+              }
+            : {},
+        ),
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.warn(
+        `[clover-print] cash-drawer/open -> ${response.status} ${detail}`.slice(
+          0,
+          300,
+        ),
+      );
+      // 404 is the honest case: this device has no drawer attached. Passed back
+      // so a screen can say that rather than "something went wrong".
+      return {
+        opened: false,
+        detail: response.status === 404 ? "no drawer" : `${response.status}`,
+      };
+    }
+    return { opened: true };
+  } catch (error) {
+    console.warn("[clover-print] cash-drawer/open failed:", error);
+    return { opened: false, detail: "unreachable" };
+  }
+}

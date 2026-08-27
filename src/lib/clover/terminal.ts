@@ -4,6 +4,7 @@ import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { cloverConfig } from "./config";
 import { chargeableConnection, validAccessToken } from "./connection";
 import { createAtomicOrder, type OrderLine } from "./orders";
+import { sweepFacility } from "./sweep";
 
 // ============================================================================
 // Taking a card on the facility's own terminal.
@@ -411,13 +412,35 @@ export async function chargeOnTerminal(
       .json()
       .catch(() => null)) as CloverTerminalPayment | null;
   } catch {
-    // The customer may have paid. The intent survives carrying its id as the
-    // externalPaymentId on Clover's side, which is exactly what a later
-    // reconciliation matches on.
+    // ── THE CUSTOMER MAY HAVE PAID, SO GO AND LOOK ──────────────────────
+    //
+    // The intent survives carrying its id as the externalPaymentId on Clover's
+    // side, which is exactly what reconciliation matches on. That used to mean
+    // waiting for the 15-minute sweep: staff were told "the payment may have
+    // gone through" and had no way to find out, which is the worst sentence to
+    // read at a counter with a customer in front of you.
+    //
+    // So the sweep is run NOW, for this facility only. It is the same code the
+    // timer runs — gap-based, idempotent, already trusted with money — and no
+    // new endpoint is invented on the path that decides whether somebody was
+    // charged. Clover's own REST Pay retrieval documentation describes the
+    // ANDROID SDK and gives no HTTP path, so there is nothing to call directly.
+    const recovered = await recoverAfterLostResponse(
+      request.facilityId,
+      intentId,
+    );
+    if (recovered) {
+      return fail(
+        "network",
+        "The terminal did not answer, but a payment WAS taken and has been recorded. Do not charge again.",
+        "Recovered by an immediate facility sweep after a lost REST Pay response.",
+      );
+    }
+
     return fail(
       "network",
-      "We lost contact with the terminal. Check the device before charging again — the payment may have gone through.",
-      "The REST Pay Display request did not return. externalPaymentId is the intent id.",
+      "We lost contact with the terminal and no payment was found. Check the device before charging again.",
+      "The REST Pay Display request did not return. externalPaymentId is the intent id; an immediate sweep found nothing.",
     );
   }
 
@@ -649,4 +672,43 @@ export async function refundOnTerminal(input: {
   }
 
   return { ok: true, refundId: body?.refund?.id ?? body?.id ?? null };
+}
+
+// ============================================================================
+// Did the payment we just lost contact with actually happen?
+//
+// Runs the SAME reconciliation the 15-minute timer runs, for this facility
+// only, and then asks a much narrower question than the sweep's own counters
+// can answer: did OUR intent gain a payment?
+//
+// `recovered > 0` from the sweep would mean SOME lost sale was finished — at a
+// counter with two terminals that could easily be somebody else's, and telling
+// this customer "you were charged" on that basis would be a guess about money.
+// The intent row is the precise answer: `record_clover_payment` sets
+// `payment_id` on it in the same transaction as the ledger row.
+// ============================================================================
+
+async function recoverAfterLostResponse(
+  facilityId: string,
+  intentId: string,
+): Promise<boolean> {
+  try {
+    // Deliberately awaited: somebody is standing at a counter waiting to know
+    // whether to charge again, and an answer after they have left is worthless.
+    await sweepFacility(facilityId);
+
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("payment_intents")
+      .select("payment_id")
+      .eq("id", intentId)
+      .maybeSingle();
+
+    return Boolean(data?.payment_id);
+  } catch (error) {
+    // A failed recovery must not change the answer the caller already has:
+    // contact was lost, and they should check the device. Never throws.
+    console.warn("[clover-terminal] immediate recovery failed:", error);
+    return false;
+  }
 }

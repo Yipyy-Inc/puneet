@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OpenDrawerButton } from "./OpenDrawerButton";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import {
   Activity,
@@ -208,6 +209,14 @@ export function DailyRegisterClient({
 
   return (
     <div className="space-y-5">
+      {/* The physical till. Beside the register's own numbers because that is
+          where somebody counting cash already is — and it opens the drawer on
+          the terminal this counter chose, so the till and the card reader
+          cannot disagree about which device is "here". */}
+      <div className="flex justify-end">
+        <OpenDrawerButton />
+      </div>
+
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         {kpis.map((k) => (
