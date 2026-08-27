@@ -45,9 +45,19 @@ import { useQueryClient } from "@tanstack/react-query";
 // any jurisdiction that has thought about it. The row records when and by whom;
 // a card with no consent recorded is refused by the charge route.
 //
-// Saving happens only AFTER the payment succeeds. A card stored against a
-// declined charge is a credential the customer never completed a purchase
-// with, and a failure to save must never fail the payment that already worked.
+// Saving happens BEFORE the charge, because Clover's tokenizer returns a
+// SINGLE-PAY token: spending it on a charge and then offering the same token to
+// POST /v1/customers cannot work, and that is the order this shipped with on
+// 2026-08-26. Token -> customer -> charge the customer id is the documented
+// order and the one used here.
+//
+// The consequence is worth stating plainly: a card is kept even if the charge
+// is then DECLINED. That is defensible — agreeing to store a card is a separate
+// decision from whether one payment succeeded, and the customer can remove it —
+// but it is a real behaviour, not an accident.
+//
+// A vault failure never costs the payment: the charge falls back to the token,
+// which is still unspent, and the customer is told the card was not kept.
 // ============================================================================
 
 export interface CloverCheckoutProps {
@@ -97,6 +107,14 @@ export function CloverCheckout({
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  /**
+   * The card could not be kept, but the payment is unaffected.
+   *
+   * Separate from `problem` on purpose: one of these stops the payment and
+   * the other does not, and showing them in the same red sentence would
+   * make a customer think their money had not gone through.
+   */
+  const [notSaved, setNotSaved] = useState<string | null>(null);
   /** null = pay with a new card. Otherwise a `saved_cards.id`. */
   const [savedCardId, setSavedCardId] = useState<string | null>(null);
   const [saveCard, setSaveCard] = useState(false);
@@ -106,6 +124,7 @@ export function CloverCheckout({
   const pay = useCallback(async () => {
     setBusy(true);
     setProblem(null);
+    setNotSaved(null);
     try {
       // ── ONE OF TWO BODIES ───────────────────────────────────────────────
       //
@@ -114,7 +133,6 @@ export function CloverCheckout({
       // hosted fields are not even mounted in that case, so there is nothing
       // to tokenise.
       let body: Record<string, unknown>;
-      let token: string | null = null;
 
       if (savedCardId) {
         body = { bookingId, savedCardId, tipCents };
@@ -125,9 +143,57 @@ export function CloverCheckout({
           // Already shown against the offending field; nothing to add here.
           return;
         }
-        token = tokenised.token;
+
         // The token and the tip. Never an amount — the server owns that.
         body = { bookingId, source: tokenised.token, tipCents };
+
+        // ── SAVING HAPPENS BEFORE THE CHARGE, AND IT HAS TO ───────────────
+        //
+        // Clover's tokenizer returns a SINGLE-PAY token. Spending it on a
+        // charge and then handing the same token to POST /v1/customers is the
+        // order this shipped with on 2026-08-26, and it could never have
+        // worked: the second call is presented a token that no longer exists.
+        //
+        // The documented order is the other way round — token -> customer ->
+        // charge the customer id — so that is what happens here. The charge
+        // then goes through the `savedCardId` path, which is the same one a
+        // returning customer uses, so there is one way to charge a stored
+        // card rather than two.
+        //
+        // A vault failure must NOT cost the payment. If the card cannot be
+        // stored — the app lacks the Ecommerce "Write customers" permission,
+        // Clover is unreachable — the charge falls back to the token that is
+        // still unspent, and the customer is told the card was not kept.
+        if (saveCard && clientId) {
+          const saved = await fetch("/api/payments/cards", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              source: tokenised.token,
+              clientId,
+              consent: true,
+            }),
+          }).catch(() => null);
+
+          const savedBody = (await saved?.json().catch(() => null)) as {
+            card?: { id?: string };
+            error?: string;
+          } | null;
+
+          if (saved?.ok && savedBody?.card?.id) {
+            // The token is now spent on the customer, so the charge must name
+            // the stored card rather than the token.
+            body = { bookingId, savedCardId: savedBody.card.id, tipCents };
+            void queryClient.invalidateQueries({
+              queryKey: savedCardKeys.forClient(clientId),
+            });
+          } else {
+            setNotSaved(
+              savedBody?.error ??
+                "The card could not be saved, so it was not kept for next time.",
+            );
+          }
+        }
       }
 
       const response = await fetch("/api/payments/clover/charge", {
@@ -148,40 +214,6 @@ export function CloverCheckout({
       if (!response.ok || !payload?.paid) {
         setProblem(payload?.error ?? "The payment did not go through.");
         return;
-      }
-
-      // ── SAVING HAPPENS AFTER THE MONEY MOVED, AND CANNOT UNDO IT ────────
-      //
-      // The payment has succeeded by this point. If storing the card fails —
-      // the merchant is not set up to vault, Clover is unreachable — the
-      // customer has still paid, and telling them their payment failed would
-      // be a lie about money. The failure is surfaced beside the receipt
-      // instead, and the charge stands.
-      if (token && saveCard && clientId) {
-        try {
-          const saved = await fetch("/api/payments/cards", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ source: token, clientId, consent: true }),
-          });
-          if (saved.ok) {
-            void queryClient.invalidateQueries({
-              queryKey: savedCardKeys.forClient(clientId),
-            });
-          } else {
-            const detail = (await saved.json().catch(() => null)) as {
-              error?: string;
-            } | null;
-            setProblem(
-              detail?.error ??
-                "The payment went through, but the card could not be saved.",
-            );
-          }
-        } catch {
-          setProblem(
-            "The payment went through, but the card could not be saved.",
-          );
-        }
       }
 
       onPaid({
@@ -259,6 +291,15 @@ export function CloverCheckout({
       {problem && (
         <p className="text-destructive text-sm" role="alert">
           {problem}
+        </p>
+      )}
+
+      {/* Not an error, and deliberately not red: the payment is unaffected.
+          Saying "something went wrong" here would have a customer checking
+          their bank for a charge that went through perfectly. */}
+      {notSaved && (
+        <p className="text-muted-foreground text-sm" role="status">
+          {notSaved}
         </p>
       )}
 

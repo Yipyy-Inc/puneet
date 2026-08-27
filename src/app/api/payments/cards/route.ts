@@ -150,11 +150,14 @@ export async function POST(request: NextRequest) {
   });
 
   if (!vaulted.ok) {
-    // `not_enabled` is the merchant account, not a bug and not the customer's
-    // card. It is passed through verbatim so the screen can say which.
+    // `not_enabled` and `no_email` are both things a person can go and fix —
+    // an app permission and a missing email address — so they are 4xx and the
+    // message names the fix. Everything else is ours and is a 502.
+    const status =
+      vaulted.code === "not_enabled" || vaulted.code === "no_email" ? 409 : 502;
     return NextResponse.json(
       { error: vaulted.message, code: vaulted.code },
-      { status: vaulted.code === "not_enabled" ? 409 : 502 },
+      { status },
     );
   }
 
