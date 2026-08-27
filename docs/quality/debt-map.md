@@ -6506,24 +6506,46 @@ basis.
 <facilityId>`, or press **Check now** on Settings → Yipyy Pay → Overview. Both
 state the environment.
 
-### 🟠 Clover's sandbox turns any amount over $100 into an error — 2026-08-27
+### 🟠 Clover's sandbox uses the AMOUNT to choose an error — but only on some paths — 2026-08-27
 
-**What is true.** From Clover's own test-card documentation: amounts **under
-$100 approve**, and amounts **over $100 return an error whose code is the last
-three digits of the amount** — $101.16 produces code 116.
+**What the documentation says**, verbatim, under "Testing tips valid for all
+cards": _"Transactions below $100.00 receive an `Approved` response.
+Transactions above $100.00 receive a specific `Error` response. Transaction
+amount sent in the transaction request message determines which error response
+code is received in your response."_ So $101.16 returns code 116.
 
-**Why it is risky.** It is invisible. Somebody testing card-not-present with a
-realistic booking — a $124.50 boarding stay — gets a decline that has nothing to
-do with the card, the token, the permissions or the code, and every instinct
-says to go and debug the integration.
+**What the ledger says**, which is narrower — six sandbox payments over $100
+SUCCEEDED, all of them on the terminal:
 
-**What to do instead:** test with amounts under $100.
+```sql
+select entry_method, grand_total from public.payments where processor='clover'
+ order by grand_total desc limit 6;
+-- swipe       180.67
+-- swipe       167.67
+-- swipe       155.97
+-- contactless 128.22
+-- swipe       104.38
+-- swipe       103.98
+```
 
-- `4242 4242 4242 4242` approves
-- `4005 5717 0222 2222` declines
-- `4005 5780 0333 3335` approves partially
+**So the rule did not apply to card-present transactions on the test device.**
+The documentation does not say which integrations it governs; the measurement
+says the physical Flex is not one of them.
 
-Any future expiry, any three-digit CVV.
+**And the honest gap: it has never been observed firing here at all.** Every
+`ecom` payment in this ledger is under $100 ($62.50 and $47.00), so there is no
+evidence either way for the hosted-iframe path — which is precisely the path the
+rule is most likely to govern, since it is the one where Clover's simulator
+processes a test PAN rather than a device processing a card.
+
+**What to do instead of guessing:** when testing card-not-present, use amounts
+**under $100** — it costs nothing and removes the variable. If a card-not-present
+charge over $100 fails with a code matching its own last three digits, that is
+this rule and not a bug in the integration. If somebody establishes the boundary
+properly, replace this entry with the measurement.
+
+Test cards: `4242 4242 4242 4242` approves · `4005 5717 0222 2222` declines ·
+`4005 5780 0333 3335` approves partially. Any future expiry, any 3-digit CVV.
 
 ### 🟠 Clover requires an email to store a card, and a client may not have one — 2026-08-27
 
