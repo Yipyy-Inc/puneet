@@ -32,29 +32,15 @@ import {
 
 /**
  * `numeric` arrives from PostgREST as a STRING, and the series mapper passes
- * `total_price` straight through under a `number` type. Rendering copes either
- * way; sorting does not.
+ * `total_price` straight through under a `number` type.
+ *
+ * Rendering copes either way; sorting does not, and the coercion is what makes
+ * it work: `DataTable` compares numerically only when both sides really are
+ * numbers, and falls back to string order otherwise. A string here would take
+ * that fallback and put $1000 ahead of $250.
  */
 function price(series: RealTrainingSeries): number {
   return Number(series.totalPrice);
-}
-
-/**
- * The sort key for Price, zero-padded, and it has to be.
- *
- * `DataTable` compares every sort value as `String(v).toLowerCase()`
- * (DataTable.tsx), so returning a number here would still be ordered
- * lexicographically -- "1000" before "250". That is a bug in the SHARED
- * table affecting every numeric column in the app, not something this screen
- * introduced, and DataTable is a documented risk zone whose comparator should
- * not be changed as a side effect of adding a panel.
- *
- * So the value is padded to a fixed width in cents, which makes lexicographic
- * order and numeric order the same thing. Remove this the day the comparator
- * learns about numbers.
- */
-function priceSortKey(series: RealTrainingSeries): string {
-  return String(Math.round(price(series) * 100)).padStart(12, "0");
 }
 
 const STATUS_STYLE: Record<RealTrainingSeries["status"], string> = {
@@ -110,7 +96,7 @@ export function TrainingServiceCatalogClient({ series }: Props) {
         label: "Price",
         align: "right",
         sortable: true,
-        sortValue: priceSortKey,
+        sortValue: price,
         render: (s) => <span className="tabular-nums">${price(s)}</span>,
       },
       {

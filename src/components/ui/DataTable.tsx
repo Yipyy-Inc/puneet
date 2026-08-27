@@ -215,6 +215,33 @@ export function DataTable<T extends object>({
     };
     const aVal = getSortValue(a);
     const bVal = getSortValue(b);
+
+    // ── Numbers compare as numbers ────────────────────────────────────────
+    //
+    // Everything below stringifies, so without this a numeric column sorts
+    // LEXICOGRAPHICALLY: 1000 ahead of 250, and boarding's own nightly rates
+    // put $125 ahead of $38. The bug was invisible for a long time because
+    // it only shows up once a column holds values of differing digit length.
+    //
+    // Guarded on BOTH sides being finite numbers, which is what keeps this
+    // additive: every value that is not a number takes exactly the path it
+    // took before, so the 88 screens on this table are unaffected unless
+    // they were already sorting wrongly.
+    //
+    // Numeric STRINGS are deliberately NOT coerced. PostgREST returns
+    // `numeric` as a string, so it is tempting -- but "01234" is a postcode,
+    // a booking ref keeps its leading zeros, and a version is not a float.
+    // A column that wants numeric order says so with
+    // `sortValue: (row) => Number(row.field)`.
+    if (
+      typeof aVal === "number" &&
+      typeof bVal === "number" &&
+      Number.isFinite(aVal) &&
+      Number.isFinite(bVal)
+    ) {
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+    }
+
     const aStr = String(aVal).toLowerCase();
     const bStr = String(bVal).toLowerCase();
     if (aStr < bStr) return sortDirection === "asc" ? -1 : 1;
