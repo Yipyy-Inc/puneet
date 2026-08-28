@@ -1002,14 +1002,19 @@ function SequenceStep({
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">Email template</Label>
+              {/* Associated, not just adjacent. An unlabelled Select is
+                  unreachable by name to a screen reader and to a test, and
+                  this step has two of them side by side. */}
+              <Label className="text-xs" htmlFor={`wf-step-${i}-email`}>
+                Email template
+              </Label>
               <Select
                 value={s.emailTemplateId ?? "NONE"}
                 onValueChange={(v) =>
                   patch(i, { emailTemplateId: v === "NONE" ? null : v })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id={`wf-step-${i}-email`}>
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1024,14 +1029,16 @@ function SequenceStep({
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">Text template</Label>
+              <Label className="text-xs" htmlFor={`wf-step-${i}-sms`}>
+                Text template
+              </Label>
               <Select
                 value={s.smsTemplateId ?? "NONE"}
                 onValueChange={(v) =>
                   patch(i, { smsTemplateId: v === "NONE" ? null : v })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id={`wf-step-${i}-sms`}>
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>
