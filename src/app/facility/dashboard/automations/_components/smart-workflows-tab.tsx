@@ -28,7 +28,8 @@ import {
 } from "@/lib/api/workflows";
 import { TRIGGER_META } from "@/lib/automations/triggers";
 import type { RealMessageTemplate } from "@/types/automations";
-import type { Workflow } from "@/types/workflows";
+import type { Workflow, WorkflowDetail } from "@/types/workflows";
+import { WorkflowDetailSheet } from "./workflow-detail";
 import { WorkflowWizard } from "./workflow-wizard";
 
 // ============================================================================
@@ -47,6 +48,8 @@ export function SmartWorkflowsTab({
   templates: RealMessageTemplate[];
 }) {
   const [creating, setCreating] = useState(false);
+  const [viewing, setViewing] = useState<string | undefined>();
+  const [editing, setEditing] = useState<WorkflowDetail | null>(null);
   const workflows = useQuery(workflowQueries.all());
   const updateWorkflow = useUpdateWorkflow();
   const archiveWorkflow = useArchiveWorkflow();
@@ -157,6 +160,7 @@ export function SmartWorkflowsTab({
             <WorkflowRow
               key={w.id}
               workflow={w}
+              onOpen={() => setViewing(w.id)}
               onToggle={toggle}
               onArchive={() =>
                 archiveWorkflow.mutate(w.id, {
@@ -169,24 +173,52 @@ export function SmartWorkflowsTab({
         </div>
       )}
 
-      <Dialog open={creating} onOpenChange={(o) => !o && setCreating(false)}>
+      <Dialog
+        open={creating || editing !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setCreating(false);
+            setEditing(null);
+          }
+        }}
+      >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          {/* `key` remounts the wizard between create and edit, and between one
+              workflow and the next. Without it the previous draft's state
+              survives and the form opens showing somebody else's sequence. */}
           <WorkflowWizard
+            key={editing?.id ?? "new"}
             templates={templates}
-            onDone={() => setCreating(false)}
+            existing={editing}
+            onDone={() => {
+              setCreating(false);
+              setEditing(null);
+            }}
           />
         </DialogContent>
       </Dialog>
+
+      <WorkflowDetailSheet
+        workflowId={viewing}
+        open={viewing !== undefined}
+        onOpenChange={(o) => !o && setViewing(undefined)}
+        onEdit={(w) => {
+          setViewing(undefined);
+          setEditing(w);
+        }}
+      />
     </div>
   );
 }
 
 function WorkflowRow({
   workflow,
+  onOpen,
   onToggle,
   onArchive,
 }: {
   workflow: Workflow;
+  onOpen: () => void;
   onToggle: (w: Workflow, on: boolean) => void;
   onArchive: () => void;
 }) {
@@ -202,7 +234,12 @@ function WorkflowRow({
   return (
     <Card>
       <CardContent className="flex flex-wrap items-center gap-4 py-4">
-        <div className="min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-w-0 flex-1 text-left"
+          aria-label={`Open ${workflow.name}`}
+        >
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{workflow.name}</span>
             <Badge
@@ -245,7 +282,7 @@ function WorkflowRow({
             {workflow.lastRunAt &&
               ` · last ran ${new Date(workflow.lastRunAt).toLocaleDateString()}`}
           </p>
-        </div>
+        </button>
 
         <div className="flex items-center gap-2">
           <Switch
