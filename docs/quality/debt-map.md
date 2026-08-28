@@ -6548,37 +6548,39 @@ same four specs from failing twice in a row to 46/46 and the gate from four red
 to 162 passed. And before trusting a long run, check `git status` — a build
 started against a tree somebody else is editing is not a build of anything.
 
-### 🔴 The messaging tick sends nothing until its timer is installed on the box — 2026-08-27
+### 🟠 The messaging tick needs a timer, and the deploy now installs it — 2026-08-27
 
 `/api/cron/messaging-tick` drains the outbox: every message a rule deferred
 (`offset_minutes > 0`) sits in `message_sends` as `queued` with a future
-`scheduled_for` until something calls that route. **Nothing calls it
-automatically yet.**
+`scheduled_for` until something calls that route.
 
-`deploy/deploy.sh` does not install systemd units — `clover-sweep.timer` was put
-on the VPS by hand, and `messaging-tick.timer` has to be too:
+**Nothing called it, and nothing would have.** `deploy/deploy.sh` in this repo is
+a REFERENCE COPY — the box runs `/opt/yipyy/deploy.sh`, installed by hand — so
+adding the install there would have changed nothing. `clover-sweep.timer` was
+put on the box manually, which worked exactly once and is not a process.
 
-```
-scp deploy/messaging-tick.sh   root@<box>:/usr/local/bin/messaging-tick
-ssh root@<box> chmod +x /usr/local/bin/messaging-tick
-scp deploy/messaging-tick.{service,timer} root@<box>:/etc/systemd/system/
-ssh root@<box> 'systemctl daemon-reload && systemctl enable --now messaging-tick.timer'
-ssh root@<box> 'systemctl list-timers messaging-tick.timer'
-```
+**Fixed by making it part of the deploy.** The `deploy` job now copies
+`deploy/messaging-tick.{sh,service,timer}` and runs `systemctl enable --now`,
+then asserts `is-active` — because `enable` succeeding is not the same as a
+timer being armed. It runs AFTER the public health check, so a broken unit turns
+the run red without ever standing between a deploy and production. It reuses
+`/etc/yipyy/cron.env` (`CRON_SECRET`, `SWEEP_HOST`), and fails loudly if that
+file is missing rather than leaving the route answering 503 for ever.
 
-It reuses `/etc/yipyy/cron.env` (`CRON_SECRET`, `SWEEP_HOST`), which the sweep
-already relies on, so there is no new secret.
+**Why this was worth doing rather than writing down.** The failure is invisible
+from inside the product: a facility switches on a tip reminder, the rule reports
+it fired, `message_sends` fills — and every row says `queued`, for ever, while
+the Automations screen counts a queued row as sent. The screen says the message
+went and the customer never got it, which is the exact claim this whole area was
+rewritten to stop making.
 
-**Why this is red rather than a to-do.** The failure is invisible from inside
-the product. A facility switches on a tip reminder, the rule reports it fired,
-`message_sends` fills with rows — and every one of them says `queued`, for ever.
-The Automations screen counts a queued row as sent by the rule, so the screen
-says the message went and the customer never got it. That is the exact class of
-claim this whole area was rewritten to stop making.
+**How to tell it is working:** `systemctl list-timers messaging-tick.timer` on
+the box, or `select status, count(*) from message_sends group by 1`. A growing
+`queued` count with an old `min(scheduled_for)` means the timer is not firing.
 
-**How to tell it is working:** `select status, count(*) from message_sends group
-by 1`. A growing `queued` count with an old `min(scheduled_for)` means the timer
-is not installed or not firing.
+**`clover-sweep.timer` is still hand-installed** and is not covered by this. It
+has been running since the VPS move, so nothing is broken — but it would not
+survive a rebuild of the box, and neither would anything else in `deploy/`.
 
 ### 🟠 The tip reminder and the report-card tip ask are configured and never sent — 2026-08-27
 

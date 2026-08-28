@@ -652,3 +652,63 @@ jobs:
           echo "::error::Public /api/health never answered 200 after the deploy."
           echo "Roll back: ssh deploy@<host> /opt/yipyy/deploy.sh <previous-sha>"
           exit 1
+
+      # ── THE TIMERS THE APP CANNOT START FOR ITSELF ──────────────────────
+      #
+      # `messaging-tick` drains the outbox: every message a rule deferred sits
+      # in `message_sends` as `queued` until something calls that route. If the
+      # timer is not on the box, those rows sit there for ever WHILE THE
+      # AUTOMATIONS SCREEN COUNTS THEM AS SENT — a facility believing it wrote
+      # to a customer who never heard from it.
+      #
+      # `clover-sweep.timer` was installed by hand and stayed installed, which
+      # worked precisely once and is not a process. This step is here so the
+      # unit is a property of the deploy rather than of somebody's memory.
+      #
+      # AFTER the health check on purpose. The application is already live and
+      # verified by this point, so a broken unit file turns the run red — which
+      # is what should happen — without ever standing between a deploy and
+      # production.
+      - name: Copy the timer units
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "deploy/messaging-tick.sh,deploy/messaging-tick.service,deploy/messaging-tick.timer"
+          target: /tmp/yipyy-units
+          strip_components: 1
+
+      - name: Install and verify the messaging timer
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+            install -m 0755 /tmp/yipyy-units/messaging-tick.sh /usr/local/bin/messaging-tick
+            install -m 0644 /tmp/yipyy-units/messaging-tick.service /etc/systemd/system/
+            install -m 0644 /tmp/yipyy-units/messaging-tick.timer   /etc/systemd/system/
+            rm -rf /tmp/yipyy-units
+
+            # The script reads CRON_SECRET and SWEEP_HOST from here, the same
+            # file the Clover sweep already uses. Without it the tick answers
+            # 503 for ever and nothing says why, so fail loudly instead.
+            test -r /etc/yipyy/cron.env || {
+              echo "::error::/etc/yipyy/cron.env is missing; the tick cannot authenticate."
+              exit 1
+            }
+
+            systemctl daemon-reload
+            systemctl enable --now messaging-tick.timer
+
+            # `enable` succeeding is not the same as the timer being armed.
+            systemctl is-active --quiet messaging-tick.timer || {
+              echo "::error::messaging-tick.timer is installed but not active."
+              systemctl status messaging-tick.timer --no-pager || true
+              exit 1
+            }
+            systemctl list-timers messaging-tick.timer --no-pager
