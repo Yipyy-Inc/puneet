@@ -97,6 +97,38 @@ export interface Workflow {
   deliverable: boolean;
 }
 
+/** How one step of a sequence has actually performed. */
+export interface WorkflowStepStat {
+  stepIndex: number;
+  sent: number;
+  queued: number;
+  failed: number;
+  skipped: number;
+}
+
+/**
+ * One line of "what this workflow has been doing".
+ *
+ * Read from `message_sends`, so it is the record of what was actually
+ * attempted rather than a separate activity table that could disagree with it.
+ */
+export interface WorkflowActivity {
+  id: string;
+  clientName: string | null;
+  stepIndex: number | null;
+  channel: string;
+  status: string;
+  skipReason: string | null;
+  createdAt: string;
+}
+
+export interface WorkflowDetail extends Workflow {
+  /** Distinct clients this workflow has ever written to. */
+  uniqueRecipients: number;
+  stepStats: WorkflowStepStat[];
+  recentActivity: WorkflowActivity[];
+}
+
 /**
  * The audience fields the compiler actually implements.
  *

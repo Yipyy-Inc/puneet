@@ -26,6 +26,7 @@ import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import {
   useAudienceEstimate,
   useCreateWorkflow,
+  useUpdateWorkflow,
   type NewWorkflow,
 } from "@/lib/api/workflows";
 import { TRIGGER_META, triggersByCategory } from "@/lib/automations/triggers";
@@ -35,6 +36,7 @@ import {
   AUDIENCE_FIELDS,
   STOP_CONDITIONS,
   type Audience,
+  type Workflow,
 } from "@/types/workflows";
 
 // ============================================================================
@@ -73,27 +75,48 @@ const EMPTY_AUDIENCE: Audience = {
 
 export function WorkflowWizard({
   templates,
+  existing,
   onDone,
 }: {
   templates: RealMessageTemplate[];
+  /** Present when editing. Its `kind` and `trigger` are fixed - see below. */
+  existing?: Workflow | null;
   onDone: () => void;
 }) {
+  const editing = Boolean(existing);
   const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
-  const [kind, setKind] = useState<"event" | "audience">("event");
-  const [trigger, setTrigger] = useState("booking_created");
-  const [audience, setAudience] = useState<Audience>(EMPTY_AUDIENCE);
-  const [frequency, setFrequency] = useState("weekly");
-  const [dayOfWeek, setDayOfWeek] = useState(1);
-  const [dayOfMonth, setDayOfMonth] = useState(1);
-  const [sendAt, setSendAt] = useState("09:00");
-  const [cooldown, setCooldown] = useState(30);
-  const [stopOn, setStopOn] = useState<string[]>(["booked"]);
-  const [steps, setSteps] = useState<DraftStep[]>([
-    { delayMinutes: 0, emailTemplateId: null, smsTemplateId: null },
-  ]);
+  const [name, setName] = useState(existing?.name ?? "");
+  const [kind, setKind] = useState<"event" | "audience">(
+    existing?.kind ?? "event",
+  );
+  const [trigger, setTrigger] = useState(
+    existing?.trigger ?? "booking_created",
+  );
+  const [audience, setAudience] = useState<Audience>(
+    existing?.audience ?? EMPTY_AUDIENCE,
+  );
+  const [frequency, setFrequency] = useState<string>(
+    existing?.frequency ?? "weekly",
+  );
+  const [dayOfWeek, setDayOfWeek] = useState(existing?.dayOfWeek ?? 1);
+  const [dayOfMonth, setDayOfMonth] = useState(existing?.dayOfMonth ?? 1);
+  const [sendAt, setSendAt] = useState(existing?.sendAtLocal ?? "09:00");
+  const [cooldown, setCooldown] = useState(existing?.minDaysBetweenSends ?? 30);
+  const [stopOn, setStopOn] = useState<string[]>(
+    existing?.stopOn ?? ["booked"],
+  );
+  const [steps, setSteps] = useState<DraftStep[]>(
+    existing && existing.steps.length > 0
+      ? existing.steps.map((s) => ({
+          delayMinutes: s.delayMinutes,
+          emailTemplateId: s.emailTemplateId,
+          smsTemplateId: s.smsTemplateId,
+        }))
+      : [{ delayMinutes: 0, emailTemplateId: null, smsTemplateId: null }],
+  );
 
   const createWorkflow = useCreateWorkflow();
+  const updateWorkflow = useUpdateWorkflow();
   const estimate = useAudienceEstimate();
   const [matched, setMatched] = useState<{ n: number; total: number } | null>(
     null,
@@ -156,6 +179,38 @@ export function WorkflowWizard({
       steps,
     };
 
+    if (existing) {
+      // `kind` and `trigger` are NOT sent: they are the workflow's identity and
+      // the API refuses to change them. Editing one in place would turn a
+      // post-checkout follow-up into something that fires on booking while
+      // keeping its name, its enrolments and its send history.
+      updateWorkflow.mutate(
+        {
+          id: existing.id,
+          patch: {
+            name: payload.name,
+            audience: payload.audience,
+            frequency: payload.frequency,
+            dayOfWeek: payload.dayOfWeek,
+            dayOfMonth: payload.dayOfMonth,
+            sendAtLocal: payload.sendAtLocal,
+            minDaysBetweenSends: payload.minDaysBetweenSends,
+            stopOn: payload.stopOn,
+            steps: payload.steps,
+            ...(activate ? { status: "active" as const } : {}),
+          },
+        },
+        {
+          onSuccess: () => {
+            toast.success(activate ? `"${payload.name}" is live.` : "Saved.");
+            onDone();
+          },
+          onError: (e: Error) => toast.error(e.message),
+        },
+      );
+      return;
+    }
+
     createWorkflow.mutate(payload, {
       onSuccess: (created) => {
         if (!activate) {
@@ -187,7 +242,9 @@ export function WorkflowWizard({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Create a Smart Workflow</DialogTitle>
+        <DialogTitle>
+          {editing ? `Edit ${existing?.name}` : "Create a Smart Workflow"}
+        </DialogTitle>
         <DialogDescription>
           Step {step + 1} of {STEPS.length} — {STEPS[step]}
         </DialogDescription>
@@ -226,8 +283,16 @@ export function WorkflowWizard({
                 placeholder="e.g. Vaccine Reminder Sequence"
               />
             </div>
+            {editing && (
+              <p className="text-muted-foreground rounded-md border p-2 text-xs">
+                A workflow&apos;s type and starting action cannot be changed
+                after it is created — that would rewrite the history of everyone
+                already enrolled. Create a new one instead.
+              </p>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <KindCard
+                disabled={editing}
                 selected={kind === "event"}
                 onSelect={() => setKind("event")}
                 icon={Zap}
@@ -235,6 +300,7 @@ export function WorkflowWizard({
                 body="Starts when a client does something — books, checks out. Best for welcome series and post-visit follow-ups."
               />
               <KindCard
+                disabled={editing}
                 selected={kind === "audience"}
                 onSelect={() => setKind("audience")}
                 icon={CalendarClock}
@@ -248,7 +314,11 @@ export function WorkflowWizard({
         {step === 1 && kind === "event" && (
           <div className="space-y-2">
             <Label htmlFor="wf-trigger">What starts this workflow?</Label>
-            <Select value={trigger} onValueChange={setTrigger}>
+            <Select
+              value={trigger}
+              onValueChange={setTrigger}
+              disabled={editing}
+            >
               <SelectTrigger id="wf-trigger">
                 <SelectValue />
               </SelectTrigger>
@@ -330,7 +400,7 @@ export function WorkflowWizard({
         <Button
           variant="outline"
           onClick={() => (step === 0 ? onDone() : setStep(step - 1))}
-          disabled={createWorkflow.isPending}
+          disabled={createWorkflow.isPending || updateWorkflow.isPending}
         >
           {step === 0 ? "Cancel" : "Back"}
         </Button>
@@ -344,13 +414,13 @@ export function WorkflowWizard({
             <Button
               variant="outline"
               onClick={() => save(false)}
-              disabled={createWorkflow.isPending}
+              disabled={createWorkflow.isPending || updateWorkflow.isPending}
             >
               Save as draft
             </Button>
             <Button
               onClick={() => save(true)}
-              disabled={createWorkflow.isPending}
+              disabled={createWorkflow.isPending || updateWorkflow.isPending}
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               Save &amp; switch on
@@ -365,12 +435,14 @@ export function WorkflowWizard({
 function KindCard({
   selected,
   onSelect,
+  disabled,
   icon: Icon,
   title,
   body,
 }: {
   selected: boolean;
   onSelect: () => void;
+  disabled?: boolean;
   icon: typeof Zap;
   title: string;
   body: string;
@@ -378,9 +450,10 @@ function KindCard({
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={onSelect}
       data-selected={selected}
-      className="rounded-lg border p-4 text-left transition data-[selected=true]:border-emerald-500 data-[selected=true]:bg-emerald-50/60"
+      className="rounded-lg border p-4 text-left transition disabled:opacity-50 data-[selected=true]:border-emerald-500 data-[selected=true]:bg-emerald-50/60"
     >
       <div className="flex items-center gap-2 font-medium">
         <Icon className="size-4" /> {title}

@@ -15,7 +15,7 @@ import { channelConfigured } from "@/lib/messaging/send";
 import { createServerClient } from "@/lib/supabase/server";
 import { DELIVERABLE_TRIGGERS } from "@/types/automations";
 import type { Tables, TablesUpdate } from "@/types/database";
-import type { Workflow } from "@/types/workflows";
+import type { WorkflowDetail, WorkflowStepStat } from "@/types/workflows";
 
 // ============================================================================
 // One workflow: read it, change it, activate it, delete it.
@@ -37,7 +37,7 @@ import type { Workflow } from "@/types/workflows";
 export const dynamic = "force-dynamic";
 
 export interface WorkflowResult {
-  workflow: Workflow;
+  workflow: WorkflowDetail;
 }
 
 async function loadWorkflow(
@@ -54,11 +54,20 @@ async function loadWorkflow(
   return (data as Tables<"workflows"> | null) ?? null;
 }
 
+/**
+ * The full picture for one workflow, including how each step has actually
+ * performed and what it has been doing lately.
+ *
+ * Both come from `message_sends` rather than a separate activity table. There
+ * is exactly one record of what was attempted, so the step counts, the activity
+ * log and the list's totals cannot disagree with each other — which is the
+ * whole reason the outbox is also the log.
+ */
 async function respondWith(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   facilityId: string,
   row: Tables<"workflows">,
-) {
+): Promise<WorkflowDetail> {
   const [{ data: steps }, { data: enrollments }, { data: sends }] =
     await Promise.all([
       supabase
@@ -72,22 +81,73 @@ async function respondWith(
         .eq("workflow_id", row.id),
       supabase
         .from("message_sends")
-        .select("source_id, status")
+        .select(
+          "id, source_id, status, skip_reason, step_index, channel, client_id, created_at, clients(name)",
+        )
         .eq("facility_id", facilityId)
         .eq("source_kind", "workflow")
-        .eq("source_id", row.id),
+        .eq("source_id", row.id)
+        .order("created_at", { ascending: false }),
     ]);
+
+  const sendRows = (sends ?? []) as {
+    id: string;
+    source_id: string | null;
+    status: string;
+    skip_reason: string | null;
+    step_index: number | null;
+    channel: string;
+    client_id: string | null;
+    created_at: string;
+    clients: { name: string } | null;
+  }[];
 
   const usage = foldWorkflowUsage(
     (enrollments ?? []) as { workflow_id: string; status: string }[],
-    (sends ?? []) as { source_id: string | null; status: string }[],
+    sendRows,
   );
 
-  return toWorkflow(
+  const stats = new Map<number, WorkflowStepStat>();
+  const recipients = new Set<string>();
+  for (const send of sendRows) {
+    if (send.client_id) recipients.add(send.client_id);
+    const index = send.step_index ?? 0;
+    const stat = stats.get(index) ?? {
+      stepIndex: index,
+      sent: 0,
+      queued: 0,
+      failed: 0,
+      skipped: 0,
+    };
+    if (send.status === "sent") stat.sent += 1;
+    else if (send.status === "failed") stat.failed += 1;
+    else if (send.status === "skipped") stat.skipped += 1;
+    else stat.queued += 1;
+    stats.set(index, stat);
+  }
+
+  const base = toWorkflow(
     row,
     ((steps ?? []) as Tables<"workflow_steps">[]).map(toStep),
     usage.get(row.id),
   );
+
+  return {
+    ...base,
+    uniqueRecipients: recipients.size,
+    stepStats: [...stats.values()].sort((a, b) => a.stepIndex - b.stepIndex),
+    // Ten is enough to answer "is this working, and what did it just do".
+    // Anything longer belongs in a proper log view, not a detail panel.
+    recentActivity: sendRows.slice(0, 10).map((send) => ({
+      id: send.id,
+      clientName: send.clients?.name ?? null,
+      stepIndex: send.step_index,
+      channel: send.channel,
+      status: send.status,
+      skipReason: send.skip_reason,
+      createdAt: send.created_at,
+    })),
+  };
 }
 
 export async function GET(
