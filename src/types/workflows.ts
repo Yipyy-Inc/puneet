@@ -218,15 +218,66 @@ export const AUDIENCE_FIELDS = [
 
 export type AudienceFieldKey = (typeof AUDIENCE_FIELDS)[number]["field"];
 
+/**
+ * Conditions the ENGINE evaluates, at each step boundary, before rendering.
+ *
+ * "Someone stops it by hand" used to sit here as a third checkbox. It was
+ * removed rather than implemented as one, because it could only ever be a
+ * control that does nothing: unticking it would not — and must not — take away
+ * staff's ability to pull one client out of a sequence. That is now a button on
+ * the workflow's detail panel, always available, and the wizard says so in
+ * plain text instead of offering a switch with no off position.
+ *
+ * `unsubscribed` is absent for a different reason: suppression is enforced
+ * inside the sender, against every message from every source, keyed by address.
+ * A per-workflow opt-out would be a second place to forget it, and the first
+ * place would still be the one that mattered.
+ */
 export const STOP_CONDITIONS = [
   {
     value: "booked",
     label: "They book an appointment",
     hint: "The usual one. Stops a win-back sequence chasing somebody who already rebooked.",
   },
-  {
-    value: "manual",
-    label: "Someone stops it by hand",
-    hint: "Staff can end a sequence for one client from the workflow's detail page.",
-  },
 ] as const;
+
+/**
+ * The stop conditions on a workflow, in words.
+ *
+ * Not `stopOn.join(", ")`: rows written before "manual" was removed from the
+ * list still carry it, and the database default is
+ * `["booked","unsubscribed"]` — so a saved workflow can name conditions this
+ * build no longer offers. Falling back to the raw value keeps those readable
+ * instead of dropping them, which would tell somebody their sequence stops on
+ * nothing.
+ */
+export function describeStopConditions(stopOn: string[]): string {
+  if (stopOn.length === 0) return "nothing — it runs to the end";
+  return stopOn
+    .map(
+      (value) =>
+        STOP_CONDITIONS.find((c) => c.value === value)?.label.toLowerCase() ??
+        value.replace(/_/g, " "),
+    )
+    .join(", ");
+}
+
+/** One person's position in one workflow, as the detail panel shows it. */
+export interface WorkflowEnrollment {
+  id: string;
+  clientId: string;
+  clientName: string | null;
+  /** 'active' | 'completed' | 'stopped' | 'failed'. */
+  status: string;
+  currentStep: number;
+  nextRunAt: string | null;
+  /**
+   * Why it ended. The engine writes bare reasons ('booked'); a person's stop is
+   * written 'manual:…' so the panel can tell the two apart — staff ask
+   * different questions about a sequence that stopped itself and one somebody
+   * stopped.
+   */
+  stoppedReason: string | null;
+  enrolledAt: string;
+  completedAt: string | null;
+}

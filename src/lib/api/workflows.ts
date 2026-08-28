@@ -7,6 +7,10 @@ import type {
   CreateWorkflowResult,
   WorkflowsPayload,
 } from "@/app/api/workflows/route";
+import type {
+  EnrollmentsPayload,
+  StopEnrollmentResult,
+} from "@/app/api/workflows/[id]/enrollments/route";
 import type { WorkflowResult } from "@/app/api/workflows/[id]/route";
 import type { Audience, WorkflowStep } from "@/types/workflows";
 
@@ -56,10 +60,49 @@ export const workflowQueries = {
         )
       ).workflow,
   }),
+  enrollments: (id: string | undefined) => ({
+    queryKey: ["workflows", id, "enrollments"] as const,
+    enabled: Boolean(id),
+    queryFn: async () =>
+      (
+        await get<EnrollmentsPayload>(
+          `/api/workflows/${encodeURIComponent(id ?? "")}/enrollments`,
+        )
+      ).enrollments,
+  }),
 };
 
 function invalidate(queryClient: ReturnType<typeof useQueryClient>) {
   return queryClient.invalidateQueries({ queryKey: ["workflows"] });
+}
+
+/**
+ * Take one client out of one workflow.
+ *
+ * Invalidating the whole `["workflows"]` tree rather than just the enrolment
+ * list is deliberate: a stop changes the detail panel's "in progress" and
+ * "stopped early" tiles and the list row's counts, all of which are derived
+ * server-side. Patching one of them locally is how those three start
+ * disagreeing.
+ */
+export function useStopEnrollment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      workflowId,
+      enrollmentId,
+      reason,
+    }: {
+      workflowId: string;
+      enrollmentId: string;
+      reason?: string;
+    }) =>
+      send<StopEnrollmentResult>(
+        `/api/workflows/${encodeURIComponent(workflowId)}/enrollments`,
+        { enrollmentId, reason },
+      ),
+    onSuccess: () => invalidate(queryClient),
+  });
 }
 
 export interface NewWorkflow {

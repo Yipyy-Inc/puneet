@@ -24,7 +24,12 @@ import {
 import { TableSkeleton } from "@/components/ui/skeletons";
 import { useUpdateWorkflow, workflowQueries } from "@/lib/api/workflows";
 import { TRIGGER_META } from "@/lib/automations/triggers";
-import type { WorkflowDetail as Detail } from "@/types/workflows";
+import {
+  describeStopConditions,
+  type WorkflowDetail as Detail,
+} from "@/types/workflows";
+
+import { WorkflowEnrollments } from "./workflow-enrollments";
 
 // ============================================================================
 // One workflow, in detail.
@@ -140,8 +145,7 @@ export function WorkflowDetailSheet({
                 <p className="text-muted-foreground mt-2 text-xs">
                   Won&apos;t write to the same client more than once every{" "}
                   {workflow.minDaysBetweenSends} days.
-                  {workflow.stopOn.length > 0 &&
-                    ` Stops when: ${workflow.stopOn.join(", ")}.`}
+                  {` Stops when ${describeStopConditions(workflow.stopOn)}.`}
                 </p>
               </div>
             </section>
@@ -193,6 +197,11 @@ export function WorkflowDetailSheet({
                 );
               })}
             </section>
+
+            <WorkflowEnrollments
+              workflowId={workflow.id}
+              stepCount={workflow.steps.length}
+            />
 
             <section className="space-y-2">
               <h3 className="text-sm font-semibold">Recent activity</h3>

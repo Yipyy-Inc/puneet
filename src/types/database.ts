@@ -10338,6 +10338,13 @@ export type Database = {
         };
         Returns: Json;
       };
+      stop_workflow_enrollment: {
+        Args: { p_enrollment_id: string; p_reason?: string };
+        Returns: {
+          cancelled_messages: number;
+          enrollment_id: string;
+        }[];
+      };
       store_boarding_secret: {
         Args: {
           p_application_id: string;

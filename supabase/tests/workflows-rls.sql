@@ -48,6 +48,9 @@ declare
   v_plain text;
   v_tpl uuid;
   v_wf uuid;
+  v_client uuid;
+  v_enrol uuid;
+  v_enrol2 uuid;
   v_rows int;
   v_msg text;
   v_n int;
@@ -197,6 +200,122 @@ begin
   end;
 
   execute 'reset role';
+
+  -- ── Taking one person out of a sequence by hand ─────────────────────────
+  --
+  -- The one write a session may make to `workflow_enrollments`, and it exists
+  -- only because P3/P4 above take every other one away. What matters here is
+  -- that it stays that narrow: the permission is checked INSIDE the function,
+  -- so a route that forgot to check cannot widen it, and an already-ended
+  -- enrolment is refused rather than silently re-stamped with a second reason.
+
+  perform pg_temp.t(16, 'anon cannot stop an enrolment',
+    not has_function_privilege('anon',
+      'public.stop_workflow_enrollment(uuid, text)', 'execute'));
+
+  select id into v_client from public.clients where facility_id = v_fac limit 1;
+
+  if v_client is null then
+    perform pg_temp.t(17, 'stopping also cancels what was already queued', true, 'skipped');
+    perform pg_temp.t(18, 'the stop says a PERSON did it', true, 'skipped');
+    perform pg_temp.t(19, 'stopping an ended enrolment is refused', true, 'skipped');
+    perform pg_temp.t(20, 'a colleague without the permission cannot stop one', true, 'skipped');
+    perform pg_temp.t(21, 'the refused stop left the sequence running', true, 'skipped');
+  else
+    -- Written as the owner, because that is who writes them: the engine runs
+    -- as service_role and no session may insert one.
+    insert into public.workflow_enrollments
+      (workflow_id, client_id, steps_snapshot, enrolment_key, next_run_at)
+    values
+      (v_wf, v_client, '[]'::jsonb, 'ZZ probe a:' || v_wf, now()),
+      (v_wf, v_client, '[]'::jsonb, 'ZZ probe b:' || v_wf, now());
+    select id into v_enrol  from public.workflow_enrollments
+      where enrolment_key = 'ZZ probe a:' || v_wf;
+    select id into v_enrol2 from public.workflow_enrollments
+      where enrolment_key = 'ZZ probe b:' || v_wf;
+
+    -- One message already waiting to go out for that enrolment. This is the
+    -- assertion that matters: quiet hours routinely defer a step to 08:00
+    -- tomorrow, and a stop that clears `next_run_at` but leaves that row queued
+    -- would still send the message staff pressed the button to prevent.
+    insert into public.message_sends
+      (facility_id, client_id, channel, to_address, source_kind, source_id,
+       enrollment_id, step_index, body_rendered, status, idempotency_key)
+    values
+      (v_fac, v_client, 'email', 'zz-probe@example.invalid', 'workflow', v_wf,
+       v_enrol, 0, 'probe', 'queued', 'ZZ probe send:' || v_enrol);
+
+    perform set_config('request.jwt.claims',
+      json_build_object('sub', v_admin, 'role', 'authenticated')::text, true);
+    execute 'set local role authenticated';
+
+    select cancelled_messages into v_n
+      from public.stop_workflow_enrollment(v_enrol);
+    perform pg_temp.t(17, 'stopping also cancels what was already queued',
+      v_n = 1, coalesce(v_n::text, 'null') || ' message(s) cancelled');
+
+    -- `next_run_at` cleared is what actually prevents the next step; the
+    -- prefix is what lets staff tell their own decision from the engine's.
+    perform pg_temp.t(18, 'the stop says a PERSON did it',
+      (select status = 'stopped'
+          and stopped_reason like 'manual:%'
+          and next_run_at is null
+         from public.workflow_enrollments where id = v_enrol));
+
+    begin
+      perform public.stop_workflow_enrollment(v_enrol);
+      perform pg_temp.t(19, 'stopping an ended enrolment is refused', false, 'accepted');
+    exception when others then
+      get stacked diagnostics v_msg = message_text;
+      if v_msg = 'accepted' then raise; end if;
+      perform pg_temp.t(19, 'stopping an ended enrolment is refused', true, v_msg);
+    end;
+
+    execute 'reset role';
+
+    -- Prefer a colleague at this facility who lacks the permission. Failing
+    -- that — and on this database there is not one, which is why 13/14 read
+    -- 'skipped' — fall back to somebody who is not a member at all. The
+    -- refusals have different causes but the same boundary, and an untested
+    -- boundary on the one function that may write an enrolment is worse than
+    -- an approximate one. Platform admins are excluded on purpose: they can see
+    -- every facility, so one would fail this for the wrong reason.
+    if v_plain is null then
+      select p.id into v_plain
+        from public.profiles p
+       where not exists (select 1 from public.facility_memberships m
+                          where m.profile_id = p.id and m.facility_id = v_fac
+                            and m.is_active)
+         and not exists (select 1 from public.platform_memberships pm
+                          where pm.profile_id = p.id)
+       limit 1;
+    end if;
+
+    if v_plain is null then
+      perform pg_temp.t(20, 'a colleague without the permission cannot stop one', true, 'skipped');
+      perform pg_temp.t(21, 'the refused stop left the sequence running', true, 'skipped');
+    else
+      perform set_config('request.jwt.claims',
+        json_build_object('sub', v_plain, 'role', 'authenticated')::text, true);
+      execute 'set local role authenticated';
+      begin
+        perform public.stop_workflow_enrollment(v_enrol2);
+        perform pg_temp.t(20, 'a colleague without the permission cannot stop one',
+          false, 'accepted');
+      exception when others then
+        get stacked diagnostics v_msg = message_text;
+        if v_msg = 'accepted' then raise; end if;
+        perform pg_temp.t(20, 'a colleague without the permission cannot stop one',
+          true, v_msg);
+      end;
+      execute 'reset role';
+
+      -- And it is still running, which is the half a refusal that raises could
+      -- still get wrong.
+      perform pg_temp.t(21, 'the refused stop left the sequence running',
+        (select status = 'active' from public.workflow_enrollments where id = v_enrol2));
+    end if;
+  end if;
 end $$;
 
 select n, name, case when ok then 'PASS' else 'FAIL' end as result, detail
