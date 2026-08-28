@@ -10,6 +10,7 @@ import { channelConfigured, sendEmail, sendSms } from "@/lib/messaging/send";
 import { isSuppressed } from "@/lib/messaging/suppression";
 import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { enrolFromEvent } from "@/lib/workflows/engine";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ============================================================================
@@ -161,9 +162,23 @@ async function dispatchClaimed(
     .eq("enabled", true);
 
   const candidates = (rules ?? []) as RuleRow[];
+
+  // WORKFLOWS FIRST, and before the early return below.
+  //
+  // A facility can perfectly well have a workflow on this trigger and no rule
+  // on it — "welcome sequence, no single confirmation" is an ordinary setup.
+  // Enrolling after `candidates.length === 0` returned would have meant those
+  // facilities silently never enrolling anybody, with nothing to see and
+  // nothing logged.
+  //
+  // Inside the same claim as the rules, so one event is considered exactly once
+  // for both kinds of thing.
+  const enrolment = await enrolFromEvent(db, event);
+  result.problems.push(...enrolment.problems);
+
   if (candidates.length === 0) return result;
 
-  const context = await loadContext(db, event);
+  const context = await loadMessageContext(db, event);
   if (!context) {
     result.problems.push(`event ${event.id}: no client to message`);
     return result;
@@ -224,7 +239,7 @@ interface BookingFacts {
   status: string | null;
 }
 
-interface MessageContext {
+export interface MessageContext {
   clientId: string;
   clientName: string;
   email: string | null;
@@ -234,9 +249,26 @@ interface MessageContext {
   data: VariableDataContext;
 }
 
-async function loadContext(
+/**
+ * Everything a message needs to know about who it is going to.
+ *
+ * Structurally typed rather than taking an `EventRow`, because workflows need
+ * the identical context and do not always have an event behind them — an
+ * audience workflow is started by a filter matching, not by anything
+ * happening. Exported so `@/lib/workflows/engine` renders through exactly this
+ * path: two context loaders would eventually disagree about what
+ * `{{pet_name}}` means, and the disagreement would be visible to a customer.
+ */
+export interface ContextSubject {
+  facility_id: string;
+  client_id: string | null;
+  booking_id: string | null;
+  location_id: string | null;
+}
+
+export async function loadMessageContext(
   db: SupabaseClient,
-  event: EventRow,
+  event: ContextSubject,
 ): Promise<MessageContext | null> {
   if (!event.client_id) return null;
 

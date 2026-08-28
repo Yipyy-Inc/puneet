@@ -910,6 +910,66 @@ export type Database = {
           },
         ];
       };
+      customer_memberships: {
+        Row: {
+          benefits: Json;
+          client_id: string;
+          created_at: string;
+          created_by: string | null;
+          discount_percent: number | null;
+          ends_on: string | null;
+          facility_id: string;
+          id: string;
+          plan_name: string;
+          starts_on: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          benefits?: Json;
+          client_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          discount_percent?: number | null;
+          ends_on?: string | null;
+          facility_id: string;
+          id?: string;
+          plan_name: string;
+          starts_on?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          benefits?: Json;
+          client_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          discount_percent?: number | null;
+          ends_on?: string | null;
+          facility_id?: string;
+          id?: string;
+          plan_name?: string;
+          starts_on?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "customer_memberships_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customer_memberships_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       customer_package_lines: {
         Row: {
           customer_package_id: string;
@@ -1892,6 +1952,119 @@ export type Database = {
             columns: ["tier_id"];
             isOneToOne: false;
             referencedRelation: "subscription_tiers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_tags: {
+        Row: {
+          color: string;
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          entity_type: string;
+          facility_id: string;
+          icon: string | null;
+          id: string;
+          is_active: boolean;
+          location_ids: string[];
+          name: string;
+          priority: string;
+          scope: string;
+          updated_at: string;
+          visibility: string;
+        };
+        Insert: {
+          color?: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          entity_type: string;
+          facility_id: string;
+          icon?: string | null;
+          id?: string;
+          is_active?: boolean;
+          location_ids?: string[];
+          name: string;
+          priority?: string;
+          scope?: string;
+          updated_at?: string;
+          visibility?: string;
+        };
+        Update: {
+          color?: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          entity_type?: string;
+          facility_id?: string;
+          icon?: string | null;
+          id?: string;
+          is_active?: boolean;
+          location_ids?: string[];
+          name?: string;
+          priority?: string;
+          scope?: string;
+          updated_at?: string;
+          visibility?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_tags_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      facility_tag_assignments: {
+        Row: {
+          assigned_at: string;
+          assigned_by: string | null;
+          entity_id: string;
+          entity_type: string;
+          expires_at: string | null;
+          facility_id: string;
+          id: string;
+          notes: string | null;
+          tag_id: string;
+        };
+        Insert: {
+          assigned_at?: string;
+          assigned_by?: string | null;
+          entity_id: string;
+          entity_type: string;
+          expires_at?: string | null;
+          facility_id?: string;
+          id?: string;
+          notes?: string | null;
+          tag_id: string;
+        };
+        Update: {
+          assigned_at?: string;
+          assigned_by?: string | null;
+          entity_id?: string;
+          entity_type?: string;
+          expires_at?: string | null;
+          facility_id?: string;
+          id?: string;
+          notes?: string | null;
+          tag_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "facility_tag_assignments_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "facility_tag_assignments_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_tags";
             referencedColumns: ["id"];
           },
         ];
@@ -5863,6 +6036,81 @@ export type Database = {
         };
         Relationships: [];
       };
+      pet_vaccinations: {
+        Row: {
+          administered_on: string | null;
+          created_at: string;
+          created_by: string | null;
+          document_url: string | null;
+          expires_on: string | null;
+          facility_id: string;
+          id: string;
+          notes: string | null;
+          pet_id: string;
+          review_reason: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: string;
+          updated_at: string;
+          vaccine_name: string;
+          veterinarian_name: string | null;
+          veterinary_clinic: string | null;
+        };
+        Insert: {
+          administered_on?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          document_url?: string | null;
+          expires_on?: string | null;
+          facility_id?: string;
+          id?: string;
+          notes?: string | null;
+          pet_id: string;
+          review_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: string;
+          updated_at?: string;
+          vaccine_name: string;
+          veterinarian_name?: string | null;
+          veterinary_clinic?: string | null;
+        };
+        Update: {
+          administered_on?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          document_url?: string | null;
+          expires_on?: string | null;
+          facility_id?: string;
+          id?: string;
+          notes?: string | null;
+          pet_id?: string;
+          review_reason?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: string;
+          updated_at?: string;
+          vaccine_name?: string;
+          veterinarian_name?: string | null;
+          veterinary_clinic?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pet_vaccinations_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pet_vaccinations_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       pets: {
         Row: {
           age_years: number | null;
@@ -8654,6 +8902,224 @@ export type Database = {
           },
         ];
       };
+      workflows: {
+        Row: {
+          activated_at: string | null;
+          activated_by: string | null;
+          audience: Json | null;
+          created_at: string;
+          created_by: string | null;
+          day_of_month: number | null;
+          day_of_week: number | null;
+          description: string | null;
+          facility_id: string;
+          frequency: string | null;
+          id: string;
+          kind: string;
+          last_estimate: number | null;
+          last_estimated_at: string | null;
+          last_run_at: string | null;
+          location_ids: string[];
+          min_days_between_sends: number;
+          name: string;
+          send_at_local: string | null;
+          status: string;
+          stop_on: Json;
+          trigger: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          activated_at?: string | null;
+          activated_by?: string | null;
+          audience?: Json | null;
+          created_at?: string;
+          created_by?: string | null;
+          day_of_month?: number | null;
+          day_of_week?: number | null;
+          description?: string | null;
+          facility_id: string;
+          frequency?: string | null;
+          id?: string;
+          kind: string;
+          last_estimate?: number | null;
+          last_estimated_at?: string | null;
+          last_run_at?: string | null;
+          location_ids?: string[];
+          min_days_between_sends?: number;
+          name: string;
+          send_at_local?: string | null;
+          status?: string;
+          stop_on?: Json;
+          trigger?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          activated_at?: string | null;
+          activated_by?: string | null;
+          audience?: Json | null;
+          created_at?: string;
+          created_by?: string | null;
+          day_of_month?: number | null;
+          day_of_week?: number | null;
+          description?: string | null;
+          facility_id?: string;
+          frequency?: string | null;
+          id?: string;
+          kind?: string;
+          last_estimate?: number | null;
+          last_estimated_at?: string | null;
+          last_run_at?: string | null;
+          location_ids?: string[];
+          min_days_between_sends?: number;
+          name?: string;
+          send_at_local?: string | null;
+          status?: string;
+          stop_on?: Json;
+          trigger?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workflows_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workflow_steps: {
+        Row: {
+          created_at: string;
+          delay_minutes: number;
+          email_template_id: string | null;
+          id: string;
+          sms_template_id: string | null;
+          step_index: number;
+          workflow_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          delay_minutes?: number;
+          email_template_id?: string | null;
+          id?: string;
+          sms_template_id?: string | null;
+          step_index: number;
+          workflow_id: string;
+        };
+        Update: {
+          created_at?: string;
+          delay_minutes?: number;
+          email_template_id?: string | null;
+          id?: string;
+          sms_template_id?: string | null;
+          step_index?: number;
+          workflow_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workflow_steps_email_template_id_fkey";
+            columns: ["email_template_id"];
+            isOneToOne: false;
+            referencedRelation: "message_templates";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workflow_steps_sms_template_id_fkey";
+            columns: ["sms_template_id"];
+            isOneToOne: false;
+            referencedRelation: "message_templates";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workflow_steps_workflow_id_fkey";
+            columns: ["workflow_id"];
+            isOneToOne: false;
+            referencedRelation: "workflows";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workflow_enrollments: {
+        Row: {
+          booking_id: string | null;
+          client_id: string;
+          completed_at: string | null;
+          current_step: number;
+          enrolled_at: string;
+          enrolment_key: string;
+          id: string;
+          next_run_at: string | null;
+          pet_id: string | null;
+          status: string;
+          steps_snapshot: Json;
+          stopped_reason: string | null;
+          updated_at: string;
+          workflow_id: string;
+        };
+        Insert: {
+          booking_id?: string | null;
+          client_id: string;
+          completed_at?: string | null;
+          current_step?: number;
+          enrolled_at?: string;
+          enrolment_key: string;
+          id?: string;
+          next_run_at?: string | null;
+          pet_id?: string | null;
+          status?: string;
+          steps_snapshot: Json;
+          stopped_reason?: string | null;
+          updated_at?: string;
+          workflow_id: string;
+        };
+        Update: {
+          booking_id?: string | null;
+          client_id?: string;
+          completed_at?: string | null;
+          current_step?: number;
+          enrolled_at?: string;
+          enrolment_key?: string;
+          id?: string;
+          next_run_at?: string | null;
+          pet_id?: string | null;
+          status?: string;
+          steps_snapshot?: Json;
+          stopped_reason?: string | null;
+          updated_at?: string;
+          workflow_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workflow_enrollments_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workflow_enrollments_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workflow_enrollments_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workflow_enrollments_workflow_id_fkey";
+            columns: ["workflow_id"];
+            isOneToOne: false;
+            referencedRelation: "workflows";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       booking_presence: {
@@ -9015,6 +9481,10 @@ export type Database = {
           subaccount_sid: string;
         }[];
       };
+      compile_audience: {
+        Args: { p_facility_id: string; p_filters: Json };
+        Returns: string[];
+      };
       consume_loyalty_voucher: {
         Args: { p_booking_id?: string; p_voucher_id: string };
         Returns: {
@@ -9037,6 +9507,10 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      count_audience: {
+        Args: { p_facility_id: string; p_filters: Json };
+        Returns: number;
       };
       create_booking: {
         Args: {

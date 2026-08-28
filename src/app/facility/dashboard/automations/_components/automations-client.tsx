@@ -7,7 +7,6 @@ import {
   Ban,
   Mail,
   MessageSquare,
-  Megaphone,
   Send,
   Settings,
   Zap,
@@ -18,7 +17,7 @@ import { RebookRemindersCard } from "@/components/communications/RebookReminders
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,6 +31,7 @@ import {
 } from "@/lib/automations/triggers";
 import type { RealAutomationRule } from "@/types/automations";
 import { AutomationRuleEditor } from "./automation-rule-editor";
+import { SmartWorkflowsTab } from "./smart-workflows-tab";
 
 // ============================================================================
 // The automations screen, reading Postgres.
@@ -211,24 +211,7 @@ export function AutomationsClient() {
         </TabsContent>
 
         <TabsContent value="campaign">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Megaphone className="size-5" /> Smart Workflows
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-muted-foreground py-12 text-center">
-                <Megaphone className="mx-auto mb-4 size-12 opacity-40" />
-                <p className="text-lg font-medium">Not built yet</p>
-                <p className="mx-auto mt-2 max-w-md text-sm">
-                  Multi-step sequences aimed at a filtered group of clients,
-                  rather than a single message on one event. The rules above are
-                  the foundation they will run on.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <SmartWorkflowsTab templates={templates.data ?? []} />
         </TabsContent>
       </Tabs>
 
