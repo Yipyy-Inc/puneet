@@ -6548,6 +6548,38 @@ same four specs from failing twice in a row to 46/46 and the gate from four red
 to 162 passed. And before trusting a long run, check `git status` — a build
 started against a tree somebody else is editing is not a build of anything.
 
+### 🔴 The messaging tick sends nothing until its timer is installed on the box — 2026-08-27
+
+`/api/cron/messaging-tick` drains the outbox: every message a rule deferred
+(`offset_minutes > 0`) sits in `message_sends` as `queued` with a future
+`scheduled_for` until something calls that route. **Nothing calls it
+automatically yet.**
+
+`deploy/deploy.sh` does not install systemd units — `clover-sweep.timer` was put
+on the VPS by hand, and `messaging-tick.timer` has to be too:
+
+```
+scp deploy/messaging-tick.sh   root@<box>:/usr/local/bin/messaging-tick
+ssh root@<box> chmod +x /usr/local/bin/messaging-tick
+scp deploy/messaging-tick.{service,timer} root@<box>:/etc/systemd/system/
+ssh root@<box> 'systemctl daemon-reload && systemctl enable --now messaging-tick.timer'
+ssh root@<box> 'systemctl list-timers messaging-tick.timer'
+```
+
+It reuses `/etc/yipyy/cron.env` (`CRON_SECRET`, `SWEEP_HOST`), which the sweep
+already relies on, so there is no new secret.
+
+**Why this is red rather than a to-do.** The failure is invisible from inside
+the product. A facility switches on a tip reminder, the rule reports it fired,
+`message_sends` fills with rows — and every one of them says `queued`, for ever.
+The Automations screen counts a queued row as sent by the rule, so the screen
+says the message went and the customer never got it. That is the exact class of
+claim this whole area was rewritten to stop making.
+
+**How to tell it is working:** `select status, count(*) from message_sends group
+by 1`. A growing `queued` count with an old `min(scheduled_for)` means the timer
+is not installed or not firing.
+
 ### 🟠 The tip reminder and the report-card tip ask are configured and never sent — 2026-08-27
 
 `tip_config.reminder` (delay, channels, headline, body, "include the report
@@ -6562,12 +6594,19 @@ never delivered. The Smart Tips specification, written against this build,
 records both sections as **KEEP — already built and correct**, which is how a
 gap like this survives a review.
 
-**What was done, 2026-08-27:** both sections now say so on the screen, in amber,
-above the fields. The config is left in place because its shape is right — what
-is missing is a sender, and that is a scheduled job rather than a component.
+**What was done, 2026-08-27, in two passes.** First both sections said so on the
+screen, in amber. Then the reminder was BUILT — and building it meant deleting
+those fields rather than wiring them, because a tip reminder is a message and
+messages now have somewhere to live: `message_templates` + `automation_rules`,
+with a delivery log, a suppression list and an audit trail a facility can
+produce under CASL. Keeping `tip_config.reminder` would have been two places
+describing one message, and the one that went stale would have been the one
+nobody could prove they had sent.
 
-**Do not "fix" this by deleting the fields.** The next person to want tip
-reminders would design the same schema again.
+Tip Settings now points at Automations, and a `tip_reminder` template ships with
+the others. **The report-card tip ask (`reportCardPrompt`) is still saved and
+read by nothing** — report cards do not carry it, and that half of this entry
+stands.
 
 ### 🟡 There is no "sync tips to Clover" button, and there must not be one — 2026-08-27
 

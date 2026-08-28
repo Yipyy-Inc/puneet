@@ -101,10 +101,17 @@ export type RealAutomationRule = z.infer<typeof automationRuleSchema>;
  * list HERE — one exported constant — means the screen, the API and the
  * dispatcher cannot disagree about which those are.
  *
- * Grows as emitters land. `booking_created` is the whole of it today.
+ * Grows as emitters land.
+ *
+ * `check_out` joined on 2026-08-27, emitted from BOTH attendance routes —
+ * daycare and boarding keep separate tables, so there is no single place
+ * downstream of both. It is also the first trigger a rule can DELAY: a positive
+ * `offsetMinutes` queues the message for the tick rather than sending it at
+ * once, which is what a post-checkout tip reminder needs.
  */
 export const DELIVERABLE_TRIGGERS: ReadonlySet<string> = new Set([
   "booking_created",
+  "check_out",
 ]);
 
 export const SEND_STATUSES = [

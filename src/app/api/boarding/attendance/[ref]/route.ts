@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getCurrentUser } from "@/lib/supabase/server";
+import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { recordArrival } from "@/lib/api/boarding-arrival-write";
+import {
+  bookingEventContext,
+  emitAutomationEvent,
+} from "@/lib/automations/emit";
 
 // ============================================================================
 // A guest goes home — or did not really arrive.
@@ -70,6 +74,37 @@ export async function PATCH(
     body.checkOut ? "check_out" : "reopen",
   );
   if (!response.ok) return response;
+
+  // ── The guest went home ─────────────────────────────────────────────────
+  //
+  // The same event daycare emits, from the other attendance table — boarding
+  // and daycare keep separate ones, so there is no single place downstream of
+  // both. Only on a real check-out, and only once `recordArrival` has said it
+  // worked. Best effort: a stay that ended has ended whether or not the owner
+  // gets an email about it.
+  if (body.checkOut) {
+    const supabase = await createServerClient();
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("ref", bookingRef)
+      .maybeSingle();
+    const bookingId = (booking as { id: string } | null)?.id ?? null;
+
+    if (bookingId) {
+      const context = await bookingEventContext(supabase, bookingId);
+      if (context) {
+        await emitAutomationEvent(supabase, {
+          facilityId: context.facilityId,
+          kind: "check_out",
+          dedupeKey: `check_out:${bookingId}`,
+          clientId: context.clientId,
+          bookingId,
+          locationId: context.locationId,
+        });
+      }
+    }
+  }
 
   return new NextResponse(null, { status: 204 });
 }
