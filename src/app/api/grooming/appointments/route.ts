@@ -12,6 +12,10 @@ import {
   type HistoryRow,
   type SizeTier,
 } from "@/lib/api/mappers/grooming-appointment";
+import {
+  bookingEventContext,
+  emitAutomationEvent,
+} from "@/lib/automations/emit";
 
 // ============================================================================
 // Grooming appointments — the board's, the calendar's and the detail page's
@@ -284,6 +288,34 @@ export async function PATCH(request: NextRequest) {
       "Not allowed to change this appointment.",
     );
     if (statusDenied) return statusDenied;
+
+    // ── The dog went home ─────────────────────────────────────────────────
+    //
+    // Grooming has no attendance table, so `completed` IS the check-out: the
+    // groom is finished and the owner has the dog. Boarding and daycare have
+    // emitted this since 20260827111420 and grooming never did, so a facility
+    // with a check-out automation got a message after daycare and silence
+    // after a groom — the single most common service in the product.
+    //
+    // The dedupe key is the booking, not the moment: marking an appointment
+    // completed, reopening it and completing it again is one groom as far as
+    // the customer is concerned, and they should not hear about it twice.
+    //
+    // Best effort, and only on `completed`. Moving a pet between tables or
+    // marking it ready for pickup is not an occasion to write to the owner.
+    if (bookingStatus === "completed") {
+      const context = await bookingEventContext(supabase, booking.id);
+      if (context) {
+        await emitAutomationEvent(supabase, {
+          facilityId: context.facilityId,
+          kind: "check_out",
+          dedupeKey: `check_out:${booking.id}`,
+          clientId: context.clientId,
+          bookingId: booking.id,
+          locationId: context.locationId,
+        });
+      }
+    }
   }
 
   return new NextResponse(null, { status: 204 });
