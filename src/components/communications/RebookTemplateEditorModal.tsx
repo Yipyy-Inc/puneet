@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { Mail, MessageSquare, Save, Sparkles } from "lucide-react";
-import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +29,8 @@ interface Props {
   channel: ReminderChannel;
   template: RebookMessageTemplate;
   onSave: (template: RebookMessageTemplate) => void;
+  /** True while the parent is writing. The dialog stays open until it lands. */
+  saving?: boolean;
 }
 
 export function RebookTemplateEditorModal({
@@ -39,6 +40,7 @@ export function RebookTemplateEditorModal({
   channel,
   template,
   onSave,
+  saving = false,
 }: Props) {
   const [subject, setSubject] = useState(template.subject);
   const [body, setBody] = useState(template.body);
@@ -72,11 +74,12 @@ export function RebookTemplateEditorModal({
     }
   };
 
-  const handleSave = () => {
-    onSave({ subject, body });
-    toast.success(`${getServiceLabel(service)} template saved`);
-    onOpenChange(false);
-  };
+  // The PARENT saves and reports. This used to raise its own
+  // `toast.success("… template saved")` and close, before anything had been
+  // written — which was true only while the save went into a local draft map
+  // that was lost on reload. It is a real round trip now, so the outcome is
+  // whoever made the request's to announce.
+  const handleSave = () => onSave({ subject, body });
 
   const showSubject = channel === "email" || channel === "both";
 
@@ -172,12 +175,16 @@ export function RebookTemplateEditorModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} disabled={saving}>
             <Save className="mr-1 size-4" />
-            Save template
+            {saving ? "Saving…" : "Save template"}
           </Button>
         </DialogFooter>
       </DialogContent>

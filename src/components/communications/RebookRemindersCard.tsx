@@ -35,7 +35,6 @@ import { HistoryTab } from "@/components/communications/rebook/HistoryTab";
 import { LapsedTab } from "@/components/communications/rebook/LapsedTab";
 import { QueueTab } from "@/components/communications/rebook/QueueTab";
 import {
-  defaultServiceFrequencies,
   formatFrequency,
   getServiceLabel,
   REMINDER_LEAD_PRESETS,
@@ -49,6 +48,11 @@ import {
   useFacilitySettings,
   useSaveFacilitySetting,
 } from "@/lib/api/facility-settings";
+import {
+  automationQueries,
+  useCreateTemplate,
+  useUpdateTemplate,
+} from "@/lib/api/automations";
 import { rebookQueries } from "@/lib/api/rebook";
 import {
   NO_REBOOK_CONFIG,
@@ -56,6 +60,7 @@ import {
   toDays,
   type RebookConfig,
 } from "@/lib/settings/rebook";
+import type { RealMessageTemplate } from "@/types/automations";
 
 /** The channel a service writes on, as an icon. Still used by the Defaults tab. */
 const channelIcon = (c: ReminderChannel, size = "size-3.5") => {
@@ -69,10 +74,31 @@ const channelIcon = (c: ReminderChannel, size = "size-3.5") => {
   );
 };
 
+/**
+ * The saved config, in the shape this card already renders.
+ *
+ * Every service the facility has configured, plus any shipped service it has
+ * not — so a facility that has only set grooming still sees boarding, daycare
+ * and training, with our assumed interval and reminders off.
+ *
+ * ── THE WORDING IS A REAL TEMPLATE ROW ──────────────────────────────────────
+ *
+ * `template` used to come from the fixture and was edited into a local draft
+ * map that was lost on reload. It resolves through `message_templates` now: the
+ * service's own template if the facility has written one, and the shipped
+ * `rebook_reminder` otherwise — which is exactly what the send route picks, so
+ * this preview cannot show wording a customer would not receive.
+ */
 function buildDefaults(
   config: RebookConfig,
-  templateDrafts: Record<string, RebookMessageTemplate>,
+  templates: RealMessageTemplate[],
 ): DefaultServiceFrequency[] {
+  const byId = new Map(templates.map((t) => [t.id, t]));
+  const shipped = {
+    email: templates.find((t) => t.key === "rebook_reminder"),
+    sms: templates.find((t) => t.key === "rebook_reminder_sms"),
+  };
+
   const services = [
     ...new Set([
       ...Object.keys(NO_REBOOK_CONFIG.services),
@@ -82,23 +108,42 @@ function buildDefaults(
 
   return services.map((service) => {
     const rule = config.services[service] ?? NO_REBOOK_CONFIG.services[service];
-    const shipped = defaultServiceFrequencies.find(
-      (d) => d.service === service,
-    );
+    const channel = rule?.channel ?? "email";
+    // One button, so it edits the channel this service actually leads with: an
+    // SMS-only service edits its text, everything else edits its email.
+    const wanted = channel === "sms" ? "sms" : "email";
+    const chosen =
+      wanted === "sms" ? rule?.smsTemplateId : rule?.emailTemplateId;
+    const template =
+      (chosen ? byId.get(chosen) : undefined) ?? shipped[wanted] ?? null;
+
     return {
       service,
       frequency: fromDays(rule?.frequencyDays ?? 28),
       remindersEnabled: rule?.remindersEnabled ?? false,
       leadDays: rule?.leadDays ?? 7,
-      channel: rule?.channel ?? "email",
-      secondReminder: shipped?.secondReminder ?? {
-        enabled: false,
-        delayDays: 7,
+      channel,
+      secondReminder: { enabled: false, delayDays: 7 },
+      template: {
+        subject: template?.subject ?? "",
+        body: template?.body ?? "",
       },
-      template: templateDrafts[service] ??
-        shipped?.template ?? { subject: "", body: "" },
     };
   });
+}
+
+/** Which template field this service's editor writes, and what it points at. */
+function chosenTemplate(config: RebookConfig, service: string) {
+  const rule = config.services[service];
+  const field =
+    rule?.channel === "sms"
+      ? ("smsTemplateId" as const)
+      : ("emailTemplateId" as const);
+  return {
+    field,
+    id: rule?.[field] ?? null,
+    channel: rule?.channel ?? "email",
+  };
 }
 
 export function RebookRemindersCard() {
@@ -117,20 +162,21 @@ export function RebookRemindersCard() {
   // and which would leave the screen briefly showing one facility's numbers as
   // another's.
   //
-  // `template` is the one field still coming from the fixture, and it is
-  // display-only: the REAL rebook wording lives in `message_templates` as
-  // `rebook_reminder` / `rebook_reminder_sms`, editable on the Templates tab,
-  // and that is what actually gets sent.
+  // The WORDING is real too now. It resolves through `message_templates` — the
+  // service's own template if the facility has written one, the shipped
+  // `rebook_reminder` otherwise — which is the same choice the send route
+  // makes, so this screen cannot preview wording a customer would not get.
   const { settings } = useFacilitySettings();
   const saveSetting = useSaveFacilitySetting();
-  const [templateDrafts, setTemplateDrafts] = useState<
-    Record<string, RebookMessageTemplate>
-  >({});
+  const templates = useQuery(automationQueries.templates());
+  const createTemplate = useCreateTemplate();
+  const updateTemplate = useUpdateTemplate();
 
   const rebookConfig = settings.rebook_config.value;
+  const templateList = useMemo(() => templates.data ?? [], [templates.data]);
   const defaults = useMemo<DefaultServiceFrequency[]>(
-    () => buildDefaults(rebookConfig, templateDrafts),
-    [rebookConfig, templateDrafts],
+    () => buildDefaults(rebookConfig, templateList),
+    [rebookConfig, templateList],
   );
   const [editingService, setEditingService] = useState<ServiceTypeKey | null>(
     null,
@@ -198,14 +244,69 @@ export function RebookRemindersCard() {
     setTemplateEditorOpen(true);
   };
 
-  const saveTemplate = (template: RebookMessageTemplate) => {
-    if (!templateEditingService) return;
-    setTemplateDrafts((prev) => ({
-      ...prev,
-      [templateEditingService]: template,
-    }));
-    if (draft && draft.service === templateEditingService) {
-      setDraft({ ...draft, template });
+  /**
+   * Save the wording, for real.
+   *
+   * ── CREATE ONCE, THEN EDIT ────────────────────────────────────────────────
+   *
+   * The first edit for a service COPIES the shipped template into one of the
+   * facility's own and records its id against the service; every edit after
+   * that patches that row. The shipped `rebook_reminder` is deliberately left
+   * alone — a facility rewording its grooming reminder must not silently change
+   * what boarding and daycare say, which is what editing the shared one in
+   * place would do.
+   *
+   * `key` is not settable on either route, so the copy is an ordinary facility
+   * template. That means it also shows up in the rule and workflow pickers,
+   * which is right: it is a real message this facility can send.
+   */
+  const saveTemplate = async (template: RebookMessageTemplate) => {
+    const service = templateEditingService;
+    if (!service) return;
+
+    const { field, id, channel } = chosenTemplate(rebookConfig, service);
+    const isSms = channel === "sms";
+
+    try {
+      if (id) {
+        await updateTemplate.mutateAsync({
+          id,
+          patch: {
+            subject: isSms ? null : template.subject,
+            body: template.body,
+          },
+        });
+      } else {
+        const created = await createTemplate.mutateAsync({
+          name: `Rebook Reminder — ${getServiceLabel(service)}`,
+          channel: isSms ? "sms" : "email",
+          category: "reminder",
+          subject: isSms ? null : template.subject,
+          body: template.body,
+        });
+
+        // The id is stored only AFTER the template exists. The other order
+        // would point a service at a template that was never created if the
+        // second call failed, and the send would then be refused for a reason
+        // nobody could see.
+        const rule =
+          rebookConfig.services[service] ?? NO_REBOOK_CONFIG.services[service];
+        const next: RebookConfig = {
+          services: {
+            ...rebookConfig.services,
+            [service]: { ...rule, [field]: created.id },
+          },
+        };
+        await saveSetting.mutateAsync({ domain: "rebook_config", value: next });
+      }
+
+      toast.success(`${getServiceLabel(service)} wording saved.`);
+      setTemplateEditorOpen(false);
+      setTemplateEditingService(null);
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "The wording was not saved.",
+      );
     }
   };
 
@@ -567,9 +668,16 @@ export function RebookRemindersCard() {
                               </div>
                             </div>
                             <div className="flex shrink-0 gap-1">
+                              {/* Disabled until the templates land. The editor
+                                  captures its text in `useState` on mount, so
+                                  opening it early captures an EMPTY body it
+                                  can never recover from — and saving that is
+                                  refused with "a template needs something to
+                                  say", about wording the user can see. */}
                               <Button
                                 variant="outline"
                                 size="sm"
+                                disabled={templates.isLoading}
                                 onClick={() => openTemplateEditor(def.service)}
                               >
                                 <Pencil className="mr-1 size-3.5" />
@@ -614,6 +722,10 @@ export function RebookRemindersCard() {
       {/* Template editor */}
       {editingDef && (
         <RebookTemplateEditorModal
+          // Remounted per service. Without it the editor keeps the text it
+          // captured for whichever service was opened FIRST — open grooming,
+          // close, open boarding, and boarding shows grooming's wording.
+          key={editingDef.service}
           open={templateEditorOpen}
           onOpenChange={(o) => {
             setTemplateEditorOpen(o);
@@ -623,6 +735,7 @@ export function RebookRemindersCard() {
           channel={editingDef.channel}
           template={editingDef.template}
           onSave={saveTemplate}
+          saving={createTemplate.isPending || updateTemplate.isPending}
         />
       )}
     </>
