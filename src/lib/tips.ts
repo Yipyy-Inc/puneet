@@ -60,6 +60,32 @@ export function activeTipTier(
 }
 
 /**
+ * The tip that takes the bill up to the next whole dollar, or null.
+ *
+ * ── NULL WHEN THERE IS NOTHING TO ROUND ───────────────────────────────────
+ *
+ * A $60.00 grooming is already whole, so "round up" would be a button offering
+ * to add nothing. Returning zero and letting the screen render it is how you
+ * get a customer tapping a tip and seeing the total not move — so the absence
+ * is expressed as null and the caller omits the option entirely.
+ *
+ * Deliberately the NEXT DOLLAR and not the next five: rounding $60.10 to $65 is
+ * a $4.90 tip presented as tidying up, which is a dark pattern rather than a
+ * convenience.
+ *
+ * @param subtotal in DOLLARS.
+ */
+export function roundUpTip(subtotal: number): number | null {
+  if (!Number.isFinite(subtotal) || subtotal <= 0) return null;
+  // Work in cents: 0.1 + 0.2 in floating point is why money arithmetic done in
+  // dollars produces a tip of 0.30000000000000004.
+  const cents = Math.round(subtotal * 100);
+  const remainder = cents % 100;
+  if (remainder === 0) return null;
+  return (100 - remainder) / 100;
+}
+
+/**
  * The facility's tips, ready to hand to a Clover device.
  *
  * ── WHAT IS DELIBERATELY NOT IN HERE ──────────────────────────────────────

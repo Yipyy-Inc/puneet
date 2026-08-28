@@ -30,6 +30,7 @@ import {
   facilityBookingFlowConfigSchema,
   moduleConfigSchema,
   tipConfigSchema,
+  tipAttributionSchema,
 } from "@/types/facility";
 import {
   boardingConfig,
@@ -69,6 +70,7 @@ import type {
   FacilityBookingFlowConfig,
   ModuleConfig,
   TipConfig,
+  TipAttribution,
   GroomingScheduling,
   AccountingStructure,
   NetworkPolicy,
@@ -136,6 +138,22 @@ export const businessHoursSchema = z.object({
 const DEFAULT_HOURS: BusinessHours = businessHours;
 const DEFAULT_RULES: BookingRules = bookingRules;
 const DEFAULT_TIPS: TipConfig = tipConfig;
+
+// ── WHO A TIP IS OWED TO, WHEN NOBODY HAS SAID ────────────────────────────
+//
+// `assigned` everywhere. It is the answer that is right most often -- a tip
+// follows the person who did the work -- and, more importantly, it is the one
+// that is VISIBLE when it is wrong: the money appears against a named person on
+// the payout report, where somebody will correct it.
+//
+// `pool` would have been the cautious-looking default and is the worse one. It
+// attributes nothing, so a facility that never opens this screen accumulates an
+// unallocated pile that looks like nobody earned anything, and the error is
+// silent for exactly as long as nobody goes looking.
+const DEFAULT_TIP_ATTRIBUTION: TipAttribution = {
+  defaultMode: "assigned",
+  byService: {},
+};
 
 // The shipped defaults, kept as the fallback rather than seeded into every
 // facility: a facility that has never opened the screen behaves exactly as it
@@ -218,6 +236,13 @@ export const SETTING_DOMAINS = {
   // set of tip tiers while the payment screen offers another is not a display
   // bug.
   tip_config: { schema: tipConfigSchema, fallback: DEFAULT_TIPS },
+  // Who the tip belongs to once it is collected. A SEPARATE domain from
+  // tip_config, deliberately: one decides what the customer is offered and is
+  // edited by whoever runs the front desk; this one decides who gets paid.
+  tip_attribution: {
+    schema: tipAttributionSchema,
+    fallback: DEFAULT_TIP_ATTRIBUTION,
+  },
   // Money, and the most consequential entry here: it decides what a customer
   // is CHARGED and what the facility owes a revenue authority.
   //

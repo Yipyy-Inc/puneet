@@ -20,6 +20,7 @@ import type {
   FacilityBookingFlowConfig,
   ModuleConfig,
   TipConfig,
+  TipAttribution,
   GroomingScheduling,
   AccountingStructure,
   NetworkPolicy,
@@ -60,6 +61,8 @@ export interface FacilitySettings {
   /** The cross-location toggles HQ Settings edits. */
   network_policy: SettingState<NetworkPolicy>;
   tip_config: SettingState<TipConfig>;
+  /** Who a tip is owed to once collected. Read by the attribution trigger too. */
+  tip_attribution: SettingState<TipAttribution>;
   tax_config: SettingState<TaxConfig>;
   /** Overtime rule + statutory holidays. `configured: false` = nobody has said. */
   payroll_config: SettingState<PayrollConfig>;

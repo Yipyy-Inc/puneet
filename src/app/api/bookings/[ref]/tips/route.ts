@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { paymentChannel } from "@/lib/payments/channel";
 
 // ============================================================================
 // Who earned the tip.
@@ -87,9 +88,16 @@ export async function GET(
     );
   }
 
+  // ── THE SOURCE COMES WITH THE MONEY ────────────────────────────────────
+  //
+  // `processor` and `entry_method` alongside the tip, so the invoice can say
+  // whether it was taken on the terminal or online. Derived by
+  // `paymentChannel()` rather than stored: a card taken at the counter and a
+  // card taken online are BOTH `method = 'card'`, so the method alone cannot
+  // answer it — which is exactly the bug that function exists to prevent.
   const { data: payments, error: paymentsError } = await supabase
     .from("payments")
-    .select("tip")
+    .select("tip, method, processor, entry_method")
     .eq("booking_id", bookingId);
 
   if (paymentsError) {
@@ -115,13 +123,31 @@ export async function GET(
     created_at: string;
   }[];
 
+  const paymentRows = (payments ?? []) as {
+    tip: number | string;
+    method: string | null;
+    processor: string | null;
+    entry_method: string | null;
+  }[];
+
+  // One figure per channel. A booking part-paid on the terminal and topped up
+  // online has two, and collapsing them would hide where the money came from at
+  // exactly the moment somebody is reconciling a till.
+  const bySource = { terminal: 0, online: 0, other: 0 };
+  for (const p of paymentRows) {
+    const tip = Number(p.tip ?? 0);
+    if (tip === 0) continue;
+    const channel = paymentChannel(p);
+    if (channel === "in_person") bySource.terminal += tip;
+    else if (channel === "online") bySource.online += tip;
+    else bySource.other += tip;
+  }
+
   return NextResponse.json({
     // Signed sum: a refunded payment carries a negative tip, and the tip goes
     // back with it.
-    tipCollected: ((payments ?? []) as { tip: number | string }[]).reduce(
-      (sum, p) => sum + Number(p.tip ?? 0),
-      0,
-    ),
+    tipCollected: paymentRows.reduce((sum, p) => sum + Number(p.tip ?? 0), 0),
+    bySource,
     method: allocations[0]?.method ?? null,
     allocations: allocations.map((a) => ({
       id: a.id,

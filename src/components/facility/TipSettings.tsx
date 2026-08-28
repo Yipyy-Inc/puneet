@@ -1,27 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import {
-  DollarSign,
-  Percent,
-  Star,
-  MessageSquare,
-  Bell,
-  FileText,
-  Clock,
-  Mail,
-  Smartphone,
-  Heart,
-} from "lucide-react";
+import { Bell, FileText, Clock, Mail, Smartphone, Heart } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
-import type { TipConfig, TipOption, TipTierConfig } from "@/types/facility";
+import type { TipAttribution, TipConfig } from "@/types/facility";
+import { TipTierEditor } from "./tips/TipTierEditor";
+import { CloverTipPanel } from "./tips/CloverTipPanel";
+import { TipAttributionCard } from "./tips/TipAttributionCard";
 
 // Defaults used when an older tipConfig (without reminder/reportCardPrompt) is loaded.
 const DEFAULT_REMINDER = {
@@ -43,147 +34,34 @@ const DEFAULT_REPORT_CARD_PROMPT = {
   onlyOnPositiveFeedback: false,
 } as const;
 
-// ── Tier editor: 3 options + preferred selector ───────────────────────────────
-
-function TierEditor({
-  tier,
-  onChange,
-  disabled,
-}: {
-  tier: TipTierConfig;
-  onChange: (next: TipTierConfig) => void;
-  disabled: boolean;
-}) {
-  const setOption = (idx: number, next: TipOption) => {
-    const options = [...tier.options] as TipTierConfig["options"];
-    options[idx] = next;
-    onChange({ ...tier, options });
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">
-        {tier.options.map((opt, idx) => (
-          <div key={idx} className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-                Option {idx + 1}
-              </span>
-              {tier.preferredIndex === idx && (
-                <Badge variant="secondary" className="gap-0.5 text-[9px]">
-                  <Star className="size-2" /> Preferred
-                </Badge>
-              )}
-            </div>
-            {/* Type toggle */}
-            <div className="flex overflow-hidden rounded-md border text-xs">
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => setOption(idx, { ...opt, type: "percentage" })}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-1 py-1 transition-colors",
-                  opt.type === "percentage"
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted",
-                )}
-              >
-                <Percent className="size-3" /> %
-              </button>
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => setOption(idx, { ...opt, type: "fixed" })}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-1 py-1 transition-colors",
-                  opt.type === "fixed"
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted",
-                )}
-              >
-                <DollarSign className="size-3" /> $
-              </button>
-            </div>
-            {/* Value input */}
-            <Input
-              type="number"
-              min={0}
-              max={opt.type === "percentage" ? 100 : 9999}
-              step={opt.type === "percentage" ? 1 : 0.5}
-              value={opt.value}
-              disabled={disabled}
-              className="h-8 text-sm"
-              onChange={(e) =>
-                setOption(idx, {
-                  ...opt,
-                  value: parseFloat(e.target.value) || 0,
-                })
-              }
-            />
-            {/* Label input */}
-            <Input
-              type="text"
-              placeholder="e.g. Good job"
-              value={opt.label ?? ""}
-              disabled={disabled}
-              maxLength={32}
-              className="h-8 text-xs"
-              onChange={(e) =>
-                setOption(idx, {
-                  ...opt,
-                  label: e.target.value || undefined,
-                })
-              }
-            />
-            {/* Preview pill */}
-            <div className="bg-muted flex h-7 items-center justify-center rounded-md px-2">
-              <span className="truncate text-[11px] font-medium">
-                {opt.type === "percentage" ? `${opt.value}%` : `$${opt.value}`}
-                {opt.label ? ` · ${opt.label}` : ""}
-              </span>
-            </div>
-            {/* Mark as preferred */}
-            {!disabled && tier.preferredIndex !== idx && (
-              <button
-                type="button"
-                onClick={() =>
-                  onChange({
-                    ...tier,
-                    preferredIndex: idx as 0 | 1 | 2,
-                  })
-                }
-                className="text-muted-foreground hover:text-primary w-full text-center text-[10px] underline"
-              >
-                Set as preferred
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-      {/* Section label hint */}
-      <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
-        <MessageSquare className="size-3" />
-        The label is shown to customers alongside the tip amount (e.g.&nbsp;
-        <span className="font-medium">20% · Fantastic job</span>).
-      </p>
-    </div>
-  );
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function TipSettings() {
-  const { tipConfig, updateTipConfig } = useSettings();
+  const { tipConfig, updateTipConfig, tipAttribution, updateTipAttribution } =
+    useSettings();
   const [local, setLocal] = useState<TipConfig>(tipConfig);
+  const [attribution, setAttribution] =
+    useState<TipAttribution>(tipAttribution);
   const [isEditing, setIsEditing] = useState(false);
+  // ── THE TICKET EVERY PREVIEW IS DRAWN AGAINST ──────────────────────────
+  //
+  // $60 because that is roughly a full groom, and because a preview needs a
+  // concrete number to be worth anything. Editable, so a facility whose
+  // average stay is $400 can see what 18% does there — the whole reason a
+  // percentage needs previewing is that its meaning changes with the bill.
+  const [preview, setPreview] = useState(60);
 
   const handleSave = () => {
+    // Two domains, saved together because one Save button edits both. They stay
+    // separate ROWS — see the comment on `updateTipAttribution`.
     updateTipConfig(local);
+    updateTipAttribution(attribution);
     setIsEditing(false);
   };
 
   const handleCancel = () => {
     setLocal(tipConfig);
+    setAttribution(tipAttribution);
     setIsEditing(false);
   };
 
@@ -282,9 +160,10 @@ export function TipSettings() {
             {local.mode === "general" && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Tip options</Label>
-                <TierEditor
+                <TipTierEditor
                   tier={local.general}
                   disabled={!isEditing}
+                  previewSubtotal={preview}
                   onChange={(tier) => setLocal({ ...local, general: tier })}
                 />
               </div>
@@ -330,9 +209,10 @@ export function TipSettings() {
                   <p className="mb-3 text-xs font-semibold">
                     Below ${local.smart.thresholdAmount} — Fixed amounts
                   </p>
-                  <TierEditor
+                  <TipTierEditor
                     tier={local.smart.belowThreshold}
                     disabled={!isEditing}
+                    previewSubtotal={preview}
                     onChange={(tier) =>
                       setLocal({
                         ...local,
@@ -347,9 +227,10 @@ export function TipSettings() {
                   <p className="mb-3 text-xs font-semibold">
                     ${local.smart.thresholdAmount}+ — Percentages
                   </p>
-                  <TierEditor
+                  <TipTierEditor
                     tier={local.smart.aboveThreshold}
                     disabled={!isEditing}
+                    previewSubtotal={preview}
                     onChange={(tier) =>
                       setLocal({
                         ...local,
@@ -360,6 +241,78 @@ export function TipSettings() {
                 </div>
               </div>
             )}
+
+            {/* ── The ticket the previews are drawn against ──────────── */}
+            <div className="flex flex-wrap items-center gap-2 border-t pt-4">
+              <Label className="text-xs font-medium">
+                Preview amounts on a
+              </Label>
+              <div className="relative w-24">
+                <span className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2 text-sm">
+                  $
+                </span>
+                <Input
+                  type="number"
+                  min={1}
+                  step={5}
+                  value={preview}
+                  className="h-8 pl-6 text-sm"
+                  onChange={(e) =>
+                    setPreview(Math.max(1, parseFloat(e.target.value) || 1))
+                  }
+                />
+              </div>
+              <span className="text-muted-foreground text-xs">
+                ticket. Changes nothing a customer sees — it only decides what
+                the figures above are worked out on.
+              </span>
+            </div>
+
+            {/* ── What else the customer is offered ──────────────────────
+                Both used to be drawn unconditionally by TipSelector, so a
+                facility could not turn either off. */}
+            <div className="space-y-3 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Custom tip</p>
+                  <p className="text-muted-foreground text-xs">
+                    Let customers type their own amount.
+                  </p>
+                </div>
+                <Switch
+                  checked={local.customTip ?? true}
+                  disabled={!isEditing}
+                  onCheckedChange={(v) => setLocal({ ...local, customTip: v })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Round up</p>
+                  <p className="text-muted-foreground text-xs">
+                    Offer to round the bill up to the next dollar. Hidden when
+                    the total is already whole.
+                  </p>
+                </div>
+                <Switch
+                  checked={local.roundUp ?? true}
+                  disabled={!isEditing}
+                  onCheckedChange={(v) => setLocal({ ...local, roundUp: v })}
+                />
+              </div>
+              <p className="text-muted-foreground text-[11px]">
+                Neither applies to the card reader: Clover always offers a
+                custom tip and a no-tip button of its own.
+              </p>
+            </div>
+
+            <CloverTipPanel config={local} previewSubtotal={preview} />
+
+            {/* ── Card 2: who the tip belongs to ───────────────────── */}
+            <TipAttributionCard
+              value={attribution}
+              onChange={setAttribution}
+              disabled={!isEditing}
+            />
 
             {/* ── Post-stay tip reminder ─────────────────────────────── */}
             {(() => {
@@ -391,6 +344,18 @@ export function TipSettings() {
                         <p className="text-muted-foreground text-xs">
                           Send a friendly ask after the pet goes home — when
                           appreciation is highest.
+                        </p>
+                        {/* ── SAVED, AND NOT YET SENT ──────────────────
+                            Nothing in the codebase reads `tipConfig.reminder`.
+                            The fields are the right shape and the sender is
+                            separate work — a scheduled job, not a screen — but
+                            until it exists a facility configuring this is
+                            configuring a message nobody will receive, and the
+                            screen has to say so rather than imply otherwise. */}
+                        <p className="mt-1 rounded-sm border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300">
+                          Not sending yet. These settings are saved, but the
+                          reminder is not delivered — the sender has not been
+                          built.
                         </p>
                       </div>
                     </div>
@@ -583,6 +548,12 @@ export function TipSettings() {
                         <p className="text-muted-foreground text-xs">
                           Add a gentle tip prompt to the daily report card sent
                           to clients.
+                        </p>
+                        {/* Same as the reminder above: `reportCardPrompt` is
+                            saved and read by nothing. */}
+                        <p className="mt-1 rounded-sm border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300">
+                          Not showing yet. These settings are saved, but report
+                          cards do not carry the tip ask.
                         </p>
                       </div>
                     </div>
