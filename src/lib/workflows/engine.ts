@@ -379,6 +379,23 @@ async function advanceOne(
     return;
   }
 
+  // Did somebody stop this while we were loading? Rendering a message takes
+  // several round trips, and `stop_workflow_enrollment` cancels the rows this
+  // enrolment has ALREADY queued — it cannot cancel one queued a moment later.
+  // So re-read the status here, immediately before writing. It does not close
+  // the window entirely (PostgREST gives us no transaction spanning the read
+  // and the insert), but it turns "staff pressed Stop and a message went out
+  // anyway" from a second-wide race into a millisecond-wide one.
+  const { data: still } = await db
+    .from("workflow_enrollments")
+    .select("status")
+    .eq("id", enrollment.id)
+    .maybeSingle();
+  if ((still as { status: string } | null)?.status !== "active") {
+    result.stopped += 1;
+    return;
+  }
+
   const channels: ("email" | "sms")[] = [];
   if (step.email_template_id) channels.push("email");
   if (step.sms_template_id) channels.push("sms");

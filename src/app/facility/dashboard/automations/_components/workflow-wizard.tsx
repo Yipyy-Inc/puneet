@@ -36,6 +36,7 @@ import type { RealMessageTemplate } from "@/types/automations";
 import {
   AUDIENCE_FIELDS,
   STOP_CONDITIONS,
+  describeStopConditions,
   type Audience,
   type Workflow,
 } from "@/types/workflows";
@@ -1095,6 +1096,14 @@ function SequenceStep({
           other message. That is enforced when the message is sent, so it is not
           a setting here.
         </p>
+        {/* This was a third checkbox until the button existed. It could only
+            ever have been a control with no off position: unticking it must
+            not take away staff's ability to pull one person out. */}
+        <p className="text-muted-foreground text-xs">
+          Staff can always stop the sequence for one client by hand, from the
+          workflow&apos;s detail panel. Anything queued for them is cancelled
+          with it.
+        </p>
       </div>
     </div>
   );
@@ -1141,7 +1150,7 @@ function ReviewStep({
     ],
     ["Messages", `${steps.length} step${steps.length === 1 ? "" : "s"}`],
     ["Re-send guard", `no more often than every ${cooldown} days`],
-    ["Stops when", stopOn.length ? stopOn.join(", ") : "never, until it ends"],
+    ["Stops when", describeStopConditions(stopOn)],
   ];
 
   return (
