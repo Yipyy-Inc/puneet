@@ -48,6 +48,21 @@ export const serviceRebookRuleSchema = z.object({
    * Queue tab name the same people.
    */
   lapsedAfterDays: z.number().int().min(1).max(3650),
+
+  /**
+   * This service's own wording, if the facility has written some.
+   *
+   * An ID into `message_templates`, not a body. The wording of a message that
+   * goes to a customer belongs in the same table as every other message's, so
+   * that the History tab can name it, the rule and workflow pickers can offer
+   * it, and there is one answer to "what did we send". A body stored here would
+   * be a second place wording lives and the first place anybody forgets.
+   *
+   * Null means fall back to the shipped `rebook_reminder`, which is what every
+   * facility starts with.
+   */
+  emailTemplateId: z.string().uuid().nullable().optional(),
+  smsTemplateId: z.string().uuid().nullable().optional(),
 });
 export type ServiceRebookRule = z.infer<typeof serviceRebookRuleSchema>;
 

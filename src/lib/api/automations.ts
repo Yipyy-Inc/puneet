@@ -11,6 +11,7 @@ import type {
   CreateTemplateResult,
   TemplatesPayload,
 } from "@/app/api/message-templates/route";
+import type { UpdateTemplateResult } from "@/app/api/message-templates/[id]/route";
 
 // ============================================================================
 // The automations query layer.
@@ -156,6 +157,34 @@ export function useCreateTemplate() {
     mutationFn: async (input: NewTemplate) =>
       (await send<CreateTemplateResult>("/api/message-templates", input))
         .template,
+    onSuccess: () => invalidateAutomations(queryClient),
+  });
+}
+
+export type TemplatePatch = Partial<Omit<NewTemplate, "channel">> & {
+  isActive?: boolean;
+};
+
+/**
+ * Reword a template — including one Yipyy shipped.
+ *
+ * `is_system` marks a template as one we installed, not one that is frozen,
+ * and the seeder is `on conflict do nothing` so an edited shipped template is
+ * left alone by the next run. `key` and `channel` are not patchable: they are
+ * the template's identity, and changing a channel would leave an email
+ * template's subject on a text.
+ */
+export function useUpdateTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: TemplatePatch }) =>
+      (
+        await send<UpdateTemplateResult>(
+          `/api/message-templates/${encodeURIComponent(id)}`,
+          patch,
+          "PATCH",
+        )
+      ).template,
     onSuccess: () => invalidateAutomations(queryClient),
   });
 }

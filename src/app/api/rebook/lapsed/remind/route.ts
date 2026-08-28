@@ -174,14 +174,24 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      // The service's OWN wording if the facility has written some, and the
+      // shipped one otherwise. Held as an id rather than a body: wording that
+      // goes to a customer belongs in `message_templates` with every other
+      // message's, so the History tab can name it and there is one answer to
+      // "what did we send".
+      const override =
+        channel === "email" ? rule.emailTemplateId : rule.smsTemplateId;
       const key =
         channel === "email" ? "rebook_reminder" : "rebook_reminder_sms";
-      const { data: template } = await admin
+
+      const query = admin
         .from("message_templates")
         .select("id, subject, body, is_active")
-        .eq("facility_id", context.facilityId)
-        .eq("key", key)
-        .maybeSingle();
+        .eq("facility_id", context.facilityId);
+
+      const { data: template } = await (
+        override ? query.eq("id", override) : query.eq("key", key)
+      ).maybeSingle();
 
       const t = template as {
         id: string;
@@ -190,7 +200,15 @@ export async function POST(request: NextRequest) {
         is_active: boolean;
       } | null;
       if (!t || !t.is_active) {
-        skip(target, "the rebook template is missing or retired");
+        // Named separately: "the one you chose for grooming has been retired"
+        // and "the shipped one is missing" need different fixes, and a single
+        // message would send somebody to the wrong screen.
+        skip(
+          target,
+          override
+            ? "the template chosen for this service is missing or retired"
+            : "the rebook template is missing or retired",
+        );
         continue;
       }
 
