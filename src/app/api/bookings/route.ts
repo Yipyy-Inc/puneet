@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
@@ -287,6 +287,57 @@ export async function POST(request: NextRequest) {
     .select(BOOKING_SELECT)
     .eq("id", created.booking_id)
     .single();
+
+  // ── AUTOMATIONS ─────────────────────────────────────────────────────────
+  //
+  // Recorded here rather than in a trigger on `bookings`. A trigger would catch
+  // more writes, but an AFTER INSERT trigger that raises FAILS THE BOOKING —
+  // and `booking-write-integrity` is one of the 22 gate specs precisely because
+  // a production 500 was once found on this path. A confirmation email is not
+  // worth that risk. A trigger also cannot tell a real booking from
+  // `scripts/apply-operational-seed.ts`, which would mail every seeded client.
+  //
+  // This is the only caller of `create_booking`, so the coverage is the same.
+  //
+  // The emit is idempotent on `dedupe_key`, and BEST EFFORT: a booking that
+  // succeeded must not be reported as failed because its confirmation could
+  // not be queued.
+  let eventId: number | null = null;
+  try {
+    const { data: emitted, error: emitError } = await supabase.rpc(
+      "emit_automation_event",
+      {
+        p_facility_id: facility.facilityId,
+        p_kind: "booking_created",
+        p_dedupe_key: `booking_created:${created.booking_id}`,
+        p_client_id: client.id,
+        p_booking_id: created.booking_id,
+        ...(facility.locationId ? { p_location_id: facility.locationId } : {}),
+      },
+    );
+    if (emitError) {
+      console.warn("[automations] emit failed:", emitError.message);
+    }
+    // NULL means the event already existed — a retried request, not a failure.
+    // Nothing to dispatch either way, because whoever created it dispatches it.
+    eventId = (emitted as number | null) ?? null;
+  } catch (emitFailure) {
+    console.warn("[automations] emit threw:", emitFailure);
+  }
+
+  // `after()` runs once the response is on its way, so the customer waits for
+  // the booking and not for Resend. The row in `automation_events` is the
+  // durable part: if this process dies before the callback runs, the event is
+  // still unclaimed and the tick picks it up.
+  if (eventId !== null) {
+    after(async () => {
+      const { dispatchEvent } = await import("@/lib/messaging/dispatch");
+      const result = await dispatchEvent(eventId);
+      if (result.problems.length > 0) {
+        console.warn("[automations] dispatch problems:", result.problems);
+      }
+    });
+  }
 
   return NextResponse.json(full ? rowToBooking(full) : null, { status: 201 });
 }

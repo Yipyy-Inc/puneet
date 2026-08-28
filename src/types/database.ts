@@ -77,6 +77,166 @@ export type Database = {
         };
         Relationships: [];
       };
+      automation_events: {
+        Row: {
+          booking_id: string | null;
+          client_id: string | null;
+          created_at: string;
+          dedupe_key: string;
+          facility_id: string;
+          id: number;
+          kind: string;
+          location_id: string | null;
+          occurred_at: string;
+          payload: Json;
+          pet_id: string | null;
+          processed_at: string | null;
+        };
+        Insert: {
+          booking_id?: string | null;
+          client_id?: string | null;
+          created_at?: string;
+          dedupe_key: string;
+          facility_id: string;
+          id?: number;
+          kind: string;
+          location_id?: string | null;
+          occurred_at?: string;
+          payload?: Json;
+          pet_id?: string | null;
+          processed_at?: string | null;
+        };
+        Update: {
+          booking_id?: string | null;
+          client_id?: string | null;
+          created_at?: string;
+          dedupe_key?: string;
+          facility_id?: string;
+          id?: number;
+          kind?: string;
+          location_id?: string | null;
+          occurred_at?: string;
+          payload?: Json;
+          pet_id?: string | null;
+          processed_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "automation_events_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "automation_events_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "automation_events_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "automation_events_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "automation_events_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      automation_rules: {
+        Row: {
+          cooldown_days: number;
+          created_at: string;
+          created_by: string | null;
+          email_template_id: string | null;
+          enabled: boolean;
+          facility_id: string;
+          id: string;
+          is_transactional: boolean;
+          location_ids: string[];
+          min_amount: number | null;
+          name: string;
+          offset_minutes: number | null;
+          service_types: string[];
+          sms_template_id: string | null;
+          trigger: string;
+          updated_at: string;
+        };
+        Insert: {
+          cooldown_days?: number;
+          created_at?: string;
+          created_by?: string | null;
+          email_template_id?: string | null;
+          enabled?: boolean;
+          facility_id: string;
+          id?: string;
+          is_transactional?: boolean;
+          location_ids?: string[];
+          min_amount?: number | null;
+          name: string;
+          offset_minutes?: number | null;
+          service_types?: string[];
+          sms_template_id?: string | null;
+          trigger: string;
+          updated_at?: string;
+        };
+        Update: {
+          cooldown_days?: number;
+          created_at?: string;
+          created_by?: string | null;
+          email_template_id?: string | null;
+          enabled?: boolean;
+          facility_id?: string;
+          id?: string;
+          is_transactional?: boolean;
+          location_ids?: string[];
+          min_amount?: number | null;
+          name?: string;
+          offset_minutes?: number | null;
+          service_types?: string[];
+          sms_template_id?: string | null;
+          trigger?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_email_template_id_fkey";
+            columns: ["email_template_id"];
+            isOneToOne: false;
+            referencedRelation: "message_templates";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "automation_rules_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "automation_rules_sms_template_id_fkey";
+            columns: ["sms_template_id"];
+            isOneToOne: false;
+            referencedRelation: "message_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       boarding_stays: {
         Row: {
           booking_id: string;
@@ -4240,6 +4400,232 @@ export type Database = {
             columns: ["requires_module_id"];
             isOneToOne: false;
             referencedRelation: "modules";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      message_sends: {
+        Row: {
+          attempts: number;
+          body_rendered: string;
+          channel: string;
+          client_id: string | null;
+          created_at: string;
+          enrollment_id: string | null;
+          facility_id: string;
+          id: string;
+          idempotency_key: string;
+          last_error: string | null;
+          location_id: string | null;
+          locked_at: string | null;
+          provider: string | null;
+          provider_id: string | null;
+          scheduled_for: string;
+          sent_at: string | null;
+          skip_reason: string | null;
+          source_id: string | null;
+          source_kind: string;
+          status: string;
+          step_index: number | null;
+          subject_rendered: string | null;
+          template_id: string | null;
+          to_address: string;
+          unsubscribe_token: string;
+        };
+        Insert: {
+          attempts?: number;
+          body_rendered: string;
+          channel: string;
+          client_id?: string | null;
+          created_at?: string;
+          enrollment_id?: string | null;
+          facility_id: string;
+          id?: string;
+          idempotency_key: string;
+          last_error?: string | null;
+          location_id?: string | null;
+          locked_at?: string | null;
+          provider?: string | null;
+          provider_id?: string | null;
+          scheduled_for?: string;
+          sent_at?: string | null;
+          skip_reason?: string | null;
+          source_id?: string | null;
+          source_kind: string;
+          status?: string;
+          step_index?: number | null;
+          subject_rendered?: string | null;
+          template_id?: string | null;
+          to_address: string;
+          unsubscribe_token?: string;
+        };
+        Update: {
+          attempts?: number;
+          body_rendered?: string;
+          channel?: string;
+          client_id?: string | null;
+          created_at?: string;
+          enrollment_id?: string | null;
+          facility_id?: string;
+          id?: string;
+          idempotency_key?: string;
+          last_error?: string | null;
+          location_id?: string | null;
+          locked_at?: string | null;
+          provider?: string | null;
+          provider_id?: string | null;
+          scheduled_for?: string;
+          sent_at?: string | null;
+          skip_reason?: string | null;
+          source_id?: string | null;
+          source_kind?: string;
+          status?: string;
+          step_index?: number | null;
+          subject_rendered?: string | null;
+          template_id?: string | null;
+          to_address?: string;
+          unsubscribe_token?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "message_sends_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "message_sends_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "message_sends_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "message_sends_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "message_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      message_suppressions: {
+        Row: {
+          address: string;
+          channel: string;
+          client_id: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          reason: string;
+          released_at: string | null;
+          released_by: string | null;
+          scope: string;
+          source: string | null;
+        };
+        Insert: {
+          address: string;
+          channel: string;
+          client_id?: string | null;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          reason: string;
+          released_at?: string | null;
+          released_by?: string | null;
+          scope?: string;
+          source?: string | null;
+        };
+        Update: {
+          address?: string;
+          channel?: string;
+          client_id?: string | null;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          reason?: string;
+          released_at?: string | null;
+          released_by?: string | null;
+          scope?: string;
+          source?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "message_suppressions_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "message_suppressions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      message_templates: {
+        Row: {
+          body: string;
+          category: string;
+          channel: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          is_active: boolean;
+          is_system: boolean;
+          key: string | null;
+          name: string;
+          subject: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          body: string;
+          category?: string;
+          channel: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          is_active?: boolean;
+          is_system?: boolean;
+          key?: string | null;
+          name: string;
+          subject?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          body?: string;
+          category?: string;
+          channel?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          is_active?: boolean;
+          is_system?: boolean;
+          key?: string | null;
+          name?: string;
+          subject?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
             referencedColumns: ["id"];
           },
         ];
@@ -8714,6 +9100,23 @@ export type Database = {
       dismiss_unattached_payment: {
         Args: { p_id: string; p_note: string };
         Returns: boolean;
+      };
+      emit_automation_event: {
+        Args: {
+          p_booking_id?: string;
+          p_client_id?: string;
+          p_dedupe_key: string;
+          p_facility_id: string;
+          p_kind: string;
+          p_location_id?: string;
+          p_payload?: Json;
+          p_pet_id?: string;
+        };
+        Returns: number;
+      };
+      ensure_message_templates: {
+        Args: { p_facility_id: string };
+        Returns: undefined;
       };
       enroll_in_training_series: {
         Args: {

@@ -1,7 +1,6 @@
 import {
   messages,
   messageTemplates,
-  automationRules,
   petUpdates,
   callLogs,
   routingRules,
@@ -13,7 +12,6 @@ import { supportSavedReplies } from "@/data/support-saved-replies";
 import type {
   Message,
   MessageTemplate,
-  AutomationRule,
   PetUpdate,
   CallLog,
   RoutingRule,
@@ -35,10 +33,19 @@ export const communicationsQueries = {
     queryKey: ["communications", "templates"] as const,
     queryFn: async (): Promise<MessageTemplate[]> => messageTemplates,
   }),
-  automationRules: () => ({
-    queryKey: ["communications", "automation-rules"] as const,
-    queryFn: async (): Promise<AutomationRule[]> => automationRules,
-  }),
+  // `automationRules` WAS here, and it fetched nothing:
+  //
+  //   queryFn: async (): Promise<AutomationRule[]> => automationRules
+  //
+  // It had the exact shape the conventions doc prescribes for a real API layer
+  // — a queryKey, an async queryFn, a typed return — so it read as converted at
+  // a glance. Nothing imported it, including the automations page it was
+  // apparently written for. Removed 2026-08-27 when automations became real;
+  // the live one is `automationQueries` in @/lib/api/automations.
+  //
+  // The other entries below are still fixtures, and still honest about it only
+  // in that they have never claimed otherwise. An `async` function that awaits
+  // nothing is worth grepping for across this directory.
   petUpdates: () => ({
     queryKey: ["communications", "pet-updates"] as const,
     queryFn: async (): Promise<PetUpdate[]> => petUpdates,

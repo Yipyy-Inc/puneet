@@ -19,7 +19,7 @@ export type {
   Note,
   NoteRolePermissions,
   TagNoteSettings,
-  AutomationRule,
+  TagAutomationRule,
   LegacyPetTag,
   LegacyPetTagAssignment,
 } from "@/types/tags";

@@ -125,6 +125,7 @@ jobs:
             success-claims \
             passkey-email-verified \
             migration-versions \
+            automation-triggers \
             doc-counts
           do
             echo "::group::check:$script"

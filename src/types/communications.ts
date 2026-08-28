@@ -46,8 +46,28 @@ export type MessageTemplate = z.infer<typeof messageTemplateSchema>;
 // Automation Rules
 // ============================================================================
 
+/**
+ * Every event an automation rule can fire on. NINETEEN values, and this list is
+ * canonical — `automation_rules.trigger`'s CHECK constraint in the database
+ * carries the same nineteen, and `bun run check:automation-triggers` fails the
+ * build if the two ever disagree.
+ *
+ * ── WHY THAT GATE EXISTS ──────────────────────────────────────────────────
+ *
+ * The rule editor's dropdown was hand-written and offered EIGHT of these. The
+ * other nine were unreachable: opening one of the nine seeded rules that used
+ * them and touching the dropdown silently rewrote the rule's trigger to
+ * whatever was highlighted. The dropdown is now generated from this enum, so
+ * the two cannot drift — and a SQL test cannot read TypeScript, so the database
+ * half needs its own guard.
+ *
+ * `booking_cancelled` and `payment_overdue` were added 2026-08-27. The spec
+ * asked for both; both existed only in a second, disagreeing TRIGGER_LABELS map
+ * inside a component that nothing imported (AutomationsView.tsx, deleted).
+ */
 export const automationTriggerEnum = z.enum([
   "booking_created",
+  "booking_cancelled",
   "booking_request_submitted",
   "booking_request_approved",
   "booking_request_declined",
@@ -55,6 +75,7 @@ export const automationTriggerEnum = z.enum([
   "check_in",
   "check_out",
   "payment_received",
+  "payment_overdue",
   "vaccination_expiry",
   "appointment_reminder",
   "form_link_sent",

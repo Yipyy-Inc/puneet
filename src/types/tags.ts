@@ -133,10 +133,21 @@ export interface TagNoteSettings {
     rolePermissions: Record<NoteCategory, NoteRolePermissions>;
     defaultVisibility: NoteVisibility;
   };
-  automationRules: AutomationRule[];
+  automationRules: TagAutomationRule[];
 }
 
-export const automationRuleSchema = z.object({
+/**
+ * A rule that fires when a TAG is assigned or removed — "when someone tags a pet
+ * Aggressive, add a note".
+ *
+ * NOT `AutomationRule` in `@/types/communications`, which is the messaging rule
+ * that sends an email or a text when a booking is created. Both used to be
+ * called `AutomationRule` and both were re-exported from `@/data/tags-notes`, so
+ * "the automation rule type" meant two different things depending on the import.
+ * The messaging one owns the plain name because it owns the `automation_rules`
+ * table; this one is qualified.
+ */
+export const tagAutomationRuleSchema = z.object({
   id: z.string(),
   tagId: z.string(),
   triggerType: z.enum(["on_assign", "on_remove"]),
@@ -144,7 +155,7 @@ export const automationRuleSchema = z.object({
   actionConfig: z.record(z.string(), z.unknown()),
   isActive: z.boolean(),
 });
-export type AutomationRule = z.infer<typeof automationRuleSchema>;
+export type TagAutomationRule = z.infer<typeof tagAutomationRuleSchema>;
 
 // ========================================
 // LEGACY TAG TYPES (backward compat)
