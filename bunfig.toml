@@ -1,0 +1,12 @@
+# ── `bun test` means the unit tests, and only those ─────────────────────────
+#
+# Without this, bare `bun test` walks the whole tree, finds the 104 Playwright
+# specs under tests/e2e (they end in .spec.ts, which is a bun test pattern too)
+# and detonates on the first `@playwright/test` import -- with an unhandled
+# error rather than anything that names the cause. Those are run by
+# `bun run test:e2e`, which is a different runner entirely.
+#
+# Scoping the root here means `bun test` is safe to type, not just
+# `bun run test:unit`.
+[test]
+root = "tests/unit"

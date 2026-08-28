@@ -6864,6 +6864,68 @@ stops being fine the moment one of them is called from a loop.
 `src/lib/messaging/send.ts`. If one of the six ever needs suppression, move it
 rather than adding a second check.
 
+## 2026-08-28
+
+### 🔴 ~~No automated tests~~ — the 2026-06-20 snapshot entry is stale twice over
+
+The entry at the top of this file says "There is no test runner and no
+`*.test.*` / `*.spec.*` in `src/`". That has been wrong since Playwright
+arrived (104 specs under `tests/e2e/`), and is wrong again now: `bun test` runs
+`tests/unit/`. Left in place because this file is append-only, but do not act
+on it.
+
+### 🔴 `DataTable` sorted every numeric column lexicographically, for months
+
+**The measurement.** `src/components/ui/DataTable.tsx` resolved each cell's sort
+value and then did `String(aVal).toLowerCase()` on both sides before comparing.
+So a column of `[1000, 250, 38, 125]` sorted to exactly that — unchanged, since
+it is already in lexicographic order. Boarding's own nightly rates put $125
+ahead of $38. 88 screens import this component.
+
+**Why it survived.** A table sorted wrongly is visually indistinguishable from
+one sorted rightly: the arrow flips, the rows move, nothing errors. It only
+shows up at all once a column holds values of _differing digit length_, so any
+table of two-digit prices sorts perfectly and hides it. It was found by eye on
+the HQ training price column, not by any gate.
+
+**Fixed** in `6c85386c`, extracted to `src/lib/table/sort.ts` and covered by
+`tests/unit/data-table-sort.test.ts` on 2026-08-28. Removing the numeric branch
+turns 5 of those 15 tests red, including the boarding-rates case — verified, not
+assumed.
+
+**Two things about that comparator are deliberate and will look like bugs:**
+
+- **Numeric strings are not coerced.** PostgREST returns `numeric` as a string,
+  which makes `Number(...)`-ing every numeric-looking string very tempting. Do
+  not: `"01234"` is a postcode, a booking ref keeps its leading zeros, and a
+  version is not a float. A column that means the quantity says
+  `sortValue: (row) => Number(row.field)`. There is a test asserting this,
+  so "fixing" it goes red with a pointer to the reasoning.
+- **Dates sort by their string form**, which is weekday-first
+  (`"Thu Jan 01 …"`) and therefore not chronological. That is pre-existing
+  behaviour on every screen, so changing it is a separate, scoped decision —
+  not a drive-by. Per-column escape hatch: `sortValue: (row) => +row.when`.
+
+**What to do instead** of hand-rolling around it: reach for `sortValue`. It was
+there the whole time; a zero-padded string key was written to work around the
+sort before the sort itself was read.
+
+### 🟡 Branch protection requires a weaker set than what actually gates the deploy
+
+`main`'s required status checks are `typecheck`, `lint`, `format`, `build` and
+`sql`. **`checks (the project's own rules)` and `unit (pure logic)` are not
+among them** — so as far as branch protection is concerned, all eighteen
+`check:*` scripts and the whole unit tier can be red and a push still lands.
+
+What actually stops a bad commit reaching production is the `needs:` list on
+the `image` job in `.github/workflows/ci.yml`, which does include both. So the
+deploy is gated; the branch is not. `enforce_admins` is false anyway, so the
+distinction matters less than it reads — but anyone assuming "required checks"
+is the complete list of what must be green is wrong by two jobs.
+
+**Not fixed here.** Adding to branch protection is a gate change, and this repo
+asks for those to be proposed explicitly and separately.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

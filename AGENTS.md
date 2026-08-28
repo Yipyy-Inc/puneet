@@ -28,6 +28,8 @@ Every task follows: **Ground → Plan → Implement → Verify → Encode.**
 
 There **is** a test runner: Playwright, 104 spec files under [tests/e2e/](tests/e2e/), driving a real browser against a real server. It was described here as absent long after it existed. "Green" = the CI gates, the auth & access specs, and a look at the touched journey.
 
+Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/unit/](tests/unit/), for pure logic worth being sure of and cheap to isolate. It exists because `DataTable`'s sort comparator ordered every numeric column on ~88 screens lexicographically — $125 ahead of $38 — for months, and neither tier that existed could have caught it: static analysis saw well-typed code, and an e2e spec would have had to seed rows of a particular digit-length shape into the shared production database to assert something three layers below the screen. Keep it to that shape. **RLS, permissions and payments stay in Playwright**, where they can actually be wrong.
+
 | Command                                | Purpose                                                                                                             |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `bun run dev`                          | Dev server (webpack); `bun run dev:turbo` for turbo                                                                 |
@@ -36,6 +38,7 @@ There **is** a test runner: Playwright, 104 spec files under [tests/e2e/](tests/
 | `bun run format:check`                 | Prettier check; `bun run format` to write                                                                           |
 | `bun run build`                        | `next build` — full production build (CI runs this)                                                                 |
 | `bun run prune`                        | Knip — dead-code / unused-export report                                                                             |
+| `bun run test:unit`                    | `bun test` over [tests/unit/](tests/unit/) — pure logic, no browser, no database. Under a second. Runs in CI        |
 | `bun run test:e2e`                     | The whole Playwright suite (104 files, ~45 min, one worker — see the debt map before trusting a run)                |
 | `bun run test:e2e:gate`                | The 22 specs CI runs on every push — the authorisation boundary, and money                                          |
 | `bun run test:e2e:ci`                  | The full suite CI runs NIGHTLY — auth & access, daily operations, scheduling, payroll, loyalty, report cards, tasks |
@@ -51,7 +54,7 @@ There **is** a test runner: Playwright, 104 spec files under [tests/e2e/](tests/
 | `bun run check:migration-versions`     | Fails if two migrations share a version number, so `db push` cannot pick its own order                              |
 | `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                   |
 
-**The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
+**The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check && bun run test:unit`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
 
 **Touching auth, a portal gate, a permission or an identity — or bookings, boarding, daycare, rooms, the care log, the calendar or the roster?** Run `bun run test:e2e:ci` too — the whole thing, by hand, before you push.
 
