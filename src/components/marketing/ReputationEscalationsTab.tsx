@@ -172,7 +172,7 @@ function TicketCard({
               onClick={() => onCall(req)}
               className="gap-1.5"
             >
-              <Phone className="size-3.5" /> Call via IVR
+              <Phone className="size-3.5" /> Call client
             </Button>
             <Button
               size="sm"
@@ -219,8 +219,11 @@ export function ReputationEscalationsTab() {
     };
   }, [requests]);
 
+  // "IVR" was the wrong word: an IVR is an inbound menu system, and this is
+  // click-to-call. The rename matters because it is what staff read before
+  // dialling somebody who has just complained.
   function handleCall(req: ReputationRequest) {
-    toast.info(`Opening IVR dialer for ${req.clientName}…`);
+    toast.info(`Opening the dialer for ${req.clientName}…`);
     router.push("/facility/dashboard/calling");
   }
 

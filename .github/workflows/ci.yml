@@ -160,6 +160,7 @@ jobs:
             passkey-email-verified \
             migration-versions \
             automation-triggers \
+            no-review-gating \
             doc-counts
           do
             echo "::group::check:$script"

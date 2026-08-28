@@ -171,14 +171,13 @@ export interface ReputationSettings {
    */
   channelWeighting?: boolean;
   /**
-   * How feedback is routed after a rating:
-   * - "open"   — everyone is invited to review publicly AND privately (default;
-   *              avoids review-gating which violates FTC / Google / Yelp policy).
-   * - "gated"  — only clients at/above the happy threshold see public links;
-   *              lower ratings are intercepted privately.
+   * At or below this rating a recovery ticket opens and the assignee is
+   * alerted. It does NOT decide who is shown a public review link — everyone
+   * is, always. Selectively showing the link only to happy clients is review
+   * gating, which the FTC's Rule on Consumer Reviews (16 CFR Part 465) and
+   * Google's review policies both prohibit; the mode that did it was removed
+   * on 2026-08-28 and must not come back.
    */
-  feedbackRouting?: "open" | "gated";
-  /** Reviews at/above this score go public; below it stay private (intercepted). */
   happyThreshold: ReputationRating;
   /** Multi-step outreach sequence (initial send + backup reminders). */
   outreachSequence?: ReputationSequenceStep[];

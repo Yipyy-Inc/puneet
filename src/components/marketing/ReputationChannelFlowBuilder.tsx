@@ -127,8 +127,8 @@ export function ReputationChannelFlowBuilder({
             Distribute by weight
           </span>
           <span className="text-muted-foreground block text-xs">
-            Send reviewers to channels by % share (e.g. Google 60% / Yelp 40%)
-            instead of fixed order.
+            Send reviewers to channels by % share (e.g. Google 60% / Facebook
+            40%) instead of fixed order.
           </span>
         </span>
         <Switch
@@ -232,7 +232,14 @@ export function ReputationChannelFlowBuilder({
                 </span>
 
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{meta.label}</p>
+                  <p className="flex items-center gap-1.5 text-sm font-semibold">
+                    {meta.label}
+                    {!meta.solicitable && (
+                      <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                        Monitor only
+                      </span>
+                    )}
+                  </p>
                   {cfg.reviewCount != null && (
                     <p className="text-muted-foreground inline-flex items-center gap-1 text-xs">
                       {cfg.reviewCount} reviews
@@ -249,10 +256,11 @@ export function ReputationChannelFlowBuilder({
 
                 <Switch
                   checked={cfg.enabled}
+                  disabled={!meta.solicitable}
                   onCheckedChange={(enabled) =>
                     patchPlatform(platform, { enabled })
                   }
-                  aria-label={`Enable ${meta.label}`}
+                  aria-label={`Send reviewers to ${meta.label}`}
                 />
                 <Button
                   variant="ghost"
@@ -265,7 +273,15 @@ export function ReputationChannelFlowBuilder({
                 </Button>
               </div>
 
-              {cfg.enabled && (
+              {!meta.solicitable && (
+                <div className="border-t px-3 pt-2 pb-3">
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                    {meta.monitorOnlyReason}
+                  </p>
+                </div>
+              )}
+
+              {cfg.enabled && meta.solicitable && (
                 <div className="space-y-2 border-t px-3 pt-2 pb-3">
                   <Label className="text-muted-foreground block text-xs">
                     Direct review page URL

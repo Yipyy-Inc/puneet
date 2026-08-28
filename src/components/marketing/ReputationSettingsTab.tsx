@@ -335,68 +335,6 @@ export function ReputationSettingsTab() {
         </div>
       </Section>
 
-      {/* Review routing mode */}
-      <Section
-        title="Review Routing"
-        description="Decide how clients are guided after they rate their visit."
-        icon={Shield}
-      >
-        <div className="space-y-2">
-          <Label className="text-sm">Interception threshold</Label>
-          <p className="text-muted-foreground text-xs">
-            Reviews at or above this score are treated as public-ready; below it
-            they&apos;re intercepted for private follow-up.
-          </p>
-          <div className="flex gap-1.5">
-            {[2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => update("happyThreshold", n as ReputationRating)}
-                className={`flex-1 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
-                  s.happyThreshold === n
-                    ? "border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                {n}★ &amp; up public
-              </button>
-            ))}
-          </div>
-          <p className="text-muted-foreground text-xs">
-            Currently: {s.happyThreshold}★ and up are public-ready;{" "}
-            {s.happyThreshold - 1}★ and below stay private.
-          </p>
-        </div>
-
-        <Toggle
-          checked={(s.feedbackRouting ?? "open") === "gated"}
-          onChange={(v) => update("feedbackRouting", v ? "gated" : "open")}
-          label="Gate public reviews by rating"
-          description="When on, only clients at or above your happy threshold are shown public review links; lower ratings are intercepted privately."
-        />
-        {(s.feedbackRouting ?? "open") === "gated" ? (
-          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            <p className="text-xs text-amber-800 dark:text-amber-300">
-              Heads up: selectively asking only happy clients for public reviews
-              (&ldquo;review gating&rdquo;) may violate the FTC Act and Google /
-              Yelp policies — they can remove your reviews. Most businesses
-              should keep this off.
-            </p>
-          </div>
-        ) : (
-          <div className="flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-            <p className="text-xs text-blue-700 dark:text-blue-300">
-              Open routing (recommended): every client is invited to review
-              publicly and privately. You still catch unhappy clients — low
-              ratings alert your manager — without hiding the public option.
-            </p>
-          </div>
-        )}
-      </Section>
-
       {/* Multi-platform channel manager (drag-and-drop) */}
       <Section
         title="Channel Manager"
@@ -512,6 +450,54 @@ export function ReputationSettingsTab() {
               </span>
             </div>
           </div>
+        </div>
+      </Section>
+
+      {/* Escalation threshold — what happens INTERNALLY, not who sees the link */}
+      <Section
+        title="Escalation Threshold"
+        description="Decide which ratings open a recovery ticket. Every client is shown the public review option regardless."
+        icon={Shield}
+      >
+        <div className="space-y-2">
+          <Label className="text-sm">Escalation threshold</Label>
+          <p className="text-muted-foreground text-xs">
+            At or below this rating we open a recovery ticket and alert the
+            assignee. It does not change whether the public review link is shown
+            — it always is.
+          </p>
+          <div className="flex gap-1.5">
+            {[2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => update("happyThreshold", n as ReputationRating)}
+                className={`flex-1 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
+                  s.happyThreshold === n
+                    ? "border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {n - 1}★ &amp; below
+              </button>
+            ))}
+          </div>
+          <p className="text-muted-foreground text-xs">
+            Currently: {s.happyThreshold - 1}★ and below opens a recovery
+            ticket. Everyone, at every rating, is offered the public review link
+            and a private channel side by side.
+          </p>
+        </div>
+
+        <div className="flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+          <p className="text-xs text-blue-700 dark:text-blue-300">
+            Open routing is the only mode. Every client is invited to review
+            publicly and privately; the rating decides what happens on your
+            side, never whether the public option appears. Showing the link only
+            to happy clients is review gating, which the FTC&apos;s Rule on
+            Consumer Reviews and Google&apos;s review policies both prohibit.
+          </p>
         </div>
       </Section>
 
