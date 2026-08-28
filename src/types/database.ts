@@ -6682,6 +6682,54 @@ export type Database = {
           },
         ];
       };
+      rebook_dismissals: {
+        Row: {
+          client_id: string;
+          dismissed_at: string;
+          dismissed_by: string | null;
+          facility_id: string;
+          id: string;
+          note: string | null;
+          reason: string | null;
+          service: string;
+        };
+        Insert: {
+          client_id: string;
+          dismissed_at?: string;
+          dismissed_by?: string | null;
+          facility_id: string;
+          id?: string;
+          note?: string | null;
+          reason?: string | null;
+          service: string;
+        };
+        Update: {
+          client_id?: string;
+          dismissed_at?: string;
+          dismissed_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          note?: string | null;
+          reason?: string | null;
+          service?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rebook_dismissals_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "rebook_dismissals_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       room_categories: {
         Row: {
           active: boolean;
@@ -9602,6 +9650,10 @@ export type Database = {
         Args: { p_facility_id: string };
         Returns: undefined;
       };
+      ensure_rebook_templates: {
+        Args: { p_facility_id: string };
+        Returns: undefined;
+      };
       enroll_in_training_series: {
         Args: {
           p_client_id: string;
@@ -9786,6 +9838,28 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      lapsed_clients: {
+        Args: {
+          p_facility_id: string;
+          p_limit?: number;
+          p_rules: Json;
+          p_today?: string;
+        };
+        Returns: {
+          client_email: string | null;
+          client_id: string;
+          client_name: string;
+          client_phone: string | null;
+          days_overdue: number;
+          days_since: number;
+          expected_days: number;
+          last_booking_id: string | null;
+          last_visit_at: string;
+          pet_name: string | null;
+          reminders_sent: number;
+          service: string;
+        }[];
       };
       link_client_record: {
         Args: { p_facility_slug: string };

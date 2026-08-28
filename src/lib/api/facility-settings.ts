@@ -28,6 +28,7 @@ import type {
 import type { PricingRules } from "@/lib/settings/pricing";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
+import type { RebookConfig } from "@/lib/settings/rebook";
 import type { LoyaltyProgramConfig } from "@/lib/settings/loyalty";
 import type { YipyyPayConfig } from "@/lib/settings/yipyy-pay";
 
@@ -74,6 +75,12 @@ export interface FacilitySettings {
    */
   loyalty_config: SettingState<LoyaltyProgramConfig>;
   pricing_rules: SettingState<PricingRules>;
+  /**
+   * Expected visit frequency per service, and whether lapsed clients for it may
+   * be messaged. `configured: false` means the Lapsed list is computed from the
+   * app's assumed intervals and NOTHING may be sent off the back of it.
+   */
+  rebook_config: SettingState<RebookConfig>;
   /**
    * Yipyy Pay preferences.
    *

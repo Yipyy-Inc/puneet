@@ -3,6 +3,7 @@ import "server-only";
 import { facilityCustomerOrigin } from "@/lib/app-host";
 import { renderEmail } from "@/lib/email/shell";
 import {
+  UNRESOLVED_TAG,
   resolveTemplate,
   type VariableDataContext,
 } from "@/lib/messaging/render";
@@ -54,16 +55,6 @@ export interface DispatchResult {
   failed: number;
   problems: string[];
 }
-
-/**
- * A merge tag still sitting in a rendered body — `{{service_name}}`.
- *
- * Not the shared VARIABLE_PATTERN from render.ts: that one carries /g, and a
- * shared global regex leaks `lastIndex` between calls, so alternating tests
- * against it silently return null every second time. This one is deliberately
- * its own, non-global, single-purpose object.
- */
-const UNRESOLVED_TAG = /\{\{[a-z_]+(\|[^}]*)?\}\}/;
 
 const EMPTY: DispatchResult = {
   queued: 0,

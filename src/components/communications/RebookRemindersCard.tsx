@@ -1,18 +1,14 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowRight,
   Ban,
   Bell,
-  Calendar,
-  CalendarPlus,
   CheckCircle2,
   Clock,
   Mail,
-  MessageCircle,
   MessageSquare,
   Pencil,
   RefreshCw,
@@ -21,10 +17,6 @@ import {
   ShieldAlert,
   ShieldOff,
   Settings,
-  Sparkles,
-  UserMinus,
-  UserX,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,30 +32,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RebookTemplateEditorModal } from "@/components/communications/RebookTemplateEditorModal";
 import { DismissReminderDialog } from "@/components/communications/DismissReminderDialog";
 import { RebookAnalyticsRow } from "@/components/communications/RebookAnalyticsRow";
+import { LapsedTab } from "@/components/communications/rebook/LapsedTab";
 import {
   BLOCK_REASON_LABELS,
   defaultServiceFrequencies,
   rebookReminders,
-  lapsedClients,
   formatFrequency,
   getServiceLabel,
   REBOOK_SERVICE_TYPES,
@@ -77,6 +55,17 @@ import {
   type ReminderChannel,
   type ServiceTypeKey,
 } from "@/data/rebook-reminders";
+import {
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import { rebookQueries } from "@/lib/api/rebook";
+import {
+  NO_REBOOK_CONFIG,
+  fromDays,
+  toDays,
+  type RebookConfig,
+} from "@/lib/settings/rebook";
 import { getBlockedClientIds } from "@/lib/blocked-clients";
 
 type QueueRange = 30 | 60 | 90;
@@ -148,9 +137,78 @@ const BUCKET_ORDER = [
   "next90",
 ];
 
+/**
+ * The saved config, in the shape this card already renders.
+ *
+ * Every service the facility has configured, plus any shipped service it has
+ * not — so a facility that has only set grooming still sees boarding, daycare
+ * and training, with our assumed interval and reminders off.
+ *
+ * `template` is fixture wording, shown for context and NOT what is sent. The
+ * real rebook message is `rebook_reminder` in `message_templates`.
+ */
+function buildDefaults(
+  config: RebookConfig,
+  templateDrafts: Record<string, RebookMessageTemplate>,
+): DefaultServiceFrequency[] {
+  const services = [
+    ...new Set([
+      ...Object.keys(NO_REBOOK_CONFIG.services),
+      ...Object.keys(config.services),
+    ]),
+  ];
+
+  return services.map((service) => {
+    const rule = config.services[service] ?? NO_REBOOK_CONFIG.services[service];
+    const shipped = defaultServiceFrequencies.find(
+      (d) => d.service === service,
+    );
+    return {
+      service,
+      frequency: fromDays(rule?.frequencyDays ?? 28),
+      remindersEnabled: rule?.remindersEnabled ?? false,
+      leadDays: rule?.leadDays ?? 7,
+      channel: rule?.channel ?? "email",
+      secondReminder: shipped?.secondReminder ?? {
+        enabled: false,
+        delayDays: 7,
+      },
+      template: templateDrafts[service] ??
+        shipped?.template ?? { subject: "", body: "" },
+    };
+  });
+}
+
 export function RebookRemindersCard() {
-  const [defaults, setDefaults] = useState<DefaultServiceFrequency[]>(() =>
-    defaultServiceFrequencies.map((d) => ({ ...d })),
+  // The tab's own count, from the same query the tab reads. React Query
+  // dedupes it, so this is not a second request — and it cannot report a
+  // different number from the list underneath it.
+  const lapsedCount =
+    useQuery({ ...rebookQueries.lapsed(), notifyOnChangeProps: ["data"] }).data
+      ?.clients.length ?? null;
+
+  // ── The frequencies are the FACILITY's now, not a fixture ─────────────────
+  //
+  // Derived from `facility_settings.rebook_config` rather than held in state.
+  // Held in state it could only ever be seeded once, and seeding it from an
+  // async query means writing state in an effect — which this codebase bans,
+  // and which would leave the screen briefly showing one facility's numbers as
+  // another's.
+  //
+  // `template` is the one field still coming from the fixture, and it is
+  // display-only: the REAL rebook wording lives in `message_templates` as
+  // `rebook_reminder` / `rebook_reminder_sms`, editable on the Templates tab,
+  // and that is what actually gets sent.
+  const { settings } = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
+  const [templateDrafts, setTemplateDrafts] = useState<
+    Record<string, RebookMessageTemplate>
+  >({});
+
+  const rebookConfig = settings.rebook_config.value;
+  const defaults = useMemo<DefaultServiceFrequency[]>(
+    () => buildDefaults(rebookConfig, templateDrafts),
+    [rebookConfig, templateDrafts],
   );
   const [reminders, setReminders] = useState<RebookReminder[]>(() => {
     const blockedIds = getBlockedClientIds();
@@ -169,10 +227,6 @@ export function RebookRemindersCard() {
   );
   const [draft, setDraft] = useState<DefaultServiceFrequency | null>(null);
 
-  const [applyToAllOpen, setApplyToAllOpen] = useState(false);
-  const [applyToAllService, setApplyToAllService] =
-    useState<ServiceTypeKey | null>(null);
-
   const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
   const [templateEditingService, setTemplateEditingService] =
     useState<ServiceTypeKey | null>(null);
@@ -186,10 +240,6 @@ export function RebookRemindersCard() {
   const [queueServiceFilter, setQueueServiceFilter] = useState<
     ServiceTypeKey | "all"
   >("all");
-  const [lapsedServiceFilter, setLapsedServiceFilter] = useState<
-    ServiceTypeKey | "all"
-  >("all");
-
   const today = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -208,24 +258,44 @@ export function RebookRemindersCard() {
 
   const saveEdit = () => {
     if (!editingService || !draft) return;
-    setDefaults((prev) =>
-      prev.map((d) => (d.service === editingService ? draft : d)),
-    );
-    toast.success(`${getServiceLabel(editingService)} settings saved`);
-    cancelEdit();
-  };
 
-  const handleApplyToAll = () => {
-    if (!applyToAllService) return;
-    const def = defaults.find((d) => d.service === applyToAllService);
-    if (!def) return;
-    toast.success(
-      `Applied ${formatFrequency(def.frequency).toLowerCase()} to all existing ${getServiceLabel(
-        applyToAllService,
-      ).toLowerCase()} clients (overrides preserved)`,
+    // The whole domain is written, not one service: `facility_settings` stores
+    // one jsonb per domain, so a partial write would drop every other service.
+    const next: RebookConfig = {
+      services: {
+        ...rebookConfig.services,
+        [editingService]: {
+          frequencyDays: toDays(draft.frequency.value, draft.frequency.unit),
+          remindersEnabled: draft.remindersEnabled,
+          leadDays: draft.leadDays,
+          channel: draft.channel,
+          // Not on this form. Carried through rather than defaulted, so
+          // editing the frequency cannot quietly reset how overdue somebody
+          // has to be before the Lapsed tab shows them.
+          lapsedAfterDays:
+            rebookConfig.services[editingService]?.lapsedAfterDays ??
+            NO_REBOOK_CONFIG.services[editingService]?.lapsedAfterDays ??
+            14,
+        },
+      },
+    };
+
+    saveSetting.mutate(
+      { domain: "rebook_config", value: next },
+      {
+        // Names what was stored. The old message said "settings saved" while
+        // saving nothing at all, and the per-service message TEMPLATE is still
+        // not part of this — so the wording says frequency, because that is
+        // what is true.
+        onSuccess: () => {
+          toast.success(
+            `${getServiceLabel(editingService)} frequency saved for this facility.`,
+          );
+          cancelEdit();
+        },
+        onError: (e: Error) => toast.error(e.message),
+      },
     );
-    setApplyToAllOpen(false);
-    setApplyToAllService(null);
   };
 
   const openTemplateEditor = (service: ServiceTypeKey) => {
@@ -235,11 +305,10 @@ export function RebookRemindersCard() {
 
   const saveTemplate = (template: RebookMessageTemplate) => {
     if (!templateEditingService) return;
-    setDefaults((prev) =>
-      prev.map((d) =>
-        d.service === templateEditingService ? { ...d, template } : d,
-      ),
-    );
+    setTemplateDrafts((prev) => ({
+      ...prev,
+      [templateEditingService]: template,
+    }));
     if (draft && draft.service === templateEditingService) {
       setDraft({ ...draft, template });
     }
@@ -314,14 +383,6 @@ export function RebookRemindersCard() {
     }));
   }, [filteredQueue, today]);
 
-  const filteredLapsed = useMemo(() => {
-    const list =
-      lapsedServiceFilter === "all"
-        ? lapsedClients
-        : lapsedClients.filter((l) => l.service === lapsedServiceFilter);
-    return [...list].sort((a, b) => b.daysOverdue - a.daysOverdue);
-  }, [lapsedServiceFilter]);
-
   const sentItems = reminders.filter(
     (r) => r.status === "sent" || r.status === "rebooked",
   );
@@ -393,7 +454,7 @@ export function RebookRemindersCard() {
                 </TabsTrigger>
                 <TabsTrigger value="lapsed">
                   <AlertTriangle className="mr-2 size-4" />
-                  Lapsed ({lapsedClients.length})
+                  Lapsed{lapsedCount === null ? "" : ` (${lapsedCount})`}
                 </TabsTrigger>
                 <TabsTrigger value="history">
                   <CheckCircle2 className="mr-2 size-4" />
@@ -712,17 +773,6 @@ export function RebookRemindersCard() {
                                 Template
                               </Button>
                               <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setApplyToAllService(def.service);
-                                  setApplyToAllOpen(true);
-                                }}
-                              >
-                                <Users className="mr-1 size-3.5" />
-                                Apply to all
-                              </Button>
-                              <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => startEdit(def)}
@@ -820,77 +870,9 @@ export function RebookRemindersCard() {
               </TabsContent>
 
               {/* LAPSED */}
+              {/* LAPSED — real, from Postgres. See rebook/LapsedTab.tsx. */}
               <TabsContent value="lapsed" className="space-y-4">
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                  <p className="font-medium">
-                    Lapsed clients don&apos;t get auto reminders
-                  </p>
-                  <p className="mt-1">
-                    After two reminders, we stop. Take manual action below or
-                    build a marketing segment for a win-back campaign.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setLapsedServiceFilter("all")}
-                      className={
-                        lapsedServiceFilter === "all"
-                          ? "border-primary bg-primary/10 text-primary rounded-full border-2 px-3 py-1 text-xs font-medium"
-                          : "hover:bg-muted/50 rounded-full border px-3 py-1 text-xs"
-                      }
-                    >
-                      All services
-                    </button>
-                    {REBOOK_SERVICE_TYPES.map((s) => {
-                      const count = lapsedClients.filter(
-                        (l) => l.service === s.key,
-                      ).length;
-                      if (count === 0) return null;
-                      return (
-                        <button
-                          key={s.key}
-                          type="button"
-                          onClick={() => setLapsedServiceFilter(s.key)}
-                          className={
-                            lapsedServiceFilter === s.key
-                              ? "border-primary bg-primary/10 text-primary rounded-full border-2 px-3 py-1 text-xs font-medium"
-                              : "hover:bg-muted/50 rounded-full border px-3 py-1 text-xs"
-                          }
-                        >
-                          {s.label} ({count})
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link
-                      href={`/facility/dashboard/marketing?segment=lapsed_${lapsedServiceFilter === "all" ? "all" : lapsedServiceFilter}`}
-                    >
-                      <Sparkles className="mr-1 size-3.5" />
-                      Create marketing segment
-                      <ArrowRight className="ml-1 size-3.5" />
-                    </Link>
-                  </Button>
-                </div>
-
-                {filteredLapsed.length === 0 ? (
-                  <div className="text-muted-foreground py-12 text-center">
-                    <CheckCircle2 className="mx-auto mb-3 size-12 opacity-50" />
-                    <p className="font-medium">No lapsed clients</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                    {filteredLapsed.map((l) => (
-                      <LapsedClientCard
-                        key={`${l.clientId}-${l.service}`}
-                        lapsed={l}
-                      />
-                    ))}
-                  </div>
-                )}
+                <LapsedTab />
               </TabsContent>
 
               {/* HISTORY */}
@@ -1076,50 +1058,6 @@ export function RebookRemindersCard() {
         </Card>
       </div>
 
-      {/* Apply-to-all confirm */}
-      <Dialog open={applyToAllOpen} onOpenChange={setApplyToAllOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-amber-500" />
-              Apply default to all existing clients?
-            </DialogTitle>
-            <DialogDescription className="pt-2">
-              This will set the{" "}
-              <span className="text-foreground font-medium">
-                {applyToAllService
-                  ? getServiceLabel(applyToAllService).toLowerCase()
-                  : ""}
-              </span>{" "}
-              frequency to{" "}
-              <span className="text-foreground font-medium">
-                {applyToAllService
-                  ? formatFrequency(
-                      defaults.find((d) => d.service === applyToAllService)
-                        ?.frequency ?? { value: 4, unit: "weeks" },
-                    ).toLowerCase()
-                  : ""}
-              </span>{" "}
-              for every existing client. Clients with a manual override will be
-              preserved.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApplyToAllOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleApplyToAll}
-              className="gap-1.5"
-            >
-              <Calendar className="size-4" />
-              Apply to all
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Template editor */}
       {editingDef && (
         <RebookTemplateEditorModal
@@ -1279,134 +1217,6 @@ function ReminderCard({
         >
           <Send className="mr-1 size-3" />
           Send now
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-interface LapsedCardProps {
-  lapsed: (typeof lapsedClients)[number];
-}
-
-function LapsedClientCard({ lapsed: l }: LapsedCardProps) {
-  const severe = l.daysOverdue > 30;
-  return (
-    <div className="bg-card hover:border-primary/30 rounded-xl border p-4 transition-all hover:shadow-sm">
-      <div className="flex items-start gap-3">
-        <Avatar className="size-11">
-          <AvatarFallback
-            className={
-              severe ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-            }
-          >
-            {initials(l.clientName)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-semibold">{l.clientName}</p>
-            <Badge
-              variant="outline"
-              className={
-                severe
-                  ? "border-red-200 bg-red-50 text-[10px] text-red-700"
-                  : "border-amber-200 bg-amber-50 text-[10px] text-amber-700"
-              }
-            >
-              {l.daysOverdue}d overdue
-            </Badge>
-          </div>
-          <p className="text-muted-foreground truncate text-xs">
-            {l.petName} · {getServiceLabel(l.service)}
-          </p>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="size-7 p-0">
-              <Settings className="size-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() =>
-                toast.success(`Composer opened for ${l.clientName}`)
-              }
-            >
-              <MessageCircle className="mr-2 size-4" />
-              Send manual message
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                toast.success(
-                  `Booking flow opened pre-filled for ${l.clientName}`,
-                )
-              }
-            >
-              <CalendarPlus className="mr-2 size-4" />
-              Book appointment
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => toast.info(`${l.clientName} marked inactive`)}
-            >
-              <UserX className="mr-2 size-4" />
-              Mark inactive
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => toast.info(`Removed ${l.clientName} from list`)}
-            >
-              <UserMinus className="mr-2 size-4" />
-              Dismiss from list
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="bg-muted/40 mt-3 grid grid-cols-3 gap-2 rounded-lg p-2.5 text-center">
-        <div>
-          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-            Last visit
-          </p>
-          <p className="mt-0.5 text-xs font-semibold">
-            {formatDate(l.lastVisitDate)}
-          </p>
-        </div>
-        <div>
-          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-            Expected
-          </p>
-          <p className="mt-0.5 text-xs font-semibold">
-            {formatFrequency(l.expectedFrequency)}
-          </p>
-        </div>
-        <div>
-          <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-            Reminders
-          </p>
-          <p className="mt-0.5 text-xs font-semibold">{l.remindersSent} sent</p>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center justify-end gap-1.5">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => toast.success(`Composer opened for ${l.clientName}`)}
-        >
-          <MessageCircle className="mr-1 size-3" />
-          Message
-        </Button>
-        <Button
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() =>
-            toast.success(`Booking flow opened for ${l.clientName}`)
-          }
-        >
-          <CalendarPlus className="mr-1 size-3" />
-          Book now
         </Button>
       </div>
     </div>
