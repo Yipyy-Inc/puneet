@@ -9,6 +9,14 @@ import {
 
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
 import { NO_REBOOK_CONFIG, rebookConfigSchema } from "@/lib/settings/rebook";
+import {
+  messagingPolicySchema,
+  NO_MESSAGING_POLICY,
+} from "@/lib/settings/messaging-policy";
+import {
+  NO_REPUTATION_CONFIG,
+  reputationConfigSchema,
+} from "@/lib/settings/reputation";
 import { NO_TAX, taxConfigSchema } from "@/lib/settings/tax";
 import { NO_YIPYY_PAY, yipyyPayConfigSchema } from "@/lib/settings/yipyy-pay";
 
@@ -404,6 +412,23 @@ export const SETTING_DOMAINS = {
   // lapsed client for it may be written to. `configured: false` means nobody
   // has said — so the Lapsed list still computes, and nothing sends.
   rebook_config: { schema: rebookConfigSchema, fallback: NO_REBOOK_CONFIG },
+
+  // Thresholds, windows and the apology-credit ceiling for review requests.
+  // NOT the send delay (that is automation_rules.offset_minutes), NOT the
+  // channels (review_channels), and emphatically NOT any switch that decides
+  // who is shown a public review link.
+  reputation_config: {
+    schema: reputationConfigSchema,
+    fallback: NO_REPUTATION_CONFIG,
+  },
+
+  // Quiet hours, the per-day send cap and how late a queued message may be.
+  // Deliberately messaging-wide rather than reputation-scoped: a 4 a.m. booking
+  // reminder is the same offence as a 4 a.m. review request.
+  messaging_policy: {
+    schema: messagingPolicySchema,
+    fallback: NO_MESSAGING_POLICY,
+  },
 
   // No exported schema for this one — it is a plain map of id -> hex, defined
   // in lib/operations-calendar rather than types/facility.
