@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
 import { deniedIfUntouched } from "@/lib/api/rls-write";
+import {
+  bookingEventContext,
+  emitAutomationEvent,
+} from "@/lib/automations/emit";
 
 // ============================================================================
 // A dog leaves its class — or was never in it.
@@ -108,6 +112,32 @@ export async function PATCH(
     "Not allowed to change this session, or nobody has checked in yet.",
   );
   if (denied) return denied;
+
+  // ── The dog went home ───────────────────────────────────────────────────
+  //
+  // The same emission boarding and daycare have had since 20260827111420, and
+  // its absence here was not a decision anybody made: `check_out` is one of
+  // nineteen declared triggers and only two routes ever fired it, so a facility
+  // with a check-out automation got messages after daycare and silence after
+  // training. Word for word the daycare version, including the placement AFTER
+  // the RLS check — an update that changed nothing checked nobody out.
+  //
+  // Best effort. A dog that has been collected has been collected, and a
+  // failure to queue the follow-up is a log line, not a 500 handed to somebody
+  // standing at a counter with the owner in front of them.
+  if (body.checkOut) {
+    const context = await bookingEventContext(supabase, bookingId);
+    if (context) {
+      await emitAutomationEvent(supabase, {
+        facilityId: context.facilityId,
+        kind: "check_out",
+        dedupeKey: `check_out:${bookingId}`,
+        clientId: context.clientId,
+        bookingId,
+        locationId: context.locationId,
+      });
+    }
+  }
 
   return new NextResponse(null, { status: 204 });
 }

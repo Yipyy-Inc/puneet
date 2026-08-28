@@ -297,6 +297,21 @@ end $$;
 --       — measured in facility-branding.sql), and it omits support_email and
 --       support_phone so the contact details cannot be harvested.
 --
+--   review_request_by_token, submit_review_response, record_review_click
+--       The survey a client opens from an SMS (20260829090000). They have no
+--       account and are not being asked to make one; the whole interaction is
+--       five stars and a sentence. Each takes an opaque 32-byte token as an
+--       ARGUMENT, hashes it inside the function and hits a unique index, so a
+--       caller learns exactly one bit about the one token they hold — the same
+--       shape as the onboarding four, and for the same reason a policy of the
+--       form "anon may read where token = ?" was rejected.
+--
+--       What they return is bounded to what the survey page renders: the
+--       facility name, the pet names, the service, and the public channels
+--       already published on the booking page. No email, no phone, no other
+--       visit. `submit_review_response` writes one row for the request the
+--       token names and is rate-once by a unique constraint.
+--
 -- Everything else was revoked by 20260822600000, which records what each one
 -- had actually exposed. Three were existence oracles; one had no permission
 -- check at all; the rest were grants nobody had asked for.
@@ -309,7 +324,9 @@ begin
      and has_function_privilege('anon', p.oid, 'execute')
      and p.proname not in ('onboarding_by_token', 'save_onboarding_section',
                            'submit_onboarding', 'set_onboarding_account_complete',
-                           'facility_branding_by_slug');
+                           'facility_branding_by_slug',
+                           'review_request_by_token', 'submit_review_response',
+                           'record_review_click');
   perform pg_temp.t('V7 no unexpected anon-callable function in public',
     unexpected is null, coalesce('anon can call: ' || unexpected, 'none'));
 end $$;
@@ -328,6 +345,26 @@ begin
    where n.nspname = 'public' and p.proname = 'facility_branding_by_slug';
   perform pg_temp.t('V8 facility_branding_by_slug is STILL anon-callable (branded sign-in)',
     coalesce(callable, false), 'callable=' || coalesce(callable::text, 'MISSING'));
+end $$;
+
+-- ── V9: the survey a customer taps is STILL reachable ──────────────────
+--
+-- V8's argument, applied to the three review RPCs. If a later revoke takes
+-- these, every survey link already sitting in a customer's inbox becomes "this
+-- review link is not valid" — and because that is also the answer for an
+-- expired token, nothing anywhere would look broken. The facility would simply
+-- stop receiving reviews.
+do $$
+declare g integer;
+begin
+  select count(*) into g
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.proname in ('review_request_by_token', 'submit_review_response',
+                       'record_review_click')
+     and has_function_privilege('anon', p.oid, 'execute');
+  perform pg_temp.t('V9 the 3 review-survey token RPCs still allow anon (by design)',
+    g = 3, format('anon-callable=%s of 3', g));
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
