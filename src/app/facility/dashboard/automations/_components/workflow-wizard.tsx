@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
+import { LocationScopeField } from "./location-scope-field";
 import {
   useAudienceEstimate,
   useCreateWorkflow,
@@ -105,6 +106,17 @@ export function WorkflowWizard({
   const [stopOn, setStopOn] = useState<string[]>(
     existing?.stopOn ?? ["booked"],
   );
+  // Empty means EVERY location, never none — the same convention the engine
+  // uses, so an untouched picker cannot silently scope a workflow to nobody.
+  const [locationIds, setLocationIds] = useState<string[]>(
+    existing?.locationIds ?? [],
+  );
+  const [serviceTypes, setServiceTypes] = useState<string[]>(
+    existing?.serviceTypes ?? [],
+  );
+  const [narrowBy, setNarrowBy] = useState<Audience | null>(
+    existing?.triggerFilters ?? null,
+  );
   const [steps, setSteps] = useState<DraftStep[]>(
     existing && existing.steps.length > 0
       ? existing.steps.map((s) => ({
@@ -176,6 +188,9 @@ export function WorkflowWizard({
       sendAtLocal: kind === "audience" ? sendAt : null,
       minDaysBetweenSends: cooldown,
       stopOn,
+      locationIds,
+      serviceTypes: kind === "event" ? serviceTypes : [],
+      triggerFilters: kind === "event" ? narrowBy : null,
       steps,
     };
 
@@ -196,6 +211,9 @@ export function WorkflowWizard({
             sendAtLocal: payload.sendAtLocal,
             minDaysBetweenSends: payload.minDaysBetweenSends,
             stopOn: payload.stopOn,
+            locationIds: payload.locationIds,
+            serviceTypes: payload.serviceTypes,
+            triggerFilters: payload.triggerFilters,
             steps: payload.steps,
             ...(activate ? { status: "active" as const } : {}),
           },
@@ -346,6 +364,79 @@ export function WorkflowWizard({
                 workflow, but it cannot be switched on until that lands.
               </p>
             )}
+
+            <div className="space-y-3 rounded-lg border p-3">
+              <div>
+                <Label className="text-sm">Only for these services</Label>
+                <p className="text-muted-foreground text-xs">
+                  Leave all unticked for every service.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {["grooming", "boarding", "daycare", "training"].map((svc) => (
+                  <button
+                    key={svc}
+                    type="button"
+                    data-on={serviceTypes.includes(svc)}
+                    onClick={() =>
+                      setServiceTypes(
+                        serviceTypes.includes(svc)
+                          ? serviceTypes.filter((x) => x !== svc)
+                          : [...serviceTypes, svc],
+                      )
+                    }
+                    className="rounded-full border px-3 py-1 text-xs data-[on=true]:border-emerald-500 data-[on=true]:bg-emerald-50"
+                  >
+                    {svc[0].toUpperCase() + svc.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              <div className="border-t pt-3">
+                <Label className="text-sm">Only for certain clients</Label>
+                <p className="text-muted-foreground mb-2 text-xs">
+                  The same filters a scheduled workflow uses, checked when the
+                  action happens. &ldquo;Lapsed clients who just booked&rdquo;,
+                  for instance.
+                </p>
+                {narrowBy === null ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setNarrowBy({
+                        groupLogicOperator: "AND",
+                        filterGroups: [
+                          {
+                            filters: [
+                              {
+                                field: "last_visit_days",
+                                operator: "more_than",
+                                value: 90,
+                              },
+                            ],
+                          },
+                        ],
+                      })
+                    }
+                  >
+                    <Plus className="mr-1 size-3" /> Add a client filter
+                  </Button>
+                ) : (
+                  <>
+                    <FilterRows audience={narrowBy} setAudience={setNarrowBy} />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => setNarrowBy(null)}
+                    >
+                      Remove all client filters
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -381,18 +472,21 @@ export function WorkflowWizard({
         )}
 
         {step === 3 && (
-          <ReviewStep
-            name={name}
-            kind={kind}
-            trigger={trigger}
-            filters={filters.length}
-            matched={matched}
-            frequency={frequency}
-            sendAt={sendAt}
-            steps={steps}
-            cooldown={cooldown}
-            stopOn={stopOn}
-          />
+          <>
+            <LocationScopeField value={locationIds} onChange={setLocationIds} />
+            <ReviewStep
+              name={name}
+              kind={kind}
+              trigger={trigger}
+              filters={filters.length}
+              matched={matched}
+              frequency={frequency}
+              sendAt={sendAt}
+              steps={steps}
+              cooldown={cooldown}
+              stopOn={stopOn}
+            />
+          </>
         )}
       </div>
 
@@ -499,89 +593,7 @@ function AudienceStep(props: {
             least one.
           </p>
         )}
-        {filters.map((f, i) => {
-          const def = AUDIENCE_FIELDS.find((d) => d.field === f.field);
-          return (
-            <div key={i} className="flex flex-wrap items-center gap-2">
-              <Select
-                value={f.field}
-                onValueChange={(field) => {
-                  const d = AUDIENCE_FIELDS.find((x) => x.field === field);
-                  const next = [...filters];
-                  next[i] = {
-                    field,
-                    operator: d?.operators[0].value ?? "is",
-                    value: null,
-                  };
-                  update(next);
-                }}
-              >
-                <SelectTrigger className="w-44">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AUDIENCE_FIELDS.map((d) => (
-                    <SelectItem key={d.field} value={d.field}>
-                      {d.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={f.operator}
-                onValueChange={(operator) => {
-                  const next = [...filters];
-                  next[i] = { ...next[i], operator };
-                  update(next);
-                }}
-              >
-                <SelectTrigger className="w-52">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(def?.operators ?? []).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <FilterValue
-                def={def}
-                operator={f.operator}
-                value={f.value}
-                onChange={(value) => {
-                  const next = [...filters];
-                  next[i] = { ...next[i], value };
-                  update(next);
-                }}
-              />
-
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Remove filter"
-                onClick={() => update(filters.filter((_, j) => j !== i))}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </div>
-          );
-        })}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            update([
-              ...filters,
-              { field: "last_visit_days", operator: "more_than", value: 30 },
-            ])
-          }
-        >
-          <Plus className="mr-1 size-3" /> Add filter
-        </Button>
+        <FilterRows audience={props.audience} setAudience={props.setAudience} />
 
         <div className="rounded-md border p-3 text-sm">
           {props.error ? (
@@ -703,6 +715,119 @@ function AudienceStep(props: {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The filter builder itself, shared by the scheduled-audience step and the
+ * action-based "only for certain clients" narrowing.
+ *
+ * One component, so the two cannot end up offering different fields or
+ * meaning different things by the same operator — and both produce exactly
+ * the shape `compile_audience()` reads.
+ */
+function FilterRows({
+  audience,
+  setAudience,
+}: {
+  audience: Audience;
+  setAudience: (a: Audience) => void;
+}) {
+  const filters = audience.filterGroups[0]?.filters ?? [];
+
+  function update(next: typeof filters) {
+    setAudience({
+      groupLogicOperator: "AND",
+      filterGroups: [{ filters: next }],
+    });
+  }
+
+  return (
+    <>
+      {filters.map((f, i) => {
+        const def = AUDIENCE_FIELDS.find((d) => d.field === f.field);
+        return (
+          <div key={i} className="flex flex-wrap items-center gap-2">
+            <Select
+              value={f.field}
+              onValueChange={(field) => {
+                const d = AUDIENCE_FIELDS.find((x) => x.field === field);
+                const next = [...filters];
+                next[i] = {
+                  field,
+                  operator: d?.operators[0].value ?? "is",
+                  value: null,
+                };
+                update(next);
+              }}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AUDIENCE_FIELDS.map((d) => (
+                  <SelectItem key={d.field} value={d.field}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={f.operator}
+              onValueChange={(operator) => {
+                const next = [...filters];
+                next[i] = { ...next[i], operator };
+                update(next);
+              }}
+            >
+              <SelectTrigger className="w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(def?.operators ?? []).map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <FilterValue
+              def={def}
+              operator={f.operator}
+              value={f.value}
+              onChange={(value) => {
+                const next = [...filters];
+                next[i] = { ...next[i], value };
+                update(next);
+              }}
+            />
+
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Remove filter"
+              onClick={() => update(filters.filter((_, j) => j !== i))}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        );
+      })}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          update([
+            ...filters,
+            { field: "last_visit_days", operator: "more_than", value: 30 },
+          ])
+        }
+      >
+        <Plus className="mr-1 size-3" /> Add filter
+      </Button>
+    </>
   );
 }
 

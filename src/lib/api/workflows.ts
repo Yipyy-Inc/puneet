@@ -68,6 +68,8 @@ export interface NewWorkflow {
   kind: "event" | "audience";
   trigger?: string | null;
   audience?: Audience | null;
+  triggerFilters?: Audience | null;
+  serviceTypes?: string[];
   locationIds?: string[];
   frequency?: string | null;
   dayOfWeek?: number | null;

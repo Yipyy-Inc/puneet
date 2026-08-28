@@ -10,7 +10,7 @@ import type {
 } from "@/types/workflows";
 
 export const WORKFLOW_SELECT =
-  "id, name, description, kind, status, trigger, audience, location_ids, frequency, day_of_week, day_of_month, send_at_local, min_days_between_sends, stop_on, last_estimate, last_run_at, created_at, updated_at";
+  "id, name, description, kind, status, trigger, audience, trigger_filters, service_types, location_ids, frequency, day_of_week, day_of_month, send_at_local, min_days_between_sends, stop_on, last_estimate, last_run_at, created_at, updated_at";
 
 export const STEP_SELECT =
   "id, step_index, delay_minutes, email_template_id, sms_template_id";
@@ -45,6 +45,8 @@ export function toWorkflow(
     status: row.status as WorkflowStatus,
     trigger: row.trigger,
     audience: (row.audience as Audience | null) ?? null,
+    triggerFilters: (row.trigger_filters as Audience | null) ?? null,
+    serviceTypes: row.service_types ?? [],
     locationIds: row.location_ids ?? [],
     frequency: (row.frequency as Frequency | null) ?? null,
     dayOfWeek: row.day_of_week,

@@ -81,10 +81,12 @@ interface WorkflowRow {
   day_of_month: number | null;
   send_at_local: string | null;
   last_run_at: string | null;
+  trigger_filters: unknown;
+  service_types: string[];
 }
 
 const WORKFLOW_SELECT =
-  "id, facility_id, name, kind, trigger, audience, location_ids, min_days_between_sends, stop_on, frequency, day_of_week, day_of_month, send_at_local, last_run_at";
+  "id, facility_id, name, kind, trigger, audience, location_ids, min_days_between_sends, stop_on, frequency, day_of_week, day_of_month, send_at_local, last_run_at, trigger_filters, service_types";
 
 // ── Enrolment from an event ────────────────────────────────────────────────
 
@@ -116,13 +118,68 @@ export async function enrolFromEvent(
     .eq("trigger", event.kind)
     .eq("status", "active");
 
-  for (const workflow of (workflows ?? []) as WorkflowRow[]) {
+  const candidates = (workflows ?? []) as WorkflowRow[];
+  if (candidates.length === 0) return result;
+
+  // Fetched once for the whole batch rather than per workflow: several
+  // workflows commonly share a trigger, and this is the same booking for all
+  // of them.
+  let serviceType: string | null = null;
+  if (event.booking_id) {
+    const { data: booking } = await db
+      .from("bookings")
+      .select("service_type")
+      .eq("id", event.booking_id)
+      .maybeSingle();
+    serviceType =
+      (booking as { service_type: string | null } | null)?.service_type ?? null;
+  }
+
+  for (const workflow of candidates) {
     if (
       workflow.location_ids.length > 0 &&
       event.location_id &&
       !workflow.location_ids.includes(event.location_id)
     ) {
       continue;
+    }
+
+    // Care type. Empty means every service, never none — the same convention
+    // as location scope, so clearing the last chip cannot silently stop the
+    // workflow firing for anybody.
+    if (
+      workflow.service_types.length > 0 &&
+      serviceType &&
+      !workflow.service_types.includes(serviceType)
+    ) {
+      continue;
+    }
+
+    // "Only start for clients matching these criteria." Compiled by the SAME
+    // function a scheduled workflow uses, so "lapsed clients who just booked"
+    // needs no second query language and cannot disagree with what the wizard
+    // previewed.
+    //
+    // Costs one compile per matching workflow per event. Fine at this volume;
+    // if a facility ever has many event workflows sharing one trigger, this is
+    // the line to memoise.
+    if (workflow.trigger_filters) {
+      const { data: matched, error: filterError } = await db.rpc(
+        "compile_audience",
+        {
+          p_facility_id: workflow.facility_id,
+          p_filters: workflow.trigger_filters,
+        },
+      );
+      if (filterError) {
+        // FAIL CLOSED. A filter that cannot be evaluated must not enrol
+        // everybody — the whole point of it is to exclude people.
+        result.problems.push(
+          `workflow ${workflow.name}: trigger filter failed, nobody enrolled — ${filterError.message}`,
+        );
+        continue;
+      }
+      if (!((matched ?? []) as string[]).includes(event.client_id)) continue;
     }
 
     // The occasion is the booking where there is one, so the same workflow

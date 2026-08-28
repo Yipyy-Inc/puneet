@@ -8926,6 +8926,8 @@ export type Database = {
           status: string;
           stop_on: Json;
           trigger: string | null;
+          trigger_filters: Json | null;
+          service_types: string[];
           updated_at: string;
         };
         Insert: {
@@ -8951,6 +8953,8 @@ export type Database = {
           status?: string;
           stop_on?: Json;
           trigger?: string | null;
+          trigger_filters?: Json | null;
+          service_types?: string[];
           updated_at?: string;
         };
         Update: {
@@ -8976,6 +8980,8 @@ export type Database = {
           status?: string;
           stop_on?: Json;
           trigger?: string | null;
+          trigger_filters?: Json | null;
+          service_types?: string[];
           updated_at?: string;
         };
         Relationships: [
@@ -9587,6 +9593,10 @@ export type Database = {
           p_pet_id?: string;
         };
         Returns: number;
+      };
+      ensure_automation_rules: {
+        Args: { p_facility_id: string };
+        Returns: undefined;
       };
       ensure_message_templates: {
         Args: { p_facility_id: string };

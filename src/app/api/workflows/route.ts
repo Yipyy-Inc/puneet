@@ -143,6 +143,8 @@ export async function POST(request: NextRequest) {
     kind?: string;
     trigger?: string | null;
     audience?: unknown;
+    triggerFilters?: unknown;
+    serviceTypes?: string[];
     locationIds?: string[];
     frequency?: string | null;
     dayOfWeek?: number | null;
@@ -212,6 +214,11 @@ export async function POST(request: NextRequest) {
     status: "draft",
     trigger: kind === "event" ? (body?.trigger ?? null) : null,
     audience: kind === "audience" ? (body?.audience as never) : null,
+    // Narrowing is for ACTION workflows only; a scheduled one already selects
+    // its people by filter, and the CHECK constraint refuses both at once.
+    trigger_filters:
+      kind === "event" ? ((body?.triggerFilters ?? null) as never) : null,
+    service_types: kind === "event" ? (body?.serviceTypes ?? []) : [],
     location_ids: body?.locationIds ?? [],
     frequency: kind === "audience" ? (body?.frequency ?? "weekly") : null,
     day_of_week: body?.dayOfWeek ?? null,
