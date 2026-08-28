@@ -204,9 +204,11 @@ export function AutomationsClient() {
         )}
 
         <TabsContent value="rebook">
-          {/* Still fixture-backed. Converting the rebook engine is its own
-              piece of work; leaving the screen in place beats deleting a
-              feature people use to make a boundary look tidy. */}
+          {/* HALF converted, and the halves look identical on screen. Lapsed
+              is real — Postgres, real sends, real dismissals. Defaults saves
+              the frequencies that decide it. Queue, History and Analytics are
+              still `src/data/rebook-reminders`. See the debt map before
+              trusting a number in here. */}
           <RebookRemindersCard />
         </TabsContent>
 
