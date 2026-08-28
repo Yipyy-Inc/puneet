@@ -88,7 +88,9 @@ export async function GET(request: NextRequest) {
     p_rules: config.services as never,
     p_today: today,
     p_min_overdue: -daysAhead,
-    p_max_overdue: null,
+    // Omitted rather than null: the generated RPC types model a Postgres
+    // DEFAULT as an absent key. `p_max_overdue` defaults to NULL, so this is
+    // the identical call - it just typechecks against the regenerated types.
     p_limit: 300,
   });
 

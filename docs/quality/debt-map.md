@@ -6951,12 +6951,23 @@ exclusions (a booking already in the diary, a dismissal, an inactive client, an
 unconfigured service) had to be identical in both, and a second copy would have
 drifted the first time anybody fixed one of them.
 
+**The per-service Template editor is real too, as of 2026-08-29.** It wrote to
+a local draft map and was lost on reload. The first edit for a service now
+copies the shipped `rebook_reminder` into one of the facility's own templates
+and records its id in `rebook_config.services.<service>.emailTemplateId`; every
+edit after that patches that row, and the send route prefers it. The shipped one
+is deliberately left alone — rewording the grooming reminder must not silently
+change what boarding says.
+
+That needed `PATCH /api/message-templates/[id]`, which did not exist: the route
+had GET and POST only, so **none of the fourteen shipped templates could be
+reworded by anybody**. Three comments in this codebase asserted they were
+"editable on the Templates tab". There is no Templates tab. Corrected.
+
 **What is still a fixture here:** the per-client **Service Preferences**
-section, and the Defaults tab's per-service **Template** editor — the latter
-writes to a local draft map and is lost on reload. The wording that actually
-gets sent is `rebook_reminder` / `rebook_reminder_sms` in `message_templates`,
-editable on the Templates tab. Per-service rebook wording is a real feature, but
-it needs per-service template rows.
+section. And a service set to `channel: 'both'` can only have its EMAIL wording
+edited from this screen — one button, one template — with the text falling back
+to the shipped `rebook_reminder_sms`.
 
 **Do not add a `rebook_reminders` table.** The reason none of this needed new
 state is that every question was derivable from bookings and the outbox. The one
@@ -7016,19 +7027,23 @@ public survey at `/review/[token]` whose token IS the request id, resolved out
 of `localStorage`. There is no `review_*` table, no `/api/reputation` route and,
 before 2026-08-28, no test of any kind.
 
-**Measured 2026-08-28, and it is worse than "only works in the same browser":
-the survey never renders at all in a fresh browser.** Driven headless against a
-local dev server at `/review/rr-005` — a request that exists in the fixture —
-the page returns 200, React mounts (the DevTools banner logs), no request
-fails, no console error is raised, and it sits on "Loading your survey…"
-indefinitely with zero buttons in the DOM. `request` never leaves `undefined`,
-so it does not even reach the "invalid link" screen it has. **Verified against
-`HEAD` as well as against the 2026-08-28 changes — identical, so it is
-pre-existing and not a regression.** Whatever the mechanism, the consequence is
-the one that matters: a client tapping the link in an SMS sees a spinner
-forever. Do not spend time repairing it. Phase B replaces this file with a page
-that reads a hashed token through a SECURITY DEFINER RPC, at which point the
-whole `localStorage` resolution path is deleted.
+**What the old survey could actually answer.** The token was the request id and
+the ids were sequential, so the sample requests that shipped in the bundle
+(`rr-001`…) resolved anywhere — but anything the app CREATED lived in the
+dashboard browser's `localStorage` and was invisible to the phone the link was
+sent to. That is the durable defect, and it is a property of the design rather
+than of any one browser.
+
+**A correction, recorded because the wrong version was committed first.** An
+earlier version of this entry, and the commit message that introduced it, said
+the survey "never renders — verified against HEAD, it sits on Loading for ever".
+That measurement was real but the cause was not the code: the dev server it ran
+against was not hydrating ANY route, including a brand-new two-line one added to
+test exactly that. Two `next dev` processes were sharing one `.next` directory.
+On a healthy server the page renders and, since 20260829090000, completes the
+whole flow. **When a page seems not to hydrate, prove the environment first by
+putting a trivial `useEffect` on a fresh route** — it costs two minutes and it
+is the difference between a real bug and an afternoon.
 
 `marketing_manage_reviews` is a real seeded permission gating the nav item, so
 the module _looks_ governed. **No server code checks it**, because there is no
