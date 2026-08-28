@@ -49,6 +49,9 @@ export interface RealTrainingSeriesSession {
   sessionNumber: number;
   startAt: string;
   endAt: string;
+  /** `start_at`, read on the facility's own clock — display this, not `startAt`. */
+  startDate: string;
+  startTime: string;
   status: TrainingSeriesSessionStatus;
 }
 

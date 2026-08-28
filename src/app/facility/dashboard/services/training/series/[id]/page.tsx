@@ -1,6 +1,4 @@
-import { notFound } from "next/navigation";
-import { trainingSeriesList } from "@/data/training-series";
-import { SeriesDetail } from "../_components/series-detail";
+import { RealSeriesDetail } from "../_components/real-series-detail";
 
 export default async function TrainingSeriesDetailPage({
   params,
@@ -8,7 +6,5 @@ export default async function TrainingSeriesDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const exists = trainingSeriesList.some((s) => s.id === id);
-  if (!exists) notFound();
-  return <SeriesDetail seriesId={id} />;
+  return <RealSeriesDetail seriesId={id} />;
 }
