@@ -1,0 +1,26 @@
+[Unit]
+Description=Yipyy — messaging tick, every 5 minutes
+
+[Timer]
+OnCalendar=*:00/5
+
+# The delay a facility configures is a floor, not a promise. Five minutes is
+# close enough that "three hours after check-out" means what it says, and far
+# enough apart that an empty outbox costs one indexed read a few hundred times
+# a day.
+#
+# Spread, for the same reason the sweep is spread: every timer on the box firing
+# on the same second of every five minutes, on two vCPUs, is a self-inflicted
+# spike.
+RandomizedDelaySec=30
+
+# A window missed during a reboot or a deploy fires once on the next start. A
+# tip reminder arriving late is worth having; one silently dropped because the
+# box was being deployed to is not.
+Persistent=true
+
+AccuracySec=1s
+Unit=messaging-tick.service
+
+[Install]
+WantedBy=timers.target

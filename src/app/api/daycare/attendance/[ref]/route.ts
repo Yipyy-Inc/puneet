@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
 import { deniedIfUntouched } from "@/lib/api/rls-write";
+import {
+  bookingEventContext,
+  emitAutomationEvent,
+} from "@/lib/automations/emit";
 
 // ============================================================================
 // Checking a dog out, and the things noted while it was here.
@@ -109,6 +113,26 @@ export async function PATCH(
     "Not allowed to change this visit, or it has no attendance record yet.",
   );
   if (denied) return denied;
+
+  // ── The dog went home ───────────────────────────────────────────────────
+  //
+  // Only on an actual check-out: editing the play group or the notes is not an
+  // occasion to write to the owner. Best effort, and deliberately AFTER the
+  // RLS check above — an update that changed nothing did not check anybody out.
+  if (body.checkOut) {
+    const bookingId = (booking as { id: string }).id;
+    const context = await bookingEventContext(supabase, bookingId);
+    if (context) {
+      await emitAutomationEvent(supabase, {
+        facilityId: context.facilityId,
+        kind: "check_out",
+        dedupeKey: `check_out:${bookingId}`,
+        clientId: context.clientId,
+        bookingId,
+        locationId: context.locationId,
+      });
+    }
+  }
 
   return new NextResponse(null, { status: 204 });
 }

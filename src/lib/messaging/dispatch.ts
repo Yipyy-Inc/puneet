@@ -93,6 +93,17 @@ interface RuleRow {
   min_amount: string | number | null;
   cooldown_days: number;
   is_transactional: boolean;
+  /**
+   * Signed minutes from the triggering moment: -1440 is a day before, +180 is
+   * three hours after. Stored since the table was created and read by nothing
+   * until now, so every rule sent immediately whatever it said.
+   *
+   * NEGATIVE offsets are not honoured here and cannot be. "24 hours before the
+   * booking" is not a delay on an event that has already happened — there is no
+   * event at that moment to delay. Those are the time-driven triggers, and they
+   * need a scan that looks forward at bookings rather than back at events.
+   */
+  offset_minutes: number | null;
 }
 
 /**
@@ -143,7 +154,7 @@ async function dispatchClaimed(
   const { data: rules } = await db
     .from("automation_rules")
     .select(
-      "id, name, trigger, email_template_id, sms_template_id, service_types, location_ids, min_amount, cooldown_days, is_transactional",
+      "id, name, trigger, email_template_id, sms_template_id, service_types, location_ids, min_amount, cooldown_days, is_transactional, offset_minutes",
     )
     .eq("facility_id", event.facility_id)
     .eq("trigger", event.kind)
@@ -204,6 +215,8 @@ type BookingStatusForDisplay = NonNullable<
 >["status"];
 
 interface BookingFacts {
+  /** The public reference — what `/pay/{ref}` takes, not the uuid. */
+  ref: number | null;
   service: string | null;
   service_type: string | null;
   start_at: string | null;
@@ -262,7 +275,7 @@ async function loadContext(
   if (event.booking_id) {
     const { data } = await db
       .from("bookings")
-      .select("service, service_type, start_at, end_at, status")
+      .select("ref, service, service_type, start_at, end_at, status")
       .eq("id", event.booking_id)
       .maybeSingle();
     booking = (data as BookingFacts | null) ?? null;
@@ -343,6 +356,12 @@ async function loadContext(
           bookingDetails: event.booking_id
             ? `${origin}/bookings/${event.booking_id}`
             : undefined,
+          // `/pay/{ref}` — the REF, not the uuid. It is the page that shows
+          // the balance and the tip options, so it is what a tip reminder or a
+          // payment chase has to point at. Absent when the booking has no ref,
+          // which leaves `{{invoice_link}}` unresolved and the message skipped
+          // rather than sent with a dead link in it.
+          invoice: booking?.ref ? `${origin}/pay/${booking.ref}` : undefined,
         }
       : undefined,
     timeZone: zone,
@@ -466,6 +485,25 @@ async function deliver(
 
   // ── The claim ───────────────────────────────────────────────────────────
 
+  // ── LATER, IF THE RULE SAYS LATER ───────────────────────────────────────
+  //
+  // A positive offset means "send this a while after the thing happened" — a
+  // tip reminder three hours after check-out, a review request the next day.
+  // The row is written NOW, fully rendered, with `scheduled_for` in the future
+  // and `status = 'queued'`; the tick sends it when it comes due.
+  //
+  // Rendering at queue time rather than at send time is deliberate. The message
+  // says what was true when the thing happened — the pet's name, the service,
+  // the balance — and a booking edited in the intervening hours must not
+  // silently change what the customer is told they were sent. `body_rendered`
+  // is the record CASL requires, and it should be the record of one decision.
+  //
+  // The suppression check still runs again in the tick: somebody who
+  // unsubscribes in those three hours must not receive it.
+  const delayMinutes = Math.max(0, rule.offset_minutes ?? 0);
+  const scheduledFor = new Date(Date.now() + delayMinutes * 60_000);
+  const deferred = !skipReason && delayMinutes > 0;
+
   const { data: inserted, error: insertError } = await db
     .from("message_sends")
     .insert({
@@ -479,7 +517,8 @@ async function deliver(
       template_id: templateId,
       subject_rendered: subject,
       body_rendered: body,
-      status: skipReason ? "skipped" : "sending",
+      status: skipReason ? "skipped" : deferred ? "queued" : "sending",
+      scheduled_for: scheduledFor.toISOString(),
       skip_reason: skipReason,
       idempotency_key: idempotencyKey,
       provider: channel === "email" ? "resend" : "twilio",
@@ -504,6 +543,11 @@ async function deliver(
 
   const sendId = (inserted as { id: string }).id;
   result.queued += 1;
+
+  // Left for the tick. Counted as queued and NOT as sent, because it has not
+  // been — a dispatcher reporting a deferred message as delivered is the same
+  // defect as a screen claiming an action it did not perform.
+  if (deferred) return result;
 
   // ── The send ────────────────────────────────────────────────────────────
 
@@ -558,4 +602,205 @@ async function deliver(
     );
   }
   return result;
+}
+
+// ============================================================================
+// The tick: sending what was queued for later.
+//
+// ── WHY A SEPARATE PASS AND NOT A setTimeout ──────────────────────────────
+//
+// A tip reminder due in three hours outlives the request that queued it, the
+// process that served it, and quite possibly the container. The durable part is
+// the row; this is the thing that comes back for it.
+//
+// ── THE CLAIM IS AN UPDATE, NOT A SELECT ──────────────────────────────────
+//
+// Two ticks overlapping — a slow run and the next cron firing — would otherwise
+// both read the same queued row and both send it. `queued -> sending` is done
+// with a conditional UPDATE that returns the rows it actually changed, so only
+// one caller can win each row. Same argument as `dispatchEvent` claiming its
+// event, and the same reason: the alternative sends a customer two of the same
+// message and there is no way to un-send one.
+//
+// ── SUPPRESSION IS ASKED AGAIN, DELIBERATELY ──────────────────────────────
+//
+// It was asked when the message was queued, hours ago. Somebody who
+// unsubscribed in between must not receive this. Everything else — the copy,
+// the subject, the address — is deliberately NOT recomputed: it was decided at
+// queue time and `body_rendered` is the record of that decision.
+// ============================================================================
+
+/** A blank line separates paragraphs, the same as the immediate path uses. */
+const BLANK_LINE = "\n\n";
+const PARAGRAPHS = (body: string) => body.split(BLANK_LINE).filter(Boolean);
+
+/** How many due messages one tick will take. Keeps a run bounded. */
+const TICK_BATCH = 50;
+
+interface QueuedRow {
+  id: string;
+  facility_id: string;
+  client_id: string | null;
+  channel: "email" | "sms";
+  to_address: string;
+  subject_rendered: string | null;
+  body_rendered: string;
+  source_id: string | null;
+}
+
+export async function sendDueMessages(): Promise<DispatchResult> {
+  if (!hasServiceRoleKey()) {
+    return { ...EMPTY, problems: ["no service-role key; nothing sent"] };
+  }
+  const db = createAdminClient();
+  const result: DispatchResult = { ...EMPTY, problems: [] };
+
+  const { data: due, error: dueError } = await db
+    .from("message_sends")
+    .select("id")
+    .eq("status", "queued")
+    .lte("scheduled_for", new Date().toISOString())
+    .order("scheduled_for", { ascending: true })
+    .limit(TICK_BATCH);
+
+  if (dueError) {
+    return {
+      ...EMPTY,
+      problems: [`could not read the queue: ${dueError.message}`],
+    };
+  }
+
+  for (const row of (due ?? []) as { id: string }[]) {
+    // The claim. `.eq("status", "queued")` is the whole race protection: a
+    // second tick that read the same row updates nothing and moves on.
+    const { data: claimed } = await db
+      .from("message_sends")
+      .update({ status: "sending" })
+      .eq("id", row.id)
+      .eq("status", "queued")
+      .select(
+        "id, facility_id, client_id, channel, to_address, subject_rendered, body_rendered, source_id",
+      );
+
+    const message = (claimed ?? [])[0] as QueuedRow | undefined;
+    if (!message) continue;
+
+    try {
+      await sendOneQueued(db, message, result);
+    } catch (error) {
+      // Never throw out of the tick: one bad row must not strand the other
+      // forty-nine in 'sending', where only the reaper can free them.
+      const detail = error instanceof Error ? error.message : "unknown";
+      result.failed += 1;
+      result.problems.push(`message ${message.id}: ${detail}`);
+      await db
+        .from("message_sends")
+        .update({ status: "failed", last_error: detail, attempts: 1 })
+        .eq("id", message.id);
+    }
+  }
+
+  return result;
+}
+
+async function sendOneQueued(
+  db: SupabaseClient,
+  message: QueuedRow,
+  result: DispatchResult,
+): Promise<void> {
+  const suppression = await isSuppressed(db, {
+    facilityId: message.facility_id,
+    channel: message.channel,
+    address: message.to_address,
+    // A rule that was transactional when it queued may have been edited since.
+    // Re-read it rather than assume — and treat a missing rule as marketing,
+    // which is the answer that sends FEWER messages.
+    isTransactional: await ruleIsTransactional(db, message.source_id),
+  });
+
+  if (suppression.suppressed) {
+    result.skipped += 1;
+    await db
+      .from("message_sends")
+      .update({
+        status: "skipped",
+        skip_reason: suppression.reason ?? "suppressed",
+      })
+      .eq("id", message.id);
+    return;
+  }
+
+  if (!channelConfigured(message.channel)) {
+    result.skipped += 1;
+    await db
+      .from("message_sends")
+      .update({ status: "skipped", skip_reason: "channel_not_configured" })
+      .eq("id", message.id);
+    return;
+  }
+
+  const { data: facility } = await db
+    .from("facilities")
+    .select("name")
+    .eq("id", message.facility_id)
+    .maybeSingle();
+  const facilityName = (facility as { name?: string } | null)?.name ?? "Yipyy";
+
+  const delivery =
+    message.channel === "email"
+      ? await sendEmail({
+          to: message.to_address,
+          subject: message.subject_rendered ?? `A message from ${facilityName}`,
+          html: renderEmail({
+            preheader: message.subject_rendered ?? facilityName,
+            heading: message.subject_rendered ?? facilityName,
+            paragraphs: PARAGRAPHS(message.body_rendered),
+            footer: facilityName,
+            origin: "",
+          }),
+          text: message.body_rendered,
+        })
+      : await sendSms({ to: message.to_address, body: message.body_rendered });
+
+  await db
+    .from("message_sends")
+    .update(
+      delivery.sent
+        ? {
+            status: "sent",
+            sent_at: new Date().toISOString(),
+            provider_id: delivery.providerId ?? null,
+            attempts: 1,
+          }
+        : {
+            status: "failed",
+            last_error: delivery.detail ?? "send failed",
+            attempts: 1,
+          },
+    )
+    .eq("id", message.id);
+
+  if (delivery.sent) result.sent += 1;
+  else {
+    result.failed += 1;
+    result.problems.push(
+      `message ${message.id}: ${delivery.detail ?? "send failed"}`,
+    );
+  }
+}
+
+/** Whether the rule behind a queued message still counts as transactional. */
+async function ruleIsTransactional(
+  db: SupabaseClient,
+  ruleId: string | null,
+): Promise<boolean> {
+  if (!ruleId) return false;
+  const { data } = await db
+    .from("automation_rules")
+    .select("is_transactional")
+    .eq("id", ruleId)
+    .maybeSingle();
+  return (
+    (data as { is_transactional?: boolean } | null)?.is_transactional ?? false
+  );
 }

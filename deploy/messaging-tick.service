@@ -1,0 +1,38 @@
+[Unit]
+Description=Yipyy — send messages queued for later
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+# ── A NON-ZERO EXIT HAS TO REACH SOMEBODY ─────────────────────────────────
+#
+# messaging-tick.sh distinguishes three outcomes: success, a failed call
+# (exit 1), and a 200 whose body reports messages that could not be sent
+# (exit 2). A tick that has been failing for a week looks identical to one that
+# ran a minute ago unless something consumes the exit code — and the symptom
+# would be customers not receiving mail a facility believes it sent, which is
+# the least visible failure in the system.
+#
+# `skipped` is deliberately NOT a failure: that is the suppression list doing
+# its job, and alerting on it would train everybody to ignore the alert.
+OnFailure=yipyy-alert@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/messaging-tick
+
+# systemd will not start a second instance while one is running, so a slow tick
+# queues rather than overlapping. That is belt-and-braces here rather than the
+# guarantee: the claim in the query is what actually stops a customer being
+# emailed twice, because two SEPARATE hosts could otherwise both run one.
+TimeoutStartSec=300
+
+# Background work. It must never compete with a customer checking out or a card
+# reader waiting on a response.
+Nice=5
+IOSchedulingClass=idle
+
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true

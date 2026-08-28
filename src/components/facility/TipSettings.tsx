@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, FileText, Clock, Mail, Smartphone, Heart } from "lucide-react";
+import Link from "next/link";
+import { Bell, Heart } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -314,218 +315,40 @@ export function TipSettings() {
               disabled={!isEditing}
             />
 
-            {/* ── Post-stay tip reminder ─────────────────────────────── */}
-            {(() => {
-              const reminder = local.reminder ?? DEFAULT_REMINDER;
-              const updateReminder = (patch: Partial<typeof reminder>) =>
-                setLocal({
-                  ...local,
-                  reminder: { ...reminder, ...patch },
-                });
-              const updateChannels = (
-                patch: Partial<typeof reminder.channels>,
-              ) =>
-                setLocal({
-                  ...local,
-                  reminder: {
-                    ...reminder,
-                    channels: { ...reminder.channels, ...patch },
-                  },
-                });
-              return (
-                <div className="space-y-3 rounded-xl border border-dashed p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-2">
-                      <Bell className="text-primary mt-0.5 size-4 shrink-0" />
-                      <div>
-                        <p className="text-sm font-semibold">
-                          Post check-out tip reminder
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          Send a friendly ask after the pet goes home — when
-                          appreciation is highest.
-                        </p>
-                        {/* ── SAVED, AND NOT YET SENT ──────────────────
-                            Nothing in the codebase reads `tipConfig.reminder`.
-                            The fields are the right shape and the sender is
-                            separate work — a scheduled job, not a screen — but
-                            until it exists a facility configuring this is
-                            configuring a message nobody will receive, and the
-                            screen has to say so rather than imply otherwise. */}
-                        <p className="mt-1 rounded-sm border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300">
-                          Not sending yet. These settings are saved, but the
-                          reminder is not delivered — the sender has not been
-                          built.
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={reminder.enabled}
-                      disabled={!isEditing}
-                      onCheckedChange={(v) => updateReminder({ enabled: v })}
-                    />
-                  </div>
-
-                  {reminder.enabled && (
-                    <div className="space-y-3 pt-1">
-                      {/* Delay */}
-                      <div className="flex items-center gap-3">
-                        <Clock className="text-muted-foreground size-3.5" />
-                        <Label className="shrink-0 text-xs font-medium">
-                          Send after
-                        </Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={168}
-                          step={1}
-                          value={reminder.delayHours}
-                          disabled={!isEditing}
-                          className="h-8 w-20 text-sm"
-                          onChange={(e) =>
-                            updateReminder({
-                              delayHours: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                        />
-                        <span className="text-muted-foreground text-xs">
-                          hours after check-out
-                        </span>
-                      </div>
-
-                      {/* Channels */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-medium">Channels</Label>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            disabled={!isEditing}
-                            onClick={() =>
-                              updateChannels({
-                                email: !reminder.channels.email,
-                              })
-                            }
-                            className={cn(
-                              "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
-                              reminder.channels.email
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "text-muted-foreground",
-                              !isEditing && "cursor-default",
-                            )}
-                          >
-                            <Mail className="size-3" /> Email
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!isEditing}
-                            onClick={() =>
-                              updateChannels({ sms: !reminder.channels.sms })
-                            }
-                            className={cn(
-                              "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
-                              reminder.channels.sms
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "text-muted-foreground",
-                              !isEditing && "cursor-default",
-                            )}
-                          >
-                            <Smartphone className="size-3" /> SMS
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!isEditing}
-                            onClick={() =>
-                              updateChannels({ push: !reminder.channels.push })
-                            }
-                            className={cn(
-                              "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
-                              reminder.channels.push
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "text-muted-foreground",
-                              !isEditing && "cursor-default",
-                            )}
-                          >
-                            <Bell className="size-3" /> Push
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Subject */}
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium">
-                          Email subject
-                        </Label>
-                        <Input
-                          value={reminder.subject}
-                          disabled={!isEditing}
-                          className="h-8 text-sm"
-                          onChange={(e) =>
-                            updateReminder({ subject: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      {/* Headline */}
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium">Headline</Label>
-                        <Input
-                          value={reminder.messageHeadline}
-                          disabled={!isEditing}
-                          className="h-8 text-sm"
-                          onChange={(e) =>
-                            updateReminder({
-                              messageHeadline: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-
-                      {/* Body */}
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium">Message</Label>
-                        <Textarea
-                          rows={3}
-                          value={reminder.messageBody}
-                          disabled={!isEditing}
-                          className="text-sm"
-                          onChange={(e) =>
-                            updateReminder({ messageBody: e.target.value })
-                          }
-                        />
-                        <p className="text-muted-foreground text-[10px]">
-                          Use{" "}
-                          <code className="bg-muted rounded-sm px-1">
-                            {"{petName}"}
-                          </code>{" "}
-                          or{" "}
-                          <code className="bg-muted rounded-sm px-1">
-                            {"{clientName}"}
-                          </code>{" "}
-                          to personalize.
-                        </p>
-                      </div>
-
-                      {/* Attach report card */}
-                      <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <FileText className="text-muted-foreground size-3.5" />
-                          <span className="text-xs font-medium">
-                            Include the pet&#39;s report card
-                          </span>
-                        </div>
-                        <Switch
-                          checked={reminder.includeReportCard}
-                          disabled={!isEditing}
-                          onCheckedChange={(v) =>
-                            updateReminder({ includeReportCard: v })
-                          }
-                        />
-                      </div>
-                    </div>
-                  )}
+            {/* ── Post-checkout tip reminder ─────────────────────────────
+                The fields that used to live here — delay, channels, headline,
+                body — were saved to `tip_config.reminder` and read by nothing.
+                A tip reminder is a message, and messages now have somewhere to
+                live: a template, a rule, a delivery log, a suppression list,
+                and an audit trail a facility can produce. Two places
+                describing one message is how one of them goes stale, and it
+                would be the one nobody could prove they had sent. */}
+            <div className="space-y-3 rounded-xl border p-4">
+              <div className="flex items-start gap-2">
+                <Bell className="text-primary mt-0.5 size-4 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">
+                    Post check-out tip reminder
+                  </p>
+                  <p className="text-muted-foreground text-xs/relaxed">
+                    Ask for a tip a few hours after the pet goes home, when
+                    appreciation is highest. This is an automation: choose
+                    <span className="font-medium"> Check-Out</span>, set how
+                    long to wait, and pick the{" "}
+                    <span className="font-medium">Tip Reminder</span> template.
+                  </p>
                 </div>
-              );
-            })()}
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/facility/dashboard/automations">
+                  Set it up in Automations
+                </Link>
+              </Button>
+              <p className="text-muted-foreground text-[11px]/relaxed">
+                Every message sent that way is recorded — what was sent, to
+                whom, and when — and anyone who has unsubscribed is skipped.
+              </p>
+            </div>
 
             {/* ── Report card tip prompt ─────────────────────────────── */}
             {(() => {
