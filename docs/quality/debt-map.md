@@ -6926,6 +6926,68 @@ is the complete list of what must be green is wrong by two jobs.
 **Not fixed here.** Adding to branch protection is a gate change, and this repo
 asks for those to be proposed explicitly and separately.
 
+### 🟠 Rebook Reminders is half converted, and the two halves look identical
+
+The **Lapsed** tab is now real: `public.lapsed_clients()` derives it from
+completed bookings and `facility_settings.rebook_config`, and Send, Dismiss and
+the per-service frequencies all write to Postgres. The **Queue**, **History**
+and **Analytics** tabs of the same card are still
+`src/data/rebook-reminders.ts` — `rebookReminders`, held in `useState`, with
+`stats` counted off it.
+
+They sit inside one 1,200-line component and render the same way, so nothing on
+screen tells you which tab you are looking at. Measured 2026-08-28:
+
+```
+lapsed  -> public.lapsed_clients(...)          7 real pairings on the demo facility
+queue   -> rebookReminders (fixture)          identical at every facility
+history -> rebookReminders (fixture)          "Total Sent" is a literal
+```
+
+**Two specific things in the fixture half still claim a success they cannot
+perform**, both pre-dating this work and both left alone deliberately rather
+than half-fixed:
+
+- The Defaults tab's per-service **Template** editor writes to a local draft
+  map and is lost on reload. The wording that actually gets sent is
+  `rebook_reminder` / `rebook_reminder_sms` in `message_templates`, editable on
+  the Templates tab. Per-service rebook wording is a real feature, but it needs
+  per-service template rows.
+- The Queue tab's Send Now / Dismiss act on fixture rows.
+
+`check:success-claims` does not catch either: its regex does not match
+`toast.success("Composer opened for …")`, which is how six such calls survived
+on the Lapsed tab until they were deleted.
+
+**What to do instead.** Convert the Queue on the same substrate rather than
+inventing a second one — a scheduled reminder is a `message_sends` row with a
+future `scheduled_for`, which the outbox and the tick already handle, and the
+History tab is a read of that same table. Do not add a `rebook_reminders` table:
+the reason the Lapsed conversion needed no new state is that the answer was
+always derivable, and the same is true here.
+
+### 🟡 `clients.status` is silently reverted for anyone without `edit_clients`
+
+`private.enforce_client_integrity` returns early for a caller holding
+`edit_clients` or a platform admin. For everybody else it rewrites seven columns
+back to their old values on the way in — `status`, `is_blocked`, `blocked_at`,
+`blocked_reason`, `outstanding_balance`, `no_show_count`, `last_visit_date` —
+plus the `membership`, `packages` and `storeCredit` keys in `details`.
+
+It does **not** raise. The UPDATE succeeds, PostgREST returns a row, and the
+route reports a save. So a "Mark inactive" button offered to somebody who
+manages automations but does not edit clients would report success and change
+nothing, every time, with nothing in the logs.
+
+This is why the Lapsed tab has no such button: managing automations and editing
+clients are separate permissions, and the staff most likely to press it are
+exactly the ones for whom it would not work. Marking a client inactive belongs
+on the client file.
+
+**Before wiring any control to one of those ten fields, check which permission
+the caller will actually hold** — and if it is not `edit_clients`, do not offer
+the control.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

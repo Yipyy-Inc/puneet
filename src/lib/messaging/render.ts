@@ -277,6 +277,19 @@ export function resolveVariable(
 
 export const VARIABLE_PATTERN = /\{\{([a-z_]+)(?:\|([^}]*))?\}\}/g;
 
+/**
+ * A tag `resolveTemplate` left behind because it had no value for it.
+ *
+ * Non-global, so it can be used with `.match()` to ask "is there one" without
+ * carrying `lastIndex` between calls the way VARIABLE_PATTERN does.
+ *
+ * Exported because it is the check that decides whether a rendered message is
+ * safe to send, and every sender has to make it. A copy per sender is a copy
+ * that can be forgotten in the next one — and what gets sent then is an email
+ * containing the literal text "{{check_in_date}}".
+ */
+export const UNRESOLVED_TAG = /\{\{[a-z_]+(\|[^}]*)?\}\}/;
+
 export function resolveTemplate(
   template: string,
   data: VariableDataContext,

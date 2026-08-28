@@ -8,6 +8,7 @@ import {
 } from "@/lib/settings/loyalty";
 
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
+import { NO_REBOOK_CONFIG, rebookConfigSchema } from "@/lib/settings/rebook";
 import { NO_TAX, taxConfigSchema } from "@/lib/settings/tax";
 import { NO_YIPYY_PAY, yipyyPayConfigSchema } from "@/lib/settings/yipyy-pay";
 
@@ -398,6 +399,11 @@ export const SETTING_DOMAINS = {
     schema: loyaltyConfigSchema,
     fallback: NO_LOYALTY_PROGRAM,
   },
+
+  // How often each service is expected to come round again, and whether a
+  // lapsed client for it may be written to. `configured: false` means nobody
+  // has said — so the Lapsed list still computes, and nothing sends.
+  rebook_config: { schema: rebookConfigSchema, fallback: NO_REBOOK_CONFIG },
 
   // No exported schema for this one — it is a plain map of id -> hex, defined
   // in lib/operations-calendar rather than types/facility.
