@@ -63,9 +63,8 @@ export function ReputationBoosterShell() {
             </Badge>
           </div>
           <p className="text-muted-foreground max-w-2xl text-sm">
-            Capture every rating inside Yipyy before it goes public. Push happy
-            clients to Google, Facebook, and Yelp — keep negative experiences
-            private and resolved.
+            Ask every client for a review, send happy ones to Google and
+            Facebook, and route unhappy ones to a manager before they leave.
           </p>
         </div>
 
@@ -143,7 +142,7 @@ export function ReputationBoosterShell() {
           </TabsTrigger>
           <TabsTrigger value="public-reviews" className="gap-2 px-3 text-sm">
             <Globe className="h-4 w-4" />
-            Public Reviews
+            Booking page reviews
           </TabsTrigger>
           {isMultiLocation && (
             <TabsTrigger value="locations" className="gap-2 px-3 text-sm">

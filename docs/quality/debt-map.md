@@ -6985,6 +6985,89 @@ on the client file.
 the caller will actually hold** — and if it is not `edit_clients`, do not offer
 the control.
 
+### 🔴 Review gating shipped as a switch, and the whole module is a mock
+
+Two separate facts, and the second is why the first went unnoticed for months.
+
+**The switch.** `ReputationSettings.feedbackRouting` offered `"open" | "gated"`.
+In gated mode the survey suppressed the public review link for anyone rating
+below the happy threshold. That is review gating: Google's review policies
+prohibit it and the US FTC's Rule on the Use of Consumer Reviews and
+Testimonials (16 CFR Part 465, in force since October 2024) prohibits
+suppressing negative reviews. It defaulted to open and carried an amber warning
+beside the toggle — which is the shape of a control somebody eventually turns
+on, having read the warning and decided it was about somebody else.
+
+Removed 2026-08-28: the union member, the survey's two sentiment-split phases,
+`submitNegative()`, and five now-dead i18n strings. `bun run check:no-review-gating`
+keeps it out, and it has been proven to fire by reintroducing the field.
+
+**The rule that replaced it, which every future change here must keep:** the
+rating decides what happens INTERNALLY — a recovery ticket, a manager alert —
+never whether the public option appears. A 2★ client is escalated _and_ shown
+the public link, beside a private feedback box. That single property is what
+makes the flow compliant, and it is why the threshold control is now labelled
+"Escalation threshold" rather than "Interception threshold".
+
+**The mock.** Everything behind the nav item is fixtures and `localStorage`:
+eight tabs, `src/data/reputation.ts` (830 hand-written rows), a 30-second tick
+in `use-reputation.tsx` that flips a status string and sends nothing, and a
+public survey at `/review/[token]` whose token IS the request id, resolved out
+of `localStorage`. There is no `review_*` table, no `/api/reputation` route and,
+before 2026-08-28, no test of any kind.
+
+**Measured 2026-08-28, and it is worse than "only works in the same browser":
+the survey never renders at all in a fresh browser.** Driven headless against a
+local dev server at `/review/rr-005` — a request that exists in the fixture —
+the page returns 200, React mounts (the DevTools banner logs), no request
+fails, no console error is raised, and it sits on "Loading your survey…"
+indefinitely with zero buttons in the DOM. `request` never leaves `undefined`,
+so it does not even reach the "invalid link" screen it has. **Verified against
+`HEAD` as well as against the 2026-08-28 changes — identical, so it is
+pre-existing and not a regression.** Whatever the mechanism, the consequence is
+the one that matters: a client tapping the link in an SMS sees a spinner
+forever. Do not spend time repairing it. Phase B replaces this file with a page
+that reads a hashed token through a SECURITY DEFINER RPC, at which point the
+whole `localStorage` resolution path is deleted.
+
+`marketing_manage_reviews` is a real seeded permission gating the nav item, so
+the module _looks_ governed. **No server code checks it**, because there is no
+server code. Do not read the nav gate as evidence of a boundary.
+
+Two traps while working here, both of which look like ordinary code:
+
+- `ReputationLocationsTab.tsx` hardcodes metrics keyed on fixture location ids
+  (`loc-dv-main`…) and then `.filter()`s them against the REAL locations from
+  Postgres. With real rows the ranked list renders empty and the network average
+  divides by zero. It looks like a data problem; it is a join against invented
+  keys.
+- `ReputationEscalationRouting.tsx` routes escalations to `staffMembers` from
+  `@/data/staff`. Every assignee a facility picks today is a fictional person.
+
+**Do not build on any of it.** The conversion plan is a spine of
+`review_requests` + `review_responses` riding the existing outbox
+(`message_sends`, `source_kind = 'review_request'`), with the survey token
+hashed the way `onboarding_instances` does it. Anything added to the fixture
+layer in the meantime is work that gets deleted.
+
+### 🟠 Yelp was offered as a place to send reviewers
+
+Yelp's content guidelines prohibit soliciting reviews outright — asking is a
+policy violation, not merely an ineffective channel — yet it was a first-class
+destination in the channel manager, weighted alongside Google and Facebook.
+
+Fixed 2026-08-28 as a property of the platform rather than a facility setting:
+`PLATFORM_META[p].solicitable`, enforced inside `orderedEnabledPlatforms()` —
+the one function every solicitation surface reads through. Nothing downstream
+can offer Yelp even if a facility has it enabled with a URL. The toggle is
+disabled with the reason stated beside it, and the card reads "Monitor only".
+
+**A disabled toggle on one screen is a convention somebody forgets. Put the
+refusal in the function that answers "where may this client be sent".** When
+`review_channels` becomes a table it carries the same rule as a CHECK
+(`platform <> 'yelp' or solicitable = false`), so the send path reads a column
+rather than trusting a screen.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

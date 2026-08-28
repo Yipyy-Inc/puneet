@@ -113,39 +113,61 @@ const DEFAULT_ADDED: ReputationPublicPlatform[] = [
 ];
 
 /** Display metadata for every supported public channel. */
+/**
+ * `solicitable: false` means the channel can be connected and displayed but
+ * must never be offered to a client as somewhere to leave a review. Yelp's
+ * content guidelines prohibit soliciting reviews outright — asking is a policy
+ * violation, not merely an ineffective channel — so it is a property of the
+ * platform, not a facility setting, and `orderedEnabledPlatforms` enforces it
+ * for every surface rather than each screen remembering to.
+ */
 export const PLATFORM_META: Record<
   ReputationPublicPlatform,
-  { label: string; badge: string; badgeCls: string; placeholder: string }
+  {
+    label: string;
+    badge: string;
+    badgeCls: string;
+    placeholder: string;
+    solicitable: boolean;
+    monitorOnlyReason?: string;
+  }
 > = {
   google: {
     label: "Google Business",
     badge: "G",
     badgeCls: "bg-blue-50 text-blue-600",
     placeholder: "Paste your Google Maps link or g.page/r/…/review",
+    solicitable: true,
   },
   facebook: {
     label: "Facebook Pages",
     badge: "f",
     badgeCls: "bg-indigo-50 text-indigo-600",
     placeholder: "https://facebook.com/yourpage/reviews",
+    solicitable: true,
   },
   yelp: {
     label: "Yelp",
     badge: "Y",
     badgeCls: "bg-red-50 text-red-600",
     placeholder: "https://yelp.com/biz/your-business",
+    solicitable: false,
+    monitorOnlyReason:
+      "Yelp prohibits asking customers for reviews, so it can be connected for display but never used as a destination.",
   },
   nextdoor: {
     label: "Nextdoor",
     badge: "N",
     badgeCls: "bg-green-50 text-green-700",
     placeholder: "https://nextdoor.com/pages/your-business",
+    solicitable: true,
   },
   tripadvisor: {
     label: "TripAdvisor",
     badge: "T",
     badgeCls: "bg-emerald-50 text-emerald-700",
     placeholder: "https://tripadvisor.com/your-business",
+    solicitable: true,
   },
 };
 
@@ -166,13 +188,21 @@ export function availablePlatforms(
   return ALL_PLATFORMS.filter((p) => !added.has(p));
 }
 
-/** Enabled-with-URL public platforms, in the facility's priority order. */
+/**
+ * Enabled-with-URL public platforms a client may actually be sent to, in the
+ * facility's priority order. Monitor-only channels are filtered out HERE, in
+ * the one function every solicitation surface reads through — a disabled
+ * toggle on one screen is a convention somebody can forget, whereas nothing
+ * downstream of this can offer Yelp even if it is enabled and has a URL.
+ */
 export function orderedEnabledPlatforms(
   settings: ReputationSettings,
 ): ReputationPublicPlatform[] {
   return orderedPlatforms(settings).filter(
     (p) =>
-      settings.reviewPlatforms[p].enabled && settings.reviewPlatforms[p].url,
+      PLATFORM_META[p].solicitable &&
+      settings.reviewPlatforms[p].enabled &&
+      settings.reviewPlatforms[p].url,
   );
 }
 

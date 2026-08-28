@@ -34,24 +34,31 @@ function StarRow({ rating }: { rating: number }) {
   );
 }
 
+/**
+ * Says what is actually known, which is that the client followed a link to this
+ * platform — NOT that they posted there. Nothing in Yipyy reads a public review
+ * back, so a badge reading "Google" beside a Show/Remove button implied both a
+ * confirmation we do not have and a reach we do not have. When a real sync
+ * exists this can say "posted"; until then it says "sent".
+ */
 function PlatformBadge({ platform }: { platform: string }) {
   const cfg: Record<string, { label: string; color: string }> = {
     google: {
-      label: "Google",
+      label: "Sent to Google",
       color: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
     },
     facebook: {
-      label: "Facebook",
+      label: "Sent to Facebook",
       color:
         "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
     },
     yelp: {
-      label: "Yelp",
+      label: "Sent to Yelp",
       color: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
     },
   };
   const c = cfg[platform] ?? {
-    label: platform,
+    label: `Sent to ${platform}`,
     color: "bg-muted text-muted-foreground",
   };
   return (
@@ -139,11 +146,11 @@ function ReviewCard({
         >
           {req.isPubliclyDisplayed ? (
             <>
-              <EyeOff className="h-3 w-3" /> Hide
+              <EyeOff className="h-3 w-3" /> Remove from booking page
             </>
           ) : (
             <>
-              <Eye className="h-3 w-3" /> Display
+              <Eye className="h-3 w-3" /> Show on booking page
             </>
           )}
         </Button>
@@ -194,11 +201,11 @@ function ReviewRow({
         >
           {req.isPubliclyDisplayed ? (
             <>
-              <EyeOff className="h-3 w-3" /> Hide
+              <EyeOff className="h-3 w-3" /> Remove from booking page
             </>
           ) : (
             <>
-              <Eye className="h-3 w-3" /> Display
+              <Eye className="h-3 w-3" /> Show on booking page
             </>
           )}
         </Button>
@@ -442,7 +449,9 @@ export function ReputationPublicReviewsTab() {
           <span className="text-foreground font-medium">
             Booking page showcase
           </span>{" "}
-          — Reviews set to &quot;Live&quot; appear on your public booking page.
+          — Reviews set to &quot;Live&quot; appear on your own booking page, and
+          only there. Showing or removing one here changes nothing on Google,
+          Facebook or Yelp — no product can edit a review on those platforms.
           Only reviews with a written comment are eligible.
         </div>
       </div>

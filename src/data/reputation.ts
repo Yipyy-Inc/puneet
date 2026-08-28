@@ -87,7 +87,6 @@ export const reputationSettings: ReputationSettings = {
   },
   platformOrder: ["google", "facebook", "yelp"],
   channelWeighting: false,
-  feedbackRouting: "open",
   happyThreshold: 4,
   outreachSequence: [
     {

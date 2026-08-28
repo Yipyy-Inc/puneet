@@ -14,7 +14,6 @@ export interface SurveyStrings {
   alreadyBody: string; // {pet} {service}
   thrilledTitle: string;
   loveQ: string; // {pet}
-  gatedLoveQ: string;
   positivePlaceholder: string; // {pet}
   postPublic: string;
   orPrivate: string;
@@ -24,10 +23,7 @@ export interface SurveyStrings {
   changeRating: string;
   openNegTitle: string;
   openNegSub: string; // {pet}
-  negTitle: string;
-  negSub: string;
   negPlaceholder: string; // {pet}
-  sendToManager: string;
   escalatedTitle: string;
   escalatedBody: string;
   sharedTitle: string;
@@ -36,7 +32,6 @@ export interface SurveyStrings {
   modalBody: string; // {platform}
   openPlatform: string; // {platform}
   done: string;
-  noPlatforms: string;
 }
 
 const EN: SurveyStrings = {
@@ -58,7 +53,6 @@ const EN: SurveyStrings = {
   alreadyBody: "You already rated {pet}'s {service} visit.",
   thrilledTitle: "We're thrilled! 🎉",
   loveQ: "What did you love most about {pet}'s visit?",
-  gatedLoveQ: "What did you love most about our service?",
   positivePlaceholder: "Tell others what made {pet}'s visit great…",
   postPublic: "Post it publicly",
   orPrivate: "Or send it straight to us",
@@ -69,11 +63,7 @@ const EN: SurveyStrings = {
   openNegTitle: "Thank you for your honesty.",
   openNegSub:
     "We're sorry we fell short with {pet}'s visit. Tell us what happened so we can make it right.",
-  negTitle: "We're so sorry.",
-  negSub:
-    "We didn't exceed your expectations today. Please let us know what happened so we can make this right immediately.",
   negPlaceholder: "What went wrong with {pet}'s visit?",
-  sendToManager: "Send feedback to the manager",
   escalatedTitle: "Thank you — we're on it.",
   escalatedBody:
     "Your feedback has gone straight to our manager, who will reach out personally to make this right. We truly appreciate the chance to fix it.",
@@ -84,7 +74,6 @@ const EN: SurveyStrings = {
     "We've copied your comment to your clipboard. Simply sign into {platform} on the next screen, paste, and post — that's it!",
   openPlatform: "Open {platform}",
   done: "Done",
-  noPlatforms: "No public review platforms are configured yet.",
 };
 
 const FR: SurveyStrings = {
@@ -107,7 +96,6 @@ const FR: SurveyStrings = {
   alreadyBody: "Vous avez déjà évalué la visite {service} de {pet}.",
   thrilledTitle: "Nous sommes ravis ! 🎉",
   loveQ: "Qu'avez-vous le plus aimé de la visite de {pet} ?",
-  gatedLoveQ: "Qu'avez-vous le plus aimé de notre service ?",
   positivePlaceholder:
     "Dites aux autres ce qui a rendu la visite de {pet} formidable…",
   postPublic: "Publiez-le publiquement",
@@ -119,12 +107,8 @@ const FR: SurveyStrings = {
   openNegTitle: "Merci de votre honnêteté.",
   openNegSub:
     "Nous sommes désolés de ne pas avoir été à la hauteur pour la visite de {pet}. Dites-nous ce qui s'est passé afin que nous puissions corriger la situation.",
-  negTitle: "Nous sommes vraiment désolés.",
-  negSub:
-    "Nous n'avons pas répondu à vos attentes aujourd'hui. Dites-nous ce qui s'est passé afin que nous puissions corriger la situation immédiatement.",
   negPlaceholder:
     "Qu'est-ce qui n'a pas fonctionné lors de la visite de {pet} ?",
-  sendToManager: "Envoyer au gestionnaire",
   escalatedTitle: "Merci — nous nous en occupons.",
   escalatedBody:
     "Votre avis a été transmis directement à notre gestionnaire, qui vous contactera personnellement pour arranger les choses. Merci de nous donner l'occasion de corriger la situation.",
@@ -136,8 +120,6 @@ const FR: SurveyStrings = {
     "Nous avons copié votre commentaire dans votre presse-papiers. Connectez-vous à {platform} à l'écran suivant, collez et publiez — c'est tout !",
   openPlatform: "Ouvrir {platform}",
   done: "Terminé",
-  noPlatforms:
-    "Aucune plateforme d'avis publique n'est configurée pour le moment.",
 };
 
 const STRINGS: Record<string, SurveyStrings> = { en: EN, fr: FR };

@@ -124,7 +124,7 @@ function StarRow({ value }: { value: number }) {
   );
 }
 
-type Phase = "rate" | "open" | "positive" | "negative" | "shared" | "escalated";
+type Phase = "rate" | "open" | "shared" | "escalated";
 
 // ─── Main survey ──────────────────────────────────────────────────────────────
 
@@ -208,10 +208,6 @@ export function ReviewSurvey({ token }: { token: string }) {
   const serviceLower = request.serviceLabel.toLowerCase();
   const V = { pet: petName, service: serviceLower, business };
   const threshold = settings?.happyThreshold ?? 4;
-  // "open" (default) never suppresses the public ask — it offers everyone both a
-  // public review and a private channel, which avoids review-gating. "gated" is
-  // the legacy sentiment-split behaviour.
-  const routing = settings?.feedbackRouting ?? "open";
   const isLow = selected > 0 && selected < threshold;
 
   function pickStar(n: number) {
@@ -223,20 +219,9 @@ export function ReviewSurvey({ token }: { token: string }) {
       rating: n as ReputationRating,
       ratedAt: now,
       source: "micro_survey",
-      ...(routing === "open" && low
-        ? { escalated: true, escalatedAt: now }
-        : {}),
+      ...(low ? { escalated: true, escalatedAt: now } : {}),
     });
-    setPhase(routing === "open" ? "open" : low ? "negative" : "positive");
-  }
-
-  function submitNegative() {
-    updateRatingOverlay(token, {
-      feedbackText: comment.trim() || undefined,
-      escalated: true,
-      escalatedAt: new Date().toISOString(),
-    });
-    setPhase("escalated");
+    setPhase("open");
   }
 
   function submitPrivate() {
@@ -295,7 +280,7 @@ export function ReviewSurvey({ token }: { token: string }) {
     );
   }
 
-  // ── Open routing (default, non-gated): everyone gets public + private ──
+  // ── Routing: everyone gets the public option AND a private channel ──
   if (phase === "open") {
     return (
       <Shell>
@@ -389,80 +374,6 @@ export function ReviewSurvey({ token }: { token: string }) {
     );
   }
 
-  // ── Positive flow (gated mode): 5-star → comment → share to public ──
-  if (phase === "positive") {
-    return (
-      <Shell>
-        <Panel>
-          <div className="text-center">
-            <StarRow value={selected} />
-            <h1 className="mt-3 text-xl font-bold tracking-tight sm:text-2xl">
-              {S.thrilledTitle}
-            </h1>
-            <p className="text-muted-foreground mt-2 text-sm">{S.gatedLoveQ}</p>
-          </div>
-
-          <Textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder={fill(S.positivePlaceholder, V)}
-            className="mt-5 min-h-28 resize-none text-sm"
-            autoFocus
-          />
-
-          <div className="mt-5 space-y-2">
-            {platforms.length > 0 ? (
-              platforms.map((p, i) => (
-                <Button
-                  key={p}
-                  onClick={() => shareTo(p)}
-                  variant={i === 0 ? "default" : "outline"}
-                  className={cn(
-                    "h-11 w-full gap-2 text-base",
-                    i === 0 && "bg-amber-600 text-white hover:bg-amber-700",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-5 items-center justify-center rounded-full text-xs font-bold",
-                      i === 0
-                        ? "bg-white/20 text-white"
-                        : PLATFORM_META[p].badgeCls,
-                    )}
-                  >
-                    {PLATFORM_META[p].badge}
-                  </span>
-                  {fill(S.shareOn, { platform: PLATFORM_META[p].label })}
-                </Button>
-              ))
-            ) : (
-              <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-center text-xs">
-                {S.noPlatforms}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={backToRate}
-            className="text-muted-foreground hover:text-foreground mx-auto mt-4 block text-center text-xs"
-          >
-            {S.changeRating}
-          </button>
-        </Panel>
-
-        <ShareModal
-          modal={modal}
-          strings={S}
-          onClose={() => {
-            setModal((m) => ({ ...m, open: false }));
-            setPhase("shared");
-          }}
-        />
-      </Shell>
-    );
-  }
-
   // ── Shared confirmation ──
   if (phase === "shared") {
     return (
@@ -479,47 +390,6 @@ export function ReviewSurvey({ token }: { token: string }) {
               </p>
             </div>
           </div>
-        </Panel>
-      </Shell>
-    );
-  }
-
-  // ── Negative / below-threshold intercept (gated): private mitigation ──
-  if (phase === "negative") {
-    return (
-      <Shell>
-        <Panel>
-          <div className="text-center">
-            <StarRow value={selected} />
-            <h1 className="mt-3 text-xl font-bold tracking-tight">
-              {S.negTitle}
-            </h1>
-            <p className="text-muted-foreground mt-2 text-sm">{S.negSub}</p>
-          </div>
-
-          <Textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder={fill(S.negPlaceholder, V)}
-            className="mt-5 min-h-32 resize-none text-sm"
-            autoFocus
-          />
-
-          <Button
-            onClick={submitNegative}
-            disabled={!comment.trim()}
-            className="mt-5 h-11 w-full gap-2 bg-rose-600 text-base text-white hover:bg-rose-700"
-          >
-            {S.sendToManager}
-          </Button>
-
-          <button
-            type="button"
-            onClick={backToRate}
-            className="text-muted-foreground hover:text-foreground mx-auto mt-4 block text-center text-xs"
-          >
-            {S.changeRating}
-          </button>
         </Panel>
       </Shell>
     );
