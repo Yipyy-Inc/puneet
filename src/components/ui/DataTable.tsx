@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { compareSortValues } from "@/lib/table/sort";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -213,40 +214,10 @@ export function DataTable<T extends object>({
       if (col.sortValue) return col.sortValue(item);
       return item[col.key as keyof T];
     };
-    const aVal = getSortValue(a);
-    const bVal = getSortValue(b);
-
-    // ── Numbers compare as numbers ────────────────────────────────────────
-    //
-    // Everything below stringifies, so without this a numeric column sorts
-    // LEXICOGRAPHICALLY: 1000 ahead of 250, and boarding's own nightly rates
-    // put $125 ahead of $38. The bug was invisible for a long time because
-    // it only shows up once a column holds values of differing digit length.
-    //
-    // Guarded on BOTH sides being finite numbers, which is what keeps this
-    // additive: every value that is not a number takes exactly the path it
-    // took before, so the 88 screens on this table are unaffected unless
-    // they were already sorting wrongly.
-    //
-    // Numeric STRINGS are deliberately NOT coerced. PostgREST returns
-    // `numeric` as a string, so it is tempting -- but "01234" is a postcode,
-    // a booking ref keeps its leading zeros, and a version is not a float.
-    // A column that wants numeric order says so with
-    // `sortValue: (row) => Number(row.field)`.
-    if (
-      typeof aVal === "number" &&
-      typeof bVal === "number" &&
-      Number.isFinite(aVal) &&
-      Number.isFinite(bVal)
-    ) {
-      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
-    }
-
-    const aStr = String(aVal).toLowerCase();
-    const bStr = String(bVal).toLowerCase();
-    if (aStr < bStr) return sortDirection === "asc" ? -1 : 1;
-    if (aStr > bStr) return sortDirection === "asc" ? 1 : -1;
-    return 0;
+    // The comparison itself lives in src/lib/table/sort.ts, so it can be
+    // tested without a browser. See that file for why numbers get their own
+    // branch and why numeric strings deliberately do not.
+    return compareSortValues(getSortValue(a), getSortValue(b), sortDirection);
   });
 
   const totalPages = Math.ceil(sortedData.length / itemsPerPage);

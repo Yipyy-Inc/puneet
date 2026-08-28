@@ -38,7 +38,7 @@ Always use **bun** as the package manager (not npm, yarn, or pnpm).
   explicitly asked. `main` is protected but `enforce_admins` is false, so the
   push is accepted. Decided 2026-08-19: the review round trip was costing more
   than it caught on a single-maintainer project.
-  - **Run the green sequence locally BEFORE pushing** — `bun run typecheck && bun run lint && bun run format:check`, plus `bun run build` for anything
+  - **Run the green sequence locally BEFORE pushing** — `bun run typecheck && bun run lint && bun run format:check && bun run test:unit`, plus `bun run build` for anything
     structural. It is faster to find a broken build here than to wait for CI,
     and CI is now what stands between a push and production.
   - **The pipeline gates the deploy, since 2026-08-25.** Vercel used to deploy

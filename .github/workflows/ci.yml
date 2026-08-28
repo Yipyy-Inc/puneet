@@ -70,6 +70,40 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run format:check
 
+  # ── THE PURE-LOGIC TESTS ──────────────────────────────────────────────────
+  #
+  # A third tier, added 2026-08-28, and deliberately a small one. Everything
+  # else here is either static analysis over the source or a real browser
+  # against a real Postgres. Neither could have caught what created this job.
+  #
+  # `DataTable`'s sort comparator, shared by ~88 screens, ordered every numeric
+  # column LEXICOGRAPHICALLY -- $125 ahead of $38, 1000 ahead of 250. It was
+  # found by eye on the HQ training price column, having shipped that way for
+  # months. Nothing failed. A sorted-wrongly table is indistinguishable from a
+  # sorted-rightly one unless you read the numbers.
+  #
+  # Static analysis cannot see it: the code was well-typed and well-formed. An
+  # e2e spec could, but only by seeding rows of a particular digit-length shape
+  # into the one shared production database in order to assert something three
+  # layers below the screen -- slow, flaky, and leaks rows when cancelled.
+  #
+  # So: pure functions, no React, no DOM, no database, no secrets. Under a
+  # second for the whole tier. `bunfig.toml` scopes `bun test` to tests/unit so
+  # it never wanders into the Playwright specs, which end in .spec.ts too.
+  #
+  # This is for logic that is worth being sure of and cheap to isolate -- a
+  # comparator, money arithmetic, a date window. It is NOT a place to move
+  # coverage that belongs against the real database; RLS, permissions and
+  # payments stay in Playwright, where they can actually be wrong.
+  unit:
+    name: unit (pure logic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run test:unit
+
   # ── THE PROJECT'S OWN RULES ────────────────────────────────────────────────
   #
   # Fourteen `check:*` scripts live in package.json. Each one exists because a
@@ -522,7 +556,7 @@ jobs:
   image:
     name: image (build & push to GHCR)
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, format, checks, sql, build]
+    needs: [typecheck, lint, format, unit, checks, sql, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
@@ -669,6 +703,18 @@ jobs:
       # verified by this point, so a broken unit file turns the run red — which
       # is what should happen — without ever standing between a deploy and
       # production.
+      # The deploy job does NOT check out the repository — SSHing to a box does
+      # not need one, and it had none until these steps arrived. Without this,
+      # scp finds nothing and fails with `tar: Cowardly refusing to create an
+      # empty archive`, which does not obviously mean "there is no checkout".
+      #
+      # Sparse, because the only thing wanted here is deploy/, and a full
+      # checkout on the deploy runner is a minute of nothing.
+      - name: Check out the unit files
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: deploy
+
       - name: Copy the timer units
         uses: appleboy/scp-action@v1
         with:
@@ -686,7 +732,9 @@ jobs:
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
-          script_stop: true
+          # No `script_stop`: this action does not accept it (it warns and
+          # ignores). `set -e` below is what actually stops on the first
+          # failure.
           script: |
             set -e
             install -m 0755 /tmp/yipyy-units/messaging-tick.sh /usr/local/bin/messaging-tick
