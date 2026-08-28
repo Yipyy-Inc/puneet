@@ -90,6 +90,35 @@ export function useCreateTrainingSeries(): UseMutationResult<
   });
 }
 
+export interface UpdateTrainingSeriesInput {
+  name?: string;
+  courseTypeName?: string;
+  locationId?: string | null;
+  staffId?: string | null;
+  capacity?: number;
+  totalPrice?: number;
+}
+
+/** Edits name/staff/location/capacity/price -- the schedule is immutable
+ *  after creation (see the migration header for why). */
+export function useUpdateTrainingSeries(): UseMutationResult<
+  void,
+  Error,
+  { id: string; patch: UpdateTrainingSeriesInput }
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }) =>
+      liveWrite<void>(`/api/training/series/${id}`, "PATCH", patch),
+    onSuccess: (_result, { id }) => {
+      client.invalidateQueries({ queryKey: realTrainingSeriesKeys.all });
+      client.invalidateQueries({
+        queryKey: realTrainingSeriesKeys.detail(id),
+      });
+    },
+  });
+}
+
 /** Cancels the series (and withdraws every enrollment on it) -- never deletes. */
 export function useCancelTrainingSeries(): UseMutationResult<
   void,

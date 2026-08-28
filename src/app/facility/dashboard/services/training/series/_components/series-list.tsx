@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import {
   DataTable,
   type ColumnDef,
   type FilterDef,
 } from "@/components/ui/DataTable";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,38 +28,42 @@ import {
   PlayCircle,
   CheckCircle2,
   Hourglass,
-  FileEdit,
   Users,
   Clock,
   GraduationCap,
-  MapPin,
   BookOpen,
   CircleSlash,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { trainingQueries } from "@/lib/api/training";
+import { getDayName } from "@/lib/training-series";
 import {
-  getDayName,
-  type TrainingSeries,
-  type SeriesStatus,
-} from "@/lib/training-series";
+  useTrainingSeriesList,
+  useCancelTrainingSeries,
+} from "@/lib/api/training-series";
+import { useFacilityLocations } from "@/lib/api/locations";
 import {
-  distinctEnrolledForSeries,
-  getKnownSeriesCourseTypes,
-  getKnownSeriesInstructors,
-  getKnownSeriesLocations,
-} from "@/data/training-series";
-import { SeriesEditDialog } from "./series-edit-dialog";
+  useTrainingTrainers,
+  assignableTrainers,
+} from "@/lib/api/training-trainers";
+import type { RealTrainingSeries } from "@/types/training-series";
+import { RealSeriesEditDialog } from "./real-series-edit-dialog";
+
+// ============================================================================
+// Real training series -- schedule, instructor, branch, capacity, price, and
+// how many pets are actually enrolled, read from Postgres. There is no
+// "upcoming"/"draft" workflow here (the mock had five statuses); a series is
+// `active` from the moment it's created, so "Upcoming" below just means
+// active with a start date still ahead, computed for display rather than
+// stored.
+// ============================================================================
+
+type DisplayStatus = "upcoming" | "active" | "completed" | "cancelled";
 
 const STATUS_META: Record<
-  SeriesStatus,
+  DisplayStatus,
   { label: string; cls: string; icon: typeof CalendarDays }
 > = {
-  draft: {
-    label: "Draft",
-    cls: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-200",
-    icon: FileEdit,
-  },
   upcoming: {
     label: "Upcoming",
     cls: "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-200",
@@ -84,6 +86,12 @@ const STATUS_META: Record<
   },
 };
 
+function displayStatus(s: RealTrainingSeries): DisplayStatus {
+  if (s.status === "cancelled" || s.status === "completed") return s.status;
+  const today = new Date().toISOString().slice(0, 10);
+  return s.startDate > today ? "upcoming" : "active";
+}
+
 function formatStartDate(iso: string): string {
   return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
     month: "short",
@@ -92,8 +100,8 @@ function formatStartDate(iso: string): string {
   });
 }
 
-function formatTimeLabel(hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
+function formatTimeLabel(hhmmss: string): string {
+  const [h, m] = hhmmss.split(":").map(Number);
   const period = h >= 12 ? "PM" : "AM";
   const hour12 = ((h + 11) % 12) + 1;
   return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
@@ -101,54 +109,16 @@ function formatTimeLabel(hhmm: string): string {
 
 export function SeriesList() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
-  const { data: serverSeries = [] } = useQuery(trainingQueries.series());
+  const { data: series = [] } = useTrainingSeriesList();
+  const { data: locations } = useFacilityLocations();
+  const { data: trainers } = useTrainingTrainers();
+  const cancel = useCancelTrainingSeries();
 
-  // Local overrides — mock data is static so saves/deletes live in component
-  // state on top of the server list. Swapping to a real API later just means
-  // dropping these and letting react-query do the work.
-  const [localOverrides, setLocalOverrides] = useState<
-    Record<string, TrainingSeries | null>
-  >({});
-
-  const series = useMemo(() => {
-    const out: TrainingSeries[] = [];
-    const seen = new Set<string>();
-    for (const s of serverSeries) {
-      if (localOverrides[s.id] === null) continue;
-      out.push(localOverrides[s.id] ?? s);
-      seen.add(s.id);
-    }
-    for (const [id, override] of Object.entries(localOverrides)) {
-      if (!override) continue;
-      if (seen.has(id)) continue;
-      out.push(override);
-    }
-    return out;
-  }, [serverSeries, localOverrides]);
-
-  const [editingSeries, setEditingSeries] = useState<TrainingSeries | null>(
+  const [editingSeries, setEditingSeries] = useState<RealTrainingSeries | null>(
     null,
   );
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [presetCourseTypeId, setPresetCourseTypeId] = useState<string | null>(
-    null,
-  );
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  // Deep link from the booking flow's "Create a series for this course"
-  // shortcut: open the create dialog pre-filled for the course type, then
-  // strip the params so a refresh doesn't reopen it.
-  useEffect(() => {
-    if (searchParams.get("create") !== "1") return;
-    setEditingSeries(null);
-    setPresetCourseTypeId(searchParams.get("course"));
-    setIsEditOpen(true);
-    router.replace("/facility/dashboard/services/training/series");
-    // Run once on mount for the initial query params.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const summary = useMemo(() => {
     let total = 0;
@@ -157,53 +127,55 @@ export function SeriesList() {
     let completed = 0;
     for (const s of series) {
       total++;
-      if (s.status === "upcoming") upcoming++;
-      else if (s.status === "active") active++;
-      else if (s.status === "completed") completed++;
+      const status = displayStatus(s);
+      if (status === "upcoming") upcoming++;
+      else if (status === "active") active++;
+      else if (status === "completed") completed++;
     }
     return { total, upcoming, active, completed };
   }, [series]);
 
   function handleAddNew() {
     setEditingSeries(null);
-    setPresetCourseTypeId(null);
     setIsEditOpen(true);
   }
 
-  function handleEdit(s: TrainingSeries) {
+  function handleEdit(s: RealTrainingSeries) {
     setEditingSeries(s);
-    setPresetCourseTypeId(null);
     setIsEditOpen(true);
   }
 
-  function handleSave(next: TrainingSeries) {
-    setLocalOverrides((prev) => ({ ...prev, [next.id]: next }));
-    toast.success(editingSeries ? "Series updated" : "Series created");
-    // Refresh any consumers of the series query — sessions on the calendar,
-    // customer enrollment views, etc.
-    queryClient.invalidateQueries({ queryKey: ["training", "series"] });
+  function confirmCancel() {
+    if (!cancellingId) return;
+    cancel.mutate(cancellingId, {
+      onSuccess: () => {
+        toast.success("Series cancelled");
+        setCancellingId(null);
+      },
+      onError: (err: Error) => {
+        toast.error(err.message);
+        setCancellingId(null);
+      },
+    });
   }
 
-  function confirmDelete() {
-    if (!deletingId) return;
-    setLocalOverrides((prev) => ({ ...prev, [deletingId]: null }));
-    toast.success("Series deleted");
-    setDeletingId(null);
-    queryClient.invalidateQueries({ queryKey: ["training", "series"] });
-  }
+  const courseTypeOptions = useMemo(() => {
+    const names = new Set(series.map((s) => s.courseTypeName).filter(Boolean));
+    return [...names];
+  }, [series]);
 
-  const columns: ColumnDef<TrainingSeries>[] = [
+  const columns: ColumnDef<RealTrainingSeries>[] = [
     {
-      key: "seriesName",
+      key: "name",
       label: "Series Name",
       icon: BookOpen,
       sortable: true,
       render: (s) => (
         <div className="flex flex-col">
-          <span className="font-semibold text-slate-800">{s.seriesName}</span>
+          <span className="font-semibold text-slate-800">{s.name}</span>
           <span className="text-muted-foreground text-[11px]">
-            {s.numberOfWeeks} week{s.numberOfWeeks === 1 ? "" : "s"} ·{" "}
-            {s.duration} min
+            {s.numberOfSessions} session{s.numberOfSessions === 1 ? "" : "s"} ·{" "}
+            {s.durationMinutes} min
           </span>
         </div>
       ),
@@ -213,7 +185,7 @@ export function SeriesList() {
       label: "Course Type",
       icon: GraduationCap,
       sortable: true,
-      render: (s) => s.courseTypeName,
+      render: (s) => s.courseTypeName || "—",
     },
     {
       key: "startDate",
@@ -236,34 +208,33 @@ export function SeriesList() {
       ),
     },
     {
-      key: "instructorName",
+      key: "staffName",
       label: "Instructor",
       icon: Users,
       sortable: true,
+      render: (s) => s.staffName ?? "Unassigned",
     },
     {
       key: "capacity",
       label: "Capacity",
       icon: Users,
       sortable: true,
-      sortValue: (s) =>
-        distinctEnrolledForSeries(s) / Math.max(s.maxCapacity, 1),
+      sortValue: (s) => s.enrolledCount / Math.max(s.capacity, 1),
       render: (s) => {
-        const enrolled = distinctEnrolledForSeries(s);
-        const full = enrolled >= s.maxCapacity;
+        const full = s.enrolledCount >= s.capacity;
         return (
           <span
             className={cn(
               "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums",
               full
                 ? "bg-amber-100 text-amber-700"
-                : enrolled / s.maxCapacity >= 0.75
+                : s.enrolledCount / Math.max(s.capacity, 1) >= 0.75
                   ? "bg-sky-100 text-sky-700"
                   : "bg-emerald-100 text-emerald-700",
             )}
-            title={`${enrolled} of ${s.maxCapacity} enrolled`}
+            title={`${s.enrolledCount} of ${s.capacity} enrolled${s.waitlistedCount > 0 ? `, ${s.waitlistedCount} waitlisted` : ""}`}
           >
-            {enrolled}/{s.maxCapacity}
+            {s.enrolledCount}/{s.capacity}
           </span>
         );
       },
@@ -273,8 +244,9 @@ export function SeriesList() {
       label: "Status",
       icon: PlayCircle,
       sortable: true,
+      sortValue: (s) => displayStatus(s),
       render: (s) => {
-        const meta = STATUS_META[s.status];
+        const meta = STATUS_META[displayStatus(s)];
         const Icon = meta.icon;
         return (
           <Badge
@@ -290,17 +262,12 @@ export function SeriesList() {
     },
   ];
 
-  const courseTypeOptions = useMemo(() => getKnownSeriesCourseTypes(), []);
-  const instructorOptions = useMemo(() => getKnownSeriesInstructors(), []);
-  const locationOptions = useMemo(() => getKnownSeriesLocations(), []);
-
   const filters: FilterDef[] = [
     {
-      key: "status",
+      key: "displayStatus",
       label: "Status",
       options: [
         { value: "all", label: "All Statuses" },
-        { value: "draft", label: "Draft" },
         { value: "upcoming", label: "Upcoming" },
         { value: "active", label: "Active" },
         { value: "completed", label: "Completed" },
@@ -308,30 +275,40 @@ export function SeriesList() {
       ],
     },
     {
-      key: "courseTypeId",
+      key: "courseTypeName",
       label: "Course Type",
       options: [
         { value: "all", label: "All Course Types" },
-        ...courseTypeOptions.map((c) => ({ value: c.id, label: c.name })),
+        ...courseTypeOptions.map((c) => ({ value: c, label: c })),
       ],
     },
     {
-      key: "instructorId",
+      key: "staffId",
       label: "Instructor",
       options: [
         { value: "all", label: "All Instructors" },
-        ...instructorOptions.map((t) => ({ value: t.id, label: t.name })),
+        ...assignableTrainers(trainers).map((t) => ({
+          value: t.staffId,
+          label: t.name,
+        })),
       ],
     },
     {
-      key: "location",
+      key: "locationId",
       label: "Location",
       options: [
         { value: "all", label: "All Locations" },
-        ...locationOptions.map((l) => ({ value: l, label: l })),
+        ...(locations ?? []).map((l) => ({ value: l.id, label: l.name })),
       ],
     },
   ];
+
+  // DataTable filters match against a row's OWN field by key -- `displayStatus`
+  // isn't a stored field, so it's attached here for the filter to read.
+  const rows = useMemo(
+    () => series.map((s) => ({ ...s, displayStatus: displayStatus(s) })),
+    [series],
+  );
 
   return (
     <div className="space-y-6">
@@ -344,6 +321,7 @@ export function SeriesList() {
           </p>
         </div>
         <Button
+          type="button"
           onClick={handleAddNew}
           className="bg-emerald-600 text-white hover:bg-emerald-700"
         >
@@ -380,14 +358,14 @@ export function SeriesList() {
       </div>
 
       <DataTable
-        data={series}
+        data={rows}
         columns={columns}
         filters={filters}
         searchPlaceholder="Search series, course type, instructor, location…"
         getSearchValue={(s) =>
-          [s.seriesName, s.courseTypeName, s.instructorName, s.location].join(
-            " ",
-          )
+          [s.name, s.courseTypeName, s.staffName, s.locationName]
+            .filter(Boolean)
+            .join(" ")
         }
         itemsPerPage={10}
         onRowClick={(s) =>
@@ -400,6 +378,7 @@ export function SeriesList() {
             onClick={(e) => e.stopPropagation()}
           >
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={(e) => {
@@ -411,13 +390,14 @@ export function SeriesList() {
               <Edit className="size-4" />
             </Button>
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                setDeletingId(s.id);
+                setCancellingId(s.id);
               }}
-              title="Delete series"
+              title="Cancel series"
             >
               <Trash2 className="text-destructive size-4" />
             </Button>
@@ -425,37 +405,33 @@ export function SeriesList() {
         )}
       />
 
-      <SeriesEditDialog
+      <RealSeriesEditDialog
+        key={editingSeries?.id ?? "new"}
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         editing={editingSeries}
-        presetCourseTypeId={presetCourseTypeId}
-        onSave={handleSave}
       />
 
       <AlertDialog
-        open={!!deletingId}
-        onOpenChange={(open) => !open && setDeletingId(null)}
+        open={!!cancellingId}
+        onOpenChange={(open) => !open && setCancellingId(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this series?</AlertDialogTitle>
+            <AlertDialogTitle>Cancel this series?</AlertDialogTitle>
             <AlertDialogDescription>
-              Deleting the series also removes its scheduled sessions. This
+              Every enrolled pet is withdrawn and their still-upcoming bookings
+              for this series are cancelled. Past sessions are left alone. This
               cannot be undone.
-              <span className="mt-2 block text-xs">
-                <MapPin className="mr-1 inline size-3 align-text-bottom" />
-                Sessions tied to this series in the Calendar will disappear.
-              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={confirmCancel}
               className="bg-red-600 text-white hover:bg-red-700"
             >
-              Delete
+              Cancel series
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
