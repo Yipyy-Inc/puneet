@@ -1,130 +1,88 @@
 "use client";
 
-import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, DollarSign, Send, TrendingUp } from "lucide-react";
+
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
-import {
-  formatRevenue,
-  lapsedClients,
-  rebookReminders,
-  type RebookReminder,
-} from "@/data/rebook-reminders";
+import { rebookQueries } from "@/lib/api/rebook";
 
-const monthLabel = (d: Date) =>
-  d.toLocaleString("en-US", { month: "short", year: "numeric" });
+// ============================================================================
+// What the rebook reminders have actually done.
+//
+// ── EVERY NUMBER HERE WAS INVENTED UNTIL 2026-08-28 ───────────────────────
+//
+// This row derived from `rebookReminders` and `lapsedClients` in
+// src/data/rebook-reminders.ts — hand-written arrays, identical at every
+// facility, on a system that had never sent a message. "Recovered revenue" was
+// the sum of a `recoveredRevenue` field somebody typed.
+//
+// All four now come from the outbox and from bookings, and those arrays have
+// been deleted rather than left lying around for the next person who needs
+// "some rebook data".
+//
+// ── RESPONSE RATE IS OVER SENT, NOT OVER ATTEMPTED ────────────────────────
+//
+// A reminder that was skipped because the client unsubscribed never reached
+// anybody, so counting it in the denominator would make the facility's
+// messaging look less effective than it is for a reason that has nothing to do
+// with the message. Skips are shown separately in the History tab, with reasons.
+// ============================================================================
 
-const inSameMonth = (iso: string | undefined, ref: Date) => {
-  if (!iso) return false;
-  const d = new Date(iso);
-  return (
-    d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth()
-  );
-};
+export function RebookAnalyticsRow() {
+  const history = useQuery(rebookQueries.history());
+  const lapsed = useQuery(rebookQueries.lapsed());
 
-interface RebookAnalyticsRowProps {
-  /** Override the runtime "now" — useful for tests/storybook. */
-  now?: Date;
-  /** Source data — defaults to the mock list so the row works standalone. */
-  reminders?: RebookReminder[];
-}
+  const stats = history.data?.stats;
+  const sent = stats?.sent ?? 0;
+  const rebooked = stats?.rebooked ?? 0;
+  const responseRate = sent === 0 ? null : Math.round((rebooked / sent) * 100);
 
-export function RebookAnalyticsRow({
-  now,
-  reminders = rebookReminders,
-}: RebookAnalyticsRowProps) {
-  const stats = useMemo(() => {
-    const today = now ?? new Date();
-    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-
-    const sentThisMonth = reminders.filter(
-      (r) =>
-        (r.status === "sent" || r.status === "rebooked") &&
-        inSameMonth(r.sentAt, today),
-    ).length;
-
-    const sentLastMonth = reminders.filter(
-      (r) =>
-        (r.status === "sent" || r.status === "rebooked") &&
-        inSameMonth(r.sentAt, lastMonth),
-    ).length;
-
-    const monthDelta = sentThisMonth - sentLastMonth;
-
-    const totalSentEver = reminders.filter(
-      (r) => r.status === "sent" || r.status === "rebooked",
-    ).length;
-    const totalRebookedEver = reminders.filter(
-      (r) => r.status === "rebooked",
-    ).length;
-    const responseRate =
-      totalSentEver === 0
-        ? 0
-        : Math.round((totalRebookedEver / totalSentEver) * 100);
-
-    const lapsedCount = lapsedClients.length;
-    const severeLapsed = lapsedClients.filter((l) => l.daysOverdue > 30).length;
-
-    const recoveredThisMonth = reminders
-      .filter(
-        (r) => r.status === "rebooked" && inSameMonth(r.rebookedAt, today),
-      )
-      .reduce((sum, r) => sum + (r.recoveredRevenue ?? 0), 0);
-
-    return {
-      sentThisMonth,
-      sentLastMonth,
-      monthDelta,
-      responseRate,
-      totalRebookedEver,
-      totalSentEver,
-      lapsedCount,
-      severeLapsed,
-      recoveredThisMonth,
-      currentMonthLabel: monthLabel(today),
-    };
-  }, [now, reminders]);
-
-  const monthDeltaHint =
-    stats.monthDelta === 0
-      ? `Same as ${monthLabel(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1))}`
-      : stats.monthDelta > 0
-        ? `+${stats.monthDelta} vs last month`
-        : `${stats.monthDelta} vs last month`;
+  const loading = history.isLoading || lapsed.isLoading;
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <KpiTile
-        label="Sent this month"
-        value={stats.sentThisMonth}
-        hint={monthDeltaHint}
+        label="Reminders sent"
+        value={loading ? "—" : String(sent)}
+        hint="Every rebook reminder that actually left"
         icon={Send}
         tone="violet"
       />
       <KpiTile
-        label="Response rate"
-        value={`${stats.responseRate}%`}
-        hint={`${stats.totalRebookedEver} of ${stats.totalSentEver} rebooked`}
+        label="Came back"
+        value={loading ? "—" : String(rebooked)}
+        // Null rather than 0% when nothing has been sent. "0%" reads as "the
+        // messages are not working"; the truth is that none have gone out.
+        hint={
+          responseRate === null
+            ? "Nothing sent yet"
+            : `${responseRate}% of those sent booked again`
+        }
         icon={TrendingUp}
         tone="emerald"
       />
       <KpiTile
-        label="Lapsed now"
-        value={stats.lapsedCount}
-        hint={
-          stats.severeLapsed > 0
-            ? `${stats.severeLapsed} over 30 days overdue`
-            : "All under 30 days"
-        }
-        icon={AlertTriangle}
-        tone="amber"
-      />
-      <KpiTile
         label="Revenue recovered"
-        value={formatRevenue(stats.recoveredThisMonth)}
-        hint={`Within 14d of reminder · ${stats.currentMonthLabel}`}
+        value={loading ? "—" : formatMoney(stats?.recoveredRevenue ?? 0)}
+        hint="Value of the bookings made after a reminder"
         icon={DollarSign}
         tone="indigo"
       />
+      <KpiTile
+        label="Lapsed clients"
+        value={loading ? "—" : String(lapsed.data?.clients.length ?? 0)}
+        hint="Overdue, with nothing in the diary"
+        icon={AlertTriangle}
+        tone="amber"
+      />
     </div>
   );
+}
+
+function formatMoney(amount: number): string {
+  return new Intl.NumberFormat("en-CA", {
+    style: "currency",
+    currency: "CAD",
+    maximumFractionDigits: 0,
+  }).format(amount);
 }

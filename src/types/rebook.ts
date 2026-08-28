@@ -74,6 +74,76 @@ export interface DismissResult {
   service: string;
 }
 
+/**
+ * Somebody approaching their expected return date — the Queue.
+ *
+ * The same row shape as a lapsed client, because it is the same row: one
+ * `rebook_pipeline` call answers both, and `daysOverdue` being negative is the
+ * only thing that makes this one "upcoming" rather than "overdue". Splitting
+ * them into two types would invite two definitions of who is excluded.
+ */
+export interface RebookDue extends LapsedClient {
+  /** last visit + the facility's expected interval. */
+  dueOn: string;
+  /** How far ahead of `dueOn` this facility writes. */
+  leadDays: number;
+  /** `dueOn - leadDays`. The date staff are actually looking at. */
+  scheduledSendOn: string;
+}
+
+export interface QueuePayload {
+  clients: RebookDue[];
+  configured: boolean;
+  remindersEnabledFor: string[];
+  /** The window that was asked for, echoed so the screen cannot mislabel it. */
+  daysAhead: number;
+}
+
+/** One rebook reminder that was attempted, read off the outbox. */
+export interface RebookHistoryEntry {
+  sendId: string;
+  clientId: string | null;
+  clientName: string | null;
+  service: string;
+  channel: string;
+  /** 'queued' | 'sending' | 'sent' | 'failed' | 'skipped' | 'cancelled'. */
+  status: string;
+  skipReason: string | null;
+  toAddress: string;
+  createdAt: string;
+  sentAt: string | null;
+  /**
+   * When they booked again afterwards, or null.
+   *
+   * Derived by a lateral join at read time, never stored — so it cannot be
+   * stale, and it cannot claim a rebook that was later cancelled.
+   */
+  rebookedAt: string | null;
+  /**
+   * What that booking was worth. `total_cost`, so it counts the same whether
+   * or not the customer has paid yet — the reminder brought the booking back
+   * either way.
+   */
+  rebookedTotal: number | null;
+}
+
+export interface RebookHistoryPayload {
+  entries: RebookHistoryEntry[];
+  /**
+   * Counted from the entries themselves rather than kept alongside them.
+   * A stored counter is free to disagree with the log it counts.
+   */
+  stats: {
+    sent: number;
+    waiting: number;
+    skipped: number;
+    failed: number;
+    rebooked: number;
+    /** Summed from the rebooked entries below, never stored. */
+    recoveredRevenue: number;
+  };
+}
+
 /** How long a dismissal lasts, in words — the tab explains this once. */
 export const DISMISSAL_EXPLANATION =
   "Dismissing hides this client until their next visit. If they come back and lapse again, they reappear on their own.";

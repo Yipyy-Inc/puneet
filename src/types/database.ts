@@ -10412,6 +10412,51 @@ export type Database = {
         };
         Returns: Json;
       };
+      rebook_history: {
+        Args: { p_facility_id: string; p_limit?: number };
+        Returns: {
+          channel: string;
+          client_id: string | null;
+          client_name: string | null;
+          created_at: string;
+          rebooked_at: string | null;
+          rebooked_total: number | null;
+          send_id: string;
+          sent_at: string | null;
+          service: string;
+          skip_reason: string | null;
+          status: string;
+          to_address: string;
+        }[];
+      };
+      rebook_pipeline: {
+        Args: {
+          p_facility_id: string;
+          p_limit?: number;
+          p_max_overdue?: number | null;
+          p_min_overdue?: number | null;
+          p_rules: Json;
+          p_today?: string;
+        };
+        Returns: {
+          client_email: string | null;
+          client_id: string;
+          client_name: string;
+          client_phone: string | null;
+          days_overdue: number;
+          days_since: number;
+          due_on: string;
+          expected_days: number;
+          is_lapsed: boolean;
+          last_booking_id: string | null;
+          last_visit_at: string;
+          lead_days: number;
+          pet_name: string | null;
+          reminders_sent: number;
+          scheduled_send_on: string;
+          service: string;
+        }[];
+      };
       stop_workflow_enrollment: {
         Args: { p_enrollment_id: string; p_reason?: string };
         Returns: {
