@@ -201,6 +201,8 @@ export async function PATCH(
     description?: string | null;
     status?: string;
     audience?: unknown;
+    triggerFilters?: unknown;
+    serviceTypes?: string[];
     locationIds?: string[];
     frequency?: string | null;
     dayOfWeek?: number | null;
@@ -291,6 +293,12 @@ export async function PATCH(
   }
   if (body.audience !== undefined && current.kind === "audience") {
     patch.audience = body.audience as never;
+  }
+  if (body.triggerFilters !== undefined && current.kind === "event") {
+    patch.trigger_filters = body.triggerFilters as never;
+  }
+  if (body.serviceTypes !== undefined && current.kind === "event") {
+    patch.service_types = body.serviceTypes;
   }
   if (body.locationIds !== undefined) patch.location_ids = body.locationIds;
   if (body.frequency !== undefined) patch.frequency = body.frequency;

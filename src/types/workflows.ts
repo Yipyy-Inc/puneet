@@ -63,6 +63,10 @@ export interface Workflow {
   trigger: string | null;
   /** Set when kind === 'audience'. */
   audience: Audience | null;
+  /** kind === 'event' only: narrow WHO the action starts it for. */
+  triggerFilters: Audience | null;
+  /** kind === 'event' only: narrow WHAT it starts on. Empty means every service. */
+  serviceTypes: string[];
 
   locationIds: string[];
   frequency: Frequency | null;

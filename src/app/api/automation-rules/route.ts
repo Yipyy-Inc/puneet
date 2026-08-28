@@ -4,6 +4,7 @@ import { getFacilityContext } from "@/lib/api/facility-context";
 import { RULE_SELECT, foldUsage, toRule } from "@/lib/api/mappers/automation";
 import { writeFailure } from "@/lib/api/write-failure";
 import { getViewer } from "@/lib/auth/viewer";
+import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import type { RealAutomationRule } from "@/types/automations";
 import { automationTriggerEnum } from "@/types/communications";
@@ -46,6 +47,28 @@ export async function GET() {
       { error: "No facility in this session." },
       { status: 403 },
     );
+  }
+
+  // The starter set, installed lazily and idempotently — the same shape as the
+  // template seeding, and for the same reason: a default is not a stored value
+  // until something needs it to be, and a facility created next month gets the
+  // same set without anyone remembering to backfill.
+  //
+  // Every seeded rule is DISABLED. They are a menu of what this module can do,
+  // which is what the spec asks for ("do not hide inactive rules — their
+  // existence should be discoverable"), not a system that starts messaging
+  // people because somebody opened a screen.
+  //
+  // Best effort: a failure here means the starter set is missing, not that the
+  // facility's own rules cannot be listed.
+  if (hasServiceRoleKey()) {
+    const { error: seedError } = await createAdminClient().rpc(
+      "ensure_automation_rules",
+      { p_facility_id: context.facilityId },
+    );
+    if (seedError) {
+      console.warn("[automations] rule seed skipped:", seedError.message);
+    }
   }
 
   const supabase = await createServerClient();

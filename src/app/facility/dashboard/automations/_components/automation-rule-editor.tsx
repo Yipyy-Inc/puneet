@@ -27,6 +27,7 @@ import type {
   RealAutomationRule,
   RealMessageTemplate,
 } from "@/types/automations";
+import { LocationScopeField } from "./location-scope-field";
 
 // ============================================================================
 // Writing a rule.
@@ -76,6 +77,9 @@ export function AutomationRuleEditor({
   const [isTransactional, setIsTransactional] = useState(
     rule?.isTransactional ?? false,
   );
+  const [locationIds, setLocationIds] = useState<string[]>(
+    rule?.locationIds ?? [],
+  );
 
   const emailTemplates = templates.filter((t) => t.channel === "email");
   const smsTemplates = templates.filter((t) => t.channel === "sms");
@@ -103,6 +107,7 @@ export function AutomationRuleEditor({
             emailTemplateId: email,
             smsTemplateId: sms,
             isTransactional,
+            locationIds,
           },
         },
         {
@@ -123,6 +128,7 @@ export function AutomationRuleEditor({
         emailTemplateId: email,
         smsTemplateId: sms,
         isTransactional,
+        locationIds,
       },
       {
         onSuccess: () => {
@@ -238,6 +244,8 @@ export function AutomationRuleEditor({
             </pre>
           </div>
         )}
+
+        <LocationScopeField value={locationIds} onChange={setLocationIds} />
 
         <label className="flex items-start gap-2 text-sm">
           <input
