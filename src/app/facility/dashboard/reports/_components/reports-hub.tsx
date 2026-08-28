@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import {
   DollarSign,
   Calendar,
@@ -33,6 +34,14 @@ export interface ReportEntry {
   description: string;
   implemented: boolean;
   tier?: ReportTier;
+  /**
+   * A report with its OWN ROUTE rather than a place in the shared sheet.
+   *
+   * Most reports are a panel in one drawer, which is right for a single table.
+   * A report with several tabs, each with its own filters and export, needs a
+   * page — and needs the browser's back button to mean something.
+   */
+  href?: string;
 }
 
 interface ReportCategory {
@@ -376,6 +385,16 @@ const CATALOG: ReportCategory[] = [
         implemented: false,
       },
       {
+        id: "tips",
+        name: "Tips",
+        description: "Collected, attributed, and what is still owed",
+        implemented: true,
+        // The only report here that OPENS A ROUTE rather than a sheet: three
+        // tabs with their own filters and CSV exports do not fit in the
+        // drawer the others share.
+        href: "/facility/dashboard/reports/tips",
+      },
+      {
         id: "commission-report",
         name: "Commission Report",
         description: "Groomer & trainer earnings",
@@ -547,11 +566,14 @@ function ReportCard({
   onClick: () => void;
 }) {
   const tier = report.tier ?? categoryTier;
-  return (
-    <button
-      onClick={onClick}
-      className="group bg-card hover:border-primary/40 relative flex items-start gap-3 rounded-xl border p-4 text-left transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:shadow-black/5 active:translate-y-0"
-    >
+  const shell =
+    "group bg-card hover:border-primary/40 relative flex items-start gap-3 rounded-xl border p-4 text-left transition-all duration-150 hover:-translate-y-px hover:shadow-md hover:shadow-black/5 active:translate-y-0";
+
+  // A report with its own page is a LINK, not a button that navigates. Middle
+  // click, open-in-new-tab and the browser's own history all come free, and
+  // none of them work on a click handler.
+  const Body = (
+    <>
       <span
         className={cn(
           "mt-[3px] size-2.5 shrink-0 rounded-full",
@@ -567,6 +589,20 @@ function ReportCard({
         </span>
       </span>
       <ChevronRight className="text-muted-foreground/0 group-hover:text-muted-foreground mt-0.5 size-4 shrink-0 -translate-x-1 transition-all group-hover:translate-x-0" />
+    </>
+  );
+
+  if (report.href) {
+    return (
+      <Link href={report.href} className={shell}>
+        {Body}
+      </Link>
+    );
+  }
+
+  return (
+    <button onClick={onClick} className={shell}>
+      {Body}
     </button>
   );
 }

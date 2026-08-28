@@ -9311,6 +9311,16 @@ export type Database = {
         Args: { p_profile_id: string; p_staff_legacy_id: string };
         Returns: Json;
       };
+      mark_tips_paid: {
+        Args: {
+          p_facility_id: string;
+          p_from: string;
+          p_note?: string;
+          p_staff_id: string;
+          p_to: string;
+        };
+        Returns: number;
+      };
       mark_report_card_viewed: {
         Args: { p_card_id: string };
         Returns: {

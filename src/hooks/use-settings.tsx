@@ -37,6 +37,7 @@ import type {
   NotificationToggle,
   ServiceNotificationDefault,
   TipConfig,
+  TipAttribution,
   Integration,
   ModuleAddon,
   GroomingScheduling,
@@ -106,6 +107,8 @@ interface SettingsContextValue {
     defaults: ServiceNotificationDefault[],
   ) => Promise<unknown>;
   updateTipConfig: (config: TipConfig) => Promise<unknown>;
+  tipAttribution: TipAttribution;
+  updateTipAttribution: (value: TipAttribution) => Promise<unknown>;
   updateIntegrations: (integrations: Integration[]) => void;
   updateAddons: (addons: ModuleAddon[]) => Promise<unknown>;
   updateWeatherRules: (rules: WeatherWarningRule[]) => Promise<unknown>;
@@ -312,6 +315,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   const updateTipConfig = (config: TipConfig) =>
     saveSetting.mutateAsync({ domain: "tip_config", value: config });
+  // A SEPARATE domain from tip_config on purpose: one decides what a customer
+  // is offered, the other decides who gets paid, and they are edited by
+  // different people for different reasons.
+  const updateTipAttribution = (value: TipAttribution) =>
+    saveSetting.mutateAsync({ domain: "tip_attribution", value });
   const updateIntegrations = (integrations: Integration[]) => {
     setIntegrationsData(integrations);
     localStorage.setItem("settings-integrations", JSON.stringify(integrations));
@@ -393,6 +401,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         networkPolicy,
         updateNetworkPolicy,
         updateTipConfig,
+        tipAttribution: facilitySettings.settings.tip_attribution.value,
+        updateTipAttribution,
         updateIntegrations,
         updateAddons,
         updateWeatherRules,

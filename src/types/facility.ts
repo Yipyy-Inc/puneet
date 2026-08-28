@@ -677,12 +677,72 @@ export const tipConfigSchema = z.object({
     belowThreshold: tipTierConfigSchema,
     aboveThreshold: tipTierConfigSchema,
   }),
+  /**
+   * Whether the customer may type their own figure.
+   *
+   * `.optional()` with a default read at the point of use, NOT `.default()`:
+   * every facility already has a `tip_config` row in Postgres written before
+   * these existed, and a required field would fail `safeParse` and fall the
+   * whole domain back to the shipped fixture — silently replacing a facility's
+   * own tips with somebody else's.
+   *
+   * The terminal is unaffected either way: Clover's own documentation says
+   * "custom tip" and "no tip" are always offered by the device, so this
+   * governs the web screens only.
+   */
+  customTip: z.boolean().optional(),
+  /** Offer "round up to the next dollar" alongside the three options. */
+  roundUp: z.boolean().optional(),
   /** Post-stay tip reminder (sent after check-out) */
   reminder: tipReminderConfigSchema.optional(),
   /** Controls the tip ask attached to automated report cards */
   reportCardPrompt: tipReportCardPromptSchema.optional(),
 });
 export type TipConfig = z.infer<typeof tipConfigSchema>;
+
+// ── Who the tip is owed to ──────────────────────────────────────────────────
+//
+// Set PER SERVICE, because facilities genuinely differ by service: a grooming
+// tip is nearly always the groomer's, while a daycare tip is for whoever was on
+// the floor that day and belongs in a pool.
+//
+// The four modes are not interchangeable, and the difference between the last
+// two matters at payout time:
+//
+//   assigned     the booking's own staff member takes all of it
+//   split_even   divided equally between the staff on the booking
+//   pool         collected, owed to nobody yet, distributed by a human
+//   none         collected and not attributed at all
+//
+// `pool` is a debt the facility still owes its people; `none` is not. Reporting
+// them as one thing would tell an owner they had settled up when they had not.
+
+export const tipAttributionModeSchema = z.enum([
+  "assigned",
+  "split_even",
+  "pool",
+  "none",
+]);
+export type TipAttributionMode = z.infer<typeof tipAttributionModeSchema>;
+
+export const tipAttributionRuleSchema = z.object({
+  mode: tipAttributionModeSchema,
+  /** Free text the facility writes for itself, e.g. "goes to the groomer". */
+  notes: z.string().max(200).optional(),
+});
+export type TipAttributionRule = z.infer<typeof tipAttributionRuleSchema>;
+
+export const tipAttributionSchema = z.object({
+  /**
+   * Applied to any service with no rule of its own — including a service type
+   * that does not exist yet. A facility should not have to revisit this screen
+   * because it started offering training.
+   */
+  defaultMode: tipAttributionModeSchema,
+  /** Keyed by `service_module`: grooming, boarding, daycare, training, retail… */
+  byService: z.record(z.string(), tipAttributionRuleSchema),
+});
+export type TipAttribution = z.infer<typeof tipAttributionSchema>;
 
 export const integrationSchema = z.object({
   id: z.string(),

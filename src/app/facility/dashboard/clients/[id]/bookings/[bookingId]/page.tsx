@@ -1726,6 +1726,29 @@ export default function ClientBookingDetailPage({
                           ${(invoice?.tipTotal ?? 0).toFixed(2)}
                         </span>
                       </div>
+
+                      {/* ── WHERE THE TIP CAME FROM ────────────────────────
+                          A facility reconciling a till needs to know which of
+                          these went through the card reader. Only shown when
+                          BOTH exist: labelling a single figure "Terminal" adds
+                          nothing when there is nothing to distinguish it from. */}
+                      {(tips?.bySource.terminal ?? 0) > 0 &&
+                        (tips?.bySource.online ?? 0) > 0 && (
+                          <div className="text-muted-foreground space-y-0.5 text-xs">
+                            <div className="flex justify-between">
+                              <span>Terminal</span>
+                              <span className="font-[tabular-nums]">
+                                ${(tips?.bySource.terminal ?? 0).toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Online</span>
+                              <span className="font-[tabular-nums]">
+                                ${(tips?.bySource.online ?? 0).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       <Separator />
                       <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                         Distribution

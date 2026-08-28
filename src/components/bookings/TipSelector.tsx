@@ -5,7 +5,7 @@ import { Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { TipConfig } from "@/types/facility";
-import { activeTipTier } from "@/lib/tips";
+import { activeTipTier, roundUpTip } from "@/lib/tips";
 
 interface TipSelectorProps {
   tipConfig: TipConfig;
@@ -25,6 +25,18 @@ export function TipSelector({
 }: TipSelectorProps) {
   const [showCustom, setShowCustom] = useState(false);
   const [customValue, setCustomValue] = useState("");
+
+  // ── THE FACILITY DECIDES WHETHER THESE EXIST ───────────────────────────
+  //
+  // Both were rendered unconditionally, so a facility that turned them off in
+  // Settings saw them anyway. `?? true` rather than a required field: every
+  // facility already has a `tip_config` row written before these existed, and
+  // the old behaviour was to show both.
+  //
+  // The terminal is not governed by either — Clover's own documentation says
+  // the device always offers "custom tip" and "no tip" itself.
+  const allowCustom = tipConfig.customTip ?? true;
+  const roundUp = (tipConfig.roundUp ?? true) ? roundUpTip(subtotal) : null;
 
   // The same rule the Clover terminal uses — see lib/tips.ts. It moved out of
   // here so a server route could reach it; a second copy would be a second
@@ -47,6 +59,13 @@ export function TipSelector({
     setShowCustom(false);
     setCustomValue("");
     onTipChange(0);
+  };
+
+  const handleRoundUp = () => {
+    if (roundUp === null) return;
+    setShowCustom(false);
+    setCustomValue("");
+    onTipChange(Math.abs(tipAmount - roundUp) < 0.01 ? 0 : roundUp);
   };
 
   const handleCustomApply = () => {
@@ -116,8 +135,30 @@ export function TipSelector({
         </button>
       </div>
 
+      {/* ── Round up ──────────────────────────────────────────────────────
+          Only when there IS something to round: `roundUpTip` returns null on a
+          whole-dollar bill, and an option that adds nothing is worse than no
+          option. */}
+      {roundUp !== null && (
+        <button
+          type="button"
+          onClick={handleRoundUp}
+          className={cn(
+            "w-full rounded-xl border-2 py-2 text-center text-xs font-medium transition-colors",
+            !showCustom && Math.abs(tipAmount - roundUp) < 0.01
+              ? "border-primary bg-primary/10 text-primary"
+              : "hover:border-primary/40 hover:bg-muted/50",
+          )}
+        >
+          Round up to ${(subtotal + roundUp).toFixed(2)}
+          <span className="text-muted-foreground ml-1">
+            (+${roundUp.toFixed(2)})
+          </span>
+        </button>
+      )}
+
       {/* Custom amount */}
-      {!showCustom ? (
+      {!allowCustom ? null : !showCustom ? (
         <button
           type="button"
           onClick={() => setShowCustom(true)}

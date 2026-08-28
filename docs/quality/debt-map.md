@@ -6548,6 +6548,56 @@ same four specs from failing twice in a row to 46/46 and the gate from four red
 to 162 passed. And before trusting a long run, check `git status` — a build
 started against a tree somebody else is editing is not a build of anything.
 
+### 🟠 The tip reminder and the report-card tip ask are configured and never sent — 2026-08-27
+
+`tip_config.reminder` (delay, channels, headline, body, "include the report
+card") and `tip_config.reportCardPrompt` are edited on Settings → Tips, written
+to Postgres, and **read by nothing**. Grep for either: the only hits are the
+schema, the settings screen, and the fixture.
+
+**Why it is worth an entry rather than a fix.** A facility configuring a
+post-checkout reminder is making a decision about how it talks to its customers,
+and getting back a screen that saves cleanly. Nothing tells them the message is
+never delivered. The Smart Tips specification, written against this build,
+records both sections as **KEEP — already built and correct**, which is how a
+gap like this survives a review.
+
+**What was done, 2026-08-27:** both sections now say so on the screen, in amber,
+above the fields. The config is left in place because its shape is right — what
+is missing is a sender, and that is a scheduled job rather than a component.
+
+**Do not "fix" this by deleting the fields.** The next person to want tip
+reminders would design the same schema again.
+
+### 🟡 There is no "sync tips to Clover" button, and there must not be one — 2026-08-27
+
+The Smart Tips specification asks for a sync button, a last-synced timestamp, a
+red/amber/green indicator and a "changes pending sync" banner — three CRITICAL
+tasks. None of it was built, and the reason belongs here so somebody does not
+build it later thinking it was overlooked.
+
+`app/api/payments/clover/terminal/route.ts` reads `tip_config` out of Postgres
+**on every payment** and hands it to the device in the same request. There is no
+second copy of the configuration anywhere, so there is nothing to push and
+nothing that can drift.
+
+A sync button would ADD the problem it appears to solve: a stored copy on the
+device, a window in which it disagrees with the screen, a failure state, and a
+banner nagging about a change that has already taken effect.
+
+Two related claims in that document are also false, and were checked rather than
+assumed:
+
+- _"Only percentage-based tips can be sent to the terminal; fixed amounts need
+  the nearest percentage equivalent."_ Clover's `read-tip` takes an `amount` in
+  **cents**, and `src/lib/tips.ts` has always sent fixed tips exactly.
+- _"Clover does not appear in Payment Gateways; tip settings cannot be pushed."_
+  Clover is the live processor and the tips reach the device today.
+
+`CloverTipPanel` renders what the device will draw, read-only, from the same
+`cloverTipSuggestions()` the terminal route calls — so the panel cannot disagree
+with the hardware, because there is one function computing one answer.
+
 ### 🟡 `CLOVER_HOSTS` covers two of Clover's four regions — 2026-08-27
 
 `src/lib/clover/config.ts` holds sandbox and **North America**. Clover also

@@ -21,6 +21,13 @@ export interface TipAllocation {
 export interface BookingTips {
   /** Signed sum of `payments.tip`: a refund takes its tip back with it. */
   tipCollected: number;
+  /**
+   * The same total, split by where it was taken.
+   *
+   * Derived from the payment's processor and entry method, never from `method`
+   * — a card at the counter and a card online are both `method = 'card'`.
+   */
+  bySource: { terminal: number; online: number; other: number };
   method: string | null;
   allocations: TipAllocation[];
 }
