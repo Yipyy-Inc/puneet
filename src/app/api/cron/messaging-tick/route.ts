@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 
 import { sendDueMessages } from "@/lib/messaging/dispatch";
+import {
+  advanceDueEnrollments,
+  runDueAudienceWorkflows,
+} from "@/lib/workflows/engine";
 
 // ============================================================================
 // The messaging tick: sending what was queued for later.
@@ -57,6 +61,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Not authorised." }, { status: 401 });
   }
 
+  // ORDER MATTERS, and it is this way round on purpose.
+  //
+  //   1. audience scan   — who qualifies today, enrol them
+  //   2. advance         — whose step is due, render it and QUEUE it
+  //   3. send            — drain everything queued, including step 2's work
+  //
+  // Sending last means a step that comes due goes out on the same tick rather
+  // than waiting five more minutes. Reversing it would add an invisible delay
+  // to every step of every sequence, and "the reminder arrives five minutes
+  // late" is the kind of bug nobody ever files.
+  const audience = await runDueAudienceWorkflows();
+  const advanced = await advanceDueEnrollments();
   const result = await sendDueMessages();
 
   // The counts are the point. A tick that reports `sent: 0, skipped: 12` is a
@@ -66,6 +82,14 @@ export async function GET(request: NextRequest) {
     sent: result.sent,
     skipped: result.skipped,
     failed: result.failed,
-    problems: result.problems.slice(0, 20),
+    enrolled: audience.enrolled + advanced.enrolled,
+    advanced: advanced.advanced,
+    completed: advanced.completed,
+    stopped: advanced.stopped,
+    problems: [
+      ...result.problems,
+      ...advanced.problems,
+      ...audience.problems,
+    ].slice(0, 20),
   });
 }
