@@ -6926,45 +6926,42 @@ is the complete list of what must be green is wrong by two jobs.
 **Not fixed here.** Adding to branch protection is a gate change, and this repo
 asks for those to be proposed explicitly and separately.
 
-### 🟠 Rebook Reminders is half converted, and the two halves look identical
+### 🟢 ~~Rebook Reminders is half converted, and the two halves look identical~~ — resolved 2026-08-28
 
-The **Lapsed** tab is now real: `public.lapsed_clients()` derives it from
-completed bookings and `facility_settings.rebook_config`, and Send, Dismiss and
-the per-service frequencies all write to Postgres. The **Queue**, **History**
-and **Analytics** tabs of the same card are still
-`src/data/rebook-reminders.ts` — `rebookReminders`, held in `useState`, with
-`stats` counted off it.
+**Resolved the same day it was written.** Queue, Lapsed, History and the
+analytics row all read Postgres now, and the fixtures they used to read —
+`rebookReminders` (26 invented reminders) and `lapsedClients` (5 invented
+people) — have been **deleted**, along with `DismissReminderDialog`, which had
+no remaining caller. `src/data/rebook-reminders.ts` went 817 → 317 lines;
+`RebookRemindersCard.tsx` went 1,437 → 633.
 
-They sit inside one 1,200-line component and render the same way, so nothing on
-screen tells you which tab you are looking at. Measured 2026-08-28:
+The substrate is one function, not four:
 
 ```
-lapsed  -> public.lapsed_clients(...)          7 real pairings on the demo facility
-queue   -> rebookReminders (fixture)          identical at every facility
-history -> rebookReminders (fixture)          "Total Sent" is a literal
+rebook_pipeline(facility, rules, today, min_overdue, max_overdue)
+  ├── is_lapsed = false → Queue      (a PROJECTION; nothing is scheduled)
+  └── is_lapsed = true  → Lapsed
+rebook_history(facility)             → History + the analytics row
+lapsed_clients(...)                  → a thin wrapper on the pipeline
 ```
 
-**Two specific things in the fixture half still claim a success they cannot
-perform**, both pre-dating this work and both left alone deliberately rather
-than half-fixed:
+`is_lapsed` is returned rather than filtered on, so both tabs read one
+definition of who is excluded. That mattered more than it sounds: the four
+exclusions (a booking already in the diary, a dismissal, an inactive client, an
+unconfigured service) had to be identical in both, and a second copy would have
+drifted the first time anybody fixed one of them.
 
-- The Defaults tab's per-service **Template** editor writes to a local draft
-  map and is lost on reload. The wording that actually gets sent is
-  `rebook_reminder` / `rebook_reminder_sms` in `message_templates`, editable on
-  the Templates tab. Per-service rebook wording is a real feature, but it needs
-  per-service template rows.
-- The Queue tab's Send Now / Dismiss act on fixture rows.
+**What is still a fixture here:** the per-client **Service Preferences**
+section, and the Defaults tab's per-service **Template** editor — the latter
+writes to a local draft map and is lost on reload. The wording that actually
+gets sent is `rebook_reminder` / `rebook_reminder_sms` in `message_templates`,
+editable on the Templates tab. Per-service rebook wording is a real feature, but
+it needs per-service template rows.
 
-`check:success-claims` does not catch either: its regex does not match
-`toast.success("Composer opened for …")`, which is how six such calls survived
-on the Lapsed tab until they were deleted.
-
-**What to do instead.** Convert the Queue on the same substrate rather than
-inventing a second one — a scheduled reminder is a `message_sends` row with a
-future `scheduled_for`, which the outbox and the tick already handle, and the
-History tab is a read of that same table. Do not add a `rebook_reminders` table:
-the reason the Lapsed conversion needed no new state is that the answer was
-always derivable, and the same is true here.
+**Do not add a `rebook_reminders` table.** The reason none of this needed new
+state is that every question was derivable from bookings and the outbox. The one
+thing that IS stored — `rebook_dismissals` — is stored because staff intent
+cannot be derived from anything.
 
 ### 🟡 `clients.status` is silently reverted for anyone without `edit_clients`
 

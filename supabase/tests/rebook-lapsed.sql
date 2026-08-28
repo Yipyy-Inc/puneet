@@ -192,11 +192,84 @@ begin
    where l.client_id = v_client;
   perform pg_temp.t(11, 'an inactive client is not chased', v_n = 0, v_n || ' row(s)');
 
-  update public.clients set status = 'active', is_blocked = true where id = v_client;
+  update public.clients set status = 'active', is_blocked = false where id = v_client;
+
+  -- ── The Queue and the Lapsed list come from ONE function ────────────────
+  --
+  -- `rebook_pipeline` returns `is_lapsed` rather than filtering on it, and
+  -- `lapsed_clients` is a wrapper that keeps the true half. P13 is the claim
+  -- that matters: the two lists cannot disagree about who is excluded, because
+  -- there is only one place the exclusions are written.
+
+  select count(*) into v_n
+    from public.rebook_pipeline(v_fac, v_rules, current_date, null, null, 500) p
+   where p.client_id = v_client and p.is_lapsed;
+  perform pg_temp.t(12, 'the pipeline agrees with lapsed_clients',
+    v_n = (select count(*) from public.lapsed_clients(v_fac, v_rules, current_date, 500) l
+            where l.client_id = v_client),
+    v_n || ' row(s)');
+
+  -- Somebody 100 days past a 28-day service is overdue, not upcoming. A Queue
+  -- that showed them would be offering to remind a client the Lapsed tab is
+  -- already chasing.
+  select count(*) into v_n
+    from public.rebook_pipeline(v_fac, v_rules, current_date, -30, null, 500) p
+   where p.client_id = v_client and not p.is_lapsed;
+  perform pg_temp.t(13, 'an overdue client is not in the upcoming queue',
+    v_n = 0, v_n || ' row(s)');
+
+  -- The send date is the DUE date minus the lead time, and the difference is
+  -- visible: a facility writing 7 days early has a queue a week ahead of its
+  -- own due dates.
+  select (p.due_on - p.scheduled_send_on) into v_n
+    from public.rebook_pipeline(v_fac,
+      '{"grooming":{"frequencyDays":28,"lapsedAfterDays":14,"leadDays":7}}'::jsonb,
+      current_date, null, null, 500) p
+   where p.client_id = v_client;
+  perform pg_temp.t(14, 'the send date is the due date minus the lead time',
+    v_n = 7, coalesce(v_n::text, 'null'));
+
+  -- ── History reads the outbox back, and credits a real rebooking ─────────
+
+  select count(*) into v_n
+    from public.rebook_history(v_fac, 200) h
+   where h.client_id = v_client;
+  perform pg_temp.t(15, 'the reminder appears in history', v_n = 1, v_n::text);
+
+  -- Nothing was booked after it, so nothing is credited. The direction that
+  -- matters: a history that credited a rebook with no booking behind it would
+  -- report the feature working when it was not.
+  select count(*) into v_n
+    from public.rebook_history(v_fac, 200) h
+   where h.client_id = v_client and h.rebooked_at is not null;
+  perform pg_temp.t(16, 'no booking means no rebook credited', v_n = 0, v_n::text);
+
+  -- `created_at` is set EXPLICITLY, a minute ahead. `now()` is frozen for the
+  -- whole transaction, so every row this file writes shares one timestamp --
+  -- and "the booking came after the message" is the exact comparison being
+  -- tested. Without this the assertion fails on `>` against an equal value,
+  -- which looks like the attribution being broken when it is the clock.
+  insert into public.bookings
+    (facility_id, client_id, service, status, start_at, end_at, total_cost,
+     created_at)
+  values
+    (v_fac, v_client, 'grooming', 'confirmed',
+     now() + interval '5 days', now() + interval '5 days' + interval '2 hours',
+     88.00, now() + interval '1 minute');
+
+  select count(*) into v_n
+    from public.rebook_history(v_fac, 200) h
+   where h.client_id = v_client
+     and h.rebooked_at is not null
+     and h.rebooked_total = 88.00;
+  perform pg_temp.t(17, 'a booking made afterwards is credited, with its value',
+    v_n = 1, v_n::text);
+
+  update public.clients set is_blocked = true where id = v_client;
   select count(*) into v_n
     from public.lapsed_clients(v_fac, v_rules, current_date, 500) l
    where l.client_id = v_client;
-  perform pg_temp.t(12, 'a blocked client is not chased', v_n = 0, v_n || ' row(s)');
+  perform pg_temp.t(18, 'a blocked client is not chased', v_n = 0, v_n || ' row(s)');
 end $$;
 
 select n, name, case when ok then 'PASS' else 'FAIL' end as result, detail

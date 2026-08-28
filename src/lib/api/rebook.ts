@@ -6,6 +6,8 @@ import type {
   DismissResult,
   LapsedPayload,
   LapsedTarget,
+  QueuePayload,
+  RebookHistoryPayload,
   RemindResult,
 } from "@/types/rebook";
 
@@ -43,6 +45,15 @@ export const rebookQueries = {
   lapsed: () => ({
     queryKey: ["rebook", "lapsed"] as const,
     queryFn: async () => get<LapsedPayload>("/api/rebook/lapsed"),
+  }),
+  /** Coming due within `days`. A projection, not a list of pending sends. */
+  queue: (days: number) => ({
+    queryKey: ["rebook", "queue", days] as const,
+    queryFn: async () => get<QueuePayload>(`/api/rebook/queue?days=${days}`),
+  }),
+  history: () => ({
+    queryKey: ["rebook", "history"] as const,
+    queryFn: async () => get<RebookHistoryPayload>("/api/rebook/history"),
   }),
 };
 
