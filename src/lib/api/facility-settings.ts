@@ -29,6 +29,8 @@ import type { PricingRules } from "@/lib/settings/pricing";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
 import type { RebookConfig } from "@/lib/settings/rebook";
+import type { ReputationConfig } from "@/lib/settings/reputation";
+import type { MessagingPolicy } from "@/lib/settings/messaging-policy";
 import type { LoyaltyProgramConfig } from "@/lib/settings/loyalty";
 import type { YipyyPayConfig } from "@/lib/settings/yipyy-pay";
 
@@ -81,6 +83,22 @@ export interface FacilitySettings {
    * app's assumed intervals and NOTHING may be sent off the back of it.
    */
   rebook_config: SettingState<RebookConfig>;
+  /**
+   * Review-request thresholds and windows.
+   *
+   * `configured: false` is the ordinary state and changes nothing: the review
+   * rule ships DISABLED, so a facility that has never opened this screen sends
+   * nothing and these numbers only describe how the ask would behave.
+   */
+  reputation_config: SettingState<ReputationConfig>;
+  /**
+   * Quiet hours, the per-day send cap and how late a queued message may be.
+   *
+   * MESSAGING-WIDE, not per feature: changing it changes every automation and
+   * every workflow step. The defaults are deliberately inert except
+   * `maxLatenessHours`, which is a correctness rule rather than a preference.
+   */
+  messaging_policy: SettingState<MessagingPolicy>;
   /**
    * Yipyy Pay preferences.
    *

@@ -2,30 +2,22 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import {
   Star,
   LayoutDashboard,
   List,
   Globe,
   Settings2,
-  Zap,
   AlertTriangle,
-  MessageSquare,
 } from "lucide-react";
-import { useReputation } from "@/hooks/use-reputation";
 import { ReputationAnalyticsTab } from "@/components/marketing/ReputationAnalyticsTab";
 import { ReputationRequestsTab } from "@/components/marketing/ReputationRequestsTab";
 import { ReputationEscalationsTab } from "@/components/marketing/ReputationEscalationsTab";
-import { ReputationMessageBuilder } from "@/components/marketing/ReputationMessageBuilder";
 import { ReputationPublicReviewsTab } from "@/components/marketing/ReputationPublicReviewsTab";
 import { ReputationSettingsTab } from "@/components/marketing/ReputationSettingsTab";
 
 export function ReputationBoosterShell() {
   const [activeTab, setActiveTab] = useState("overview");
-  const { settings } = useReputation();
-
-  const isEnabled = settings.enabled;
 
   return (
     <div className="space-y-6">
@@ -39,13 +31,6 @@ export function ReputationBoosterShell() {
             <h1 className="text-2xl font-bold tracking-tight">
               Reputation Booster
             </h1>
-            <Badge
-              variant={isEnabled ? "default" : "secondary"}
-              className={`gap-1 ${isEnabled ? "border-0 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" : ""}`}
-            >
-              <Zap className="h-3 w-3" />
-              {isEnabled ? "Active" : "Inactive"}
-            </Badge>
           </div>
           <p className="text-muted-foreground max-w-2xl text-sm">
             Ask every client for a review, send happy ones to Google and
@@ -73,10 +58,6 @@ export function ReputationBoosterShell() {
             <Globe className="h-4 w-4" />
             Booking page reviews
           </TabsTrigger>
-          <TabsTrigger value="messages" className="gap-2 px-3 text-sm">
-            <MessageSquare className="h-4 w-4" />
-            Messages
-          </TabsTrigger>
           <TabsTrigger value="settings" className="gap-2 px-3 text-sm">
             <Settings2 className="h-4 w-4" />
             Settings
@@ -97,10 +78,6 @@ export function ReputationBoosterShell() {
 
         <TabsContent value="public-reviews" className="mt-6">
           <ReputationPublicReviewsTab />
-        </TabsContent>
-
-        <TabsContent value="messages" className="mt-6">
-          <ReputationMessageBuilder />
         </TabsContent>
 
         <TabsContent value="settings" className="mt-6">

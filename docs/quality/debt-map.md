@@ -7102,12 +7102,48 @@ Real today:
 (rule, four templates, 28 tags) · quiet hours, the lateness cut-off and the
 daily cap in `sendOneQueued`.
 
-Still fixtures: every tab under `src/components/marketing/Reputation*.tsx`,
-`src/hooks/use-reputation.tsx` and its 30-second tick, `src/lib/api/reputation.ts`
-(every `queryFn` returns a constant), `src/lib/reputation/{trigger-engine,
-review-link,message-template,template-schema,escalation-task,resolve-client}.ts`.
+Converted since: the Overview/Performance/Locations tabs (collapsed into
+`ReputationAnalyticsTab`), the Requests tab and the Escalations tab, plus the
+routes under `src/app/api/reputation/`.
+
+Still a fixture: `ReputationPublicReviewsTab` (the booking-page showcase),
+`src/lib/api/reputation.ts` (every `queryFn` returns a constant), and
+`src/lib/reputation/{trigger-engine,review-link,message-template,
+template-schema,escalation-task,resolve-client}.ts`.
+
+**`use-reputation.tsx` is still mounted, and deliberately.** Two live screens
+call its `recordCheckout`: the daycare check-in page
+(`services/daycare/check-in`) and the training session view. Both are
+fixture-backed screens with numeric pet ids, so they cannot reach the real
+`check_out` emission yet, and removing the provider would take away the only
+reputation behaviour they have without replacing it. **Converting those two
+screens is what retires the provider** — not deleting it first.
+
+Its 30-second tick therefore still runs on every facility page. It only mutates
+`localStorage`, so it is dead weight rather than a hazard, but do not read it
+as evidence that anything is scheduled.
 
 **Do not build on the fixture half.** The conversion deletes it.
+
+### 🟠 A stored breach flag would be worse than no flag
+
+`review_escalations` has `first_response_due_at` and `resolve_due_at` and NO
+`is_breached`. Whether a ticket is late is computed at read time from the due
+date, every time.
+
+The reason is the failure mode. A stored flag needs something to set it; that
+something is a job; and a job that stops running turns every breach into an
+on-time ticket. On this queue, silence IS the failure being measured, so a
+mechanism that fails silent is the one thing it must not have.
+
+`breach_notified_at` IS stored, and the distinction is worth keeping straight:
+it records an action we took (we shouted about this one), not a property of the
+clock. Storing that is safe because a missing value means "not yet shouted",
+which is recoverable, rather than "not late", which is a lie.
+
+**Same rule for the SLA countdown on any screen: derive it.** If you find
+yourself adding a column that a cron job keeps in step with `now()`, the column
+is the bug.
 
 ### 🟠 The review rule is seeded DISABLED, and that is not a bug
 
