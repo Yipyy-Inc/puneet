@@ -1,648 +1,356 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Star,
-  Search,
-  Send,
-  Globe,
-  AlertCircle,
-  RotateCcw,
-  CheckCircle2,
-  Minus,
-  Mail,
-  Smartphone,
-  Clock,
-  ExternalLink,
+  Ban,
+  Check,
   ChevronDown,
-  ChevronUp,
-  SlidersHorizontal,
-  Copy,
+  Clock,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Star,
 } from "lucide-react";
-import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  NUDGE_OUTCOMES,
+  reviewRequestQueries,
+  SUPPRESS_REASONS,
+  type RequestSend,
+  type RequestState,
+  type ReviewRequestRow,
+} from "@/lib/api/reputation-requests";
 import { cn } from "@/lib/utils";
-import { useReputation } from "@/hooks/use-reputation";
-import { buildReviewPath } from "@/lib/reputation/review-link";
-import type {
-  ReputationRequest,
-  ReputationRequestStatus,
-  ReputationRating,
-} from "@/types/reputation";
 
-// ─── Status config ────────────────────────────────────────────────────────────
+// ============================================================================
+// What happened to each ask.
+//
+// ── THE SUPPRESSED ROWS ARE NOT AN EDGE CASE ──────────────────────────────
+//
+// They are the reason this screen is worth opening. A facility whose review
+// rate looks poor usually has a suppression reason repeating down this list —
+// no mobile number on file, a cooldown set too long, a run of refunds — and the
+// previous build could not show any of it, because a refused request was never
+// written down.
+//
+// So SUPPRESSED is a first-class filter, and the machine reason is translated
+// into a sentence here. A screen showing `negative_pause` would be showing its
+// own schema.
+//
+// ── TIMES ARE THE FACILITY'S, WITH THE ZONE SAID OUT LOUD ─────────────────
+//
+// The audit found "Request sent via Email — Apr 29, 4:00 a.m." and a rating at
+// 6:14 a.m. Both were UTC rendered as if local. Every timestamp here is
+// formatted in the viewer's own zone with the zone name attached, so a 4 a.m.
+// that IS 4 a.m. can be told from one that is a rendering artefact.
+//
+// ── NO SURVEY LINK IS OFFERED ─────────────────────────────────────────────
+//
+// The old trail card had "Open survey" and "Copy link" buttons. The token now
+// exists only in the message that was sent, and that is deliberate: a member of
+// staff who can open a customer's survey can answer it as them.
+// ============================================================================
 
-const STATUS_STYLES: Record<
-  ReputationRequestStatus,
-  { label: string; cls: string; icon: React.ReactNode }
-> = {
-  not_sent: {
-    label: "Not Sent",
-    cls: "bg-muted text-muted-foreground",
-    icon: <Minus className="h-3 w-3" />,
-  },
-  scheduled: {
-    label: "Scheduled",
-    cls: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
-    icon: <Clock className="h-3 w-3" />,
-  },
-  sent: {
-    label: "Sent",
-    cls: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-    icon: <Send className="h-3 w-3" />,
-  },
-  reminder_sent: {
-    label: "Reminder",
-    cls: "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300",
-    icon: <RotateCcw className="h-3 w-3" />,
-  },
-  rating_received: {
-    label: "Rated",
-    cls: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-    icon: <Star className="h-3 w-3" />,
-  },
-  public_push_sent: {
-    label: "Public",
-    cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
-    icon: <Globe className="h-3 w-3" />,
-  },
-  escalated: {
-    label: "Escalated",
-    cls: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
-    icon: <AlertCircle className="h-3 w-3" />,
-  },
-  closed: {
-    label: "Closed",
-    cls: "bg-muted text-muted-foreground",
-    icon: <CheckCircle2 className="h-3 w-3" />,
-  },
-};
-
-function StatusPill({ status }: { status: ReputationRequestStatus }) {
-  const s = STATUS_STYLES[status];
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase",
-        s.cls,
-      )}
-    >
-      {s.icon}
-      {s.label}
-    </span>
-  );
-}
-
-function RatingBadge({ rating }: { rating: ReputationRating }) {
-  const color =
-    rating >= 4
-      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-      : rating === 3
-        ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
-        : "bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300";
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
-        color,
-      )}
-    >
-      <Star className="h-3 w-3 fill-current" />
-      {rating}
-    </span>
-  );
-}
-
-// ─── Status tabs (group raw statuses into intuitive buckets) ──────────────────
-
-type StatusTab = "all" | "outreach" | "rated" | "public" | "closed";
-
-type SortField = "sentAt" | "rating";
-
-function SortIcon({
-  field,
-  sortField,
-  sortDir,
-}: {
-  field: SortField;
-  sortField: SortField;
-  sortDir: "asc" | "desc";
-}) {
-  if (sortField !== field)
-    return <ChevronDown className="text-muted-foreground/40 size-3" />;
-  return sortDir === "asc" ? (
-    <ChevronUp className="size-3" />
-  ) : (
-    <ChevronDown className="size-3" />
-  );
-}
-
-const STATUS_TABS: { value: StatusTab; label: string }[] = [
-  { value: "outreach", label: "Outreach" },
-  { value: "rated", label: "Rated" },
-  { value: "public", label: "Public" },
-  { value: "closed", label: "Closed" },
+const TABS: { value: RequestState | "all"; label: string }[] = [
   { value: "all", label: "All" },
+  { value: "sent", label: "Waiting" },
+  { value: "rated", label: "Answered" },
+  { value: "suppressed", label: "Not asked" },
+  { value: "expired", label: "Expired" },
+  { value: "failed", label: "Failed" },
 ];
 
-function matchesTab(status: ReputationRequestStatus, tab: StatusTab) {
-  if (tab === "all") return true;
-  if (tab === "outreach")
-    return (
-      status === "not_sent" ||
-      status === "scheduled" ||
-      status === "sent" ||
-      status === "reminder_sent"
-    );
-  if (tab === "rated")
-    return status === "rating_received" || status === "escalated";
-  if (tab === "public") return status === "public_push_sent";
-  if (tab === "closed") return status === "closed";
-  return true;
-}
+export function ReputationRequestsTab() {
+  const [tab, setTab] = useState<RequestState | "all">("all");
 
-// ─── Audit log (rendered inline in expanded row) ──────────────────────────────
+  const { data, isPending, error } = useQuery(
+    reviewRequestQueries.list(tab === "all" ? {} : { state: tab }),
+  );
 
-function AuditLog({ req }: { req: ReputationRequest }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-      <div className="space-y-3">
-        <div className="bg-background rounded-lg border p-3">
-          <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-            Trail
-          </p>
-          <div className="mt-2 space-y-2 text-xs">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Channel</span>
-              <span className="text-foreground inline-flex items-center gap-1 font-medium">
-                {req.channel === "sms" ? (
-                  <Smartphone className="size-3" />
-                ) : (
-                  <Mail className="size-3" />
-                )}
-                {req.channel.toUpperCase()}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Reminders</span>
-              <span className="text-foreground font-medium tabular-nums">
-                {req.remindersCount}
-              </span>
-            </div>
-            {req.publicLinkClicked && req.publicPlatform && (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Pushed to</span>
-                <span className="text-foreground font-medium capitalize">
-                  {req.publicPlatform}
-                </span>
-              </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-1.5">
+        {TABS.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => setTab(item.value)}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+              tab === item.value
+                ? "border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                : "text-muted-foreground hover:bg-muted",
             )}
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Survey link</span>
-              <div className="flex items-center gap-2">
-                <a
-                  href={buildReviewPath(req.id)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-foreground inline-flex items-center gap-1 font-medium hover:underline"
-                >
-                  Open <ExternalLink className="size-3" />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard?.writeText(
-                      window.location.origin + buildReviewPath(req.id),
-                    );
-                    toast.success("Survey link copied");
-                  }}
-                  className="text-muted-foreground hover:text-foreground inline-flex items-center"
-                  aria-label="Copy survey link"
-                >
-                  <Copy className="size-3" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {req.clientComment && (
-          <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/30">
-            <p className="text-[10px] font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-400">
-              Client comment
-            </p>
-            <p className="text-foreground mt-1 text-xs italic">
-              &ldquo;{req.clientComment}&rdquo;
-            </p>
-          </div>
-        )}
-        {req.feedbackText && (
-          <div className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 dark:border-rose-900 dark:bg-rose-950/30">
-            <p className="text-[10px] font-semibold tracking-wide text-rose-700 uppercase dark:text-rose-400">
-              <AlertCircle className="mr-1 inline size-3" />
-              Internal feedback
-            </p>
-            <p className="text-foreground mt-1 text-xs">{req.feedbackText}</p>
-          </div>
-        )}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
 
-      <div>
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-          Audit log
-        </p>
-        <div className="border-muted relative mt-2 space-y-2.5 border-l-2 pl-4">
-          {req.auditLog.map((entry) => (
-            <div key={entry.id} className="relative">
-              <div className="bg-primary absolute top-1 -left-[1.1rem] h-2 w-2 rounded-full" />
-              <p className="text-xs leading-none font-medium">{entry.action}</p>
-              <p className="text-muted-foreground mt-0.5 text-[11px]">
-                {new Date(entry.timestamp).toLocaleString("en-CA", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
-              </p>
-            </div>
+      {error ? (
+        <Card>
+          <CardContent className="text-muted-foreground py-10 text-center text-sm">
+            {error instanceof Error
+              ? error.message
+              : "Could not load requests."}
+          </CardContent>
+        </Card>
+      ) : isPending ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="text-muted-foreground size-6 animate-spin" />
+        </div>
+      ) : data.requests.length === 0 ? (
+        <Card>
+          <CardContent className="text-muted-foreground py-12 text-center text-sm">
+            {tab === "all"
+              ? "Nobody has been asked yet. Review requests go out after check-out, once the automation is switched on."
+              : "Nothing in this state."}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {data.requests.map((request) => (
+            <RequestCard key={request.id} request={request} />
           ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-// ─── Request row ──────────────────────────────────────────────────────────────
-
-function RequestRow({
-  req,
-  expanded,
-  onToggle,
-}: {
-  req: ReputationRequest;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  const isNeg = req.rating !== undefined && req.rating <= 2;
+function RequestCard({ request }: { request: ReviewRequestRow }) {
+  const [open, setOpen] = useState(false);
+  const suppressed = request.state === "suppressed";
 
   return (
-    <>
-      <tr
-        className={cn(
-          "hover:bg-muted/30 cursor-pointer border-t transition-colors",
-          expanded && "bg-muted/20",
-          isNeg && !expanded && "bg-rose-50/40 dark:bg-rose-950/10",
-        )}
-        onClick={onToggle}
-      >
-        {/* Client / pet */}
-        <td className="py-3 pr-3 pl-5">
-          <div className="flex items-center gap-2.5">
-            <div
-              className={cn(
-                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                isNeg
-                  ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"
-                  : req.rating && req.rating >= 4
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
-                    : "bg-muted text-muted-foreground",
-              )}
-            >
-              {req.clientName.charAt(0)}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm/none font-medium">
-                {req.clientName}
-              </p>
-              <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
-                {req.petName}
-              </p>
-            </div>
-          </div>
-        </td>
+    <Card>
+      <CardContent className="p-0">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="hover:bg-muted/30 flex w-full items-center gap-3 p-3 text-left transition-colors"
+        >
+          <StateDot request={request} />
 
-        {/* Service */}
-        <td className="px-3 py-3">
-          <span className="text-foreground text-xs capitalize">
-            {req.serviceLabel}
-          </span>
-        </td>
-
-        {/* Channel */}
-        <td className="px-3 py-3">
-          <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-            {req.channel === "sms" ? (
-              <Smartphone className="size-3 opacity-60" />
-            ) : (
-              <Mail className="size-3 opacity-60" />
-            )}
-            <span className="uppercase">{req.channel}</span>
-          </span>
-        </td>
-
-        {/* Status */}
-        <td className="px-3 py-3">
-          <StatusPill status={req.status} />
-        </td>
-
-        {/* Rating */}
-        <td className="px-3 py-3">
-          {req.rating ? (
-            <div className="flex items-center gap-1.5">
-              <RatingBadge rating={req.rating} />
-              {isNeg && <AlertCircle className="size-3.5 text-rose-500" />}
-              {req.publicLinkClicked && (
-                <ExternalLink className="size-3.5 text-emerald-500" />
-              )}
-            </div>
-          ) : (
-            <span className="text-muted-foreground text-xs">—</span>
-          )}
-        </td>
-
-        {/* Sent / scheduled */}
-        <td className="px-3 py-3">
-          <div className="flex flex-col gap-0.5">
-            {req.status === "scheduled" && req.scheduledSendAt ? (
-              <span className="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400">
-                <Clock className="size-3" />
-                {new Date(req.scheduledSendAt).toLocaleString("en-CA", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold">
+                {request.client.name}
               </span>
-            ) : (
-              <span className="text-foreground inline-flex items-center gap-1 text-xs">
-                <Clock className="size-3 opacity-60" />
-                {new Date(req.sentAt).toLocaleDateString("en-CA", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
-            )}
-            {req.remindersCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-purple-600 dark:text-purple-400">
-                <RotateCcw className="size-3" />
-                {req.remindersCount} reminder{req.remindersCount > 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
-        </td>
-
-        {/* Staff */}
-        <td className="py-3 pr-5 pl-3">
-          <span className="text-muted-foreground text-xs">
-            {req.staffName ?? "—"}
-          </span>
-        </td>
-      </tr>
-
-      {expanded && (
-        <tr className="bg-muted/10 border-t">
-          <td colSpan={7} className="px-5 py-4">
-            <AuditLog req={req} />
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
-// ─── Requests tab ─────────────────────────────────────────────────────────────
-
-export function ReputationRequestsTab() {
-  const { requests } = useReputation();
-
-  const [tab, setTab] = useState<StatusTab>("all");
-  const [search, setSearch] = useState("");
-  const [filterService, setFilterService] = useState("all");
-  const [filterRating, setFilterRating] = useState("all");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<"sentAt" | "rating">("sentAt");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-
-  const counts = useMemo(
-    () => ({
-      all: requests.length,
-      outreach: requests.filter((r) => matchesTab(r.status, "outreach")).length,
-      rated: requests.filter((r) => matchesTab(r.status, "rated")).length,
-      public: requests.filter((r) => matchesTab(r.status, "public")).length,
-      closed: requests.filter((r) => matchesTab(r.status, "closed")).length,
-    }),
-    [requests],
-  );
-
-  const filtered = useMemo(() => {
-    let list = requests.filter((r) => matchesTab(r.status, tab));
-
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (r) =>
-          r.clientName.toLowerCase().includes(q) ||
-          r.petName.toLowerCase().includes(q),
-      );
-    }
-    if (filterService !== "all")
-      list = list.filter((r) => r.service === filterService);
-    if (filterRating !== "all") {
-      if (filterRating === "negative")
-        list = list.filter((r) => r.rating !== undefined && r.rating <= 2);
-      else list = list.filter((r) => r.rating === parseInt(filterRating));
-    }
-
-    list.sort((a, b) => {
-      if (sortField === "sentAt") {
-        const diff =
-          new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime();
-        return sortDir === "asc" ? diff : -diff;
-      } else {
-        const ra = a.rating ?? 0;
-        const rb = b.rating ?? 0;
-        return sortDir === "asc" ? ra - rb : rb - ra;
-      }
-    });
-
-    return list;
-  }, [requests, tab, search, filterService, filterRating, sortField, sortDir]);
-
-  function toggleSort(field: typeof sortField) {
-    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortField(field);
-      setSortDir("desc");
-    }
-  }
-
-  const services = [...new Set(requests.map((r) => r.service))];
-
-  return (
-    <div className="flex w-full min-w-0 flex-col">
-      {/* Header */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold tracking-tight">Requests</h2>
-          <span className="text-muted-foreground bg-muted inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-semibold">
-            {counts.all}
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search anything here..."
-              className="h-9 w-56 pl-8 text-sm"
-            />
-          </div>
-          <Select value={filterService} onValueChange={setFilterService}>
-            <SelectTrigger className="h-9 w-32 text-sm">
-              <SlidersHorizontal className="mr-1 size-3.5" />
-              <SelectValue placeholder="Service" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All services</SelectItem>
-              {services.map((s) => (
-                <SelectItem key={s} value={s} className="capitalize">
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterRating} onValueChange={setFilterRating}>
-            <SelectTrigger className="h-9 w-32 text-sm">
-              <Star className="mr-1 size-3.5" />
-              <SelectValue placeholder="Rating" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All ratings</SelectItem>
-              <SelectItem value="5">★★★★★ 5 stars</SelectItem>
-              <SelectItem value="4">★★★★ 4 stars</SelectItem>
-              <SelectItem value="3">★★★ 3 stars</SelectItem>
-              <SelectItem value="negative">★★ Negative</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="mb-4 flex border-b">
-        {STATUS_TABS.map((t) => {
-          const isActive = tab === t.value;
-          const count = counts[t.value];
-          return (
-            <button
-              key={t.value}
-              onClick={() => {
-                setTab(t.value);
-                setExpandedId(null);
-              }}
-              className={cn(
-                "relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t.label}
-              {count > 0 && (
-                <span
-                  className={cn(
-                    "inline-flex size-5 items-center justify-center rounded-full text-[10px] font-bold",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground",
-                  )}
+              {request.service_types.map((service) => (
+                <Badge
+                  key={service}
+                  variant="secondary"
+                  className="text-[10px] capitalize"
                 >
-                  {count}
+                  {service}
+                </Badge>
+              ))}
+              {request.response && (
+                <span className="flex items-center gap-0.5 text-xs font-semibold">
+                  {request.response.rating}
+                  <Star className="size-3 fill-amber-400 text-amber-400" />
                 </span>
               )}
-              {isActive && (
-                <span className="bg-primary absolute inset-x-0 -bottom-px h-0.5" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+            </div>
+            <p className="text-muted-foreground mt-0.5 truncate text-xs">
+              {suppressed
+                ? (SUPPRESS_REASONS[request.suppress_reason ?? ""] ??
+                  "Not asked")
+                : (request.response?.comment ?? describeState(request))}
+            </p>
+          </div>
 
-      {/* Table */}
-      <div className="bg-card overflow-hidden rounded-xl border">
-        {filtered.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px]">
-              <thead className="bg-muted/30">
-                <tr className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                  <th className="py-3 pr-3 pl-5 text-left">Client / Pet</th>
-                  <th className="px-3 py-3 text-left">Service</th>
-                  <th className="px-3 py-3 text-left">Channel</th>
-                  <th className="px-3 py-3 text-left">Status</th>
-                  <th
-                    className="hover:text-foreground cursor-pointer px-3 py-3 text-left"
-                    onClick={() => toggleSort("rating")}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      Rating{" "}
-                      <SortIcon
-                        field="rating"
-                        sortField={sortField}
-                        sortDir={sortDir}
-                      />
-                    </span>
-                  </th>
-                  <th
-                    className="hover:text-foreground cursor-pointer px-3 py-3 text-left"
-                    onClick={() => toggleSort("sentAt")}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      Sent{" "}
-                      <SortIcon
-                        field="sentAt"
-                        sortField={sortField}
-                        sortDir={sortDir}
-                      />
-                    </span>
-                  </th>
-                  <th className="py-3 pr-5 pl-3 text-left">Staff</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((req) => (
-                  <RequestRow
-                    key={req.id}
-                    req={req}
-                    expanded={expandedId === req.id}
-                    onToggle={() =>
-                      setExpandedId((cur) => (cur === req.id ? null : req.id))
-                    }
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-muted-foreground flex flex-col items-center py-16 text-center">
-            <Search className="mb-3 size-10 opacity-25" />
-            <p className="font-medium">
-              {search || filterService !== "all" || filterRating !== "all"
-                ? "No matches"
-                : "Nothing here yet"}
+          <ChevronDown
+            className={cn(
+              "text-muted-foreground size-4 shrink-0 transition-transform",
+              open && "rotate-180",
+            )}
+          />
+        </button>
+
+        {open && <Trail request={request} />}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StateDot({ request }: { request: ReviewRequestRow }) {
+  if (request.state === "suppressed") {
+    return (
+      <span className="text-muted-foreground bg-muted flex size-8 shrink-0 items-center justify-center rounded-full">
+        <Ban className="size-4" />
+      </span>
+    );
+  }
+  if (request.response) {
+    return (
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40">
+        <Check className="size-4" />
+      </span>
+    );
+  }
+  return (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950/40">
+      <Clock className="size-4" />
+    </span>
+  );
+}
+
+function describeState(request: ReviewRequestRow): string {
+  if (request.state === "expired") return "No answer, and the link has closed";
+  if (request.state === "failed") return "The message could not be sent";
+  const sent = request.sends.find((send) => send.step_index === 0);
+  if (sent?.sent_at) return `Asked ${when(sent.sent_at)}`;
+  return `Going out ${when(request.first_send_at)}`;
+}
+
+function Trail({ request }: { request: ReviewRequestRow }) {
+  return (
+    <div className="space-y-4 border-t px-3 py-3">
+      {request.state === "suppressed" ? (
+        <div>
+          <p className="text-xs font-semibold">Not asked</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {SUPPRESS_REASONS[request.suppress_reason ?? ""] ??
+              request.suppress_reason}
+            {request.suppress_stage === "send" &&
+              " — checked again just before sending"}
+          </p>
+          {request.next_eligible_at && (
+            <p className="text-muted-foreground mt-1 text-xs">
+              Eligible again {when(request.next_eligible_at)}
             </p>
-            <p className="mt-1 text-sm">
-              {search || filterService !== "all" || filterRating !== "all"
-                ? "Try a different search or filter."
-                : "Requests will appear here once sent."}
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold">What went out</p>
+          {request.sends.length === 0 ? (
+            <p className="text-muted-foreground text-xs">Nothing queued yet.</p>
+          ) : (
+            request.sends.map((send) => <SendRow key={send.id} send={send} />)
+          )}
+          {request.nudge_outcome && (
+            <p className="text-muted-foreground text-xs">
+              Follow-up: {NUDGE_OUTCOMES[request.nudge_outcome]}
             </p>
+          )}
+        </div>
+      )}
+
+      {request.response && (
+        <div>
+          <p className="text-xs font-semibold">What they said</p>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="flex items-center gap-0.5 text-xs font-semibold">
+              {request.response.rating}
+              <Star className="size-3 fill-amber-400 text-amber-400" />
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {when(request.response.submitted_at)} · via{" "}
+              {request.response.source.replace("_", " ")}
+            </span>
+            {request.response.public_clicked_at && (
+              <Badge variant="secondary" className="text-[10px]">
+                Followed the public link
+              </Badge>
+            )}
           </div>
-        )}
-      </div>
+          {request.response.comment && (
+            <p className="text-muted-foreground mt-1 text-xs italic">
+              &ldquo;{request.response.comment}&rdquo;
+            </p>
+          )}
+          {request.response.staff && (
+            <p className="text-muted-foreground mt-1 text-xs">
+              Credited to {request.response.staff.first_name}{" "}
+              {request.response.staff.last_name}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
+}
+
+function SendRow({ send }: { send: RequestSend }) {
+  const [showBody, setShowBody] = useState(false);
+  const Icon = send.channel === "email" ? Mail : MessageSquare;
+
+  return (
+    <div className="text-xs">
+      <div className="flex items-start gap-2">
+        <Icon className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p>
+            <span className="font-medium">
+              {send.step_index === 0 ? "The ask" : "Follow-up"}
+            </span>{" "}
+            <span className="text-muted-foreground">
+              {send.sent_at
+                ? `sent ${when(send.sent_at)}`
+                : send.status === "skipped"
+                  ? `not sent — ${send.skip_reason ?? "skipped"}`
+                  : `due ${when(send.scheduled_for)}`}
+            </span>
+          </p>
+          {send.last_error && (
+            <p className="mt-0.5 text-rose-600 dark:text-rose-400">
+              {send.last_error}
+            </p>
+          )}
+        </div>
+
+        {/* The rendered copy. "What did you tell my customer" is a question a
+            facility has to be able to answer, and `body_rendered` is the record
+            CASL requires them to keep — frozen literally, by
+            `message_sends_freeze`, so this is the copy that went out rather
+            than whatever the template says today.
+
+            Inline rather than a dialog: it is a lookup, not a document, and a
+            modal would be the fourth interactive thing on an already dense row. */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground h-6 shrink-0 px-2 text-[11px]"
+          onClick={() => setShowBody((value) => !value)}
+        >
+          {showBody ? "Hide" : "View"}
+        </Button>
+      </div>
+
+      {showBody && (
+        <div className="bg-muted/40 mt-1.5 ml-5 rounded-lg border p-2">
+          {send.subject_rendered && (
+            <p className="font-medium">{send.subject_rendered}</p>
+          )}
+          <p className="text-muted-foreground mt-1 whitespace-pre-wrap">
+            {send.body_rendered}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A timestamp in the VIEWER's zone, with the zone named.
+ *
+ * The audit found an SMS logged at 4:00 a.m. that was really 4:00 UTC. Naming
+ * the zone is what lets somebody tell a genuine 4 a.m. send from a rendering
+ * artefact without opening the database.
+ */
+function when(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
 }
