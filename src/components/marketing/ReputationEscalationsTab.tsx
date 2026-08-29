@@ -1,194 +1,328 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  Check,
+  Clock,
+  Loader2,
   Phone,
-  Gift,
-  CheckCircle2,
   Star,
-  Bell,
-  Mail,
-  Smartphone,
-  ShieldCheck,
 } from "lucide-react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  actOnEscalation,
+  escalationQueries,
+  hoursOverdue,
+  RESOLUTION_CODES,
+  RESOLUTION_LABELS,
+  type Escalation,
+  type ResolutionCode,
+} from "@/lib/api/reputation-escalations";
 import { cn } from "@/lib/utils";
-import { useReputation } from "@/hooks/use-reputation";
-import { resolveEscalationAssignees } from "@/lib/reputation/review-link";
-import type { ReputationRequest } from "@/types/reputation";
 
-const CREDIT_PRESETS = [10, 25, 50];
+// ============================================================================
+// The recovery queue.
+//
+// ── WHAT THIS REPLACED ────────────────────────────────────────────────────
+//
+// A tab over a localStorage overlay, whose tickets had no age, no due date and
+// no resolution. One had been open since 27 April with nothing on screen
+// suggesting that was odd. Its "Call via IVR" button navigated to the calling
+// page — an IVR is an inbound menu system, so the label was wrong as well as
+// the behaviour, and its "Apology credit" mutated an in-memory array that reset
+// on reload.
+//
+// ── THE AGE IS THE FEATURE ────────────────────────────────────────────────
+//
+// Ordered by due date, breached first, with the overdue hours on the card. A
+// queue ordered by arrival puts the ticket you have already missed at the
+// bottom, which is how one stayed open for four months.
+//
+// ── CLOSING REQUIRES SAYING HOW ───────────────────────────────────────────
+//
+// The resolution code is not paperwork. It is what turns "we fixed four of
+// eight Laval complaints for the same reason" from a hunch into a query, and
+// the database refuses a resolution without one — so this form asks for it
+// rather than discovering the constraint.
+// ============================================================================
 
-function Stars({ value }: { value: number }) {
+export function ReputationEscalationsTab() {
+  const [scope, setScope] = useState<"open" | "resolved">("open");
+  const { data, isPending, error } = useQuery(escalationQueries.list(scope));
+
   return (
-    <span className="inline-flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star
-          key={n}
-          className={cn(
-            "size-3.5",
-            n <= value
-              ? "fill-amber-400 text-amber-400"
-              : "text-muted-foreground/30 fill-transparent",
-          )}
-        />
-      ))}
-    </span>
+    <div className="space-y-4">
+      <div className="flex gap-1.5">
+        {(["open", "resolved"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setScope(value)}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-xs font-medium capitalize transition-colors",
+              scope === value
+                ? "border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                : "text-muted-foreground hover:bg-muted",
+            )}
+          >
+            {value === "open" ? "Needs work" : "Resolved"}
+          </button>
+        ))}
+      </div>
+
+      {error ? (
+        <Card>
+          <CardContent className="text-muted-foreground py-10 text-center text-sm">
+            {error instanceof Error
+              ? error.message
+              : "Could not load the queue."}
+          </CardContent>
+        </Card>
+      ) : isPending ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="text-muted-foreground size-6 animate-spin" />
+        </div>
+      ) : data.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
+            <Check className="size-6 text-emerald-500" />
+            <p className="text-sm font-medium">
+              {scope === "open" ? "Nothing to recover" : "Nothing resolved yet"}
+            </p>
+            <p className="text-muted-foreground max-w-sm text-xs">
+              {scope === "open"
+                ? "A rating at or below your escalation threshold opens a ticket here, with a clock on it."
+                : "Resolved tickets keep their resolution code, so you can see what actually fixed things."}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {data.map((ticket) => (
+            <TicketCard key={ticket.id} ticket={ticket} scope={scope} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
-function fmt(iso?: string) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
-}
-
-// ─── Ticket card ──────────────────────────────────────────────────────────────
-
 function TicketCard({
-  req,
-  routedTo,
-  onCall,
-  onApology,
-  onResolve,
+  ticket,
+  scope,
 }: {
-  req: ReputationRequest;
-  routedTo: string;
-  onCall: (r: ReputationRequest) => void;
-  onApology: (r: ReputationRequest) => void;
-  onResolve: (r: ReputationRequest) => void;
+  ticket: Escalation;
+  scope: "open" | "resolved";
 }) {
-  const resolved = req.status === "closed";
+  const queryClient = useQueryClient();
+  const [resolving, setResolving] = useState(false);
+  const [code, setCode] = useState<ResolutionCode | "">("");
+  const [note, setNote] = useState("");
+
+  const overdue = hoursOverdue(ticket);
+  const client = ticket.response.request.client;
+
+  const act = useMutation({
+    mutationFn: (action: Parameters<typeof actOnEscalation>[1]) =>
+      actOnEscalation(ticket.id, action),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["reputation", "escalations"],
+      });
+    },
+    onError: (failure) => {
+      // Say what went wrong. A silent failure on this screen means somebody
+      // believes they have logged a call they have not logged.
+      toast.error(
+        failure instanceof Error ? failure.message : "That could not be saved.",
+      );
+    },
+  });
 
   return (
     <Card
-      className={cn(
-        resolved ? "opacity-80" : "border-rose-200 dark:border-rose-900/50",
-      )}
+      className={cn(overdue !== null && "border-rose-300 dark:border-rose-900")}
     >
       <CardContent className="space-y-3 p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-full",
-                resolved
-                  ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40"
-                  : "bg-rose-100 text-rose-600 dark:bg-rose-950/40",
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold">{client.name}</span>
+              <span className="flex items-center gap-0.5 text-xs font-semibold">
+                {ticket.response.rating}
+                <Star className="size-3 fill-amber-400 text-amber-400" />
+              </span>
+              {ticket.service_type && (
+                <Badge variant="secondary" className="text-[10px] capitalize">
+                  {ticket.service_type}
+                </Badge>
               )}
-            >
-              {resolved ? (
-                <ShieldCheck className="size-4" />
-              ) : (
-                <AlertTriangle className="size-4" />
-              )}
+              <StateBadge ticket={ticket} overdue={overdue} />
             </div>
-            <div className="min-w-0">
-              <p className="text-sm/none font-semibold">
-                {req.clientName}
-                <span className="text-muted-foreground font-normal">
-                  {" "}
-                  · {req.petName}
-                </span>
-              </p>
-              <div className="mt-1 flex items-center gap-2">
-                <Stars value={req.rating ?? 0} />
-                <span className="text-muted-foreground text-xs capitalize">
-                  {req.serviceLabel}
-                </span>
-              </div>
-            </div>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {when(ticket.opened_at)}
+              {ticket.response.staff &&
+                ` · ${ticket.response.staff.first_name} ${ticket.response.staff.last_name} was on the visit`}
+            </p>
           </div>
-          <Badge
-            className={cn(
-              "border-0",
-              resolved
-                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-                : "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+
+          <div className="text-muted-foreground text-right text-xs">
+            {ticket.resolved_at ? (
+              <span>Resolved {when(ticket.resolved_at)}</span>
+            ) : ticket.acknowledged_at ? (
+              <span>Resolve by {when(ticket.resolve_due_at)}</span>
+            ) : (
+              <span>Acknowledge by {when(ticket.first_response_due_at)}</span>
             )}
-          >
-            {resolved ? "Resolved" : "Escalated"}
-          </Badge>
+          </div>
         </div>
 
-        {req.feedbackText && (
-          <div className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 dark:border-rose-900 dark:bg-rose-950/30">
-            <p className="text-foreground text-sm">“{req.feedbackText}”</p>
-          </div>
+        {ticket.response.comment && (
+          <p className="bg-muted/40 rounded-lg border p-2 text-xs italic">
+            &ldquo;{ticket.response.comment}&rdquo;
+          </p>
         )}
 
-        <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-          <span>Received {fmt(req.ratedAt)}</span>
-          {routedTo && (
-            <span className="inline-flex items-center gap-1">
-              <ShieldCheck className="size-3" /> Routed to {routedTo}
+        {ticket.resolution_code && (
+          <p className="text-xs">
+            <span className="font-medium">
+              {RESOLUTION_LABELS[ticket.resolution_code]}
             </span>
-          )}
-          {!resolved && (
-            <span className="inline-flex items-center gap-2">
-              Alerts sent:
-              <span className="inline-flex items-center gap-1">
-                <Smartphone className="size-3" /> SMS
+            {ticket.resolution_note && (
+              <span className="text-muted-foreground">
+                {" "}
+                — {ticket.resolution_note}
               </span>
-              <span className="inline-flex items-center gap-1">
-                <Mail className="size-3" /> Email
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Bell className="size-3" /> Bell
-              </span>
-            </span>
-          )}
-          {req.apologyCreditAmount != null && (
-            <span className="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
-              <Gift className="size-3" /> ${req.apologyCreditAmount} credit
-              issued
-            </span>
-          )}
-          {resolved && req.resolvedAt && (
-            <span>Resolved {fmt(req.resolvedAt)}</span>
-          )}
-        </div>
+            )}
+          </p>
+        )}
 
-        {!resolved && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onCall(req)}
-              className="gap-1.5"
-            >
-              <Phone className="size-3.5" /> Call client
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onApology(req)}
-              className="gap-1.5"
-            >
-              <Gift className="size-3.5" /> Apology credit
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => onResolve(req)}
-              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-            >
-              <CheckCircle2 className="size-3.5" /> Resolve ticket
-            </Button>
+        {ticket.events.length > 0 && (
+          <ul className="text-muted-foreground space-y-0.5 text-xs">
+            {[...ticket.events]
+              .sort((a, b) => a.occurred_at.localeCompare(b.occurred_at))
+              .map((event) => (
+                <li key={event.id}>
+                  {when(event.occurred_at)} — {describeEvent(event.kind)}
+                  {typeof event.payload.note === "string" &&
+                    `: ${event.payload.note}`}
+                </li>
+              ))}
+          </ul>
+        )}
+
+        {scope === "open" && (
+          <div className="space-y-2 border-t pt-3">
+            {!resolving ? (
+              <div className="flex flex-wrap gap-2">
+                {!ticket.acknowledged_at && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={act.isPending}
+                    onClick={() => act.mutate({ action: "acknowledge" })}
+                  >
+                    I am on it
+                  </Button>
+                )}
+                {/* "Call client", not "Call via IVR": an IVR is an inbound menu
+                    system. This records that a call happened; it does not dial,
+                    and it does not claim to. */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  disabled={act.isPending || !client.phone}
+                  onClick={() =>
+                    act.mutate({
+                      action: "log",
+                      kind: "call",
+                      note: client.phone ? `Called ${client.phone}` : undefined,
+                    })
+                  }
+                >
+                  <Phone className="size-3.5" />
+                  Log a call
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  disabled={act.isPending}
+                  onClick={() => setResolving(true)}
+                >
+                  Resolve
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Select
+                  value={code}
+                  onValueChange={(value) => setCode(value as ResolutionCode)}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="What fixed it?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RESOLUTION_CODES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {RESOLUTION_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Textarea
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  placeholder="Anything worth knowing next time (optional)"
+                  className="min-h-16 resize-none text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    disabled={!code || act.isPending}
+                    onClick={() =>
+                      code &&
+                      act.mutate(
+                        {
+                          action: "resolve",
+                          resolutionCode: code,
+                          note: note.trim() || undefined,
+                        },
+                        { onSuccess: () => setResolving(false) },
+                      )
+                    }
+                  >
+                    {act.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      "Mark resolved"
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setResolving(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
@@ -196,177 +330,62 @@ function TicketCard({
   );
 }
 
-// ─── Escalations tab ──────────────────────────────────────────────────────────
-
-export function ReputationEscalationsTab() {
-  const router = useRouter();
-  const { requests, settings, resolveEscalation, grantApology } =
-    useReputation();
-
-  const routedTo = (req: ReputationRequest) =>
-    resolveEscalationAssignees(settings, req.service)
-      .map((a) => a.name)
-      .join(", ");
-
-  const [apologyFor, setApologyFor] = useState<ReputationRequest | null>(null);
-  const [creditAmount, setCreditAmount] = useState(25);
-
-  const { open, resolved } = useMemo(() => {
-    const escalated = requests.filter((r) => r.escalatedToManager);
-    return {
-      open: escalated.filter((r) => r.status !== "closed"),
-      resolved: escalated.filter((r) => r.status === "closed"),
-    };
-  }, [requests]);
-
-  // "IVR" was the wrong word: an IVR is an inbound menu system, and this is
-  // click-to-call. The rename matters because it is what staff read before
-  // dialling somebody who has just complained.
-  function handleCall(req: ReputationRequest) {
-    toast.info(`Opening the dialer for ${req.clientName}…`);
-    router.push("/facility/dashboard/calling");
+function StateBadge({
+  ticket,
+  overdue,
+}: {
+  ticket: Escalation;
+  overdue: number | null;
+}) {
+  if (overdue !== null) {
+    return (
+      <Badge className="gap-1 border-0 bg-rose-100 text-[10px] text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+        <AlertTriangle className="size-3" />
+        {overdue}h overdue
+      </Badge>
+    );
   }
-
-  function handleResolve(req: ReputationRequest) {
-    resolveEscalation(req.id);
-    toast.success(`Ticket resolved — ${req.clientName}`, {
-      description: "The manager follow-up task has been marked complete.",
-    });
+  if (ticket.resolved_at) {
+    return (
+      <Badge className="gap-1 border-0 bg-emerald-100 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+        <Check className="size-3" />
+        Resolved
+      </Badge>
+    );
   }
-
-  function confirmApology() {
-    if (!apologyFor || creditAmount <= 0) return;
-    grantApology(apologyFor.id, creditAmount);
-    toast.success(`$${creditAmount} apology credit issued`, {
-      description: `Added to ${apologyFor.clientName}'s account.`,
-    });
-    setApologyFor(null);
-    setCreditAmount(25);
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Intro */}
-      <div className="flex items-start gap-3 rounded-xl border border-rose-100 bg-rose-50/60 p-4 dark:border-rose-900/40 dark:bg-rose-950/10">
-        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-600" />
-        <div>
-          <p className="text-sm font-semibold">Internal Escalation Ledger</p>
-          <p className="text-muted-foreground mt-0.5 text-sm">
-            Negative reviews are intercepted before they reach public platforms.
-            Each one alerts the manager and opens a ticket here with quick
-            service-recovery actions.
-          </p>
-        </div>
-      </div>
-
-      {/* Open tickets */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
-            Open tickets
-          </h2>
-          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-100 px-1.5 text-xs font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
-            {open.length}
-          </span>
-        </div>
-        {open.length > 0 ? (
-          <div className="grid gap-3">
-            {open.map((req) => (
-              <TicketCard
-                key={req.id}
-                req={req}
-                routedTo={routedTo(req)}
-                onCall={handleCall}
-                onApology={(r) => {
-                  setApologyFor(r);
-                  setCreditAmount(25);
-                }}
-                onResolve={handleResolve}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-muted-foreground flex flex-col items-center rounded-xl border border-dashed py-12 text-center">
-            <ShieldCheck className="mb-2 size-8 opacity-30" />
-            <p className="text-sm font-medium">No open escalations</p>
-            <p className="text-xs">
-              Negative reviews will appear here for follow-up.
-            </p>
-          </div>
-        )}
-      </section>
-
-      {/* Resolved */}
-      {resolved.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
-            Resolved ({resolved.length})
-          </h2>
-          <div className="grid gap-3">
-            {resolved.map((req) => (
-              <TicketCard
-                key={req.id}
-                req={req}
-                routedTo={routedTo(req)}
-                onCall={handleCall}
-                onApology={() => {}}
-                onResolve={() => {}}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Apology credit dialog */}
-      <Dialog
-        open={apologyFor != null}
-        onOpenChange={(o) => !o && setApologyFor(null)}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Gift className="size-4" /> Send apology credit
-            </DialogTitle>
-            <DialogDescription>
-              Issue store credit to {apologyFor?.clientName} as a goodwill
-              gesture.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              {CREDIT_PRESETS.map((amt) => (
-                <Button
-                  key={amt}
-                  type="button"
-                  variant={creditAmount === amt ? "default" : "outline"}
-                  onClick={() => setCreditAmount(amt)}
-                  className="flex-1"
-                >
-                  ${amt}
-                </Button>
-              ))}
-            </div>
-            <Input
-              type="number"
-              min={1}
-              value={creditAmount}
-              onChange={(e) => setCreditAmount(Number(e.target.value))}
-              className="w-full"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApologyFor(null)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={confirmApology}
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
-            >
-              Issue ${creditAmount} credit
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+    <Badge variant="secondary" className="gap-1 text-[10px]">
+      <Clock className="size-3" />
+      {ticket.acknowledged_at ? "In recovery" : "Waiting"}
+    </Badge>
   );
+}
+
+function describeEvent(kind: string): string {
+  const words: Record<string, string> = {
+    opened: "Ticket opened",
+    assigned: "Assigned",
+    acknowledged: "Acknowledged",
+    call: "Called them",
+    message: "Messaged them",
+    note: "Note added",
+    credit: "Credit given",
+    refund: "Refunded",
+    state_change: "Status changed",
+    sla_breach: "Missed the deadline",
+    resolved: "Resolved",
+    reinvited: "Asked again",
+  };
+  return words[kind] ?? kind;
+}
+
+/** With the zone named, for the reason the Requests tab gives. */
+function when(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
 }

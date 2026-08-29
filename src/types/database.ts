@@ -6815,6 +6815,157 @@ export type Database = {
           },
         ];
       };
+      review_escalation_events: {
+        Row: {
+          actor: string | null;
+          escalation_id: string;
+          facility_id: string;
+          id: number;
+          kind: string;
+          occurred_at: string;
+          payload: Json;
+        };
+        Insert: {
+          actor?: string | null;
+          escalation_id: string;
+          facility_id: string;
+          id?: never;
+          kind: string;
+          occurred_at?: string;
+          payload?: Json;
+        };
+        Update: {
+          actor?: string | null;
+          escalation_id?: string;
+          facility_id?: string;
+          id?: never;
+          kind?: string;
+          occurred_at?: string;
+          payload?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "review_escalation_events_actor_fkey";
+            columns: ["actor"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "review_escalation_events_escalation_id_fkey";
+            columns: ["escalation_id"];
+            isOneToOne: false;
+            referencedRelation: "review_escalations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "review_escalation_events_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      review_escalations: {
+        Row: {
+          acknowledged_at: string | null;
+          acknowledged_by: string | null;
+          assignee_ids: string[];
+          breach_notified_at: string | null;
+          created_at: string;
+          facility_id: string;
+          first_response_due_at: string;
+          id: string;
+          location_id: string | null;
+          opened_at: string;
+          resolution_code: string | null;
+          resolution_note: string | null;
+          resolve_due_at: string;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          response_id: string;
+          service_type: string | null;
+          state: string;
+        };
+        Insert: {
+          acknowledged_at?: string | null;
+          acknowledged_by?: string | null;
+          assignee_ids?: string[];
+          breach_notified_at?: string | null;
+          created_at?: string;
+          facility_id: string;
+          first_response_due_at: string;
+          id?: string;
+          location_id?: string | null;
+          opened_at?: string;
+          resolution_code?: string | null;
+          resolution_note?: string | null;
+          resolve_due_at: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          response_id: string;
+          service_type?: string | null;
+          state?: string;
+        };
+        Update: {
+          acknowledged_at?: string | null;
+          acknowledged_by?: string | null;
+          assignee_ids?: string[];
+          breach_notified_at?: string | null;
+          created_at?: string;
+          facility_id?: string;
+          first_response_due_at?: string;
+          id?: string;
+          location_id?: string | null;
+          opened_at?: string;
+          resolution_code?: string | null;
+          resolution_note?: string | null;
+          resolve_due_at?: string;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          response_id?: string;
+          service_type?: string | null;
+          state?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "review_escalations_acknowledged_by_fkey";
+            columns: ["acknowledged_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "review_escalations_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "review_escalations_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "review_escalations_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "review_escalations_response_id_fkey";
+            columns: ["response_id"];
+            isOneToOne: true;
+            referencedRelation: "review_responses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       review_requests: {
         Row: {
           booking_ids: string[];

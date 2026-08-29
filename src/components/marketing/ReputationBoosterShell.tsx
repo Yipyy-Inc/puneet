@@ -23,11 +23,8 @@ import { ReputationSettingsTab } from "@/components/marketing/ReputationSettings
 
 export function ReputationBoosterShell() {
   const [activeTab, setActiveTab] = useState("overview");
-  const { settings, requests } = useReputation();
+  const { settings } = useReputation();
 
-  const openEscalations = requests.filter(
-    (r) => r.escalatedToManager && r.status !== "closed",
-  ).length;
   const isEnabled = settings.enabled;
 
   return (
@@ -68,17 +65,9 @@ export function ReputationBoosterShell() {
             <List className="h-4 w-4" />
             Requests
           </TabsTrigger>
-          <TabsTrigger
-            value="escalations"
-            className="relative gap-2 px-3 text-sm"
-          >
+          <TabsTrigger value="escalations" className="gap-2 px-3 text-sm">
             <AlertTriangle className="h-4 w-4" />
             Escalations
-            {openEscalations > 0 && (
-              <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                {openEscalations}
-              </span>
-            )}
           </TabsTrigger>
           <TabsTrigger value="public-reviews" className="gap-2 px-3 text-sm">
             <Globe className="h-4 w-4" />
