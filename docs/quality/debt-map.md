@@ -7106,10 +7106,17 @@ Converted since: the Overview/Performance/Locations tabs (collapsed into
 `ReputationAnalyticsTab`), the Requests tab and the Escalations tab, plus the
 routes under `src/app/api/reputation/`.
 
-Still a fixture: `ReputationPublicReviewsTab` (the booking-page showcase),
-`src/lib/api/reputation.ts` (every `queryFn` returns a constant), and
-`src/lib/reputation/{trigger-engine,review-link,message-template,
-template-schema,escalation-task,resolve-client}.ts`.
+**Every tab now reads Postgres.** What is left of the fixture layer is
+`src/data/reputation.ts`, `src/lib/api/reputation.ts` (every `queryFn` returns
+a constant) and `src/lib/reputation/{trigger-engine,review-link,
+message-template,template-schema,escalation-task,resolve-client}.ts` — kept
+alive ONLY by `use-reputation.tsx` and the two screens below.
+
+**The booking page itself has not been wired up.** Moderating a review to
+`live` sets a column; no customer-facing page reads
+`review_responses.moderation_state` yet. So the Booking-page-reviews tab is
+honest about what it controls and that control currently reaches nothing. That
+is the next thing somebody should finish, and it is a small job.
 
 **`use-reputation.tsx` is still mounted, and deliberately.** Two live screens
 call its `recordCheckout`: the daycare check-in page
