@@ -66,7 +66,33 @@ export interface ScheduleResult {
   suppressed: number;
   duplicate: number;
   problems: string[];
+  /**
+   * Why nothing was requested, for a caller who has a person waiting.
+   *
+   * The automated path counts and moves on — one check-out among fifty. A
+   * MANUAL send has somebody looking at a button, and "nothing happened" is
+   * not an answer, so the reason is carried out rather than only counted.
+   */
+  refusal?: string;
 }
+
+/**
+ * A manual send: who asked for it, and their reason if they are overriding.
+ *
+ * The rungs that MAY be overridden are the recency ones — cooldown and the
+ * negative pause — because those are a facility's own policy about how often
+ * to ask, and a manager who knows this client is the right person to judge an
+ * exception. Nothing else is overridable: consent is not ours to waive, and
+ * asking for a review on a refunded or cancelled visit is the single most
+ * damaging thing this feature can do.
+ */
+export interface ManualSend {
+  requestedBy: string;
+  overrideReason: string | null;
+}
+
+/** The only suppression reasons a person may override. See `ManualSend`. */
+const OVERRIDABLE = new Set(["cooldown", "negative_pause"]);
 
 const EMPTY: ScheduleResult = {
   requested: 0,
@@ -93,25 +119,37 @@ export async function scheduleReviewRequest(
     booking_id: string | null;
     location_id: string | null;
   },
+  manual?: ManualSend,
 ): Promise<ScheduleResult> {
   const result: ScheduleResult = { ...EMPTY, problems: [] };
   if (event.kind !== "check_out" || !event.client_id) return result;
 
   // ── The rule, which is also the on/off switch ───────────────────────────
-  const { data: ruleRow } = await db
+  const ruleQuery = db
     .from("automation_rules")
     .select(
       "id, email_template_id, sms_template_id, offset_minutes, location_ids, service_types",
     )
     .eq("facility_id", event.facility_id)
-    .eq("seed_key", "review_request")
-    .eq("enabled", true)
-    .maybeSingle();
+    .eq("seed_key", "review_request");
+
+  // `enabled` gates the AUTOMATION, not the person. A manager asking for one
+  // review by hand is not switching the campaign on, and the rule is still
+  // needed here because it owns the templates. The scoping below (locations,
+  // service types) is likewise the automation's scope, so a manual send skips
+  // it — they picked this client deliberately.
+  const { data: ruleRow } = await (manual
+    ? ruleQuery.maybeSingle()
+    : ruleQuery.eq("enabled", true).maybeSingle());
 
   const rule = ruleRow as ReviewRuleRow | null;
-  if (!rule) return result;
+  if (!rule) {
+    if (manual) result.refusal = "This facility has no review request set up.";
+    return result;
+  }
 
   if (
+    !manual &&
     rule.location_ids.length > 0 &&
     event.location_id &&
     !rule.location_ids.includes(event.location_id)
@@ -122,10 +160,12 @@ export async function scheduleReviewRequest(
   const context = await loadMessageContext(db, event as ContextSubject);
   if (!context) {
     result.problems.push(`event ${event.id}: no client to ask`);
+    if (manual) result.refusal = "That client has no contact details.";
     return result;
   }
 
   if (
+    !manual &&
     rule.service_types.length > 0 &&
     context.serviceType &&
     !rule.service_types.includes(context.serviceType)
@@ -211,14 +251,36 @@ export async function scheduleReviewRequest(
   );
 
   // ── The rungs nothing else asks about ──────────────────────────────────
-  const verdict = await reviewRequestEligibility(db, {
+  const rawVerdict = await reviewRequestEligibility(db, {
     facilityId: event.facility_id,
     clientId: event.client_id,
     bookingIds,
     config,
   });
 
-  const delayMinutes = Math.max(0, rule.offset_minutes ?? 60);
+  // A person overriding the recency rungs, and ONLY those. See `ManualSend`:
+  // consent is not ours to waive, and a refunded visit is not one to ask about
+  // however good the reason sounds.
+  const overridden = Boolean(
+    manual?.overrideReason &&
+    !rawVerdict.eligible &&
+    rawVerdict.reason &&
+    OVERRIDABLE.has(rawVerdict.reason),
+  );
+  const verdict = overridden
+    ? { ...rawVerdict, eligible: true as const }
+    : rawVerdict;
+
+  if (manual && !verdict.eligible) {
+    result.refusal = OVERRIDABLE.has(verdict.reason ?? "")
+      ? `Not sent: ${verdict.reason}. Give a reason to send it anyway.`
+      : `Not sent: ${verdict.reason}. That cannot be overridden.`;
+  }
+
+  // The automation waits for the rule's delay; a person pressing send means
+  // now. The tick still applies quiet hours and the velocity cap on the way
+  // out, so "now" never means "at 4 a.m.".
+  const delayMinutes = manual ? 0 : Math.max(0, rule.offset_minutes ?? 60);
   const firstSendAt = new Date(Date.now() + delayMinutes * 60_000);
   const { token, hash } = mintReviewToken();
 
@@ -236,6 +298,11 @@ export async function scheduleReviewRequest(
     booking_ids: bookingIds,
     escalation_threshold: config.escalationThreshold,
     showcase_min: config.showcaseMin,
+    // `review_requests_manual_says_who` pairs these: a manual request names
+    // the person who asked for it, or it is refused by the database.
+    source: manual ? "manual" : "automated",
+    requested_by: manual?.requestedBy ?? null,
+    override_reason: overridden ? manual?.overrideReason : null,
     first_send_at: firstSendAt.toISOString(),
     expires_at: new Date(
       firstSendAt.getTime() + config.expiresAfterDays * 86_400_000,
@@ -273,6 +340,10 @@ export async function scheduleReviewRequest(
     // today at this location. The mechanism working, not a failure.
     if (insertError.code === "23505") {
       result.duplicate += 1;
+      if (manual) {
+        result.refusal =
+          "This client has already been asked about today's visit.";
+      }
       return result;
     }
     result.problems.push(`review request: ${insertError.message}`);
@@ -300,6 +371,10 @@ export async function scheduleReviewRequest(
     result.problems.push(
       `review request ${requestId}: facility has no slug, so no survey link`,
     );
+    await markFailed(db, requestId);
+    result.requested -= 1;
+    if (manual)
+      result.refusal = "This facility has no address for its survey links.";
     return result;
   }
 
@@ -316,6 +391,10 @@ export async function scheduleReviewRequest(
     channel === "email" ? rule.email_template_id : rule.sms_template_id;
   if (!templateId) {
     result.problems.push(`review request ${requestId}: no ${channel} template`);
+    await markFailed(db, requestId);
+    result.requested -= 1;
+    if (manual)
+      result.refusal = `There is no ${channel} template for review requests.`;
     return result;
   }
 
@@ -331,6 +410,10 @@ export async function scheduleReviewRequest(
   } | null;
   if (!t || !t.is_active) {
     result.problems.push(`review request ${requestId}: template retired`);
+    await markFailed(db, requestId);
+    result.requested -= 1;
+    if (manual)
+      result.refusal = "The review request template has been retired.";
     return result;
   }
 
@@ -349,6 +432,12 @@ export async function scheduleReviewRequest(
     result.problems.push(
       `review request ${requestId}: unresolved variable, not queued`,
     );
+    await markFailed(db, requestId);
+    result.requested -= 1;
+    if (manual) {
+      result.refusal =
+        "The template asks for something this client has no value for, so nothing was sent.";
+    }
     return result;
   }
 
@@ -375,7 +464,13 @@ export async function scheduleReviewRequest(
   } as never);
 
   if (sendError && sendError.code !== "23505") {
+    // Same rule as the four above: the request must not say `sent` when the
+    // outbox refused the row. 23505 is the idempotency key doing its job, and
+    // that one IS a send — somebody else queued it first.
     result.problems.push(`review request ${requestId}: ${sendError.message}`);
+    await markFailed(db, requestId);
+    result.requested -= 1;
+    if (manual) result.refusal = "The message could not be queued.";
   }
 
   return result;
@@ -401,6 +496,37 @@ export async function loadReputationConfig(
   // so a half-written config cannot change who gets messaged.
   const parsed = reputationConfigSchema.safeParse(row.value);
   return parsed.success ? parsed.data : NO_REPUTATION_CONFIG;
+}
+
+/**
+ * The request exists but no message could be built for it.
+ *
+ * NOT `sent`, which is what these paths used to leave behind: a missing
+ * template, a retired one, a template reaching for a variable this client has
+ * no value for, or a facility with no slug all returned early AFTER the row was
+ * inserted, so the Requests tab showed `sent` for a request that had never been
+ * queued anywhere. `check:success-claims` exists for this shape of defect on
+ * screens; this was the same lie one layer down, told by a row.
+ *
+ * NOT `suppressed` either: nothing decided against asking this client. We tried
+ * and could not, which is a different fact and a different fix — usually
+ * somebody's template.
+ */
+async function markFailed(
+  db: SupabaseClient,
+  requestId: string,
+): Promise<void> {
+  await db
+    .from("review_requests")
+    .update({
+      state: "failed",
+      // The token was minted for a message that does not exist. Leaving it live
+      // would leave a working survey link nobody was ever given.
+      token_hash: null,
+      token_expires_at: null,
+      nudge_due_at: null,
+    } as never)
+    .eq("id", requestId);
 }
 
 async function markSuppressed(
