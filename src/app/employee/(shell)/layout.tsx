@@ -9,7 +9,6 @@ import { BookingModalProviderWrapper } from "@/components/providers/BookingModal
 import { LoyaltyProgramProvider } from "@/hooks/use-loyalty-program";
 import { CallAvailabilityProvider } from "@/hooks/use-call-availability";
 import { CallTagsProvider } from "@/hooks/use-call-tags";
-import { ReputationProvider } from "@/hooks/use-reputation";
 import { EmployeeSidebar } from "@/components/employee/EmployeeSidebar";
 import { EmployeeHeader } from "@/components/employee/EmployeeHeader";
 import { WriteUpAckBanner } from "@/components/employee/WriteUpAckBanner";
@@ -79,31 +78,29 @@ export default async function EmployeeShellLayout({
                 <BookingModalProviderWrapper>
                   <CallAvailabilityProvider>
                     <CallTagsProvider>
-                      <ReputationProvider>
-                        <SidebarProvider>
-                          <EmployeeSidebar staffId={staffId} />
-                          <SidebarInset className="flex min-h-screen flex-col">
-                            <WriteUpAckBanner staffId={staffId} />
-                            <EmployeeHeader staffId={staffId} />
-                            {/* Past-closing "count & close" nudge (closing_time
-                              mode) — supports opener ≠ closer. */}
-                            <RegisterCloseWatcher staffId={staffId} />
+                      <SidebarProvider>
+                        <EmployeeSidebar staffId={staffId} />
+                        <SidebarInset className="flex min-h-screen flex-col">
+                          <WriteUpAckBanner staffId={staffId} />
+                          <EmployeeHeader staffId={staffId} />
+                          {/* Past-closing "count & close" nudge (closing_time
+                            mode) — supports opener ≠ closer. */}
+                          <RegisterCloseWatcher staffId={staffId} />
 
-                            {/* pb clears the fixed mobile bottom-nav (I1). */}
-                            <main className="flex-1 overflow-x-hidden pb-16 md:pb-0">
-                              {children}
-                            </main>
-                            <footer className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 pb-20 text-xs md:pb-3">
-                              © 2026 Yipyy · Employee Portal
-                            </footer>
-                          </SidebarInset>
-                          <EmployeeBottomNav staffId={staffId} />
-                          {/* Close reminder: pops the count-and-close flow when an
-                          authorized employee clocks out / logs out with the
-                          drawer still open. */}
-                          <RegisterCloseReminder staffId={staffId} />
-                        </SidebarProvider>
-                      </ReputationProvider>
+                          {/* pb clears the fixed mobile bottom-nav (I1). */}
+                          <main className="flex-1 overflow-x-hidden pb-16 md:pb-0">
+                            {children}
+                          </main>
+                          <footer className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 pb-20 text-xs md:pb-3">
+                            © 2026 Yipyy · Employee Portal
+                          </footer>
+                        </SidebarInset>
+                        <EmployeeBottomNav staffId={staffId} />
+                        {/* Close reminder: pops the count-and-close flow when an
+                        authorized employee clocks out / logs out with the
+                        drawer still open. */}
+                        <RegisterCloseReminder staffId={staffId} />
+                      </SidebarProvider>
                     </CallTagsProvider>
                   </CallAvailabilityProvider>
                 </BookingModalProviderWrapper>

@@ -39,7 +39,6 @@ import {
   useDaycareRevert,
 } from "@/lib/api/daycare-attendance";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
-import { useReputation } from "@/hooks/use-reputation";
 import { clients } from "@/data/clients";
 
 interface UnifiedCheckIn {
@@ -104,7 +103,6 @@ const getPetImage = (petId: number) => petImages[petId];
 export function DaycareCheckInOutSection() {
   const isMounted = useHydrated();
   const { recordEvent } = useLoyaltyEngine();
-  const { recordCheckout, cancelScheduled } = useReputation();
   const [searchQuery, setSearchQuery] = useState("");
   const [checkInOutMode, setCheckInOutMode] = useState<
     "check-in" | "check-out" | "view" | null
@@ -220,10 +218,14 @@ export function DaycareCheckInOutSection() {
     const actionLabel = isCheckIn ? "Checked In" : "Checked Out";
     const visit = daycareData.find((c) => c.id === selectedItem.id);
 
-    // The loyalty and reputation side effects belong to a completed stay, so
-    // they run only after the CHECK-OUT lands. Firing them beside a local
-    // setState — which is what happened before — awarded points for a stay the
-    // database had no record of.
+    // Loyalty belongs to a completed stay, so it runs only after the CHECK-OUT
+    // lands. Firing it beside a local setState — which is what happened before
+    // — awarded points for a stay the database had no record of.
+    //
+    // The review request is NOT scheduled here. `updateVisit` emits the real
+    // `check_out` automation event server-side, and the scheduler acts on that.
+    // A second, client-side scheduler was a second answer to "was this client
+    // asked", and the one in localStorage could never be the true one.
     const afterCheckOut = () => {
       const loyaltyClient = findClientForPet(selectedItem.petId);
       if (loyaltyClient) {
@@ -238,17 +240,6 @@ export function DaycareCheckInOutSection() {
           isService: true,
         });
       }
-      const repResult = recordCheckout({
-        bookingId: bookingRef || selectedItem.petId,
-        clientId: loyaltyClient?.id ?? selectedItem.petId,
-        clientName: loyaltyClient?.name ?? selectedItem.ownerName,
-        petName: selectedItem.petName,
-        service: "daycare",
-        serviceLabel: "Daycare",
-        triggerEvent: "daycare_checkout",
-        checkoutAt: now,
-      });
-      return repResult.request?.id;
     };
 
     const onError = (error: Error) => toast.error(error.message);
@@ -273,7 +264,7 @@ export function DaycareCheckInOutSection() {
         { bookingRef, checkOut: true },
         {
           onSuccess: () => {
-            const scheduledRequestId = afterCheckOut();
+            afterCheckOut();
             toast.success(`${selectedItem.petName} - ${actionLabel}`, {
               description: "Daycare checked out",
               action: {
@@ -283,8 +274,6 @@ export function DaycareCheckInOutSection() {
                     { bookingRef, reopen: true },
                     {
                       onSuccess: () => {
-                        if (scheduledRequestId)
-                          cancelScheduled(scheduledRequestId);
                         toast.info("Action undone", {
                           description: `${selectedItem.petName} is back on the floor`,
                         });
