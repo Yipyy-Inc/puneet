@@ -10119,6 +10119,18 @@ export type Database = {
         Args: { p_facility_id: string };
         Returns: undefined;
       };
+      ensure_review_automation: {
+        Args: { p_facility_id: string };
+        Returns: undefined;
+      };
+      ensure_review_tags: {
+        Args: { p_facility_id: string };
+        Returns: undefined;
+      };
+      ensure_review_templates: {
+        Args: { p_facility_id: string };
+        Returns: undefined;
+      };
       facility_branding_by_slug: {
         Args: { p_slug: string };
         Returns: {
@@ -10808,6 +10820,48 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      reputation_metrics: {
+        Args: {
+          p_facility_id: string;
+          p_from: string;
+          p_location_ids?: string[];
+          p_to: string;
+        };
+        Returns: Json;
+      };
+      reputation_service_stats: {
+        Args: {
+          p_facility_id: string;
+          p_from: string;
+          p_location_ids?: string[];
+          p_to: string;
+        };
+        Returns: {
+          average_rating: number;
+          detractors: number;
+          requests: number;
+          responses: number;
+          service_type: string;
+        }[];
+      };
+      reputation_staff_stats: {
+        Args: {
+          p_facility_id: string;
+          p_from: string;
+          p_location_ids?: string[];
+          p_to: string;
+        };
+        Returns: {
+          average_rating: number;
+          detractors: number;
+          mentions: number;
+          praise: number;
+          rating_sum: number;
+          reviews: number;
+          staff_id: string;
+          staff_name: string;
+        }[];
       };
       reset_facility_modules: {
         Args: { p_facility_id: string };
