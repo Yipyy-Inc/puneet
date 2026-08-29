@@ -9,9 +9,6 @@ import { callLogs } from "@/data/communications-hub";
 import { aiCallSummaries } from "@/data/calling";
 import { defaultFollowUpStatus } from "@/lib/calling/follow-up-status";
 import { buildFollowUpTask } from "@/lib/calling/follow-up-task";
-import { reputationRequests, reputationSettings } from "@/data/reputation";
-import { buildReputationEscalationTask } from "@/lib/reputation/escalation-task";
-import { resolveEscalationAssignees } from "@/lib/reputation/review-link";
 
 export type WorkTaskCategory =
   | "opening"
@@ -714,65 +711,14 @@ function generateCallFollowUpTasks(): StandaloneTask[] {
 
 standaloneTasks.push(...generateCallFollowUpTasks());
 
-// ── Negative review → manager task auto-creation ──────────────────────────────
-// Cross-module integration (Step 3B): every escalated negative review gets a
-// manager service-recovery task so follow-up never relies on memory. Deduped by
-// reputation request id. Runtime (survey-submitted) escalations are added by the
-// reputation provider via addStandaloneTask + hasTaskForReputationRequest.
-
-/** Whether a follow-up task already exists for a review (dedup guard). */
-export function hasTaskForReputationRequest(
-  reputationRequestId: string,
-): boolean {
-  return standaloneTasks.some(
-    (t) => t.metadata?.reputationRequestId === reputationRequestId,
-  );
-}
-
-/** Whether a review task already exists for a specific assignee (dedup guard). */
-export function hasReputationTaskFor(
-  reputationRequestId: string,
-  staffId: string,
-): boolean {
-  return standaloneTasks.some(
-    (t) =>
-      t.metadata?.reputationRequestId === reputationRequestId &&
-      t.assignedToId === staffId,
-  );
-}
-
-/** Mark ALL of a review's escalation tasks complete (ticket resolved). */
-export function completeTaskForReputationRequest(
-  reputationRequestId: string,
-): void {
-  for (const task of standaloneTasks) {
-    if (
-      task.metadata?.reputationRequestId === reputationRequestId &&
-      task.status !== "completed"
-    ) {
-      task.status = "completed";
-      task.completedAt = new Date().toISOString();
-      task.completedByName = "Manager One";
-    }
-  }
-}
-
-function generateReviewEscalationTasks(): StandaloneTask[] {
-  const generated: StandaloneTask[] = [];
-  for (const req of reputationRequests) {
-    if (!req.escalatedToManager || req.status === "closed") continue;
-    const assignees = resolveEscalationAssignees(
-      reputationSettings,
-      req.service,
-    );
-    for (const a of assignees) {
-      if (hasReputationTaskFor(req.id, a.id)) continue;
-      if (generated.some((t) => t.id === `task-rep-${req.id}-${a.id}`))
-        continue;
-      generated.push(buildReputationEscalationTask(req, a));
-    }
-  }
-  return generated;
-}
-
-standaloneTasks.push(...generateReviewEscalationTasks());
+// ── Negative review → manager task auto-creation: REMOVED ────────────────────
+//
+// This block generated a service-recovery task for every escalated review in
+// `data/reputation.ts` and pushed them into `standaloneTasks` at module load.
+// Those requests are FIXTURES. Since the real escalation system landed
+// (`review_escalations`, and a linked `facility_tasks` row written in the same
+// transaction as the response), the staff task board was showing recovery
+// tasks about reviews that do not exist in Postgres, assigned to staff who do
+// not exist either, next to the real recovery queue.
+//
+// The real path opens the ticket. Nothing here needs to.

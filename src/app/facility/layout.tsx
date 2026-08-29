@@ -29,7 +29,6 @@ import { AnnouncementBanner } from "@/components/facility/announcement-banner";
 import { LoyaltyProgramProvider } from "@/hooks/use-loyalty-program";
 import { CallAvailabilityProvider } from "@/hooks/use-call-availability";
 import { CallTagsProvider } from "@/hooks/use-call-tags";
-import { ReputationProvider } from "@/hooks/use-reputation";
 
 export default async function FacilityLayout({
   children,
@@ -82,45 +81,43 @@ export default async function FacilityLayout({
               <BookingModalProviderWrapper>
                 <CallAvailabilityProvider>
                   <CallTagsProvider>
-                    <ReputationProvider>
-                      <SidebarProvider className="min-h-[calc(100vh-64px)]">
-                        <FacilitySidebar />
-                        <SidebarInset className="flex min-h-[calc(100vh-64px)] min-w-0 flex-col overflow-x-clip">
-                          <header className="from-background to-muted/20 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r px-4 backdrop-blur-sm sm:px-6">
-                            <div className="flex min-w-0 items-center gap-3">
-                              <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
-                              <GlobalSearchNext
-                                className="hidden w-[460px] max-w-[480px] min-w-0 sm:flex"
-                                canCreateCustomer={canCreateCustomer}
-                              />
-                              <MobileSearch
-                                className="sm:hidden"
-                                canCreateCustomer={canCreateCustomer}
-                              />
-                            </div>
-                            <FacilityHeaderActions
-                              facilityId={11}
-                              viewer={{
-                                name: viewer.fullName,
-                                email: viewer.email,
-                                isPlatformAdmin: viewer.isPlatformAdmin,
-                                canManageAccount:
-                                  canManageFacilityAccount(viewer),
-                              }}
+                    <SidebarProvider className="min-h-[calc(100vh-64px)]">
+                      <FacilitySidebar />
+                      <SidebarInset className="flex min-h-[calc(100vh-64px)] min-w-0 flex-col overflow-x-clip">
+                        <header className="from-background to-muted/20 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r px-4 backdrop-blur-sm sm:px-6">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
+                            <GlobalSearchNext
+                              className="hidden w-[460px] max-w-[480px] min-w-0 sm:flex"
+                              canCreateCustomer={canCreateCustomer}
                             />
-                          </header>
-                          <main className="min-w-0 flex-1 overflow-x-clip">
-                            <ImpersonationBanner />
-                            <AnnouncementBanner facilityId={11} />
-                            <FacilityOnboardingBanner />
-                            {children}
-                          </main>
-                          <FacilityMobileBottomNav />
-                        </SidebarInset>
-                        <SupportFab />
-                        <SupportCenter />
-                      </SidebarProvider>
-                    </ReputationProvider>
+                            <MobileSearch
+                              className="sm:hidden"
+                              canCreateCustomer={canCreateCustomer}
+                            />
+                          </div>
+                          <FacilityHeaderActions
+                            facilityId={11}
+                            viewer={{
+                              name: viewer.fullName,
+                              email: viewer.email,
+                              isPlatformAdmin: viewer.isPlatformAdmin,
+                              canManageAccount:
+                                canManageFacilityAccount(viewer),
+                            }}
+                          />
+                        </header>
+                        <main className="min-w-0 flex-1 overflow-x-clip">
+                          <ImpersonationBanner />
+                          <AnnouncementBanner facilityId={11} />
+                          <FacilityOnboardingBanner />
+                          {children}
+                        </main>
+                        <FacilityMobileBottomNav />
+                      </SidebarInset>
+                      <SupportFab />
+                      <SupportCenter />
+                    </SidebarProvider>
                   </CallTagsProvider>
                 </CallAvailabilityProvider>
               </BookingModalProviderWrapper>

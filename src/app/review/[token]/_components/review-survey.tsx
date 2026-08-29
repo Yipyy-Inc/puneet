@@ -12,7 +12,7 @@ import {
   submitSurvey,
   type SurveyRequest,
 } from "@/lib/api/review-survey";
-import { PLATFORM_META } from "@/lib/reputation/review-link";
+import { PLATFORM_META } from "@/lib/reputation/platforms";
 import {
   fill,
   surveyStrings,
