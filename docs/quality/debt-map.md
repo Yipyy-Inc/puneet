@@ -7083,6 +7083,95 @@ refusal in the function that answers "where may this client be sent".** When
 (`platform <> 'yelp' or solicitable = false`), so the send path reads a column
 rather than trusting a screen.
 
+## 2026-08-29 (Reputation Booster v2)
+
+### 🟠 The reputation module is half converted, and the halves look identical
+
+The capture spine is real: `review_requests`, `review_responses`,
+`review_channels`, `review_tags`, `review_response_tags`, three anon token RPCs,
+a scheduler on `check_out`, and a survey a customer can actually answer. The
+EIGHT TABS are still fixtures and `localStorage`.
+
+So the module now has exactly the shape this repo has been bitten by before: a
+screen that looks finished, reading `src/data/reputation.ts`, sitting next to
+one that writes to Postgres. **Grep what a tab imports before editing it.**
+
+Real today:
+`review_*` tables · `/api/review/[token]` (GET, POST, click) · the survey page ·
+`scheduleReviewRequest` on the `check_out` event · `ensure_review_automation`
+(rule, four templates, 28 tags) · quiet hours, the lateness cut-off and the
+daily cap in `sendOneQueued`.
+
+Still fixtures: every tab under `src/components/marketing/Reputation*.tsx`,
+`src/hooks/use-reputation.tsx` and its 30-second tick, `src/lib/api/reputation.ts`
+(every `queryFn` returns a constant), `src/lib/reputation/{trigger-engine,
+review-link,message-template,template-schema,escalation-task,resolve-client}.ts`.
+
+**Do not build on the fixture half.** The conversion deletes it.
+
+### 🟠 The review rule is seeded DISABLED, and that is not a bug
+
+`ensure_automation_rules` ships every rule off, and the review request is no
+exception. A facility that installs an update must not begin messaging its
+customers because of it. Turning it on is a toggle on the Automations screen.
+
+The consequence to remember: **a check-out on a facility that has not enabled
+the rule produces NOTHING** — no request row, no suppression row, no log line.
+That is correct, and it is also the first thing to check when the feature
+appears not to work.
+
+### 🔴 Quiet hours, the lateness cut-off and the daily cap apply to EVERY message
+
+They were written for review requests and deliberately live in
+`sendOneQueued`, not in the reputation module. A 4 a.m. booking reminder is the
+same offence as a 4 a.m. review request, and the audit that prompted this found
+an SMS logged at 04:00 in the shipped screens.
+
+**So changing `messaging_policy` changes the behaviour of every automation and
+every workflow step in the product**, not just reviews. Three things follow:
+
+- The defaults are deliberately inert. Quiet hours OFF, `dailyCap: 0`,
+  `smsRegistered: true` — adopting the domain changes nothing until somebody
+  configures it. The one exception is `maxLatenessHours: 24`, which is a
+  correctness rule rather than a preference and applies immediately.
+- **Transactional messages bypass all three.** A receipt is still a receipt,
+  and a customer who paid is owed the record however late the worker was. This
+  is why `is_transactional` is the most consequential column on
+  `automation_rules` — a review request marked transactional would walk through
+  every consent check in the product.
+- A deferral leaves the row `queued` with a later `scheduled_for`. It must
+  never become `skipped`: a dropped message and a message nobody sent are
+  indistinguishable from the facility's side.
+
+### 🟡 The facility-local day is not `${day}T00:00:00Z`
+
+Caught in the scheduler before it shipped, and it is the third time this class
+of bug has appeared here (the night-shift window, the outbox's `occasion_ref`,
+now this). The visit's business day is computed on the FACILITY's clock; the
+bookings that make up that visit are then selected by a UTC timestamp range.
+Writing the range as `${day}T00:00:00Z` looks right and is wrong for every
+facility not on UTC.
+
+Measured on the demo facility at 21:02 local: the local day was the 28th while
+`end_at` was already `2026-08-29T01:02Z`, so the booking that had just fired the
+event fell outside its own window. The request was written with no services and
+no staff attached, silently — which would have emptied the Performance screen
+for every facility west of UTC and looked like an attribution bug.
+
+**Convert both ends through `instantFromWallClock(day, "00:00", zone)`.** If you
+find yourself typing a `Z` after a date you computed in a facility's zone, stop.
+
+### 🟡 `{{survey_link}}` can only be filled by the review scheduler
+
+It is a template variable like any other in the picker, but the value is a
+token minted per request whose plaintext is never stored. `deliver()` has no
+token, so a rule pointed at a review template by hand renders the tag
+unresolved and the message REFUSES to send on `UNRESOLVED_TAG`.
+
+That refusal is the designed behaviour — the alternative is mailing somebody a
+broken link — but it looks like a silent failure. If a facility reports that a
+review template "does nothing", check which rule is sending it.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

@@ -56,7 +56,7 @@ Always use **bun** as the package manager (not npm, yarn, or pnpm).
   - Touching auth, a portal gate, a permission or an identity — or bookings,
     boarding, daycare, rooms, the care log, the calendar or the roster? Run
     `bun run test:e2e:ci` locally too — the whole suite, by hand, before you
-    push. CI itself runs only the 23-spec gate on a push (the authorisation
+    push. CI itself runs only the 24-spec gate on a push (the authorisation
     boundary and money) and the full suite nightly, because 79 specs is ~45
     minutes and GitHub holds one pending run per branch: with two people
     pushing, every queued run was cancelled by the next push and nothing

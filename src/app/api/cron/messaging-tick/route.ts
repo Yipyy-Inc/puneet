@@ -6,6 +6,7 @@ import {
   advanceDueEnrollments,
   runDueAudienceWorkflows,
 } from "@/lib/workflows/engine";
+import { evaluateDueReviewNudges } from "@/lib/reputation/nudge";
 
 // ============================================================================
 // The messaging tick: sending what was queued for later.
@@ -65,7 +66,8 @@ export async function GET(request: NextRequest) {
   //
   //   1. audience scan   — who qualifies today, enrol them
   //   2. advance         — whose step is due, render it and QUEUE it
-  //   3. send            — drain everything queued, including step 2's work
+  //   3. review nudges   — whose one nudge is due; pick its branch and QUEUE it
+  //   4. send            — drain everything queued, including 2's and 3's work
   //
   // Sending last means a step that comes due goes out on the same tick rather
   // than waiting five more minutes. Reversing it would add an invisible delay
@@ -73,6 +75,7 @@ export async function GET(request: NextRequest) {
   // late" is the kind of bug nobody ever files.
   const audience = await runDueAudienceWorkflows();
   const advanced = await advanceDueEnrollments();
+  const nudges = await evaluateDueReviewNudges();
   const result = await sendDueMessages();
 
   // The counts are the point. A tick that reports `sent: 0, skipped: 12` is a
@@ -83,6 +86,12 @@ export async function GET(request: NextRequest) {
     skipped: result.skipped,
     failed: result.failed,
     enrolled: audience.enrolled + advanced.enrolled,
+    // Counted separately from `sent`. A nudge that was EVALUATED and produced
+    // nothing is the engine working - "rated and already clicked" is the
+    // commonest outcome - and folding it into a send count would make a quiet
+    // tick look like an outage.
+    nudged: nudges.queued,
+    nudgesExpired: nudges.expired,
     advanced: advanced.advanced,
     completed: advanced.completed,
     stopped: advanced.stopped,
@@ -90,6 +99,7 @@ export async function GET(request: NextRequest) {
       ...result.problems,
       ...advanced.problems,
       ...audience.problems,
+      ...nudges.problems,
     ].slice(0, 20),
   });
 }
