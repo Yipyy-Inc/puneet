@@ -1,786 +1,497 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+  ExternalLink,
+  Globe,
+  Info,
+  Loader2,
+  Shield,
+  Trash2,
+} from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
 import {
-  Shield,
-  Clock,
-  Bell,
-  Globe,
-  Zap,
-  MessageSquare,
-  Mail,
-  Smartphone,
-  CheckCircle2,
-  Settings2,
-  Users,
-  Info,
-  Send,
-} from "lucide-react";
-import { useReputation } from "@/hooks/use-reputation";
-import { initialStep, describeMinutes } from "@/lib/reputation/trigger-engine";
-import { buildReviewPath } from "@/lib/reputation/review-link";
-import { ReputationChannelFlowBuilder } from "@/components/marketing/ReputationChannelFlowBuilder";
-import { ReputationSequenceBuilder } from "@/components/marketing/ReputationSequenceBuilder";
-import { ReputationEscalationRouting } from "@/components/marketing/ReputationEscalationRouting";
-import type {
-  ReputationSettings,
-  ReputationTriggerConfig,
-  ReputationNotifyOn,
-  ReputationRating,
-} from "@/types/reputation";
+  NO_REPUTATION_CONFIG,
+  type ReputationConfig,
+} from "@/lib/settings/reputation";
+import { cn } from "@/lib/utils";
 
-// ─── Section wrapper ──────────────────────────────────────────────────────────
+// ============================================================================
+// What the facility decides.
+//
+// ── WHAT IS NO LONGER DECIDED HERE, AND WHY ───────────────────────────────
+//
+// **The send delay.** It is `automation_rules.offset_minutes`, edited on the
+// Automations screen, and this page links there. It used to be editable in
+// three places — a trigger card, a send sequence, and a chip on the Messages
+// tab — with no rule anywhere about which won. The fix was not a precedence
+// order; it was deleting two of the three editors.
+//
+// **The reminder sequence.** There is one nudge per request, ever, and its
+// branch is chosen at evaluation time. Two configurable reminder systems both
+// firing at 48 hours into a one-per-day cap is what there was before.
+//
+// **Anything that hides the public review link.** Removed 2026-08-28;
+// `bun run check:no-review-gating` fails the build if it returns.
+//
+// ── AND THE ONE THING THAT MOVED IN ───────────────────────────────────────
+//
+// The channel list writes to `review_channels` rather than a fixture, so the
+// survey a customer opens on their phone shows the facility's own destinations.
+// Yelp is display-only and the database refuses to make it otherwise.
+// ============================================================================
 
-function Section({
-  title,
-  description,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  description?: string;
-  icon: React.ElementType;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <div className="bg-primary/10 flex h-7 w-7 items-center justify-center rounded-lg">
-            <Icon className="text-primary h-4 w-4" />
-          </div>
-          {title}
-        </CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
-      </CardHeader>
-      <CardContent className="space-y-4">{children}</CardContent>
-    </Card>
-  );
+interface ChannelRow {
+  id: string;
+  platform: string;
+  place_id: string | null;
+  profile_url: string | null;
+  enabled: boolean;
+  solicitable: boolean;
+  priority: number;
+  weight: number;
 }
 
-// ─── Toggle switch ────────────────────────────────────────────────────────────
-
-function Toggle({
-  checked,
-  onChange,
-  label,
-  description,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-  description?: string;
-}) {
-  return (
-    <label className="group flex cursor-pointer items-start gap-3">
-      <div
-        className="relative mt-0.5 shrink-0"
-        onClick={() => onChange(!checked)}
-      >
-        <div
-          className={`h-5 w-9 rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted"}`}
-        />
-        <div
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`}
-        />
-      </div>
-      <div>
-        <p className="text-sm/none font-medium">{label}</p>
-        {description && (
-          <p className="text-muted-foreground mt-1 text-xs">{description}</p>
-        )}
-      </div>
-    </label>
-  );
-}
-
-// ─── Trigger row ──────────────────────────────────────────────────────────────
-
-function TriggerRow({
-  trigger,
-  onChange,
-}: {
-  trigger: ReputationTriggerConfig;
-  onChange: (enabled: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between border-b py-2.5 last:border-0">
-      <div className="flex items-center gap-3">
-        <div
-          className={`h-2 w-2 rounded-full ${trigger.enabled ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
-        />
-        <div>
-          <p className="text-sm font-medium">{trigger.label}</p>
-          {trigger.serviceType === "custom" && (
-            <Badge variant="secondary" className="mt-0.5 h-4 text-xs">
-              Custom Service
-            </Badge>
-          )}
-        </div>
-      </div>
-      <Toggle checked={trigger.enabled} onChange={onChange} label="" />
-    </div>
-  );
-}
-
-const NOTIFY_OPTIONS: { value: ReputationNotifyOn; label: string }[] = [
-  { value: "all", label: "All reviews" },
-  { value: "under_3_stars", label: "Under 3 stars only" },
-  { value: "5_stars_only", label: "5-star reviews only" },
-  { value: "mention_only", label: "When mentioned by name" },
-];
-
-/** Parse a number input, falling back (and clamping) so a cleared field can't store NaN. */
-function safeInt(
-  value: string,
-  fallback: number,
-  min: number,
-  max: number,
-): number {
-  const n = parseInt(value, 10);
-  if (Number.isNaN(n)) return fallback;
-  return Math.min(max, Math.max(min, n));
-}
-
-// ─── Settings tab ─────────────────────────────────────────────────────────────
+const PLATFORMS = [
+  { value: "google", label: "Google Business" },
+  { value: "facebook", label: "Facebook" },
+  { value: "yelp", label: "Yelp" },
+] as const;
 
 export function ReputationSettingsTab() {
-  const { settings: initial, updateSettings } = useReputation();
-  const [settings, setSettings] = useState<ReputationSettings | null>(null);
-  const [saved, setSaved] = useState(false);
+  const { settings } = useFacilitySettings();
+  const save = useSaveFacilitySetting();
+  const [draft, setDraft] = useState<ReputationConfig>(NO_REPUTATION_CONFIG);
+  const [dirty, setDirty] = useState(false);
 
-  const s: ReputationSettings = settings ?? initial;
+  // The stored value once it arrives. Not a `defaultValue`, because the query
+  // resolves after first paint and a defaulted input would keep showing the
+  // fallback while the facility's own numbers sat unused behind it.
+  useEffect(() => {
+    if (!dirty) setDraft(settings.reputation_config.value);
+  }, [settings.reputation_config.value, dirty]);
 
-  function update<K extends keyof ReputationSettings>(
+  function update<K extends keyof ReputationConfig>(
     key: K,
-    value: ReputationSettings[K],
+    value: ReputationConfig[K],
   ) {
-    setSettings((prev) => ({ ...(prev ?? s), [key]: value }));
-    setSaved(false);
-  }
-
-  function patchDraft(patch: Partial<ReputationSettings>) {
-    setSettings((prev) => ({ ...(prev ?? s), ...patch }));
-    setSaved(false);
-  }
-
-  function updateTrigger(event: string, enabled: boolean) {
-    update(
-      "triggers",
-      s.triggers.map((t) => (t.event === event ? { ...t, enabled } : t)),
-    );
-  }
-
-  function save() {
-    updateSettings(s);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setDraft((current) => ({ ...current, [key]: value }));
+    setDirty(true);
   }
 
   return (
-    <div className="space-y-5">
-      {/* Automation pipeline — Step 1 trigger preview + test */}
-      <AutomationPipelineCard settings={s} />
-
-      {/* Master toggle */}
-      <Card
-        className={`${s.enabled ? "border-emerald-300 bg-emerald-50/30 dark:border-emerald-700 dark:bg-emerald-950/10" : "border-dashed"}`}
-      >
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-10 w-10 items-center justify-center rounded-xl ${s.enabled ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}
-              >
-                <Zap className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-semibold">Reputation Booster</p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  {s.enabled
-                    ? "Active — review requests are being sent automatically"
-                    : "Inactive — no review requests are being sent"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge
-                variant={s.enabled ? "default" : "secondary"}
-                className={
-                  s.enabled ? "border-0 bg-emerald-100 text-emerald-700" : ""
-                }
-              >
-                {s.enabled ? "Enabled" : "Disabled"}
-              </Badge>
-              <Toggle
-                checked={s.enabled}
-                onChange={(v) => update("enabled", v)}
-                label=""
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Triggers */}
-      <Section
-        title="Trigger Events"
-        description="Choose which events automatically send a review request to the client."
-        icon={Zap}
-      >
-        <div>
-          {s.triggers.map((t) => (
-            <TriggerRow
-              key={t.event}
-              trigger={t}
-              onChange={(enabled) => updateTrigger(t.event, enabled)}
-            />
-          ))}
-        </div>
-        <div className="flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-          <p className="text-xs text-blue-700 dark:text-blue-300">
-            Custom services you create will appear automatically in this list
-            once configured in the Services module.
-          </p>
-        </div>
-      </Section>
-
-      {/* Outreach sequence (multi-step) */}
-      <Section
-        title="Send Sequence"
-        description="Build a multi-step outreach: an initial send plus backup reminders that only fire if the client hasn't responded."
-        icon={Clock}
-      >
-        <div className="space-y-4">
-          <ReputationSequenceBuilder
-            steps={
-              s.outreachSequence && s.outreachSequence.length > 0
-                ? s.outreachSequence
-                : [
-                    {
-                      id: "seq-initial",
-                      channel: "sms",
-                      delayMinutes: 60,
-                      onlyIfNoResponse: false,
-                    },
-                  ]
-            }
-            onChange={(steps) => update("outreachSequence", steps)}
-          />
-
-          <div className="space-y-1.5">
-            <Label className="text-sm">Daily send limit per client</Label>
-            <Select
-              value={String(s.dailySendLimitPerClient)}
-              onValueChange={(v) =>
-                update("dailySendLimitPerClient", parseInt(v))
-              }
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 per day (recommended)</SelectItem>
-                <SelectItem value="2">2 per day</SelectItem>
-                <SelectItem value="3">3 per day</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-muted-foreground text-xs">
-              If a client completes multiple services on the same day, only one
-              review request is sent.
-            </p>
-          </div>
-        </div>
-      </Section>
-
-      {/* Channels */}
-      <Section
-        title="Delivery Channels"
-        description="Choose how review requests are delivered to clients."
-        icon={MessageSquare}
-      >
-        <div className="space-y-3">
-          <Toggle
-            checked={s.channels.sms}
-            onChange={(v) => update("channels", { ...s.channels, sms: v })}
-            label="SMS"
-            description="Send via text message — highest open rate"
-          />
-          <Toggle
-            checked={s.channels.email}
-            onChange={(v) => update("channels", { ...s.channels, email: v })}
-            label="Email"
-            description="Send via email — great for clients who prefer inbox communication"
-          />
-        </div>
-      </Section>
-
-      {/* Multi-platform channel manager (drag-and-drop) */}
-      <Section
-        title="Channel Manager"
-        description="Add, reorder, or disable your public review channels. Drag to set priority — the top enabled channel is offered first in the survey."
-        icon={Globe}
-      >
-        <ReputationChannelFlowBuilder value={s} onChange={patchDraft} />
-      </Section>
-
-      {/* Protection rules */}
-      <Section
-        title="Protection Rules"
-        description="Block review requests when certain conditions are present — prevents tone-deaf outreach."
-        icon={Shield}
-      >
-        <div className="space-y-3">
-          <Toggle
-            checked={s.protectionRules.blockOnCancelled}
-            onChange={(v) =>
-              update("protectionRules", {
-                ...s.protectionRules,
-                blockOnCancelled: v,
-              })
-            }
-            label="Block on cancelled bookings"
-          />
-          <Toggle
-            checked={s.protectionRules.blockOnRefundInProgress}
-            onChange={(v) =>
-              update("protectionRules", {
-                ...s.protectionRules,
-                blockOnRefundInProgress: v,
-              })
-            }
-            label="Block when refund is in progress"
-          />
-          <Toggle
-            checked={s.protectionRules.blockOnCriticalIncident}
-            onChange={(v) =>
-              update("protectionRules", {
-                ...s.protectionRules,
-                blockOnCriticalIncident: v,
-              })
-            }
-            label="Block when booking has a critical incident"
-          />
-          <Toggle
-            checked={s.protectionRules.blockOnOptOut}
-            onChange={(v) =>
-              update("protectionRules", {
-                ...s.protectionRules,
-                blockOnOptOut: v,
-              })
-            }
-            label="Block for clients who opted out"
-          />
-          <Toggle
-            checked={s.protectionRules.blockOnOpenDispute}
-            onChange={(v) =>
-              update("protectionRules", {
-                ...s.protectionRules,
-                blockOnOpenDispute: v,
-              })
-            }
-            label="Block when client has an open dispute"
-          />
-
-          <div className="space-y-1.5 pt-2">
-            <Label className="text-sm">Client cooldown period (days)</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min={1}
-                max={365}
-                value={s.protectionRules.cooldownDays}
-                onChange={(e) =>
-                  update("protectionRules", {
-                    ...s.protectionRules,
-                    cooldownDays: safeInt(
-                      e.target.value,
-                      s.protectionRules.cooldownDays,
-                      1,
-                      365,
-                    ),
-                  })
-                }
-                className="w-24"
-              />
-              <span className="text-muted-foreground text-sm">
-                days between requests to the same client
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-sm">Negative feedback pause (days)</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min={1}
-                max={90}
-                value={s.negativePauseDays}
-                onChange={(e) =>
-                  update(
-                    "negativePauseDays",
-                    safeInt(e.target.value, s.negativePauseDays, 1, 90),
-                  )
-                }
-                className="w-24"
-              />
-              <span className="text-muted-foreground text-sm">
-                pause all requests after a negative rating
-              </span>
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* Escalation threshold — what happens INTERNALLY, not who sees the link */}
-      <Section
-        title="Escalation Threshold"
-        description="Decide which ratings open a recovery ticket. Every client is shown the public review option regardless."
-        icon={Shield}
-      >
-        <div className="space-y-2">
-          <Label className="text-sm">Escalation threshold</Label>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Shield className="size-4" />
+            Escalation threshold
+          </CardTitle>
           <p className="text-muted-foreground text-xs">
             At or below this rating we open a recovery ticket and alert the
             assignee. It does not change whether the public review link is shown
             — it always is.
           </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
           <div className="flex gap-1.5">
-            {[2, 3, 4, 5].map((n) => (
+            {[1, 2, 3, 4].map((value) => (
               <button
-                key={n}
+                key={value}
                 type="button"
-                onClick={() => update("happyThreshold", n as ReputationRating)}
-                className={`flex-1 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
-                  s.happyThreshold === n
+                onClick={() => update("escalationThreshold", value)}
+                className={cn(
+                  "flex-1 rounded-lg border px-2 py-2 text-xs font-medium transition-colors",
+                  draft.escalationThreshold === value
                     ? "border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
+                    : "text-muted-foreground hover:bg-muted",
+                )}
               >
-                {n - 1}★ &amp; below
+                {value}★ &amp; below
               </button>
             ))}
           </div>
-          <p className="text-muted-foreground text-xs">
-            Currently: {s.happyThreshold - 1}★ and below opens a recovery
-            ticket. Everyone, at every rating, is offered the public review link
-            and a private channel side by side.
-          </p>
-        </div>
 
-        <div className="flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-          <p className="text-xs text-blue-700 dark:text-blue-300">
-            Open routing is the only mode. Every client is invited to review
-            publicly and privately; the rating decides what happens on your
-            side, never whether the public option appears. Showing the link only
-            to happy clients is review gating, which the FTC&apos;s Rule on
-            Consumer Reviews and Google&apos;s review policies both prohibit.
-          </p>
-        </div>
-      </Section>
-
-      {/* Escalation routing */}
-      <Section
-        title="Escalation Routing"
-        description="Route negative reviews to the right person by service. Assign one or several people — everyone assigned gets the alert and a follow-up task."
-        icon={Users}
-      >
-        <ReputationEscalationRouting
-          routes={s.escalationRoutes ?? []}
-          onChange={(routes) => update("escalationRoutes", routes)}
-        />
-      </Section>
-
-      {/* Reminders */}
-      <Section
-        title="Smart Reminders"
-        description="One gentle nudge for happy clients who rated but never clicked through to post publicly. (No-response reminders are configured in the Send Sequence above.)"
-        icon={Bell}
-      >
-        <div className="space-y-5">
-          <div className="space-y-3 rounded-xl border p-4">
-            <p className="text-sm font-semibold">Happy-but-silent follow-up</p>
-            <Toggle
-              checked={s.reminders.happyNoClickReminderEnabled}
-              onChange={(v) =>
-                update("reminders", {
-                  ...s.reminders,
-                  happyNoClickReminderEnabled: v,
-                })
-              }
-              label="Remind happy clients who haven't clicked a review link"
-              description="One gentle nudge — never more than once"
-            />
-            {s.reminders.happyNoClickReminderEnabled && (
-              <div className="space-y-1.5">
-                <Label className="text-muted-foreground text-xs">
-                  Send after (hours)
-                </Label>
-                <Input
-                  type="number"
-                  min={24}
-                  max={120}
-                  value={s.reminders.happyNoClickReminderHours}
-                  onChange={(e) =>
-                    update("reminders", {
-                      ...s.reminders,
-                      happyNoClickReminderHours: safeInt(
-                        e.target.value,
-                        s.reminders.happyNoClickReminderHours,
-                        24,
-                        120,
-                      ),
-                    })
-                  }
-                  className="w-36"
-                />
-              </div>
-            )}
+          <div className="flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
+            <Info className="mt-0.5 size-4 shrink-0 text-blue-600" />
+            <p className="text-xs text-blue-700 dark:text-blue-300">
+              Every client is invited to review publicly and privately, whatever
+              they rate. Showing the public link only to happy clients is review
+              gating, which the FTC&apos;s Rule on Consumer Reviews and
+              Google&apos;s review policies both prohibit.
+            </p>
           </div>
-        </div>
-      </Section>
+        </CardContent>
+      </Card>
 
-      {/* Staff notifications */}
-      <Section
-        title="Staff Notifications"
-        description="Control what each team member is notified about when reviews arrive."
-        icon={Users}
-      >
-        <div className="space-y-3">
-          {s.staffNotifications.map((sn, idx) => (
-            <div
-              key={sn.staffId}
-              className="flex items-center justify-between gap-3 rounded-xl border p-3"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="from-primary/20 to-primary/40 text-primary flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold">
-                  {sn.staffName.charAt(0)}
-                </div>
-                <p className="text-sm font-medium">{sn.staffName}</p>
-              </div>
-              <Select
-                value={sn.notifyOn}
-                onValueChange={(v) => {
-                  const updated = [...s.staffNotifications];
-                  updated[idx] = { ...sn, notifyOn: v as ReputationNotifyOn };
-                  update("staffNotifications", updated);
-                }}
-              >
-                <SelectTrigger className="h-8 w-52 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {NOTIFY_OPTIONS.map((o) => (
-                    <SelectItem
-                      key={o.value}
-                      value={o.value}
-                      className="text-xs"
-                    >
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
-        </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">When we ask, and how often</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <NumberField
+            label="Do not ask again for"
+            suffix="days"
+            value={draft.cooldownDays}
+            onChange={(value) => update("cooldownDays", value)}
+            hint="Counted from the last time this client was asked."
+          />
+          <NumberField
+            label="After a poor rating, wait"
+            suffix="days"
+            value={draft.negativePauseDays}
+            onChange={(value) => update("negativePauseDays", value)}
+            hint="Whichever of these two windows runs longer is the one that applies."
+          />
+          <NumberField
+            label="Follow up once, after"
+            suffix="hours"
+            value={draft.nudgeAfterHours}
+            onChange={(value) => update("nudgeAfterHours", value)}
+            hint="One follow-up per request, ever. What it says depends on what they did."
+          />
+          <NumberField
+            label="The link stops working after"
+            suffix="days"
+            value={draft.linkTtlDays}
+            onChange={(value) => update("linkTtlDays", value)}
+          />
+          <NumberField
+            label="Stop following up after"
+            suffix="days"
+            value={draft.expiresAfterDays}
+            onChange={(value) => update("expiresAfterDays", value)}
+            hint="Past this, an outstanding follow-up is dropped rather than sent late."
+          />
+          <NumberField
+            label="Show on the booking page from"
+            suffix="★ and up"
+            value={draft.showcaseMin}
+            min={1}
+            max={5}
+            onChange={(value) => update("showcaseMin", value)}
+            hint="With a written comment and the client's consent."
+          />
+        </CardContent>
+      </Card>
 
-        <div className="space-y-1.5">
-          <Label className="text-sm">Manager alert email(s)</Label>
-          <Input
-            value={s.managerAlertEmails.join(", ")}
-            onChange={(e) =>
-              update(
-                "managerAlertEmails",
-                e.target.value.split(",").map((x) => x.trim()),
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Retail-only visits</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <label className="flex items-start gap-3">
+            <Switch
+              checked={draft.askAfterRetailOnly}
+              onCheckedChange={(value) => update("askAfterRetailOnly", value)}
+            />
+            <span className="text-xs">
+              <span className="font-medium">
+                Ask after a purchase with no service
+              </span>
+              <span className="text-muted-foreground block">
+                Off by default. &ldquo;How was your visit?&rdquo; after buying a
+                bag of food reads as a form letter, and it spends the cooldown
+                the next groom would have used.
+              </span>
+            </span>
+          </label>
+        </CardContent>
+      </Card>
+
+      {dirty && (
+        <div className="bg-background sticky bottom-4 flex items-center justify-end gap-2 rounded-xl border p-3 shadow-lg">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setDraft(settings.reputation_config.value);
+              setDirty(false);
+            }}
+          >
+            Discard
+          </Button>
+          <Button
+            size="sm"
+            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            disabled={save.isPending}
+            onClick={() =>
+              save.mutate(
+                { domain: "reputation_config", value: draft },
+                {
+                  onSuccess: () => {
+                    setDirty(false);
+                    toast.success("Saved.");
+                  },
+                  onError: (failure) =>
+                    toast.error(
+                      failure instanceof Error
+                        ? failure.message
+                        : "That could not be saved.",
+                    ),
+                },
               )
             }
-            placeholder="manager@yourbusiness.com"
-          />
-          <p className="text-muted-foreground text-xs">
-            Immediate alerts are sent here for 1–2 star ratings. Separate
-            multiple addresses with commas.
-          </p>
+          >
+            {save.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              "Save"
+            )}
+          </Button>
         </div>
-      </Section>
+      )}
 
-      {/* Save button */}
-      <div className="flex justify-end gap-3 pt-2">
-        {saved && (
-          <div className="flex items-center gap-1.5 text-sm text-emerald-600">
-            <CheckCircle2 className="h-4 w-4" /> Settings saved
-          </div>
-        )}
-        <Button onClick={save} className="gap-2">
-          <Settings2 className="h-4 w-4" /> Save Settings
-        </Button>
-      </div>
+      <ChannelManager />
+      <DelayNote />
     </div>
   );
 }
 
-// ─── Automation pipeline (Step 1) ─────────────────────────────────────────────
-
-function AutomationPipelineCard({
-  settings,
+function NumberField({
+  label,
+  suffix,
+  value,
+  onChange,
+  hint,
+  min = 0,
+  max = 3650,
 }: {
-  settings: ReputationSettings;
+  label: string;
+  suffix: string;
+  value: number;
+  onChange: (value: number) => void;
+  hint?: string;
+  min?: number;
+  max?: number;
 }) {
-  const { recordCheckout, runtimeRequests } = useReputation();
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          value={value}
+          min={min}
+          max={max}
+          onChange={(event) => {
+            const next = Number(event.target.value);
+            if (Number.isFinite(next))
+              onChange(Math.min(max, Math.max(min, next)));
+          }}
+          className="h-9 w-24 text-sm"
+        />
+        <span className="text-muted-foreground text-xs">{suffix}</span>
+      </div>
+      {hint && <p className="text-muted-foreground text-[11px]">{hint}</p>}
+    </div>
+  );
+}
 
-  const step = initialStep(settings);
-  const channel = step.channel;
-  const scheduledCount = runtimeRequests.filter(
-    (r) => r.status === "scheduled",
-  ).length;
+function ChannelManager() {
+  const queryClient = useQueryClient();
+  const { data, isPending } = useQuery({
+    queryKey: ["reputation", "channels"],
+    queryFn: async (): Promise<ChannelRow[]> => {
+      const response = await fetch("/api/reputation/channels", {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Could not read the channels.");
+      const body = (await response.json()) as { channels: ChannelRow[] };
+      return body.channels;
+    },
+  });
 
-  function runTest() {
-    const enabledTrigger = settings.triggers.find((t) => t.enabled);
-    // Synthetic client id so repeated tests aren't blocked by cooldown.
-    const syntheticId = -Math.floor(Date.now() / 1000);
-    const result = recordCheckout({
-      bookingId: 90000 + (syntheticId % 1000),
-      clientId: syntheticId,
-      clientName: "Test Client",
-      petName: "Buddy (test)",
-      service: enabledTrigger?.event.replace(/_.*/, "") ?? "boarding",
-      serviceLabel: enabledTrigger?.label ?? "Boarding Checkout",
-      triggerEvent: enabledTrigger?.event ?? "boarding_checkout",
-      checkoutAt: new Date().toISOString(),
+  const [platform, setPlatform] = useState<string>("google");
+  const [url, setUrl] = useState("");
+
+  const invalidate = () =>
+    void queryClient.invalidateQueries({
+      queryKey: ["reputation", "channels"],
     });
 
-    if (!result.allowed) {
-      toast.error("Review request not scheduled", {
-        description: result.reason,
+  const upsert = useMutation({
+    mutationFn: async (body: Record<string, unknown>) => {
+      const response = await fetch("/api/reputation/channels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
-      return;
-    }
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(detail?.error ?? "That could not be saved.");
+      }
+    },
+    onSuccess: invalidate,
+    onError: (failure) =>
+      toast.error(
+        failure instanceof Error ? failure.message : "That could not be saved.",
+      ),
+  });
 
-    const req = result.request;
-    const openSurvey = req
-      ? {
-          label: "Open survey",
-          onClick: () => window.open(buildReviewPath(req.id), "_blank"),
-        }
-      : undefined;
-    if (req?.status === "sent") {
-      toast.success("Test review request sent", {
-        description: `Sent immediately via ${req.channel.toUpperCase()} — open the survey link the client would receive.`,
-        action: openSurvey,
-      });
-    } else if (req?.scheduledSendAt) {
-      toast.success("Test review request scheduled", {
-        description: `Will send ${describeMinutes(step.delayMinutes)} (${new Date(
-          req.scheduledSendAt,
-        ).toLocaleTimeString("en-CA", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}) via ${req.channel.toUpperCase()}. Preview the client's survey:`,
-        action: openSurvey,
-      });
-    }
-  }
-
-  const steps = [
-    {
-      label: "Checkout",
-      sub: "Pet marked checked out (T0)",
-      icon: CheckCircle2,
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(
+        `/api/reputation/channels?id=${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) throw new Error("That could not be removed.");
     },
-    {
-      label: "Delay (Δt)",
-      sub: describeMinutes(step.delayMinutes),
-      icon: Clock,
-    },
-    {
-      label: "Send",
-      sub: channel ? `via ${channel.toUpperCase()}` : "no channel enabled",
-      icon: channel === "sms" ? Smartphone : Mail,
-    },
-  ];
+    onSuccess: invalidate,
+    onError: () => toast.error("That could not be removed."),
+  });
 
   return (
-    <Card className="border-amber-200 bg-amber-50/40 dark:border-amber-900/40 dark:bg-amber-950/10">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40">
-            <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          </div>
-          Automated Post-Service Trigger
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Globe className="size-4" />
+          Where happy clients are sent
         </CardTitle>
-        <CardDescription>
-          When a pet is checked out, a review request is scheduled automatically
-          and sent after the configured delay on the client&apos;s channel.
-        </CardDescription>
+        <p className="text-muted-foreground text-xs">
+          These appear on the survey, in this order. Yelp can be connected for
+          its rating but never used as a destination — its guidelines prohibit
+          asking for reviews at all.
+        </p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-1.5">
-          {steps.map((step, i) => (
-            <div key={step.label} className="flex flex-1 items-center gap-1.5">
-              <div className="bg-background flex-1 rounded-xl border px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <step.icon className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <div className="min-w-0">
-                    <p className="text-sm/none font-medium">{step.label}</p>
-                    <p className="text-muted-foreground mt-1 truncate text-xs">
-                      {step.sub}
-                    </p>
-                  </div>
-                </div>
+      <CardContent className="space-y-3">
+        {isPending ? (
+          <Loader2 className="text-muted-foreground mx-auto size-5 animate-spin" />
+        ) : (
+          (data ?? []).map((channel) => (
+            <div
+              key={channel.id}
+              className="flex items-center gap-3 rounded-xl border p-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1.5 text-sm font-medium capitalize">
+                  {channel.platform}
+                  {!channel.solicitable && (
+                    <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                      Monitor only
+                    </span>
+                  )}
+                </p>
+                <p className="text-muted-foreground truncate text-xs">
+                  {channel.place_id
+                    ? `Place ID ${channel.place_id}`
+                    : (channel.profile_url ?? "No link yet")}
+                </p>
               </div>
-              {i < steps.length - 1 && (
-                <span className="text-muted-foreground shrink-0">→</span>
-              )}
-            </div>
-          ))}
-        </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-muted-foreground text-xs">
-            {settings.enabled ? (
-              <>
-                <span className="font-medium text-emerald-600">Live</span> —{" "}
-                {scheduledCount > 0
-                  ? `${scheduledCount} request${scheduledCount > 1 ? "s" : ""} scheduled and awaiting send.`
-                  : "real checkouts will schedule requests here."}
-              </>
-            ) : (
-              <span className="text-muted-foreground">
-                Paused — enable Reputation Booster below to activate.
-              </span>
-            )}
-          </p>
+              <Switch
+                checked={channel.enabled}
+                disabled={!channel.solicitable || upsert.isPending}
+                onCheckedChange={(enabled) =>
+                  upsert.mutate({
+                    platform: channel.platform,
+                    profileUrl: channel.profile_url ?? "",
+                    placeId: channel.place_id ?? "",
+                    enabled,
+                    priority: channel.priority,
+                    weight: channel.weight,
+                  })
+                }
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-destructive size-8"
+                onClick={() => remove.mutate(channel.id)}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+          ))
+        )}
+
+        <div className="flex flex-wrap items-end gap-2 border-t pt-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Platform</Label>
+            <select
+              value={platform}
+              onChange={(event) => setPlatform(event.target.value)}
+              className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+            >
+              {PLATFORMS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="min-w-[16rem] flex-1 space-y-1">
+            <Label className="text-xs">Link to your profile</Label>
+            <Input
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder="Paste your Google Maps or profile link"
+              className="h-9 text-sm"
+            />
+          </div>
           <Button
-            variant="outline"
             size="sm"
-            onClick={runTest}
-            disabled={!settings.enabled}
-            className="gap-2"
+            disabled={!url.trim() || upsert.isPending}
+            onClick={() =>
+              upsert.mutate(
+                {
+                  platform,
+                  profileUrl: url.trim(),
+                  enabled: platform !== "yelp",
+                },
+                { onSuccess: () => setUrl("") },
+              )
+            }
           >
-            <Send className="h-3.5 w-3.5" /> Send test review request
+            Add
           </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * The delay has ONE editor, and it is not here.
+ *
+ * A read-only mirror would be a third place showing the same number. A link is
+ * one place showing it, and one place to change it.
+ */
+function DelayNote() {
+  return (
+    <Card>
+      <CardContent className="flex items-start gap-3 py-4">
+        <Info className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+        <div className="text-xs">
+          <p className="font-medium">
+            When the ask goes out, and whether it goes out at all
+          </p>
+          <p className="text-muted-foreground mt-1">
+            The review request is an automation on check-out. Its delay,
+            channels and on/off switch live on the Automations screen, so there
+            is one place to change them rather than three that can disagree.
+          </p>
+          <Link
+            href="/facility/dashboard/marketing/automations"
+            className="mt-2 inline-flex items-center gap-1 font-medium text-amber-700 hover:underline dark:text-amber-400"
+          >
+            Open Automations
+            <ExternalLink className="size-3" />
+          </Link>
         </div>
       </CardContent>
     </Card>

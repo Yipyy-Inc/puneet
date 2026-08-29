@@ -124,7 +124,6 @@ const BASELINE = new Set<string>([
   "src/components/evaluations/EvaluationResultCard.tsx",
   "src/components/evaluations/StaffEvaluationFormModal.tsx",
   "src/components/facility/staff-hr/onboarding-invite-email.tsx",
-  "src/components/marketing/ReputationMessageBuilder.tsx",
 ]);
 
 function walk(dir: string, out: string[] = []): string[] {
