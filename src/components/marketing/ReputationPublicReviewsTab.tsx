@@ -1,460 +1,259 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Eye, EyeOff, Info, Loader2, Star } from "lucide-react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Star,
-  Globe,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  ThumbsUp,
-  Clock,
-  ExternalLink,
-  LayoutGrid,
-  List,
-  Sparkles,
-} from "lucide-react";
-import { reputationQueries } from "@/lib/api/reputation";
-import type { ReputationRequest } from "@/types/reputation";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ============================================================================
+// The reviews on the facility's OWN booking page.
+//
+// ── WHAT THE OLD SCREEN CLAIMED ───────────────────────────────────────────
+//
+// It put Google and Facebook badges beside "Hide" and "Display" buttons, which
+// reads as an offer to hide a review on those platforms. Nothing in this
+// product can do that, and a footnote saying so does not undo what the buttons
+// imply. The tab is now "Booking page reviews", the buttons name the booking
+// page, and the banner says plainly that Google and Facebook are untouched.
+//
+// ── AND WHAT IT COULD NOT ANSWER ──────────────────────────────────────────
+//
+// It showed "Pending 0" with no approve action anywhere and no stated rule, so
+// nobody could say why a given review was or was not on the booking page.
+// Eligibility is now one sentence — a written comment, a rating at or above the
+// facility's showcase minimum, and the client's consent — and it is enforced in
+// the query rather than in somebody's head.
+// ============================================================================
 
-function StarRow({ rating }: { rating: number }) {
-  return (
-    <div className="flex gap-0.5">
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          className={`h-3 w-3 ${i < rating ? "fill-amber-400 text-amber-400" : "fill-muted text-muted-foreground"}`}
-        />
-      ))}
-    </div>
-  );
-}
-
-/**
- * Says what is actually known, which is that the client followed a link to this
- * platform — NOT that they posted there. Nothing in Yipyy reads a public review
- * back, so a badge reading "Google" beside a Show/Remove button implied both a
- * confirmation we do not have and a reach we do not have. When a real sync
- * exists this can say "posted"; until then it says "sent".
- */
-function PlatformBadge({ platform }: { platform: string }) {
-  const cfg: Record<string, { label: string; color: string }> = {
-    google: {
-      label: "Sent to Google",
-      color: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-    },
-    facebook: {
-      label: "Sent to Facebook",
-      color:
-        "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
-    },
-    yelp: {
-      label: "Sent to Yelp",
-      color: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
-    },
+interface ShowcaseReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  submitted_at: string;
+  moderation_state: "pending" | "approved" | "live" | "hidden" | "rejected";
+  showcase_sort_order: number | null;
+  display_consent: boolean;
+  approved_at: string | null;
+  staff: { id: string; first_name: string; last_name: string } | null;
+  request: {
+    id: string;
+    showcase_min: number;
+    service_types: string[];
+    client: { id: string; name: string };
   };
-  const c = cfg[platform] ?? {
-    label: `Sent to ${platform}`,
-    color: "bg-muted text-muted-foreground",
-  };
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${c.color}`}
-    >
-      <Globe className="h-2.5 w-2.5" />
-      {c.label}
-    </span>
-  );
 }
 
-// ─── Review card (grid view) ──────────────────────────────────────────────────
-
-function ReviewCard({
-  req,
-  onToggleDisplay,
-}: {
-  req: ReputationRequest;
-  onToggleDisplay: (id: string) => void;
-}) {
-  return (
-    <div
-      className={`bg-card flex flex-col gap-2.5 rounded-xl border p-3.5 transition-all hover:shadow-sm ${
-        req.isPubliclyDisplayed
-          ? "border-emerald-300 dark:border-emerald-800"
-          : ""
-      }`}
-    >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold">
-            {req.clientName.charAt(0)}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-xs leading-none font-semibold">
-              {req.clientName}
-            </p>
-            <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
-              {req.petName} · {req.serviceLabel}
-            </p>
-          </div>
-        </div>
-        {req.isPubliclyDisplayed ? (
-          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-            <Eye className="h-2.5 w-2.5" /> Live
-          </span>
-        ) : req.isApprovedForPublicDisplay ? (
-          <span className="bg-muted text-muted-foreground inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold">
-            <CheckCircle2 className="h-2.5 w-2.5" /> Approved
-          </span>
-        ) : null}
-      </div>
-
-      {/* Rating */}
-      <div className="flex items-center gap-1.5">
-        <StarRow rating={req.rating!} />
-        <span className="text-[11px] font-bold tabular-nums">
-          {req.rating}.0
-        </span>
-        {req.publicPlatform && <PlatformBadge platform={req.publicPlatform} />}
-      </div>
-
-      {/* Comment */}
-      <p className="text-muted-foreground line-clamp-3 flex-1 text-xs/relaxed italic">
-        &quot;{req.clientComment}&quot;
-      </p>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between gap-2 border-t pt-2">
-        <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px]">
-          <Clock className="h-2.5 w-2.5" />
-          {new Date(req.ratedAt!).toLocaleDateString("en-CA", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
-        </span>
-        <Button
-          variant={req.isPubliclyDisplayed ? "outline" : "default"}
-          size="sm"
-          className="h-6 gap-1 px-2 text-[11px]"
-          onClick={() => onToggleDisplay(req.id)}
-        >
-          {req.isPubliclyDisplayed ? (
-            <>
-              <EyeOff className="h-3 w-3" /> Remove from booking page
-            </>
-          ) : (
-            <>
-              <Eye className="h-3 w-3" /> Show on booking page
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Review row (list view) ───────────────────────────────────────────────────
-
-function ReviewRow({
-  req,
-  onToggleDisplay,
-}: {
-  req: ReputationRequest;
-  onToggleDisplay: (id: string) => void;
-}) {
-  return (
-    <div
-      className={`hover:bg-muted/30 flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-all ${req.isPubliclyDisplayed ? "border-emerald-200 bg-emerald-50/30 dark:border-emerald-800 dark:bg-emerald-950/10" : "bg-card"}`}
-    >
-      <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold">
-        {req.clientName.charAt(0)}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <p className="text-xs font-semibold">{req.clientName}</p>
-          <StarRow rating={req.rating!} />
-          {req.publicPlatform && (
-            <PlatformBadge platform={req.publicPlatform} />
-          )}
-        </div>
-        <p className="text-muted-foreground mt-0.5 truncate text-[11px] italic">
-          &quot;{req.clientComment}&quot;
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5">
-        {req.isPubliclyDisplayed && (
-          <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-            Live
-          </span>
-        )}
-        <Button
-          variant={req.isPubliclyDisplayed ? "outline" : "default"}
-          size="sm"
-          className="h-6 gap-1 px-2 text-[11px]"
-          onClick={() => onToggleDisplay(req.id)}
-        >
-          {req.isPubliclyDisplayed ? (
-            <>
-              <EyeOff className="h-3 w-3" /> Remove from booking page
-            </>
-          ) : (
-            <>
-              <Eye className="h-3 w-3" /> Show on booking page
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Public reviews tab ───────────────────────────────────────────────────────
+const TABS = [
+  { value: "", label: "All" },
+  { value: "pending", label: "Waiting on you" },
+  { value: "live", label: "On the page" },
+  { value: "hidden", label: "Taken down" },
+] as const;
 
 export function ReputationPublicReviewsTab() {
-  const { data: requests = [] } = useQuery(reputationQueries.requests());
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [showLiveOnly, setShowLiveOnly] = useState(false);
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const [state, setState] = useState<string>("");
+  const queryClient = useQueryClient();
 
-  const eligible = useMemo(
-    () =>
-      requests.filter(
-        (r) =>
-          r.isApprovedForPublicDisplay &&
-          r.rating &&
-          r.rating >= 4 &&
-          r.clientComment,
+  const { data, isPending, error } = useQuery({
+    queryKey: ["reputation", "showcase", state],
+    queryFn: async (): Promise<ShowcaseReview[]> => {
+      const params = state ? `?state=${state}` : "";
+      const response = await fetch(`/api/reputation/showcase${params}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(detail?.error ?? "Could not read the reviews.");
+      }
+      const body = (await response.json()) as { reviews: ShowcaseReview[] };
+      return body.reviews;
+    },
+  });
+
+  const moderate = useMutation({
+    mutationFn: async (input: { responseId: string; state: string }) => {
+      const response = await fetch("/api/reputation/showcase", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(detail?.error ?? "That could not be saved.");
+      }
+    },
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["reputation", "showcase"],
+      }),
+    onError: (failure) =>
+      toast.error(
+        failure instanceof Error ? failure.message : "That could not be saved.",
       ),
-    [requests],
-  );
-
-  const pending = useMemo(
-    () =>
-      requests.filter(
-        (r) =>
-          !r.isApprovedForPublicDisplay &&
-          r.rating &&
-          r.rating >= 4 &&
-          r.clientComment,
-      ),
-    [requests],
-  );
-
-  const displayed = eligible.filter((r) =>
-    overrides[r.id] !== undefined ? overrides[r.id] : r.isPubliclyDisplayed,
-  );
-  const notDisplayed = eligible.filter(
-    (r) =>
-      !(overrides[r.id] !== undefined
-        ? overrides[r.id]
-        : r.isPubliclyDisplayed),
-  );
-
-  const visible = showLiveOnly ? displayed : eligible;
-
-  function toggleDisplay(id: string) {
-    const current =
-      overrides[id] !== undefined
-        ? overrides[id]
-        : (eligible.find((r) => r.id === id)?.isPubliclyDisplayed ?? false);
-    setOverrides((prev) => ({ ...prev, [id]: !current }));
-  }
-
-  const isLive = (req: ReputationRequest) =>
-    overrides[req.id] !== undefined
-      ? overrides[req.id]
-      : req.isPubliclyDisplayed;
+  });
 
   return (
-    <div className="space-y-6">
-      {/* Stats row */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
-          {
-            label: "Eligible",
-            value: eligible.length,
-            icon: ThumbsUp,
-            color:
-              "text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300",
-          },
-          {
-            label: "Live",
-            value: displayed.length,
-            icon: Eye,
-            color:
-              "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300",
-          },
-          {
-            label: "Approved, hidden",
-            value: notDisplayed.length,
-            icon: CheckCircle2,
-            color:
-              "text-amber-600 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300",
-          },
-          {
-            label: "Pending",
-            value: pending.length,
-            icon: Clock,
-            color:
-              "text-purple-600 bg-purple-50 dark:bg-purple-500/15 dark:text-purple-300",
-          },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="bg-card flex items-center gap-2.5 rounded-xl border px-3 py-2.5"
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-1.5">
+        {TABS.map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setState(tab.value)}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+              state === tab.value
+                ? "border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                : "text-muted-foreground hover:bg-muted",
+            )}
           >
-            <div
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${s.color}`}
-            >
-              <s.icon className="h-3.5 w-3.5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-muted-foreground text-[10px] leading-none tracking-wide uppercase">
-                {s.label}
-              </p>
-              <p className="mt-1 text-lg/none font-bold tabular-nums">
-                {s.value}
-              </p>
-            </div>
-          </div>
+            {tab.label}
+          </button>
         ))}
       </div>
 
-      {/* Pending approval */}
-      {pending.length > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/30 p-3 dark:border-amber-800 dark:bg-amber-950/10">
-          <div className="mb-2 flex items-center gap-2 text-amber-700 dark:text-amber-400">
-            <Sparkles className="h-3.5 w-3.5" />
-            <p className="text-xs font-semibold">
-              Pending your approval ({pending.length})
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            {pending.map((req) => (
-              <div
-                key={req.id}
-                className="bg-background flex items-center gap-2.5 rounded-lg border px-3 py-2"
-              >
-                <div className="from-primary/20 to-primary/40 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-xs font-bold">
-                  {req.clientName.charAt(0)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <p className="text-xs font-semibold">{req.clientName}</p>
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: req.rating! }, (_, i) => (
-                        <Star
-                          key={i}
-                          className="h-3 w-3 fill-amber-400 text-amber-400"
-                        />
-                      ))}
-                    </div>
-                    <span className="text-muted-foreground text-[10px]">
-                      · {req.serviceLabel}
-                    </span>
-                  </div>
-                  <p className="text-muted-foreground mt-0.5 truncate text-[11px] italic">
-                    &quot;{req.clientComment}&quot;
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  className="h-6 shrink-0 gap-1 bg-emerald-600 px-2 text-[11px] hover:bg-emerald-700"
-                >
-                  <CheckCircle2 className="h-3 w-3" /> Approve
-                </Button>
-              </div>
-            ))}
-          </div>
+      {error ? (
+        <Card>
+          <CardContent className="text-muted-foreground py-10 text-center text-sm">
+            {error instanceof Error ? error.message : "Could not load reviews."}
+          </CardContent>
+        </Card>
+      ) : isPending ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="text-muted-foreground size-6 animate-spin" />
         </div>
-      )}
-
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={showLiveOnly ? "default" : "outline"}
-            size="sm"
-            className="h-8 gap-1 text-xs"
-            onClick={() => setShowLiveOnly((v) => !v)}
-          >
-            <Eye className="h-3.5 w-3.5" />
-            {showLiveOnly ? "Showing live only" : "Show all approved"}
-          </Button>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant={viewMode === "grid" ? "default" : "ghost"}
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setViewMode("grid")}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setViewMode("list")}
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Review grid / list */}
-      {viewMode === "grid" ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((req) => (
-            <ReviewCard
-              key={req.id}
-              req={{ ...req, isPubliclyDisplayed: isLive(req) }}
-              onToggleDisplay={toggleDisplay}
-            />
-          ))}
-        </div>
+      ) : data.length === 0 ? (
+        <Card>
+          <CardContent className="text-muted-foreground py-12 text-center text-sm">
+            Nothing here yet. Only reviews with something written in them can go
+            on the booking page.
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-2">
-          {visible.map((req) => (
-            <ReviewRow
-              key={req.id}
-              req={{ ...req, isPubliclyDisplayed: isLive(req) }}
-              onToggleDisplay={toggleDisplay}
+        <div className="grid gap-3 md:grid-cols-2">
+          {data.map((review) => (
+            <ReviewCard
+              key={review.id}
+              review={review}
+              busy={moderate.isPending}
+              onModerate={(next) =>
+                moderate.mutate({ responseId: review.id, state: next })
+              }
             />
           ))}
         </div>
       )}
 
-      {eligible.length === 0 && (
-        <div className="text-muted-foreground py-20 text-center">
-          <Globe className="mx-auto mb-3 h-10 w-10 opacity-20" />
-          <p className="text-sm font-medium">No approved reviews yet</p>
-          <p className="mt-1 text-xs">
-            Once clients rate their experience 4 or 5 stars, you&#39;ll be able
-            to approve and display them here.
-          </p>
-        </div>
-      )}
-
-      {/* Info banner */}
       <div className="bg-muted/30 flex items-start gap-2 rounded-xl border border-dashed px-3 py-2.5">
-        <ExternalLink className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <div className="text-muted-foreground text-xs">
-          <span className="text-foreground font-medium">
-            Booking page showcase
-          </span>{" "}
-          — Reviews set to &quot;Live&quot; appear on your own booking page, and
-          only there. Showing or removing one here changes nothing on Google,
-          Facebook or Yelp — no product can edit a review on those platforms.
-          Only reviews with a written comment are eligible.
-        </div>
+        <Info className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
+        <p className="text-muted-foreground text-xs">
+          These appear on{" "}
+          <span className="font-medium">your own booking page</span>, and only
+          there. Putting one up or taking it down changes nothing on Google,
+          Facebook or Yelp — no product can edit a review on those platforms. A
+          review can be shown when it has a written comment, a rating at or
+          above your showcase minimum, and the client agreed it could be
+          displayed.
+        </p>
       </div>
     </div>
+  );
+}
+
+function ReviewCard({
+  review,
+  busy,
+  onModerate,
+}: {
+  review: ShowcaseReview;
+  busy: boolean;
+  onModerate: (state: string) => void;
+}) {
+  const live = review.moderation_state === "live";
+  const eligible =
+    review.rating >= review.request.showcase_min && review.display_consent;
+
+  return (
+    <Card className={cn(live && "border-emerald-300 dark:border-emerald-900")}>
+      <CardContent className="space-y-2 p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold">
+              {review.request.client.name}
+            </p>
+            <div className="mt-0.5 flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star
+                  key={n}
+                  className={cn(
+                    "size-3",
+                    n <= review.rating
+                      ? "fill-amber-400 text-amber-400"
+                      : "text-muted-foreground/30 fill-transparent",
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+          {live && (
+            <Badge className="border-0 bg-emerald-100 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              On the page
+            </Badge>
+          )}
+        </div>
+
+        <p className="text-muted-foreground line-clamp-4 text-xs italic">
+          &ldquo;{review.comment}&rdquo;
+        </p>
+
+        {review.staff && (
+          <p className="text-muted-foreground text-[11px]">
+            {review.staff.first_name} {review.staff.last_name}
+          </p>
+        )}
+
+        {!eligible ? (
+          // Say WHY, rather than disabling a button and leaving somebody to
+          // guess. These are the two halves of the eligibility rule.
+          <p className="text-muted-foreground border-t pt-2 text-[11px]">
+            {!review.display_consent
+              ? "They did not agree to have this shown."
+              : `Below your showcase minimum of ${review.request.showcase_min}★.`}
+          </p>
+        ) : (
+          <div className="border-t pt-2">
+            <Button
+              size="sm"
+              variant={live ? "outline" : "default"}
+              disabled={busy}
+              className={cn(
+                "h-8 gap-1.5 text-xs",
+                !live && "bg-emerald-600 text-white hover:bg-emerald-700",
+              )}
+              onClick={() => onModerate(live ? "hidden" : "live")}
+            >
+              {live ? (
+                <>
+                  <EyeOff className="size-3" /> Remove from booking page
+                </>
+              ) : (
+                <>
+                  <Eye className="size-3" /> Show on booking page
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
