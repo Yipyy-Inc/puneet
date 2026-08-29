@@ -7244,6 +7244,35 @@ That refusal is the designed behaviour — the alternative is mailing somebody a
 broken link — but it looks like a silent failure. If a facility reports that a
 review template "does nothing", check which rule is sending it.
 
+### 🟡 `anon` holds a SELECT grant on `public.clients` that nobody revoked
+
+Measured 2026-08-29 while writing `supabase/tests/published-reviews.sql`:
+`has_table_privilege('anon', 'public.clients', 'select')` is TRUE.
+
+**It is not currently exploitable.** RLS is enabled on `clients`, there are four
+policies and NONE of them names `anon` or `public`, so an anon session reads
+zero rows — confirmed by running the count as the role rather than by reading
+the policies. The grant is dangling, not open.
+
+But it is one permissive policy away from being open, and it will not announce
+itself: a future `create policy ... to anon using (...)` on that table would
+inherit a grant nobody remembers giving. This is the exact shape 20260822610000
+was written about — `revoke ... from public` is not `revoke ... from anon`, and
+Supabase default privileges hand `authenticated` AND `anon` the full set on
+every new table in `public`.
+
+**Not fixed here on purpose.** Revoking a grant on `clients` touches the most
+central table in the product, and doing it inside a reputation change is how a
+one-line revoke becomes an outage nobody connects to the commit that caused it.
+It wants its own migration, its own SQL test, and a deliberate look at which
+other tables carry the same dangling grant — `bun run test:sql` already has
+`rpc-session-required.sql` doing that sweep for FUNCTIONS, and the table
+equivalent does not exist.
+
+**The rule meanwhile:** assert what a role can READ, not what it was granted.
+`published-reviews.sql` P6 counts rows as `anon` for that reason, and would go
+red the moment such a policy appeared.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

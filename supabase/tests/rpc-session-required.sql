@@ -278,7 +278,7 @@ end $$;
 -- must be shaped so that being called by anybody is safe — an exact-key lookup
 -- rather than a listing, returning only what the signed-out page renders.
 --
--- The five that qualify:
+-- The ten that qualify:
 --
 --   onboarding_by_token, save_onboarding_section, submit_onboarding,
 --   set_onboarding_account_complete
@@ -312,6 +312,27 @@ end $$;
 --       visit. `submit_review_response` writes one row for the request the
 --       token names and is rate-once by a unique constraint.
 --
+--   published_reviews_for, published_review_summary
+--       The reviews a facility chose to put on its own booking page
+--       (20260829200000). Somebody deciding whether to book has no account and
+--       is not being asked for one -- reading the testimonials IS the thing
+--       they are there to do, and a wall of reviews nobody signed out can see
+--       is not a wall of reviews.
+--
+--       These are the `facility_branding_by_slug` shape, NOT the token shape:
+--       an EXACT slug answers about ONE facility, so it is a lookup and not a
+--       directory, and an unknown slug returns an empty list rather than
+--       raising -- a 404 would turn it into a way to ask which businesses are
+--       on Yipyy.
+--
+--       They are functions precisely SO the tables need no anon policy. A
+--       policy filters rows, not columns, and the row carries the client's
+--       identity through the request, the attributed staff member and the
+--       moderation history. What comes back is a rating, some words, a first
+--       name and an initial, a service and a date. The author is 'Sarah M.'
+--       and never 'Sarah Mitchell': consent to display a review is not consent
+--       to be identified.
+--
 -- Everything else was revoked by 20260822600000, which records what each one
 -- had actually exposed. Three were existence oracles; one had no permission
 -- check at all; the rest were grants nobody had asked for.
@@ -326,7 +347,8 @@ begin
                            'submit_onboarding', 'set_onboarding_account_complete',
                            'facility_branding_by_slug',
                            'review_request_by_token', 'submit_review_response',
-                           'record_review_click');
+                           'record_review_click',
+                           'published_reviews_for', 'published_review_summary');
   perform pg_temp.t('V7 no unexpected anon-callable function in public',
     unexpected is null, coalesce('anon can call: ' || unexpected, 'none'));
 end $$;
@@ -365,6 +387,25 @@ begin
      and has_function_privilege('anon', p.oid, 'execute');
   perform pg_temp.t('V9 the 3 review-survey token RPCs still allow anon (by design)',
     g = 3, format('anon-callable=%s of 3', g));
+end $$;
+
+-- ── V10: and the booking page can still read its own reviews ──────────────
+--
+-- The same argument as V8 and V9, third time. A revoke sweep that took these
+-- would empty the testimonial wall on every facility's booking page, and the
+-- page would render perfectly -- an empty list is also the honest answer for a
+-- facility that has published nothing. Nobody would see a bug; facilities
+-- would just quietly stop having reviews.
+do $$
+declare g integer;
+begin
+  select count(*) into g
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.proname in ('published_reviews_for', 'published_review_summary')
+     and has_function_privilege('anon', p.oid, 'execute');
+  perform pg_temp.t('V10 the booking page reviews still allow anon (by design)',
+    g = 2, format('anon-callable=%s of 2', g));
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

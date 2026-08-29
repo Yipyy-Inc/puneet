@@ -3888,6 +3888,144 @@ export type Database = {
           },
         ];
       };
+      incidents: {
+        Row: {
+          booking_id: string | null;
+          client_id: string | null;
+          client_notes: string;
+          created_at: string;
+          description: string;
+          facility_id: string;
+          id: string;
+          internal_notes: string;
+          kind: string;
+          location_id: string | null;
+          occurred_at: string;
+          owner_notified_at: string | null;
+          owner_notified_by: string | null;
+          pet_ids: string[];
+          ref: number;
+          reported_at: string;
+          reported_by: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          severity: string;
+          staff_ids: string[];
+          status: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          booking_id?: string | null;
+          client_id?: string | null;
+          client_notes?: string;
+          created_at?: string;
+          description?: string;
+          facility_id: string;
+          id?: string;
+          internal_notes?: string;
+          kind: string;
+          location_id?: string | null;
+          occurred_at: string;
+          owner_notified_at?: string | null;
+          owner_notified_by?: string | null;
+          pet_ids?: string[];
+          ref?: number;
+          reported_at?: string;
+          reported_by?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          severity: string;
+          staff_ids?: string[];
+          status?: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          booking_id?: string | null;
+          client_id?: string | null;
+          client_notes?: string;
+          created_at?: string;
+          description?: string;
+          facility_id?: string;
+          id?: string;
+          internal_notes?: string;
+          kind?: string;
+          location_id?: string | null;
+          occurred_at?: string;
+          owner_notified_at?: string | null;
+          owner_notified_by?: string | null;
+          pet_ids?: string[];
+          ref?: number;
+          reported_at?: string;
+          reported_by?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          severity?: string;
+          staff_ids?: string[];
+          status?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "incidents_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "incidents_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "incidents_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "incidents_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "incidents_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "incidents_owner_notified_by_fkey";
+            columns: ["owner_notified_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "incidents_reported_by_fkey";
+            columns: ["reported_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "incidents_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       locations: {
         Row: {
           address: Json | null;
@@ -6877,6 +7015,7 @@ export type Database = {
           facility_id: string;
           first_response_due_at: string;
           id: string;
+          incident_id: string | null;
           location_id: string | null;
           opened_at: string;
           resolution_code: string | null;
@@ -6897,6 +7036,7 @@ export type Database = {
           facility_id: string;
           first_response_due_at: string;
           id?: string;
+          incident_id?: string | null;
           location_id?: string | null;
           opened_at?: string;
           resolution_code?: string | null;
@@ -6917,6 +7057,7 @@ export type Database = {
           facility_id?: string;
           first_response_due_at?: string;
           id?: string;
+          incident_id?: string | null;
           location_id?: string | null;
           opened_at?: string;
           resolution_code?: string | null;
@@ -6941,6 +7082,13 @@ export type Database = {
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "review_escalations_incident_id_fkey";
+            columns: ["incident_id"];
+            isOneToOne: false;
+            referencedRelation: "incidents";
             referencedColumns: ["id"];
           },
           {
@@ -10620,6 +10768,18 @@ export type Database = {
           p_website?: string;
         };
         Returns: Json;
+      };
+      published_review_summary: { Args: { p_slug: string }; Returns: Json };
+      published_reviews_for: {
+        Args: { p_limit?: number; p_slug: string };
+        Returns: {
+          author: string;
+          comment: string;
+          id: string;
+          rating: number;
+          service_type: string;
+          submitted_at: string;
+        }[];
       };
       purchase_package: {
         Args: {
