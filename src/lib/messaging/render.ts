@@ -74,6 +74,17 @@ export interface TemplateLinks {
   yipyyGo: string;
   invoice: string;
   cancel: string;
+  /**
+   * The review survey, `/review/<token>`.
+   *
+   * Unlike every other link here it is not derivable from an id: the token is
+   * minted once per request and only its sha256 is stored, so ONLY the
+   * reputation scheduler can supply it. The generic dispatcher has no token and
+   * leaves `{{survey_link}}` unresolved, which makes the message refuse to send
+   * on UNRESOLVED_TAG rather than mailing somebody a broken link. That refusal
+   * is the designed behaviour for a rule pointed at a review template by hand.
+   */
+  survey: string;
 }
 
 export interface VariableDataContext {
@@ -267,6 +278,8 @@ export function resolveVariable(
       return links?.invoice ?? null;
     case "cancel_link":
       return links?.cancel ?? null;
+    case "survey_link":
+      return links?.survey ?? null;
 
     default:
       return null;

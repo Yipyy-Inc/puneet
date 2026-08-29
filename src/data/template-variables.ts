@@ -456,6 +456,15 @@ const linkVariables: TemplateVariable[] = [
     example: "https://portal.yipyy.com/bookings/BK-2024-001/cancel",
     contextRequired: ["booking"],
   },
+  {
+    key: "survey_link",
+    label: "Review Survey Link",
+    category: "links",
+    description:
+      "The one-tap review survey. Only the review-request automation can fill this in - it mints a token per request - so a hand-built rule using it will refuse to send rather than mail a broken link.",
+    example: "https://pawcare.yipyy.com/review/9x2Kf3...",
+    contextRequired: ["booking"],
+  },
 ];
 
 // ── Aggregate Registry ──────────────────────────────────────

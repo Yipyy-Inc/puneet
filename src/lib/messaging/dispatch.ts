@@ -9,6 +9,17 @@ import {
 } from "@/lib/messaging/render";
 import { channelConfigured, sendEmail, sendSms } from "@/lib/messaging/send";
 import { isSuppressed } from "@/lib/messaging/suppression";
+import {
+  isTooLate,
+  jitterMinutes,
+  nextSendableInstant,
+  sendingZone,
+} from "@/lib/messaging/quiet-hours";
+import {
+  messagingPolicySchema,
+  NO_MESSAGING_POLICY,
+  type MessagingPolicy,
+} from "@/lib/settings/messaging-policy";
 import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { enrolFromEvent } from "@/lib/workflows/engine";
@@ -166,6 +177,33 @@ async function dispatchClaimed(
   // for both kinds of thing.
   const enrolment = await enrolFromEvent(db, event);
   result.problems.push(...enrolment.problems);
+
+  // REVIEW REQUESTS, for the same reason and in the same claim.
+  //
+  // A check-out can perfectly well produce a review request and no automation
+  // rule — the review rule IS a rule, but it is dispatched here rather than by
+  // `deliver()` below because it needs a request row, a link token and a nudge
+  // budget, none of which `deliver()` knows about. Placed before the early
+  // return so a facility that has only turned on the review request still gets
+  // one; that ordering is the same bug `enrolFromEvent` was moved up to fix.
+  //
+  // Imported lazily so the reputation module is not pulled into every path
+  // that dispatches a message, and so a fault there cannot stop a booking
+  // confirmation from going out.
+  if (event.kind === "check_out") {
+    try {
+      const { scheduleReviewRequest } =
+        await import("@/lib/reputation/schedule");
+      const review = await scheduleReviewRequest(db, event);
+      result.problems.push(...review.problems);
+      result.queued += review.requested;
+      result.skipped += review.suppressed;
+    } catch (failure) {
+      result.problems.push(
+        `event ${event.id}: review scheduling failed: ${String(failure)}`,
+      );
+    }
+  }
 
   if (candidates.length === 0) return result;
 
@@ -663,12 +701,15 @@ const TICK_BATCH = 50;
 interface QueuedRow {
   id: string;
   facility_id: string;
+  location_id: string | null;
   client_id: string | null;
   channel: "email" | "sms";
   to_address: string;
   subject_rendered: string | null;
   body_rendered: string;
   source_id: string | null;
+  source_kind: string;
+  scheduled_for: string;
 }
 
 export async function sendDueMessages(): Promise<DispatchResult> {
@@ -702,7 +743,7 @@ export async function sendDueMessages(): Promise<DispatchResult> {
       .eq("id", row.id)
       .eq("status", "queued")
       .select(
-        "id, facility_id, client_id, channel, to_address, subject_rendered, body_rendered, source_id",
+        "id, facility_id, location_id, client_id, channel, to_address, subject_rendered, body_rendered, source_id, source_kind, scheduled_for",
       );
 
     const message = (claimed ?? [])[0] as QueuedRow | undefined;
@@ -726,19 +767,174 @@ export async function sendDueMessages(): Promise<DispatchResult> {
   return result;
 }
 
+/**
+ * When this facility may send, how many, and how late is too late.
+ *
+ * Read per message rather than cached: the tick is fifty rows and a settings
+ * read is one indexed lookup, whereas a cache would let a facility turn quiet
+ * hours on and watch the next batch ignore it.
+ */
+async function loadMessagingPolicy(
+  db: SupabaseClient,
+  facilityId: string,
+): Promise<MessagingPolicy> {
+  const { data } = await db
+    .from("facility_settings")
+    .select("value")
+    .eq("facility_id", facilityId)
+    .eq("domain", "messaging_policy")
+    .maybeSingle();
+
+  const row = data as { value: unknown } | null;
+  if (!row) return NO_MESSAGING_POLICY;
+
+  // A value that no longer parses is ignored in favour of the default, never
+  // merged - the same rule /api/facility/settings follows. A half-written
+  // policy must not decide who gets messaged at 4 a.m.
+  const parsed = messagingPolicySchema.safeParse(row.value);
+  return parsed.success ? parsed.data : NO_MESSAGING_POLICY;
+}
+
+/** The location's clock, then the facility's, then the default. */
+async function sendingZoneFor(
+  db: SupabaseClient,
+  message: QueuedRow,
+): Promise<string> {
+  const [{ data: location }, { data: facility }] = await Promise.all([
+    message.location_id
+      ? db
+          .from("locations")
+          .select("timezone")
+          .eq("id", message.location_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    db
+      .from("facilities")
+      .select("timezone")
+      .eq("id", message.facility_id)
+      .maybeSingle(),
+  ]);
+
+  return sendingZone(
+    (location as { timezone: string | null } | null)?.timezone,
+    (facility as { timezone: string | null } | null)?.timezone,
+  );
+}
+
+/**
+ * Whether this location has already sent its allowance of marketing today.
+ *
+ * Counted from `message_sends` rather than a counter column, for the reason
+ * 20260827111420 gives for having no `total_sent`: a stored copy is one more
+ * thing that can disagree with the rows.
+ */
+async function isOverDailyCap(
+  db: SupabaseClient,
+  message: QueuedRow,
+  cap: number,
+): Promise<boolean> {
+  const since = new Date(Date.now() - 86_400_000).toISOString();
+  let query = db
+    .from("message_sends")
+    .select("id", { count: "exact", head: true })
+    .eq("facility_id", message.facility_id)
+    .eq("status", "sent")
+    .gte("sent_at", since);
+
+  // Per LOCATION, because a five-branch network sending its cap from each is
+  // not the velocity spike a platform filter reacts to - one branch flooding
+  // is.
+  query = message.location_id
+    ? query.eq("location_id", message.location_id)
+    : query.is("location_id", null);
+
+  const { count } = await query;
+  return (count ?? 0) >= cap;
+}
+
 async function sendOneQueued(
   db: SupabaseClient,
   message: QueuedRow,
   result: DispatchResult,
 ): Promise<void> {
+  const policy = await loadMessagingPolicy(db, message.facility_id);
+  const transactional = await ruleIsTransactional(db, message.source_id);
+  const now = new Date();
+  const scheduledFor = new Date(message.scheduled_for);
+
+  // ── TOO LATE TO BE WORTH SENDING ────────────────────────────────────────
+  //
+  // A worker outage backs the queue up, and when it drains a message whose
+  // moment has passed must be DROPPED and recorded rather than sent. "Your
+  // appointment is tomorrow", three days late, is worse than silence. The
+  // build this replaces once sent a "gentle nudge" 49 days after its request.
+  //
+  // Transactional messages are exempt: a receipt is still a receipt, and a
+  // customer who paid is owed the record however late the worker was.
+  if (!transactional && isTooLate(scheduledFor, now, policy.maxLatenessHours)) {
+    result.skipped += 1;
+    await db
+      .from("message_sends")
+      .update({ status: "skipped", skip_reason: "expired" })
+      .eq("id", message.id);
+    return;
+  }
+
+  // ── QUIET HOURS DEFER, THEY NEVER DROP ──────────────────────────────────
+  //
+  // The one rung of the ladder that reschedules. The row stays `queued` with a
+  // later `scheduled_for`, so the next tick after the window opens picks it up.
+  // Dropping it instead would be indistinguishable, from the facility's side,
+  // from never having queued it.
+  //
+  // Checked again HERE and not only at queue time because `scheduled_for` can
+  // be moved, and because a facility can turn quiet hours on after a message is
+  // already waiting.
+  if (!transactional && policy.quietHours.enabled) {
+    const zone = await sendingZoneFor(db, message);
+    const allowed = nextSendableInstant(now, zone, policy.quietHours);
+    if (allowed.getTime() > now.getTime()) {
+      await db
+        .from("message_sends")
+        .update({ status: "queued", scheduled_for: allowed.toISOString() })
+        .eq("id", message.id);
+      return;
+    }
+  }
+
+  // ── PACING ──────────────────────────────────────────────────────────────
+  //
+  // A sudden spike in review velocity is what makes a platform's spam filter
+  // discard a whole batch — the reviews are collected, and then they are not
+  // there. Over the cap, the message moves to tomorrow's window plus a
+  // deterministic jitter, so a retry of the same row lands in the same slot
+  // rather than being deferred for ever.
+  if (!transactional && policy.dailyCap > 0) {
+    const over = await isOverDailyCap(db, message, policy.dailyCap);
+    if (over) {
+      const zone = await sendingZoneFor(db, message);
+      const tomorrow = new Date(now.getTime() + 86_400_000);
+      const opens = nextSendableInstant(tomorrow, zone, policy.quietHours);
+      const slot = new Date(
+        opens.getTime() + jitterMinutes(message.id, 120) * 60_000,
+      );
+      await db
+        .from("message_sends")
+        .update({ status: "queued", scheduled_for: slot.toISOString() })
+        .eq("id", message.id);
+      return;
+    }
+  }
+
   const suppression = await isSuppressed(db, {
     facilityId: message.facility_id,
     channel: message.channel,
     address: message.to_address,
     // A rule that was transactional when it queued may have been edited since.
     // Re-read it rather than assume — and treat a missing rule as marketing,
-    // which is the answer that sends FEWER messages.
-    isTransactional: await ruleIsTransactional(db, message.source_id),
+    // which is the answer that sends FEWER messages. Read once at the top of
+    // this function, because the three checks above need the same answer.
+    isTransactional: transactional,
   });
 
   if (suppression.suppressed) {
