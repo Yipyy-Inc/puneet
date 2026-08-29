@@ -79,6 +79,17 @@ export async function reviewRequestEligibility(
     bookingIds: string[];
     config: ReputationConfig;
     now?: Date;
+    /**
+     * A request row to ignore when measuring recency — itself.
+     *
+     * At SCHEDULING time the request does not exist yet, so "when did we last
+     * ask this client" is a question about other rows. At SEND time it does
+     * exist, and without this the cooldown lookup finds the very request it is
+     * deciding about, concludes the client was asked seconds ago, and suppresses
+     * it. Every review request, always, with a reason that looks entirely
+     * plausible in the suppression list.
+     */
+    excludeRequestId?: string;
   },
 ): Promise<EligibilityVerdict> {
   const now = input.now ?? new Date();
@@ -113,15 +124,20 @@ export async function reviewRequestEligibility(
   // Monday gets asked again on Friday. `nextEligibleAt` takes the later of the
   // two, and the same date is what the client profile shows.
   const [{ data: lastAsk }, { data: lastNegative }] = await Promise.all([
-    db
-      .from("review_requests")
-      .select("created_at")
-      .eq("facility_id", input.facilityId)
-      .eq("client_id", input.clientId)
-      .neq("state", "suppressed")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    (() => {
+      const q = db
+        .from("review_requests")
+        .select("created_at")
+        .eq("facility_id", input.facilityId)
+        .eq("client_id", input.clientId)
+        .neq("state", "suppressed");
+      // See `excludeRequestId`: at send time this query would otherwise find
+      // the request it is being asked about.
+      return (input.excludeRequestId ? q.neq("id", input.excludeRequestId) : q)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    })(),
     db
       .from("review_responses")
       .select("submitted_at, rating, review_requests!inner(client_id)")

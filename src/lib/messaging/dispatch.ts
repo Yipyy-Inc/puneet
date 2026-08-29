@@ -958,6 +958,31 @@ async function sendOneQueued(
     return;
   }
 
+  // ── The one rung that is not universal ──────────────────────────────────
+  //
+  // Everything above applies to every message the product sends. Booking
+  // health does not: nothing else asks "was this visit refunded, reversed or
+  // cancelled while the message sat in the queue". A review request is the one
+  // kind of message where the answer changes what we owe the customer, and the
+  // delay between check-out and asking is EXACTLY the window in which somebody
+  // notices a cut on a dog's ear and opens a refund.
+  //
+  // Dynamically imported for the same reason the scheduler is: reputation
+  // depends on messaging, so messaging must not import it at module load.
+  if (message.source_kind === "review_request" && message.source_id) {
+    const { reviewRequestStillAskable } =
+      await import("@/lib/reputation/send-guard");
+    const guard = await reviewRequestStillAskable(db, message.source_id);
+    if (guard.reason) {
+      result.skipped += 1;
+      await db
+        .from("message_sends")
+        .update({ status: "skipped", skip_reason: guard.reason })
+        .eq("id", message.id);
+      return;
+    }
+  }
+
   const { data: facility } = await db
     .from("facilities")
     .select("name")
