@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,12 +10,9 @@ import {
   Globe,
   Settings2,
   Zap,
-  Shield,
-  TrendingUp,
   AlertTriangle,
   MessageSquare,
 } from "lucide-react";
-import { reputationQueries } from "@/lib/api/reputation";
 import { useReputation } from "@/hooks/use-reputation";
 import { ReputationAnalyticsTab } from "@/components/marketing/ReputationAnalyticsTab";
 import { ReputationRequestsTab } from "@/components/marketing/ReputationRequestsTab";
@@ -24,15 +20,11 @@ import { ReputationEscalationsTab } from "@/components/marketing/ReputationEscal
 import { ReputationMessageBuilder } from "@/components/marketing/ReputationMessageBuilder";
 import { ReputationPublicReviewsTab } from "@/components/marketing/ReputationPublicReviewsTab";
 import { ReputationSettingsTab } from "@/components/marketing/ReputationSettingsTab";
-import { useLocationContext } from "@/hooks/use-location-context";
 
 export function ReputationBoosterShell() {
   const [activeTab, setActiveTab] = useState("overview");
-  const { isMultiLocation } = useLocationContext();
   const { settings, requests } = useReputation();
-  const { data: stats } = useQuery(reputationQueries.stats());
 
-  const escalatedCount = requests.filter((r) => r.escalatedToManager).length;
   const openEscalations = requests.filter(
     (r) => r.escalatedToManager && r.status !== "closed",
   ).length;
@@ -63,45 +55,6 @@ export function ReputationBoosterShell() {
             Facebook, and route unhappy ones to a manager before they leave.
           </p>
         </div>
-
-        {/* Quick stats strip */}
-        {stats && (
-          <div className="bg-muted/30 flex shrink-0 items-center gap-4 rounded-xl border px-4 py-3">
-            <div className="text-center">
-              <p className="text-muted-foreground text-xs leading-none">
-                Avg Rating
-              </p>
-              <div className="mt-1 flex items-center gap-1">
-                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                <span className="text-lg font-bold">
-                  {stats.averageRating.toFixed(1)}
-                </span>
-              </div>
-            </div>
-            <div className="bg-border h-8 w-px" />
-            <div className="text-center">
-              <p className="text-muted-foreground text-xs leading-none">
-                Response Rate
-              </p>
-              <div className="mt-1 flex items-center gap-1">
-                <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                <span className="text-lg font-bold">{stats.responseRate}%</span>
-              </div>
-            </div>
-            <div className="bg-border h-8 w-px" />
-            <div className="text-center">
-              <p className="text-muted-foreground text-xs leading-none">
-                5-Star %
-              </p>
-              <div className="mt-1 flex items-center gap-1">
-                <Shield className="h-3.5 w-3.5 text-blue-500" />
-                <span className="text-lg font-bold">
-                  {stats.fiveStarPercentage}%
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Tabs */}
@@ -111,14 +64,9 @@ export function ReputationBoosterShell() {
             <LayoutDashboard className="h-4 w-4" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="requests" className="relative gap-2 px-3 text-sm">
+          <TabsTrigger value="requests" className="gap-2 px-3 text-sm">
             <List className="h-4 w-4" />
             Requests
-            {escalatedCount > 0 && (
-              <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                {escalatedCount}
-              </span>
-            )}
           </TabsTrigger>
           <TabsTrigger
             value="escalations"
