@@ -43,7 +43,7 @@ const moderationSchema = z.object({
 export async function GET(request: NextRequest) {
   const guard = await authorise();
   if ("response" in guard) return guard.response;
-  const { supabase, facilityId } = guard;
+  const { supabase, facilityId, facilitySlug } = guard;
 
   const state = request.nextUrl.searchParams.get("state");
 
@@ -72,7 +72,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ reviews: data ?? [] });
+  return NextResponse.json({
+    reviews: data ?? [],
+    // The page these are published TO. A screen that says "these appear on
+    // your public page" and cannot link to it is asking to be believed.
+    publicPath: facilitySlug ? `/${facilitySlug}/reviews` : null,
+  });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -136,6 +141,7 @@ async function authorise(): Promise<
   | {
       supabase: Awaited<ReturnType<typeof createServerClient>>;
       facilityId: string;
+      facilitySlug: string;
       userId: string;
     }
   | { response: NextResponse }
@@ -166,6 +172,7 @@ async function authorise(): Promise<
   return {
     supabase: await createServerClient(),
     facilityId: facility.facilityId,
+    facilitySlug: facility.slug,
     userId: user.id,
   };
 }
