@@ -8,26 +8,22 @@ import {
   Star,
   LayoutDashboard,
   List,
-  Trophy,
   Globe,
   Settings2,
   Zap,
   Shield,
   TrendingUp,
-  MapPin,
   AlertTriangle,
   MessageSquare,
 } from "lucide-react";
 import { reputationQueries } from "@/lib/api/reputation";
 import { useReputation } from "@/hooks/use-reputation";
-import { ReputationOverviewTab } from "@/components/marketing/ReputationOverviewTab";
+import { ReputationAnalyticsTab } from "@/components/marketing/ReputationAnalyticsTab";
 import { ReputationRequestsTab } from "@/components/marketing/ReputationRequestsTab";
 import { ReputationEscalationsTab } from "@/components/marketing/ReputationEscalationsTab";
 import { ReputationMessageBuilder } from "@/components/marketing/ReputationMessageBuilder";
-import { ReputationPerformanceTab } from "@/components/marketing/ReputationPerformanceTab";
 import { ReputationPublicReviewsTab } from "@/components/marketing/ReputationPublicReviewsTab";
 import { ReputationSettingsTab } from "@/components/marketing/ReputationSettingsTab";
-import { ReputationLocationsTab } from "@/components/marketing/ReputationLocationsTab";
 import { useLocationContext } from "@/hooks/use-location-context";
 
 export function ReputationBoosterShell() {
@@ -136,20 +132,10 @@ export function ReputationBoosterShell() {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="performance" className="gap-2 px-3 text-sm">
-            <Trophy className="h-4 w-4" />
-            Performance
-          </TabsTrigger>
           <TabsTrigger value="public-reviews" className="gap-2 px-3 text-sm">
             <Globe className="h-4 w-4" />
             Booking page reviews
           </TabsTrigger>
-          {isMultiLocation && (
-            <TabsTrigger value="locations" className="gap-2 px-3 text-sm">
-              <MapPin className="h-4 w-4" />
-              Locations
-            </TabsTrigger>
-          )}
           <TabsTrigger value="messages" className="gap-2 px-3 text-sm">
             <MessageSquare className="h-4 w-4" />
             Messages
@@ -161,7 +147,7 @@ export function ReputationBoosterShell() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <ReputationOverviewTab onTabChange={setActiveTab} />
+          <ReputationAnalyticsTab />
         </TabsContent>
 
         <TabsContent value="requests" className="mt-6">
@@ -172,19 +158,9 @@ export function ReputationBoosterShell() {
           <ReputationEscalationsTab />
         </TabsContent>
 
-        <TabsContent value="performance" className="mt-6">
-          <ReputationPerformanceTab />
-        </TabsContent>
-
         <TabsContent value="public-reviews" className="mt-6">
           <ReputationPublicReviewsTab />
         </TabsContent>
-
-        {isMultiLocation && (
-          <TabsContent value="locations" className="mt-6">
-            <ReputationLocationsTab />
-          </TabsContent>
-        )}
 
         <TabsContent value="messages" className="mt-6">
           <ReputationMessageBuilder />
