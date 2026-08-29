@@ -732,6 +732,60 @@ export type Database = {
           },
         ];
       };
+      client_rebook_preferences: {
+        Row: {
+          client_id: string;
+          created_at: string;
+          facility_id: string;
+          frequency_days: number | null;
+          id: string;
+          reason: string | null;
+          reminders_enabled: boolean;
+          service: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          client_id: string;
+          created_at?: string;
+          facility_id: string;
+          frequency_days?: number | null;
+          id?: string;
+          reason?: string | null;
+          reminders_enabled?: boolean;
+          service?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          client_id?: string;
+          created_at?: string;
+          facility_id?: string;
+          frequency_days?: number | null;
+          id?: string;
+          reason?: string | null;
+          reminders_enabled?: boolean;
+          service?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "client_rebook_preferences_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_rebook_preferences_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       clients: {
         Row: {
           address: Json | null;

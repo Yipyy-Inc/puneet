@@ -32,14 +32,6 @@ export interface ServiceTypeMeta {
   custom?: boolean;
 }
 
-export const REBOOK_SERVICE_TYPES: ServiceTypeMeta[] = [
-  { key: "grooming", label: "Grooming" },
-  { key: "boarding", label: "Boarding" },
-  { key: "daycare", label: "Daycare" },
-  { key: "training", label: "Training" },
-  { key: "swim", label: "Swim Sessions", custom: true },
-];
-
 /**
  * Lead-time presets for sending the reminder *before* the expected return
  * date. 0 = on the expected date itself. Custom values supported via the
@@ -161,101 +153,19 @@ export const REBOOK_TEMPLATE_VARIABLES = [
   { token: "{{facility_name}}", label: "Facility name" },
 ];
 
-/**
- * Per-client master toggle — when true, no rebook reminders go out for this
- * client across any service. Independent of marketing opt-outs.
- */
-export interface ClientRebookOptOut {
-  clientId: number;
-  optedOut: boolean;
-  reason?: string;
-  updatedAt: string;
-  updatedBy?: string;
-}
-
-export const clientRebookOptOuts: ClientRebookOptOut[] = [
-  {
-    clientId: 18,
-    optedOut: true,
-    reason: "Client requested by phone — too many messages",
-    updatedAt: "2026-04-15T10:30:00Z",
-    updatedBy: "Jessica M.",
-  },
-];
-
-/**
- * Per-client override. If a client has no entry for a given service, the
- * facility default is used.
- */
-export interface ClientServicePreference {
-  clientId: number;
-  service: ServiceTypeKey;
-  frequency: ServiceFrequency;
-  /** Free-form note staff added when overriding (e.g. "thick coat"). */
-  reason?: string;
-  updatedAt: string;
-}
-
-export const clientServicePreferences: ClientServicePreference[] = [
-  {
-    clientId: 15,
-    service: "grooming",
-    frequency: { value: 3, unit: "weeks" },
-    reason: "Thick double coat — mats fast",
-    updatedAt: "2026-03-12T15:42:00Z",
-  },
-  {
-    clientId: 15,
-    service: "boarding",
-    frequency: { value: 1, unit: "months" },
-    reason: "Frequent traveler",
-    updatedAt: "2026-03-12T15:42:00Z",
-  },
-  {
-    clientId: 16,
-    service: "training",
-    frequency: { value: 5, unit: "days" },
-    reason: "Active behavioral plan",
-    updatedAt: "2026-04-02T10:15:00Z",
-  },
-  {
-    clientId: 17,
-    service: "grooming",
-    frequency: { value: 6, unit: "weeks" },
-    updatedAt: "2026-02-08T09:00:00Z",
-  },
-];
-
-// ── DELETED 2026-08-28: the Queue and History fixtures ────────────────────
+// ── DELETED 2026-08-29: the per-client fixtures ───────────────────────────
 //
-// `rebookReminders` (26 invented reminders), `lapsedClients` (5 invented
-// people), `RebookReminder`, `LapsedClientEntry`, `DISMISS_REASONS` and the
-// reminder-block helpers lived here. All four tabs that read them are now on
-// Postgres: `lapsed_clients()` / `rebook_pipeline()` for the Queue and Lapsed
-// lists, `rebook_history()` for History and the analytics row.
+// `clientRebookOptOuts` and `clientServicePreferences` lived here — two
+// hand-written arrays keyed by fixture client ids, edited into a `useState` on
+// the client file and gone on reload. Both are Postgres now
+// (`client_rebook_preferences`, 20260829105200), read by the client file
+// through /api/clients/[ref]/rebook-preferences and honoured by
+// `rebook_pipeline` itself, so the Queue and the Lapsed tab use a client's own
+// interval without a second rule anywhere.
 //
-// They are deleted rather than left in place because dead fixtures do not stay
-// dead — they get re-imported by the next person who needs "some rebook data",
-// and nothing in the build would object.
-//
-// What REMAINS below is genuinely still used: the service-frequency shapes the
-// Defaults tab renders, and the per-client Service Preferences section, which
-// has not been converted.
-
-// ----------------------------------------------------------------------------
-// Helpers
-// ----------------------------------------------------------------------------
-
-export function frequencyInDays(f: ServiceFrequency): number {
-  switch (f.unit) {
-    case "days":
-      return f.value;
-    case "weeks":
-      return f.value * 7;
-    case "months":
-      return f.value * 30;
-  }
-}
+// `computeActualFrequency` and `getEffectiveFrequency` went with them: the
+// first is a lateral pass over the client's real bookings in the route now, and
+// the second was resolving an override against a fixture default.
 
 export function formatFrequency(f: ServiceFrequency): string {
   const noun =
@@ -270,48 +180,9 @@ export function formatFrequency(f: ServiceFrequency): string {
 }
 
 export function getServiceLabel(service: ServiceTypeKey): string {
-  return (
-    REBOOK_SERVICE_TYPES.find((s) => s.key === service)?.label ??
-    service.charAt(0).toUpperCase() + service.slice(1)
-  );
-}
-
-/**
- * Compute the average gap (in days) between consecutive bookings for a given
- * client + service. Returns null when there's not enough history.
- */
-export function computeActualFrequency(
-  bookingDates: string[],
-): ServiceFrequency | null {
-  if (bookingDates.length < 2) return null;
-  const sorted = [...bookingDates]
-    .map((d) => new Date(d).getTime())
-    .sort((a, b) => a - b);
-  let totalGap = 0;
-  for (let i = 1; i < sorted.length; i++) {
-    totalGap += sorted[i] - sorted[i - 1];
-  }
-  const avgDays = Math.round(totalGap / (sorted.length - 1) / 86400000);
-  if (avgDays >= 60) {
-    return { value: Math.round(avgDays / 30), unit: "months" };
-  }
-  if (avgDays >= 14) {
-    return { value: Math.round(avgDays / 7), unit: "weeks" };
-  }
-  return { value: avgDays, unit: "days" };
-}
-
-export function getEffectiveFrequency(
-  clientId: number,
-  service: ServiceTypeKey,
-): { frequency: ServiceFrequency; source: "override" | "default" } {
-  const override = clientServicePreferences.find(
-    (p) => p.clientId === clientId && p.service === service,
-  );
-  if (override) return { frequency: override.frequency, source: "override" };
-  const fallback = defaultServiceFrequencies.find((d) => d.service === service);
-  return {
-    frequency: fallback?.frequency ?? { value: 4, unit: "weeks" },
-    source: "default",
-  };
+  // `REBOOK_SERVICE_TYPES` used to supply five hand-written labels here. The
+  // services a facility runs come from `bookings.service` now, so a fixed list
+  // could only ever be right for the four Yipyy ships and wrong for every
+  // custom one — capitalising the slug is right for all of them.
+  return service.charAt(0).toUpperCase() + service.slice(1);
 }

@@ -132,18 +132,30 @@ function buildDefaults(
   });
 }
 
-/** Which template field this service's editor writes, and what it points at. */
-function chosenTemplate(config: RebookConfig, service: string) {
-  const rule = config.services[service];
+/**
+ * Which template row a service's editor writes, for ONE channel.
+ *
+ * The channel is passed in rather than derived. A service set to `both` sends
+ * two different messages and has two sets of words; deriving one from the rule
+ * meant the text version of every `both` service was uneditable and silently
+ * fell back to the shipped one.
+ */
+function chosenTemplate(
+  config: RebookConfig,
+  service: string,
+  channel: "email" | "sms",
+) {
   const field =
-    rule?.channel === "sms"
+    channel === "sms"
       ? ("smsTemplateId" as const)
       : ("emailTemplateId" as const);
-  return {
-    field,
-    id: rule?.[field] ?? null,
-    channel: rule?.channel ?? "email",
-  };
+  return { field, id: config.services[service]?.[field] ?? null };
+}
+
+/** The channels a service actually sends on — one button each. */
+function channelsOf(channel: ReminderChannel): ("email" | "sms")[] {
+  if (channel === "both") return ["email", "sms"];
+  return [channel];
 }
 
 export function RebookRemindersCard() {
@@ -184,8 +196,10 @@ export function RebookRemindersCard() {
   const [draft, setDraft] = useState<DefaultServiceFrequency | null>(null);
 
   const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
-  const [templateEditingService, setTemplateEditingService] =
-    useState<ServiceTypeKey | null>(null);
+  const [templateEditing, setTemplateEditing] = useState<{
+    service: ServiceTypeKey;
+    channel: "email" | "sms";
+  } | null>(null);
 
   const startEdit = (def: DefaultServiceFrequency) => {
     setEditingService(def.service);
@@ -239,8 +253,11 @@ export function RebookRemindersCard() {
     );
   };
 
-  const openTemplateEditor = (service: ServiceTypeKey) => {
-    setTemplateEditingService(service);
+  const openTemplateEditor = (
+    service: ServiceTypeKey,
+    channel: "email" | "sms",
+  ) => {
+    setTemplateEditing({ service, channel });
     setTemplateEditorOpen(true);
   };
 
@@ -261,10 +278,10 @@ export function RebookRemindersCard() {
    * which is right: it is a real message this facility can send.
    */
   const saveTemplate = async (template: RebookMessageTemplate) => {
-    const service = templateEditingService;
-    if (!service) return;
+    if (!templateEditing) return;
+    const { service, channel } = templateEditing;
 
-    const { field, id, channel } = chosenTemplate(rebookConfig, service);
+    const { field, id } = chosenTemplate(rebookConfig, service, channel);
     const isSms = channel === "sms";
 
     try {
@@ -300,9 +317,11 @@ export function RebookRemindersCard() {
         await saveSetting.mutateAsync({ domain: "rebook_config", value: next });
       }
 
-      toast.success(`${getServiceLabel(service)} wording saved.`);
+      toast.success(
+        `${getServiceLabel(service)} ${isSms ? "text" : "email"} wording saved.`,
+      );
       setTemplateEditorOpen(false);
-      setTemplateEditingService(null);
+      setTemplateEditing(null);
     } catch (e) {
       toast.error(
         e instanceof Error ? e.message : "The wording was not saved.",
@@ -310,9 +329,24 @@ export function RebookRemindersCard() {
     }
   };
 
-  const editingDef = templateEditingService
-    ? defaults.find((d) => d.service === templateEditingService)
-    : null;
+  /**
+   * The wording the editor is pointed at, for the CHANNEL it was opened on.
+   *
+   * Not `defaults[].template`: that resolves one template per service for the
+   * row's preview, so reusing it here would have opened the email wording when
+   * somebody pressed Text.
+   */
+  const editorTemplate = useMemo(() => {
+    if (!templateEditing) return null;
+    const { service, channel } = templateEditing;
+    const { id } = chosenTemplate(rebookConfig, service, channel);
+    const shippedKey =
+      channel === "sms" ? "rebook_reminder_sms" : "rebook_reminder";
+    const found =
+      (id ? templateList.find((t) => t.id === id) : undefined) ??
+      templateList.find((t) => t.key === shippedKey);
+    return { subject: found?.subject ?? "", body: found?.body ?? "" };
+  }, [templateEditing, rebookConfig, templateList]);
 
   return (
     <>
@@ -615,14 +649,21 @@ export function RebookRemindersCard() {
                                   {d.template.subject}
                                 </p>
                               </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openTemplateEditor(d.service)}
-                              >
-                                <Pencil className="mr-1 size-3.5" />
-                                Edit template
-                              </Button>
+                              <div className="flex gap-1.5">
+                                {channelsOf(d.channel).map((c) => (
+                                  <Button
+                                    key={c}
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      openTemplateEditor(d.service, c)
+                                    }
+                                  >
+                                    <Pencil className="mr-1 size-3.5" />
+                                    {c === "sms" ? "Text" : "Email"}
+                                  </Button>
+                                ))}
+                              </div>
                             </div>
 
                             <div className="flex justify-end gap-2">
@@ -674,15 +715,25 @@ export function RebookRemindersCard() {
                                   can never recover from — and saving that is
                                   refused with "a template needs something to
                                   say", about wording the user can see. */}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={templates.isLoading}
-                                onClick={() => openTemplateEditor(def.service)}
-                              >
-                                <Pencil className="mr-1 size-3.5" />
-                                Template
-                              </Button>
+                              {/* One button per channel this service actually
+                                  sends on. A service set to `both` sends two
+                                  different messages, and a single button left
+                                  the text version uneditable and silently
+                                  falling back to the shipped wording. */}
+                              {channelsOf(def.channel).map((c) => (
+                                <Button
+                                  key={c}
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={templates.isLoading}
+                                  onClick={() =>
+                                    openTemplateEditor(def.service, c)
+                                  }
+                                >
+                                  <Pencil className="mr-1 size-3.5" />
+                                  {c === "sms" ? "Text" : "Email"}
+                                </Button>
+                              ))}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -720,20 +771,20 @@ export function RebookRemindersCard() {
       </div>
 
       {/* Template editor */}
-      {editingDef && (
+      {templateEditing && editorTemplate && (
         <RebookTemplateEditorModal
-          // Remounted per service. Without it the editor keeps the text it
-          // captured for whichever service was opened FIRST — open grooming,
-          // close, open boarding, and boarding shows grooming's wording.
-          key={editingDef.service}
+          // Remounted per service AND channel. Without it the editor keeps the
+          // text it captured the first time it opened — open grooming's email,
+          // close, open its text, and the text editor shows the email.
+          key={`${templateEditing.service}:${templateEditing.channel}`}
           open={templateEditorOpen}
           onOpenChange={(o) => {
             setTemplateEditorOpen(o);
-            if (!o) setTemplateEditingService(null);
+            if (!o) setTemplateEditing(null);
           }}
-          service={editingDef.service}
-          channel={editingDef.channel}
-          template={editingDef.template}
+          service={templateEditing.service}
+          channel={templateEditing.channel}
+          template={editorTemplate}
           onSave={saveTemplate}
           saving={createTemplate.isPending || updateTemplate.isPending}
         />

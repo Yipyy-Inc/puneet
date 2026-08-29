@@ -6964,10 +6964,35 @@ had GET and POST only, so **none of the fourteen shipped templates could be
 reworded by anybody**. Three comments in this codebase asserted they were
 "editable on the Templates tab". There is no Templates tab. Corrected.
 
-**What is still a fixture here:** the per-client **Service Preferences**
-section. And a service set to `channel: 'both'` can only have its EMAIL wording
-edited from this screen — one button, one template — with the text falling back
-to the shipped `rebook_reminder_sms`.
+**Both remaining gaps closed 2026-08-29, and nothing here is a fixture now.**
+
+A service set to `channel: 'both'` sends two messages and has two sets of words;
+one button resolved `both` to email, so the text version was unreachable and
+silently fell back to the shipped one. There is a button per channel now, and
+`RebookTemplateEditorModal` takes `"email" | "sms"` rather than
+`ReminderChannel` — the ambiguous value is refused at the type boundary instead
+of being resolved by whichever caller got there first.
+
+**Per-client Service Preferences** is `client_rebook_preferences`
+(20260829105200). Two questions with two keys, one table: a row per
+(client, service) holds that client's interval, and a row with `service IS NULL`
+is the facility's "do not chase them at all". `nulls not distinct` on the unique
+index is what makes the null key behave like a key.
+
+The override is honoured inside `rebook_pipeline` itself, not in a route — so
+the Queue, the Lapsed tab and the send route all use a client's own interval
+from one place. A dog on a 21-day cycle is more overdue than the 28-day default
+would say, and appears a week earlier, with no second rule anywhere.
+
+The switch is **not** a suppression, and the screen says so. `message_suppressions`
+is the customer's own decision, keyed by address, and stops every marketing
+message from every source; this is the facility's note about one client and
+stops rebook reminders only. Both are enforced. Do not merge them.
+
+The third number on that screen — how often they ACTUALLY come — is derived on
+every read from their completed bookings and is deliberately not stored: it is
+the evidence for or against the interval, and a stored average is wrong the day
+after the next visit. Under two visits it says so rather than showing a number.
 
 **Do not add a `rebook_reminders` table.** The reason none of this needed new
 state is that every question was derivable from bookings and the outbox. The one

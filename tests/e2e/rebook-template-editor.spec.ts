@@ -41,13 +41,19 @@ async function templates(
   return ((await response.json()) as { templates: Template[] }).templates;
 }
 
-async function openEditor(page: import("@playwright/test").Page) {
+async function openEditor(
+  page: import("@playwright/test").Page,
+  channel: "Email" | "Text" = "Email",
+) {
   await page.goto(AUTOMATIONS);
   await page.getByRole("tab", { name: "Rebook Reminders" }).click();
   await page.getByRole("tab", { name: "Defaults & Templates" }).click();
+  // One button per channel the service sends on. Named, not positional: a
+  // service set to `both` shows two, and picking `.first()` would silently
+  // always test the email one.
   await page
     .getByRole("tabpanel")
-    .getByRole("button", { name: "Template" })
+    .getByRole("button", { name: channel, exact: true })
     .first()
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -74,6 +80,34 @@ test.describe("the rebook template editor", () => {
             },
           });
         }
+      }
+
+      // Put grooming's channel back. The `both` test changes it, and leaving it
+      // would mean every later rebook send from this facility tried SMS as
+      // well — a state change one spec makes and every other spec inherits.
+      //
+      // `failOnStatusCode` is ON deliberately: a cleanup that fails silently is
+      // worse than no cleanup, because it looks like it worked. This one did
+      // exactly that on its first attempt.
+      const settings = await page.request.get("/api/facility/settings");
+      const config = (await settings.json()) as {
+        rebook_config: { value: { services: Record<string, unknown> } };
+      };
+      const services = config.rebook_config.value.services;
+      const grooming = services.grooming as Record<string, unknown> | undefined;
+      if (grooming?.channel === "both") {
+        await page.request.patch("/api/facility/settings", {
+          data: {
+            domain: "rebook_config",
+            value: {
+              services: {
+                ...services,
+                grooming: { ...grooming, channel: "email" },
+              },
+            },
+          },
+          failOnStatusCode: true,
+        });
       }
     } finally {
       await context.close();
@@ -154,6 +188,58 @@ test.describe("the rebook template editor", () => {
       (t) => t.id === shipped.id,
     )!;
     expect(stillShipped.key).toBe("rebook_reminder");
+  });
+
+  test("a service that sends both gets a button for each", async ({ page }) => {
+    await signIn(page, "owner@yipyy.dev");
+
+    // ── THE GAP THIS CLOSES ──────────────────────────────────────────────
+    //
+    // A service set to `both` sends two different messages. The editor derived
+    // its channel from the rule and resolved `both` to email, so the TEXT
+    // wording could not be reached from this screen at all — it silently fell
+    // back to the shipped one, for every facility that chose both.
+    const settings = await page.request.get("/api/facility/settings");
+    const current = (await settings.json()) as {
+      rebook_config: { value: { services: Record<string, unknown> } };
+    };
+    const services = current.rebook_config.value.services;
+    const grooming = services.grooming as Record<string, unknown>;
+
+    await page.request.patch("/api/facility/settings", {
+      data: {
+        domain: "rebook_config",
+        value: {
+          services: { ...services, grooming: { ...grooming, channel: "both" } },
+        },
+      },
+    });
+
+    await page.goto(AUTOMATIONS);
+    await page.getByRole("tab", { name: "Rebook Reminders" }).click();
+    await page.getByRole("tab", { name: "Defaults & Templates" }).click();
+
+    const panel = page.getByRole("tabpanel");
+    await expect(
+      panel.getByRole("button", { name: "Email", exact: true }).first(),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole("button", { name: "Text", exact: true }).first(),
+    ).toBeVisible();
+
+    // And the Text button opens the TEXT wording, not the email's. An SMS
+    // template has no subject, so the subject field being absent is the
+    // cheapest proof the editor is on the right one.
+    await panel
+      .getByRole("button", { name: "Text", exact: true })
+      .first()
+      .click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText("Subject (email only)")).toBeHidden();
+    await expect(
+      dialog.getByText("SMS", { exact: false }).first(),
+    ).toBeVisible();
   });
 
   test("an email template cannot have its subject cleared", async ({
