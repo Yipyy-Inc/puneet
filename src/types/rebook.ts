@@ -147,3 +147,37 @@ export interface RebookHistoryPayload {
 /** How long a dismissal lasts, in words — the tab explains this once. */
 export const DISMISSAL_EXPLANATION =
   "Dismissing hides this client until their next visit. If they come back and lapse again, they reappear on their own.";
+
+// ============================================================================
+// One client's own rebook settings — the client file's Service Preferences.
+// ============================================================================
+
+/** How one service works for one client. */
+export interface ClientServiceRebook {
+  service: string;
+  /** The facility's interval, or null if the service is not configured. */
+  defaultDays: number | null;
+  /** What somebody set for this client, or null. */
+  overrideDays: number | null;
+  /** What the pipeline will actually use. */
+  effectiveDays: number | null;
+  source: "default" | "override";
+  /** False when the facility has asked not to chase them for this service. */
+  remindersEnabled: boolean;
+  reason: string | null;
+  completedVisits: number;
+  /**
+   * The average gap between their real completed visits, or null under two.
+   *
+   * Derived on every read, never stored: it is the EVIDENCE for or against the
+   * interval, and a stored copy would be wrong the day after the next visit.
+   */
+  observedDays: number | null;
+}
+
+export interface ClientRebookPreferences {
+  /** The master switch: false means no rebook reminders at all for them. */
+  remindersEnabled: boolean;
+  optOutReason: string | null;
+  services: ClientServiceRebook[];
+}

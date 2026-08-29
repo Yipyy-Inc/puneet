@@ -18,7 +18,6 @@ import {
   REBOOK_TEMPLATE_VARIABLES,
   getServiceLabel,
   type RebookMessageTemplate,
-  type ReminderChannel,
   type ServiceTypeKey,
 } from "@/data/rebook-reminders";
 
@@ -26,7 +25,15 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   service: ServiceTypeKey;
-  channel: ReminderChannel;
+  /**
+   * ONE channel, never "both".
+   *
+   * A service set to `both` sends two different messages with two sets of
+   * words. Accepting `ReminderChannel` here is what let the card open a single
+   * editor for it, leaving the text version uneditable — so the type refuses
+   * the ambiguous value rather than relying on the caller to resolve it.
+   */
+  channel: "email" | "sms";
   template: RebookMessageTemplate;
   onSave: (template: RebookMessageTemplate) => void;
   /** True while the parent is writing. The dialog stays open until it lands. */
@@ -81,7 +88,7 @@ export function RebookTemplateEditorModal({
   // whoever made the request's to announce.
   const handleSave = () => onSave({ subject, body });
 
-  const showSubject = channel === "email" || channel === "both";
+  const showSubject = channel === "email";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -101,13 +108,7 @@ export function RebookTemplateEditorModal({
           <div className="flex items-center gap-2 text-xs">
             <span className="text-muted-foreground">Channel:</span>
             <Badge variant="outline" className="gap-1">
-              {channel === "both" ? (
-                <>
-                  <Mail className="size-3" />
-                  <MessageSquare className="size-3" />
-                  Email + SMS
-                </>
-              ) : channel === "email" ? (
+              {channel === "email" ? (
                 <>
                   <Mail className="size-3" />
                   Email

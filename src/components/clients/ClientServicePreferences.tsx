@@ -1,416 +1,289 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  BellOff,
-  Calendar,
-  CheckCircle,
-  Edit,
-  Save,
-  Sparkles,
-  TrendingDown,
-  TrendingUp,
-  X,
-} from "lucide-react";
+import { useState } from "react";
+import { BellOff, Calendar, Check, Save, TrendingDown, X } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { TableSkeleton } from "@/components/ui/skeletons";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { bookings } from "@/data/bookings";
-import {
-  REBOOK_SERVICE_TYPES,
-  clientRebookOptOuts,
-  clientServicePreferences,
-  computeActualFrequency,
-  formatFrequency,
-  frequencyInDays,
-  getEffectiveFrequency,
-  getServiceLabel,
-  type FrequencyUnit,
-  type ServiceFrequency,
-  type ServiceTypeKey,
-} from "@/data/rebook-reminders";
+  useClientRebookPreferences,
+  useSaveRebookPreference,
+} from "@/lib/api/client-rebook";
+import type { ClientServiceRebook } from "@/types/rebook";
 
-interface Props {
-  clientId: number;
-}
+// ============================================================================
+// How often THIS client comes back.
+//
+// ── WHAT THIS REPLACES ────────────────────────────────────────────────────
+//
+// `clientServicePreferences` and `clientRebookOptOuts` — two hand-written
+// arrays keyed by fixture client ids, edited into a `useState` and gone on
+// reload. The section offered "override the default for this client" from the
+// day it was built and stored nothing, on a screen where the whole point is
+// that this client is different from the default.
+//
+// ── THREE NUMBERS, AND ONLY ONE OF THEM IS A SETTING ──────────────────────
+//
+// The facility's interval, the override, and what actually HAPPENS — the mean
+// gap between their real completed visits. The third is derived on every read
+// and is the evidence for or against the other two: a dog booked in every 19
+// days against a 28-day default is the argument for an override, in a number
+// nobody had to keep.
+//
+// ── THE SWITCH IS THE FACILITY'S NOTE, NOT AN UNSUBSCRIBE ─────────────────
+//
+// It stops rebook reminders for this client and nothing else. A customer who
+// unsubscribes is a suppression, keyed by their address, and it stops every
+// marketing message from every source. Two different facts, both enforced, and
+// this screen can only write the one it is about — which is why it says so.
+// ============================================================================
 
-interface PrefRow {
-  service: ServiceTypeKey;
-  effective: ServiceFrequency;
-  source: "override" | "default";
-  actual: ServiceFrequency | null;
-  bookingCount: number;
-  reason?: string;
-}
-
-export function ClientServicePreferences({ clientId }: Props) {
-  const [overrides, setOverrides] = useState(() =>
-    clientServicePreferences.filter((p) => p.clientId === clientId),
-  );
-  const [optedOut, setOptedOut] = useState(
-    () =>
-      clientRebookOptOuts.find((o) => o.clientId === clientId)?.optedOut ??
-      false,
-  );
-  const [editingService, setEditingService] = useState<ServiceTypeKey | null>(
-    null,
-  );
-  const [draftFrequency, setDraftFrequency] = useState<ServiceFrequency>({
-    value: 4,
-    unit: "weeks",
-  });
+export function ClientServicePreferences({ clientId }: { clientId: number }) {
+  const prefs = useClientRebookPreferences(clientId);
+  const save = useSaveRebookPreference(clientId);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draftDays, setDraftDays] = useState(28);
   const [draftReason, setDraftReason] = useState("");
 
-  const toggleOptOut = (next: boolean) => {
-    setOptedOut(next);
-    toast.success(
-      next
-        ? "Rebook reminders turned off for this client"
-        : "Rebook reminders re-enabled for this client",
+  if (prefs.isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <TableSkeleton rows={3} cols={3} />
+        </CardContent>
+      </Card>
     );
-  };
+  }
+  if (prefs.error || !prefs.data) {
+    return (
+      <Card>
+        <CardContent className="text-muted-foreground pt-6 text-sm">
+          Rebook settings could not be loaded
+          {prefs.error ? `: ${prefs.error.message}` : "."}
+        </CardContent>
+      </Card>
+    );
+  }
 
-  const clientBookings = useMemo(
-    () => bookings.filter((b) => b.clientId === clientId),
-    [clientId],
-  );
+  const data = prefs.data;
 
-  const rows: PrefRow[] = useMemo(() => {
-    return REBOOK_SERVICE_TYPES.map(({ key }) => {
-      const override = overrides.find((p) => p.service === key);
-      const eff = override
-        ? { frequency: override.frequency, source: "override" as const }
-        : getEffectiveFrequency(clientId, key);
-      const dates = clientBookings
-        .filter(
-          (b) =>
-            b.service === key &&
-            (b.status === "completed" || b.status === "confirmed"),
-        )
-        .map((b) => b.startDate);
-      const actual = computeActualFrequency(dates);
-      return {
-        service: key,
-        effective: eff.frequency,
-        source: eff.source,
-        actual,
-        bookingCount: dates.length,
-        reason: override?.reason,
-      };
-    });
-  }, [overrides, clientBookings, clientId]);
-
-  const startEdit = (row: PrefRow) => {
-    setEditingService(row.service);
-    setDraftFrequency({ ...row.effective });
+  const startEdit = (row: ClientServiceRebook) => {
+    setEditing(row.service);
+    setDraftDays(row.effectiveDays ?? 28);
     setDraftReason(row.reason ?? "");
   };
 
-  const cancelEdit = () => {
-    setEditingService(null);
-    setDraftReason("");
-  };
-
-  const saveEdit = () => {
-    if (!editingService) return;
-    setOverrides((prev) => {
-      const idx = prev.findIndex((p) => p.service === editingService);
-      const next = {
-        clientId,
-        service: editingService,
-        frequency: draftFrequency,
-        reason: draftReason.trim() || undefined,
-        updatedAt: new Date().toISOString(),
-      };
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = next;
-        return copy;
-      }
-      return [...prev, next];
-    });
-    toast.success(
-      `${getServiceLabel(editingService)} frequency set to ${formatFrequency(
-        draftFrequency,
-      ).toLowerCase()}`,
+  const commit = (service: string, days: number | null) => {
+    save.mutate(
+      {
+        service,
+        frequencyDays: days,
+        remindersEnabled: true,
+        reason: days === null ? null : draftReason,
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            days === null
+              ? "Back to the facility's interval."
+              : `Every ${days} days for this client.`,
+          );
+          setEditing(null);
+        },
+        onError: (e: Error) => toast.error(e.message),
+      },
     );
-    setEditingService(null);
-  };
-
-  const resetToDefault = (service: ServiceTypeKey) => {
-    setOverrides((prev) => prev.filter((p) => p.service !== service));
-    toast.success(`${getServiceLabel(service)} reset to facility default`);
-  };
-
-  const compareIndicator = (row: PrefRow) => {
-    if (!row.actual) return null;
-    const expectedDays = frequencyInDays(row.effective);
-    const actualDays = frequencyInDays(row.actual);
-    const diff = actualDays - expectedDays;
-    const pct = Math.abs(diff) / expectedDays;
-    if (pct < 0.15) {
-      return {
-        icon: <CheckCircle className="size-3" />,
-        text: "Matches actual",
-        cls: "text-emerald-600",
-      };
-    }
-    if (diff > 0) {
-      return {
-        icon: <TrendingDown className="size-3" />,
-        text: `Comes back slower (every ${formatFrequency(row.actual).toLowerCase().replace("every ", "")})`,
-        cls: "text-amber-600",
-      };
-    }
-    return {
-      icon: <TrendingUp className="size-3" />,
-      text: `Comes back faster (every ${formatFrequency(row.actual).toLowerCase().replace("every ", "")})`,
-      cls: "text-blue-600",
-    };
   };
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-            <Calendar className="size-4" />
-            Service Preferences
-          </CardTitle>
-          <Badge variant="outline" className="gap-1 text-[10px]">
-            <Sparkles className="size-3" />
-            Powers rebook reminders
-          </Badge>
-        </div>
-        <p className="text-muted-foreground mt-1 text-xs">
-          How often this client typically returns, per service. Defaults inherit
-          from{" "}
-          <a
-            href="/facility/dashboard/automations"
-            className="text-primary underline-offset-4 hover:underline"
-          >
-            Automations → Rebook Reminders
-          </a>
-          .
-        </p>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Calendar className="size-4" />
+          Rebook settings
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
-        <div
-          className={
-            optedOut
-              ? "flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-3"
-              : "bg-muted/20 flex items-center justify-between rounded-lg border p-3"
-          }
-        >
-          <div className="flex items-center gap-2.5">
-            <BellOff
-              className={
-                optedOut
-                  ? "size-4 text-amber-600"
-                  : "text-muted-foreground size-4"
-              }
-            />
-            <div>
-              <p className="text-sm font-medium">
-                {optedOut
-                  ? "Rebook reminders are off"
-                  : "Rebook reminders enabled"}
-              </p>
-              <p
-                className={
-                  optedOut
-                    ? "text-xs text-amber-700/80"
-                    : "text-muted-foreground text-xs"
-                }
-              >
-                {optedOut
-                  ? "This client is excluded from the rebook queue. Other communications still send."
-                  : "Use this toggle if the client asks not to receive rebook nudges."}
-              </p>
-            </div>
+      <CardContent className="space-y-4">
+        {/* The master switch */}
+        <div className="bg-muted/30 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-sm font-medium">
+              <BellOff className="size-3.5" />
+              Rebook reminders
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {data.remindersEnabled
+                ? "This client is chased when they are overdue."
+                : "This client is never chased, for any service."}{" "}
+              This is your note about them — it does not affect anything they
+              unsubscribed from themselves.
+            </p>
           </div>
           <Switch
-            checked={!optedOut}
-            onCheckedChange={(v) => toggleOptOut(!v)}
+            checked={data.remindersEnabled}
+            disabled={save.isPending}
+            onCheckedChange={(on) =>
+              save.mutate(
+                { service: null, remindersEnabled: on },
+                {
+                  onSuccess: () =>
+                    toast.success(
+                      on
+                        ? "Rebook reminders back on for this client."
+                        : "This client will not be chased.",
+                    ),
+                  onError: (e: Error) => toast.error(e.message),
+                },
+              )
+            }
           />
         </div>
-        {rows.map((row) => {
-          const isEditing = editingService === row.service;
-          const indicator = compareIndicator(row);
-          return (
-            <div
-              key={row.service}
-              className={
-                optedOut
-                  ? "rounded-lg border border-dashed p-3 opacity-60 transition-colors"
-                  : "hover:bg-muted/30 rounded-lg border p-3 transition-colors"
-              }
-            >
-              {isEditing ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold">
-                      {getServiceLabel(row.service)}
-                    </span>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {row.source === "override"
-                        ? "Editing override"
-                        : "New override"}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2">
+
+        {data.services.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No services are configured for rebook reminders yet.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {data.services.map((row) => (
+              <div key={row.service} className="rounded-lg border p-3">
+                {editing === row.service ? (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium capitalize">
+                        {row.service}
+                      </span>
                       <span className="text-muted-foreground text-xs">
-                        Every
+                        every
                       </span>
                       <Input
                         type="number"
                         min={1}
-                        value={draftFrequency.value}
+                        max={3650}
+                        value={draftDays}
                         onChange={(e) =>
-                          setDraftFrequency({
-                            ...draftFrequency,
-                            value: Math.max(
-                              1,
-                              parseInt(e.target.value, 10) || 1,
-                            ),
-                          })
+                          setDraftDays(
+                            Math.max(1, parseInt(e.target.value, 10) || 1),
+                          )
                         }
-                        className="h-8 w-16"
+                        className="h-7 w-20 text-xs"
                       />
-                      <Select
-                        value={draftFrequency.unit}
-                        onValueChange={(v: FrequencyUnit) =>
-                          setDraftFrequency({ ...draftFrequency, unit: v })
-                        }
-                      >
-                        <SelectTrigger className="h-8 flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="days">Days</SelectItem>
-                          <SelectItem value="weeks">Weeks</SelectItem>
-                          <SelectItem value="months">Months</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <span className="text-muted-foreground text-xs">
+                        days
+                      </span>
                     </div>
                     <Input
-                      placeholder="Reason (optional)"
+                      placeholder="Why? e.g. coat grows fast"
                       value={draftReason}
                       onChange={(e) => setDraftReason(e.target.value)}
-                      className="h-8 text-xs"
+                      className="h-7 text-xs"
                     />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs"
-                      onClick={cancelEdit}
-                    >
-                      <X className="mr-1 size-3" />
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={saveEdit}
-                    >
-                      <Save className="mr-1 size-3" />
-                      Save
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">
-                        {getServiceLabel(row.service)}
-                      </span>
-                      <Badge
-                        variant={
-                          row.source === "override" ? "default" : "secondary"
-                        }
-                        className="text-[10px]"
-                      >
-                        {row.source === "override"
-                          ? "Override"
-                          : "Facility default"}
-                      </Badge>
-                    </div>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      Set to{" "}
-                      <span className="text-foreground font-medium">
-                        {formatFrequency(row.effective).toLowerCase()}
-                      </span>
-                    </p>
-                    {row.reason && (
-                      <p className="text-muted-foreground mt-0.5 text-[11px] italic">
-                        “{row.reason}”
-                      </p>
-                    )}
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-                      <span className="text-muted-foreground">
-                        Historical:{" "}
-                        <span className="text-foreground font-medium">
-                          {row.actual
-                            ? formatFrequency(row.actual).toLowerCase()
-                            : row.bookingCount === 0
-                              ? "no visits"
-                              : "1 visit only"}
-                        </span>
-                      </span>
-                      {indicator && (
-                        <span
-                          className={`flex items-center gap-1 ${indicator.cls}`}
-                        >
-                          {indicator.icon}
-                          {indicator.text}
-                        </span>
-                      )}
-                      <span className="text-muted-foreground">
-                        {row.bookingCount} booking
-                        {row.bookingCount === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    {row.source === "override" && (
+                    <div className="flex flex-wrap justify-end gap-1.5">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 px-2 text-[11px]"
-                        onClick={() => resetToDefault(row.service)}
+                        className="h-7 text-xs"
+                        onClick={() => setEditing(null)}
                       >
-                        Reset
+                        <X className="mr-1 size-3" />
+                        Cancel
                       </Button>
-                    )}
+                      {row.overrideDays !== null && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          disabled={save.isPending}
+                          onClick={() => commit(row.service, null)}
+                        >
+                          Use the default
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        className="h-7 bg-emerald-600 text-xs text-white hover:bg-emerald-700"
+                        disabled={save.isPending}
+                        onClick={() => commit(row.service, draftDays)}
+                      >
+                        <Save className="mr-1 size-3" />
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium capitalize">
+                          {row.service}
+                        </span>
+                        {row.source === "override" ? (
+                          <Badge
+                            variant="outline"
+                            className="border-violet-200 bg-violet-50 text-[10px] text-violet-700"
+                          >
+                            theirs
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px]">
+                            facility default
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {row.effectiveDays === null
+                          ? "Not configured for rebook reminders"
+                          : `Every ${row.effectiveDays} days`}
+                        {row.source === "override" &&
+                          row.defaultDays !== null &&
+                          ` · facility default is ${row.defaultDays}`}
+                      </p>
+                      {/* The evidence. Two visits is the minimum that can have
+                          a gap between them; below that the honest answer is
+                          that we do not know yet. */}
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {row.observedDays === null ? (
+                          `${row.completedVisits} completed visit${row.completedVisits === 1 ? "" : "s"} — not enough to see a pattern`
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <TrendingDown className="size-3" />
+                            They actually come every {row.observedDays} days
+                            over {row.completedVisits} visits
+                          </span>
+                        )}
+                      </p>
+                      {row.reason && (
+                        <p className="text-muted-foreground mt-0.5 text-xs italic">
+                          “{row.reason}”
+                        </p>
+                      )}
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 px-2 text-[11px]"
+                      className="h-7 text-xs"
                       onClick={() => startEdit(row)}
                     >
-                      <Edit className="mr-1 size-3" />
-                      {row.source === "override" ? "Edit" : "Override"}
+                      {row.source === "override" ? (
+                        <>
+                          <Check className="mr-1 size-3" />
+                          Change
+                        </>
+                      ) : (
+                        "Set for this client"
+                      )}
                     </Button>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
