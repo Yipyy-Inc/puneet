@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient } from "@/lib/supabase/server";
+import { redirectUrl } from "@/lib/request-origin";
 
 // ============================================================================
 // Following the public review link.
@@ -39,7 +40,11 @@ export async function GET(
   const { token } = await params;
   const channelId = request.nextUrl.searchParams.get("channel");
 
-  const back = new URL(`/review/${encodeURIComponent(token)}`, request.url);
+  // `redirectUrl` and NOT `new URL(path, request.url)`: self-hosted, Next
+  // resolves request.url from the address the server is LISTENING on, which is
+  // how a redirect once pointed at https://0.0.0.0:3000. This one goes to a
+  // customer holding a phone, and there is no second chance at it.
+  const back = redirectUrl(request, `/review/${encodeURIComponent(token)}`);
   if (!channelId) return NextResponse.redirect(back, 302);
 
   const supabase = await createServerClient();
