@@ -7161,6 +7161,35 @@ for every facility west of UTC and looked like an attribution bug.
 **Convert both ends through `instantFromWallClock(day, "00:00", zone)`.** If you
 find yourself typing a `Z` after a date you computed in a facility's zone, stop.
 
+### 🔴 A conditional claim must write EVERY column its constraints pair together
+
+The nudge evaluator claims a request with
+`nudge_resolved_at is null -> now()`. `review_requests` also has
+`(nudge_resolved_at is null) = (nudge_outcome is null)`, so setting only the
+timestamp raises 23514 — and the code read only `data` from the response, so
+the error went nowhere.
+
+The result was the worst available shape: every claim failed, `evaluated`
+stayed 0, and the tick returned `{sent: 0, problems: []}`. A clean run that had
+done nothing. Nothing in a log, nothing on a screen, and the feature simply
+never nudging anybody.
+
+Two rules out of it, and both generalise past this table:
+
+- **Claim with a provisional value for anything a CHECK pairs with the claimed
+  column.** Here the claim writes `nudge_outcome: 'none'` and the branches
+  narrow it. That value is also the correct thing to be left with if the
+  process dies mid-way, which is the test of whether a provisional value is the
+  right one.
+- **Never destructure only `data` from a write.** `const { data } = await
+db.from(x).update(...)` compiles, runs, and silently does nothing when the
+  row is refused. `deniedIfUntouched` exists for the RLS version of this; a
+  CHECK violation needs the `error` read explicitly.
+
+Found by the only assertion that could find it: two ticks racing each other,
+asserting that exactly one message exists afterwards. A single-caller test
+passes against a claim that never succeeds, because zero is also "not two".
+
 ### 🟡 `{{survey_link}}` can only be filled by the review scheduler
 
 It is a template variable like any other in the picker, but the value is a
