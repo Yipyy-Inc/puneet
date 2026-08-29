@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createServerClient } from "@/lib/supabase/server";
+import { getPublishedReviews } from "@/lib/api/published-reviews";
 
 // ============================================================================
 // The reviews a facility has put on its own booking page.
@@ -37,30 +37,11 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-
   const limit = Number(request.nextUrl.searchParams.get("limit") ?? "20");
-  const supabase = await createServerClient();
-
-  const [reviews, summary] = await Promise.all([
-    supabase.rpc("published_reviews_for", {
-      p_slug: slug,
-      p_limit: Number.isFinite(limit) ? limit : 20,
-    }),
-    supabase.rpc("published_review_summary", { p_slug: slug }),
-  ]);
 
   // A facility with no published reviews and a slug that does not exist are the
   // same answer on purpose: an empty list. A 404 here would turn this into a
-  // way to ask which businesses are on Yipyy.
-  if (reviews.error) {
-    return NextResponse.json({
-      reviews: [],
-      summary: { count: 0, average: null },
-    });
-  }
-
-  return NextResponse.json({
-    reviews: reviews.data ?? [],
-    summary: summary.data ?? { count: 0, average: null },
-  });
+  // way to ask which businesses are on Yipyy. getPublishedReviews owns that
+  // rule, and the public page reads through the same function.
+  return NextResponse.json(await getPublishedReviews(slug, limit));
 }

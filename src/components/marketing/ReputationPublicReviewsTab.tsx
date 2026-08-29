@@ -18,8 +18,16 @@ import { cn } from "@/lib/utils";
 // It put Google and Facebook badges beside "Hide" and "Display" buttons, which
 // reads as an offer to hide a review on those platforms. Nothing in this
 // product can do that, and a footnote saying so does not undo what the buttons
-// imply. The tab is now "Booking page reviews", the buttons name the booking
-// page, and the banner says plainly that Google and Facebook are untouched.
+// imply. The buttons now name the page they affect, and the banner says plainly
+// that Google and Facebook are untouched.
+//
+// ── AND THE PAGE NOW EXISTS ───────────────────────────────────────────────
+//
+// This screen said "these appear on your own booking page" before ANY surface
+// in the product rendered a review — the same shape of untrue claim it was
+// written to remove, introduced one layer up. /[facilitySlug]/reviews is that
+// page, and the banner links to it, so the claim is one the person making it
+// can click and check.
 //
 // ── AND WHAT IT COULD NOT ANSWER ──────────────────────────────────────────
 //
@@ -29,6 +37,12 @@ import { cn } from "@/lib/utils";
 // facility's showcase minimum, and the client's consent — and it is enforced in
 // the query rather than in somebody's head.
 // ============================================================================
+
+interface ShowcasePayload {
+  reviews: ShowcaseReview[];
+  /** The public page these are published to, or null if the slug is unset. */
+  publicPath: string | null;
+}
 
 interface ShowcaseReview {
   id: string;
@@ -61,7 +75,7 @@ export function ReputationPublicReviewsTab() {
 
   const { data, isPending, error } = useQuery({
     queryKey: ["reputation", "showcase", state],
-    queryFn: async (): Promise<ShowcaseReview[]> => {
+    queryFn: async (): Promise<ShowcasePayload> => {
       const params = state ? `?state=${state}` : "";
       const response = await fetch(`/api/reputation/showcase${params}`, {
         cache: "no-store",
@@ -72,10 +86,12 @@ export function ReputationPublicReviewsTab() {
         } | null;
         throw new Error(detail?.error ?? "Could not read the reviews.");
       }
-      const body = (await response.json()) as { reviews: ShowcaseReview[] };
-      return body.reviews;
+      return (await response.json()) as ShowcasePayload;
     },
   });
+
+  const reviews = data?.reviews ?? [];
+  const publicPath = data?.publicPath ?? null;
 
   const moderate = useMutation({
     mutationFn: async (input: { responseId: string; state: string }) => {
@@ -131,7 +147,7 @@ export function ReputationPublicReviewsTab() {
         <div className="flex justify-center py-16">
           <Loader2 className="text-muted-foreground size-6 animate-spin" />
         </div>
-      ) : data.length === 0 ? (
+      ) : reviews.length === 0 ? (
         <Card>
           <CardContent className="text-muted-foreground py-12 text-center text-sm">
             Nothing here yet. Only reviews with something written in them can go
@@ -140,7 +156,7 @@ export function ReputationPublicReviewsTab() {
         </Card>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          {data.map((review) => (
+          {reviews.map((review) => (
             <ReviewCard
               key={review.id}
               review={review}
@@ -157,12 +173,23 @@ export function ReputationPublicReviewsTab() {
         <Info className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
         <p className="text-muted-foreground text-xs">
           These appear on{" "}
-          <span className="font-medium">your own booking page</span>, and only
-          there. Putting one up or taking it down changes nothing on Google,
-          Facebook or Yelp — no product can edit a review on those platforms. A
-          review can be shown when it has a written comment, a rating at or
-          above your showcase minimum, and the client agreed it could be
-          displayed.
+          {publicPath ? (
+            <a
+              className="text-foreground font-medium underline underline-offset-2"
+              href={publicPath}
+              rel="noreferrer"
+              target="_blank"
+            >
+              your public reviews page
+            </a>
+          ) : (
+            <span className="font-medium">your public reviews page</span>
+          )}
+          , and only there. Putting one up or taking it down changes nothing on
+          Google, Facebook or Yelp — no product can edit a review on those
+          platforms. A review can be shown when it has a written comment, a
+          rating at or above your showcase minimum, and the client agreed it
+          could be displayed.
         </p>
       </div>
     </div>

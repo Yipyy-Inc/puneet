@@ -95,6 +95,14 @@ export type FacilityContext = {
    */
   name: string;
   /**
+   * The facility's URL slug — the one its public pages answer to.
+   *
+   * Carried so a screen that publishes something to a public page can LINK to
+   * that page. A claim the person making it cannot click is a claim nobody can
+   * check, which is the shape of defect this module has been removing.
+   */
+  slug: string;
+  /**
    * The facility's legacy NUMERIC ref.
    *
    * The mock-era types (`RoomCategory.facilityId`, `FacilityRoom.facilityId`,
@@ -133,7 +141,7 @@ export async function getFacilityContext(
     : (
         await supabase
           .from("facilities")
-          .select("id, timezone, name, legacy_id")
+          .select("id, timezone, name, legacy_id, slug")
           .eq("legacy_id", DEMO_FACILITY_LEGACY_ID)
           .maybeSingle()
       ).data;
@@ -148,6 +156,7 @@ export async function getFacilityContext(
     locationId,
     timeZone: facility.timezone ?? DEFAULT_TIMEZONE,
     name: facility.name,
+    slug: facility.slug ?? "",
     legacyRef: Number.isFinite(legacyRef) ? legacyRef : null,
   };
 }
@@ -196,6 +205,7 @@ type FacilityRow = {
   timezone: string | null;
   name: string;
   legacy_id: string | null;
+  slug: string | null;
 };
 
 /**
@@ -332,7 +342,7 @@ export async function facilityContextForClient(
   // succeeds for the owner and for nobody else.
   const { data: client } = await supabase
     .from("clients")
-    .select("facility_id, facilities(id, timezone, name, legacy_id)")
+    .select("facility_id, facilities(id, timezone, name, legacy_id, slug)")
     .eq("id", clientRowId)
     .maybeSingle();
 
@@ -342,6 +352,7 @@ export async function facilityContextForClient(
         timezone: string | null;
         name: string;
         legacy_id: string | null;
+        slug: string | null;
       }
     | null
     | undefined;
@@ -364,6 +375,7 @@ export async function facilityContextForClient(
     locationId: location?.id ?? null,
     timeZone: facility.timezone ?? DEFAULT_TIMEZONE,
     name: facility.name,
+    slug: facility.slug ?? "",
     legacyRef: Number.isFinite(legacyRef) ? legacyRef : null,
   };
 }
