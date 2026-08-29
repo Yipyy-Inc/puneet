@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
 import { holds, myPermissions } from "@/lib/auth/permissions";
+import { scheduleReviewRequest } from "@/lib/reputation/schedule";
+import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 // ============================================================================
@@ -151,4 +154,144 @@ export async function GET(request: NextRequest) {
     // offset page 2 would skip whatever arrived in between.
     nextBefore: rows.length === PAGE ? rows[rows.length - 1].created_at : null,
   });
+}
+
+// ============================================================================
+// Ask this client, now, because somebody decided to.
+//
+// ── IT IS THE SAME FUNCTION THE AUTOMATION USES ───────────────────────────
+//
+// `scheduleReviewRequest` with a `manual` descriptor — not a second
+// implementation. Every rung, the visit dedupe, the facility-local day, the
+// token, the template rendering and the outbox insert are one code path. A
+// parallel "send it now" path would be a second place to forget that somebody
+// has unsubscribed, and under CASL that is not a bug you get to have twice.
+//
+// ── WHO MAY BE ASKED IS RE-DERIVED, NOT TAKEN FROM THE BODY ───────────────
+//
+// The client id is checked against `clients` through the RLS client before
+// anything else happens, so the body cannot name somebody at another facility.
+// The write then goes through the admin client because `message_sends` grants a
+// session SELECT and nothing else — the outbox is the record of what was
+// attempted — and every query inside takes its facility from the SESSION.
+//
+// ── WHAT AN OVERRIDE CAN AND CANNOT DO ────────────────────────────────────
+//
+// A reason lets a manager past the cooldown and the negative pause: those are
+// the facility's own policy about how often to ask, and somebody who knows the
+// client can judge an exception. It does NOT get past consent, a hard bounce, a
+// refund or a cancellation. Those are not ours to waive, and the row records
+// the reason either way.
+// ============================================================================
+
+const manualSchema = z.object({
+  clientId: z.string().uuid(),
+  bookingId: z.string().uuid().optional(),
+  overrideReason: z.string().trim().min(3).max(500).optional(),
+});
+
+export async function POST(request: NextRequest) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+  if (!holds(await myPermissions(), "marketing_manage_reviews")) {
+    return NextResponse.json(
+      { error: "You do not have permission to ask for reviews." },
+      { status: 403 },
+    );
+  }
+
+  const facility = await getFacilityContext().catch(() => null);
+  if (!facility) {
+    return NextResponse.json(
+      { error: "No facility in this session." },
+      { status: 403 },
+    );
+  }
+
+  const parsed = manualSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "That is not a review request.", detail: parsed.error.issues },
+      { status: 422 },
+    );
+  }
+  const input = parsed.data;
+
+  if (!hasServiceRoleKey()) {
+    // Say so rather than reporting a success on a queue that was never written.
+    return NextResponse.json(
+      { error: "Messaging is not configured on this deployment." },
+      { status: 503 },
+    );
+  }
+
+  // Through the RLS client, so a caller cannot name another facility's client.
+  const supabase = await createServerClient();
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", input.clientId)
+    .eq("facility_id", facility.facilityId)
+    .maybeSingle();
+
+  if (!client) {
+    return NextResponse.json(
+      { error: "No such client at this facility." },
+      { status: 404 },
+    );
+  }
+
+  // Same treatment for the booking, when one is named: it has to belong to
+  // this client at this facility, or it is not part of their visit.
+  let bookingId: string | null = null;
+  if (input.bookingId) {
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("id", input.bookingId)
+      .eq("client_id", input.clientId)
+      .eq("facility_id", facility.facilityId)
+      .maybeSingle();
+    if (!booking) {
+      return NextResponse.json(
+        { error: "That booking is not this client's." },
+        { status: 404 },
+      );
+    }
+    bookingId = (booking as { id: string }).id;
+  }
+
+  const result = await scheduleReviewRequest(
+    createAdminClient(),
+    {
+      // Not a real automation event — there was no check-out, a person asked.
+      // `id` appears only in server-side problem strings.
+      id: 0,
+      facility_id: facility.facilityId,
+      kind: "check_out",
+      client_id: input.clientId,
+      booking_id: bookingId,
+      location_id: facility.locationId,
+    },
+    {
+      requestedBy: user.id,
+      overrideReason: input.overrideReason ?? null,
+    },
+  );
+
+  if (result.requested === 0) {
+    // 409, not 500: nothing went wrong. The rules said no, and the reason is
+    // the useful part of the answer.
+    return NextResponse.json(
+      {
+        error: result.refusal ?? "That review request was not sent.",
+        problems: result.problems,
+      },
+      { status: 409 },
+    );
+  }
+
+  return NextResponse.json({ requested: result.requested });
 }
