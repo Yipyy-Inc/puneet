@@ -7298,6 +7298,57 @@ equivalent does not exist.
 `published-reviews.sql` P6 counts rows as `anon` for that reason, and would go
 red the moment such a policy appeared.
 
+## 2026-08-29 — Three things about re-checking a review request at send time
+
+**`bookings.payment_status` is derived, and writing it directly is silently
+discarded.** Severity: medium, and it makes tests lie rather than fail.
+
+Measured while proving the send-time guard below: a booking INSERTed with
+`payment_status = 'paid'` and then UPDATEd to `'refunded'` read back as
+`'pending'` through both a direct Postgres connection and PostgREST.
+`information_schema` says `is_generated = NEVER`, and
+`bookings_payment_status_check` allows all three values — so nothing raises,
+nothing warns, and the write simply does not survive. It is maintained from
+`payments` by trigger, which is what `booking-payment-derivation.sql` is about.
+
+**What to do instead:** to set up a refunded booking, write the payment rows —
+never the column. A test that sets `payment_status` by hand is asserting against
+a value the database will overwrite, and it will pass or fail for reasons
+unrelated to what it claims to test. `status` IS a plain column and exercises
+the same eligibility rung, which is what the guard's proof uses.
+
+**Any eligibility re-check that runs AFTER its own row exists must exclude
+itself.** Severity: high — it silences the whole feature and looks correct.
+
+`reviewRequestEligibility`'s recency rung asks "when did we last ask this
+client" by reading the newest non-suppressed `review_requests` row. At
+scheduling time the request does not exist yet, so that is a question about
+other rows. At SEND time it does exist, so the query finds the request it is
+being asked about, concludes the client was asked seconds ago, and suppresses
+it — every request, every time, with `cooldown` in the suppression list, which
+is an entirely plausible-looking reason.
+
+Measured: with a healthy booking the guard returned `cooldown` and moved the
+request to `suppressed`. Typecheck and lint saw nothing; only running it did.
+`excludeRequestId` now exists for this, and the same trap applies to any future
+rung re-evaluated after its subject row is written.
+
+**A reversed check-out still gets asked for a review.** Severity: medium. NOT
+fixed.
+
+Undo on the daycare/boarding check-out toast sets `checked_out_at = null`, but
+`emitAutomationEvent` has already fired `check_out:<booking_id>` and the review
+request is queued. Eligibility's booking-health rung reads `status` and
+`payment_status` — neither changes on a reopen — so nothing stops the send. And
+because the dedupe key is per booking, the LATER genuine check-out emits
+nothing, so the customer is asked on the strength of the mistaken one and the
+real visit produces no request at all.
+
+Not fixed because the fix is a judgement about what a reopen means, not a
+one-liner: either eligibility learns to read `checked_out_at`, or the reopen
+path cancels the request, or the dedupe key stops being per-booking. All three
+change behaviour for boarding and daycare equally and want their own change.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
