@@ -67,6 +67,15 @@ export interface ScheduleResult {
   duplicate: number;
   problems: string[];
   /**
+   * Whether a reason would get past this refusal.
+   *
+   * Sent to the client rather than inferred there: a screen that decided by
+   * matching on the wording of `refusal` would silently lose the override box
+   * the day somebody rephrases a sentence, and the list of what may be
+   * overridden is a rule about consent that belongs in exactly one place.
+   */
+  refusalOverridable?: boolean;
+  /**
    * Why nothing was requested, for a caller who has a person waiting.
    *
    * The automated path counts and moves on — one check-out among fifty. A
@@ -272,7 +281,9 @@ export async function scheduleReviewRequest(
     : rawVerdict;
 
   if (manual && !verdict.eligible) {
-    result.refusal = OVERRIDABLE.has(verdict.reason ?? "")
+    const canOverride = OVERRIDABLE.has(verdict.reason ?? "");
+    result.refusalOverridable = canOverride;
+    result.refusal = canOverride
       ? `Not sent: ${verdict.reason}. Give a reason to send it anyway.`
       : `Not sent: ${verdict.reason}. That cannot be overridden.`;
   }
@@ -329,6 +340,69 @@ export async function scheduleReviewRequest(
         }),
   };
 
+  // ── AN OVERRIDE REVIVES THE ROW ITS OWN REFUSAL WROTE ──────────────────
+  //
+  // "A refusal is still a row" and the visit index allows one row per visit, so
+  // the two rules collide exactly here: the refused attempt writes a suppressed
+  // row for today, and the person's second press — now WITH a reason — hits
+  // 23505 and is told the client has already been asked. Through the dialog the
+  // override could therefore never succeed, because the thing blocking it was
+  // the record of it being blocked.
+  //
+  // So an override updates that row rather than inserting a second one. The
+  // trail is better for it: refused for cooldown, then overridden by this
+  // person for this reason, on one row.
+  if (manual?.overrideReason && verdict.eligible) {
+    const { data: existing } = await db
+      .from("review_requests")
+      .select("id, suppress_reason")
+      .eq("facility_id", event.facility_id)
+      .eq("client_id", event.client_id)
+      .eq("business_day", day)
+      .eq("state", "suppressed")
+      .maybeSingle();
+
+    const prior = existing as {
+      id: string;
+      suppress_reason: string | null;
+    } | null;
+
+    // Only a refusal this person is ALLOWED to overturn. A row suppressed for
+    // consent or a refund is not revived by writing a reason next to it.
+    if (prior && OVERRIDABLE.has(prior.suppress_reason ?? "")) {
+      const { error: reviveError } = await db
+        .from("review_requests")
+        .update({
+          ...insert,
+          suppress_reason: null,
+          suppress_stage: null,
+          suppressed_at: null,
+        } as never)
+        .eq("id", prior.id);
+
+      if (reviveError) {
+        result.problems.push(
+          `review request ${prior.id}: ${reviveError.message}`,
+        );
+        result.refusal = "That review request could not be sent.";
+        return result;
+      }
+      return finishReviewRequest(db, prior.id, {
+        result,
+        event,
+        rule,
+        context,
+        config,
+        zone,
+        day,
+        token,
+        firstSendAt,
+        slug: f?.slug ?? null,
+        manual,
+      });
+    }
+  }
+
   const { data: created, error: insertError } = await db
     .from("review_requests")
     .insert(insert as never)
@@ -357,11 +431,143 @@ export async function scheduleReviewRequest(
     result.suppressed += 1;
     return result;
   }
+  return finishReviewRequest(db, requestId, {
+    result,
+    event,
+    rule,
+    context,
+    config,
+    zone,
+    day,
+    token,
+    firstSendAt,
+    slug: f?.slug ?? null,
+    manual,
+  });
+}
+
+/** The facility's thresholds and windows, or the documented defaults. */
+export async function loadReputationConfig(
+  db: SupabaseClient,
+  facilityId: string,
+): Promise<ReputationConfig> {
+  const { data } = await db
+    .from("facility_settings")
+    .select("value")
+    .eq("facility_id", facilityId)
+    .eq("domain", "reputation_config")
+    .maybeSingle();
+
+  const row = data as { value: unknown } | null;
+  if (!row) return NO_REPUTATION_CONFIG;
+
+  // A value that no longer parses is IGNORED in favour of the default rather
+  // than merged or thrown — the rule `/api/facility/settings` already follows,
+  // so a half-written config cannot change who gets messaged.
+  const parsed = reputationConfigSchema.safeParse(row.value);
+  return parsed.success ? parsed.data : NO_REPUTATION_CONFIG;
+}
+
+/**
+ * The request exists but no message could be built for it.
+ *
+ * NOT `sent`, which is what these paths used to leave behind: a missing
+ * template, a retired one, a template reaching for a variable this client has
+ * no value for, or a facility with no slug all returned early AFTER the row was
+ * inserted, so the Requests tab showed `sent` for a request that had never been
+ * queued anywhere. `check:success-claims` exists for this shape of defect on
+ * screens; this was the same lie one layer down, told by a row.
+ *
+ * NOT `suppressed` either: nothing decided against asking this client. We tried
+ * and could not, which is a different fact and a different fix — usually
+ * somebody's template.
+ */
+async function markFailed(
+  db: SupabaseClient,
+  requestId: string,
+): Promise<void> {
+  await db
+    .from("review_requests")
+    .update({
+      state: "failed",
+      // The token was minted for a message that does not exist. Leaving it live
+      // would leave a working survey link nobody was ever given.
+      token_hash: null,
+      token_expires_at: null,
+      nudge_due_at: null,
+    } as never)
+    .eq("id", requestId);
+}
+
+async function markSuppressed(
+  db: SupabaseClient,
+  requestId: string,
+  reason: string,
+): Promise<void> {
+  await db
+    .from("review_requests")
+    .update({
+      state: "suppressed",
+      suppress_reason: reason,
+      suppress_stage: "trigger",
+      suppressed_at: new Date().toISOString(),
+      token_hash: null,
+      nudge_due_at: null,
+    } as never)
+    .eq("id", requestId);
+}
+
+/**
+ * Render the message for a request that is going out, and queue it.
+ *
+ * Shared by the two ways a request comes to exist: a fresh insert, and an
+ * override reviving the suppressed row its own refusal wrote. Both must mint
+ * the same token, refuse the same half-rendered message and write the same
+ * outbox row, so there is one copy of it.
+ */
+async function finishReviewRequest(
+  db: SupabaseClient,
+  requestId: string,
+  ctx: {
+    result: ScheduleResult;
+    event: {
+      facility_id: string;
+      location_id: string | null;
+      client_id: string | null;
+    };
+    rule: ReviewRuleRow;
+    context: Awaited<ReturnType<typeof loadMessageContext>>;
+    config: ReputationConfig;
+    zone: string;
+    day: string;
+    token: string;
+    firstSendAt: Date;
+    slug: string | null;
+    manual?: ManualSend;
+  },
+): Promise<ScheduleResult> {
+  const {
+    result,
+    event,
+    rule,
+    config,
+    zone,
+    day,
+    token,
+    firstSendAt,
+    slug,
+    manual,
+  } = ctx;
+  const context = ctx.context!;
+
+  // Counted HERE rather than at either call site, so the insert path and the
+  // override-revive path cannot disagree about it. Every refusal below
+  // decrements it again.
   result.requested += 1;
 
   // ── The message ────────────────────────────────────────────────────────
-  const origin = f?.slug
-    ? facilityCustomerOrigin(f.slug, process.env.NEXT_PUBLIC_APP_DOMAIN)
+  const origin = slug
+    ? facilityCustomerOrigin(slug, process.env.NEXT_PUBLIC_APP_DOMAIN)
     : null;
 
   if (!origin) {
@@ -474,75 +680,4 @@ export async function scheduleReviewRequest(
   }
 
   return result;
-}
-
-/** The facility's thresholds and windows, or the documented defaults. */
-export async function loadReputationConfig(
-  db: SupabaseClient,
-  facilityId: string,
-): Promise<ReputationConfig> {
-  const { data } = await db
-    .from("facility_settings")
-    .select("value")
-    .eq("facility_id", facilityId)
-    .eq("domain", "reputation_config")
-    .maybeSingle();
-
-  const row = data as { value: unknown } | null;
-  if (!row) return NO_REPUTATION_CONFIG;
-
-  // A value that no longer parses is IGNORED in favour of the default rather
-  // than merged or thrown — the rule `/api/facility/settings` already follows,
-  // so a half-written config cannot change who gets messaged.
-  const parsed = reputationConfigSchema.safeParse(row.value);
-  return parsed.success ? parsed.data : NO_REPUTATION_CONFIG;
-}
-
-/**
- * The request exists but no message could be built for it.
- *
- * NOT `sent`, which is what these paths used to leave behind: a missing
- * template, a retired one, a template reaching for a variable this client has
- * no value for, or a facility with no slug all returned early AFTER the row was
- * inserted, so the Requests tab showed `sent` for a request that had never been
- * queued anywhere. `check:success-claims` exists for this shape of defect on
- * screens; this was the same lie one layer down, told by a row.
- *
- * NOT `suppressed` either: nothing decided against asking this client. We tried
- * and could not, which is a different fact and a different fix — usually
- * somebody's template.
- */
-async function markFailed(
-  db: SupabaseClient,
-  requestId: string,
-): Promise<void> {
-  await db
-    .from("review_requests")
-    .update({
-      state: "failed",
-      // The token was minted for a message that does not exist. Leaving it live
-      // would leave a working survey link nobody was ever given.
-      token_hash: null,
-      token_expires_at: null,
-      nudge_due_at: null,
-    } as never)
-    .eq("id", requestId);
-}
-
-async function markSuppressed(
-  db: SupabaseClient,
-  requestId: string,
-  reason: string,
-): Promise<void> {
-  await db
-    .from("review_requests")
-    .update({
-      state: "suppressed",
-      suppress_reason: reason,
-      suppress_stage: "trigger",
-      suppressed_at: new Date().toISOString(),
-      token_hash: null,
-      nudge_due_at: null,
-    } as never)
-    .eq("id", requestId);
 }
