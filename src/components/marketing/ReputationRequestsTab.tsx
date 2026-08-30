@@ -10,10 +10,13 @@ import {
   Loader2,
   Mail,
   MessageSquare,
+  Plus,
   Star,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import dynamic from "next/dynamic";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -64,8 +67,16 @@ const TABS: { value: RequestState | "all"; label: string }[] = [
   { value: "failed", label: "Failed" },
 ];
 
+// A modal nobody has opened should not be in the first load. `next/dynamic`
+// needs a NAMED component, not the module.
+const AskForReviewDialog = dynamic(
+  () => import("./AskForReviewDialog").then((m) => m.AskForReviewDialog),
+  { ssr: false },
+);
+
 export function ReputationRequestsTab() {
   const [tab, setTab] = useState<RequestState | "all">("all");
+  const [askOpen, setAskOpen] = useState(false);
 
   const { data, isPending, error } = useQuery(
     reviewRequestQueries.list(tab === "all" ? {} : { state: tab }),
@@ -73,23 +84,36 @@ export function ReputationRequestsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-1.5">
-        {TABS.map((item) => (
-          <button
-            key={item.value}
-            type="button"
-            onClick={() => setTab(item.value)}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-              tab === item.value
-                ? "border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
-                : "text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {TABS.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setTab(item.value)}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                tab === item.value
+                  ? "border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                  : "text-muted-foreground hover:bg-muted",
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <Button
+          size="sm"
+          className="bg-emerald-600 text-white hover:bg-emerald-700"
+          onClick={() => setAskOpen(true)}
+        >
+          <Plus className="size-4" />
+          Ask for a review
+        </Button>
       </div>
+
+      <AskForReviewDialog open={askOpen} onOpenChange={setAskOpen} />
 
       {error ? (
         <Card>
@@ -107,7 +131,7 @@ export function ReputationRequestsTab() {
         <Card>
           <CardContent className="text-muted-foreground py-12 text-center text-sm">
             {tab === "all"
-              ? "Nobody has been asked yet. Review requests go out after check-out, once the automation is switched on."
+              ? "Nobody has been asked yet. Requests go out after check-out once the automation is switched on, or you can ask one client now."
               : "Nothing in this state."}
           </CardContent>
         </Card>

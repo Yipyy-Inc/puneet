@@ -184,9 +184,14 @@ export async function GET(request: NextRequest) {
 // the reason either way.
 // ============================================================================
 
+// REFS, not uuids. `rowToClient` maps `id: row.ref`, so every client-facing
+// screen in this product holds the numeric ref and has never seen the uuid —
+// asking for one would be asking the UI for something it does not have. The
+// uuid is resolved here, scoped to the session's facility, which is the same
+// re-derivation the lookup was doing anyway.
 const manualSchema = z.object({
-  clientId: z.string().uuid(),
-  bookingId: z.string().uuid().optional(),
+  clientRef: z.number().int().positive(),
+  bookingRef: z.number().int().positive().optional(),
   overrideReason: z.string().trim().min(3).max(500).optional(),
 });
 
@@ -232,7 +237,7 @@ export async function POST(request: NextRequest) {
   const { data: client } = await supabase
     .from("clients")
     .select("id")
-    .eq("id", input.clientId)
+    .eq("ref", input.clientRef)
     .eq("facility_id", facility.facilityId)
     .maybeSingle();
 
@@ -245,13 +250,15 @@ export async function POST(request: NextRequest) {
 
   // Same treatment for the booking, when one is named: it has to belong to
   // this client at this facility, or it is not part of their visit.
+  const clientId = (client as { id: string }).id;
+
   let bookingId: string | null = null;
-  if (input.bookingId) {
+  if (input.bookingRef) {
     const { data: booking } = await supabase
       .from("bookings")
       .select("id")
-      .eq("id", input.bookingId)
-      .eq("client_id", input.clientId)
+      .eq("ref", input.bookingRef)
+      .eq("client_id", clientId)
       .eq("facility_id", facility.facilityId)
       .maybeSingle();
     if (!booking) {
@@ -271,7 +278,7 @@ export async function POST(request: NextRequest) {
       id: 0,
       facility_id: facility.facilityId,
       kind: "check_out",
-      client_id: input.clientId,
+      client_id: clientId,
       booking_id: bookingId,
       location_id: facility.locationId,
     },
@@ -287,6 +294,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: result.refusal ?? "That review request was not sent.",
+        // Whether a reason would get past it. The screen must not have to
+        // infer this from the wording.
+        overridable: result.refusalOverridable ?? false,
         problems: result.problems,
       },
       { status: 409 },
