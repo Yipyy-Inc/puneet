@@ -70,3 +70,6 @@ pnpm-lock.yaml
 .claude/skills/workos-widgets/
 
 .vercel
+
+# Supabase CLI scratch (version cache, linked-project ref) — not project state
+supabase/.temp/

@@ -1,0 +1,4712 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Yipyy — Reputation Booster v2 · Build Spec</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #14161c;
+        --ink-2: #454b5a;
+        --ink-3: #767d8d;
+        --paper: #f6f7f9;
+        --card: #ffffff;
+        --rule: #dee2e9;
+        --rule-2: #edeff3;
+        --violet: #5b3df5;
+        --violet-tint: #efebff;
+        --defect: #c31232;
+        --defect-tint: #fdeef1;
+        --risk: #9c6100;
+        --risk-tint: #fdf3e2;
+        --target: #04725a;
+        --target-tint: #e7f5f1;
+        --gap: #1f5fa8;
+        --gap-tint: #eaf1fa;
+        --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        --sans:
+          "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        --cond:
+          "IBM Plex Sans Condensed", "IBM Plex Sans", -apple-system, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 15.5px;
+        line-height: 1.62;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 28px 120px;
+      }
+
+      /* ---------- masthead ---------- */
+      .mast {
+        padding: 56px 0 34px;
+        border-bottom: 2px solid var(--ink);
+      }
+      .eyebrow {
+        font-family: var(--cond);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 12px;
+        color: var(--violet);
+      }
+      h1 {
+        font-family: var(--cond);
+        font-weight: 700;
+        font-size: clamp(34px, 6vw, 58px);
+        line-height: 1.02;
+        letter-spacing: -0.015em;
+        margin: 12px 0 14px;
+        max-width: 20ch;
+      }
+      .deck {
+        font-size: 18px;
+        color: var(--ink-2);
+        max-width: 70ch;
+        margin: 0 0 26px;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 34px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .meta b {
+        color: var(--ink);
+        font-weight: 500;
+        display: block;
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 13px;
+      }
+
+      /* ---------- layout ---------- */
+      .cols {
+        display: grid;
+        grid-template-columns: 212px 1fr;
+        gap: 56px;
+        margin-top: 44px;
+        align-items: start;
+      }
+      nav.toc {
+        position: sticky;
+        top: 24px;
+        font-family: var(--mono);
+        font-size: 12.5px;
+        line-height: 1.5;
+      }
+      nav.toc p {
+        font-family: var(--cond);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        font-size: 11px;
+        color: var(--ink-3);
+        margin: 0 0 12px;
+        font-weight: 700;
+      }
+      nav.toc a {
+        display: block;
+        padding: 4px 0 4px 26px;
+        text-indent: -26px;
+        color: var(--ink-2);
+        text-decoration: none;
+        border-left: 2px solid var(--rule);
+        padding-left: 14px;
+        text-indent: 0;
+      }
+      nav.toc a:hover,
+      nav.toc a:focus {
+        color: var(--violet);
+        border-left-color: var(--violet);
+      }
+      nav.toc a span {
+        color: var(--ink-3);
+      }
+
+      /* ---------- sections ---------- */
+      section {
+        margin: 0 0 62px;
+        scroll-margin-top: 20px;
+      }
+      h2 {
+        font-family: var(--cond);
+        font-weight: 700;
+        font-size: 30px;
+        letter-spacing: -0.01em;
+        margin: 0 0 6px;
+        padding-top: 8px;
+      }
+      h2 .num {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--violet);
+        display: block;
+        margin-bottom: 6px;
+        letter-spacing: 0.06em;
+      }
+      h3 {
+        font-family: var(--cond);
+        font-weight: 700;
+        font-size: 20px;
+        margin: 34px 0 8px;
+        letter-spacing: -0.005em;
+      }
+      h4 {
+        font-family: var(--cond);
+        font-weight: 700;
+        font-size: 15px;
+        margin: 22px 0 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-2);
+      }
+      p {
+        margin: 0 0 14px;
+        max-width: 78ch;
+      }
+      .lede {
+        font-size: 17px;
+        color: var(--ink-2);
+        max-width: 74ch;
+        margin-bottom: 22px;
+      }
+      ul,
+      ol {
+        max-width: 78ch;
+        padding-left: 20px;
+        margin: 0 0 16px;
+      }
+      li {
+        margin-bottom: 6px;
+      }
+      code,
+      kbd {
+        font-family: var(--mono);
+        font-size: 0.88em;
+        background: #eef0f4;
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: #2b3040;
+      }
+      hr {
+        border: 0;
+        border-top: 1px solid var(--rule);
+        margin: 38px 0;
+      }
+      strong {
+        font-weight: 600;
+      }
+
+      /* ---------- id chips ---------- */
+      .id {
+        font-family: var(--mono);
+        font-size: 11.5px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 4px;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+      .id-d {
+        background: var(--defect-tint);
+        color: var(--defect);
+      }
+      .id-r {
+        background: var(--risk-tint);
+        color: var(--risk);
+      }
+      .id-x {
+        background: var(--violet-tint);
+        color: var(--violet);
+      }
+      .id-g {
+        background: var(--gap-tint);
+        color: var(--gap);
+      }
+
+      /* ---------- tables ---------- */
+      .tw {
+        overflow-x: auto;
+        margin: 0 0 20px;
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        background: var(--card);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+        min-width: 640px;
+      }
+      th {
+        font-family: var(--cond);
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        font-size: 11.5px;
+        text-align: left;
+        padding: 11px 14px;
+        background: #f0f2f6;
+        color: var(--ink-2);
+        border-bottom: 1px solid var(--rule);
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      td {
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--rule-2);
+        vertical-align: top;
+        line-height: 1.5;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      td.m,
+      th.m {
+        font-family: var(--mono);
+        font-size: 12.5px;
+      }
+      .nowrap {
+        white-space: nowrap;
+      }
+
+      /* ---------- callouts ---------- */
+      .box {
+        border: 1px solid var(--rule);
+        border-left: 3px solid var(--ink-3);
+        background: var(--card);
+        padding: 16px 18px;
+        border-radius: 6px;
+        margin: 0 0 20px;
+        max-width: 82ch;
+      }
+      .box p:last-child {
+        margin-bottom: 0;
+      }
+      .box .h {
+        font-family: var(--cond);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-size: 11.5px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: var(--ink-2);
+      }
+      .box.stop {
+        border-left-color: var(--defect);
+        background: var(--defect-tint);
+      }
+      .box.stop .h {
+        color: var(--defect);
+      }
+      .box.warn {
+        border-left-color: var(--risk);
+        background: var(--risk-tint);
+      }
+      .box.warn .h {
+        color: var(--risk);
+      }
+      .box.good {
+        border-left-color: var(--target);
+        background: var(--target-tint);
+      }
+      .box.good .h {
+        color: var(--target);
+      }
+      .proof {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        background: #22252e;
+        color: #d8dce6;
+        padding: 12px 15px;
+        border-radius: 5px;
+        margin: 10px 0 0;
+        overflow-x: auto;
+        white-space: pre;
+      }
+      .proof .bad {
+        color: #ff8fa3;
+      }
+      .proof .ok {
+        color: #7ee0be;
+      }
+      .proof .dim {
+        color: #7c8395;
+      }
+
+      /* ---------- figures ---------- */
+      figure {
+        margin: 26px 0 30px;
+      }
+      .figbox {
+        background: var(--card);
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        padding: 20px 18px 12px;
+        overflow-x: auto;
+      }
+      figure svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-width: 520px;
+      }
+      figcaption {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--ink-3);
+        margin-top: 10px;
+        padding-left: 2px;
+        letter-spacing: 0.01em;
+      }
+      figcaption b {
+        font-weight: 600;
+        color: var(--ink-2);
+      }
+      svg text {
+        font-family: "IBM Plex Sans", sans-serif;
+        fill: var(--ink);
+      }
+      svg .ttl {
+        font-family: "IBM Plex Sans Condensed", sans-serif;
+        font-weight: 700;
+        font-size: 13px;
+      }
+      svg .lbl {
+        font-size: 11.5px;
+        fill: #454b5a;
+      }
+      svg .mn {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 10.5px;
+        fill: #767d8d;
+      }
+      svg .mnw {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 10.5px;
+        fill: #fff;
+      }
+      svg .st {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11.5px;
+        font-weight: 600;
+      }
+      svg .ln {
+        stroke: #9aa2b1;
+        stroke-width: 1.4;
+        fill: none;
+      }
+      svg .ln-d {
+        stroke: #c31232;
+        stroke-width: 1.4;
+        fill: none;
+        stroke-dasharray: 4 3;
+      }
+      svg .ln-g {
+        stroke: #04725a;
+        stroke-width: 1.6;
+        fill: none;
+      }
+      svg .bx {
+        fill: #fff;
+        stroke: #c9cfda;
+        stroke-width: 1.3;
+      }
+      svg .bx-v {
+        fill: #efebff;
+        stroke: #5b3df5;
+        stroke-width: 1.3;
+      }
+      svg .bx-r {
+        fill: #fdeef1;
+        stroke: #c31232;
+        stroke-width: 1.3;
+      }
+      svg .bx-a {
+        fill: #fdf3e2;
+        stroke: #9c6100;
+        stroke-width: 1.3;
+      }
+      svg .bx-g {
+        fill: #e7f5f1;
+        stroke: #04725a;
+        stroke-width: 1.3;
+      }
+      svg .bx-k {
+        fill: #22252e;
+        stroke: #22252e;
+      }
+      svg .sep {
+        stroke: #e4e7ed;
+        stroke-width: 1;
+      }
+
+      /* ---------- phase strip ---------- */
+      .phase {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        margin-bottom: 22px;
+      }
+      .ph {
+        background: var(--card);
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        padding: 15px 16px;
+      }
+      .ph .k {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--violet);
+        font-weight: 600;
+        letter-spacing: 0.06em;
+      }
+      .ph .t {
+        font-family: var(--cond);
+        font-weight: 700;
+        font-size: 17px;
+        margin: 3px 0 7px;
+      }
+      .ph p {
+        font-size: 13.5px;
+        color: var(--ink-2);
+        margin: 0 0 8px;
+      }
+      .ph .ids {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .pill {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 11px;
+        padding: 2px 7px;
+        border-radius: 20px;
+        border: 1px solid var(--rule);
+        color: var(--ink-2);
+        background: #fff;
+      }
+
+      footer {
+        border-top: 2px solid var(--ink);
+        margin-top: 60px;
+        padding-top: 20px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+
+      a {
+        color: var(--violet);
+      }
+      :focus-visible {
+        outline: 2px solid var(--violet);
+        outline-offset: 2px;
+      }
+
+      @media (max-width: 940px) {
+        .cols {
+          grid-template-columns: 1fr;
+          gap: 0;
+        }
+        nav.toc {
+          position: static;
+          margin-bottom: 40px;
+          column-count: 2;
+          column-gap: 24px;
+        }
+      }
+      @media (max-width: 560px) {
+        .wrap {
+          padding: 0 18px 80px;
+        }
+        nav.toc {
+          column-count: 1;
+        }
+        h2 {
+          font-size: 25px;
+        }
+      }
+      @media print {
+        body {
+          background: #fff;
+          font-size: 10.5pt;
+        }
+        nav.toc {
+          display: none;
+        }
+        .cols {
+          grid-template-columns: 1fr;
+        }
+        section {
+          page-break-inside: auto;
+        }
+        figure,
+        .box,
+        .tw {
+          page-break-inside: avoid;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="mast">
+        <div class="eyebrow">Yipyy · Marketing · Build specification</div>
+        <h1>Reputation Booster v2</h1>
+        <p class="deck">
+          An audit of the current build, a corrected end-to-end workflow, and
+          the data model, rules and acceptance criteria needed to ship it.
+          Written to be handed straight to engineering.
+        </p>
+        <div class="meta">
+          <span><b>Owner</b>Product / Marketing surface</span>
+          <span><b>Audience</b>Engineering, QA, Design</span>
+          <span
+            ><b>Baseline</b>puneet-blue.vercel.app ·
+            /marketing/reputation-booster</span
+          >
+          <span><b>Benchmark</b>MoeGo Review Booster</span>
+        </div>
+      </header>
+
+      <div class="cols">
+        <nav class="toc" aria-label="Contents">
+          <p>Contents</p>
+          <a href="#s1"><span>01</span> &nbsp;What changes</a>
+          <a href="#s2"><span>02</span> &nbsp;Current-state audit</a>
+          <a href="#s3"><span>03</span> &nbsp;Feasibility &amp; compliance</a>
+          <a href="#s4"><span>04</span> &nbsp;Config conflicts</a>
+          <a href="#s5"><span>05</span> &nbsp;MoeGo read</a>
+          <a href="#s6"><span>06</span> &nbsp;Target workflow</a>
+          <a href="#s7"><span>07</span> &nbsp;Guardrail ladder</a>
+          <a href="#s8"><span>08</span> &nbsp;Capture surfaces</a>
+          <a href="#s9"><span>09</span> &nbsp;Routing &amp; amplify</a>
+          <a href="#s10"><span>10</span> &nbsp;Timing engine</a>
+          <a href="#s11"><span>11</span> &nbsp;Escalation</a>
+          <a href="#s12"><span>12</span> &nbsp;Data model</a>
+          <a href="#s13"><span>13</span> &nbsp;Events &amp; API</a>
+          <a href="#s14"><span>14</span> &nbsp;Metric dictionary</a>
+          <a href="#s15"><span>15</span> &nbsp;Screen changes</a>
+          <a href="#s16"><span>16</span> &nbsp;Delivery phases</a>
+          <a href="#s17"><span>17</span> &nbsp;QA matrix</a>
+          <a href="#s18"><span>18</span> &nbsp;Open questions</a>
+        </nav>
+
+        <main>
+          <!-- ================= 01 ================= -->
+          <section id="s1">
+            <h2><span class="num">01</span>What changes, in one page</h2>
+            <p class="lede">
+              The current Reputation Booster has a strong feature surface —
+              escalations, protection rules, multi-location, sequencing — but
+              three structural problems stop it being shippable as-is.
+            </p>
+
+            <ol>
+              <li>
+                <strong>The numbers on the page don't reconcile.</strong>
+                Overview and Performance describe one location; Locations
+                describes the network; nothing on screen says which. Six KPIs
+                have undefined denominators. Staff review counts exceed total
+                ratings by 31%.
+              </li>
+              <li>
+                <strong>The core promise is a legal problem.</strong> "Capture
+                every rating before it goes public… keep negative experiences
+                private" is a description of review gating. That is prohibited
+                by Google's review policies and by the FTC's Rule on Consumer
+                Reviews and Testimonials. The product already contains the
+                correct answer — the <em>open routing</em> note — but it's the
+                non-default, buried in Settings.
+              </li>
+              <li>
+                <strong>The same value is editable in three places.</strong>
+                Send delay lives in the trigger card, the send sequence, and the
+                Messages touchpoint. Two independent reminder systems both fire
+                at 48 hours into a "1 per day" cap.
+              </li>
+            </ol>
+
+            <p>
+              v2 fixes those, then adds the one thing MoeGo does far better:
+              <strong>capture at the moment of peak engagement</strong>. MoeGo's
+              flagship customer generates 90%+ of their 1,300 reviews from a
+              Review Booster embedded in the grooming report, not from a
+              standalone SMS. Yipyy has no equivalent surface.
+            </p>
+
+            <div class="box good">
+              <div class="h">The v2 thesis</div>
+              <p>
+                Ask everyone, ask where they already are, never hide the public
+                option, and put a real service-recovery workflow behind every
+                unhappy answer. Yipyy wins on recovery and multi-location; it
+                needs to catch up on capture.
+              </p>
+            </div>
+
+            <h4>Finding classes used throughout</h4>
+            <p>
+              <span class="id id-d">D-nn</span> data / logic defect
+              &nbsp;·&nbsp; <span class="id id-r">R-nn</span> feasibility or
+              compliance risk &nbsp;·&nbsp;
+              <span class="id id-x">X-nn</span> configuration or UX
+              contradiction &nbsp;·&nbsp;
+              <span class="id id-g">G-nn</span> capability gap vs MoeGo
+            </p>
+            <p>
+              Every ID recurs in the phase plan (§16) and the QA matrix (§17),
+              so tickets can be cut directly from this document.
+            </p>
+          </section>
+
+          <!-- ================= 02 ================= -->
+          <section id="s2">
+            <h2>
+              <span class="num">02</span>Current-state audit — the numbers
+            </h2>
+            <p class="lede">
+              Everything below was recomputed from the values visible on screen.
+              Where a figure is internally consistent it is marked; where it
+              isn't, the arithmetic is shown.
+            </p>
+
+            <h3>What already reconciles</h3>
+            <div class="proof">
+              <span class="dim">Services tab, sent:</span> 103 + 98 + 62 + 49 =
+              312 <span class="ok">= Overview "Requests sent" ✓</span>
+              <span class="dim">Services tab, rated:</span> 87 + 74 + 51 + 35 =
+              247 <span class="ok">= Overview "247 ratings received" ✓</span>
+              <span class="dim">Response rate:</span> 247 / 312 = 79.2%
+              <span class="ok">✓</span>
+              <span class="dim">5-star share:</span> 158 / 247 = 63.9%
+              <span class="ok">✓</span>
+              <span class="dim">Locations, reviews:</span> 184 + 96 + 71 = 351
+              <span class="dim">Locations, 5-star:</span> 162 + 78 + 48 = 288 →
+              288/351 = 82% <span class="ok">✓</span>
+              <span class="dim">Network rating:</span> (4.90·184 + 4.70·96 +
+              4.40·71) / 351 = 4.744 <span class="ok">✓</span>
+            </div>
+            <p>
+              So Locations is internally sound, and Overview + Performance are
+              internally sound. They just aren't the same dataset.
+            </p>
+
+            <h3>Defect ledger</h3>
+            <div class="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 56px">ID</th>
+                    <th>Defect</th>
+                    <th>Evidence</th>
+                    <th>Required fix</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="id id-d">D-01</span></td>
+                    <td>
+                      <strong
+                        >Two different scopes render on one page with no scope
+                        control.</strong
+                      >
+                      Overview/Performance are Plateau-only; Locations is the
+                      network.
+                    </td>
+                    <td class="m">
+                      Overview sent = 312. Plateau requests sent = 312. Network
+                      sent = 312+198+241 = 751. Ratings: 247 vs 351.
+                    </td>
+                    <td>
+                      Add a persistent <code>scope</code> selector (All
+                      locations / single). Every card reads scope from one
+                      store. Locations tab is network-only by definition and
+                      says so.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-02</span></td>
+                    <td>Rating distribution does not sum to 100%.</td>
+                    <td class="m">64 + 21 + 8 + 6 = 99%</td>
+                    <td>
+                      Render distribution from raw counts, not stored
+                      percentages. Largest-remainder rounding so displayed
+                      values always total 100.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-03</span></td>
+                    <td>
+                      <strong>Staff review counts exceed total ratings.</strong>
+                      A rating attributed to every staff member on the visit is
+                      counted N times.
+                    </td>
+                    <td class="m">87+103+62+71 = 323 vs 247 rated (+31%)</td>
+                    <td>
+                      Decide one rule and label accordingly:
+                      <em>primary staff only</em> (column reads "Reviews") or
+                      <em>all staff on visit</em> (column reads "Mentions").
+                      Survey asks "who looked after Nala?" when a visit has
+                      &gt;1 staff.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-04</span></td>
+                    <td>
+                      Sentiment counts never equal review counts; the neutral
+                      bucket is undefined.
+                    </td>
+                    <td class="m">
+                      Emma 84+1=85 vs 87 · Sophie 99+2=101 vs 103 · Noah 58+3=61
+                      vs 62 · Liam 65+4=69 vs 71
+                    </td>
+                    <td>
+                      Define three buckets over the full set: positive ≥4★,
+                      neutral =3★, negative ≤2★. Sum must equal the review
+                      count; assert in the query.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-05</span></td>
+                    <td>
+                      <strong
+                        >Four incompatible definitions of "negative" ship
+                        simultaneously.</strong
+                      >
+                    </td>
+                    <td class="m">
+                      Overview "Negative rate 6.5%" · distribution "1–2★ = 6%" ·
+                      escalation threshold "≤3★ stays private" (=14%) ·
+                      Locations "Flagged negative 8"
+                    </td>
+                    <td>
+                      One constant:
+                      <code>DETRACTOR_MAX = escalation_threshold − 1</code>.
+                      Every negative-flavoured metric derives from it. "Flagged"
+                      becomes a distinct, clearly-labelled concept (open
+                      tickets).
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-06</span></td>
+                    <td>
+                      "Public conversions 41.3%" and "Reminder recovery 22.4%"
+                      have no stated denominator.
+                    </td>
+                    <td class="m">
+                      41.3% of 247 = 102; of 312 = 129. Unresolvable from the
+                      UI.
+                    </td>
+                    <td>
+                      Publish the metric dictionary in §14 and render the
+                      denominator in the card subtitle, e.g. "102 of 247 rated
+                      clients".
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-07</span></td>
+                    <td>
+                      Response rate divides by requests <em>sent</em>, not
+                      <em>delivered</em>. Hard-bounced SMS and invalid emails
+                      depress a metric staff are measured on.
+                    </td>
+                    <td class="m">247 / 312 uses send count</td>
+                    <td>
+                      <code>response_rate = ratings / delivered</code>. Surface
+                      <code>delivery_rate</code> separately so carrier failures
+                      are visible instead of silent.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-08</span></td>
+                    <td>
+                      Three different averages coexist with no aggregation rule.
+                    </td>
+                    <td class="m">
+                      header 4.6 · service-weighted 4.67 · staff-weighted 4.74 ·
+                      network 4.74
+                    </td>
+                    <td>
+                      Single aggregate function, always count-weighted, rounded
+                      once at render. Never average an average.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-09</span></td>
+                    <td>
+                      Suspicious value collisions suggest cross-wired fields in
+                      the mock or the query layer.
+                    </td>
+                    <td class="m">
+                      Google "312 reviews" = requests sent 312 · public
+                      composite (4.8·312+4.7·147+4.6·89)/548 = 4.740 = network
+                      rating 4.74
+                    </td>
+                    <td>
+                      Verify bindings. Public platform counts must come from the
+                      platform sync table, never from
+                      <code>review_request</code>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-10</span></td>
+                    <td>
+                      Audit-log timestamps appear to be UTC, not client-local —
+                      and one shows an SMS sent at 4:00 a.m.
+                    </td>
+                    <td class="m">
+                      "Request sent via Email — Apr 29, 2026, 4:00 a.m." then
+                      rating at 6:14 a.m.
+                    </td>
+                    <td>
+                      Store UTC, render in the <em>location's</em> timezone with
+                      a tz suffix. Scheduling must use client-local time (see
+                      <span class="id id-r">R-05</span>).
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-11</span></td>
+                    <td>
+                      <strong>A reminder fired 49 days after the request</strong
+                      >, violating both the 48-hour nudge rule and the 30-day
+                      cooldown.
+                    </td>
+                    <td class="m">
+                      Request Apr 29 2026 → "Reminder sent — gentle nudge… Jun
+                      17 2026, 9:59 a.m."
+                    </td>
+                    <td>
+                      Reminders are scheduled jobs with an expiry. Any job whose
+                      <code>scheduled_at</code> has passed by &gt; the step's
+                      TTL is dropped, not sent late.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-12</span></td>
+                    <td>
+                      SMS counter is wrong. The template contains an emoji,
+                      which forces UCS-2 encoding (70 chars/segment), and
+                      variables are counted unexpanded.
+                    </td>
+                    <td class="m">
+                      UI: "123/160 · 1 segment". Actual: 🐾 → UCS-2 → 123 chars
+                      ≈ 2 segments, before <code>{{pet.names}}</code> expands.
+                    </td>
+                    <td>
+                      Encoding-aware counter (GSM-7 vs UCS-2). Show a worst-case
+                      expanded estimate using the longest real value per
+                      variable, plus per-message cost.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-13</span></td>
+                    <td>
+                      A request with status <code>RATED</code> appears in the
+                      Public Reviews pool; the eligibility rule is undocumented.
+                    </td>
+                    <td class="m">
+                      James Nguyen — Requests: RATED · Public Reviews:
+                      "Approved"
+                    </td>
+                    <td>
+                      Publish the rule explicitly: showcase eligibility = has
+                      comment ∧ rating ≥ showcase threshold ∧ display consent.
+                      Independent of whether they clicked a public link.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-14</span></td>
+                    <td>
+                      Escalations have no age or SLA. One ticket has been open
+                      since Apr 27 with no visible pressure.
+                    </td>
+                    <td class="m">
+                      Michael Torres · received Apr 27, 11:45 a.m. · still
+                      "Escalated"
+                    </td>
+                    <td>
+                      Add <code>first_response_due_at</code> /
+                      <code>resolve_due_at</code>, an aging badge, and breach
+                      escalation to the location manager.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-d">D-15</span></td>
+                    <td>
+                      Every KPI says "up from last month" but there is no
+                      date-range control anywhere.
+                    </td>
+                    <td class="m">
+                      5 cards on Overview, all with trend arrows
+                    </td>
+                    <td>
+                      Global range picker (7/30/90/custom). Trend = current
+                      range vs immediately preceding equal range. No range, no
+                      trend arrow.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- ================= 03 ================= -->
+          <section id="s3">
+            <h2>
+              <span class="num">03</span>Feasibility &amp; compliance — what
+              cannot ship as drawn
+            </h2>
+
+            <div class="box stop">
+              <div class="h">R-01 · Blocker — review gating</div>
+              <p>
+                The page header reads:
+                <em
+                  >"Capture every rating inside Yipyy before it goes public…
+                  keep negative experiences private and resolved."</em
+                >
+                Settings then offers
+                <strong>Gate public reviews by rating</strong> and an
+                <strong>interception threshold</strong> defaulting to
+                <strong>4★ &amp; up public</strong>.
+              </p>
+              <p>
+                Selectively showing review links only to happy customers is
+                <em>review gating</em>. Google's review policies prohibit it,
+                and the US FTC's Rule on the Use of Consumer Reviews and
+                Testimonials (16 CFR Part 465, effective October 2024) prohibits
+                suppressing negative reviews. Shipping this as a customer-facing
+                switch exposes both Yipyy and every facility using it.
+              </p>
+              <p>
+                <strong>Required:</strong> delete the gating toggle. Open
+                routing becomes the only mode and stops being described as a
+                recommendation. Rename "Interception threshold" →
+                <strong>Escalation threshold</strong> and change its help text
+                from "treated as public-ready" to "at or below this rating, open
+                a recovery ticket and alert the assignee." Rewrite the page
+                header (§15).
+              </p>
+            </div>
+
+            <div class="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 56px">ID</th>
+                    <th>Issue</th>
+                    <th>Reality</th>
+                    <th>Required fix</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="id id-r">R-02</span></td>
+                    <td>
+                      Yelp is offered as a routing destination in Channel
+                      Manager.
+                    </td>
+                    <td>
+                      Yelp explicitly prohibits soliciting reviews. Routing
+                      customers there is a policy violation, not just an
+                      ineffective channel.
+                    </td>
+                    <td>
+                      Yelp becomes <strong>monitor-only</strong>: it can be
+                      connected for rating display, but cannot be selected as a
+                      solicitation target. Add
+                      <code>solicitable: false</code> to the channel record and
+                      disable the toggle with an inline explanation.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-r">R-03</span></td>
+                    <td>
+                      Public Reviews cards carry Google / Facebook badges beside
+                      <strong>Hide</strong> and
+                      <strong>Display</strong> buttons.
+                    </td>
+                    <td>
+                      Nothing in Yipyy can hide a review on Google or Facebook.
+                      The footnote correctly says the toggle affects the booking
+                      page — the badges contradict it.
+                    </td>
+                    <td>
+                      Rename the tab <strong>Booking page reviews</strong>.
+                      Buttons become "Show on booking page" / "Remove from
+                      booking page". Badge means "this client also posted to X",
+                      shown only when confirmed by sync.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-r">R-04</span></td>
+                    <td>
+                      The tab implies aggregation of live public review content
+                      across three platforms.
+                    </td>
+                    <td>
+                      Only Google Business Profile reliably returns review
+                      content via API for owned locations. Facebook Page ratings
+                      access is heavily restricted; Yelp does not expose review
+                      content at all.
+                    </td>
+                    <td>
+                      Two clearly separated data domains:
+                      <em>internal survey responses</em> (always ours) and
+                      <em>synced public reviews</em> (Google only at launch,
+                      per-platform capability flags). Never blend them in one
+                      average.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-r">R-05</span></td>
+                    <td>
+                      No quiet hours, no consent surface, no messaging
+                      registration state.
+                    </td>
+                    <td>
+                      US SMS requires A2P 10DLC campaign registration and
+                      STOP/HELP handling. TCPA restricts contact to 8 a.m.–9
+                      p.m. <em>recipient local time</em>. Canada requires CASL
+                      consent and unsubscribe on email. The audit log shows a 4
+                      a.m. send.
+                    </td>
+                    <td>
+                      Add per-location quiet hours (default 09:00–20:00 local),
+                      computed from the client's timezone. Sends inside quiet
+                      hours <strong>defer to the next window</strong> rather
+                      than drop. Store <code>marketing_consent</code>,
+                      <code>consent_source</code>, <code>consent_at</code>,
+                      <code>opted_out_at</code>. Block sending if the location's
+                      10DLC campaign is unregistered.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-r">R-06</span></td>
+                    <td>"Call via IVR" on escalation tickets.</td>
+                    <td>
+                      IVR is an inbound menu system. This is click-to-call. If
+                      the call is recorded, two-party-consent jurisdictions
+                      require an announcement.
+                    </td>
+                    <td>
+                      Rename to <strong>Call client</strong>. Log the call as a
+                      ticket event with duration and outcome. If recording is
+                      enabled, play a disclosure.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-r">R-07</span></td>
+                    <td>
+                      "Apology credit" issues financial value from a marketing
+                      screen.
+                    </td>
+                    <td>
+                      Writes to the billing ledger with no visible cap, approval
+                      step, or permission scope.
+                    </td>
+                    <td>
+                      Permission <code>reputation.issue_credit</code>, a
+                      per-location cap, an approval step above the cap, and an
+                      immutable ledger entry linked to the ticket.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-r">R-08</span></td>
+                    <td>
+                      Multi-language toggle in Messages with no locale source.
+                    </td>
+                    <td>
+                      There is no per-client language field, no translation
+                      store, and translated copy changes SMS segment maths
+                      (accented characters force UCS-2).
+                    </td>
+                    <td>
+                      Add <code>client.locale</code>; per-locale template
+                      variants with an explicit fallback chain; re-run the
+                      segment estimator per locale.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-r">R-09</span></td>
+                    <td>Bulk sends with no pacing.</td>
+                    <td>
+                      Sudden review velocity spikes trigger platform spam
+                      filtering — reviews get collected and then silently
+                      filtered out.
+                    </td>
+                    <td>
+                      Per-location daily cap on public-link sends and a jittered
+                      send window. Surface projected weekly velocity in
+                      Settings.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-r">R-10</span></td>
+                    <td>
+                      Channels store a raw pasted URL
+                      (<code>https://g.page/r/…/review</code>).
+                    </td>
+                    <td>
+                      Short links rot when a business profile changes. "Optimize
+                      link" has nothing durable to optimise against.
+                    </td>
+                    <td>
+                      Resolve and store <code>place_id</code>; generate the
+                      write-review deep link at send time. Keep the raw URL only
+                      as a display fallback.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- ================= 04 ================= -->
+          <section id="s4">
+            <h2><span class="num">04</span>Configuration conflicts</h2>
+            <p class="lede">
+              Several settings can be put into states where the system's
+              behaviour is undefined. Each needs an explicit precedence rule,
+              not just a fix.
+            </p>
+
+            <div class="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 56px">ID</th>
+                    <th>Conflict</th>
+                    <th>Rule to implement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="id id-x">X-01</span></td>
+                    <td>
+                      <strong>Send delay is editable in three places</strong>:
+                      the "Automated Post-Service Trigger" card, Send Sequence
+                      step 1, and the Messages touchpoint chip ("SMS · 1 hour").
+                    </td>
+                    <td>
+                      Send Sequence is the only editor. The trigger card and the
+                      Messages chip become read-only mirrors that deep-link to
+                      it.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-02</span></td>
+                    <td>
+                      Global Delivery Channel toggles vs per-step channel
+                      dropdowns. Turning SMS off globally while step 1 is SMS
+                      has no defined outcome.
+                    </td>
+                    <td>
+                      Global toggle wins. Disabling a channel marks every step
+                      using it as invalid, blocks save, and offers one-click
+                      reassignment to an enabled channel.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-03</span></td>
+                    <td>
+                      <strong
+                        >Two independent reminder systems both fire at 48
+                        h</strong
+                      >
+                      — Send Sequence backup ("2 days, only if no response") and
+                      Smart Reminders ("happy-but-silent, 48 hours") — against a
+                      "1 per day" cap.
+                    </td>
+                    <td>
+                      One nudge engine, one nudge per request, ever. State
+                      decides which: no rating → sequence backup; rated ≥
+                      threshold but no public click → share nudge. Mutually
+                      exclusive by construction (§10).
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-04</span></td>
+                    <td>
+                      Client cooldown 30 days vs negative-feedback pause 14 days
+                      — precedence undefined.
+                    </td>
+                    <td>
+                      Suppression windows are unioned; the longest applicable
+                      window wins. Show the client's next eligible date on their
+                      profile.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-05</span></td>
+                    <td>
+                      Trigger events mix checkout events (Boarding Checkout,
+                      Daycare Checkout) with completion events (Grooming
+                      Completed, Training Session Completed). A groom inside a
+                      boarding stay fires twice.
+                    </td>
+                    <td>
+                      Introduce the <strong>visit</strong> aggregate: all
+                      appointments for one client at one location closing on one
+                      business day. One request per visit, regardless of how
+                      many services or pets it contains.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-06</span></td>
+                    <td>
+                      "Invoice Paid" and "Retail Purchase" triggers overlap
+                      service triggers.
+                    </td>
+                    <td>
+                      Same visit dedupe. Retail-only visits (no service) get a
+                      distinct template or no request at all — configurable,
+                      default off.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-07</span></td>
+                    <td>
+                      Channel Manager shows a chain "Google Business → Facebook
+                      Pages" for happy reviewers, with weighting off. Fixed
+                      order sends 100% to Google, yet Facebook shows 147
+                      reviews.
+                    </td>
+                    <td>
+                      One primary channel per request. Fixed order = failover
+                      only (use next channel if the first is unavailable).
+                      Weighted mode = true split. Show the projected split under
+                      the list.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-08</span></td>
+                    <td>
+                      "Interception threshold" is labelled in terms of
+                      "public-ready" but, with gating off, only governs
+                      escalation.
+                    </td>
+                    <td>
+                      Rename to Escalation threshold; rewrite the help text;
+                      move it next to Escalation Routing where it belongs.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-09</span></td>
+                    <td>
+                      Escalation Routing shows Boarding as "Falls back to
+                      default" while All other services shows "1 assigned" — two
+                      labels for one mechanism.
+                    </td>
+                    <td>
+                      Uniform display of the resolved chain:
+                      <code>service owner → location manager → org default</code
+                      >, with the effective assignee named in every row.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-10</span></td>
+                    <td>
+                      No manual send. There is no way to request a review from
+                      an appointment or a client profile.
+                    </td>
+                    <td>
+                      Add "Request a review" to the appointment overflow menu
+                      and the client profile, both running the full guardrail
+                      ladder with an override reason captured.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-11</span></td>
+                    <td>
+                      Public Reviews shows "Pending 0" but exposes no approve /
+                      reject action.
+                    </td>
+                    <td>
+                      Implement the moderation states in §12 with visible
+                      actions and an auto-approve rule.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-x">X-12</span></td>
+                    <td>
+                      The staff table has a "Praise" column implying tags exist,
+                      but there is no tag catalog anywhere in Settings.
+                    </td>
+                    <td>
+                      Ship the tag catalog (§08). Praise = count of positive
+                      tags attributed to that staff member in range.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- ================= 05 ================= -->
+          <section id="s5">
+            <h2>
+              <span class="num">05</span>Reading MoeGo — take, beat, avoid
+            </h2>
+
+            <h4>Take — capabilities MoeGo has that Yipyy lacks</h4>
+            <div class="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 56px">ID</th>
+                    <th>Capability</th>
+                    <th>Why it matters</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="id id-g">G-01</span></td>
+                    <td>
+                      <strong
+                        >Review request embedded in the report card.</strong
+                      >
+                      MoeGo puts the rating widget inside the grooming report
+                      the client is already opening.
+                    </td>
+                    <td>
+                      Their published case study attributes 90%+ of 1,300+
+                      Google reviews to this surface. It is the single
+                      highest-leverage change in this document.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-g">G-02</span></td>
+                    <td>
+                      <strong>Structured tag feedback</strong> — "Professional",
+                      "Patient &amp; caring", "Clean &amp; tidy", "Responsive" —
+                      collected alongside the star rating.
+                    </td>
+                    <td>
+                      Turns free text into queryable data; makes the existing
+                      "Praise" column real; gives coaching signal per staff
+                      member.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-g">G-03</span></td>
+                    <td>
+                      <strong>Reply-with-a-number SMS rating.</strong> Client
+                      texts "5" — no link, no page load.
+                    </td>
+                    <td>
+                      Removes the biggest drop-off in the funnel. Yipyy is
+                      link-only today.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-g">G-04</span></td>
+                    <td>
+                      Manual send from the appointment detail and the client
+                      profile.
+                    </td>
+                    <td>
+                      Front desk can ask while the client is still in the lobby.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-g">G-05</span></td>
+                    <td>
+                      Source attribution on every rating (SMS / report card /
+                      portal).
+                    </td>
+                    <td>
+                      Without it you cannot tell which surface is worth
+                      investing in.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-g">G-06</span></td>
+                    <td>
+                      Per-client review history on the client profile, with
+                      total and average.
+                    </td>
+                    <td>
+                      Front desk context; also the natural home for "next
+                      eligible date".
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="id id-g">G-07</span></td>
+                    <td>
+                      Pet photo attached to showcase reviews on the booking
+                      site.
+                    </td>
+                    <td>
+                      Pet photos are the strongest social proof this category
+                      has, and Yipyy already stores them.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4>Beat — where MoeGo is weak</h4>
+            <ul>
+              <li>
+                <strong>Fragile rating detection.</strong> MoeGo's inline rating
+                only works if the client replies directly, within 24 hours, with
+                no other message in between. Yipyy should use a 72-hour window,
+                keep an open rating expectation on the conversation that
+                survives interleaved messages, accept digits, words, emoji and
+                star counts, and ask once for confirmation when ambiguous.
+              </li>
+              <li>
+                <strong>Report card review booster is SMS-only</strong> in MoeGo
+                — explicitly unsupported on email report cards. Yipyy's embed
+                should work on both.
+              </li>
+              <li>
+                <strong>MoeGo gates.</strong> "Send review link when rating = 5
+                / 4 and above / 3 and above" is exactly the pattern described in
+                <span class="id id-r">R-01</span>. Do not copy it. Open routing
+                is both safer and, in practice, higher-yield because the
+                eligible pool is larger.
+              </li>
+              <li>
+                <strong>No recovery workflow.</strong> MoeGo sends a "sorry to
+                hear that" reply and stops. Yipyy's escalation ledger,
+                per-service routing and protection rules are already ahead —
+                finish them with SLAs and a resolution loop.
+              </li>
+              <li>
+                <strong>No multi-location view</strong> and no protection rules.
+                Keep both; they're the enterprise wedge.
+              </li>
+              <li>
+                <strong>Manual showcase selection capped at 20.</strong> Yipyy
+                should auto-curate with an override.
+              </li>
+            </ul>
+
+            <div class="box good">
+              <div class="h">Net position</div>
+              <p>
+                Yipyy is ahead on recovery, governance and multi-location
+                analytics, and behind on capture. v2 keeps the lead and closes
+                the gap: <span class="id id-g">G-01</span>–<span class="id id-g"
+                  >G-03</span
+                >
+                are the priority.
+              </p>
+            </div>
+          </section>
+
+          <!-- ================= 06 ================= -->
+          <section id="s6">
+            <h2><span class="num">06</span>Target workflow</h2>
+            <p class="lede">
+              Seven stages. Every stage is observable, every transition is
+              logged, and every suppression has a named reason.
+            </p>
+
+            <figure>
+              <div class="figbox">
+                <svg
+                  viewBox="0 0 900 736"
+                  role="img"
+                  aria-label="Seven-stage Reputation Booster lifecycle from visit close to learning loop"
+                >
+                  <defs>
+                    <marker
+                      id="a1"
+                      markerWidth="9"
+                      markerHeight="9"
+                      refX="7"
+                      refY="4.5"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L8,4.5 L0,9 z" fill="#9AA2B1" />
+                    </marker>
+                  </defs>
+
+                  <!-- stage rows -->
+                  <g>
+                    <!-- 0 -->
+                    <rect
+                      class="bx-a"
+                      x="70"
+                      y="8"
+                      width="760"
+                      height="76"
+                      rx="7"
+                    />
+                    <circle cx="102" cy="46" r="15" fill="#9C6100" />
+                    <text class="mnw" x="102" y="50" text-anchor="middle">
+                      0
+                    </text>
+                    <text class="ttl" x="130" y="34">
+                      Eligibility &amp; guardrails
+                    </text>
+                    <text class="lbl" x="130" y="52">
+                      Runs twice: at trigger and again immediately before send.
+                    </text>
+                    <text class="mn" x="130" y="70">
+                      consent · contactable · booking health · cooldown ·
+                      frequency · quiet hours · suppression list
+                    </text>
+
+                    <!-- 1 -->
+                    <rect
+                      class="bx"
+                      x="70"
+                      y="104"
+                      width="760"
+                      height="76"
+                      rx="7"
+                    />
+                    <circle cx="102" cy="142" r="15" fill="#22252E" />
+                    <text class="mnw" x="102" y="146" text-anchor="middle">
+                      1
+                    </text>
+                    <text class="ttl" x="130" y="130">
+                      Trigger — one request per visit
+                    </text>
+                    <text class="lbl" x="130" y="148">
+                      All appointments for one client, one location, closing the
+                      same business day = one visit.
+                    </text>
+                    <text class="mn" x="130" y="166">
+                      visit.checked_out → dedupe(client, location, business_day)
+                      → review_request.scheduled
+                    </text>
+
+                    <!-- 2 -->
+                    <rect
+                      class="bx-v"
+                      x="70"
+                      y="200"
+                      width="760"
+                      height="88"
+                      rx="7"
+                    />
+                    <circle cx="102" cy="244" r="15" fill="#5B3DF5" />
+                    <text class="mnw" x="102" y="248" text-anchor="middle">
+                      2
+                    </text>
+                    <text class="ttl" x="130" y="226">
+                      Capture — meet them where they already are
+                    </text>
+                    <text class="lbl" x="130" y="244">
+                      Six surfaces, one response model. Report card and inline
+                      SMS reply are the new high-yield paths.
+                    </text>
+                    <text class="mn" x="130" y="262">
+                      sms_reply · sms_link · email_link · report_card · portal ·
+                      kiosk_qr
+                    </text>
+                    <text class="mn" x="130" y="278">
+                      captures: rating 1–5 · tags[] · comment · staff
+                      attribution · locale · source
+                    </text>
+
+                    <!-- 3 -->
+                    <rect
+                      class="bx-g"
+                      x="70"
+                      y="308"
+                      width="760"
+                      height="88"
+                      rx="7"
+                    />
+                    <circle cx="102" cy="352" r="15" fill="#04725A" />
+                    <text class="mnw" x="102" y="356" text-anchor="middle">
+                      3
+                    </text>
+                    <text class="ttl" x="130" y="334">
+                      Route — open routing, no exceptions
+                    </text>
+                    <text class="lbl" x="130" y="352">
+                      Every respondent sees public links and a private feedback
+                      box. Rating changes emphasis and
+                    </text>
+                    <text class="lbl" x="130" y="368">
+                      what happens internally — never whether the public option
+                      exists.
+                    </text>
+                    <text class="mn" x="130" y="386">
+                      rating ≤ escalation_threshold → also open a ticket + alert
+                      assignee
+                    </text>
+
+                    <!-- 4 -->
+                    <rect
+                      class="bx"
+                      x="70"
+                      y="416"
+                      width="360"
+                      height="88"
+                      rx="7"
+                    />
+                    <circle cx="102" cy="460" r="15" fill="#22252E" />
+                    <text class="mnw" x="102" y="464" text-anchor="middle">
+                      4
+                    </text>
+                    <text class="ttl" x="130" y="442">Amplify</text>
+                    <text class="lbl" x="130" y="460">
+                      One primary channel per request,
+                    </text>
+                    <text class="lbl" x="130" y="476">
+                      place_id deep link, paced.
+                    </text>
+                    <text class="mn" x="130" y="494">
+                      exactly one nudge, ever
+                    </text>
+
+                    <rect
+                      class="bx-r"
+                      x="470"
+                      y="416"
+                      width="360"
+                      height="88"
+                      rx="7"
+                    />
+                    <circle cx="502" cy="460" r="15" fill="#C31232" />
+                    <text class="mnw" x="502" y="464" text-anchor="middle">
+                      5
+                    </text>
+                    <text class="ttl" x="530" y="442">Recover</text>
+                    <text class="lbl" x="530" y="460">
+                      Ticket with SLA, routed by service,
+                    </text>
+                    <text class="lbl" x="530" y="476">
+                      recovery actions, resolution code.
+                    </text>
+                    <text class="mn" x="530" y="494">
+                      re-invite after resolve + cooldown
+                    </text>
+
+                    <!-- 6 -->
+                    <rect
+                      class="bx"
+                      x="70"
+                      y="524"
+                      width="760"
+                      height="76"
+                      rx="7"
+                    />
+                    <circle cx="102" cy="562" r="15" fill="#22252E" />
+                    <text class="mnw" x="102" y="566" text-anchor="middle">
+                      6
+                    </text>
+                    <text class="ttl" x="130" y="550">
+                      Publish — booking page showcase only
+                    </text>
+                    <text class="lbl" x="130" y="568">
+                      Moderation states, auto-curation, pet photo. Never claims
+                      to affect Google or Facebook.
+                    </text>
+                    <text class="mn" x="130" y="586">
+                      pending → approved → live | hidden | rejected
+                    </text>
+
+                    <!-- 7 -->
+                    <rect
+                      class="bx"
+                      x="70"
+                      y="620"
+                      width="760"
+                      height="86"
+                      rx="7"
+                    />
+                    <circle cx="102" cy="663" r="15" fill="#22252E" />
+                    <text class="mnw" x="102" y="667" text-anchor="middle">
+                      7
+                    </text>
+                    <text class="ttl" x="130" y="646">Learn</text>
+                    <text class="lbl" x="130" y="664">
+                      Staff, service and location analytics built on tags and
+                      attributed responses — all scoped and
+                    </text>
+                    <text class="lbl" x="130" y="680">
+                      date-ranged, all denominators declared.
+                    </text>
+                    <text class="mn" x="130" y="698">
+                      feeds back into escalation routing, staffing and template
+                      copy
+                    </text>
+                  </g>
+
+                  <!-- connectors -->
+                  <path class="ln" d="M450,84 L450,102" marker-end="url(#a1)" />
+                  <path
+                    class="ln"
+                    d="M450,180 L450,198"
+                    marker-end="url(#a1)"
+                  />
+                  <path
+                    class="ln"
+                    d="M450,288 L450,306"
+                    marker-end="url(#a1)"
+                  />
+                  <path
+                    class="ln"
+                    d="M380,396 L250,396 L250,414"
+                    marker-end="url(#a1)"
+                  />
+                  <path
+                    class="ln"
+                    d="M520,396 L650,396 L650,414"
+                    marker-end="url(#a1)"
+                  />
+                  <path
+                    class="ln"
+                    d="M250,504 L250,522"
+                    marker-end="url(#a1)"
+                  />
+                  <path class="ln" d="M650,504 L650,562 L832,562" />
+                  <path
+                    class="ln"
+                    d="M450,600 L450,618"
+                    marker-end="url(#a1)"
+                  />
+                  <path
+                    class="ln"
+                    d="M56,663 L30,663 L30,46 L68,46"
+                    marker-end="url(#a1)"
+                  />
+                  <text
+                    class="mn"
+                    x="34"
+                    y="360"
+                    transform="rotate(-90 34 360)"
+                    text-anchor="middle"
+                  >
+                    learning loop → suppression &amp; routing config
+                  </text>
+                </svg>
+              </div>
+              <figcaption>
+                <b>Fig 1.</b> Lifecycle. Stage 0 is re-evaluated at send time
+                because state changes between scheduling and sending — refunds,
+                cancellations and opt-outs all happen inside the delay window.
+              </figcaption>
+            </figure>
+
+            <h3>Request state machine</h3>
+            <figure>
+              <div class="figbox">
+                <svg
+                  viewBox="0 0 940 430"
+                  role="img"
+                  aria-label="State machine for a review request"
+                >
+                  <defs>
+                    <marker
+                      id="a2"
+                      markerWidth="9"
+                      markerHeight="9"
+                      refX="7"
+                      refY="4.5"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L8,4.5 L0,9 z" fill="#9AA2B1" />
+                    </marker>
+                    <marker
+                      id="a2r"
+                      markerWidth="9"
+                      markerHeight="9"
+                      refX="7"
+                      refY="4.5"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L8,4.5 L0,9 z" fill="#C31232" />
+                    </marker>
+                    <marker
+                      id="a2g"
+                      markerWidth="9"
+                      markerHeight="9"
+                      refX="7"
+                      refY="4.5"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L8,4.5 L0,9 z" fill="#04725A" />
+                    </marker>
+                  </defs>
+
+                  <rect
+                    class="bx"
+                    x="14"
+                    y="140"
+                    width="104"
+                    height="40"
+                    rx="6"
+                  />
+                  <text class="st" x="66" y="165" text-anchor="middle">
+                    QUEUED
+                  </text>
+                  <rect
+                    class="bx-a"
+                    x="14"
+                    y="240"
+                    width="104"
+                    height="40"
+                    rx="6"
+                  />
+                  <text
+                    class="st"
+                    x="66"
+                    y="265"
+                    text-anchor="middle"
+                    fill="#9C6100"
+                  >
+                    SUPPRESSED
+                  </text>
+
+                  <rect
+                    class="bx"
+                    x="158"
+                    y="140"
+                    width="104"
+                    height="40"
+                    rx="6"
+                  />
+                  <text class="st" x="210" y="165" text-anchor="middle">
+                    SCHEDULED
+                  </text>
+                  <rect
+                    class="bx"
+                    x="302"
+                    y="140"
+                    width="88"
+                    height="40"
+                    rx="6"
+                  />
+                  <text class="st" x="346" y="165" text-anchor="middle">
+                    SENT
+                  </text>
+                  <rect
+                    class="bx"
+                    x="430"
+                    y="140"
+                    width="104"
+                    height="40"
+                    rx="6"
+                  />
+                  <text class="st" x="482" y="165" text-anchor="middle">
+                    DELIVERED
+                  </text>
+                  <rect
+                    class="bx-a"
+                    x="430"
+                    y="52"
+                    width="104"
+                    height="40"
+                    rx="6"
+                  />
+                  <text
+                    class="st"
+                    x="482"
+                    y="77"
+                    text-anchor="middle"
+                    fill="#9C6100"
+                  >
+                    FAILED
+                  </text>
+                  <rect
+                    class="bx"
+                    x="430"
+                    y="330"
+                    width="104"
+                    height="40"
+                    rx="6"
+                  />
+                  <text class="st" x="482" y="355" text-anchor="middle">
+                    EXPIRED
+                  </text>
+
+                  <rect
+                    class="bx-v"
+                    x="576"
+                    y="140"
+                    width="88"
+                    height="40"
+                    rx="6"
+                  />
+                  <text
+                    class="st"
+                    x="620"
+                    y="165"
+                    text-anchor="middle"
+                    fill="#5B3DF5"
+                  >
+                    RATED
+                  </text>
+
+                  <rect
+                    class="bx-g"
+                    x="716"
+                    y="66"
+                    width="128"
+                    height="40"
+                    rx="6"
+                  />
+                  <text
+                    class="st"
+                    x="780"
+                    y="91"
+                    text-anchor="middle"
+                    fill="#04725A"
+                  >
+                    ROUTED_PUBLIC
+                  </text>
+                  <rect
+                    class="bx-g"
+                    x="716"
+                    y="126"
+                    width="128"
+                    height="34"
+                    rx="6"
+                  />
+                  <text
+                    class="st"
+                    x="780"
+                    y="148"
+                    text-anchor="middle"
+                    fill="#04725A"
+                  >
+                    CLICKED
+                  </text>
+                  <rect
+                    class="bx-r"
+                    x="716"
+                    y="216"
+                    width="128"
+                    height="40"
+                    rx="6"
+                  />
+                  <text
+                    class="st"
+                    x="780"
+                    y="241"
+                    text-anchor="middle"
+                    fill="#C31232"
+                  >
+                    ESCALATED
+                  </text>
+                  <rect
+                    class="bx"
+                    x="716"
+                    y="288"
+                    width="128"
+                    height="34"
+                    rx="6"
+                  />
+                  <text class="st" x="780" y="310" text-anchor="middle">
+                    RESOLVED
+                  </text>
+                  <rect
+                    class="bx-k"
+                    x="716"
+                    y="360"
+                    width="128"
+                    height="34"
+                    rx="6"
+                  />
+                  <text
+                    class="st"
+                    x="780"
+                    y="382"
+                    text-anchor="middle"
+                    fill="#fff"
+                  >
+                    CLOSED
+                  </text>
+
+                  <path class="ln" d="M66,180 L66,238" marker-end="url(#a2)" />
+                  <text class="mn" x="72" y="214">guardrail fail</text>
+                  <path
+                    class="ln"
+                    d="M118,160 L156,160"
+                    marker-end="url(#a2)"
+                  />
+                  <path
+                    class="ln"
+                    d="M210,180 L210,260 L12,260"
+                    marker-end="url(#a2)"
+                  />
+                  <text class="mn" x="120" y="276">re-check at send</text>
+                  <path
+                    class="ln"
+                    d="M262,160 L300,160"
+                    marker-end="url(#a2)"
+                  />
+                  <path
+                    class="ln"
+                    d="M390,160 L428,160"
+                    marker-end="url(#a2)"
+                  />
+                  <path
+                    class="ln"
+                    d="M390,150 L410,150 L410,72 L428,72"
+                    marker-end="url(#a2)"
+                  />
+                  <text class="mn" x="332" y="104">bounce</text>
+                  <path
+                    class="ln-d"
+                    d="M430,72 L340,72 L340,138"
+                    marker-end="url(#a2r)"
+                  />
+                  <text class="mn" x="330" y="126" text-anchor="end">
+                    retry on alt channel ×1
+                  </text>
+                  <path
+                    class="ln"
+                    d="M534,160 L574,160"
+                    marker-end="url(#a2)"
+                  />
+                  <path
+                    class="ln"
+                    d="M482,180 L482,328"
+                    marker-end="url(#a2)"
+                  />
+                  <text class="mn" x="490" y="262">
+                    sequence exhausted + TTL
+                  </text>
+                  <path
+                    class="ln-g"
+                    d="M664,152 L690,152 L690,86 L714,86"
+                    marker-end="url(#a2g)"
+                  />
+                  <text class="mn" x="606" y="118">always</text>
+                  <path
+                    class="ln-g"
+                    d="M780,106 L780,124"
+                    marker-end="url(#a2g)"
+                  />
+                  <path
+                    class="ln-d"
+                    d="M664,170 L690,170 L690,236 L714,236"
+                    marker-end="url(#a2r)"
+                  />
+                  <text class="mn" x="600" y="212">≤ threshold</text>
+                  <path
+                    class="ln"
+                    d="M780,256 L780,286"
+                    marker-end="url(#a2)"
+                  />
+                  <path
+                    class="ln"
+                    d="M780,322 L780,358"
+                    marker-end="url(#a2)"
+                  />
+                  <path
+                    class="ln"
+                    d="M844,143 L880,143 L880,377 L846,377"
+                    marker-end="url(#a2)"
+                  />
+                  <path
+                    class="ln"
+                    d="M534,350 L700,350 L700,377 L714,377"
+                    marker-end="url(#a2)"
+                  />
+
+                  <line class="sep" x1="14" y1="404" x2="926" y2="404" />
+                  <text class="mn" x="14" y="422">
+                    Terminal: SUPPRESSED · CLOSED. &nbsp; ESCALATED and
+                    ROUTED_PUBLIC are not mutually exclusive — a 2★ rating is
+                    escalated and still shown public links.
+                  </text>
+                </svg>
+              </div>
+              <figcaption>
+                <b>Fig 2.</b> A request is escalated
+                <em>in addition to</em> being routed publicly, never instead of
+                it. That single property is what makes the flow compliant.
+              </figcaption>
+            </figure>
+          </section>
+
+          <!-- ================= 07 ================= -->
+          <section id="s7">
+            <h2><span class="num">07</span>The guardrail ladder</h2>
+            <p class="lede">
+              Evaluated in order, short-circuiting on the first failure, and
+              writing a named reason to <code>suppression_log</code>. Order
+              matters: consent before contactability, cheap checks before
+              expensive ones.
+            </p>
+
+            <figure>
+              <div class="figbox">
+                <svg
+                  viewBox="0 0 880 610"
+                  role="img"
+                  aria-label="Ordered guardrail checks with suppression reasons"
+                >
+                  <defs>
+                    <marker
+                      id="a3"
+                      markerWidth="9"
+                      markerHeight="9"
+                      refX="7"
+                      refY="4.5"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L8,4.5 L0,9 z" fill="#9AA2B1" />
+                    </marker>
+                    <marker
+                      id="a3r"
+                      markerWidth="8"
+                      markerHeight="8"
+                      refX="6.5"
+                      refY="4"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L7,4 L0,8 z" fill="#C31232" />
+                    </marker>
+                  </defs>
+
+                  <g>
+                    <rect
+                      class="bx"
+                      x="20"
+                      y="10"
+                      width="300"
+                      height="46"
+                      rx="6"
+                    />
+                    <text class="ttl" x="36" y="30">1 · Consent</text>
+                    <text class="mn" x="36" y="47">
+                      opted_out · marketing_consent · 10DLC registered
+                    </text>
+                    <rect
+                      class="bx-r"
+                      x="470"
+                      y="14"
+                      width="290"
+                      height="38"
+                      rx="6"
+                    />
+                    <text class="mn" x="484" y="38" fill="#C31232">
+                      OPTED_OUT · NO_CONSENT · CAMPAIGN_UNREGISTERED
+                    </text>
+
+                    <rect
+                      class="bx"
+                      x="20"
+                      y="90"
+                      width="300"
+                      height="46"
+                      rx="6"
+                    />
+                    <text class="ttl" x="36" y="110">2 · Contactable</text>
+                    <text class="mn" x="36" y="127">
+                      valid mobile / email for an enabled channel
+                    </text>
+                    <rect
+                      class="bx-r"
+                      x="470"
+                      y="94"
+                      width="290"
+                      height="38"
+                      rx="6"
+                    />
+                    <text class="mn" x="484" y="118" fill="#C31232">
+                      NO_CHANNEL · INVALID_NUMBER · HARD_BOUNCED
+                    </text>
+
+                    <rect
+                      class="bx"
+                      x="20"
+                      y="170"
+                      width="300"
+                      height="46"
+                      rx="6"
+                    />
+                    <text class="ttl" x="36" y="190">3 · Booking health</text>
+                    <text class="mn" x="36" y="207">
+                      cancelled · no-show · refund · dispute · incident
+                    </text>
+                    <rect
+                      class="bx-r"
+                      x="470"
+                      y="174"
+                      width="290"
+                      height="38"
+                      rx="6"
+                    />
+                    <text class="mn" x="484" y="198" fill="#C31232">
+                      CANCELLED · REFUND_OPEN · DISPUTE · INCIDENT
+                    </text>
+
+                    <rect
+                      class="bx"
+                      x="20"
+                      y="250"
+                      width="300"
+                      height="46"
+                      rx="6"
+                    />
+                    <text class="ttl" x="36" y="270">4 · Recency</text>
+                    <text class="mn" x="36" y="287">
+                      client cooldown 30d ∪ negative pause 14d
+                    </text>
+                    <rect
+                      class="bx-r"
+                      x="470"
+                      y="254"
+                      width="290"
+                      height="38"
+                      rx="6"
+                    />
+                    <text class="mn" x="484" y="278" fill="#C31232">
+                      COOLDOWN · NEGATIVE_PAUSE
+                    </text>
+
+                    <rect
+                      class="bx"
+                      x="20"
+                      y="330"
+                      width="300"
+                      height="46"
+                      rx="6"
+                    />
+                    <text class="ttl" x="36" y="350">5 · Frequency</text>
+                    <text class="mn" x="36" y="367">
+                      per-day cap · per-visit cap · location velocity cap
+                    </text>
+                    <rect
+                      class="bx-r"
+                      x="470"
+                      y="334"
+                      width="290"
+                      height="38"
+                      rx="6"
+                    />
+                    <text class="mn" x="484" y="358" fill="#C31232">
+                      DAILY_CAP · VISIT_DUPLICATE · VELOCITY_CAP
+                    </text>
+
+                    <rect
+                      class="bx-a"
+                      x="20"
+                      y="410"
+                      width="300"
+                      height="46"
+                      rx="6"
+                    />
+                    <text class="ttl" x="36" y="430">6 · Quiet hours</text>
+                    <text class="mn" x="36" y="447">
+                      09:00–20:00 client-local — defers, never drops
+                    </text>
+                    <rect
+                      class="bx-a"
+                      x="470"
+                      y="414"
+                      width="290"
+                      height="38"
+                      rx="6"
+                    />
+                    <text class="mn" x="484" y="438" fill="#9C6100">
+                      DEFERRED → reschedule to next window
+                    </text>
+
+                    <rect
+                      class="bx"
+                      x="20"
+                      y="490"
+                      width="300"
+                      height="46"
+                      rx="6"
+                    />
+                    <text class="ttl" x="36" y="510">7 · Suppression list</text>
+                    <text class="mn" x="36" y="527">
+                      manual holds · VIP · legal
+                    </text>
+                    <rect
+                      class="bx-r"
+                      x="470"
+                      y="494"
+                      width="290"
+                      height="38"
+                      rx="6"
+                    />
+                    <text class="mn" x="484" y="518" fill="#C31232">
+                      MANUAL_HOLD
+                    </text>
+
+                    <rect
+                      class="bx-g"
+                      x="20"
+                      y="562"
+                      width="300"
+                      height="40"
+                      rx="6"
+                    />
+                    <text class="ttl" x="36" y="587" fill="#04725A">
+                      → SCHEDULED
+                    </text>
+                  </g>
+
+                  <path class="ln" d="M170,56 L170,88" marker-end="url(#a3)" />
+                  <path
+                    class="ln"
+                    d="M170,136 L170,168"
+                    marker-end="url(#a3)"
+                  />
+                  <path
+                    class="ln"
+                    d="M170,216 L170,248"
+                    marker-end="url(#a3)"
+                  />
+                  <path
+                    class="ln"
+                    d="M170,296 L170,328"
+                    marker-end="url(#a3)"
+                  />
+                  <path
+                    class="ln"
+                    d="M170,376 L170,408"
+                    marker-end="url(#a3)"
+                  />
+                  <path
+                    class="ln"
+                    d="M170,456 L170,488"
+                    marker-end="url(#a3)"
+                  />
+                  <path
+                    class="ln"
+                    d="M170,536 L170,560"
+                    marker-end="url(#a3)"
+                  />
+
+                  <path
+                    class="ln-d"
+                    d="M320,33 L468,33"
+                    marker-end="url(#a3r)"
+                  />
+                  <path
+                    class="ln-d"
+                    d="M320,113 L468,113"
+                    marker-end="url(#a3r)"
+                  />
+                  <path
+                    class="ln-d"
+                    d="M320,193 L468,193"
+                    marker-end="url(#a3r)"
+                  />
+                  <path
+                    class="ln-d"
+                    d="M320,273 L468,273"
+                    marker-end="url(#a3r)"
+                  />
+                  <path
+                    class="ln-d"
+                    d="M320,353 L468,353"
+                    marker-end="url(#a3r)"
+                  />
+                  <path
+                    class="ln-d"
+                    d="M320,433 L468,433"
+                    stroke="#9C6100"
+                    marker-end="url(#a3r)"
+                  />
+                  <path
+                    class="ln-d"
+                    d="M320,513 L468,513"
+                    marker-end="url(#a3r)"
+                  />
+
+                  <text class="mn" x="392" y="26" text-anchor="middle">
+                    fail
+                  </text>
+                  <text class="mn" x="176" y="76">pass</text>
+                </svg>
+              </div>
+              <figcaption>
+                <b>Fig 3.</b> Quiet hours is the only check that reschedules
+                instead of suppressing. Every suppression writes a row — this is
+                what makes the new <b>Suppressions</b> view possible, and MoeGo
+                has no equivalent.
+              </figcaption>
+            </figure>
+
+            <div class="box">
+              <div class="h">Why the ladder runs twice</div>
+              <p>
+                With a one-hour delay between checkout and send, a refund can be
+                opened, an incident logged, or a STOP received inside the
+                window. Re-running at send time is cheap and prevents the single
+                most damaging failure mode this feature has: asking for a review
+                from someone whose pet was just injured.
+              </p>
+            </div>
+          </section>
+
+          <!-- ================= 08 ================= -->
+          <section id="s8">
+            <h2><span class="num">08</span>Capture surfaces</h2>
+            <p class="lede">
+              Six entry points, one <code>survey_response</code> record. Source
+              is always stored, so surface performance becomes measurable —
+              which is how you decide where to invest next.
+            </p>
+
+            <figure>
+              <div class="figbox">
+                <svg
+                  viewBox="0 0 900 400"
+                  role="img"
+                  aria-label="Six capture surfaces feeding one survey response model"
+                >
+                  <defs>
+                    <marker
+                      id="a4"
+                      markerWidth="9"
+                      markerHeight="9"
+                      refX="7"
+                      refY="4.5"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L8,4.5 L0,9 z" fill="#9AA2B1" />
+                    </marker>
+                  </defs>
+
+                  <rect
+                    class="bx-v"
+                    x="14"
+                    y="10"
+                    width="208"
+                    height="52"
+                    rx="6"
+                  />
+                  <text class="ttl" x="28" y="31">SMS · reply 1–5</text>
+                  <text class="mn" x="28" y="48">
+                    no link · 72 h window · new
+                  </text>
+                  <rect
+                    class="bx-v"
+                    x="14"
+                    y="76"
+                    width="208"
+                    height="52"
+                    rx="6"
+                  />
+                  <text class="ttl" x="28" y="97">Report card embed</text>
+                  <text class="mn" x="28" y="114">
+                    SMS + email · stars, tags, comment · new
+                  </text>
+                  <rect
+                    class="bx"
+                    x="14"
+                    y="142"
+                    width="208"
+                    height="52"
+                    rx="6"
+                  />
+                  <text class="ttl" x="28" y="163">SMS · survey link</text>
+                  <text class="mn" x="28" y="180">existing</text>
+                  <rect
+                    class="bx"
+                    x="14"
+                    y="208"
+                    width="208"
+                    height="52"
+                    rx="6"
+                  />
+                  <text class="ttl" x="28" y="229">Email · survey link</text>
+                  <text class="mn" x="28" y="246">existing</text>
+                  <rect
+                    class="bx"
+                    x="14"
+                    y="274"
+                    width="208"
+                    height="52"
+                    rx="6"
+                  />
+                  <text class="ttl" x="28" y="295">Pet parent portal</text>
+                  <text class="mn" x="28" y="312">
+                    passive prompt after visit
+                  </text>
+                  <rect
+                    class="bx"
+                    x="14"
+                    y="340"
+                    width="208"
+                    height="52"
+                    rx="6"
+                  />
+                  <text class="ttl" x="28" y="361">Front desk QR / tablet</text>
+                  <text class="mn" x="28" y="378">
+                    in-lobby · staff-initiated
+                  </text>
+
+                  <rect
+                    class="bx-k"
+                    x="352"
+                    y="120"
+                    width="196"
+                    height="164"
+                    rx="8"
+                  />
+                  <text
+                    class="ttl"
+                    x="450"
+                    y="150"
+                    text-anchor="middle"
+                    fill="#fff"
+                  >
+                    survey_response
+                  </text>
+                  <line
+                    class="sep"
+                    x1="370"
+                    y1="162"
+                    x2="530"
+                    y2="162"
+                    stroke="#454B5A"
+                  />
+                  <text class="mnw" x="370" y="182">rating 1–5</text>
+                  <text class="mnw" x="370" y="200">tags[] tag_id</text>
+                  <text class="mnw" x="370" y="218">comment text</text>
+                  <text class="mnw" x="370" y="236">staff_id attributed</text>
+                  <text class="mnw" x="370" y="254">source enum</text>
+                  <text class="mnw" x="370" y="272">locale bcp47</text>
+
+                  <rect
+                    class="bx-g"
+                    x="662"
+                    y="88"
+                    width="222"
+                    height="60"
+                    rx="6"
+                  />
+                  <text class="ttl" x="676" y="110" fill="#04725A">
+                    Routing (always)
+                  </text>
+                  <text class="mn" x="676" y="128">
+                    public links + private feedback box
+                  </text>
+                  <text class="mn" x="676" y="142">§09</text>
+                  <rect
+                    class="bx-r"
+                    x="662"
+                    y="164"
+                    width="222"
+                    height="60"
+                    rx="6"
+                  />
+                  <text class="ttl" x="676" y="186" fill="#C31232">
+                    Escalation (conditional)
+                  </text>
+                  <text class="mn" x="676" y="204">
+                    rating ≤ escalation_threshold
+                  </text>
+                  <text class="mn" x="676" y="218">§11</text>
+                  <rect
+                    class="bx"
+                    x="662"
+                    y="240"
+                    width="222"
+                    height="60"
+                    rx="6"
+                  />
+                  <text class="ttl" x="676" y="262">Analytics</text>
+                  <text class="mn" x="676" y="280">
+                    staff · service · location · tags
+                  </text>
+                  <text class="mn" x="676" y="294">§14</text>
+
+                  <path
+                    class="ln"
+                    d="M222,36 L290,36 L290,175 L350,175"
+                    marker-end="url(#a4)"
+                  />
+                  <path
+                    class="ln"
+                    d="M222,102 L290,102"
+                    marker-end="url(#a4)"
+                  />
+                  <path
+                    class="ln"
+                    d="M222,168 L350,168"
+                    marker-end="url(#a4)"
+                  />
+                  <path
+                    class="ln"
+                    d="M222,234 L290,234 L290,200 L350,200"
+                    marker-end="url(#a4)"
+                  />
+                  <path
+                    class="ln"
+                    d="M222,300 L290,300 L290,210 L350,210"
+                    marker-end="url(#a4)"
+                  />
+                  <path
+                    class="ln"
+                    d="M222,366 L290,366 L290,215 L350,215"
+                    marker-end="url(#a4)"
+                  />
+                  <path
+                    class="ln"
+                    d="M548,180 L604,180 L604,118 L660,118"
+                    marker-end="url(#a4)"
+                  />
+                  <path
+                    class="ln"
+                    d="M548,192 L604,192 L604,194 L660,194"
+                    marker-end="url(#a4)"
+                  />
+                  <path
+                    class="ln"
+                    d="M548,204 L604,204 L604,270 L660,270"
+                    marker-end="url(#a4)"
+                  />
+                </svg>
+              </div>
+              <figcaption>
+                <b>Fig 4.</b> Two new surfaces (violet) carry the growth case.
+                The other four already exist or are trivial extensions.
+              </figcaption>
+            </figure>
+
+            <h3>
+              SMS inline rating — parser requirements
+              <span class="id id-g">G-03</span>
+            </h3>
+            <ul>
+              <li>
+                Open a <code>rating_expectation</code> on the conversation with
+                a <strong>72-hour</strong> TTL. It survives interleaved messages
+                — this is where MoeGo breaks.
+              </li>
+              <li>
+                Accept: digits <code>1–5</code>, words in the client's locale
+                (<em>five</em>, <em>cinq</em>), star characters, and
+                rating-bearing emoji. Normalise before matching.
+              </li>
+              <li>
+                If the reply contains a number <em>and</em> other text ("5
+                thanks so much"), take the rating and store the remainder as the
+                comment.
+              </li>
+              <li>
+                If ambiguous, send exactly one clarifying message. No answer
+                within TTL → the expectation closes silently; the request
+                follows the normal expiry path.
+              </li>
+              <li>
+                Immediately reply with the routing message (§09) containing the
+                public link — that reply is not a "nudge" and doesn't consume
+                the nudge budget.
+              </li>
+            </ul>
+
+            <h3>
+              Tag catalog <span class="id id-g">G-02</span>
+              <span class="id id-x">X-12</span>
+            </h3>
+            <p>
+              Tags are per-service-type, configurable per location, with a
+              polarity so they can drive analytics:
+            </p>
+            <div class="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Positive tags (shown at ≥4★)</th>
+                    <th>Improvement tags (shown at ≤3★)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Grooming</td>
+                    <td>
+                      Great cut · Gentle handling · Clean finish · On time
+                    </td>
+                    <td>
+                      Cut not as asked · Rushed · Pet seemed stressed · Late
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Boarding</td>
+                    <td>
+                      Pet came home happy · Great updates · Clean facility ·
+                      Attentive staff
+                    </td>
+                    <td>
+                      Few updates · Pet seemed unsettled · Cleanliness ·
+                      Check-out delay
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Daycare</td>
+                    <td>
+                      Tired &amp; happy · Good socialisation · Easy drop-off
+                    </td>
+                    <td>
+                      Little info at pick-up · Pet seemed anxious · Drop-off
+                      queue
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Training</td>
+                    <td>Clear progress · Patient trainer · Good homework</td>
+                    <td>
+                      Session felt rushed · Not enough one-on-one · Unclear next
+                      steps
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              The improvement tags are the important half: they convert "2★,
+              session felt rushed" from prose a manager must read into a
+              countable signal. The existing Training escalation on the
+              Escalations tab is exactly this case.
+            </p>
+          </section>
+
+          <!-- ================= 09 ================= -->
+          <section id="s9">
+            <h2><span class="num">09</span>Routing &amp; amplification</h2>
+
+            <figure>
+              <div class="figbox">
+                <svg
+                  viewBox="0 0 900 380"
+                  role="img"
+                  aria-label="Open routing decision: all ratings receive public links"
+                >
+                  <defs>
+                    <marker
+                      id="a5"
+                      markerWidth="9"
+                      markerHeight="9"
+                      refX="7"
+                      refY="4.5"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L8,4.5 L0,9 z" fill="#9AA2B1" />
+                    </marker>
+                    <marker
+                      id="a5g"
+                      markerWidth="9"
+                      markerHeight="9"
+                      refX="7"
+                      refY="4.5"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L8,4.5 L0,9 z" fill="#04725A" />
+                    </marker>
+                  </defs>
+
+                  <rect
+                    class="bx-v"
+                    x="18"
+                    y="150"
+                    width="150"
+                    height="56"
+                    rx="7"
+                  />
+                  <text class="ttl" x="93" y="174" text-anchor="middle">
+                    Rating received
+                  </text>
+                  <text class="mn" x="93" y="192" text-anchor="middle">
+                    1 – 5
+                  </text>
+
+                  <rect
+                    class="bx-g"
+                    x="248"
+                    y="34"
+                    width="252"
+                    height="120"
+                    rx="7"
+                  />
+                  <text class="ttl" x="266" y="58" fill="#04725A">
+                    Rating ≥ threshold
+                  </text>
+                  <text class="lbl" x="266" y="78">
+                    Thank-you screen leads with the
+                  </text>
+                  <text class="lbl" x="266" y="94">public review link.</text>
+                  <text class="mn" x="266" y="116">
+                    primary: Google (place_id deep link)
+                  </text>
+                  <text class="mn" x="266" y="132">
+                    secondary: "Something we could do better?"
+                  </text>
+
+                  <rect
+                    class="bx-a"
+                    x="248"
+                    y="200"
+                    width="252"
+                    height="140"
+                    rx="7"
+                  />
+                  <text class="ttl" x="266" y="224" fill="#9C6100">
+                    Rating ≤ threshold
+                  </text>
+                  <text class="lbl" x="266" y="244">
+                    Screen leads with the private
+                  </text>
+                  <text class="lbl" x="266" y="260">
+                    feedback box and improvement tags.
+                  </text>
+                  <text class="mn" x="266" y="284">
+                    then, below and unhidden:
+                  </text>
+                  <text class="mn" x="266" y="300">
+                    "You can also review us publicly →"
+                  </text>
+                  <text class="mn" x="266" y="322">
+                    + escalation ticket opened
+                  </text>
+
+                  <rect
+                    class="bx"
+                    x="562"
+                    y="34"
+                    width="320"
+                    height="66"
+                    rx="7"
+                  />
+                  <text class="ttl" x="580" y="56">Channel selection</text>
+                  <text class="mn" x="580" y="76">
+                    one primary per request · weighted or failover
+                  </text>
+                  <text class="mn" x="580" y="92">
+                    Yelp excluded from solicitation (R-02)
+                  </text>
+
+                  <rect
+                    class="bx"
+                    x="562"
+                    y="116"
+                    width="320"
+                    height="66"
+                    rx="7"
+                  />
+                  <text class="ttl" x="580" y="138">Pacing</text>
+                  <text class="mn" x="580" y="158">
+                    per-location daily cap + jitter
+                  </text>
+                  <text class="mn" x="580" y="174">
+                    avoids platform velocity filtering (R-09)
+                  </text>
+
+                  <rect
+                    class="bx-r"
+                    x="562"
+                    y="222"
+                    width="320"
+                    height="66"
+                    rx="7"
+                  />
+                  <text class="ttl" x="580" y="244" fill="#C31232">
+                    Escalation queue
+                  </text>
+                  <text class="mn" x="580" y="264">
+                    routed by service · SLA clock starts
+                  </text>
+                  <text class="mn" x="580" y="280">§11</text>
+
+                  <rect
+                    class="bx"
+                    x="562"
+                    y="300"
+                    width="320"
+                    height="52"
+                    rx="7"
+                  />
+                  <text class="ttl" x="580" y="322">Showcase eligibility</text>
+                  <text class="mn" x="580" y="340">
+                    comment ∧ rating ≥ showcase_min ∧ consent
+                  </text>
+
+                  <path
+                    class="ln-g"
+                    d="M168,166 L208,166 L208,94 L246,94"
+                    marker-end="url(#a5g)"
+                  />
+                  <path
+                    class="ln"
+                    d="M168,190 L208,190 L208,270 L246,270"
+                    marker-end="url(#a5)"
+                  />
+                  <path
+                    class="ln-g"
+                    d="M500,80 L530,80 L530,64 L560,64"
+                    marker-end="url(#a5g)"
+                  />
+                  <path
+                    class="ln-g"
+                    d="M500,300 L520,300 L520,150 L560,150"
+                    marker-end="url(#a5g)"
+                  />
+                  <text
+                    class="mn"
+                    x="512"
+                    y="196"
+                    text-anchor="middle"
+                    fill="#04725A"
+                  >
+                    both paths
+                  </text>
+                  <text
+                    class="mn"
+                    x="512"
+                    y="210"
+                    text-anchor="middle"
+                    fill="#04725A"
+                  >
+                    reach public
+                  </text>
+                  <path
+                    class="ln"
+                    d="M500,322 L560,322"
+                    marker-end="url(#a5)"
+                  />
+                  <path
+                    class="ln"
+                    d="M500,255 L530,255 L560,255"
+                    marker-end="url(#a5)"
+                  />
+                </svg>
+              </div>
+              <figcaption>
+                <b>Fig 5.</b> Rating changes what the screen
+                <em>leads with</em> and what happens internally. It never
+                changes whether the public link is present. This is the
+                compliant reading of "intercept before it goes public".
+              </figcaption>
+            </figure>
+
+            <h3>Channel rules</h3>
+            <ul>
+              <li>
+                <strong>One primary destination per request.</strong> The
+                current "Google Business → Facebook Pages" chain implies both,
+                which splits attention and converts worse.
+              </li>
+              <li>
+                <strong>Fixed order = failover.</strong> Use the
+                highest-priority enabled channel; fall through only if it's
+                unavailable or unlinked.
+              </li>
+              <li>
+                <strong>Weighted mode = true split.</strong> Deterministic
+                assignment by hashing <code>request_id</code>, so re-renders are
+                stable. Show the projected 30-day split under the channel list.
+              </li>
+              <li>
+                <strong>Store <code>place_id</code>, not URLs</strong>
+                <span class="id id-r">R-10</span>. "Optimize link" resolves a
+                pasted Maps URL to a place ID and previews the resulting
+                write-review deep link.
+              </li>
+              <li>
+                <strong>Yelp is monitor-only</strong>
+                <span class="id id-r">R-02</span>, with an inline note
+                explaining why the toggle is disabled.
+              </li>
+            </ul>
+          </section>
+
+          <!-- ================= 10 ================= -->
+          <section id="s10">
+            <h2><span class="num">10</span>Timing engine — one nudge, ever</h2>
+            <p class="lede">
+              This resolves <span class="id id-x">X-01</span>,
+              <span class="id id-x">X-03</span>,
+              <span class="id id-x">X-04</span> and
+              <span class="id id-d">D-11</span> in one mechanism.
+            </p>
+
+            <figure>
+              <div class="figbox">
+                <svg
+                  viewBox="0 0 900 330"
+                  role="img"
+                  aria-label="Request timeline showing single-nudge precedence"
+                >
+                  <defs>
+                    <marker
+                      id="a6"
+                      markerWidth="9"
+                      markerHeight="9"
+                      refX="7"
+                      refY="4.5"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L8,4.5 L0,9 z" fill="#9AA2B1" />
+                    </marker>
+                  </defs>
+
+                  <line
+                    x1="60"
+                    y1="70"
+                    x2="860"
+                    y2="70"
+                    stroke="#22252E"
+                    stroke-width="2"
+                  />
+                  <g fill="#22252E">
+                    <circle cx="60" cy="70" r="5" />
+                    <circle cx="200" cy="70" r="5" />
+                    <circle cx="420" cy="70" r="5" />
+                    <circle cx="620" cy="70" r="5" />
+                    <circle cx="820" cy="70" r="5" />
+                  </g>
+                  <text class="mn" x="60" y="56" text-anchor="middle">T0</text>
+                  <text class="mn" x="200" y="56" text-anchor="middle">
+                    T0 + 1h
+                  </text>
+                  <text class="mn" x="420" y="56" text-anchor="middle">
+                    T0 + 48h
+                  </text>
+                  <text class="mn" x="620" y="56" text-anchor="middle">
+                    T0 + 7d
+                  </text>
+                  <text class="mn" x="820" y="56" text-anchor="middle">
+                    T0 + 30d
+                  </text>
+                  <text class="lbl" x="60" y="34" text-anchor="middle">
+                    visit closed
+                  </text>
+                  <text class="lbl" x="200" y="34" text-anchor="middle">
+                    initial send
+                  </text>
+                  <text class="lbl" x="420" y="34" text-anchor="middle">
+                    nudge window
+                  </text>
+                  <text class="lbl" x="620" y="34" text-anchor="middle">
+                    request TTL
+                  </text>
+                  <text class="lbl" x="820" y="34" text-anchor="middle">
+                    cooldown ends
+                  </text>
+
+                  <rect
+                    class="bx-a"
+                    x="60"
+                    y="96"
+                    width="140"
+                    height="40"
+                    rx="6"
+                  />
+                  <text class="mn" x="70" y="114" fill="#9C6100">
+                    guardrails ×2
+                  </text>
+                  <text class="mn" x="70" y="130" fill="#9C6100">
+                    + quiet-hours defer
+                  </text>
+
+                  <rect
+                    class="bx"
+                    x="248"
+                    y="164"
+                    width="392"
+                    height="52"
+                    rx="6"
+                  />
+                  <text class="ttl" x="262" y="186">
+                    At T0+48h, evaluate state — exactly one branch fires
+                  </text>
+                  <text class="mn" x="262" y="206">
+                    and the nudge budget for this request drops to zero either
+                    way
+                  </text>
+
+                  <rect
+                    class="bx"
+                    x="248"
+                    y="234"
+                    width="188"
+                    height="76"
+                    rx="6"
+                  />
+                  <text class="ttl" x="262" y="256">state = DELIVERED</text>
+                  <text class="lbl" x="262" y="274">no rating yet</text>
+                  <text class="mn" x="262" y="294">
+                    → resend on backup channel
+                  </text>
+
+                  <rect
+                    class="bx-g"
+                    x="452"
+                    y="234"
+                    width="188"
+                    height="76"
+                    rx="6"
+                  />
+                  <text class="ttl" x="466" y="256" fill="#04725A">
+                    state = ROUTED_PUBLIC
+                  </text>
+                  <text class="lbl" x="466" y="274">rated, never clicked</text>
+                  <text class="mn" x="466" y="294">
+                    → "share it publicly" nudge
+                  </text>
+
+                  <rect
+                    class="bx-r"
+                    x="660"
+                    y="234"
+                    width="200"
+                    height="76"
+                    rx="6"
+                  />
+                  <text class="ttl" x="674" y="256" fill="#C31232">
+                    any other state
+                  </text>
+                  <text class="lbl" x="674" y="274">
+                    clicked · escalated · closed
+                  </text>
+                  <text class="mn" x="674" y="294">→ no nudge</text>
+
+                  <path class="ln" d="M420,80 L420,162" marker-end="url(#a6)" />
+                  <path
+                    class="ln"
+                    d="M340,216 L340,232"
+                    marker-end="url(#a6)"
+                  />
+                  <path
+                    class="ln"
+                    d="M546,216 L546,232"
+                    marker-end="url(#a6)"
+                  />
+                  <path
+                    class="ln"
+                    d="M640,190 L730,190 L730,232"
+                    marker-end="url(#a6)"
+                  />
+                  <path class="ln" d="M200,116 L246,116 L246,70" />
+                  <line
+                    class="sep"
+                    x1="620"
+                    y1="70"
+                    x2="620"
+                    y2="150"
+                    stroke-dasharray="4 3"
+                  />
+                  <text class="mn" x="628" y="146">
+                    unrated requests expire — late jobs are dropped, not sent
+                    (D-11)
+                  </text>
+                </svg>
+              </div>
+              <figcaption>
+                <b>Fig 6.</b> Smart Reminders and the sequence backup step stop
+                being two systems. They become two branches of one scheduled
+                evaluation with a shared budget of one.
+              </figcaption>
+            </figure>
+
+            <h4>Rules</h4>
+            <ul>
+              <li>
+                <code>nudges_remaining</code> starts at 1 and is decremented on
+                any nudge send. Nothing else can send it.
+              </li>
+              <li>
+                Every scheduled job carries a TTL. If
+                <code>now &gt; scheduled_at + ttl</code>, the job is dropped and
+                logged as <code>EXPIRED_JOB</code>. This is the direct fix for
+                the 49-day reminder.
+              </li>
+              <li>
+                Suppression windows are <strong>unioned</strong>:
+                <code
+                  >next_eligible_at = max(cooldown_end, negative_pause_end,
+                  manual_hold_end)</code
+                >.
+              </li>
+              <li>
+                Quiet hours defer within the day; if deferral would push past
+                the step TTL, the step is skipped, not delayed indefinitely.
+              </li>
+            </ul>
+          </section>
+
+          <!-- ================= 11 ================= -->
+          <section id="s11">
+            <h2>
+              <span class="num">11</span>Escalation &amp; service recovery
+            </h2>
+            <p class="lede">
+              This is Yipyy's strongest differentiator against MoeGo, which does
+              nothing beyond an automated apology reply. Finishing it means
+              adding time pressure and a closing loop.
+            </p>
+
+            <figure>
+              <div class="figbox">
+                <svg
+                  viewBox="0 0 900 384"
+                  role="img"
+                  aria-label="Escalation swimlane across client, system and manager"
+                >
+                  <defs>
+                    <marker
+                      id="a7"
+                      markerWidth="9"
+                      markerHeight="9"
+                      refX="7"
+                      refY="4.5"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L8,4.5 L0,9 z" fill="#9AA2B1" />
+                    </marker>
+                  </defs>
+
+                  <line class="sep" x1="120" y1="8" x2="120" y2="330" />
+                  <line class="sep" x1="0" y1="106" x2="900" y2="106" />
+                  <line class="sep" x1="0" y1="212" x2="900" y2="212" />
+                  <text class="ttl" x="14" y="56">Client</text>
+                  <text class="ttl" x="14" y="162">System</text>
+                  <text class="ttl" x="14" y="268">Assignee</text>
+
+                  <rect
+                    class="bx-a"
+                    x="140"
+                    y="26"
+                    width="140"
+                    height="50"
+                    rx="6"
+                  />
+                  <text class="mn" x="152" y="46" fill="#9C6100">
+                    rates 2★ + comment
+                  </text>
+                  <text class="mn" x="152" y="62" fill="#9C6100">
+                    "session felt rushed"
+                  </text>
+
+                  <rect
+                    class="bx"
+                    x="140"
+                    y="126"
+                    width="140"
+                    height="66"
+                    rx="6"
+                  />
+                  <text class="mn" x="152" y="146">open ticket</text>
+                  <text class="mn" x="152" y="162">route by service</text>
+                  <text class="mn" x="152" y="178">start SLA clock</text>
+
+                  <rect
+                    class="bx"
+                    x="308"
+                    y="126"
+                    width="140"
+                    height="66"
+                    rx="6"
+                  />
+                  <text class="mn" x="320" y="146">alert assignee</text>
+                  <text class="mn" x="320" y="162">SMS · email · bell</text>
+                  <text class="mn" x="320" y="178">create follow-up task</text>
+
+                  <rect
+                    class="bx"
+                    x="308"
+                    y="232"
+                    width="140"
+                    height="72"
+                    rx="6"
+                  />
+                  <text class="mn" x="320" y="252">acknowledge</text>
+                  <text class="mn" x="320" y="268">≤ 4 business hours</text>
+                  <text class="mn" x="320" y="288">→ ACKNOWLEDGED</text>
+
+                  <rect
+                    class="bx"
+                    x="476"
+                    y="232"
+                    width="152"
+                    height="72"
+                    rx="6"
+                  />
+                  <text class="mn" x="488" y="252">recovery action</text>
+                  <text class="mn" x="488" y="268">
+                    call · message · credit
+                  </text>
+                  <text class="mn" x="488" y="288">
+                    · refund · link incident
+                  </text>
+
+                  <rect
+                    class="bx-g"
+                    x="656"
+                    y="232"
+                    width="152"
+                    height="72"
+                    rx="6"
+                  />
+                  <text class="mn" x="668" y="252" fill="#04725A">resolve</text>
+                  <text class="mn" x="668" y="268" fill="#04725A">
+                    ≤ 3 business days
+                  </text>
+                  <text class="mn" x="668" y="288" fill="#04725A">
+                    + resolution_code
+                  </text>
+
+                  <rect
+                    class="bx-g"
+                    x="656"
+                    y="26"
+                    width="152"
+                    height="50"
+                    rx="6"
+                  />
+                  <text class="mn" x="668" y="46" fill="#04725A">
+                    optional re-invite
+                  </text>
+                  <text class="mn" x="668" y="62" fill="#04725A">
+                    after resolve + cooldown
+                  </text>
+
+                  <rect
+                    class="bx-r"
+                    x="476"
+                    y="126"
+                    width="152"
+                    height="66"
+                    rx="6"
+                  />
+                  <text class="mn" x="488" y="146" fill="#C31232">
+                    SLA breach
+                  </text>
+                  <text class="mn" x="488" y="162" fill="#C31232">
+                    → location manager
+                  </text>
+                  <text class="mn" x="488" y="178" fill="#C31232">
+                    → aging badge on list
+                  </text>
+
+                  <path class="ln" d="M210,76 L210,124" marker-end="url(#a7)" />
+                  <path
+                    class="ln"
+                    d="M280,159 L306,159"
+                    marker-end="url(#a7)"
+                  />
+                  <path
+                    class="ln"
+                    d="M378,192 L378,230"
+                    marker-end="url(#a7)"
+                  />
+                  <path
+                    class="ln"
+                    d="M448,268 L474,268"
+                    marker-end="url(#a7)"
+                  />
+                  <path
+                    class="ln"
+                    d="M628,268 L654,268"
+                    marker-end="url(#a7)"
+                  />
+                  <path class="ln" d="M732,232 L732,78" marker-end="url(#a7)" />
+                  <path
+                    class="ln-d"
+                    d="M448,240 L462,240 L462,192"
+                    marker-end="url(#a7)"
+                  />
+
+                  <line class="sep" x1="0" y1="330" x2="900" y2="330" />
+                  <text class="mn" x="14" y="352">
+                    Ticket states: OPEN → ACKNOWLEDGED → IN_RECOVERY → RESOLVED
+                    → CLOSED. &nbsp; Every action writes a ticket_event with
+                    actor, timestamp and payload.
+                  </text>
+                  <text class="mn" x="14" y="370">
+                    resolution_code: contacted_apologised · credit_issued ·
+                    refunded · policy_change · staff_coached ·
+                    no_contact_possible · client_satisfied
+                  </text>
+                </svg>
+              </div>
+              <figcaption>
+                <b>Fig 7.</b> The SLA clock and the aging badge are the missing
+                pieces (<span style="font-family: var(--mono)">D-14</span>).
+                Resolution codes are what make "we fixed 4 of 8 Laval complaints
+                for the same reason" a query rather than a hunch.
+              </figcaption>
+            </figure>
+
+            <h4>Routing resolution</h4>
+            <p>
+              Display the resolved chain in every row so the effective assignee
+              is never implicit <span class="id id-x">X-09</span>:
+            </p>
+            <div class="proof">
+              service_assignees(service_id)
+              <span class="dim">→ e.g. Grooming: David Wilson</span> ↳ if empty:
+              location_manager(location)
+              <span class="dim">→ e.g. Plateau: Manager One</span> ↳ if empty:
+              org_default_assignee <span class="dim">→ Admin User</span>
+              <span class="ok"
+                >Every assignee in the resolved set is alerted and receives a
+                follow-up task.</span
+              >
+            </div>
+
+            <h4>Incident linkage</h4>
+            <p>
+              The 1★ Daycare escalation on the current build reads
+              <em
+                >"Nala had a cut on her leg when I picked her up and staff
+                didn't mention it."</em
+              >
+              The Protection Rules already contain "Block when booking has a
+              critical incident" — but nothing created the incident. Add: when a
+              response contains injury/illness language, or an improvement tag
+              with <code>severity: high</code> is selected, prompt the assignee
+              to create or link an incident record. That closes the loop that
+              currently exists only in one direction.
+            </p>
+          </section>
+
+          <!-- ================= 12 ================= -->
+          <section id="s12">
+            <h2><span class="num">12</span>Data model</h2>
+
+            <figure>
+              <div class="figbox">
+                <svg
+                  viewBox="0 0 940 620"
+                  role="img"
+                  aria-label="Entity relationship diagram for Reputation Booster v2"
+                >
+                  <defs>
+                    <marker
+                      id="a8"
+                      markerWidth="8"
+                      markerHeight="8"
+                      refX="6.5"
+                      refY="4"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L7,4 L0,8 z" fill="#9AA2B1" />
+                    </marker>
+                  </defs>
+
+                  <rect
+                    class="bx"
+                    x="14"
+                    y="14"
+                    width="180"
+                    height="96"
+                    rx="6"
+                  />
+                  <text class="ttl" x="26" y="34">visit</text>
+                  <line class="sep" x1="26" y1="42" x2="182" y2="42" />
+                  <text class="mn" x="26" y="60">client_id · location_id</text>
+                  <text class="mn" x="26" y="76">business_day · closed_at</text>
+                  <text class="mn" x="26" y="92">
+                    appointment_ids[] · pet_ids[]
+                  </text>
+                  <text class="mn" x="26" y="106">primary_staff_id</text>
+
+                  <rect
+                    class="bx-v"
+                    x="248"
+                    y="14"
+                    width="212"
+                    height="128"
+                    rx="6"
+                  />
+                  <text class="ttl" x="260" y="34" fill="#5B3DF5">
+                    review_request
+                  </text>
+                  <line class="sep" x1="260" y1="42" x2="448" y2="42" />
+                  <text class="mn" x="260" y="60">
+                    visit_id · campaign_version_id
+                  </text>
+                  <text class="mn" x="260" y="76">
+                    state · state_changed_at
+                  </text>
+                  <text class="mn" x="260" y="92">
+                    nudges_remaining (default 1)
+                  </text>
+                  <text class="mn" x="260" y="108">expires_at</text>
+                  <text class="mn" x="260" y="124">assigned_channel_id</text>
+                  <text class="mn" x="260" y="138">
+                    scope: location_id (denorm)
+                  </text>
+
+                  <rect
+                    class="bx"
+                    x="514"
+                    y="14"
+                    width="200"
+                    height="112"
+                    rx="6"
+                  />
+                  <text class="ttl" x="526" y="34">review_request_step</text>
+                  <line class="sep" x1="526" y1="42" x2="702" y2="42" />
+                  <text class="mn" x="526" y="60">
+                    seq · kind: initial|backup|nudge
+                  </text>
+                  <text class="mn" x="526" y="76">
+                    channel · scheduled_at · ttl
+                  </text>
+                  <text class="mn" x="526" y="92">sent_at · delivered_at</text>
+                  <text class="mn" x="526" y="108">
+                    provider_message_id · status
+                  </text>
+                  <text class="mn" x="526" y="122">segments · cost</text>
+
+                  <rect
+                    class="bx-a"
+                    x="762"
+                    y="14"
+                    width="164"
+                    height="96"
+                    rx="6"
+                  />
+                  <text class="ttl" x="774" y="34" fill="#9C6100">
+                    suppression_log
+                  </text>
+                  <line class="sep" x1="774" y1="42" x2="914" y2="42" />
+                  <text class="mn" x="774" y="60">visit_id · client_id</text>
+                  <text class="mn" x="774" y="76">reason (enum)</text>
+                  <text class="mn" x="774" y="92">stage: trigger|send</text>
+                  <text class="mn" x="774" y="106">next_eligible_at</text>
+
+                  <rect
+                    class="bx-v"
+                    x="248"
+                    y="184"
+                    width="212"
+                    height="128"
+                    rx="6"
+                  />
+                  <text class="ttl" x="260" y="204" fill="#5B3DF5">
+                    survey_response
+                  </text>
+                  <line class="sep" x1="260" y1="212" x2="448" y2="212" />
+                  <text class="mn" x="260" y="230">
+                    request_id · rating 1–5
+                  </text>
+                  <text class="mn" x="260" y="246">comment · locale</text>
+                  <text class="mn" x="260" y="262">source (enum)</text>
+                  <text class="mn" x="260" y="278">attributed_staff_id</text>
+                  <text class="mn" x="260" y="294">service_id · pet_id</text>
+                  <text class="mn" x="260" y="310">display_consent bool</text>
+
+                  <rect
+                    class="bx"
+                    x="14"
+                    y="184"
+                    width="180"
+                    height="82"
+                    rx="6"
+                  />
+                  <text class="ttl" x="26" y="204">tag_catalog</text>
+                  <line class="sep" x1="26" y1="212" x2="182" y2="212" />
+                  <text class="mn" x="26" y="230">service_type · label</text>
+                  <text class="mn" x="26" y="246">polarity · severity</text>
+                  <text class="mn" x="26" y="262">locale_variants</text>
+
+                  <rect
+                    class="bx"
+                    x="14"
+                    y="292"
+                    width="180"
+                    height="60"
+                    rx="6"
+                  />
+                  <text class="ttl" x="26" y="312">response_tag</text>
+                  <line class="sep" x1="26" y1="320" x2="182" y2="320" />
+                  <text class="mn" x="26" y="338">response_id · tag_id</text>
+
+                  <rect
+                    class="bx"
+                    x="514"
+                    y="176"
+                    width="200"
+                    height="96"
+                    rx="6"
+                  />
+                  <text class="ttl" x="526" y="196">public_channel</text>
+                  <line class="sep" x1="526" y1="204" x2="702" y2="204" />
+                  <text class="mn" x="526" y="222">platform · place_id</text>
+                  <text class="mn" x="526" y="238">
+                    weight · priority · enabled
+                  </text>
+                  <text class="mn" x="526" y="254">
+                    solicitable (false for Yelp)
+                  </text>
+                  <text class="mn" x="526" y="268">sync_capability enum</text>
+
+                  <rect
+                    class="bx"
+                    x="514"
+                    y="292"
+                    width="200"
+                    height="72"
+                    rx="6"
+                  />
+                  <text class="ttl" x="526" y="312">public_click</text>
+                  <line class="sep" x1="526" y1="320" x2="702" y2="320" />
+                  <text class="mn" x="526" y="338">
+                    request_id · channel_id
+                  </text>
+                  <text class="mn" x="526" y="354">
+                    clicked_at · user_agent
+                  </text>
+
+                  <rect
+                    class="bx"
+                    x="762"
+                    y="176"
+                    width="164"
+                    height="96"
+                    rx="6"
+                  />
+                  <text class="ttl" x="774" y="196">external_review</text>
+                  <line class="sep" x1="774" y1="204" x2="914" y2="204" />
+                  <text class="mn" x="774" y="222">
+                    channel_id · platform_id
+                  </text>
+                  <text class="mn" x="774" y="238">
+                    rating · body · posted_at
+                  </text>
+                  <text class="mn" x="774" y="254">matched_request_id?</text>
+                  <text class="mn" x="774" y="268">synced_at</text>
+
+                  <rect
+                    class="bx-r"
+                    x="248"
+                    y="356"
+                    width="212"
+                    height="112"
+                    rx="6"
+                  />
+                  <text class="ttl" x="260" y="376" fill="#C31232">
+                    escalation_ticket
+                  </text>
+                  <line class="sep" x1="260" y1="384" x2="448" y2="384" />
+                  <text class="mn" x="260" y="402">response_id · state</text>
+                  <text class="mn" x="260" y="418">
+                    assignee_ids[] · service_id
+                  </text>
+                  <text class="mn" x="260" y="434">first_response_due_at</text>
+                  <text class="mn" x="260" y="450">
+                    resolve_due_at · resolved_at
+                  </text>
+                  <text class="mn" x="260" y="464">
+                    resolution_code · incident_id?
+                  </text>
+
+                  <rect
+                    class="bx"
+                    x="514"
+                    y="384"
+                    width="200"
+                    height="72"
+                    rx="6"
+                  />
+                  <text class="ttl" x="526" y="404">ticket_event</text>
+                  <line class="sep" x1="526" y1="412" x2="702" y2="412" />
+                  <text class="mn" x="526" y="430">
+                    actor_id · kind · payload
+                  </text>
+                  <text class="mn" x="526" y="446">
+                    call · sms · credit · note
+                  </text>
+
+                  <rect
+                    class="bx-g"
+                    x="248"
+                    y="500"
+                    width="212"
+                    height="96"
+                    rx="6"
+                  />
+                  <text class="ttl" x="260" y="520" fill="#04725A">
+                    showcase_review
+                  </text>
+                  <line class="sep" x1="260" y1="528" x2="448" y2="528" />
+                  <text class="mn" x="260" y="546">
+                    response_id · moderation_state
+                  </text>
+                  <text class="mn" x="260" y="562">
+                    pending|approved|live|hidden|rejected
+                  </text>
+                  <text class="mn" x="260" y="578">
+                    pet_photo_id · sort_order
+                  </text>
+                  <text class="mn" x="260" y="592">
+                    approved_by · approved_at
+                  </text>
+
+                  <rect
+                    class="bx"
+                    x="14"
+                    y="500"
+                    width="180"
+                    height="76"
+                    rx="6"
+                  />
+                  <text class="ttl" x="26" y="520">campaign_version</text>
+                  <line class="sep" x1="26" y1="528" x2="182" y2="528" />
+                  <text class="mn" x="26" y="546">
+                    location_id · config json
+                  </text>
+                  <text class="mn" x="26" y="562">effective_from · author</text>
+
+                  <rect
+                    class="bx"
+                    x="514"
+                    y="500"
+                    width="200"
+                    height="76"
+                    rx="6"
+                  />
+                  <text class="ttl" x="526" y="520">notification_pref</text>
+                  <line class="sep" x1="526" y1="528" x2="702" y2="528" />
+                  <text class="mn" x="526" y="546">staff_id · scope enum</text>
+                  <text class="mn" x="526" y="562">
+                    all|below_threshold|own_only|none
+                  </text>
+
+                  <path class="ln" d="M194,58 L246,58" marker-end="url(#a8)" />
+                  <path class="ln" d="M460,70 L512,70" marker-end="url(#a8)" />
+                  <path class="ln" d="M194,80 L216,80 L216,62 L246,62" />
+                  <path class="ln" d="M714,58 L760,58" marker-end="url(#a8)" />
+                  <path
+                    class="ln"
+                    d="M354,142 L354,182"
+                    marker-end="url(#a8)"
+                  />
+                  <path
+                    class="ln"
+                    d="M194,224 L246,224"
+                    marker-end="url(#a8)"
+                  />
+                  <path
+                    class="ln"
+                    d="M104,266 L104,290"
+                    marker-end="url(#a8)"
+                  />
+                  <path
+                    class="ln"
+                    d="M194,322 L220,322 L220,270 L246,270"
+                    marker-end="url(#a8)"
+                  />
+                  <path
+                    class="ln"
+                    d="M460,240 L512,224"
+                    marker-end="url(#a8)"
+                  />
+                  <path
+                    class="ln"
+                    d="M460,286 L490,286 L490,320 L512,320"
+                    marker-end="url(#a8)"
+                  />
+                  <path
+                    class="ln"
+                    d="M714,224 L760,224"
+                    marker-end="url(#a8)"
+                  />
+                  <path
+                    class="ln"
+                    d="M354,312 L354,354"
+                    marker-end="url(#a8)"
+                  />
+                  <path
+                    class="ln"
+                    d="M460,420 L512,420"
+                    marker-end="url(#a8)"
+                  />
+                  <path
+                    class="ln"
+                    d="M354,468 L354,498"
+                    marker-end="url(#a8)"
+                  />
+                  <path
+                    class="ln"
+                    d="M194,538 L246,538"
+                    marker-end="url(#a8)"
+                  />
+                </svg>
+              </div>
+              <figcaption>
+                <b>Fig 8.</b> <code>visit</code> is the new entity that fixes
+                double-sending (<span style="font-family: var(--mono)"
+                  >X-05</span
+                >), and <code>attributed_staff_id</code> on the response is what
+                fixes the 323-vs-247 count (<span
+                  style="font-family: var(--mono)"
+                  >D-03</span
+                >).
+              </figcaption>
+            </figure>
+
+            <h4>Notes for implementation</h4>
+            <ul>
+              <li>
+                <strong>Config is versioned.</strong>
+                <code>campaign_version</code> is immutable; a request stores the
+                version it ran under. Otherwise editing a template retroactively
+                changes what you believe you sent.
+              </li>
+              <li>
+                <strong>Scope is denormalised</strong> onto
+                <code>review_request</code> so every analytics query can filter
+                by location without joining through visit → appointment.
+              </li>
+              <li>
+                <strong>Attribution is single-valued.</strong>
+                <code>attributed_staff_id</code> is set from
+                <code>visit.primary_staff_id</code>, or from the survey's "who
+                looked after Nala?" answer when the visit had more than one
+                staff member. Any "mentions" metric is derived separately and
+                labelled as such.
+              </li>
+              <li>
+                <strong>Suppressions are first-class rows,</strong> not log
+                lines. They power a Suppressions view and answer "why did only
+                312 of 480 checkouts get asked?" — a question the current build
+                cannot answer at all.
+              </li>
+            </ul>
+          </section>
+
+          <!-- ================= 13 ================= -->
+          <section id="s13">
+            <h2><span class="num">13</span>Events &amp; API surface</h2>
+
+            <h4>Domain events</h4>
+            <div class="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="m">Event</th>
+                    <th>Emitted when</th>
+                    <th>Key payload</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="m">visit.closed</td>
+                    <td>Last appointment of a visit is checked out</td>
+                    <td class="m">
+                      visit_id, client_id, location_id, services[], staff[]
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">review_request.scheduled</td>
+                    <td>Guardrails passed at trigger time</td>
+                    <td class="m">request_id, first_send_at, channel</td>
+                  </tr>
+                  <tr>
+                    <td class="m">review_request.suppressed</td>
+                    <td>Any guardrail fails, either stage</td>
+                    <td class="m">reason, stage, next_eligible_at</td>
+                  </tr>
+                  <tr>
+                    <td class="m">review_request.sent</td>
+                    <td>Handed to provider</td>
+                    <td class="m">
+                      step_id, channel, segments, provider_message_id
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">review_request.delivered</td>
+                    <td>Provider delivery receipt</td>
+                    <td class="m">step_id, delivered_at</td>
+                  </tr>
+                  <tr>
+                    <td class="m">review_request.failed</td>
+                    <td>Hard bounce or provider error</td>
+                    <td class="m">step_id, error_code, retry_planned</td>
+                  </tr>
+                  <tr>
+                    <td class="m">review_request.rated</td>
+                    <td>Response captured on any surface</td>
+                    <td class="m">response_id, rating, source, tags[]</td>
+                  </tr>
+                  <tr>
+                    <td class="m">review_request.public_clicked</td>
+                    <td>Public link followed</td>
+                    <td class="m">channel_id, clicked_at</td>
+                  </tr>
+                  <tr>
+                    <td class="m">escalation.opened</td>
+                    <td>Rating ≤ escalation threshold</td>
+                    <td class="m">ticket_id, assignees[], due_at</td>
+                  </tr>
+                  <tr>
+                    <td class="m">escalation.sla_breached</td>
+                    <td>Due date passes unmet</td>
+                    <td class="m">ticket_id, breach_type, escalated_to</td>
+                  </tr>
+                  <tr>
+                    <td class="m">escalation.resolved</td>
+                    <td>Assignee closes with a code</td>
+                    <td class="m">resolution_code, duration_hours</td>
+                  </tr>
+                  <tr>
+                    <td class="m">showcase.published</td>
+                    <td>Review goes live on booking page</td>
+                    <td class="m">showcase_id, approved_by</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4>Endpoints</h4>
+            <div class="proof">
+              POST /v1/reputation/requests
+              <span class="dim"
+                >manual send — runs guardrails, accepts override_reason</span
+              >
+              GET /v1/reputation/requests?scope&amp;range
+              <span class="dim">list + facets, cursor paginated</span> GET
+              /v1/reputation/requests/:id/trail
+              <span class="dim"
+                >steps + audit events, location-local timestamps</span
+              >
+              POST /v1/reputation/responses
+              <span class="dim"
+                >public, token-authed — the survey page posts here</span
+              >
+              POST /v1/reputation/responses/sms
+              <span class="dim">inbound webhook, runs the 1–5 parser</span> GET
+              /v1/reputation/suppressions
+              <span class="dim">grouped by reason — new view</span> GET
+              /v1/reputation/metrics
+              <span class="dim"
+                >every KPI, denominators included in the payload</span
+              >
+              PATCH /v1/reputation/tickets/:id
+              <span class="dim">state, assignees, resolution_code</span> POST
+              /v1/reputation/tickets/:id/actions
+              <span class="dim"
+                >call | message | credit | refund | link_incident</span
+              >
+              PATCH /v1/reputation/showcase/:id
+              <span class="dim">moderation_state, sort_order</span> POST
+              /v1/reputation/channels/resolve
+              <span class="dim"
+                >Maps URL → place_id → write-review deep link</span
+              >
+              GET /v1/reputation/config
+              <span class="dim">current campaign_version</span> PUT
+              /v1/reputation/config
+              <span class="dim">creates a new immutable version</span>
+            </div>
+
+            <div class="box">
+              <div class="h">Metrics payload contract</div>
+              <p>
+                Every metric returns
+                <code
+                  >{ value, numerator, denominator, scope, range, definition_key
+                  }</code
+                >. The UI renders the denominator in the card subtitle. This
+                makes <span class="id id-d">D-06</span> structurally impossible
+                to reintroduce.
+              </p>
+            </div>
+          </section>
+
+          <!-- ================= 14 ================= -->
+          <section id="s14">
+            <h2><span class="num">14</span>Metric dictionary</h2>
+            <p class="lede">
+              One definition each. Ship this table in the codebase as the source
+              of truth and generate the tooltips from it.
+            </p>
+
+            <div class="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th class="m">Numerator</th>
+                    <th class="m">Denominator</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Requests sent</td>
+                    <td class="m">steps where kind=initial ∧ sent_at ≠ null</td>
+                    <td class="m">—</td>
+                    <td>
+                      Excludes nudges and backups so it isn't inflated by
+                      retries.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Delivery rate</td>
+                    <td class="m">requests delivered</td>
+                    <td class="m">requests sent</td>
+                    <td>
+                      New. Surfaces carrier failures currently hidden inside
+                      response rate.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Response rate</td>
+                    <td class="m">requests with a response</td>
+                    <td class="m">requests <strong>delivered</strong></td>
+                    <td>
+                      Changed from sent <span class="id id-d">D-07</span>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Average rating (internal)</td>
+                    <td class="m">Σ rating</td>
+                    <td class="m">responses</td>
+                    <td>
+                      Count-weighted, rounded once at render
+                      <span class="id id-d">D-08</span>. Never mixed with public
+                      platform ratings.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>5-star share</td>
+                    <td class="m">responses rating = 5</td>
+                    <td class="m">responses</td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td>Detractor rate</td>
+                    <td class="m">responses rating ≤ escalation_threshold</td>
+                    <td class="m">responses</td>
+                    <td>
+                      Replaces all four current definitions
+                      <span class="id id-d">D-05</span>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Public click rate</td>
+                    <td class="m">requests with ≥1 public_click</td>
+                    <td class="m">responses</td>
+                    <td>
+                      Renames "Public conversions" and states its base
+                      <span class="id id-d">D-06</span>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Nudge recovery</td>
+                    <td class="m">responses arriving after a nudge</td>
+                    <td class="m">nudges sent</td>
+                    <td>Renames "Reminder recovery".</td>
+                  </tr>
+                  <tr>
+                    <td>Suppression rate</td>
+                    <td class="m">suppressed visits</td>
+                    <td class="m">eligible visits</td>
+                    <td>New. Broken out by reason.</td>
+                  </tr>
+                  <tr>
+                    <td>Staff rating</td>
+                    <td class="m">Σ rating where attributed_staff_id = s</td>
+                    <td class="m">responses attributed to s</td>
+                    <td>
+                      Attribution single-valued
+                      <span class="id id-d">D-03</span>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Staff mentions</td>
+                    <td class="m">responses where s was on the visit</td>
+                    <td class="m">—</td>
+                    <td>
+                      Separate, explicitly labelled, may exceed total responses.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Praise count</td>
+                    <td class="m">
+                      response_tags with polarity=positive for s
+                    </td>
+                    <td class="m">—</td>
+                    <td>
+                      Makes the existing column real
+                      <span class="id id-x">X-12</span>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Public reputation score</td>
+                    <td class="m">Σ (platform rating × platform count)</td>
+                    <td class="m">Σ platform counts</td>
+                    <td>
+                      Separate domain from internal ratings
+                      <span class="id id-r">R-04</span>. Only synced platforms
+                      count.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Location conversion</td>
+                    <td class="m">responses at location</td>
+                    <td class="m">requests delivered at location</td>
+                    <td>
+                      Same definition as response rate — use one label, not two
+                      <span class="id id-d">D-01</span>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Time to resolve</td>
+                    <td class="m">Σ (resolved_at − opened_at)</td>
+                    <td class="m">resolved tickets</td>
+                    <td>Business hours, location calendar. New.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="box warn">
+              <div class="h">Two ratings, never one</div>
+              <p>
+                The header must show both and label them:
+                <strong>Internal 4.6</strong> (247 responses) and
+                <strong>Public 4.74</strong> (548 reviews across connected
+                platforms). Averaging survey responses with public reviews
+                produces a number that means nothing and moves for reasons
+                nobody can explain.
+              </p>
+            </div>
+          </section>
+
+          <!-- ================= 15 ================= -->
+          <section id="s15">
+            <h2><span class="num">15</span>Screen-by-screen changes</h2>
+
+            <div class="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Screen</th>
+                    <th>Change</th>
+                    <th class="nowrap">IDs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Page header</strong></td>
+                    <td>
+                      Rewrite the description. From
+                      <em
+                        >"Capture every rating before it goes public… keep
+                        negative experiences private"</em
+                      >
+                      to
+                      <em
+                        >"Ask every client for a review, send happy ones to
+                        Google and Facebook, and route unhappy ones to a manager
+                        before they leave."</em
+                      >
+                      Add scope selector + date range. Split the rating KPI into
+                      Internal and Public.
+                    </td>
+                    <td class="m">R-01 D-01 D-15</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Overview</strong></td>
+                    <td>
+                      Denominator in every card subtitle. Distribution from raw
+                      counts. Rename "Public conversions" → "Public click rate".
+                      Add a <strong>Suppressions</strong> card linking to the
+                      new view.
+                    </td>
+                    <td class="m">D-02 D-06 D-07</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Requests</strong></td>
+                    <td>
+                      Add <code>SUPPRESSED</code> and <code>EXPIRED</code> as
+                      filter tabs. Trail shows location-local timestamps with
+                      tz. Add source and segment count per step. Add "Request a
+                      review" manual action.
+                    </td>
+                    <td class="m">D-10 D-11 X-10</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Escalations</strong></td>
+                    <td>
+                      Aging badge and SLA countdown per ticket. "Call via IVR" →
+                      "Call client". Resolution code required to close. Add
+                      "Link incident". Add resolved-ticket history with
+                      time-to-resolve.
+                    </td>
+                    <td class="m">D-14 R-06 R-07</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Performance</strong></td>
+                    <td>
+                      Split "Reviews" into <strong>Reviews</strong> (attributed)
+                      and <strong>Mentions</strong>. Sentiment becomes three
+                      buckets that sum correctly. Add a tag breakdown per staff
+                      member and per service.
+                    </td>
+                    <td class="m">D-03 D-04 X-12</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Public Reviews</strong></td>
+                    <td>
+                      Rename to <strong>Booking page reviews</strong>. Buttons
+                      become "Show on booking page" / "Remove". Platform badge
+                      only when a sync confirms a matching public post.
+                      Implement pending → approved actions. Add pet photo.
+                    </td>
+                    <td class="m">R-03 R-04 X-11 G-07</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Locations</strong></td>
+                    <td>
+                      Label as network-only. Use "Response rate", not
+                      "conversion", for the same ratio. Drill-through from a
+                      location into its filtered Requests and Escalations.
+                    </td>
+                    <td class="m">D-01</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Messages</strong></td>
+                    <td>
+                      Encoding-aware segment counter with expanded worst case.
+                      Timing chips become read-only mirrors of the Send
+                      Sequence. Add report-card template variants and locale
+                      variants.
+                    </td>
+                    <td class="m">D-12 X-01 R-08 G-01</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Settings</strong></td>
+                    <td>
+                      Remove the gating toggle. Rename "Interception threshold"
+                      → "Escalation threshold" and move it beside Escalation
+                      Routing. Merge Smart Reminders into the Send Sequence as
+                      the nudge step. Add quiet hours, consent status, 10DLC
+                      registration state, velocity cap, tag catalog, showcase
+                      rules.
+                    </td>
+                    <td class="m">R-01 R-05 R-09 X-03 X-08 G-02</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Appointment · Client profile</strong></td>
+                    <td>
+                      New entry points: "Request a review" on the appointment
+                      overflow menu; review history, average and next-eligible
+                      date on the client profile.
+                    </td>
+                    <td class="m">G-04 G-06 X-10</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Report card</strong></td>
+                    <td>
+                      New embed: stars → tags → comment → routing. Works on SMS
+                      and email. Beats MoeGo, which supports SMS only.
+                    </td>
+                    <td class="m">G-01 G-02</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- ================= 16 ================= -->
+          <section id="s16">
+            <h2><span class="num">16</span>Delivery phases</h2>
+            <p class="lede">
+              P0 is not optional and not reorderable — it contains the
+              compliance blocker and the reporting corrections that everything
+              else is measured against.
+            </p>
+
+            <div class="phase">
+              <div class="ph">
+                <div class="k">P0 · CORRECT &amp; COMPLY</div>
+                <div class="t">Make it truthful and legal</div>
+                <p>
+                  Remove gating, fix the metric layer, add scope + range, quiet
+                  hours and timezones, single source of truth for timing,
+                  suppression logging, staff attribution rule, segment counter.
+                </p>
+                <div class="ids">
+                  <span class="id id-r">R-01</span
+                  ><span class="id id-r">R-02</span
+                  ><span class="id id-r">R-03</span
+                  ><span class="id id-r">R-05</span
+                  ><span class="id id-d">D-01</span
+                  ><span class="id id-d">D-02</span
+                  ><span class="id id-d">D-03</span
+                  ><span class="id id-d">D-04</span
+                  ><span class="id id-d">D-05</span
+                  ><span class="id id-d">D-06</span
+                  ><span class="id id-d">D-07</span
+                  ><span class="id id-d">D-08</span
+                  ><span class="id id-d">D-10</span
+                  ><span class="id id-d">D-12</span
+                  ><span class="id id-d">D-15</span
+                  ><span class="id id-x">X-01</span
+                  ><span class="id id-x">X-02</span
+                  ><span class="id id-x">X-08</span>
+                </div>
+              </div>
+              <div class="ph">
+                <div class="k">P1 · CAPTURE</div>
+                <div class="t">Close the MoeGo gap</div>
+                <p>
+                  Visit aggregate and dedupe, report-card embed on SMS and
+                  email, tag catalog, inline SMS 1–5 parser, manual send, source
+                  attribution, client review history.
+                </p>
+                <div class="ids">
+                  <span class="id id-g">G-01</span
+                  ><span class="id id-g">G-02</span
+                  ><span class="id id-g">G-03</span
+                  ><span class="id id-g">G-04</span
+                  ><span class="id id-g">G-05</span
+                  ><span class="id id-g">G-06</span
+                  ><span class="id id-x">X-05</span
+                  ><span class="id id-x">X-06</span
+                  ><span class="id id-x">X-10</span
+                  ><span class="id id-x">X-12</span>
+                </div>
+              </div>
+              <div class="ph">
+                <div class="k">P2 · AMPLIFY &amp; RECOVER</div>
+                <div class="t">Convert and close the loop</div>
+                <p>
+                  place_id deep links, one primary channel with weighting and
+                  pacing, the single-nudge engine, escalation SLAs, recovery
+                  actions, resolution codes, incident linkage.
+                </p>
+                <div class="ids">
+                  <span class="id id-r">R-09</span
+                  ><span class="id id-r">R-10</span
+                  ><span class="id id-r">R-06</span
+                  ><span class="id id-r">R-07</span
+                  ><span class="id id-d">D-11</span
+                  ><span class="id id-d">D-14</span
+                  ><span class="id id-x">X-03</span
+                  ><span class="id id-x">X-04</span
+                  ><span class="id id-x">X-07</span
+                  ><span class="id id-x">X-09</span>
+                </div>
+              </div>
+              <div class="ph">
+                <div class="k">P3 · PUBLISH &amp; LEARN</div>
+                <div class="t">Compound the advantage</div>
+                <p>
+                  Showcase moderation with auto-curation and pet photos, Google
+                  Business Profile review sync, tag analytics, location
+                  drill-through, weekly digests, multi-language.
+                </p>
+                <div class="ids">
+                  <span class="id id-g">G-07</span
+                  ><span class="id id-r">R-04</span
+                  ><span class="id id-r">R-08</span
+                  ><span class="id id-d">D-09</span
+                  ><span class="id id-d">D-13</span
+                  ><span class="id id-x">X-11</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="box">
+              <div class="h">Sequencing note</div>
+              <p>
+                P1 depends on the <code>visit</code> aggregate, which depends on
+                nothing in P0 — those can run in parallel if there's capacity.
+                P2's nudge engine must land after P0's timing consolidation, or
+                you'll be merging two systems that are still being edited in
+                three places.
+              </p>
+            </div>
+          </section>
+
+          <!-- ================= 17 ================= -->
+          <section id="s17">
+            <h2><span class="num">17</span>QA matrix</h2>
+            <p class="lede">
+              Each row is a testable scenario tied to the finding it closes.
+            </p>
+
+            <div class="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="nowrap">ID</th>
+                    <th>Given / When</th>
+                    <th>Then</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="m">D-01</td>
+                    <td>Scope = "All locations", then switch to Plateau</td>
+                    <td>
+                      Every card on Overview and Performance recomputes;
+                      Locations remains network-wide and is labelled so
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">D-03</td>
+                    <td>
+                      A visit has 2 staff; client answers "who looked after
+                      Nala?"
+                    </td>
+                    <td>
+                      One response with one <code>attributed_staff_id</code>;
+                      Reviews column totals equal total responses; Mentions may
+                      exceed it
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">D-04</td>
+                    <td>Any staff row rendered</td>
+                    <td>
+                      <code>positive + neutral + negative == reviews</code> —
+                      assert in the query, fail loudly
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">D-05</td>
+                    <td>Escalation threshold changed from 3★ to 2★</td>
+                    <td>
+                      Detractor rate, negative counts and flagged totals all
+                      move together
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">D-07</td>
+                    <td>10 requests sent, 2 hard bounce, 5 respond</td>
+                    <td>
+                      Delivery rate 80%, response rate 62.5% (5/8), not 50%
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">D-11</td>
+                    <td>Worker is down for 5 days; nudge jobs backlog</td>
+                    <td>
+                      All expired jobs are dropped and logged; zero late sends
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">D-12</td>
+                    <td>
+                      Template contains 🐾 and <code>{{pet.names}}</code> =
+                      "Bartholomew &amp; Persephone"
+                    </td>
+                    <td>
+                      Counter shows UCS-2, worst-case expanded length, and
+                      correct segment count &gt; 1
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">R-01</td>
+                    <td>Search the entire settings surface</td>
+                    <td>
+                      No control exists that hides a public link based on rating
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">R-02</td>
+                    <td>Open Channel Manager</td>
+                    <td>
+                      Yelp is present, connected, display-only; solicitation
+                      toggle disabled with an explanation
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">R-05</td>
+                    <td>Visit closes at 20:40 local with a 1-hour delay</td>
+                    <td>
+                      Send defers to 09:00 next day; suppression log records
+                      <code>DEFERRED</code>, not a drop
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">R-05</td>
+                    <td>Client replies STOP</td>
+                    <td>
+                      All scheduled steps cancelled within one job cycle; future
+                      visits suppress at stage 1
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">X-03</td>
+                    <td>Client rates 5★ at T+3h, never clicks the link</td>
+                    <td>
+                      Exactly one nudge at T+48h; the sequence backup does not
+                      also fire
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">X-04</td>
+                    <td>
+                      Client left 2★ 10 days ago and had a visit 20 days ago
+                    </td>
+                    <td>
+                      <code>next_eligible_at</code> = the later of the two
+                      windows; profile displays it
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">X-05</td>
+                    <td>
+                      Boarding stay including a mid-stay groom, both closing
+                      today
+                    </td>
+                    <td>
+                      One visit, one request; suppression log shows
+                      <code>VISIT_DUPLICATE</code> for the second trigger
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">G-03</td>
+                    <td>
+                      Client replies "thanks!", then "5" ninety minutes later
+                    </td>
+                    <td>
+                      Rating captured — the interleaved message does not break
+                      detection (MoeGo fails this)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">G-03</td>
+                    <td>Client replies "5" seventy-five hours after send</td>
+                    <td>
+                      Expectation closed; a polite "that survey has closed"
+                      reply; no rating recorded
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">G-01</td>
+                    <td>Report card delivered by email</td>
+                    <td>
+                      Rating widget renders and submits (MoeGo supports SMS
+                      only)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">D-14</td>
+                    <td>Ticket opened Monday 16:00, unacknowledged</td>
+                    <td>
+                      Breach at Tuesday 12:00 by business-hours clock; escalates
+                      to location manager; aging badge appears
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">R-03</td>
+                    <td>Set a review to "Remove from booking page"</td>
+                    <td>
+                      Booking page updates; no claim or attempt to change
+                      anything on Google or Facebook
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="m">R-07</td>
+                    <td>
+                      Staff without <code>reputation.issue_credit</code> opens a
+                      ticket
+                    </td>
+                    <td>Credit action hidden; attempt via API returns 403</td>
+                  </tr>
+                  <tr>
+                    <td class="m">R-09</td>
+                    <td>400 visits close in one day at one location</td>
+                    <td>
+                      Public-link sends are capped and jittered across the
+                      window; overflow defers to the next day
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- ================= 18 ================= -->
+          <section id="s18">
+            <h2><span class="num">18</span>Open questions for product</h2>
+            <ol>
+              <li>
+                <strong>Default escalation threshold.</strong> 3★ or 4★? At 3★
+                the current data gives roughly 6% of responses escalating (~15
+                tickets per 247). At 4★ it's ~14% (~35 tickets). Pick based on
+                how much recovery capacity a facility actually has.
+              </li>
+              <li>
+                <strong>Showcase minimum.</strong> Only 5★ on the booking page,
+                or 4★ and up? An all-5★ wall reads as manufactured; 4★ and up is
+                more credible and roughly doubles the pool.
+              </li>
+              <li>
+                <strong>Retail-only visits.</strong> Ask for a review after a
+                retail purchase with no service? Default off is proposed;
+                confirm.
+              </li>
+              <li>
+                <strong>Staff visibility of negative feedback.</strong> Should a
+                groomer see their own 2★ reviews directly, or only through their
+                manager? This is an HR decision that determines the notification
+                scope enum.
+              </li>
+              <li>
+                <strong>Google review sync.</strong> Requires each location to
+                complete Business Profile OAuth. Who drives that onboarding —
+                support, or a self-serve prompt in Settings?
+              </li>
+              <li>
+                <strong>Re-invite after resolution.</strong> If a 1★ complaint
+                is resolved to the client's satisfaction, do we ask again after
+                the cooldown? It's the single highest-upside move in the flow
+                and also the highest-risk if the resolution was superficial.
+                Proposal: manual, assignee-initiated, one attempt.
+              </li>
+              <li>
+                <strong>Locations scope for non-network accounts.</strong>
+                Single-location facilities shouldn't see the Locations tab at
+                all — confirm it hides rather than showing a leaderboard of one.
+              </li>
+            </ol>
+          </section>
+
+          <footer>
+            Yipyy · Reputation Booster v2 build specification · Findings
+            D-01→D-15, R-01→R-10, X-01→X-12, G-01→G-07 · Baseline screens
+            captured 22 Aug 2026
+          </footer>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
