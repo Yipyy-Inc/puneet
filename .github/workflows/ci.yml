@@ -452,6 +452,29 @@ jobs:
           WORKOS_COOKIE_PASSWORD: ${{ secrets.WORKOS_COOKIE_PASSWORD }}
           NEXT_PUBLIC_WORKOS_REDIRECT_URI: http://localhost:3000/auth/callback
           NEXT_PUBLIC_APP_DOMAIN: yipyy.test
+          # ── PLACEHOLDERS, AND THEY MUST STAY PLACEHOLDERS ─────────────────
+          #
+          # `cloverConfig()` returns null when APP_ID or APP_SECRET is absent,
+          # and /clover then renders "Yipyy Pay is not available here" instead
+          # of the launch cards. `clover-connect.spec.ts` asserts those cards,
+          # so without these two it failed every night from the day it was
+          # added (2026-08-27) to 2026-08-31 — five consecutive nightlies,
+          # never once green. Its third test passed throughout, because it
+          # asserts only that something is ABSENT, which an error card
+          # satisfies. A spec can be red for a week without anybody reading it.
+          #
+          # Fake values are CORRECT here, not a shortcut. Every case in that
+          # file stops before Clover is contacted — signed out, or signed in
+          # administering nothing — so the credentials are never sent anywhere;
+          # only their PRESENCE is read. The specs that do reach Clover need a
+          # production identity and a deployed environment, cannot run in this
+          # job at all, and live in `clover.yml`.
+          #
+          # So do not replace these with real secrets to "make it more
+          # realistic": that would put live payment credentials on a public
+          # repository's runner to no test's benefit.
+          CLOVER_APP_ID: e2e-placeholder-app-id
+          CLOVER_APP_SECRET: e2e-placeholder-app-secret
         run: |
           bun run start --port 3000 > /tmp/server.log 2>&1 &
           for i in $(seq 1 60); do

@@ -389,13 +389,31 @@ claims the row.
 
 ## 8. Known red, and not yours
 
-The **nightly full e2e suite has failed on the same three `clover-connect`
-specs** on consecutive nights (2026-08-29 and 2026-08-30), on the signed-out
-Clover launch page. It predates the reputation work — verified by reading the
-earlier run, not assumed. Nobody has looked at it. It is failing where money
-lives, and it is the "a test nobody runs" shape AGENTS.md warns about.
+**FOUND AND FIXED, 2026-08-31.** The three `clover-connect` failures on the
+signed-out Clover launch page were not a defect in the application, and not
+flake. The e2e job's "Start the built server" step passes Supabase and WorkOS
+secrets but never passed `CLOVER_APP_ID`/`CLOVER_APP_SECRET`, so
+`cloverConfig()` returned null and /clover served "Yipyy Pay is not available
+here" — a page containing none of the three strings those specs assert. The fix
+is two placeholder values in `ci.yml`; every case in that file stops before
+Clover is contacted, so only their PRESENCE is ever read.
 
-The push gate (24 specs) is green; only the nightly full suite is red.
+**It had never passed.** The spec was added 2026-08-27 in the same commit that
+added it to the CI list, `CLOVER_APP_ID` has never once appeared in `ci.yml`,
+and the nightly was green on 2026-08-26 and red every night from 2026-08-27 to
+2026-08-31. Five consecutive nightlies, born red. The earlier note here said it
+"predates the reputation work", which was true and beside the point.
+
+Two things worth keeping from it. **An absence-only assertion passes on an error
+page**: the fourth test in that file — `toHaveCount(0)` on an injected `img` —
+was green throughout, so the file read as "mostly working" while the page under
+it never rendered. When three tests fail and the one asserting nothing-is-there
+passes, suspect the page, not the three. And **a spec that has never been green
+is not a regression to bisect** — check whether it ever passed before looking
+for what broke it.
+
+The push gate (24 specs) was green throughout, because `clover-connect` is not
+in it — it runs only nightly, which is why this stayed invisible for five days.
 
 **`bun run prune` (Knip) exits 1 on a clean tree** — 180 unused files, measured
 2026-08-31 on `main` with nothing of your own in the working directory. It is
