@@ -79,6 +79,7 @@ E2E_BASE_URL=http://localhost:3000 bun run test:e2e:ci
 | Read this                                                                        | For tasks about                                                                                            |
 | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | [CLAUDE.md](CLAUDE.md)                                                           | Architecture, build-performance rules, data-fetching/forms patterns, code style — the authoritative manual |
+| [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md)                                   | **Start here after a break** — machine setup, what is actually done, and the traps                         |
 | [docs/architecture/overview.md](docs/architecture/overview.md)                   | How the system fits together; where routes/components/logic/state/data live; known deviations              |
 | [docs/conventions/code-style.md](docs/conventions/code-style.md)                 | Detected conventions vs. target conventions for new code                                                   |
 | [docs/quality/debt-map.md](docs/quality/debt-map.md)                             | Known landmines, fragile areas, risk zones — read before touching them                                     |
