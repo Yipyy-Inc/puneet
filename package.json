@@ -46,6 +46,7 @@
     "check:migration-versions": "bun scripts/check-migration-versions.ts",
     "check:automation-triggers": "bun scripts/check-automation-triggers.ts",
     "check:no-review-gating": "bun scripts/check-review-gating.ts",
+    "check:vendor-strings": "bun scripts/check-vendor-strings.ts",
     "measure:migration-drift": "bun scripts/measure-migration-drift.ts",
     "check:doc-counts": "bun scripts/check-doc-counts.ts",
     "shoot": "bun scripts/shoot.ts"

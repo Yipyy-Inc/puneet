@@ -23,8 +23,8 @@ const ACTION_LABEL: Record<IVRAction, string> = {
   route_operator: "Route to operator",
 };
 
-// Browser text-to-speech — stands in for the Twilio TTS that renders prompts
-// in production. Plays the audio in the browser so staff can hear it.
+// Browser text-to-speech — stands in for the speech synthesis that renders
+// prompts on a real call. Plays the audio in the browser so staff can hear it.
 function speak(text: string, onEnd?: () => void) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
@@ -106,8 +106,9 @@ export function IVRPreview({
               IVR Preview
             </DialogTitle>
             <DialogDescription>
-              Read-only simulation — nothing is saved. Audio uses your
-              browser&apos;s text-to-speech (Twilio TTS in production).
+              Read-only preview — nothing is saved. Audio uses your
+              browser&apos;s text-to-speech, so callers will hear a different
+              voice.
             </DialogDescription>
           </DialogHeader>
 

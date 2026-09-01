@@ -1176,8 +1176,11 @@ export function CallingWorkspace({
     );
   };
 
-  // Shared: POST to Twilio outbound (to=number, from=businessNumber) and open
-  // the active call panel. Mocked here — this is the integration point.
+  // Opens the active-call panel and nothing else. It is named like the real
+  // helper in src/lib/twilio-dialer.ts and shadows it inside this file, which is
+  // how it came to claim in a toast that it had placed a call. It has never made
+  // a network request. The provider adapter is where the real one lands; until
+  // then this stays local and says what it is.
   const placeOutboundCall = (opts: {
     id: string;
     number: string;
@@ -1197,8 +1200,11 @@ export function CallingWorkspace({
       isRecording: defaultCallingSettings.autoRecord,
     });
     setCallMinimized(false);
-    toast.success(`Calling ${opts.clientName ?? opts.number} back…`, {
-      description: "Outbound call placed via Twilio.",
+    // Not "placed" — nothing here dials. This opens the panel and nothing
+    // else; the real outbound path arrives with the provider adapter. Saying so
+    // is what check:success-claims exists to enforce.
+    toast.success(`Opening a call with ${opts.clientName ?? opts.number}`, {
+      description: "Calling is not connected yet, so no call was placed.",
     });
   };
 

@@ -1040,53 +1040,6 @@ export const serviceNotificationDefaults: ServiceNotificationDefault[] = [
 
 export const integrations: Integration[] = [
   {
-    id: "int-001",
-    name: "Twilio SMS",
-    category: "communication",
-    isEnabled: true,
-    config: {
-      accountSid: "AC*********************",
-      authToken: "*********************",
-      phoneNumber: "+1234567890",
-    },
-  },
-  {
-    id: "int-002",
-    name: "SendGrid Email",
-    category: "communication",
-    isEnabled: true,
-    config: {
-      apiKey: "SG.*********************",
-      fromEmail: "noreply@pawcare.com",
-      fromName: "PawCare Facility",
-    },
-  },
-  {
-    id: "int-003",
-    name: "SMTP Email",
-    category: "communication",
-    isEnabled: false,
-    config: {
-      host: "smtp.gmail.com",
-      port: 587,
-      username: "",
-      password: "",
-      secure: true,
-    },
-  },
-  {
-    id: "int-004",
-    name: "Twilio VOIP",
-    category: "phone",
-    isEnabled: true,
-    config: {
-      accountSid: "AC*********************",
-      authToken: "*********************",
-      phoneNumber: "+1234567890",
-      recordCalls: true,
-    },
-  },
-  {
     id: "int-005",
     name: "QuickBooks Online",
     category: "accounting",
