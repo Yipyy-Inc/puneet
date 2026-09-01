@@ -4,7 +4,6 @@ import type {
   VoicemailGreeting,
   AICallSummary,
   CallingSettings,
-  CallAnalytics,
   MissedCallTask,
   CallRoutingRule,
   CallTag,
@@ -323,89 +322,6 @@ export const defaultCallingSettings: CallingSettings = {
     saturday: { open: "08:00", close: "18:00", enabled: true },
     sunday: { open: "08:00", close: "18:00", enabled: true },
   },
-};
-
-// ============================================================
-// Analytics
-// ============================================================
-
-export const callAnalytics: CallAnalytics = {
-  period: "Last 30 days",
-  totalCalls: 347,
-  missedCalls: 28,
-  avgAnswerTime: 12,
-  conversionRate: 34,
-  revenueFromCalls: 8420,
-  avgCallDuration: 186,
-  abandonedCalls: 14,
-  repeatCallers: 89,
-  leadConversionRate: 22,
-  hourlyVolume: [
-    { hour: 0, calls: 0 },
-    { hour: 1, calls: 0 },
-    { hour: 2, calls: 0 },
-    { hour: 3, calls: 0 },
-    { hour: 4, calls: 0 },
-    { hour: 5, calls: 0 },
-    { hour: 6, calls: 1 },
-    { hour: 7, calls: 8 },
-    { hour: 8, calls: 22 },
-    { hour: 9, calls: 38 },
-    { hour: 10, calls: 45 },
-    { hour: 11, calls: 41 },
-    { hour: 12, calls: 29 },
-    { hour: 13, calls: 33 },
-    { hour: 14, calls: 37 },
-    { hour: 15, calls: 44 },
-    { hour: 16, calls: 52 },
-    { hour: 17, calls: 48 },
-    { hour: 18, calls: 36 },
-    { hour: 19, calls: 18 },
-    { hour: 20, calls: 7 },
-    { hour: 21, calls: 2 },
-    { hour: 22, calls: 0 },
-    { hour: 23, calls: 0 },
-  ],
-  staffPerformance: [
-    {
-      name: "Sarah M.",
-      callsHandled: 98,
-      avgResponseTime: 9,
-      missedCalls: 4,
-      conversionRate: 38,
-    },
-    {
-      name: "James K.",
-      callsHandled: 87,
-      avgResponseTime: 14,
-      missedCalls: 8,
-      conversionRate: 29,
-    },
-    {
-      name: "Priya N.",
-      callsHandled: 104,
-      avgResponseTime: 11,
-      missedCalls: 5,
-      conversionRate: 41,
-    },
-    {
-      name: "Tom B.",
-      callsHandled: 58,
-      avgResponseTime: 18,
-      missedCalls: 11,
-      conversionRate: 24,
-    },
-  ],
-  topCallReasons: [
-    { reason: "Boarding inquiry", count: 92 },
-    { reason: "Grooming appointment", count: 78 },
-    { reason: "Vaccination questions", count: 44 },
-    { reason: "Pricing & rates", count: 38 },
-    { reason: "Pickup / drop-off times", count: 31 },
-    { reason: "Daycare availability", count: 29 },
-    { reason: "Billing dispute", count: 14 },
-    { reason: "Lost & found / emergency", count: 8 },
-  ],
 };
 
 // ============================================================

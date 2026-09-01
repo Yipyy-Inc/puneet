@@ -14,6 +14,11 @@ import {
   BarChart3,
   Hash,
   CalendarClock,
+  TrendingUp,
+  PhoneMissed,
+  Repeat,
+  Flag,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
@@ -148,37 +153,62 @@ export function CallMetricsOverview({
 
   const ivrMax = m.byIvrOption[0]?.count ?? 1;
 
+  const header = (
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-bold">Call Metrics</h2>
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          Live from the call log · {PERIOD_LABEL[dateRange]} ·{" "}
+          <span className="text-foreground font-medium">{m.total}</span> call
+          {m.total === 1 ? "" : "s"}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {isMultiLocation && (
+          <LocationScopePicker
+            locations={locations}
+            value={locationFilter}
+            onChange={setLocationFilter}
+            compact
+          />
+        )}
+        <DateRangeFilter
+          value={dateRange}
+          onChange={setDateRange}
+          customFrom={customFrom}
+          onCustomFrom={setCustomFrom}
+          customTo={customTo}
+          onCustomTo={setCustomTo}
+        />
+      </div>
+    </div>
+  );
+
+  // A grid of zeros and empty charts is indistinguishable from a facility that
+  // took no calls and one whose calls are not reaching this screen. Say which.
+  if (m.total === 0) {
+    return (
+      <div className="space-y-5">
+        {header}
+        <Card>
+          <CardContent className="py-16 text-center">
+            <Phone className="text-muted-foreground/30 mx-auto mb-4 size-10" />
+            <p className="font-medium">
+              No calls in {PERIOD_LABEL[dateRange].toLowerCase()}
+            </p>
+            <p className="text-muted-foreground mx-auto mt-1 max-w-sm text-sm">
+              Widen the date range to see earlier activity. Metrics appear here
+              as soon as calls land in the log.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      {/* Header + filters */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold">Call Metrics</h2>
-          <p className="text-muted-foreground mt-0.5 text-sm">
-            Live from the call log · {PERIOD_LABEL[dateRange]} ·{" "}
-            <span className="text-foreground font-medium">{m.total}</span> call
-            {m.total === 1 ? "" : "s"}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {isMultiLocation && (
-            <LocationScopePicker
-              locations={locations}
-              value={locationFilter}
-              onChange={setLocationFilter}
-              compact
-            />
-          )}
-          <DateRangeFilter
-            value={dateRange}
-            onChange={setDateRange}
-            customFrom={customFrom}
-            onCustomFrom={setCustomFrom}
-            customTo={customTo}
-            onCustomTo={setCustomTo}
-          />
-        </div>
-      </div>
+      {header}
 
       {/* Headline business metric: missed-call recovery rate + weekly trend */}
       <MissedCallRecovery
@@ -243,6 +273,45 @@ export function CallMetricsOverview({
           hint={`${m.sentimentSamples} call${m.sentimentSamples === 1 ? "" : "s"} analyzed`}
           icon={Smile}
           tone={sentimentTone}
+        />
+        <KpiTile
+          label="Call → Booking"
+          value={`${Math.round(m.conversionRate)}%`}
+          hint={`${m.bookingsCreated} booked · ${Math.round(m.leadConversionRate)}% of inbound`}
+          icon={TrendingUp}
+          tone="emerald"
+        />
+        <KpiTile
+          label="Abandoned Calls"
+          value={m.abandoned}
+          hint="Waited in the queue, then hung up"
+          icon={PhoneMissed}
+          tone={m.abandoned > 0 ? "amber" : "slate"}
+        />
+        <KpiTile
+          label="Repeat Callers"
+          value={m.repeatCallers}
+          hint="Known clients who called more than once"
+          icon={Repeat}
+          tone="violet"
+        />
+        <KpiTile
+          label="Flagged for Review"
+          value={m.flaggedRecordings}
+          hint="Recordings awaiting a listen"
+          icon={Flag}
+          tone={m.flaggedRecordings > 0 ? "amber" : "slate"}
+        />
+        {/* Revenue attribution needs a call record joined to a booking, and no
+            call is stored yet. This tile showed bookings × a $75 constant that
+            existed nowhere but this file. An em-dash says "not measured"; $0
+            would have read as a measurement, and the old number read as one. */}
+        <KpiTile
+          label="Revenue from Calls"
+          value="—"
+          hint="Attribution arrives with call records"
+          icon={DollarSign}
+          tone="slate"
         />
       </div>
 
