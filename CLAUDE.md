@@ -43,8 +43,8 @@ Always use **bun** as the package manager (not npm, yarn, or pnpm).
     and CI is now what stands between a push and production.
   - **The pipeline gates the deploy, since 2026-08-25.** Vercel used to deploy
     from `main` on push, so CI reported after customers had the code. Now the
-    container image is built only once typecheck, lint, format, checks, sql and
-    build have passed, and the deploy job SSHes to the VPS and swaps colours
+    container image is built only once typecheck, lint, format, unit, checks,
+    sql and build have passed, and the deploy job SSHes to the VPS and swaps colours
     with a graceful `caddy reload` — nobody mid-request is interrupted,
     including somebody 90 seconds into tapping a card.
     **Do not infer the deploy from the push.** That lesson outlived its cause:
@@ -63,7 +63,7 @@ Always use **bun** as the package manager (not npm, yarn, or pnpm).
     finished. `bun run check:doc-counts` derives both numbers from package.json
     and fails if either drifts.
     CI still runs it, but only after the deploy is live — and the e2e job is
-    not one of the four required checks, so it reports rather than gates.
+    not in `image`'s `needs:`, so it reports rather than gates.
 - Use the `DataTable` component for all tables — additions to DataTable must not break existing implementations
 - Plan before coding — outline approach before implementing
 
