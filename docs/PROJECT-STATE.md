@@ -236,12 +236,42 @@ review are gone. `bun run check:no-review-gating` keeps it that way.
 - **The Ask-for-a-review dialog has never been rendered.** It is typechecked and
   its route is proven end to end, but nobody has looked at the screen.
 
-### The last fixture standing
+### The last fixture is gone, and it was doing two things wrong
 
-`src/data/reputation.ts` (829 lines) survives for exactly ONE import:
-`reputationSettings` in
-`src/components/customer/report-cards/report-card-rating.tsx`. Nothing else in
-the product reads it, and that widget is the G-01 surface above.
+`src/data/reputation.ts` (829 lines) survived for exactly ONE import —
+`reputationSettings` in `report-card-rating.tsx`, the G-01 surface above. It was
+deleted on 2026-08-31 along with the block that read it, because reading that
+block closely showed it was not merely unconverted:
+
+- **It gated reviews.** The "Share on Google" button rendered only when
+  `stars >= reputationSettings.happyThreshold` (4), so the public link was shown
+  to happy clients and withheld from unhappy ones. That is the practice
+  `check:no-review-gating` exists to prevent, that Google's policies prohibit,
+  and that the FTC's Rule on Consumer Reviews (16 CFR Part 465) prohibits.
+- **It sent every facility's clients to one hardcoded demo profile** —
+  `https://g.page/r/yipyy-mtl/review` — rather than their own `review_channels`
+  row.
+
+**The guard passed the whole time**, and that is the transferable part. Every
+rule in it matched an IDENTIFIER (`feedbackRouting`, `"gated"`,
+`gate*Public*`), and this gate used none — just a comparison. A check that names
+the thing it forbids only catches the version that keeps the name. It now has a
+second, structural rule: a rating compared against a threshold and chained by
+`&&` into a public-link affordance. Verified both ways on 2026-08-31 — clean on
+the fixed tree, and exit 1 when the original expression is reintroduced verbatim.
+
+A rating that chooses COPY stays legal, deliberately: the survey's
+`isLow ? escalatedTitle : sharedTitle` is correct, because `<PublicButtons>`
+renders either way.
+
+Severity was bounded by luck rather than design: `report_cards` holds 0 rows, so
+nothing could reach the widget. It was live code on a customer-facing screen.
+
+Bringing a share prompt back to the report card needs a `SECURITY DEFINER`
+projection of `review_channels` for a signed-in client — the pattern in
+`lib/api/published-reviews.ts` — because RLS scopes that table to staff
+(`member_facility_ids()`), and a customer is not a member. That is G-01, still
+blocked on report cards actually sending.
 
 The whole localStorage half — the 30-second tick, the trigger engine, a
 duplicate template system, and a generator that pushed fixture escalation tasks

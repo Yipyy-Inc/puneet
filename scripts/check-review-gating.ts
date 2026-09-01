@@ -24,6 +24,23 @@
  * property of the source, not of a rendered page — and it has to survive the
  * rewrite of every screen it currently applies to.
  *
+ * ── WHY NAMES ARE NOT ENOUGH (added 2026-08-31) ───────────────────────────
+ *
+ * Every rule above matches an IDENTIFIER, and gating does not need one.
+ * `report-card-rating.tsx` hid its "Share on Google" button behind
+ * `stars >= reputationSettings.happyThreshold` and tripped none of them: no
+ * banned name appears, only a comparison. It shipped that way from the day the
+ * name-based rules were written, and this check reported clean throughout.
+ *
+ * So there is a second, STRUCTURAL rule: a rating compared against a threshold
+ * must not be chained into the rendering of a public review link.
+ *
+ * It deliberately does not fire on a rating that chooses COPY. The survey's
+ * `isLow ? S.escalatedTitle : S.sharedTitle` is correct and must stay legal —
+ * what matters is that `<PublicButtons>` renders either way. The rule looks
+ * for a comparison joined by `&&` to a public-link affordance, which is the
+ * shape of a guard rather than a choice between two strings.
+ *
  * Exits 0 clean, 1 on a reintroduction.
  */
 
@@ -89,6 +106,45 @@ interface Finding {
   why: string;
 }
 
+/** A rating being compared to something — the left half of a gate. */
+const RATING_COMPARISON =
+  /\b(?:stars|rating|ratingStars|ratingValue|score)\b\s*(?:>=|>|<=|<)\s*[^;\n]{1,80}/;
+
+/**
+ * A control that takes somebody to a public review page. If one of these is
+ * reached only when the comparison above is true, that is gating.
+ */
+const PUBLIC_LINK_AFFORDANCE =
+  /shareTarget|profile_url|profileUrl|reviewClickHref|PLATFORM_META|PLATFORM_LABELS|PublicButtons|publicReviewUrl|Share on /;
+
+/**
+ * Flags `rating >= threshold && <public link>`, across up to four lines so a
+ * Prettier-wrapped JSX condition is still read as one expression. A comparison
+ * with no `&&` is choosing copy, not guarding a render, and is left alone —
+ * `isLow ? escalatedTitle : sharedTitle` decides wording, and the survey's
+ * public buttons render either way.
+ */
+function structuralGating(code: string, file: string): Finding[] {
+  if (!file.endsWith(".tsx")) return [];
+  const lines = code.split("\n");
+  const out: Finding[] = [];
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!RATING_COMPARISON.test(line)) continue;
+    if (!line.includes("&&")) continue;
+    if (!PUBLIC_LINK_AFFORDANCE.test(lines.slice(i, i + 4).join("\n")))
+      continue;
+
+    out.push({
+      file: file.replace(/\\/g, "/"),
+      line: i + 1,
+      match: line.trim().slice(0, 72),
+      why: "a rating comparison gating the render of a public review link",
+    });
+  }
+  return out;
+}
 const findings: Finding[] = [];
 
 for (const file of walk(ROOT)) {
@@ -107,6 +163,8 @@ for (const file of walk(ROOT)) {
       });
     }
   }
+
+  findings.push(...structuralGating(code, file));
 }
 
 console.log(

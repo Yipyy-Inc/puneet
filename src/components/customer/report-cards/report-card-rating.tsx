@@ -8,28 +8,29 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { ReportCard } from "@/types/report-card";
 import { rateReportCard } from "@/lib/api/report-cards";
-import { reputationSettings } from "@/data/reputation";
 
-const PLATFORM_LABELS: Record<string, string> = {
-  google: "Google",
-  facebook: "Facebook",
-  yelp: "Yelp",
-  nextdoor: "Nextdoor",
-  tripadvisor: "Tripadvisor",
-};
-
-/** Highest-priority enabled public review platform, or null if none configured. */
-function topSharePlatform(): { key: string; url: string } | null {
-  if (!reputationSettings.enabled) return null;
-  for (const key of reputationSettings.platformOrder ?? []) {
-    const p =
-      reputationSettings.reviewPlatforms[
-        key as keyof typeof reputationSettings.reviewPlatforms
-      ];
-    if (p?.enabled && p.url) return { key, url: p.url };
-  }
-  return null;
-}
+// ── WHY THERE IS NO "SHARE THIS PUBLICLY" PROMPT HERE ─────────────────────
+//
+// There was one until 2026-08-31, and it did two things wrong.
+//
+// It rendered only when `stars >= happyThreshold`, so the public review link
+// was shown to happy clients and withheld from unhappy ones. That is review
+// gating: Google's review policies prohibit it and the FTC's Rule on Consumer
+// Reviews (16 CFR Part 465) prohibits suppressing negative reviews. The rating
+// decides what happens INTERNALLY — a recovery ticket, a manager alert — never
+// whether the public option appears.
+//
+// And its link came from `src/data/reputation.ts`, a fixture, so every
+// facility's clients were sent to one hardcoded demo profile rather than their
+// own `review_channels` row.
+//
+// The honest surface for this is `/review/<token>`, which reads real channels,
+// routes every click through `/api/review/[token]/click` (which re-checks
+// enabled and solicitable), and shows the public option to everybody. Bringing
+// a share prompt back HERE needs a SECURITY DEFINER projection of
+// `review_channels` for a signed-in client — the pattern in
+// `lib/api/published-reviews.ts` — because RLS scopes that table to staff. It
+// is G-01 in the v2 spec and is blocked on report cards actually sending.
 
 export function ReportCardRating({
   reportCard,
@@ -48,8 +49,6 @@ export function ReportCardRating({
   const [comment, setComment] = useState(reportCard.ratingComment ?? "");
   const [submitted, setSubmitted] = useState(alreadyRated);
   const [saving, setSaving] = useState(false);
-
-  const shareTarget = topSharePlatform();
 
   const handleSubmit = async () => {
     if (stars < 1 || saving) return;
@@ -124,29 +123,6 @@ export function ReportCardRating({
           Thanks! Your {stars}-star rating was sent to {facilityName}.
         </p>
       )}
-
-      {/* External-share prompt for happy ratings, when a platform is configured */}
-      {submitted &&
-        stars >= reputationSettings.happyThreshold &&
-        shareTarget && (
-          <div className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
-            <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-              Loved {petName}&apos;s visit? Share it!
-            </p>
-            <p className="text-xs text-amber-900/80 dark:text-amber-200/80">
-              A quick public review helps {facilityName} a lot.
-            </p>
-            <Button
-              size="sm"
-              className="mt-2"
-              onClick={() =>
-                window.open(shareTarget.url, "_blank", "noopener,noreferrer")
-              }
-            >
-              Share on {PLATFORM_LABELS[shareTarget.key] ?? shareTarget.key}
-            </Button>
-          </div>
-        )}
     </div>
   );
 }
