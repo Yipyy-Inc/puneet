@@ -40,6 +40,10 @@ import "server-only";
 // ============================================================================
 
 import { toE164 } from "@/lib/phone/format";
+import {
+  describeProviderError,
+  parseProviderErrorCode,
+} from "@/lib/calling/provider-errors";
 import { platformSendingNumber, platformTwilio } from "@/lib/twilio/config";
 
 export interface DeliveryResult {
@@ -233,11 +237,20 @@ export async function sendSms(message: SmsMessage): Promise<DeliveryResult> {
     );
 
     if (!response.ok) {
-      const detail = await response.text().catch(() => "");
+      const body = await response.text().catch(() => "");
+      const code = parseProviderErrorCode(body);
+      // The status code goes to the log, where somebody who can look it up will
+      // see it. The ROW gets a sentence, because `detail` is what a
+      // receptionist reads — and "SMS service said 400" is the same message
+      // whether the customer replied STOP, the number has a digit missing, or
+      // the campaign was never registered.
       console.warn(
-        `[messaging] sms -> ${response.status} ${detail}`.slice(0, 300),
+        `[messaging] sms -> ${response.status} code=${code ?? "?"} ${body}`.slice(
+          0,
+          300,
+        ),
       );
-      return { sent: false, detail: `SMS service said ${response.status}` };
+      return { sent: false, detail: describeProviderError(code) };
     }
 
     const body = (await response.json().catch(() => null)) as {

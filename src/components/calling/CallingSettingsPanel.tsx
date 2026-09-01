@@ -258,7 +258,6 @@ const SECTIONS: {
     value: (s) => ({
       missedCallAutoSMS: s.missedCallAutoSMS,
       missedCallSMSTemplate: s.missedCallSMSTemplate,
-      tags: s.tags,
     }),
   },
 ];

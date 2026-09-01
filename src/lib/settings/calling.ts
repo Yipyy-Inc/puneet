@@ -1,8 +1,11 @@
 import { z } from "zod";
 
+import { callTags as seedCallTags } from "@/data/calling";
+import { MAX_CALL_TAGS } from "@/lib/calling/call-tags";
 import {
   callForwardingModeEnum,
   callHandlingEnum,
+  callTagSchema,
   dispatchModeEnum,
   ringToneEnum,
 } from "@/types/calling";
@@ -173,14 +176,6 @@ export const NO_CALL_RECORDING: CallingRecording = {
 export const callingFollowUpSchema = z.object({
   missedCallAutoSMS: z.boolean(),
   missedCallSMSTemplate: z.string().max(1600),
-  /**
-   * The facility's own call tags.
-   *
-   * They lived in React context — created, renamed and deleted in one browser
-   * tab and gone on reload, invisible to a colleague. They are a facility's
-   * vocabulary for its own calls, so they belong on the facility.
-   */
-  tags: z.array(z.string().min(1).max(40)).max(60),
 });
 export type CallingFollowUp = z.infer<typeof callingFollowUpSchema>;
 
@@ -199,5 +194,47 @@ export const NO_CALL_FOLLOW_UP: CallingFollowUp = {
   missedCallAutoSMS: false,
   missedCallSMSTemplate:
     "Hi {{name}}, sorry we missed your call! How can we help? Reply here and we'll get back to you.",
-  tags: [],
 };
+
+// ── THE FACILITY'S OWN CALL TAGS ──────────────────────────────────────────
+
+/**
+ * A separate domain from `calling_follow_up`, and the roadmap said otherwise.
+ *
+ * The reason is how they are EDITED. Every other control on the settings panel
+ * is staged in a draft and written by one Save button; the tag list saves the
+ * moment somebody adds, renames or deletes a row, because that is what an
+ * editable list is. Sharing a row would mean a rename racing a Save — one of
+ * them writing the whole object from a draft that predates the other.
+ *
+ * The same reasoning that keeps `daycare_config` and `boarding_config` apart.
+ */
+export const callingTagsSchema = z
+  .array(callTagSchema)
+  .max(MAX_CALL_TAGS)
+  .superRefine((tags, ctx) => {
+    // Ids address a tag from `callLog.tags`, so a duplicate makes an existing
+    // call point at two different things.
+    const seen = new Set<string>();
+    for (const tag of tags) {
+      if (seen.has(tag.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate tag id: ${tag.id}`,
+        });
+      }
+      seen.add(tag.id);
+    }
+  });
+export type CallingTags = z.infer<typeof callingTagsSchema>;
+
+/**
+ * The eight tags the fixture ships, as the documented starting vocabulary.
+ *
+ * NOT the NO_TAX treatment, and the difference is worth stating: an empty list
+ * costs a facility the ability to categorise a call until somebody invents a
+ * taxonomy, and a wrong tag charges nobody and breaks no law. The starting set
+ * is a convenience with no downside, which is exactly when copying the fixture
+ * is the right answer — see DEFAULT_HOURS in domains.ts, which does the same.
+ */
+export const DEFAULT_CALL_TAGS: CallingTags = seedCallTags;
