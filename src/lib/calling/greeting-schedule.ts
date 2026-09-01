@@ -1,4 +1,4 @@
-import type { CallingSettings } from "@/types/calling";
+import type { BusinessHours } from "@/types/facility";
 
 /** Greeting profile the schedule should activate at a given moment. */
 export type ScheduledGreetingType = "default" | "after_hours" | "holiday";
@@ -29,17 +29,17 @@ function localDateKey(d: Date): string {
  */
 export function computeScheduledGreeting(
   now: Date,
-  businessHours: CallingSettings["businessHours"],
+  businessHours: BusinessHours,
   holidays: { date: string }[],
 ): ScheduledGreetingType {
   if (holidays.some((h) => h.date === localDateKey(now))) return "holiday";
 
   const day = businessHours[DAY_KEYS[now.getDay()]];
-  if (!day?.enabled) return "after_hours";
+  if (!day?.isOpen) return "after_hours";
 
   const minutesNow = now.getHours() * 60 + now.getMinutes();
-  const [openH, openM] = day.open.split(":").map(Number);
-  const [closeH, closeM] = day.close.split(":").map(Number);
+  const [openH, openM] = day.openTime.split(":").map(Number);
+  const [closeH, closeM] = day.closeTime.split(":").map(Number);
   if (minutesNow < openH * 60 + openM || minutesNow >= closeH * 60 + closeM) {
     return "after_hours";
   }

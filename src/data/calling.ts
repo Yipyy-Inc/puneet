@@ -312,6 +312,7 @@ export const defaultCallingSettings: CallingSettings = {
   missedCallAutoSMS: true,
   missedCallSMSTemplate:
     "Hi {{name}}, sorry we missed your call at Yipyy! How can we help? Reply here or call us back at (514) 555-0100.",
+  tags: [],
   businessNumber: "+1 (514) 555-0100",
   businessHours: {
     monday: { open: "07:00", close: "19:00", enabled: true },

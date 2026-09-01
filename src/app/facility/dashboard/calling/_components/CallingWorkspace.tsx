@@ -81,7 +81,6 @@ import {
   callQueue,
   ivrConfig,
   voicemailGreetings,
-  defaultCallingSettings,
   missedCallTasks,
   callRoutingRules,
 } from "@/data/calling";
@@ -91,6 +90,7 @@ import {
   isUnworkedMissedTask,
 } from "@/lib/calling/call-metrics";
 import type { CallingSystemStatus } from "@/lib/calling/system-status";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
 import type { ActiveCall, MissedCallTask } from "@/types/calling";
 import { toast } from "sonner";
 import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
@@ -912,6 +912,14 @@ export function CallingWorkspace({
     }),
   );
   const [tab, setTab] = useState(initialTab);
+
+  // The facility's own answers, not the fixture's. `autoRecord` in particular:
+  // the fixture shipped it TRUE, so every facility's outbound call opened with
+  // the recording indicator lit whether or not anybody had chosen to record.
+  const { settings: facilitySettings } = useFacilitySettings();
+  const callingNumber =
+    facilitySettings.calling_number_prefs.value.businessNumber;
+  const recordingPrefs = facilitySettings.calling_recording.value;
   // Unanswered-call worklist, stateful so Call Back / Mark as handled update it.
   const [missedTasks, setMissedTasks] = useState(missedCallTasks);
 
@@ -1206,13 +1214,13 @@ export function CallingWorkspace({
       id: opts.id,
       type: "outbound",
       from: opts.number,
-      to: defaultCallingSettings.businessNumber,
+      to: callingNumber,
       clientId: opts.clientId,
       clientName: opts.clientName,
       startTime: new Date().toISOString(),
       status: "active",
       isMuted: false,
-      isRecording: defaultCallingSettings.autoRecord,
+      isRecording: recordingPrefs.autoRecord,
     });
     setCallMinimized(false);
     // Not "placed" — nothing here dials. This opens the panel and nothing
@@ -1839,7 +1847,7 @@ export function CallingWorkspace({
 
           {/* Settings */}
           <TabsContent value="settings">
-            <CallingSettingsPanel settings={defaultCallingSettings} />
+            <CallingSettingsPanel />
           </TabsContent>
         </Tabs>
       </div>
