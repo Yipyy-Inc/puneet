@@ -1,3 +1,5 @@
+import { callingSystemStatus } from "@/lib/calling/system-status";
+
 import { CallingWorkspace } from "./_components/CallingWorkspace";
 
 // ============================================================================
@@ -49,5 +51,10 @@ export default async function CallingPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  return <CallingWorkspace initialTab={resolveTab(params.tab)} />;
+  return (
+    <CallingWorkspace
+      initialTab={resolveTab(params.tab)}
+      systemStatus={callingSystemStatus()}
+    />
+  );
 }

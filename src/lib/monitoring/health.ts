@@ -5,6 +5,9 @@
 import os from "node:os";
 import v8 from "node:v8";
 
+import { callingSystemStatus } from "@/lib/calling/system-status";
+import { platformTwilio, webhooksAreReachable } from "@/lib/twilio/config";
+
 import type { HealthComponent, HealthResponse, HealthStatus } from "./types";
 
 function fmtUptime(s: number): string {
@@ -137,6 +140,28 @@ export async function runHealthChecks(): Promise<HealthResponse> {
     memoryPercent: null,
     metrics: [
       { label: "API key", value: aiConfigured ? "Configured" : "Not set" },
+    ],
+  });
+
+  // --- Telephony: real config check, shared with the Calling module's tile ---
+  // Same determination, one place. The facility-facing card and this page must
+  // not be able to disagree about whether the phone system works.
+  const telephony = callingSystemStatus();
+  components.push({
+    id: "telephony",
+    name: "Telephony",
+    category: "infrastructure",
+    status: telephony.state,
+    detail: telephony.detail,
+    latencyMs: null,
+    cpuPercent: null,
+    memoryPercent: null,
+    metrics: [
+      { label: "Provider", value: platformTwilio() ? "Configured" : "Not set" },
+      {
+        label: "Inbound webhooks",
+        value: webhooksAreReachable() ? "Reachable" : "Not reachable",
+      },
     ],
   });
 
