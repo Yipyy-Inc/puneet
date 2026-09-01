@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,8 @@ interface Draft {
 const EMPTY_DRAFT: Draft = { name: "", color: "blue", description: "" };
 
 export function CallTagsSettings() {
-  const { tags, canAddMore, addTag, updateTag, removeTag } = useCallTags();
+  const { tags, canAddMore, isPending, addTag, updateTag, removeTag } =
+    useCallTags();
   // null = list view; "new" = adding; otherwise the tag id being edited.
   const [mode, setMode] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
@@ -46,7 +48,11 @@ export function CallTagsSettings() {
   };
   const cancel = () => setMode(null);
 
-  const save = () => {
+  // Every write is awaited and its failure surfaced. RLS refuses this row for
+  // anyone without `settings_general`, and the previous version could not have
+  // told anyone: the mutators returned void, so a refusal removed the tag from
+  // the screen and left it in the database.
+  const save = async () => {
     const name = draft.name.trim();
     if (!name) return;
     const payload = {
@@ -54,10 +60,43 @@ export function CallTagsSettings() {
       color: draft.color,
       description: draft.description.trim() || undefined,
     };
-    if (mode === "new") addTag(payload);
-    else if (mode) updateTag(mode, payload);
+    const editing = mode;
     setMode(null);
+    try {
+      if (editing === "new") await addTag(payload);
+      else if (editing) await updateTag(editing, payload);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "The tag could not be saved",
+      );
+    }
   };
+
+  const remove = async (id: string) => {
+    try {
+      await removeTag(id);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "The tag could not be deleted",
+      );
+    }
+  };
+
+  // Showing the eight shipped tags while the facility's own list is in flight,
+  // and allowing a write, would save the defaults over whatever they have. Same
+  // trap as the settings panel, same answer.
+  if (isPending) {
+    return (
+      <Card>
+        <CardContent className="py-10">
+          <div
+            data-slot="skeleton"
+            className="bg-muted h-4 w-40 animate-pulse rounded-sm"
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -122,7 +161,7 @@ export function CallTagsSettings() {
                     variant="ghost"
                     size="icon"
                     className="text-muted-foreground/50 hover:text-destructive size-7"
-                    onClick={() => removeTag(t.id)}
+                    onClick={() => void remove(t.id)}
                     aria-label="Delete tag"
                   >
                     <Trash2 className="size-3.5" />
@@ -132,7 +171,7 @@ export function CallTagsSettings() {
                   <TagEditor
                     draft={draft}
                     setDraft={setDraft}
-                    onSave={save}
+                    onSave={() => void save()}
                     onCancel={cancel}
                   />
                 )}
@@ -147,7 +186,7 @@ export function CallTagsSettings() {
             <TagEditor
               draft={draft}
               setDraft={setDraft}
-              onSave={save}
+              onSave={() => void save()}
               onCancel={cancel}
             />
           </div>

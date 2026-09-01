@@ -7,6 +7,7 @@ import type {
   CallingFollowUp,
   CallingNumberPrefs,
   CallingRecording,
+  CallingTags,
 } from "@/lib/settings/calling";
 import { SETTING_DOMAINS, type SettingDomain } from "@/lib/settings/domains";
 import type {
@@ -147,8 +148,17 @@ export interface FacilitySettings {
    * criminal offence in a two-party jurisdiction.
    */
   calling_recording: SettingState<CallingRecording>;
-  /** Missed-call auto-SMS, its template, and the facility's own call tags. */
+  /** Missed-call auto-SMS and its template. */
   calling_follow_up: SettingState<CallingFollowUp>;
+  /**
+   * The facility's call-tag vocabulary.
+   *
+   * `configured: false` means nobody has edited the list, so these are the
+   * eight the product ships with — which is why the tags editor must not write
+   * until it has loaded, or it would save the defaults as though they were a
+   * choice and lose whatever a colleague had set.
+   */
+  calling_tags: SettingState<CallingTags>;
 }
 
 /**

@@ -12,6 +12,8 @@ import {
   callingFollowUpSchema,
   callingNumberPrefsSchema,
   callingRecordingSchema,
+  callingTagsSchema,
+  DEFAULT_CALL_TAGS,
   DEFAULT_CALLING_DISPATCH,
   NO_CALL_FOLLOW_UP,
   NO_CALL_RECORDING,
@@ -480,6 +482,13 @@ export const SETTING_DOMAINS = {
     schema: callingFollowUpSchema,
     fallback: NO_CALL_FOLLOW_UP,
   },
+  // The facility's own call-tag vocabulary. A separate row from
+  // calling_follow_up because the list saves as it is edited while everything
+  // else on that panel waits for a Save button — sharing one would make a
+  // rename race a Save. The fallback IS the fixture's eight, deliberately: an
+  // empty taxonomy costs a facility something and a starting one costs nobody
+  // anything, which is when copying a fixture is right.
+  calling_tags: { schema: callingTagsSchema, fallback: DEFAULT_CALL_TAGS },
 
   // No exported schema for this one — it is a plain map of id -> hex, defined
   // in lib/operations-calendar rather than types/facility.

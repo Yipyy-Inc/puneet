@@ -229,8 +229,6 @@ export const callingSettingsSchema = z.object({
   aiSummaryEnabled: z.boolean(),
   missedCallAutoSMS: z.boolean(),
   missedCallSMSTemplate: z.string(),
-  /** The facility's own call tags — stored in `calling_follow_up`. */
-  tags: z.array(z.string()),
   businessNumber: z.string(),
   businessHours: z.object({
     monday: businessHoursDaySchema,
