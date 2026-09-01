@@ -132,3 +132,72 @@ export function inboundIntent(body: string): InboundIntent {
   if (word === "help" || word === "info") return "help";
   return "other";
 }
+
+// ============================================================================
+// The check itself, so five routes cannot each get it subtly different.
+//
+// `sms/route.ts` had the only copy: read the form, collect the string fields,
+// verify, 403. The other four webhooks — voice, dial, status, recording —
+// verified NOTHING, while `src/proxy.ts` excluded all of `api/twilio` from auth
+// on the stated grounds that "Twilio signs its own webhooks". That was true of
+// one route out of five.
+//
+// ── AN UNCONFIGURED DEPLOYMENT REFUSES ────────────────────────────────────
+//
+// If there is no auth token, nothing can be verified, so nobody is proven and
+// everybody gets a 403. This is a deliberate change from what `sms` used to do,
+// which was to answer 200 with empty TwiML so the provider "does not retry for
+// hours". That reasoning only holds where the provider is CONFIGURED — and if
+// it is, this returns the 200 anyway once the signature checks out. On a
+// deployment with no credentials no genuine webhook can arrive, so the only
+// callers are probes, and answering them 200 is what makes the rule untestable:
+// a spec asserting "unsigned is refused" would pass against a route that had
+// been deleted.
+// ============================================================================
+
+export type TwilioWebhookCheck =
+  | { ok: true; params: Record<string, string> }
+  | { ok: false; response: Response };
+
+/**
+ * Verify an inbound provider webhook, or produce the refusal.
+ *
+ * The body is consumed here, so callers take `params` from the result rather
+ * than reading the request again — a `Request` body can only be read once, and
+ * a second `formData()` throws.
+ */
+export async function verifyTwilioWebhook(
+  request: Request,
+  authToken: string | undefined,
+): Promise<TwilioWebhookCheck> {
+  // 403 and nothing else, in every failure below. A caller who cannot sign
+  // learns only that — not whether the deployment has credentials, not whether
+  // their body parsed, not whether the route does anything.
+  const refuse = {
+    ok: false as const,
+    response: new Response(null, { status: 403 }),
+  };
+
+  if (!authToken) return refuse;
+
+  const form = await request.formData().catch(() => null);
+  if (!form) return refuse;
+
+  const params: Record<string, string> = {};
+  for (const [key, value] of form.entries()) {
+    if (typeof value === "string") params[key] = value;
+  }
+
+  if (
+    !isTwilioSignature({
+      authToken,
+      url: twilioRequestUrl(request),
+      params,
+      signature: request.headers.get("x-twilio-signature"),
+    })
+  ) {
+    return refuse;
+  }
+
+  return { ok: true, params };
+}

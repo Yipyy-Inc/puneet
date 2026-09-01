@@ -84,7 +84,16 @@ export function DialerTab() {
     }
 
     const facility = lookupFacilityByPhone(target);
-    toast.success(`Calling ${facility?.facilityName ?? target}…`);
+    const who = facility?.facilityName ?? target;
+    // `placed` is the one that means a call exists. `ok` only means the request
+    // was understood — the endpoint used to conflate them and return a
+    // fabricated call sid, so this said "Calling…" while nothing dialled.
+    if (result.placed) toast.success(`Calling ${who}…`);
+    else {
+      toast.info(`Opening a call with ${who}`, {
+        description: result.reason ?? "Outbound calling is not connected yet.",
+      });
+    }
     if (facility) {
       recordOutboundCall({
         facilityId: facility.facilityId,

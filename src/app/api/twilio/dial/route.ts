@@ -1,11 +1,19 @@
 import { toE164 } from "@/lib/phone/format";
+import { platformTwilio } from "@/lib/twilio/config";
+import { verifyTwilioWebhook } from "@/lib/twilio/signature";
 import { escapeXml, twimlResponse } from "@/lib/twiml";
 
-// Outbound-call webhook. The Dialer (Task 48) places calls from the Yipyy
-// support number; Twilio requests this URL to get the TwiML that dials the
-// destination the agent entered. The caller ID comes from the call's `from`
-// (Twilio sends `From` in the form post; the Dialer also passes it on the
-// query string), falling back to the support number.
+// Outbound-call webhook. The provider requests this URL to get the TwiML that
+// dials the destination, and the caller ID comes from the call's `From`.
+//
+// ── THE GET IS GONE, AND SO IS WHAT USED IT ───────────────────────────────
+//
+// There was a GET taking `?to=&from=` off the query string, built by
+// /api/twilio/call — an unauthenticated endpoint that let any caller specify
+// both legs of a call. Nothing dialled, so nothing happened; the day it does,
+// that is an open relay somebody else pays for. `call` has moved behind a
+// session and a permission (/api/facility/calling/outbound) and no longer
+// constructs a dial URL, so this route is POST-only and signed like the rest.
 const SUPPORT_CALLER_ID = "+14155550100";
 
 /**
@@ -21,29 +29,15 @@ function toCallerId(from: string): string {
   return toE164(from) ?? SUPPORT_CALLER_ID;
 }
 
-async function dialTwiml(to: string, from: string): Promise<Response> {
-  const callerId = toCallerId(from);
+export async function POST(request: Request): Promise<Response> {
+  const check = await verifyTwilioWebhook(request, platformTwilio()?.authToken);
+  if (!check.ok) return check.response;
+
+  const to = check.params.To ?? "";
+  const callerId = toCallerId(check.params.From ?? "");
   return twimlResponse(
     `<Response>
   <Dial callerId="${escapeXml(callerId)}">${escapeXml(to)}</Dial>
 </Response>`,
   );
-}
-
-export async function POST(req: Request): Promise<Response> {
-  let to = "";
-  let from = "";
-  try {
-    const form = await req.formData();
-    to = String(form.get("To") ?? "");
-    from = String(form.get("From") ?? "");
-  } catch {
-    // no form body
-  }
-  return dialTwiml(to, from);
-}
-
-export async function GET(req: Request): Promise<Response> {
-  const params = new URL(req.url).searchParams;
-  return dialTwiml(params.get("to") ?? "", params.get("from") ?? "");
 }

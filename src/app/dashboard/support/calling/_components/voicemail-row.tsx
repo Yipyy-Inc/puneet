@@ -55,9 +55,16 @@ export function VoicemailRow({ voicemail }: { voicemail: SupportVoicemail }) {
       toast.error(result.error ?? "The call could not be placed.");
       return;
     }
-    toast.success(
-      `Calling ${facility?.facilityName ?? voicemail.callerNumber}…`,
-    );
+    const who = facility?.facilityName ?? voicemail.callerNumber;
+    // `placed` is the one that means a call exists. `ok` only means the request
+    // was understood — the endpoint used to conflate them and return a
+    // fabricated call sid, so this said "Calling…" while nothing dialled.
+    if (result.placed) toast.success(`Calling ${who}…`);
+    else {
+      toast.info(`Opening a call with ${who}`, {
+        description: result.reason ?? "Outbound calling is not connected yet.",
+      });
+    }
     if (facility) {
       recordOutboundCall({
         facilityId: facility.facilityId,
