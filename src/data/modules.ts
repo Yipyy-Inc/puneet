@@ -409,9 +409,10 @@ export const modules: Module[] = [
   },
   {
     id: "module-voip",
-    name: "VOIP",
+    name: "Calling",
     slug: "voip",
-    description: "Voice over IP phone system integration",
+    description:
+      "Your own business number, call routing, voicemail and call recordings",
     category: "premium",
     icon: "Phone",
     features: [

@@ -3823,8 +3823,7 @@ export default function SettingsPage() {
     });
   };
 
-  const { integrations, updateIntegrations, addons, updateAddons } =
-    useSettings();
+  const { integrations, addons, updateAddons } = useSettings();
 
   // Audit Log Columns
   const auditColumns: ColumnDef<(typeof auditLog)[0]>[] = [
@@ -4122,110 +4121,48 @@ export default function SettingsPage() {
               {/* Payments, as a signpost rather than a screen. The whole
                   connect flow used to live here — a processor-branded card with
                   numbered steps, a merchant id and a disconnect dialog, sitting
-                  between Twilio SMS and SendGrid Email. Deciding where a
+                  among the other carrier-named cards. Deciding where a
                   business's revenue lands is not an integration in the sense
                   the rest of this page means, so it moved to Financial →
-                  Payments & Billing → Yipyy Pay. Everything below this tile is
-                  still the fixture-backed switch list. */}
+                  Payments & Billing → Yipyy Pay. The telephony and email cards
+                  it used to sit beside left for the same reason on 2026-09-01;
+                  what remains below is the connector a facility genuinely owns
+                  the other side of. */}
               <YipyyPayStatusTile />
 
-              {/* Communication Integrations */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="size-5" />
-                    Communication Integrations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {integrations
-                    .filter((i) => i.category === "communication")
-                    .map((integration) => (
-                      <div
-                        key={integration.id}
-                        className="space-y-3 rounded-lg border p-4"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="font-semibold">
-                              {integration.name}
-                            </div>
-                            {integration.isEnabled && (
-                              <Badge variant="default">Connected</Badge>
-                            )}
-                          </div>
-                          <Switch
-                            checked={integration.isEnabled}
-                            onCheckedChange={(checked) =>
-                              updateIntegrations(
-                                integrations.map((i) =>
-                                  i.id === integration.id
-                                    ? { ...i, isEnabled: checked }
-                                    : i,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
-                        {integration.isEnabled && (
-                          <div className="text-muted-foreground text-sm">
-                            Connected and operational
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </CardContent>
-              </Card>
+              {/* ── PHONE AND MESSAGING ARE NOT INTEGRATIONS ─────────────
+                  Until 2026-09-01 this section showed facilities cards named
+                  after the carrier and the email provider, with a placeholder
+                  number and toggles that read as if they could sever a live
+                  phone line. Two of those toggles wrote to localStorage and one
+                  had no handler at all, so none of them disconnected anything —
+                  which is worse than either honest answer.
 
-              {/* Phone Integration */}
+                  A facility owns a phone number, a ring order and a voicemail
+                  greeting. It does not own a carrier account, and showing it one
+                  invites a support call, an accidental outage, and the reading
+                  that Yipyy is a thin wrapper. What stays on this page is the
+                  connector a facility genuinely owns the other side of —
+                  QuickBooks.
+
+                  This signpost is for one release; delete it after that. */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Phone className="size-5" />
-                    VOIP & Phone System
+                    Phone and messaging have moved
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {integrations
-                    .filter((i) => i.category === "phone")
-                    .map((integration) => (
-                      <div
-                        key={integration.id}
-                        className="space-y-3 rounded-lg border p-4"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="font-semibold">
-                              {integration.name}
-                            </div>
-                            {integration.isEnabled && (
-                              <Badge variant="default">Connected</Badge>
-                            )}
-                          </div>
-                          <Switch checked={integration.isEnabled} />
-                        </div>
-                        {integration.isEnabled && (
-                          <div className="space-y-2">
-                            <div className="text-sm">
-                              <strong>Phone Number:</strong>{" "}
-                              {String(integration.config.phoneNumber)}
-                            </div>
-                            <div className="flex items-center gap-2 text-sm">
-                              <strong>Call Recording:</strong>
-                              {integration.config.recordCalls ? (
-                                <Badge variant="default" className="text-xs">
-                                  Enabled
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">
-                                  Disabled
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                <CardContent className="space-y-3">
+                  <p className="text-muted-foreground text-sm">
+                    Your number, call routing, voicemail and missed-call replies
+                    now live under Communication → Calling.
+                  </p>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/facility/dashboard/calling?tab=settings">
+                      Open calling settings
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
 

@@ -109,7 +109,6 @@ interface SettingsContextValue {
   updateTipConfig: (config: TipConfig) => Promise<unknown>;
   tipAttribution: TipAttribution;
   updateTipAttribution: (value: TipAttribution) => Promise<unknown>;
-  updateIntegrations: (integrations: Integration[]) => void;
   updateAddons: (addons: ModuleAddon[]) => Promise<unknown>;
   updateWeatherRules: (rules: WeatherWarningRule[]) => Promise<unknown>;
   updateServiceColorOverrides: (
@@ -320,10 +319,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   // different people for different reasons.
   const updateTipAttribution = (value: TipAttribution) =>
     saveSetting.mutateAsync({ domain: "tip_attribution", value });
-  const updateIntegrations = (integrations: Integration[]) => {
-    setIntegrationsData(integrations);
-    localStorage.setItem("settings-integrations", JSON.stringify(integrations));
-  };
   const updateAddons = (addons: ModuleAddon[]) =>
     saveSetting.mutateAsync({ domain: "module_addons", value: addons });
   const updateWeatherRules = (rules: WeatherWarningRule[]) =>
@@ -403,7 +398,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateTipConfig,
         tipAttribution: facilitySettings.settings.tip_attribution.value,
         updateTipAttribution,
-        updateIntegrations,
         updateAddons,
         updateWeatherRules,
         updateServiceColorOverrides,

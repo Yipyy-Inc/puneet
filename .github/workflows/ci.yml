@@ -161,6 +161,7 @@ jobs:
             migration-versions \
             automation-triggers \
             no-review-gating \
+            vendor-strings \
             doc-counts
           do
             echo "::group::check:$script"
