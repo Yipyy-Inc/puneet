@@ -243,40 +243,6 @@ export const callingSettingsSchema = z.object({
 export type CallingSettings = z.infer<typeof callingSettingsSchema>;
 
 // ============================================================
-// Analytics
-// ============================================================
-
-export const staffPerformanceSchema = z.object({
-  name: z.string(),
-  callsHandled: z.number(),
-  avgResponseTime: z.number(),
-  missedCalls: z.number(),
-  conversionRate: z.number(),
-});
-export type StaffPerformance = z.infer<typeof staffPerformanceSchema>;
-
-export const callAnalyticsSchema = z.object({
-  period: z.string(),
-  totalCalls: z.number(),
-  missedCalls: z.number(),
-  avgAnswerTime: z.number(),
-  conversionRate: z.number(),
-  revenueFromCalls: z.number(),
-  avgCallDuration: z.number(),
-  abandonedCalls: z.number(),
-  repeatCallers: z.number(),
-  leadConversionRate: z.number(),
-  hourlyVolume: z.array(z.object({ hour: z.number(), calls: z.number() })),
-  staffPerformance: z.array(staffPerformanceSchema),
-  topCallReasons: z.array(z.object({ reason: z.string(), count: z.number() })),
-});
-export type CallAnalytics = z.infer<typeof callAnalyticsSchema>;
-
-// ============================================================
-// Missed Call Tasks
-// ============================================================
-
-// ============================================================
 // Smart Routing Rules
 // Evaluated BEFORE the IVR menu using live CRM data about the
 // caller (tags, balance, care alerts, history) so the right

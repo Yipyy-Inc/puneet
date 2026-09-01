@@ -69,7 +69,6 @@ import {
 import { buildFollowUpTask } from "@/lib/calling/follow-up-task";
 import { IVRBuilder } from "@/components/calling/IVRBuilder";
 import { RoutingRulesBuilder } from "@/components/calling/RoutingRulesBuilder";
-import { CallAnalyticsDashboard } from "@/components/calling/CallAnalyticsDashboard";
 import { CallMetricsOverview } from "@/components/calling/CallMetricsOverview";
 import { CallingSettingsPanel } from "@/components/calling/CallingSettingsPanel";
 import { VoicemailInbox } from "@/components/calling/VoicemailInbox";
@@ -86,7 +85,11 @@ import {
   missedCallTasks,
   callRoutingRules,
 } from "@/data/calling";
-import { buildCallAnalytics } from "@/lib/calling/call-metrics";
+import {
+  isOpenMissedTask,
+  isUnworkedMiss,
+  isUnworkedMissedTask,
+} from "@/lib/calling/call-metrics";
 import type { ActiveCall, MissedCallTask } from "@/types/calling";
 import { toast } from "sonner";
 import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
@@ -115,7 +118,8 @@ function LiveTab({
 }) {
   // Hide cards that have been resolved (Mark as handled) — they drop off the
   // live worklist but the resolution is retained on the record.
-  const openMissed = missedTasks.filter((t) => t.status !== "resolved");
+  const openMissed = missedTasks.filter(isOpenMissedTask);
+  const unworked = missedTasks.filter(isUnworkedMissedTask).length;
   return (
     <div className="space-y-6">
       {/* Active call or idle */}
@@ -250,9 +254,9 @@ function LiveTab({
         <h3 className="mb-3 flex items-center gap-2 font-semibold">
           <PhoneOff className="size-4 text-red-500" />
           Unanswered Calls
-          {missedTasks.filter((t) => t.status === "unresolved").length > 0 && (
-            <Badge variant="destructive">
-              {missedTasks.filter((t) => t.status === "unresolved").length}
+          {openMissed.length > 0 && (
+            <Badge variant={unworked > 0 ? "destructive" : "secondary"}>
+              {openMissed.length}
             </Badge>
           )}
         </h3>
@@ -919,12 +923,6 @@ export function CallingWorkspace({
     filtersHydrated.current = true;
   }, []);
 
-  // Owner-facing call analytics, derived from the real call-log seed.
-  const derivedCallAnalytics = useMemo(
-    () => buildCallAnalytics(logs, aiCallSummaries),
-    [logs],
-  );
-
   const filteredCalls = useMemo(() => {
     const { from, to } = dateRangeBounds(dateRange, customFrom, customTo);
     return logs.filter((c) => {
@@ -972,29 +970,11 @@ export function CallingWorkspace({
   );
   // Only missed calls still awaiting follow-up count toward the "needs attention"
   // badge — resolving a call (scheduled / completed / no action) clears it.
-  const missedCalls = useMemo(
-    () =>
-      logs.filter(
-        (c) => c.status === "missed" && c.followUpStatus === "pending",
-      ),
-    [logs],
-  );
+  const missedCalls = useMemo(() => logs.filter(isUnworkedMiss), [logs]);
   const callsWithRecordings = useMemo(
     () => logs.filter((c) => c.recordingUrl),
     [logs],
   );
-
-  // Flagged recordings from this week (since Sunday) — Analytics count card.
-  const flaggedThisWeek = useMemo(() => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - start.getDay());
-    const from = start.getTime();
-    return logs.filter(
-      (c) =>
-        c.flagged && c.recordingUrl && new Date(c.timestamp).getTime() >= from,
-    ).length;
-  }, [logs]);
 
   const handleAnswer = (call: ActiveCall) => {
     setIncomingCall(null);
@@ -1806,10 +1786,6 @@ export function CallingWorkspace({
               logs={logs}
               summaries={aiCallSummaries}
               canViewStaffReport={canViewQa}
-            />
-            <CallAnalyticsDashboard
-              data={derivedCallAnalytics}
-              flaggedThisWeek={flaggedThisWeek}
             />
           </TabsContent>
 

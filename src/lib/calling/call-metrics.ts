@@ -1,5 +1,9 @@
 import type { CallLog } from "@/types/communications";
-import type { AICallSummary, InquiryTag, CallAnalytics } from "@/types/calling";
+import type {
+  AICallSummary,
+  InquiryTag,
+  MissedCallTask,
+} from "@/types/calling";
 
 // ============================================================
 // Core calling metrics — all derived from the call-log table so
@@ -12,9 +16,56 @@ import type { AICallSummary, InquiryTag, CallAnalytics } from "@/types/calling";
 export const HEATMAP_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export const HEATMAP_HOURS = Array.from({ length: 24 }, (_, h) => h);
 
-/** A missed call counts as "resolved" once it is completed or marked no-action. */
-function isResolved(c: CallLog): boolean {
+// ============================================================
+// What "missed" means — one place, four named meanings.
+//
+// There were four definitions across two arrays and nothing named any of
+// them, so they disagreed on screen: the Live tab's heading badge counted
+// `status === "unresolved"` while the list below it rendered
+// `status !== "resolved"`, printing "1" above two cards.
+//
+// The meanings are genuinely different and all four are wanted — a missed
+// call that has been rung back is still a missed call, but it is no longer
+// work — so the fix is to name them and use the names, not to collapse them
+// into one. Every counter in the module and on the screens goes through
+// these. See docs/product/calling-metric-dictionary.md.
+// ============================================================
+
+/** Every call that did not reach a person. The denominator for missed rate
+ *  and recovery rate — a miss that was later resolved is still a miss. */
+export function isMissedCall(c: CallLog): boolean {
+  return c.status === "missed";
+}
+
+/** A missed call nobody has dealt with yet — the "needs attention" count. */
+export function isUnworkedMiss(c: CallLog): boolean {
+  return isMissedCall(c) && c.followUpStatus === "pending";
+}
+
+/** A call whose follow-up is closed, either by acting on it or by deciding no
+ *  action was needed. Says nothing about how the call ended — a voicemail can
+ *  carry a follow-up too, which is why the per-staff report counts more
+ *  follow-ups than the missed-call tile does. */
+export function isFollowUpResolved(c: CallLog): boolean {
   return c.followUpStatus === "completed" || c.followUpStatus === "no_action";
+}
+
+/** A missed call whose follow-up is closed. The numerator of the facility-wide
+ *  follow-up completion tile, whose denominator is every missed call. */
+export function isResolvedMiss(c: CallLog): boolean {
+  return isMissedCall(c) && isFollowUpResolved(c);
+}
+
+/** A missed-call task still on the live worklist — not closed, whether or not
+ *  somebody has already rung back. This is what the Live tab renders, so it is
+ *  what its badge counts. */
+export function isOpenMissedTask(t: MissedCallTask): boolean {
+  return t.status !== "resolved";
+}
+
+/** An open task nobody has rung back yet — the red dot, not the count. */
+export function isUnworkedMissedTask(t: MissedCallTask): boolean {
+  return t.status === "unresolved";
 }
 
 export interface CallMetrics {
@@ -36,6 +87,17 @@ export interface CallMetrics {
   /** 7×24 grid of call counts: heatmap[dayOfWeek][hour]. */
   heatmap: number[][];
   heatmapMax: number;
+  bookingsCreated: number;
+  conversionRate: number; // 0–100, bookings / all calls
+  inbound: number;
+  leadConversionRate: number; // 0–100, bookings / inbound calls
+  /** Missed inbound calls that had already waited in the queue — the caller
+   *  hung up rather than never getting through. */
+  abandoned: number;
+  /** Distinct known clients who called more than once in the period. */
+  repeatCallers: number;
+  /** Recordings flagged for review, over the same period as every other tile. */
+  flaggedRecordings: number;
 }
 
 export function computeCallMetrics(
@@ -43,7 +105,7 @@ export function computeCallMetrics(
   summaries: AICallSummary[],
 ): CallMetrics {
   const total = logs.length;
-  const missedLogs = logs.filter((c) => c.status === "missed");
+  const missedLogs = logs.filter(isMissedCall);
   const missed = missedLogs.length;
   const voicemail = logs.filter((c) => c.status === "voicemail").length;
 
@@ -68,7 +130,7 @@ export function computeCallMetrics(
     : 0;
 
   // Follow-up completion — resolved missed calls / total missed.
-  const followUpResolved = missedLogs.filter(isResolved).length;
+  const followUpResolved = missedLogs.filter(isResolvedMiss).length;
 
   // Average AI sentiment over calls in range that have a summary.
   const sentimentById = new Map(
@@ -105,6 +167,30 @@ export function computeCallMetrics(
     if (next > heatmapMax) heatmapMax = next;
   }
 
+  const bookingsCreated = logs.filter(
+    (c) => c.outcome === "booking_created",
+  ).length;
+  const inbound = logs.filter((c) => c.type === "inbound").length;
+
+  // Abandoned — a missed call that had already spent time in the queue, i.e.
+  // the caller waited and then hung up, as opposed to never getting through.
+  const abandoned = missedLogs.filter(
+    (c) => typeof c.queueWaitSeconds === "number",
+  ).length;
+
+  // Repeat callers — known clients who called more than once in the period.
+  const byClient = new Map<number, number>();
+  for (const c of logs) {
+    if (typeof c.clientId === "number") {
+      byClient.set(c.clientId, (byClient.get(c.clientId) ?? 0) + 1);
+    }
+  }
+  const repeatCallers = [...byClient.values()].filter((n) => n > 1).length;
+
+  const flaggedRecordings = logs.filter(
+    (c) => c.flagged && c.recordingUrl,
+  ).length;
+
   return {
     total,
     missed,
@@ -123,6 +209,13 @@ export function computeCallMetrics(
     byIvrOption,
     heatmap,
     heatmapMax,
+    bookingsCreated,
+    conversionRate: total ? (bookingsCreated / total) * 100 : 0,
+    inbound,
+    leadConversionRate: inbound ? (bookingsCreated / inbound) * 100 : 0,
+    abandoned,
+    repeatCallers,
+    flaggedRecordings,
   };
 }
 
@@ -160,7 +253,7 @@ export function outcomeCategory(c: CallLog): OutcomeKey {
       return "complaint_logged";
   }
   // No explicit outcome — derive from how the call ended.
-  if (c.status === "missed") return "no_answer";
+  if (isMissedCall(c)) return "no_answer";
   if (c.status === "voicemail") return "voicemail_left";
   return "other";
 }
@@ -185,7 +278,7 @@ export function computeOutcomeBreakdown(
 /** A missed call that was called back and converted to a booking. */
 export function isRecoveredMiss(c: CallLog): boolean {
   return (
-    c.status === "missed" &&
+    isMissedCall(c) &&
     c.followUpStatus === "completed" &&
     c.outcome === "booking_created"
   );
@@ -198,7 +291,7 @@ export interface RecoveryStats {
 }
 
 export function computeRecovery(logs: CallLog[]): RecoveryStats {
-  const missed = logs.filter((c) => c.status === "missed");
+  const missed = logs.filter(isMissedCall);
   const recovered = missed.filter(isRecoveredMiss).length;
   return {
     totalMissed: missed.length,
@@ -228,7 +321,7 @@ export function computeWeeklyRecovery(
   start.setHours(0, 0, 0, 0);
   start.setDate(start.getDate() - start.getDay()); // Sunday of current week
 
-  const missed = logs.filter((c) => c.status === "missed");
+  const missed = logs.filter(isMissedCall);
   const buckets: RecoveryWeek[] = [];
   for (let i = weeks - 1; i >= 0; i--) {
     const ws = new Date(start);
@@ -310,12 +403,7 @@ export function computeStaffPerformance(
     if (typeof c.qaScore === "number") a.qas.push(c.qaScore);
     if (c.followUpStatus != null) {
       a.fuTotal += 1;
-      if (
-        c.followUpStatus === "completed" ||
-        c.followUpStatus === "no_action"
-      ) {
-        a.fuResolved += 1;
-      }
+      if (isFollowUpResolved(c)) a.fuResolved += 1;
     }
     if (c.status === "completed" && c.duration > 0)
       a.durations.push(c.duration);
@@ -334,118 +422,4 @@ export function computeStaffPerformance(
     followUpRate: a.fuTotal ? (a.fuResolved / a.fuTotal) * 100 : null,
     avgDuration: a.durations.length ? mean(a.durations) : null,
   }));
-}
-
-// ============================================================
-// CallAnalytics — the owner-facing analytics dashboard shape,
-// derived from the real call-log table (replaces the static
-// callAnalytics blob). Revenue is estimated from booking-created
-// outcomes × an average booking value (call logs carry no dollar
-// amount); everything else is a direct aggregation of the logs.
-// ============================================================
-
-const CALL_AVG_BOOKING_VALUE = 75;
-
-const INQUIRY_REASON_LABELS: Record<string, string> = {
-  boarding: "Boarding inquiry",
-  grooming: "Grooming appointment",
-  billing: "Billing question",
-  reception: "Reception / general",
-  emergency: "Emergency",
-  training: "Training inquiry",
-};
-
-export function buildCallAnalytics(
-  logs: CallLog[],
-  summaries: AICallSummary[],
-): CallAnalytics {
-  const m = computeCallMetrics(logs, summaries);
-  const total = logs.length;
-
-  const bookingCreated = logs.filter(
-    (c) => c.outcome === "booking_created",
-  ).length;
-  const inbound = logs.filter((c) => c.type === "inbound").length;
-
-  // Hourly volume (0–23) from real call timestamps.
-  const hourly = Array.from({ length: 24 }, (_, hour) => ({ hour, calls: 0 }));
-  for (const c of logs) {
-    const h = new Date(c.timestamp).getHours();
-    if (h >= 0 && h < 24) hourly[h].calls += 1;
-  }
-
-  // Repeat callers — distinct clients who called more than once.
-  const byClient = new Map<number, number>();
-  for (const c of logs)
-    if (typeof c.clientId === "number")
-      byClient.set(c.clientId, (byClient.get(c.clientId) ?? 0) + 1);
-  const repeatCallers = [...byClient.values()].filter((n) => n > 1).length;
-
-  // Abandoned — missed inbound calls that had spent time in the queue.
-  const abandonedCalls = logs.filter(
-    (c) => c.status === "missed" && typeof c.queueWaitSeconds === "number",
-  ).length;
-
-  // Per-staff performance from the handledBy field.
-  const staffMap = new Map<
-    string,
-    {
-      handled: number;
-      missed: number;
-      booked: number;
-      waitSum: number;
-      waitN: number;
-    }
-  >();
-  for (const c of logs) {
-    if (!c.handledBy) continue;
-    const s = staffMap.get(c.handledBy) ?? {
-      handled: 0,
-      missed: 0,
-      booked: 0,
-      waitSum: 0,
-      waitN: 0,
-    };
-    s.handled += 1;
-    if (c.status === "missed") s.missed += 1;
-    if (c.outcome === "booking_created") s.booked += 1;
-    if (typeof c.queueWaitSeconds === "number") {
-      s.waitSum += c.queueWaitSeconds;
-      s.waitN += 1;
-    }
-    staffMap.set(c.handledBy, s);
-  }
-  const staffPerformance = [...staffMap.entries()]
-    .map(([name, s]) => ({
-      name,
-      callsHandled: s.handled,
-      avgResponseTime: s.waitN > 0 ? Math.round(s.waitSum / s.waitN) : 0,
-      missedCalls: s.missed,
-      conversionRate:
-        s.handled > 0 ? Math.round((s.booked / s.handled) * 100) : 0,
-    }))
-    .sort((a, b) => b.callsHandled - a.callsHandled);
-
-  // Top call reasons from the IVR inquiry tag.
-  const topCallReasons = m.byIvrOption.map(({ tag, count }) => ({
-    reason: INQUIRY_REASON_LABELS[tag] ?? tag,
-    count,
-  }));
-
-  return {
-    period: "Last 30 days",
-    totalCalls: total,
-    missedCalls: m.missed,
-    avgAnswerTime: m.avgQueueWait,
-    conversionRate: total > 0 ? Math.round((bookingCreated / total) * 100) : 0,
-    revenueFromCalls: bookingCreated * CALL_AVG_BOOKING_VALUE,
-    avgCallDuration: m.avgDuration,
-    abandonedCalls,
-    repeatCallers,
-    leadConversionRate:
-      inbound > 0 ? Math.round((bookingCreated / inbound) * 100) : 0,
-    hourlyVolume: hourly,
-    staffPerformance,
-    topCallReasons,
-  };
 }
