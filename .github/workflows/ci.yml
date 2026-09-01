@@ -682,10 +682,35 @@ jobs:
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
+          # ── TWO TIMEOUTS, AND THEY MEASURE DIFFERENT THINGS ──────────────
+          #
+          # `command_timeout` bounds the deploy script once it is running.
+          # `timeout` bounds getting there — the TCP connect and handshake —
+          # and defaults to 30s, which is exactly what expired on 2026-09-01:
+          # `dial tcp ***:22: i/o timeout` at duration_ms=30193, before a byte
+          # of the script ran. The box was idle at load 0.00 throughout and
+          # answered SSH from elsewhere in the same minute, so the reach is the
+          # runner's, not the server's — the same shape measured on 2026-08-25,
+          # when an Azure eastus2 runner could not reach this host at all while
+          # westus could.
+          #
+          # 60s does not fix an unroutable runner. It absorbs the marginal case
+          # and leaves the genuinely unreachable one still failing, which is
+          # what should happen: a deploy that stops cleanly and leaves the old
+          # colour serving is the correct outcome, and re-running the job is
+          # the documented remedy.
+          timeout: 60s
           command_timeout: 15m
-          script_stop: true
           envs: GHCR_TOKEN,GHCR_USER,SMOKE_HOST
           script: |
+            # `set -e` is the only thing stopping this script on a failed step.
+            # This step also passed `script_stop: true` until 2026-09-01 — a
+            # v0.x input v1 does not accept — so every deploy log opened with
+            # `Warning: Unexpected input(s) 'script_stop'` while the setting did
+            # nothing. "Install and verify the messaging timer", below, has said
+            # so in a comment since it was written; the knowledge just never
+            # came back up here. Do not delete this line thinking the action
+            # covers it.
             set -e
             trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
@@ -757,6 +782,10 @@ jobs:
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
+          # Same 60s connect timeout as the deploy step, for the same reason:
+          # the default is 30s and this reaches the same host over the same
+          # path, so it is exposed to the same runner-side unreachability.
+          timeout: 60s
           # No `script_stop`: this action does not accept it (it warns and
           # ignores). `set -e` below is what actually stops on the first
           # failure.
