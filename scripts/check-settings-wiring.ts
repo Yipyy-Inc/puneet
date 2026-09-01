@@ -6,7 +6,8 @@
  *
  *   bun run check:settings-wiring
  *
- * It scans every `*Settings.tsx` component under `src/components/` and fails if
+ * It scans every `*Settings.tsx` and `*SettingsPanel.tsx` component under
+ * `src/components/` and fails if
  * any is imported nowhere in `src/`. Exits 0 when clean, 1 on a NEW orphan — so
  * it can be plugged into CI. Pre-existing orphans live in BASELINE_ORPHANS and
  * are reported as warnings (they still nag every run) without failing the gate;
@@ -61,10 +62,17 @@ for (const file of files) {
   }
 }
 
-// Settings-section components: `*Settings.tsx` under src/components/.
+// Settings-section components under src/components/.
+//
+// `*SettingsPanel.tsx` is matched as well as `*Settings.tsx`. The pattern was
+// anchored on the basename ENDING in "Settings.tsx", so
+// `CallingSettingsPanel.tsx` — 665 lines, the whole phone system's
+// configuration — sat outside the guard and could have been orphaned without a
+// word. It is exactly the shape of file this check exists for.
 const settingsComponents = files.filter(
   (f) =>
-    f.includes(`${sep}components${sep}`) && /Settings\.tsx$/.test(basename(f)),
+    f.includes(`${sep}components${sep}`) &&
+    /Settings(Panel)?\.tsx$/.test(basename(f)),
 );
 
 const newOrphans: string[] = [];
@@ -86,7 +94,7 @@ const total = settingsComponents.length;
 const wired = total - newOrphans.length - baselinedOrphans.length;
 
 console.log(
-  `${ANSI.bold}Settings wiring · ${total} *Settings.tsx component${total === 1 ? "" : "s"}${ANSI.reset}`,
+  `${ANSI.bold}Settings wiring · ${total} *Settings(Panel).tsx component${total === 1 ? "" : "s"}${ANSI.reset}`,
 );
 console.log(
   `  ${ANSI.green}${wired} imported${ANSI.reset} · ${ANSI.yellow}${baselinedOrphans.length} baselined${ANSI.reset} · ${ANSI.red}${newOrphans.length} new orphan${newOrphans.length === 1 ? "" : "s"}${ANSI.reset}`,
@@ -121,7 +129,7 @@ if (newOrphans.length === 0) {
     `${ANSI.red}${ANSI.bold}✗ ${newOrphans.length} orphaned settings component${newOrphans.length === 1 ? "" : "s"}${ANSI.reset}`,
   );
   console.log(
-    `${ANSI.yellow}A *Settings.tsx component imported nowhere is dead code. Wire it into its host page or delete it.${ANSI.reset}`,
+    `${ANSI.yellow}A *Settings(Panel).tsx component imported nowhere is dead code. Wire it into its host page or delete it.${ANSI.reset}`,
   );
   process.exit(1);
 }

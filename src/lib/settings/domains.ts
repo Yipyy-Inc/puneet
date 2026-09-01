@@ -7,6 +7,17 @@ import {
   loyaltyConfigSchema,
 } from "@/lib/settings/loyalty";
 
+import {
+  callingDispatchSchema,
+  callingFollowUpSchema,
+  callingNumberPrefsSchema,
+  callingRecordingSchema,
+  DEFAULT_CALLING_DISPATCH,
+  NO_CALL_FOLLOW_UP,
+  NO_CALL_RECORDING,
+  NO_CALLING_NUMBER,
+} from "@/lib/settings/calling";
+
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
 import { NO_REBOOK_CONFIG, rebookConfigSchema } from "@/lib/settings/rebook";
 import {
@@ -428,6 +439,46 @@ export const SETTING_DOMAINS = {
   messaging_policy: {
     schema: messagingPolicySchema,
     fallback: NO_MESSAGING_POLICY,
+  },
+
+  // ── THE PHONE SYSTEM ───────────────────────────────────────────────────
+  //
+  // Four rows, not one, because the panel's Save writes every section and a
+  // single row would let two staff editing different sections overwrite each
+  // other — the same reason the module configs are separate. They also differ
+  // enormously in stakes: one of them is a legal question.
+  //
+  // Calling's own `businessHours` is deliberately NOT a fifth domain. It
+  // duplicated `business_hours` in a different shape and from a different
+  // fixture, so a facility had two answers to "when are you open" and the
+  // after-hours greeting followed the one nobody edited. The panel reads the
+  // existing domain.
+  //
+  // No credential is here. See lib/settings/calling.ts and the note below.
+  calling_number_prefs: {
+    schema: callingNumberPrefsSchema,
+    fallback: NO_CALLING_NUMBER,
+  },
+  calling_dispatch: {
+    schema: callingDispatchSchema,
+    fallback: DEFAULT_CALLING_DISPATCH,
+  },
+  // The fallback is recording OFF, and it is not a matter of taste. The
+  // fixture ships `autoRecord: true`; inheriting it would have every facility
+  // that never opened the screen recording its customers on a choice nobody
+  // made — a criminal offence in a two-party jurisdiction, of which Quebec,
+  // whose area code the demo data uses throughout, is one. Same rule as
+  // NO_TAX. See the banner in lib/settings/calling.ts.
+  calling_recording: {
+    schema: callingRecordingSchema,
+    fallback: NO_CALL_RECORDING,
+  },
+  // Missed-call auto-SMS and the facility's own call tags. Auto-SMS defaults
+  // OFF for the NO_TAX reason again: on, it texts real customers from a number
+  // the facility does not own.
+  calling_follow_up: {
+    schema: callingFollowUpSchema,
+    fallback: NO_CALL_FOLLOW_UP,
   },
 
   // No exported schema for this one — it is a plain map of id -> hex, defined

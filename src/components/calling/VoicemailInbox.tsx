@@ -25,7 +25,8 @@ import { cn } from "@/lib/utils";
 import type { CallLog } from "@/data/communications-hub";
 import type { VoicemailGreeting } from "@/types/calling";
 import type { FollowUpStatus } from "@/types/communications";
-import { holidayCalendar, defaultCallingSettings } from "@/data/calling";
+import { holidayCalendar } from "@/data/calling";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { CallTranscriptSummary } from "@/components/calling/CallTranscriptSummary";
 import { FollowUpStatusPill } from "@/components/calling/FollowUpStatusPill";
 import {
@@ -128,13 +129,16 @@ export function VoicemailInbox({
   // A 5-minute "cron" re-evaluates business hours + the holiday calendar and
   // activates the right greeting (in production this runs server-side). Staff
   // can override manually; auto-management resumes at the next scheduled switch.
+  //
+  // The hours are the FACILITY's, not the calling fixture's. Calling used to
+  // carry its own copy in its own shape, so this decided when to play the
+  // after-hours greeting from a set of hours nobody could edit — and one that
+  // disagreed with the hours on the Settings page.
+  const { settings } = useFacilitySettings();
+  const hours = settings.business_hours.value;
+
   const [scheduledType, setScheduledType] = useState<ScheduledGreetingType>(
-    () =>
-      computeScheduledGreeting(
-        new Date(),
-        defaultCallingSettings.businessHours,
-        holidayCalendar,
-      ),
+    () => computeScheduledGreeting(new Date(), hours, holidayCalendar),
   );
   const [isAuto, setIsAuto] = useState(true);
   const [manualGreetingId, setManualGreetingId] = useState<string | null>(null);
@@ -142,11 +146,7 @@ export function VoicemailInbox({
 
   useEffect(() => {
     const evaluate = () => {
-      const next = computeScheduledGreeting(
-        new Date(),
-        defaultCallingSettings.businessHours,
-        holidayCalendar,
-      );
+      const next = computeScheduledGreeting(new Date(), hours, holidayCalendar);
       setScheduledType(next);
       // If overridden, resume auto-management once the schedule actually switches.
       if (
@@ -161,7 +161,10 @@ export function VoicemailInbox({
     evaluate();
     const id = setInterval(evaluate, 5 * 60 * 1000);
     return () => clearInterval(id);
-  }, []);
+    // `hours` matters: the settings arrive after mount, and the greeting that
+    // was scheduled against the documented default has to be recomputed once
+    // the facility's real hours land.
+  }, [hours]);
 
   const greetingForType = (type: ScheduledGreetingType) =>
     greetings.find((g) => g.type === type) ??

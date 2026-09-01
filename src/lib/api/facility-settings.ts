@@ -2,6 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type {
+  CallingDispatch,
+  CallingFollowUp,
+  CallingNumberPrefs,
+  CallingRecording,
+} from "@/lib/settings/calling";
 import { SETTING_DOMAINS, type SettingDomain } from "@/lib/settings/domains";
 import type {
   BookingRules,
@@ -127,6 +133,22 @@ export interface FacilitySettings {
     services: Record<string, string>;
     statuses: Record<string, string>;
   }>;
+  /** What outbound calls present as the caller ID. Not a provisioned line. */
+  calling_number_prefs: SettingState<CallingNumberPrefs>;
+  /** How a call reaches somebody: ring mode, alerts, forwarding, ring duration. */
+  calling_dispatch: SettingState<CallingDispatch>;
+  /**
+   * Recording, retention, the compliance announcement, transcription and AI
+   * summaries.
+   *
+   * `configured: false` means recording is OFF because nobody has turned it on
+   * — not because a facility chose to. Both read the same on this screen and
+   * they are not the same fact; recording somebody without consent is a
+   * criminal offence in a two-party jurisdiction.
+   */
+  calling_recording: SettingState<CallingRecording>;
+  /** Missed-call auto-SMS, its template, and the facility's own call tags. */
+  calling_follow_up: SettingState<CallingFollowUp>;
 }
 
 /**

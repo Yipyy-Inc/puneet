@@ -7349,6 +7349,62 @@ one-liner: either eligibility learns to read `checked_out_at`, or the reopen
 path cancels the request, or the dedupe key stops being per-booking. All three
 change behaviour for boarding and daycare equally and want their own change.
 
+## 2026-09-01 (Calling — Phase 1b)
+
+### 🟡 The platform support console derives its recording notice from a pet facility's fixture
+
+`src/app/dashboard/support/calling/_components/recording-utils.ts` computes
+`STORAGE_NOTE` ("AES-256 encrypted · 90-day retention"), `RECORDING_ENABLED` and
+`COMPLIANCE_NOTICE` from `defaultCallingSettings` — the **facility** calling
+fixture. The support desk's own settings live in
+`src/lib/support-calling-settings-store.ts`, which already carries `autoRecord`,
+`recordingStorage` and `complianceNotice` of its own.
+
+So the platform console tells its agents how long _their_ calls are retained
+using a value that belongs to a boarding kennel, and it will keep saying
+"90-day retention" whatever any facility chooses.
+
+**Not fixed here** because these are module-level `export const`s evaluated at
+import time, and the correct source is a `useSyncExternalStore` hook — the fix
+turns four constants into hook reads across the support console, which is a
+different surface from Phase 1b.
+
+**What to do:** read the support store at those call sites. Do NOT "fix" it by
+importing the facility's new `calling_recording` domain — that is the same
+cross-wire with a better-looking source.
+
+### 🟢 A customer CANNOT read a facility's calling settings — the allow-list already existed
+
+Recorded because the opposite was nearly written into this file on inference.
+
+`facility_settings_read` (20260809140000) reads, in the migration that created
+it, as a grant of the whole table to the facility's clients — and that is how it
+was described. It is not what is deployed. Two later migrations
+(20260809180000, extended by 20260819180000 and 20260822100000) narrowed the
+client arm to an explicit allow-list:
+
+```
+select policyname, qual from pg_policies
+where tablename = 'facility_settings' and policyname = 'facility_settings_read';
+-- ... OR ((facility_id IN (SELECT private.client_facility_ids()))
+--         AND (domain = ANY (private.customer_visible_setting_domains())))
+
+select private.customer_visible_setting_domains();
+-- business_hours, booking_rules, tip_config, booking_flow, daycare_config,
+-- boarding_config, grooming_config, training_config, tax_config, loyalty_config
+```
+
+Ten domains, opt-in, and none of the four calling ones. `payroll_config`,
+`yipyy_pay_config`, `network_policy` and `calling_dispatch` (which carries
+`callForwardingNumber`, plausibly a staff member's mobile) are all staff-only.
+
+**The lesson is the shape of the mistake, not the outcome.** Reading the
+CREATE migration and believing it describes the live policy is the same error
+this file's footer already documents twice. `pg_policies` is one query and it
+disagrees with the migration history whenever anything has been altered since.
+Adding a settings domain needs no policy work — but if one ever must reach a
+customer, naming it in that function exposes the WHOLE domain, not one field.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
