@@ -308,6 +308,102 @@ end $$;
 
 reset role;
 
+-- ── The lifecycle constraints (20260901231203) ─────────────────────────────
+--
+-- Seeded as the migration role, because these are shape rules rather than
+-- authorisation rules and provisioning writes them as service_role.
+
+do $$
+declare state text;
+begin
+  begin
+    insert into public.communication_numbers
+      (facility_id, provider, phone_number, status)
+    values ((select id from ids where slug = 'comm-alpha'), 'twilio',
+            '+15145550777', 'provisioning');
+    state := 'ACCEPTED';
+  exception when others then state := sqlstate;
+  end;
+  -- The opening move of provisioning: a number whose capabilities are not yet
+  -- known. The original `communication_number_does_something` refused exactly
+  -- this, which would have made the flow impossible to start.
+  perform pg_temp.t(20,
+    'M20 a provisioning row may have no capabilities yet',
+    state = 'ACCEPTED', 'state=' || state);
+end $$;
+
+do $$
+declare state text;
+begin
+  begin
+    insert into public.communication_numbers
+      (facility_id, provider, phone_number, status)
+    values ((select id from ids where slug = 'comm-alpha'), 'twilio',
+            '+15145550778', 'active');
+    state := 'ACCEPTED';
+  exception when others then state := sqlstate;
+  end;
+  -- And the rule still bites where it was doing the work. Without this, M20
+  -- would read as "the constraint was deleted".
+  perform pg_temp.t(21,
+    'M21 but an ACTIVE row with no capabilities is still refused',
+    state = '23514', 'state=' || state);
+end $$;
+
+do $$
+declare state text;
+begin
+  begin
+    insert into public.communication_numbers
+      (facility_id, provider, phone_number, status, voice_enabled)
+    values ((select id from ids where slug = 'comm-alpha'), 'twilio',
+            '+15145550779', 'released', true);
+    state := 'ACCEPTED';
+  exception when others then state := sqlstate;
+  end;
+  perform pg_temp.t(22,
+    'M22 released and released_at cannot disagree',
+    state = '23514', 'state=' || state);
+end $$;
+
+do $$
+declare state text;
+begin
+  begin
+    insert into public.communication_numbers
+      (facility_id, provider, phone_number, status, voice_enabled, is_primary)
+    values ((select id from ids where slug = 'comm-alpha'), 'twilio',
+            '+15145550780', 'active', true, true),
+           ((select id from ids where slug = 'comm-alpha'), 'twilio',
+            '+15145550781', 'active', true, true);
+    state := 'ACCEPTED';
+  exception when others then state := sqlstate;
+  end;
+  perform pg_temp.t(23,
+    'M23 a facility cannot have two primary numbers',
+    state = '23505', 'state=' || state);
+end $$;
+
+do $$
+declare state text;
+begin
+  begin
+    insert into public.communication_numbers
+      (facility_id, provider, phone_number, status, voice_enabled, is_primary)
+    values ((select id from ids where slug = 'comm-alpha'), 'twilio',
+            '+15145550782', 'active', true, true);
+    state := 'ACCEPTED';
+  exception when others then state := sqlstate;
+  end;
+  -- The control for M23: the index is PARTIAL, so many non-primary numbers
+  -- coexist and exactly one primary is allowed. A plain unique index on
+  -- (facility_id, is_primary) would have permitted one non-primary number too,
+  -- and M23 alone cannot tell the two shapes apart.
+  perform pg_temp.t(24,
+    'M24 and one primary alongside several non-primaries is fine',
+    state = 'ACCEPTED', 'state=' || state);
+end $$;
+
 -- ── Report ─────────────────────────────────────────────────────────────────
 
 select case when ok then '  PASS  ' else '> FAIL <' end as result, name, detail
