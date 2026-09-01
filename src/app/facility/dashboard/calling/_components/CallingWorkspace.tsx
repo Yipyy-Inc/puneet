@@ -90,6 +90,7 @@ import {
   isUnworkedMiss,
   isUnworkedMissedTask,
 } from "@/lib/calling/call-metrics";
+import type { CallingSystemStatus } from "@/lib/calling/system-status";
 import type { ActiveCall, MissedCallTask } from "@/types/calling";
 import { toast } from "sonner";
 import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
@@ -102,17 +103,34 @@ const CALL_LOG_FILTERS_KEY = "calling:callLogFilters:v1";
 
 // Radix Select forbids an empty value, so "no assignee" uses a sentinel.
 const UNASSIGNED = "__unassigned__";
+
+// Both status cards read these, so a deployment cannot be red on one and green
+// on the other.
+const STATUS_CARD: Record<CallingSystemStatus["state"], string> = {
+  operational:
+    "border-2 border-green-500/20 bg-green-50/50 dark:bg-green-950/20",
+  degraded: "border-2 border-amber-500/25 bg-amber-50/50 dark:bg-amber-950/20",
+  not_configured: "border-2 border-dashed",
+};
+
+const STATUS_TEXT: Record<CallingSystemStatus["state"], string> = {
+  operational: "text-green-600 dark:text-green-400",
+  degraded: "text-amber-600 dark:text-amber-400",
+  not_configured: "text-muted-foreground",
+};
 const ACTIVE_STAFF = staffMembers.filter((s) => s.isActive);
 
 // ─── Live Tab ───────────────────────────────────────────────
 function LiveTab({
   activeCall,
   missedTasks,
+  systemStatus,
   onCallBack,
   onMarkHandled,
 }: {
   activeCall: ActiveCall | null;
   missedTasks: MissedCallTask[];
+  systemStatus: CallingSystemStatus;
   onCallBack: (task: MissedCallTask) => void;
   onMarkHandled: (task: MissedCallTask) => void;
 }) {
@@ -165,13 +183,21 @@ function LiveTab({
           </CardContent>
         </Card>
       ) : (
-        <Card className="border-2 border-green-500/20 bg-green-50/40">
+        <Card className={STATUS_CARD[systemStatus.state]}>
           <CardContent className="flex items-center gap-3 pt-5">
-            <Radio className="size-5 animate-pulse text-green-600" />
+            <Radio
+              className={`size-5 ${STATUS_TEXT[systemStatus.state]} ${
+                systemStatus.state === "operational" ? "animate-pulse" : ""
+              }`}
+            />
             <div>
-              <p className="font-semibold text-green-700">System Online</p>
+              <p className={`font-semibold ${STATUS_TEXT[systemStatus.state]}`}>
+                {systemStatus.state === "operational"
+                  ? "System Online · No active calls"
+                  : systemStatus.headline}
+              </p>
               <p className="text-muted-foreground text-xs">
-                All lines available · No active calls
+                {systemStatus.detail}
               </p>
             </div>
           </CardContent>
@@ -835,8 +861,17 @@ function CallLogDetail({
  */
 export function CallingWorkspace({
   initialTab = "live",
+  systemStatus,
 }: {
   initialTab?: string;
+  /**
+   * Resolved on the server, because it reads environment credentials that must
+   * never reach the browser — that is the whole reason the old version of this
+   * card was a literal. There is no fallback default on purpose: a component
+   * that can render "Online" without being told would be the original defect
+   * again, one prop-drill away.
+   */
+  systemStatus: CallingSystemStatus;
 }) {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedCall, setSelectedCall] = useState<(typeof callLogs)[0] | null>(
@@ -1291,15 +1326,27 @@ export function CallingWorkspace({
 
         {/* KPI strip */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Card className="border-2 border-green-500/20 bg-green-50/50">
+          <Card className={STATUS_CARD[systemStatus.state]}>
             <CardContent className="pt-5">
-              <div className="flex items-center gap-2 text-green-600">
-                <Radio className="size-4 animate-pulse" />
+              <div
+                className={`flex items-center gap-2 ${STATUS_TEXT[systemStatus.state]}`}
+              >
+                <Radio
+                  className={
+                    systemStatus.state === "operational"
+                      ? "size-4 animate-pulse"
+                      : "size-4"
+                  }
+                />
                 <span className="text-sm font-semibold">System Status</span>
               </div>
-              <p className="mt-1 text-2xl font-bold text-green-600">Online</p>
+              <p
+                className={`mt-1 text-2xl/tight font-bold ${STATUS_TEXT[systemStatus.state]}`}
+              >
+                {systemStatus.headline}
+              </p>
               <p className="text-muted-foreground text-xs">
-                All systems operational
+                {systemStatus.hint}
               </p>
             </CardContent>
           </Card>
@@ -1416,6 +1463,7 @@ export function CallingWorkspace({
             <LiveTab
               activeCall={activeCall}
               missedTasks={missedTasks}
+              systemStatus={systemStatus}
               onCallBack={handleCallBack}
               onMarkHandled={handleMarkHandled}
             />
