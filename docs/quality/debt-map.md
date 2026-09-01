@@ -7405,6 +7405,51 @@ disagrees with the migration history whenever anything has been altered since.
 Adding a settings domain needs no policy work — but if one ever must reach a
 customer, naming it in that function exposes the WHOLE domain, not one field.
 
+### 🟡 The forms list loads every archived form, and the e2e suite is now losing a race against it
+
+`forms.spec.ts:357` — "the screen shows the forms the database holds" — failed
+in the full-suite run of 2026-09-01 and passed on every isolated re-run of the
+same commit. It is not flaky in the usual sense; it is losing a race that gets
+slower every time the suite runs.
+
+`GET /api/forms` applies no status filter unless one is asked for, and the list
+page renders archived forms too (greyed, `opacity-60`). `forms.spec.ts` cleans
+up by ARCHIVING rather than deleting, correctly — a version somebody answered is
+`on delete restrict` and cannot be removed at all. So every run leaves its forms
+in the list forever.
+
+Measured:
+
+```
+select status, count(*) from public.forms where name like '[e2e]%' group by status;
+-- archived  665
+
+-- of those, how many could even be deleted:
+--   deletable (no submissions)  265
+--   has_submissions             400   <- on delete restrict, permanent
+```
+
+So the page under test loads 665 rows and climbing, and the assertion's
+15-second `toBeVisible` times out when the machine is busy — which is exactly
+what a 56-minute suite run is. It passed alone; it failed at minute ~50 of the
+full run.
+
+**It is not a regression.** Bisected against the commit before Phase 1c and the
+same commit in isolation: pass, fail, pass. Nothing in the calling work touches
+forms.
+
+**What to do, in preference order:**
+
+1. Have the list exclude archived by default and offer them behind a filter.
+   That is a product improvement independent of the tests — a facility with a
+   few hundred archived forms has the same page.
+2. Failing that, have `afterAll` hard-delete the ones with no submissions
+   (265 of the 665 today) and archive only the rest. It slows the growth without
+   fixing it.
+
+**What NOT to do:** raise the 15-second timeout. The assertion is not slow, the
+page is, and a longer timeout hides the only signal that says so.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
