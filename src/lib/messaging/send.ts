@@ -39,6 +39,7 @@ import "server-only";
 // Every function returns a result and the caller records it.
 // ============================================================================
 
+import { toE164 } from "@/lib/phone/format";
 import { platformSendingNumber, platformTwilio } from "@/lib/twilio/config";
 
 export interface DeliveryResult {
@@ -72,18 +73,7 @@ export interface DeliveryResult {
  * E.164. Refuses everything else rather than handing Twilio something it will
  * answer with a 400 that reads like an outage.
  */
-export function normalisePhone(raw: string): string | null {
-  const digits = raw.replace(/[^\d+]/g, "");
-  const e164 = digits.startsWith("+")
-    ? digits
-    : digits.length === 10
-      ? `+1${digits}`
-      : digits.length === 11 && digits.startsWith("1")
-        ? `+${digits}`
-        : null;
-  if (!e164 || !/^\+[1-9]\d{7,14}$/.test(e164)) return null;
-  return e164;
-}
+export const normalisePhone = toE164;
 
 /**
  * An email address lowercased and trimmed, or null if it is not one.

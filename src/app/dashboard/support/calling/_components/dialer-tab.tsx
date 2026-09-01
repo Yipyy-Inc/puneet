@@ -17,11 +17,8 @@ import { cn } from "@/lib/utils";
 import { lookupFacilityByPhone } from "@/data/support-calls";
 import { recordOutboundCall } from "@/lib/dialer-store";
 import { usePlatformTelephony } from "@/lib/api/platform-communication";
-import {
-  dialDigits,
-  placeOutboundCall,
-  supportDialPrefix,
-} from "@/lib/twilio-dialer";
+import { isDialable } from "@/lib/phone/format";
+import { placeOutboundCall, supportDialPrefix } from "@/lib/twilio-dialer";
 import type { RecentCall } from "@/types/dialer";
 import { RecentContacts } from "./recent-contacts";
 
@@ -64,7 +61,7 @@ export function DialerTab() {
   // on rows that render after hydration, so it never lands in the SSR output.
   const [nowMs] = useState(() => Date.now());
 
-  const canDial = twilio.connected && !dialing && dialDigits(value).length >= 7;
+  const canDial = twilio.connected && !dialing && isDialable(value);
 
   async function dialNumber(to: string) {
     const target = to.trim();
@@ -72,7 +69,7 @@ export function DialerTab() {
       toast.error("Twilio isn't connected — configure it in Integrations.");
       return;
     }
-    if (dialDigits(target).length < 7) {
+    if (!isDialable(target)) {
       toast.error("Enter a valid number to dial.");
       return;
     }

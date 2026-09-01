@@ -1,3 +1,4 @@
+import { toE164 } from "@/lib/phone/format";
 import { escapeXml, twimlResponse } from "@/lib/twiml";
 
 // Outbound-call webhook. The Dialer (Task 48) places calls from the Yipyy
@@ -7,11 +8,17 @@ import { escapeXml, twimlResponse } from "@/lib/twiml";
 // query string), falling back to the support number.
 const SUPPORT_CALLER_ID = "+14155550100";
 
-/** Normalize a display number to an E.164 caller ID, e.g.
- *  "+1 (415) 555-0100" → "+14155550100". Falls back to the support number. */
+/**
+ * A display number as an E.164 caller ID, falling back to the support number.
+ *
+ * This used to be `"+" + digits` for anything with seven or more of them, which
+ * turned a 10-digit North American number into `+5145550100` — country code 514
+ * — and would have presented an unroutable caller ID on a real call. `toE164`
+ * reads the same input as `+15145550100`, and returns null rather than a guess
+ * for anything it cannot place, which is what makes the fallback meaningful.
+ */
 function toCallerId(from: string): string {
-  const d = from.replace(/\D/g, "");
-  return d.length >= 7 ? `+${d}` : SUPPORT_CALLER_ID;
+  return toE164(from) ?? SUPPORT_CALLER_ID;
 }
 
 async function dialTwiml(to: string, from: string): Promise<Response> {
