@@ -43,13 +43,23 @@ const BASE_URL = REMOTE || `http://localhost:${PORT}`;
  * could skip themselves rather than fail with a puzzle. That flag is gone —
  * every portal requires a session — and the specs that skipped now sign in.
  *
- * Deliberately minimal: KEY=value, no quoting or interpolation. If this ever
- * needs to grow, use a real dotenv rather than extending it.
+ * Deliberately minimal: KEY=value plus optional surrounding quotes, no
+ * interpolation. Quotes are not a feature, they are agreement — bun owns this
+ * file and strips them, so a parser that kept them would read a different
+ * value than the server does from the same line. If this ever needs to grow
+ * further, use a real dotenv rather than extending it.
  */
 try {
   for (const line of readFileSync(".env.local", "utf8").split("\n")) {
     const match = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
-    if (match && !process.env[match[1]!]) process.env[match[1]!] = match[2]!;
+    if (!match || process.env[match[1]!]) continue;
+    // Strip one matched pair of surrounding quotes, exactly as bun does when it
+    // loads this same file. Values here have to be quotable — E2E_PASSWORD
+    // contains an `&`, which truncates the value when a shell sources the file
+    // — and a parser that kept the quotes handed Playwright a password with two
+    // extra characters. Sign-in then failed with `Invalid credentials`, and
+    // _auth.ts sensibly but wrongly sends you to check WorkOS staging.
+    process.env[match[1]!] = match[2]!.replace(/^(["'])(.*)\1$/, "$2");
   }
 } catch {
   /* no .env.local — CI, or a fresh clone */
