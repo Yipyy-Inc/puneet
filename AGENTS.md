@@ -65,7 +65,7 @@ So the gate is **24** specs, and it runs on every push: the authorisation bounda
 
 Let `bun run check:doc-counts` keep both numbers honest rather than trusting this paragraph: they went stale FOUR times before it started deriving them from `package.json`. Each batch earned its place on its first run — the operations set found a production 500 on booking creation, a checkout that priced with no late fee while settings loaded, and an empty board caused by reading a PostgREST to-one relation as an array; the scheduling set found a UTC window that dropped every night shift out of its own day, a wage that could be read but never written, and a groomer told they could see labour cost. `passkey-auth` drives a CDP virtual authenticator, so it is Chromium-only by construction. `booking-payment-ledger` and `booking-payment-screens` joined on 2026-08-25 having sat in NO suite since they were written: the day they were finally run they caught a checkout offering to charge the PRICE on a part-paid booking — $64 asked for on a $64 booking with $16 already paid. **A spec in no suite is not coverage, it is a file.**
 
-CI runs exactly that command, but **the e2e job is not one of the four required status checks** — it reports, it does not gate, and pushes go straight to `main` regardless. Running it locally first is the only thing that actually stops a bad commit. Fastest locally against a built server rather than the dev one:
+CI runs exactly that command, but **the e2e job is not in `image`'s `needs:`** — it reports, it does not gate, and pushes go straight to `main` regardless. Running it locally first is the only thing that actually stops a bad commit. Fastest locally against a built server rather than the dev one:
 
 ```
 bun run build && bun run start --port 3000 &
@@ -103,17 +103,26 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
 - **Conventional Commits** for every commit (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:` …).
 - **Push straight to `main`; do not open a PR** unless asked. Decided
   2026-08-19 — the review round trip cost more than it caught here. `main` is
-  protected with four required checks but `enforce_admins` is false, so the push
-  goes through.
+  protected with five required status checks but `enforce_admins` is false, so
+  the push goes through. FIVE is what GitHub printed on the pushes of
+  2026-08-31 and 2026-09-01 — `5 of 5 required status checks are expected`.
+  It said FOUR here until 2026-09-01 and nothing derived it, which is the
+  whole reason to write down where the number comes from. WHICH five needs
+  `gh api repos/Yipyy-Inc/puneet/branches/main/protection/required_status_checks`
+  and an admin token — a device-flow CLI token is refused with 403. Every push
+  prints the count, so this one announces its own drift if you read the
+  remote's output.
   **The gates are back in front of the fence, and that is new.** Until
   2026-08-25 Vercel deployed production from `main` on push, so CI reported
   _after_ customers already had the code and the required checks were a
   post-mortem. Self-hosted, the pipeline is the other way round: the image is
-  built only once `typecheck`, `lint`, `format`, `checks`, `sql` and `build`
-  have passed, and only then does anything deploy.
+  built only once `typecheck`, `lint`, `format`, `unit`, `checks`, `sql` and
+  `build` have passed, and only then does anything deploy. That list is
+  `image`'s `needs:` in ci.yml, and `bun run check:doc-counts` now derives it
+  from there — it omitted `unit` here until 2026-09-01.
 
   **How a change reaches production now:**
-  1. Push to `main`. CI runs the 14-spec gate, the SQL tests and the checks.
+  1. Push to `main`. CI runs the 24-spec gate, the SQL tests and the checks.
   2. On green, the `image` job builds a container and pushes it to GHCR tagged
      with the commit sha.
   3. The `deploy` job SSHes to the VPS and runs `/opt/yipyy/deploy.sh <sha>`,

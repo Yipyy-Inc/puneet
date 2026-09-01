@@ -176,6 +176,67 @@ const CLAIMS: Claim[] = [
     label: "specs in test:e2e:gate",
     actual: gateSpecCount(),
   },
+  {
+    // The deploy sequence quotes the gate size too, and said 14 from the day the
+    // suite was split until 2026-09-01 — no pattern here matched that sentence,
+    // so nothing contradicted it while the two beside it were checked every run.
+    file: "AGENTS.md",
+    pattern: /CI runs the (\d+)-spec gate, the SQL tests/,
+    label: "specs in test:e2e:gate (deploy sequence)",
+    actual: gateSpecCount(),
+  },
+];
+
+/**
+ * The jobs that gate a deploy, read out of `image`'s `needs:` in ci.yml.
+ *
+ * This is a LIST, not a count, and it is the one CI fact that decides whether
+ * code reaches production: `image` builds only when every job named there has
+ * passed, and `deploy` needs `image`. Both docs describe that list in prose and
+ * both got it wrong the same way — they named six jobs and omitted `unit`, from
+ * the day the sequence was written until 2026-09-01.
+ *
+ * It is deliberately NOT the branch-protection required-check set. That reads
+ * five, lives in GitHub's settings rather than the repository, and needs an
+ * admin token to enumerate — and a check that silently skips when the token is
+ * missing is the appearance of a gate rather than a gate. What decides the
+ * deploy is in the repo, so that is what gets checked here.
+ */
+function deployGateJobs(): string[] {
+  const ci = readFileSync(join(".github", "workflows", "ci.yml"), "utf8");
+  const needs = ci.match(/^\s{4}needs:\s*\[([^\]]+)\]/m);
+  if (!needs) return [];
+  return needs[1]
+    .split(",")
+    .map((job) => job.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Both docs write the list as prose — backticked in AGENTS.md, bare in
+ * CLAUDE.md — so the comparison is on the job NAMES in order, not on the
+ * punctuation around them.
+ */
+function jobsNamedIn(text: string, pattern: RegExp): string[] | null {
+  const found = text.match(pattern);
+  if (!found) return null;
+  return found[1]
+    .split(/,|\band\b/)
+    .map((job) => job.replace(/[`\s]/g, ""))
+    .filter(Boolean);
+}
+
+const GATE_LIST_CLAIMS: { file: string; pattern: RegExp; label: string }[] = [
+  {
+    file: "AGENTS.md",
+    pattern: /built only once ([^.]+?) have passed/,
+    label: "deploy-gating jobs (prose)",
+  },
+  {
+    file: "CLAUDE.md",
+    pattern: /image is built only once ([^.]+?) have passed/,
+    label: "deploy-gating jobs (prose)",
+  },
 ];
 
 console.log(`${ANSI.bold}Doc-count guard${ANSI.reset}`);
@@ -201,6 +262,31 @@ for (const claim of CLAIMS) {
   if (claimed !== claim.actual) {
     wrong.push(
       `${claim.file}: ${claim.label} says ${claimed}, actual is ${claim.actual}`,
+    );
+  }
+}
+
+const gateJobs = deployGateJobs();
+
+if (gateJobs.length === 0) {
+  missing.push(
+    "ci.yml: could not read `image`'s needs: — the deploy-gating job list cannot be checked",
+  );
+}
+
+for (const claim of GATE_LIST_CLAIMS) {
+  const named = jobsNamedIn(readFileSync(claim.file, "utf8"), claim.pattern);
+
+  if (!named) {
+    missing.push(
+      `${claim.file}: ${claim.label} — pattern no longer matches; update the pattern in this script or remove the claim`,
+    );
+    continue;
+  }
+
+  if (gateJobs.length > 0 && named.join(",") !== gateJobs.join(",")) {
+    wrong.push(
+      `${claim.file}: ${claim.label} says [${named.join(", ")}], ci.yml says [${gateJobs.join(", ")}]`,
     );
   }
 }
