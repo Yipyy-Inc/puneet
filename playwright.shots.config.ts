@@ -21,7 +21,9 @@ import { readFileSync } from "node:fs";
 try {
   for (const line of readFileSync(".env.local", "utf8").split("\n")) {
     const match = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
-    if (match && !process.env[match[1]!]) process.env[match[1]!] = match[2]!;
+    if (!match || process.env[match[1]!]) continue;
+    // Quote-stripping, and why: see the identical block in playwright.config.ts.
+    process.env[match[1]!] = match[2]!.replace(/^(["'])(.*)\1$/, "$2");
   }
 } catch {
   /* no .env.local — CI, or a fresh clone */
