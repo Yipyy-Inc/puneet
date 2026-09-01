@@ -1,5 +1,4 @@
 import type {
-  ActiveCall,
   CallQueueEntry,
   IVRConfig,
   VoicemailGreeting,
@@ -11,66 +10,6 @@ import type {
   CallTag,
 } from "@/types/calling";
 import { inquiryTagForIvrKey } from "@/lib/calling/inquiry-tags";
-
-// ============================================================
-// Active Calls (demo / simulation data)
-// ============================================================
-
-export const mockActiveCall: ActiveCall = {
-  id: "active-001",
-  type: "inbound",
-  from: "+1 (514) 555-0142",
-  to: "+1 (514) 555-0100",
-  clientId: 3,
-  clientName: "Jennifer Walsh",
-  clientPhoto: undefined,
-  pets: [
-    { name: "Biscuit", breed: "Golden Retriever" },
-    { name: "Luna", breed: "French Bulldog" },
-  ],
-  tags: ["vip", "high_maintenance"],
-  startTime: new Date(Date.now() - 127000).toISOString(),
-  status: "active",
-  isMuted: false,
-  isRecording: true,
-  assignedStaff: "Sarah M.",
-  upcomingAppointments: 2,
-  outstandingBalance: 145.0,
-  currentService: "Boarding – 3 nights (Biscuit)",
-  // Caller pressed 3 (Boarding & Daycare) in the IVR — carried through to the
-  // call log when the call ends.
-  inquiryTag: inquiryTagForIvrKey("3"),
-};
-
-export const mockIncomingCall: ActiveCall = {
-  id: "incoming-001",
-  type: "inbound",
-  from: "+1 (514) 555-0198",
-  to: "+1 (514) 555-0100",
-  clientId: 15, // Alice Johnson — a real client record so booking pre-fill works
-  clientName: "Alice Johnson",
-  clientPhoto: undefined,
-  pets: [{ name: "Buddy", breed: "Golden Retriever" }],
-  tags: ["vip"],
-  startTime: new Date().toISOString(),
-  status: "ringing",
-  isMuted: false,
-  isRecording: false,
-  upcomingAppointments: 1,
-  outstandingBalance: 0,
-  previousUnresolved: "Rescheduling grooming – last Tuesday",
-};
-
-export const mockUnknownIncomingCall: ActiveCall = {
-  id: "incoming-002",
-  type: "inbound",
-  from: "+1 (514) 555-0227",
-  to: "+1 (514) 555-0100",
-  startTime: new Date().toISOString(),
-  status: "ringing",
-  isMuted: false,
-  isRecording: false,
-};
 
 // ============================================================
 // Call Queue

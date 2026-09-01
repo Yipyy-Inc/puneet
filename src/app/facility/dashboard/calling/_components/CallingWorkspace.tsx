@@ -79,9 +79,6 @@ import { dateRangeBounds, type DateRange } from "@/lib/calling/date-range";
 import { getFacilityRole } from "@/lib/role-utils";
 import { shouldAutoFlag } from "@/lib/calling/flag-call";
 import {
-  mockIncomingCall,
-  mockUnknownIncomingCall,
-  mockActiveCall,
   callQueue,
   ivrConfig,
   voicemailGreetings,
@@ -107,17 +104,11 @@ const ACTIVE_STAFF = staffMembers.filter((s) => s.isActive);
 // ─── Live Tab ───────────────────────────────────────────────
 function LiveTab({
   activeCall,
-  onSimulateIncoming,
-  onSimulateUnknown,
-  onAnswerDemo,
   missedTasks,
   onCallBack,
   onMarkHandled,
 }: {
   activeCall: ActiveCall | null;
-  onSimulateIncoming: () => void;
-  onSimulateUnknown: () => void;
-  onAnswerDemo: () => void;
   missedTasks: MissedCallTask[];
   onCallBack: (task: MissedCallTask) => void;
   onMarkHandled: (task: MissedCallTask) => void;
@@ -127,42 +118,6 @@ function LiveTab({
   const openMissed = missedTasks.filter((t) => t.status !== "resolved");
   return (
     <div className="space-y-6">
-      {/* Demo controls */}
-      <Card className="border-dashed">
-        <CardContent className="flex flex-wrap items-center gap-3 pt-5">
-          <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            Demo Controls
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={onSimulateIncoming}
-          >
-            <PhoneIncoming className="size-4 text-green-600" />
-            Simulate Known Caller
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={onSimulateUnknown}
-          >
-            <PhoneIncoming className="size-4 text-amber-500" />
-            Simulate Unknown Caller
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={onAnswerDemo}
-          >
-            <PhoneCall className="size-4 text-blue-600" />
-            Show Active Call Panel
-          </Button>
-        </CardContent>
-      </Card>
-
       {/* Active call or idle */}
       {activeCall ? (
         <Card className="border-2 border-green-500/30 bg-green-50/30">
@@ -1474,9 +1429,6 @@ export function CallingWorkspace({
           <TabsContent value="live">
             <LiveTab
               activeCall={activeCall}
-              onSimulateIncoming={() => setIncomingCall(mockIncomingCall)}
-              onSimulateUnknown={() => setIncomingCall(mockUnknownIncomingCall)}
-              onAnswerDemo={() => setActiveCall(mockActiveCall)}
               missedTasks={missedTasks}
               onCallBack={handleCallBack}
               onMarkHandled={handleMarkHandled}
