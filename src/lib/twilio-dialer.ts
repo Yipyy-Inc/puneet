@@ -1,13 +1,20 @@
-// Client helpers for placing outbound support calls through Twilio (Task 19).
+// Client helpers for placing outbound support calls from the platform console.
 
 export interface PlaceCallResult {
   ok: boolean;
-  callSid?: string;
+  /**
+   * Whether a call was genuinely handed to the provider.
+   *
+   * Separate from `ok` on purpose. The endpoint used to return a fabricated
+   * `callSid` and `status: "queued"`, so every caller read `ok: true` and told
+   * somebody the call was being placed while nothing dialled. `ok` now means
+   * the request was accepted; `placed` means a call exists.
+   */
+  placed?: boolean;
   to?: string;
   from?: string;
-  status?: string;
-  /** The TwiML webhook URL Twilio is pointed at for the dialed leg. */
-  dialUrl?: string;
+  /** Why nothing was placed, when nothing was. */
+  reason?: string;
   error?: string;
 }
 
@@ -18,15 +25,19 @@ export function supportDialPrefix(supportNumber: string | undefined): string {
   return m ? `${m[1]} ` : "";
 }
 
-/** Place an outbound call from the Yipyy support number to `to`. Initiates the
- *  call via the /api/twilio/call route (the Twilio REST calls.create integration
- *  point), which in turn points Twilio at the /api/twilio/dial TwiML webhook. */
+/**
+ * Ask the support desk's outbound endpoint to place a call.
+ *
+ * Was `/api/twilio/call`, which sat inside the proxy's `api/twilio` auth
+ * exclusion and took both legs of the call from an unauthenticated request
+ * body. It is now platform-admin only.
+ */
 export async function placeOutboundCall(params: {
   to: string;
   from: string;
 }): Promise<PlaceCallResult> {
   try {
-    const res = await fetch("/api/twilio/call", {
+    const res = await fetch("/api/platform/calling/outbound", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
@@ -36,6 +47,7 @@ export async function placeOutboundCall(params: {
   } catch (e) {
     return {
       ok: false,
+      placed: false,
       error: e instanceof Error ? e.message : "Network error",
     };
   }

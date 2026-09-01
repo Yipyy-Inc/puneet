@@ -4,11 +4,7 @@ import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 import { normalisePhone } from "@/lib/messaging/send";
 import { suppress } from "@/lib/messaging/suppression";
 import { platformTwilio } from "@/lib/twilio/config";
-import {
-  inboundIntent,
-  isTwilioSignature,
-  twilioRequestUrl,
-} from "@/lib/twilio/signature";
+import { inboundIntent, verifyTwilioWebhook } from "@/lib/twilio/signature";
 
 // ============================================================================
 // Somebody texted back.
@@ -61,32 +57,15 @@ function twiml(): NextResponse {
 }
 
 export async function POST(request: NextRequest) {
-  const twilio = platformTwilio();
-  if (!twilio) {
-    // Not configured. Answer 200 so Twilio does not retry for hours against a
-    // deployment that will never be able to accept it.
-    return twiml();
-  }
-
-  const form = await request.formData().catch(() => null);
-  if (!form) return twiml();
-
-  const params: Record<string, string> = {};
-  for (const [key, value] of form.entries()) {
-    if (typeof value === "string") params[key] = value;
-  }
-
-  if (
-    !isTwilioSignature({
-      authToken: twilio.authToken,
-      url: twilioRequestUrl(request),
-      params,
-      signature: request.headers.get("x-twilio-signature"),
-    })
-  ) {
-    // 403 and nothing else. A caller who cannot sign learns only that.
-    return new NextResponse(null, { status: 403 });
-  }
+  // The shared verifier, so all five webhooks refuse identically. This route
+  // used to answer 200 with empty TwiML when the deployment had no credentials,
+  // reasoning that the provider should not retry for hours — but that reasoning
+  // needs a provider, and where there is one this still returns 200 after the
+  // signature checks out. Unconfigured, the only callers are probes, and 200 to
+  // a probe is what makes "unsigned is refused" untestable.
+  const check = await verifyTwilioWebhook(request, platformTwilio()?.authToken);
+  if (!check.ok) return check.response;
+  const params = check.params;
 
   const from = normalisePhone(params.From ?? "");
   const intent = inboundIntent(params.Body ?? "");

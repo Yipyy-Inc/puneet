@@ -267,9 +267,22 @@ export const config = {
      * Everything except:
      *   _next/static, _next/image  — build output, no auth context needed
      *   favicon / image files      — static assets
-     *   api/twilio, api/health     — machine-to-machine; Twilio signs its own
-     *                                webhooks and carries no session, so
-     *                                establishing one would be pure latency
+     *   the five signed webhook    — machine-to-machine. Each verifies an HMAC
+     *   paths, api/health            signature over its own body before doing
+     *                                anything (verifyTwilioWebhook), and
+     *                                carries no session, so establishing one
+     *                                would be pure latency.
+     *
+     *                                NAMED INDIVIDUALLY, and that is the point.
+     *                                This excluded all of `api/twilio` on the
+     *                                stated grounds that "Twilio signs its own
+     *                                webhooks" — true of ONE of the five at the
+     *                                time. The other four verified nothing, and
+     *                                `api/twilio/call` was an outbound-call
+     *                                endpoint that took both legs from an
+     *                                unauthenticated request body. A prefix
+     *                                exclusion covers routes nobody has written
+     *                                yet; a list has to be edited on purpose.
      *   api/internal              — the TLS `ask` endpoint. Caddy calls it
      *                                DURING A TLS HANDSHAKE, before the
      *                                certificate exists, to decide whether to
@@ -286,6 +299,6 @@ export const config = {
      * /auth/callback is NOT excluded either — it must run so AuthKit can set the
      * session cookie it just earned.
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/twilio|api/health|api/internal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/twilio/sms|api/twilio/voice|api/twilio/dial|api/twilio/status|api/twilio/recording|api/health|api/internal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
