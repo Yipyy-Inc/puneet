@@ -1,178 +1,59 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  PhoneCall,
-  CheckCircle2,
-  XCircle,
-  Upload,
-  FileText,
-  ChevronRight,
-  ChevronLeft,
-  Loader2,
-  Bell,
-  Clock,
-  ShieldCheck,
-  AlertTriangle,
-  Info,
-  RotateCcw,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { CheckCircle2, Info, PhoneCall } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ============================================================================
+// Porting an existing number — what we can honestly offer today.
+//
+// ── WHAT THIS REPLACED ────────────────────────────────────────────────────
+//
+// A five-step wizard that fabricated the entire process:
+//
+//   * "Instantly check if it's eligible" ran `setTimeout(1500)` and then
+//     declared any number ENDING IN 0 ineligible and everything else eligible.
+//     A business could have abandoned a port, or begun one, on a digit.
+//   * Steps 2 and 3 collected the carrier ACCOUNT NUMBER and PIN — the
+//     credentials that authorise a transfer away from a carrier — plus the
+//     service address and an uploaded bill. All of it went into React state and
+//     nowhere else. There is no porting backend and no table to hold it.
+//   * Step 4 said "By submitting, a Letter of Authorization will be sent to
+//     your email for a digital signature." Nothing sends an email.
+//   * Step 5 said "Port request submitted!", showed a hardcoded
+//     "In Progress — Est. May 3, 2026" and listed a MOCK_STATUS_UPDATES array
+//     under the heading "Real-time status updates".
+//
+// The trigger card advertised "Free porting · Digital LOA · Real-time status".
+//
+// ── WHY A REQUEST AND NOT A FLAG ──────────────────────────────────────────
+//
+// There is no feature-flag mechanism in this codebase to hide it behind, and
+// keeping five steps of unreachable flow "for Phase 2" is how a fabricated
+// screen ships by accident. Porting arrives properly in Phase 2 with
+// `communication_numbers` and a real carrier integration (P2-04); this asks for
+// the one thing a person can act on now, and says plainly that a human does the
+// rest.
+//
+// It deliberately does NOT take an account number or a PIN. Those are
+// credentials, and nothing here is allowed to hold one — the same rule the
+// settings domains follow.
+// ============================================================================
 
-type PortStatus = "idle" | "checking" | "eligible" | "ineligible";
-type WizardStep = 1 | 2 | 3 | 4 | 5; // 5 = submitted/tracking
-
-interface PortingRequest {
-  phoneNumber: string;
-  accountNumber: string;
-  pin: string;
-  serviceAddress: string;
-  city: string;
-  state: string;
-  zip: string;
-  authorizedName: string;
-  file: File | null;
-}
-
-// Mock port status updates — in production these come from webhooks
-const MOCK_STATUS_UPDATES = [
-  {
-    date: "2026-04-28",
-    status: "submitted",
-    label: "Request submitted",
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-    icon: FileText,
-  },
-  {
-    date: "2026-04-29",
-    status: "approved",
-    label: "Approved by carrier",
-    color: "text-green-600",
-    bg: "bg-green-50",
-    icon: CheckCircle2,
-  },
-  {
-    date: "2026-05-01",
-    status: "scheduled",
-    label: "Port scheduled for May 3rd",
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-    icon: Clock,
-  },
-];
-
-const STEPS = [
-  { n: 1, label: "Portability Check" },
-  { n: 2, label: "Account Info" },
-  { n: 3, label: "Upload Bill" },
-  { n: 4, label: "Authorize" },
-];
-
-// ─── Step indicator ───────────────────────────────────────────────────────────
-function StepBar({ current }: { current: WizardStep }) {
-  if (current === 5) return null;
-  return (
-    <div className="mb-6 flex items-center gap-0">
-      {STEPS.map((s, i) => {
-        const done = current > s.n;
-        const active = current === s.n;
-        return (
-          <div key={s.n} className="flex flex-1 items-center">
-            <div className="flex shrink-0 flex-col items-center gap-1">
-              <div
-                className={cn(
-                  "flex size-7 items-center justify-center rounded-full border-2 text-[11px] font-bold transition-all",
-                  done
-                    ? "border-primary bg-primary text-white"
-                    : active
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-muted text-muted-foreground",
-                )}
-              >
-                {done ? <CheckCircle2 className="size-3.5" /> : s.n}
-              </div>
-              <span
-                className={cn(
-                  "w-16 text-center text-[10px] leading-tight font-medium",
-                  active
-                    ? "text-primary"
-                    : done
-                      ? "text-foreground"
-                      : "text-muted-foreground",
-                )}
-              >
-                {s.label}
-              </span>
-            </div>
-            {i < STEPS.length - 1 && (
-              <div
-                className={cn(
-                  "mx-1 mb-4 h-px flex-1 transition-colors",
-                  done ? "bg-primary" : "bg-border",
-                )}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Main wizard ─────────────────────────────────────────────────────────────
 export function NumberPortingWizard() {
-  const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<WizardStep>(1);
-  const [portStatus, setPortStatus] = useState<PortStatus>("idle");
-  const [form, setForm] = useState<PortingRequest>({
-    phoneNumber: "",
-    accountNumber: "",
-    pin: "",
-    serviceAddress: "",
-    city: "",
-    state: "",
-    zip: "",
-    authorizedName: "",
-    file: null,
-  });
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [number, setNumber] = useState("");
+  const [sent, setSent] = useState(false);
 
-  const set = (k: keyof PortingRequest, v: string | File | null) =>
-    setForm((f) => ({ ...f, [k]: v }));
-
-  const checkPortability = () => {
-    if (!form.phoneNumber.trim()) return;
-    setPortStatus("checking");
-    // Mock API call — 1.5s delay
-    setTimeout(() => {
-      // Numbers ending in 0 are "ineligible" for demo
-      setPortStatus(form.phoneNumber.endsWith("0") ? "ineligible" : "eligible");
-    }, 1500);
-  };
-
-  const reset = () => {
-    setStep(1);
-    setPortStatus("idle");
-    setForm({
-      phoneNumber: "",
-      accountNumber: "",
-      pin: "",
-      serviceAddress: "",
-      city: "",
-      state: "",
-      zip: "",
-      authorizedName: "",
-      file: null,
-    });
-  };
+  const mailto = `mailto:support@yipyy.com?subject=${encodeURIComponent(
+    "Port my existing business number",
+  )}&body=${encodeURIComponent(
+    `I'd like to transfer my existing business number to Yipyy.\n\nNumber: ${
+      number || "(number)"
+    }\n\nPlease let me know what you need from my current carrier.`,
+  )}`;
 
   return (
     <Card>
@@ -182,470 +63,54 @@ export function NumberPortingWizard() {
           Port Your Number
         </CardTitle>
         <p className="text-muted-foreground text-sm">
-          Transfer your existing business number to this platform.
+          Transfer your existing business number to this platform
         </p>
       </CardHeader>
-      <CardContent>
-        {!open ? (
-          /* ── Entry state ── */
-          <div className="bg-muted/30 flex items-start gap-4 rounded-xl border p-4">
-            <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-xl">
-              <PhoneCall className="text-primary size-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Keep your existing number</p>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Port your current business number so clients can still reach
-                you. Takes 3–5 business days. No downtime.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {["Free porting", "Digital LOA", "Real-time status"].map(
-                  (t) => (
-                    <span
-                      key={t}
-                      className="bg-primary/10 text-primary flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                    >
-                      <CheckCircle2 className="size-3" />
-                      {t}
-                    </span>
-                  ),
-                )}
-              </div>
-            </div>
-            <Button
-              size="sm"
-              className="shrink-0"
-              onClick={() => setOpen(true)}
-            >
-              Start Porting <ChevronRight className="ml-1 size-3.5" />
-            </Button>
-          </div>
-        ) : (
-          /* ── Wizard ── */
-          <div className="space-y-4">
-            <StepBar current={step} />
+      <CardContent className="space-y-4">
+        <div className="flex gap-2.5 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-sm text-blue-700 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300">
+          <Info className="mt-0.5 size-4 shrink-0" />
+          <span>
+            Porting is not self-serve yet. Tell us the number and we&apos;ll
+            check it with your carrier and come back to you — most business
+            numbers can be transferred, and your line keeps working throughout.
+          </span>
+        </div>
 
-            {/* ── Step 1: Portability Check ── */}
-            {step === 1 && (
-              <div className="space-y-4">
-                <div className="flex gap-2.5 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-sm text-blue-700">
-                  <Info className="mt-0.5 size-4 shrink-0" />
-                  <span>
-                    Enter your current business number to instantly check if
-                    it&apos;s eligible for porting.
-                  </span>
-                </div>
-                <div>
-                  <Label className="mb-2 block">Current phone number</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      className="max-w-xs font-mono"
-                      placeholder="+1 (514) 555-0100"
-                      value={form.phoneNumber}
-                      onChange={(e) => {
-                        set("phoneNumber", e.target.value);
-                        setPortStatus("idle");
-                      }}
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={checkPortability}
-                      disabled={
-                        portStatus === "checking" || !form.phoneNumber.trim()
-                      }
-                    >
-                      {portStatus === "checking" ? (
-                        <>
-                          <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                          Checking…
-                        </>
-                      ) : (
-                        "Check"
-                      )}
-                    </Button>
-                  </div>
-                </div>
+        <div>
+          <Label className="mb-2 block">
+            Your current business number{" "}
+            <span className="text-muted-foreground font-normal">
+              (optional)
+            </span>
+          </Label>
+          <Input
+            className="max-w-xs font-mono"
+            inputMode="tel"
+            placeholder="+1 (555) 000-0000"
+            value={number}
+            onChange={(e) => {
+              setNumber(e.target.value);
+              setSent(false);
+            }}
+          />
+          <p className="text-muted-foreground mt-1.5 text-xs">
+            We never ask for your carrier account number or PIN here. Those are
+            only ever given on a signed Letter of Authorization, which we will
+            walk you through.
+          </p>
+        </div>
 
-                {portStatus === "eligible" && (
-                  <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-                    <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-green-600" />
-                    <div>
-                      <p className="text-sm font-semibold text-green-700">
-                        Number is eligible for porting!
-                      </p>
-                      <p className="mt-0.5 text-xs text-green-600">
-                        <span className="font-mono font-bold">
-                          {form.phoneNumber}
-                        </span>{" "}
-                        can be transferred. Continue to provide your carrier
-                        account details.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {portStatus === "ineligible" && (
-                  <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-                    <XCircle className="mt-0.5 size-5 shrink-0 text-red-600" />
-                    <div>
-                      <p className="text-sm font-semibold text-red-700">
-                        Number cannot be ported
-                      </p>
-                      <p className="mt-0.5 text-xs text-red-600">
-                        This number is not eligible for porting at this time.
-                        Contact support for assistance.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-between pt-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setOpen(false);
-                      reset();
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={portStatus !== "eligible"}
-                    onClick={() => setStep(2)}
-                  >
-                    Continue <ChevronRight className="ml-1 size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Step 2: Account Info ── */}
-            {step === 2 && (
-              <div className="space-y-4">
-                <div className="flex gap-2.5 rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm text-amber-700">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  <span>
-                    These details must <strong>exactly match</strong> your
-                    current carrier&apos;s records or the port will be rejected.
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label className="mb-2 block">
-                      Account number <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      placeholder="Found on your bill"
-                      value={form.accountNumber}
-                      onChange={(e) => set("accountNumber", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-2 block">
-                      Account PIN / Passcode
-                      <span className="text-muted-foreground ml-1.5 text-[11px] font-normal">
-                        (if applicable)
-                      </span>
-                    </Label>
-                    <Input
-                      type="password"
-                      placeholder="4–6 digit PIN"
-                      value={form.pin}
-                      onChange={(e) => set("pin", e.target.value)}
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label className="mb-2 block">
-                      Service address{" "}
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      placeholder="123 Main St"
-                      value={form.serviceAddress}
-                      onChange={(e) => set("serviceAddress", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-2 block">
-                      City <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      placeholder="Montreal"
-                      value={form.city}
-                      onChange={(e) => set("city", e.target.value)}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="mb-2 block">Province / State</Label>
-                      <Input
-                        placeholder="QC"
-                        value={form.state}
-                        onChange={(e) => set("state", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label className="mb-2 block">Postal code</Label>
-                      <Input
-                        placeholder="H1A 1A1"
-                        value={form.zip}
-                        onChange={(e) => set("zip", e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between pt-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setStep(1)}
-                  >
-                    <ChevronLeft className="mr-1 size-3.5" /> Back
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={
-                      !form.accountNumber.trim() ||
-                      !form.serviceAddress.trim() ||
-                      !form.city.trim()
-                    }
-                    onClick={() => setStep(3)}
-                  >
-                    Continue <ChevronRight className="ml-1 size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Step 3: Document Upload ── */}
-            {step === 3 && (
-              <div className="space-y-4">
-                <div className="flex gap-2.5 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-sm text-blue-700">
-                  <Info className="mt-0.5 size-4 shrink-0" />
-                  <span>
-                    Upload your most recent phone bill (within the last 30
-                    days). PDF, JPG, or PNG — max 10 MB.
-                  </span>
-                </div>
-
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  className="hidden"
-                  onChange={(e) => set("file", e.target.files?.[0] ?? null)}
-                />
-
-                {!form.file ? (
-                  <button
-                    onClick={() => fileRef.current?.click()}
-                    className="border-border hover:border-primary/50 hover:bg-primary/5 flex w-full flex-col items-center gap-3 rounded-xl border-2 border-dashed py-10 text-center transition-colors"
-                  >
-                    <div className="bg-muted flex size-12 items-center justify-center rounded-xl">
-                      <Upload className="text-muted-foreground size-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">
-                        Click to upload your phone bill
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 text-xs">
-                        PDF, JPG, PNG — max 10 MB
-                      </p>
-                    </div>
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50/50 px-4 py-3">
-                    <div className="flex size-10 items-center justify-center rounded-lg bg-green-100">
-                      <FileText className="size-5 text-green-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">
-                        {form.file.name}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {(form.file.size / 1024).toFixed(0)} KB
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => set("file", null)}
-                      className="text-muted-foreground hover:text-destructive text-xs underline"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
-
-                <div className="flex justify-between pt-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setStep(2)}
-                  >
-                    <ChevronLeft className="mr-1 size-3.5" /> Back
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={!form.file}
-                    onClick={() => setStep(4)}
-                  >
-                    Continue <ChevronRight className="ml-1 size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Step 4: Digital LOA / Authorize ── */}
-            {step === 4 && (
-              <div className="space-y-4">
-                <div className="bg-muted/40 space-y-2 rounded-xl border p-4 text-sm">
-                  <p className="font-semibold">Review your porting request</p>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                    <span className="text-muted-foreground">
-                      Number to port
-                    </span>
-                    <span className="font-mono font-semibold">
-                      {form.phoneNumber}
-                    </span>
-                    <span className="text-muted-foreground">
-                      Account number
-                    </span>
-                    <span className="font-mono">{form.accountNumber}</span>
-                    <span className="text-muted-foreground">
-                      Service address
-                    </span>
-                    <span>
-                      {form.serviceAddress}, {form.city} {form.state} {form.zip}
-                    </span>
-                    <span className="text-muted-foreground">Document</span>
-                    <span className="truncate">{form.file?.name}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="mb-2 block">
-                    Authorized account holder name{" "}
-                    <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    placeholder="Full legal name as on the account"
-                    value={form.authorizedName}
-                    onChange={(e) => set("authorizedName", e.target.value)}
-                  />
-                </div>
-
-                <div className="border-primary/20 bg-primary/5 flex items-start gap-3 rounded-xl border px-4 py-3">
-                  <ShieldCheck className="text-primary mt-0.5 size-5 shrink-0" />
-                  <p className="text-muted-foreground text-xs">
-                    By submitting, a{" "}
-                    <strong>Letter of Authorization (LOA)</strong> will be sent
-                    to your email for a digital signature. You authorize the
-                    transfer of the above number. No PDF required.
-                  </p>
-                </div>
-
-                <div className="flex justify-between pt-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setStep(3)}
-                  >
-                    <ChevronLeft className="mr-1 size-3.5" /> Back
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={!form.authorizedName.trim()}
-                    onClick={() => setStep(5)}
-                  >
-                    Submit &amp; Send LOA{" "}
-                    <ShieldCheck className="ml-1.5 size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Step 5: Submitted / Status tracking ── */}
-            {step === 5 && (
-              <div className="space-y-5">
-                <div className="flex flex-col items-center gap-3 py-4 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-2xl bg-green-100">
-                    <CheckCircle2 className="size-7 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-base font-bold">
-                      Port request submitted!
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      Check your email for the LOA link to sign digitally.
-                      Porting typically takes 3–5 business days.
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="gap-1.5 border-amber-200 bg-amber-50 text-amber-600"
-                  >
-                    <Clock className="size-3" /> In Progress — Est. May 3, 2026
-                  </Badge>
-                </div>
-
-                {/* Status timeline */}
-                <div>
-                  <p className="text-muted-foreground mb-3 flex items-center gap-2 text-xs font-bold tracking-wide uppercase">
-                    <Bell className="size-3.5" /> Real-time status updates
-                  </p>
-                  <div className="space-y-2">
-                    {MOCK_STATUS_UPDATES.map((u, i) => {
-                      const Icon = u.icon;
-                      return (
-                        <div
-                          key={i}
-                          className={cn(
-                            "flex items-start gap-3 rounded-xl border px-3 py-2.5",
-                            u.bg,
-                          )}
-                        >
-                          <Icon
-                            className={cn("mt-0.5 size-4 shrink-0", u.color)}
-                          />
-                          <div className="flex-1">
-                            <p className={cn("text-sm font-semibold", u.color)}>
-                              {u.label}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              {u.date}
-                            </p>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className="shrink-0 text-[10px] capitalize"
-                          >
-                            {u.status}
-                          </Badge>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="text-muted-foreground mt-2 flex items-center gap-1 text-[11px]">
-                    <Bell className="size-3" /> Status updates are pushed in
-                    real time via webhooks — no need to check email.
-                  </p>
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full gap-1.5"
-                  onClick={reset}
-                >
-                  <RotateCcw className="size-3.5" /> Start a new port request
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" asChild onClick={() => setSent(true)}>
+            <a href={mailto}>Ask us to port this number</a>
+          </Button>
+          {sent && (
+            <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="size-3.5" />
+              Opened in your email app — nothing has been sent from here
+            </span>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

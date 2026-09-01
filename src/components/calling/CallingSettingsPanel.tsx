@@ -33,7 +33,9 @@ import {
   PhoneForwarded,
   Timer,
 } from "lucide-react";
+import Link from "next/link";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
+import { PERMISSION_GROUPS } from "@/types/facility-staff";
 import { cn } from "@/lib/utils";
 import {
   useFacilitySettings,
@@ -203,6 +205,17 @@ function fromDomains(facility: FacilitySettings): CallingSettings {
 // edges. Calling used to carry a second copy in a different shape.
 // ============================================================================
 
+/**
+ * The calling permissions, taken from the catalogue rather than retyped.
+ *
+ * Only the `calling_` keys: the catalogue group is "Calling & messages" and the
+ * messaging half is a different module's screen.
+ */
+const CALLING_PERMISSIONS =
+  PERMISSION_GROUPS.find(
+    (g) => g.id === "calling_messages",
+  )?.permissions.filter((p) => p.key.startsWith("calling_")) ?? [];
+
 /** The four domains this panel writes, and how to cut its draft into them. */
 const SECTIONS: {
   domain: SettingDomain;
@@ -266,6 +279,38 @@ export function CallingSettingsPanel() {
   const settings = draft ?? stored;
   const dirty = draft !== null;
 
+  // ── NOTHING MAY BE EDITED BEFORE THE FACILITY'S VALUES ARRIVE ────────────
+  //
+  // `useFacilitySettings` returns the documented DEFAULTS while the request is
+  // in flight — deliberately, so the booking modals can render a whole form.
+  // Here that is a trap: a draft seeded from those defaults keeps shadowing the
+  // real values once they land (`draft ?? stored`), and Save writes EVERY
+  // domain. One toggle flipped a second too early silently replaces the
+  // facility's business hours, dispatch mode and recording policy with the
+  // fallbacks.
+  //
+  // Not hypothetical. It overwrote this database's real hours — Monday
+  // 06:15-21:45 with the weekend closed — with the fixture's 07:00-19:00 and an
+  // open weekend, during the verification run for this very change.
+  //
+  // So the panel does not exist until it knows what it is editing.
+  if (isPending) {
+    return (
+      <div className="space-y-6">
+        {[0, 1, 2].map((i) => (
+          <Card key={i}>
+            <CardContent className="py-10">
+              <div
+                data-slot="skeleton"
+                className="bg-muted h-4 w-48 animate-pulse rounded-sm"
+              />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   const update = <K extends keyof CallingSettings>(
     key: K,
     value: CallingSettings[K],
@@ -288,6 +333,10 @@ export function CallingSettingsPanel() {
     });
 
   const handleSave = async () => {
+    // Unreachable while the early return above stands, and kept anyway: this is
+    // the function that writes five domains at once, and the cost of it running
+    // against unloaded values is somebody's opening hours.
+    if (isPending || !dirty) return;
     const attempts = await Promise.allSettled(
       SECTIONS.map((section) =>
         saveSetting.mutateAsync({
@@ -840,26 +889,28 @@ export function CallingSettingsPanel() {
           </p>
         </CardHeader>
         <CardContent>
+          {/* Rendered from the catalogue the role editor actually reads.
+              These were six hand-typed strings, and they had drifted: two of
+              them — "Download recordings" and "Delete recordings" — name
+              permissions that do not exist, so a manager sent here to grant one
+              would search the role editor and never find it. A third,
+              calling_view_voicemail, was real and missing. */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {[
-              "Receive calls",
-              "Make outbound calls",
-              "Access recordings",
-              "Download recordings",
-              "Delete recordings",
-              "Change IVR settings",
-            ].map((perm) => (
+            {CALLING_PERMISSIONS.map((perm) => (
               <div
-                key={perm}
+                key={perm.key}
                 className="bg-muted/30 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium"
+                title={perm.hint}
               >
                 <Shield className="text-muted-foreground size-3" />
-                {perm}
+                {perm.label}
               </div>
             ))}
           </div>
-          <Button variant="outline" size="sm" className="mt-3">
-            Manage Role Permissions →
+          <Button variant="outline" size="sm" className="mt-3" asChild>
+            <Link href="/facility/dashboard/settings?section=roles-permissions">
+              Manage Role Permissions →
+            </Link>
           </Button>
         </CardContent>
       </Card>
