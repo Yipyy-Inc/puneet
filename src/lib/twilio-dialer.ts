@@ -18,11 +18,6 @@ export function supportDialPrefix(supportNumber: string | undefined): string {
   return m ? `${m[1]} ` : "";
 }
 
-/** Digits only — used to validate a destination before dialing. */
-export function dialDigits(value: string): string {
-  return value.replace(/\D/g, "");
-}
-
 /** Place an outbound call from the Yipyy support number to `to`. Initiates the
  *  call via the /api/twilio/call route (the Twilio REST calls.create integration
  *  point), which in turn points Twilio at the /api/twilio/dial TwiML webhook. */

@@ -15,7 +15,7 @@
 // representative queued call (callSid + status) — the same "real route handler,
 // representative result" shape as the other /api/twilio/* webhooks.
 
-import { dialDigits } from "@/lib/twilio-dialer";
+import { isDialable } from "@/lib/phone/format";
 
 export async function POST(req: Request): Promise<Response> {
   let to = "";
@@ -28,13 +28,13 @@ export async function POST(req: Request): Promise<Response> {
     // no / invalid JSON body
   }
 
-  if (dialDigits(to).length < 7) {
+  if (!isDialable(to)) {
     return Response.json(
       { ok: false, error: "A valid destination number is required." },
       { status: 400 },
     );
   }
-  if (dialDigits(from).length < 7) {
+  if (!isDialable(from)) {
     return Response.json(
       { ok: false, error: "A valid caller number is required." },
       { status: 400 },
