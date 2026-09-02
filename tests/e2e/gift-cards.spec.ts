@@ -437,6 +437,104 @@ test.describe("gift cards", () => {
     });
   });
 
+  test("a valid card is redeemable at the counter", async ({ page }) => {
+    // ── THE BUTTON, NOT THE ROUTE ────────────────────────────────────────
+    //
+    // "handing a card in moves its value onto the customer's credit", below,
+    // posts to /api/gift-cards/to-credit and has always passed. It could not
+    // have caught this: the defect was in the modal, BEFORE any request.
+    //
+    // `RedeemGiftCardModal` derived the card's origin location with
+    // `deriveLocationId(card.id)` — a hash into one of three fixture location
+    // slugs — and fed it to `canRedeemGiftCard`, which compares it to the
+    // till's location. `crossLocationGiftCards` defaults to false, and a slug
+    // can never equal a real location uuid, so every card read as "purchased
+    // somewhere else". `cardValid` went false and Continue died.
+    //
+    // MEASURED on a real $40 card before the fix: status Active, "$40.00
+    // available", Continue disabled, and nothing on screen saying why — the
+    // banner that would have explained it was gated on `isMultiLocation`,
+    // which is false for every facility here.
+    //
+    // So the assertion is the ENABLED button on a card the screen has already
+    // agreed is good. It fails against the old code and passes against
+    // 80d9b0ae.
+    await signIn(page, ACCOUNTS.owner);
+
+    // ── THE CARD HAS TO BE ONE THE BUG COULD REACH ───────────────────────
+    //
+    // `deriveLocationId` was `parseInt(id)` % 3 into a slug array, and a uuid
+    // beginning with a LETTER parses to NaN — index NaN is `undefined`, the
+    // origin reads falsy, and the cross-location check short-circuits to
+    // allowed. So the defect only ever reached cards whose id begins with a
+    // digit: MEASURED across this facility's 2,248 cards, 59.9% of them.
+    //
+    // Issuing one card and hoping would make this test a coin flip as a
+    // control — it passed against the reintroduced bug on its first attempt,
+    // which is how this was found. So issue until the id qualifies. Ten
+    // attempts fail once in about 10,000 runs.
+    let code = "";
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      code = freshCode("counter");
+      const card = await issue(page, { amount: 40, code, kind: "online" });
+      if (/^[0-9]/.test(card.id)) break;
+      // Not qualifying: drain and cancel it here rather than leaving the sweep
+      // a card this test never used.
+      await page.request.post(REDEEM, {
+        data: { code, amount: 40, note: "E2E cleanup: drain" },
+      });
+      await page.request.patch(`${CARDS}/${card.id}`, {
+        data: { status: "cancelled" },
+      });
+      code = "";
+    }
+    expect(code, "no card with a digit-leading id in ten tries").not.toBe("");
+
+    await page.goto("/facility/dashboard/gift-cards");
+    const dialog = page.getByRole("dialog");
+
+    // WAIT FOR THE CARDS FIRST, and not as politeness. The modal searches the
+    // list the PAGE holds, not the API, so opening it before that list arrives
+    // answers "No gift card found with that code" for a card that plainly
+    // exists — which is how this test failed on its first run. A counter
+    // scanning quickly after a page load can see the same thing; that is worth
+    // knowing, but it is not the defect under test, so the test waits rather
+    // than asserting the race.
+    await expect(page.getByText(/Total issued: [1-9]/)).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await page.getByRole("button", { name: "Redeem to Credit" }).click();
+
+    // Step 1 — who receives the balance.
+    await page
+      .getByPlaceholder("Search by name, email, or phone…")
+      .fill("Alice");
+    await dialog
+      .getByRole("button", { name: /Alice Johnson/ })
+      .first()
+      .click({ timeout: 20_000 });
+    await dialog.getByRole("button", { name: "Continue" }).click();
+
+    // Step 2 — the card itself. Enter submits; the search button is an icon.
+    const scan = page.getByPlaceholder("Scan or type the card number");
+    await scan.fill(code);
+    await scan.press("Enter");
+
+    // The screen agrees the card is good…
+    await expect(dialog.getByText("Active")).toBeVisible({ timeout: 20_000 });
+    await expect(dialog.getByText("$40.00")).toBeVisible();
+
+    // …so the counter can act on it. This is the whole point of the test: a
+    // card the modal itself calls Active must not have a dead button, and if
+    // anything ever does refuse one, the refusal has to be on screen.
+    await expect(
+      dialog.getByRole("button", { name: "Continue" }),
+      "a card shown as Active with a balance must be redeemable",
+    ).toBeEnabled();
+    await expect(dialog).not.toContainText("purchased at a different location");
+  });
+
   test("handing a card in moves its value onto the customer's credit", async ({
     page,
   }) => {
