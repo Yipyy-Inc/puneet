@@ -178,6 +178,54 @@ begin
     state = 'REFUSED', 'state=' || state);
 end $$;
 
+do $$
+declare state text; n int;
+begin
+  begin
+    -- THE REALISTIC RETRY: the same logical event with a DIFFERENT timestamp.
+    --
+    -- C13 above retries byte-identically, which is the easy case and the one
+    -- the original (sid, type, occurred_at) constraint could catch. A carrier
+    -- does not promise an identical timestamp, and a handler stamping its own
+    -- now() guarantees a different one — so on the shipped schema this was
+    -- ACCEPTED and one call held two completed events.
+    --
+    -- Measured, then fixed by 20260902125815's partial unique index. The two
+    -- assertions are kept apart deliberately: C13 alone passed against a
+    -- constraint that could not do the job.
+    insert into public.call_event (facility_id, provider_call_sid, type, occurred_at, payload)
+    select id, 'CAtest0000000001', 'completed', '2026-09-02T10:03:59Z',
+           '{"duration_s":"175"}'::jsonb from ids where slug = 'call-alpha';
+    state := 'ACCEPTED';
+  exception when unique_violation then state := 'REFUSED';
+  end;
+  perform pg_temp.t(26, 'C26 a retry with a DIFFERENT timestamp is also refused',
+    state = 'REFUSED', 'state=' || state);
+
+  select count(*) into n from public.call_event
+   where provider_call_sid = 'CAtest0000000001' and type = 'completed';
+  perform pg_temp.t(27, 'C27 so one call still holds one completed event',
+    n = 1, 'completed events=' || n);
+end $$;
+
+-- The control. Without it, C26 reads as "the index collapses everything" and a
+-- ring group of four phones would silently become one ringing event — erasing
+-- the fact a facility most wants to see, that four phones rang and nobody
+-- picked up.
+do $$
+declare state text; n int;
+begin
+  begin
+    insert into public.call_event (facility_id, provider_call_sid, type, occurred_at, payload)
+    select id, 'CAtest0000000001', 'ringing', '2026-09-02T10:00:02Z',
+           '{"device":"mobile"}'::jsonb from ids where slug = 'call-alpha';
+    state := 'ACCEPTED';
+  exception when unique_violation then state := 'REFUSED';
+  end;
+  perform pg_temp.t(28, 'C28 but a second device ringing is NOT collapsed',
+    state = 'ACCEPTED', 'state=' || state);
+end $$;
+
 select pg_temp.t(14, 'C14 and there is still exactly one call record',
   (select count(*) from public.call_record where provider_call_sid = 'CAtest0000000001') = 1);
 
