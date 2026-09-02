@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,6 @@ import { RecordingsList } from "@/components/calling/RecordingsList";
 import { DateRangeFilter } from "@/components/calling/DateRangeFilter";
 import { dateRangeBounds, type DateRange } from "@/lib/calling/date-range";
 import { getFacilityRole } from "@/lib/role-utils";
-import { shouldAutoFlag } from "@/lib/calling/flag-call";
 import {
   callQueue,
   ivrConfig,
@@ -91,6 +91,8 @@ import {
 } from "@/lib/calling/call-metrics";
 import type { CallingSystemStatus } from "@/lib/calling/system-status";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { callingQueries } from "@/lib/api/calling";
+import type { CallLog } from "@/types/communications";
 import type { ActiveCall, MissedCallTask } from "@/types/calling";
 import { toast } from "sonner";
 import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
@@ -859,6 +861,8 @@ function CallLogDetail({
  * while the route was itself a client component, and would have broken
  * silently the moment it stopped being one.
  */
+const EMPTY_LOGS: CallLog[] = [];
+
 export function CallingWorkspace({
   initialTab = "live",
   systemStatus,
@@ -893,24 +897,35 @@ export function CallingWorkspace({
   const [incomingCall, setIncomingCall] = useState<ActiveCall | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [, setCallMinimized] = useState(false);
-  // Call log records live in state so a just-ended call (carrying the notes
-  // typed during it) can be prepended, its Staff Notes edited in place, and its
-  // follow-up status resolved. Seed each record's default follow-up state.
-  const [logs, setLogs] = useState<typeof callLogs>(() =>
-    callLogs.map((c) => {
-      const summary = aiCallSummaries.find((s) => s.callId === c.id);
-      return {
-        ...c,
-        followUpStatus: c.followUpStatus ?? defaultFollowUpStatus(c.status),
-        // Auto-flag recordings on receipt: low AI sentiment or risky keywords.
-        flagged:
-          c.flagged ??
-          (c.recordingUrl
-            ? shouldAutoFlag(c.transcription, summary?.sentimentScore)
-            : undefined),
-      };
-    }),
+  // ── THE CALL LOG IS THE FACILITY'S OWN, NOT THE FIXTURE'S ──────────────
+  //
+  // This was `useState(() => callLogs.map(...))` — twenty hand-authored rows
+  // with names, outcomes, sentiment scores and QA ratings for calls nobody
+  // ever placed, shown identically to every facility on the platform.
+  //
+  // It now reads `call_record` through the API. Which means it is EMPTY until
+  // a facility owns a number, because the webhooks resolve a facility from
+  // `communication_numbers` and provisioning has not run. That is the honest
+  // answer: a facility that has never had a call through this platform has no
+  // calls, and `emptyReason` below says which kind of empty it is.
+  //
+  // The local `setLogs` is kept. A call that has just ended is prepended and
+  // its notes edited in place before the server round trip, and losing that
+  // would make the in-call panel feel broken. The server's copy wins on the
+  // next fetch — these are optimistic edits, not a second source of truth.
+  const callsQuery = useQuery(callingQueries.calls());
+  const serverLogs = callsQuery.data?.logs;
+  const [localLogs, setLocalLogs] = useState<CallLog[] | null>(null);
+  const logs = useMemo(
+    () => localLogs ?? serverLogs ?? EMPTY_LOGS,
+    [localLogs, serverLogs],
   );
+  const setLogs = (update: CallLog[] | ((previous: CallLog[]) => CallLog[])) =>
+    setLocalLogs((previous) =>
+      typeof update === "function"
+        ? update(previous ?? serverLogs ?? [])
+        : update,
+    );
   const [tab, setTab] = useState(initialTab);
 
   // The facility's own answers, not the fixture's. `autoRecord` in particular:
@@ -1634,9 +1649,37 @@ export function CallingWorkspace({
                 <Card className="h-full">
                   <ScrollArea className="h-[560px]">
                     {filteredCalls.length === 0 ? (
-                      <div className="text-muted-foreground flex flex-col items-center justify-center py-20">
+                      <div className="text-muted-foreground flex flex-col items-center justify-center px-8 py-20 text-center">
                         <PhoneCall className="mb-3 size-10 opacity-25" />
-                        <p className="text-sm">No calls match your filters</p>
+                        {/* Three different situations that used to render one
+                            sentence. "No calls match your filters" told a
+                            facility with no calls at all to go and adjust
+                            filters that were not the reason. */}
+                        {callsQuery.isPending ? (
+                          <p className="text-sm">Loading calls…</p>
+                        ) : callsQuery.isError ? (
+                          <>
+                            <p className="text-sm">
+                              The call log could not be loaded.
+                            </p>
+                            <p className="mt-1 max-w-sm text-xs">
+                              {callsQuery.error instanceof Error
+                                ? callsQuery.error.message
+                                : "Try again in a moment."}
+                            </p>
+                          </>
+                        ) : logs.length === 0 ? (
+                          <>
+                            <p className="text-sm font-medium">No calls yet</p>
+                            <p className="mt-1 max-w-sm text-xs">
+                              Calls appear here once this facility has its own
+                              number. Nothing has been provisioned yet, so there
+                              is nothing to show — not an empty result.
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-sm">No calls match your filters</p>
+                        )}
                       </div>
                     ) : (
                       <div className="divide-y">
