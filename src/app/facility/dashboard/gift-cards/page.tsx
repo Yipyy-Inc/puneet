@@ -86,11 +86,8 @@ import {
   Archive,
   List,
 } from "lucide-react";
-import {
-  customerWallets,
-  physicalCardBatches,
-  giftCardSettings,
-} from "@/data/gift-cards";
+import { customerWallets, physicalCardBatches } from "@/data/gift-cards";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { clients } from "@/data/clients";
 import { giftCardQueries, useUpdateGiftCard } from "@/lib/api/gift-cards";
 import { toLegacyGiftCard } from "./_lib/to-legacy-card";
@@ -347,16 +344,27 @@ export default function FacilityGiftCardsPage() {
 
   const batchName = (b: PhysicalCardBatch) => batchNames[b.id] ?? b.name;
 
-  // Programme settings are still a FIXTURE - the settings tab has not been
-  // converted. Read here, where the facility is known, rather than in the
-  // components: a Postgres card has a uuid facility and the shim sets the
-  // legacy number to a sentinel, so a lookup by `card.facilityId` further down
-  // would resolve to nothing and quietly turn features off.
-  const programSettings = giftCardSettings.find(
-    (s) => s.facilityId === FACILITY_ID,
-  );
-  const lowStockThreshold = programSettings?.lowStockThreshold ?? 50;
-  const expiryEnabled = programSettings?.expiryEnabled ?? false;
+  // ── THE FACILITY'S OWN ANSWERS, NOT THE FIXTURE'S ───────────────────────
+  //
+  // `GiftCardSettingsPanel` has written these to the `gift_card_config` domain
+  // since it was converted. This page kept reading `giftCardSettings` from
+  // src/data, so the Settings tab saved and these two consumers ignored it.
+  //
+  // Latent rather than live, and worth being exact about: the fixture's row for
+  // facility 11 happens to equal `NO_GIFT_CARD_CONFIG` — threshold 50, expiry
+  // off — so while nobody had touched the screen the two agreed. It bites on
+  // the first change. MEASURED: with the domain saying 400 and 330 cards in
+  // stock, the tile showed no low-stock warning at all, because it was still
+  // comparing against 50.
+  //
+  // Read-only, so there is no `isPending` seeding trap here (see
+  // check:settings-seeding): before the fetch resolves these are the fallback,
+  // which is the same conservative pair — expiry OFF, and no reorder warning
+  // invented for a facility whose threshold is not yet known.
+  const { settings: facilitySettings } = useFacilitySettings();
+  const giftCardConfig = facilitySettings.gift_card_config.value;
+  const lowStockThreshold = giftCardConfig.lowStockThreshold;
+  const expiryEnabled = giftCardConfig.expiryEnabled;
 
   type AuditTarget =
     | { kind: "card"; id: string; label: string }
