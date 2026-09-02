@@ -24,9 +24,9 @@ export default function DailyRegisterPage() {
           status pill carries currency, not the title bar. */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/facility/dashboard/billing">
+          <Link href="/facility/dashboard/payments">
             <ArrowLeft className="mr-1.5 size-4" />
-            Billing
+            Payments
           </Link>
         </Button>
         <div className="flex flex-1 flex-wrap items-center justify-between gap-3">

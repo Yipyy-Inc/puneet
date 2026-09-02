@@ -21,7 +21,6 @@ import {
   Package,
   Tags,
   Camera,
-  DollarSign,
   CreditCard,
   Vault,
   Receipt,
@@ -270,16 +269,20 @@ export const NAV_SECTIONS: NavSection[] = [
         // `financial_take_payment`: reading the day's takings is not the same
         // permission as putting a card through, and the bookkeeper holds only
         // the first.
+        //
+        // "Payments & Billing" used to sit directly beneath this entry and is
+        // gone. It read `src/data/payments` at a HARDCODED `facilityId = 11`,
+        // so every facility was shown the same fourteen invented payments:
+        // $1,201.50 of revenue and $15.00 of tips against the demo facility's
+        // real 724 payments, $34,757.25 and $1,356.00. Its other three tabs
+        // duplicated screens that already exist here and are real — gift cards
+        // (/facility/dashboard/gift-cards), credits (Memberships → Credits),
+        // and this one — and its fourth listed outstanding invoices, of which
+        // there is no table, no route and no way to create one.
         title: "Payments",
         url: "/facility/dashboard/payments",
         icon: CreditCard,
         permKey: "financial_view_amounts",
-      },
-      {
-        title: "Payments & Billing",
-        url: "/facility/dashboard/billing",
-        icon: DollarSign,
-        permKey: "financial_take_payment",
       },
       {
         title: "Daily Register",

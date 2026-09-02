@@ -546,7 +546,6 @@ const NAV_PERMISSIONS: Record<string, Permission> = {
   "/facility/dashboard/services/grooming": "view_grooming",
   "/facility/training": "view_training",
   "/facility/dashboard/services/retail": "view_retail",
-  "/facility/dashboard/billing": "view_billing",
   "/facility/dashboard/inventory": "view_inventory",
   "/facility/dashboard/reports": "view_reports",
   "/facility/dashboard/insights": "view_insights",

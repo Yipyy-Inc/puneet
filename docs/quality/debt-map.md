@@ -7479,6 +7479,83 @@ forms.
 **What NOT to do:** raise the 15-second timeout. The assertion is not slow, the
 page is, and a longer timeout hides the only signal that says so.
 
+### 🟡 `view_billing` and `financial_manage_invoices` now gate nothing — 2026-09-02
+
+`/facility/dashboard/billing` and its employee door were removed (see below).
+Both permission keys survived the deletion and both are now inert:
+
+```
+grep -rn "view_billing|financial_manage_invoices" src/ --include=*.ts --include=*.tsx
+```
+
+returns only the catalogue label, four role defaults in `role-utils.ts`, and the
+group entry in `types/facility-staff.ts`. No `permKey`, no `usePermission`, no
+`RequirePermission`, no route map. `financial_manage_invoices` had exactly one
+consumer in the whole repo — the `<RequirePermission>` on the deleted
+`/employee/billing` wrapper — and `view_billing`'s only consumer was the route
+map in `role-utils.ts` that went with the page.
+
+**Why it is risky.** The role editor still renders both. An owner can grant or
+revoke "Manage invoices" for a role, see it save, and change nothing — which is
+the same class of defect as a hidden tab standing in for a control. Nobody is
+over-exposed by this (they gate nothing in either direction); the lie is to the
+person configuring roles.
+
+**What to do.** `financial_manage_invoices` should go when invoicing is either
+built or abandoned as an idea — there is no `invoices` table, no API route, and
+nothing in `src/` that creates one, so today the key names a feature that does
+not exist. `view_billing` is the more interesting one: it is in four role
+defaults, so removing it means a migration over `facility_role_permissions` as
+well as a type change, and that is worth doing deliberately rather than as a
+tail of this change.
+
+**What NOT to do:** re-point either key at a nearby screen to make it look used.
+`/facility/dashboard/payments` already gates on `financial_view_amounts`, which
+is the permission that actually describes reading takings, and giving it a
+second key would put two answers behind one question.
+
+### 🟢 `/facility/dashboard/billing` was a fixture twin of three real screens — removed 2026-09-02
+
+Recorded because the shape recurs, not because the page still exists.
+
+The screen was in the Financial nav group, directly beneath **Payments**, whose
+own header comment already argued the case against it: _"two screens listing the
+same money is how they come to disagree about it … it does not gain a twin."_
+
+It read `src/data/payments` at a **hardcoded `const facilityId = 11`**, so every
+facility saw one fixture facility's numbers. Measured against the demo facility
+on 2026-09-02:
+
+| The screen showed                | `public.payments` for that facility |
+| -------------------------------- | ----------------------------------- |
+| $1,201.50 revenue, 13 payments   | **$34,757.25**, 724 payments        |
+| $15.00 tips                      | **$1,356.00**                       |
+| 3 gift cards                     | 2,336 rows in `gift_cards`          |
+| 2 credits                        | 212 rows in `store_credit_entries`  |
+| 5 outstanding invoices, $422 due | **no `invoices` table exists**      |
+
+Three of its four tabs duplicated screens that are real and already in the same
+nav — `/facility/dashboard/payments`, `/facility/dashboard/gift-cards`, and
+Memberships → Credits. Both of its write actions existed elsewhere too
+(`SellGiftCardModal`, `useWriteStoreCredit` on the Credits tab), so removing it
+cost no capability.
+
+**The part worth keeping.** Yipyy Pay's Overview shows _real_ recent card
+payments and its "View all" button pointed here — so a reader clicked through
+from a genuine payment to a list that could not contain it. A fixture screen is
+worse when a real one links to it: the link is what makes the fiction look like
+the same system.
+
+**The deep link was dead twice over.** `smartInsightLinks.billing(invoiceId)`
+produced `?invoiceId=…` and the page never read `searchParams` at all — the same
+defect as `calling(tab)` emitting `?tab=voicemail` for a page that ignored it.
+Two independent link helpers in this repo have now shipped a parameter no page
+reads. If you add a helper that encodes a parameter, grep the destination for it.
+
+**What to do when you find the next one:** check whether the real screen already
+exists before converting. The instinct is to wire the fixture screen to the
+database; here that would have built a fourth listing of the same money.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

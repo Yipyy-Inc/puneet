@@ -32,7 +32,7 @@ Ranking is **[inferred]** from route volume, cross-linking, and how many other f
 3. **Express check-in (YipyyGo)** — QR + pre-intake forms reducing front-desk time. (Observed: `qr-checkin.ts`, `check-in-qr`.)
 4. **Loyalty, referrals & reputation** — retention and review-funnel engines. (Observed: `facility/dashboard/loyalty/*`, `marketing/reputation-booster`.)
 5. **Calling** — availability, routing, logging, analytics, follow-up tasks. (Observed: `facility/dashboard/calling`.)
-6. **Billing & money** — invoices, payments, deposits, store credit, gift cards, cash drawer. (Observed: `facility/dashboard/billing/*`, `gift-cards`.)
+6. **Billing & money** — payments, deposits, store credit, gift cards, cash drawer. (Observed: `facility/dashboard/payments`, `facility/dashboard/billing/{cash-drawer,payment-settings}`, `gift-cards`.) Invoicing was listed here on the strength of a fixture screen removed on 2026-09-02; no `invoices` table has ever existed.
 7. **Staff scheduling & management** — roster, swaps, time-off, performance. (Observed: `services/scheduling/*`, `staff/*`.)
 8. **Forms & waivers** — dynamic builder with logic + audit. (Observed: `forms/{builder,submissions,audit}`.)
 9. **Multi-location HQ** — cross-location reporting and transfers. (Observed: `facility/hq/*`.)

@@ -161,12 +161,13 @@ export function RevenueReportPanel({
               <div className="min-w-0 flex-1 space-y-0.5">
                 <div className="flex items-center gap-2">
                   <Receipt className="text-muted-foreground size-3.5" />
-                  <Link
-                    href={insightLinks.billing(inv.id)}
-                    className="hover:text-primary text-sm font-semibold hover:underline"
-                  >
-                    {inv.id}
-                  </Link>
+                  {/* Plain text, not a link. This was
+                      `insightLinks.billing(inv.id)`, and no page has ever read
+                      an `?invoiceId` — there is no invoices table and no route
+                      that makes one, so there is nowhere for an invoice id to
+                      lead. A link that navigates to a list of something else is
+                      worse than a label. */}
+                  <span className="text-sm font-semibold">{inv.id}</span>
                   <Badge variant="outline" className={STATUS_STYLE[inv.status]}>
                     {STATUS_LABEL[inv.status]}
                   </Badge>
@@ -192,11 +193,11 @@ export function RevenueReportPanel({
       </ul>
 
       <Link
-        href={insightLinks.billing()}
+        href={insightLinks.payments()}
         className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 self-start text-xs hover:underline"
       >
         <ExternalLink className="size-3" />
-        Open full revenue report in Billing
+        Open every payment
       </Link>
 
       <div className="mt-auto">

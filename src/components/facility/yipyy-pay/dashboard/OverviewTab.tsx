@@ -272,7 +272,12 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-semibold">Recent card payments</p>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/facility/dashboard/billing">
+              {/* The full ledger, not a second copy of it. This pointed at
+                  /facility/dashboard/billing, which listed fourteen fixture
+                  payments belonging to a facility nobody using it was in — so
+                  "View all" led away from a real payment shown above it to a
+                  list that could not contain it. */}
+              <Link href="/facility/dashboard/payments">
                 View all
                 <ArrowRight className="size-3.5" />
               </Link>
