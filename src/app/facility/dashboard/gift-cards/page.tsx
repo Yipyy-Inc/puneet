@@ -89,12 +89,12 @@ import {
 import {
   customerWallets,
   physicalCardBatches,
-  giftCardAuditLogs,
   giftCardSettings,
 } from "@/data/gift-cards";
 import { clients } from "@/data/clients";
 import { giftCardQueries, useUpdateGiftCard } from "@/lib/api/gift-cards";
 import { toLegacyGiftCard } from "./_lib/to-legacy-card";
+import { toActivityLog } from "./_lib/to-activity-log";
 import { SellGiftCardModal } from "./_components/SellGiftCardModal";
 import { RedeemGiftCardModal } from "./_components/RedeemGiftCardModal";
 import { GiftCardDetailSheet } from "./_components/GiftCardDetailSheet";
@@ -166,13 +166,25 @@ const ACTIVITY_FILTERS: {
   {
     key: "redeemed",
     label: "Redeemed",
-    actions: ["redeemed_to_wallet", "wallet_used"],
+    // `redeemed` is what a real movement carries; the other two are the
+    // fixture's, kept while the customer wallet screens still read it.
+    actions: ["redeemed", "redeemed_to_wallet", "wallet_used"],
   },
   { key: "voided", label: "Voided", actions: ["voided", "refunded"] },
   { key: "expired", label: "Expired", actions: ["expired"] },
 ];
 
 type ActivityFilter = (typeof ACTIVITY_FILTERS)[number]["key"];
+
+/**
+ * Filters whose events nothing writes down.
+ *
+ * The feed reads `gift_card_transactions`, which records money moving. A card
+ * being voided or expiring changes `gift_cards.status` and writes no row, so
+ * these two can only ever be empty — and an empty list without a sentence reads
+ * as "none happened" rather than "not recorded".
+ */
+const UNRECORDED_ACTIVITY = new Set<ActivityFilter>(["voided", "expired"]);
 
 export default function FacilityGiftCardsPage() {
   const router = useRouter();
@@ -267,19 +279,16 @@ export default function FacilityGiftCardsPage() {
     [],
   );
 
-  const facilityAuditLogs = useMemo(
-    () => giftCardAuditLogs.filter((l) => l.facilityId === FACILITY_ID),
-    [],
-  );
-
-  // All activity, newest first — used by the Activity tab and the overview feed.
+  // All activity, newest first — the Activity tab and the overview feed.
+  //
+  // Its own query, not a projection of `cardsQuery`. That endpoint joins two
+  // capped lists in memory and returned every card with an EMPTY history on
+  // this facility's row counts; /api/gift-cards/activity asks for the newest
+  // movements directly. `toActivityLog` says which events have no row at all.
+  const activityQuery = useQuery(giftCardQueries.activity());
   const activityLog = useMemo(
-    () =>
-      [...facilityAuditLogs].sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-      ),
-    [facilityAuditLogs],
+    () => toActivityLog(activityQuery.data ?? [], FACILITY_ID),
+    [activityQuery.data],
   );
 
   // Overview feed, narrowed to the selected filter chip.
@@ -707,6 +716,13 @@ export default function FacilityGiftCardsPage() {
             color: "text-green-600",
             label: "Activated",
           },
+          // What a movement in `gift_card_transactions` maps to. The ledger
+          // does not record where the money went, so this does not claim to.
+          redeemed: {
+            icon: ArrowDownRight,
+            color: "text-violet-600",
+            label: "Redeemed",
+          },
           expiry_changed: {
             icon: Settings,
             color: "text-gray-600",
@@ -749,6 +765,16 @@ export default function FacilityGiftCardsPage() {
       key: "performedBy",
       label: "By",
       defaultVisible: true,
+      // `gift_card_transactions.created_by` is a WorkOS id, and a `user_01…`
+      // does not belong in a column headed "By" — mappers/scheduling.ts
+      // declines the same substitution for the same reason. Absent until a
+      // name can be resolved, and shown as absent rather than as blank.
+      render: (l) =>
+        l.performedBy ? (
+          <span className="text-sm">{l.performedBy}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
     {
       key: "linkedTo",
@@ -1167,9 +1193,11 @@ export default function FacilityGiftCardsPage() {
                             {target ? ` · ${target.label}` : ""}
                           </p>
                           <p className="text-muted-foreground truncate text-[11px]">
-                            {log.performedBy === "Online Purchase"
-                              ? "Online Purchase"
-                              : `by ${log.performedBy}`}
+                            {!log.performedBy
+                              ? ""
+                              : log.performedBy === "Online Purchase"
+                                ? "Online Purchase"
+                                : `by ${log.performedBy}`}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2 text-right">
@@ -1195,6 +1223,21 @@ export default function FacilityGiftCardsPage() {
                   <div className="text-muted-foreground py-8 text-center text-sm">
                     No {activityFilter === "all" ? "recent" : activityFilter}{" "}
                     activity to show.
+                    {/* "No voided activity" and "voiding is not recorded" are
+                        different facts, and only the second one is true here.
+                        `gift_card_transactions` holds MOVEMENTS; voiding and
+                        expiry change `gift_cards.status` and write no row —
+                        2,063 cards are cancelled and not one has an event
+                        saying when. Saying so beats an empty list the reader
+                        would take as "none happened". */}
+                    {UNRECORDED_ACTIVITY.has(activityFilter) && (
+                      <p className="mx-auto mt-2 max-w-sm text-xs">
+                        {activityFilter === "voided" ? "Voiding" : "Expiry"} is
+                        a change of status, not a movement of money, so it
+                        leaves no entry in the ledger this feed reads. Cards in
+                        that state are listed on the Cards tab.
+                      </p>
+                    )}
                   </div>
                 )}
                 <Button

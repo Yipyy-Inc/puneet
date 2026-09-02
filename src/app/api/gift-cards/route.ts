@@ -110,13 +110,24 @@ export async function GET(request: NextRequest) {
   // balance and nothing else. Sending the history to the till would be paying
   // for a statement to answer "how much is on this?".
   if (params.get("withLedger") === "1") {
-    const ledgers = await ledgersForFacility(supabase, context.facilityId);
-    return NextResponse.json({
-      cards: cards.map((card) => ({
-        ...card,
-        transactions: ledgers.get(card.id) ?? [],
-      })),
-    });
+    // `ledgersForFacility` throws now instead of answering with an empty Map.
+    // Caught here so the caller gets a message rather than a stack trace — and
+    // so a failed ledger is never dressed up as a set of cards with no history,
+    // which is what this endpoint did until 20260902175656.
+    try {
+      const ledgers = await ledgersForFacility(supabase, context.facilityId);
+      return NextResponse.json({
+        cards: cards.map((card) => ({
+          ...card,
+          transactions: ledgers.get(card.id) ?? [],
+        })),
+      });
+    } catch (cause) {
+      return NextResponse.json(
+        { error: cause instanceof Error ? cause.message : "Ledger failed." },
+        { status: 400 },
+      );
+    }
   }
 
   return NextResponse.json({ cards });

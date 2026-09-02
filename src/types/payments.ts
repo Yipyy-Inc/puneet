@@ -805,6 +805,11 @@ export const giftCardAuditActionEnum = z.enum([
   "issued_digital",
   "issued_physical",
   "activated",
+  // Both of these name a DESTINATION. `gift_card_transactions` records only
+  // that a redemption happened — /redeem and /to-credit write the same kind —
+  // so `redeemed` is what a real movement maps to. The two below remain for
+  // the customer-facing wallet screens, which still read the fixture.
+  "redeemed",
   "redeemed_to_wallet",
   "wallet_used",
   "voided",
