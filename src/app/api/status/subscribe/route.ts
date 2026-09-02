@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  buildStatusSubscribeEmail,
-  buildStatusSubscribeSms,
-} from "@/lib/status-subscribe-message";
+import { callingProvider, platformCredentials } from "@/lib/calling/provider";
+import { buildStatusSubscribeEmail } from "@/lib/status-subscribe-message";
+import { buildStatusSubscribeSms } from "@/lib/status-subscribe-message";
+import { platformSendingNumber } from "@/lib/twilio/config";
 
 // Public status-alert subscription. Env-gated like the other Yipyy send routes:
 // when RESEND_API_KEY / Twilio creds are absent we don't fake a send — the
@@ -57,40 +57,26 @@ async function sendEmail(email: string): Promise<ChannelResult> {
 }
 
 async function sendSms(phone: string): Promise<ChannelResult> {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_PHONE_NUMBER ?? process.env.STATUS_SMS_FROM;
-  if (!sid || !token || !from) return { sent: false, reason: "not_configured" };
-  try {
-    const params = new URLSearchParams({
-      To: phone,
-      From: from,
-      Body: buildStatusSubscribeSms(),
-    });
-    const res = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: params,
-      },
-    );
-    if (!res.ok) {
-      console.error(
-        "Status subscribe SMS failed:",
-        res.status,
-        await res.text(),
-      );
-      return { sent: false, reason: "send_failed" };
-    }
-    return { sent: true };
-  } catch (error) {
-    console.error("Status subscribe SMS error:", error);
-    return { sent: false, reason: "error" };
+  // Through the adapter. This path built its own request and — unlike the two
+  // other senders — carried NO timeout at all, so a carrier that stopped
+  // answering would have held this route open until something upstream gave up.
+  const provider = callingProvider();
+  const credentials = platformCredentials();
+  const from = platformSendingNumber();
+  if (!provider || !credentials || !from) {
+    return { sent: false, reason: "not_configured" };
   }
+
+  const result = await provider.sendSms(credentials, {
+    to: phone,
+    from,
+    body: buildStatusSubscribeSms(),
+  });
+  if (!result.ok) {
+    console.error("Status subscribe SMS failed:", result.detail);
+    return { sent: false, reason: "send_failed" };
+  }
+  return { sent: true };
 }
 
 export async function POST(req: NextRequest) {
