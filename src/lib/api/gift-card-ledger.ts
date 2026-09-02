@@ -98,11 +98,16 @@ export async function ledgerForCard(
   supabase: Client,
   giftCardId: string,
 ): Promise<GiftCardTransactionRow[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("gift_card_transactions")
     .select(LEDGER_SELECT)
     .eq("gift_card_id", giftCardId)
     .order("created_at", { ascending: true });
+
+  // Same rule as ledgersForFacility below: a card whose history could not be
+  // read is not a card with no history, and the balance beside it came from a
+  // trigger over exactly these rows.
+  if (error) throw new Error(`Gift-card ledger unavailable: ${error.message}`);
 
   const rows = (data ?? []) as unknown as LedgerRecord[];
   const refs = await refsForBookings(
@@ -118,16 +123,32 @@ export async function ledgerForCard(
  * Two queries for the whole screen rather than two per card. RLS narrows the
  * read the same way it narrows the cards themselves, so a caller who cannot see
  * a card cannot see its ledger either and the grouping has nothing to hide.
+ *
+ * ── IT THROWS NOW, AND IT USED TO SHRUG ──────────────────────────────────
+ *
+ * This discarded the error and returned an empty Map. So a read that never
+ * finished was indistinguishable from a facility that has never sold a gift
+ * card, and the screen showed the second.
+ *
+ * That is not hypothetical. `gift_card_transactions_read` calls
+ * `private.has_permission(facility_id, …)` with a COLUMN as its argument, so
+ * it cannot be hoisted and ran once per row; at 4,539 rows the query hit the
+ * statement timeout. The gift-cards screen answered with every card's history
+ * empty, its revenue tile at $0.00 and its status breakdown at zero cards —
+ * all of it silent, none of it true. 20260902175656 adds the index that makes
+ * the read affordable; this makes the next failure of any kind say so.
  */
 export async function ledgersForFacility(
   supabase: Client,
   facilityId: string,
 ): Promise<Map<string, GiftCardTransactionRow[]>> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("gift_card_transactions")
     .select(LEDGER_SELECT)
     .eq("facility_id", facilityId)
     .order("created_at", { ascending: true });
+
+  if (error) throw new Error(`Gift-card ledger unavailable: ${error.message}`);
 
   const rows = (data ?? []) as unknown as LedgerRecord[];
   const refs = await refsForBookings(

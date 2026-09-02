@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import type { GiftCardActivityRow } from "@/app/api/gift-cards/activity/route";
 import type { GiftCardRow } from "@/lib/api/mappers/gift-card";
 import type { GiftCardDetailPayload } from "@/app/api/gift-cards/[id]/route";
 import type { GiftCardTransactionRow } from "@/lib/api/gift-card-ledger";
@@ -29,6 +30,7 @@ import type { ToCreditResult } from "@/app/api/gift-cards/to-credit/route";
 // ============================================================================
 
 export type { GiftCardRow, GiftCardTransactionRow, GiftCardDetailPayload };
+export type { GiftCardActivityRow } from "@/app/api/gift-cards/activity/route";
 
 /** A card with its movements, as `allWithLedger` returns it. */
 export interface GiftCardWithLedger extends GiftCardRow {
@@ -104,6 +106,24 @@ export const giftCardQueries = {
       await get<GiftCardDetailPayload>(
         `/api/gift-cards/${encodeURIComponent(id ?? "")}`,
       ),
+  }),
+
+  /**
+   * The facility's newest movements, whatever card they were on.
+   *
+   * Separate from `allWithLedger` on purpose. That one asks for every card's
+   * whole history so a row can show its own; a feed wants the last N things
+   * that happened, and joining two capped queries in memory does not answer
+   * that — see the banner on /api/gift-cards/activity.
+   */
+  activity: (limit?: number) => ({
+    queryKey: ["gift-cards", "activity", limit ?? null] as const,
+    queryFn: async () =>
+      (
+        await get<{ activity: GiftCardActivityRow[] }>(
+          `/api/gift-cards/activity${limit ? `?limit=${limit}` : ""}`,
+        )
+      ).activity,
   }),
 
   /**
