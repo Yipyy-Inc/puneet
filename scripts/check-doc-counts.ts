@@ -185,7 +185,37 @@ const CLAIMS: Claim[] = [
     label: "specs in test:e2e:gate (deploy sequence)",
     actual: gateSpecCount(),
   },
+  {
+    // The checks job counting itself. See checkScriptCount().
+    file: ".github/workflows/ci.yml",
+    pattern: /# (\d+) `check:\*` scripts run here/,
+    label: "check:* scripts in the checks job",
+    actual: checkScriptCount(),
+  },
 ];
+
+/**
+ * How many `check:*` scripts the checks job actually runs, read out of its own
+ * loop in ci.yml.
+ *
+ * The job's header comment counts them in prose, and said "Fourteen" from the
+ * day it was written until 2026-09-02, by which point there were 22 — inside
+ * the file that runs THIS script, which exists because counts written by hand
+ * go stale. Deriving it costs four lines.
+ *
+ * Read from the `for script in \` list rather than from package.json on
+ * purpose: a script registered in package.json but never added here would be
+ * invisible to CI, and counting package.json would hide exactly that.
+ */
+function checkScriptCount(): number {
+  const ci = readFileSync(join(".github", "workflows", "ci.yml"), "utf8");
+  const loop = ci.match(/for script in \\\n([\s\S]*?)\n\s*do\n/);
+  if (!loop) return 0;
+  return loop[1]
+    .split("\n")
+    .map((line) => line.replace(/\\/g, "").trim())
+    .filter(Boolean).length;
+}
 
 /**
  * The jobs that gate a deploy, read out of `image`'s `needs:` in ci.yml.

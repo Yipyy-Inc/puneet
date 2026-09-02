@@ -51,6 +51,7 @@
     "measure:migration-drift": "bun scripts/measure-migration-drift.ts",
     "check:doc-counts": "bun scripts/check-doc-counts.ts",
     "shoot": "bun scripts/shoot.ts",
+    "check:inert-permissions": "bun scripts/check-inert-permissions.ts",
     "check:settings-seeding": "bun scripts/check-settings-seeding.ts"
   },
   "dependencies": {

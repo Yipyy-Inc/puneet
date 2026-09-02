@@ -7479,7 +7479,29 @@ forms.
 **What NOT to do:** raise the 15-second timeout. The assertion is not slow, the
 page is, and a longer timeout hides the only signal that says so.
 
-### 🟡 `view_billing` and `financial_manage_invoices` now gate nothing — 2026-09-02
+### 🟡 59 permission switches decide nothing — 2026-09-02
+
+> **This entry was written the same day claiming TWO keys, and that was wrong —
+> not in its facts but in its scale.** The two below were found by grepping for
+> two names. Auditing all of them found 59, and the guard
+> `bun run check:inert-permissions` now freezes that set so it can only shrink.
+> The original text is kept because the two are still the clearest example, and
+> because the correction is the point: a defect found by looking for it is
+> almost never the only one of its kind. **Measure the class, not the instance.**
+>
+> **59 of 211 distinct keys** across the repo's TWO catalogues
+> (`PERMISSION_GROUPS` in `src/types/facility-staff.ts`, 168 keys; `permissionEnum`
+> in `src/types/staff.ts`, 62) are consulted by no `permKey`, no
+> `usePermission`, no `holds()`, and no RLS policy. Whole groups are inert: all
+> four `hq_*` keys, all four `retail_manage_*`/`retail_view_reports`, seven
+> money keys. Comments do not count as uses — the first pass of that audit
+> reported `financial_manage_invoices` as enforced in RLS and the hit was a
+> `--` line explaining why it is not.
+>
+> **Deleting them is the wrong fix for most.** `hq_view` names a module that
+> exists and `retail_manage_inventory` names a screen that exists; those want
+> wiring. Which of the two each key wants is a judgement per key, and the gate
+> exists to stop the list growing while that judgement is made.
 
 `/facility/dashboard/billing` and its employee door were removed (see below).
 Both permission keys survived the deletion and both are now inert:
