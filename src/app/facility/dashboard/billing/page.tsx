@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { cn } from "@/lib/utils";
-import { TakePaymentModal } from "@/components/billing/TakePaymentModal";
 import { IssueGiftCardModal } from "@/components/billing/IssueGiftCardModal";
 import { AddCustomerCreditModal } from "@/components/billing/AddCustomerCreditModal";
 import {
@@ -109,7 +108,6 @@ export default function FacilityBillingPage() {
   const [selectedGiftCard, setSelectedGiftCard] = useState<
     (typeof giftCards)[0] | null
   >(null);
-  const [showTakePayment, setShowTakePayment] = useState(false);
   const [showIssueGiftCard, setShowIssueGiftCard] = useState(false);
   const [showAddCredit, setShowAddCredit] = useState(false);
 
@@ -360,10 +358,6 @@ export default function FacilityBillingPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="default" onClick={() => setShowTakePayment(true)}>
-              <Plus className="mr-2 size-4" />
-              Take Payment
-            </Button>
             <Button
               variant="outline"
               onClick={() => exportPaymentsToCSV(facilityPayments)}
@@ -1435,36 +1429,34 @@ export default function FacilityBillingPage() {
         </Dialog>
 
         {/* Modals */}
-        <TakePaymentModal
-          open={showTakePayment}
-          onOpenChange={setShowTakePayment}
-          facilityId={facilityId}
-          onSuccess={(payment) => {
-            console.log("Payment successful:", payment);
-            alert(
-              `Payment of $${payment.totalAmount.toFixed(2)} processed successfully!`,
-            );
-          }}
-        />
+        {/* TakePaymentModal is gone, and this is the note it leaves behind.
+            It collected a card number and a CVC into React state, built a
+            payment with `status: "completed"` and a FABRICATED
+            `stripeChargeId` — `ch_${uuid.slice(0,7)}` — contacted nothing, and
+            the handler here alerted "Payment of $X processed successfully!".
+            A counter would have taken a customer's card, been told it worked,
+            and recorded nothing.
+
+            Money is taken through Clover: PaymentCheckoutFlow, the booking
+            card's checkout, and the terminal panel. This screen was a second,
+            Stripe-flavoured path that never existed. Removed rather than
+            wired, on the precedent of the user-creation form that created
+            nobody — see facility-access-level.spec.ts. */}
 
         <IssueGiftCardModal
           open={showIssueGiftCard}
           onOpenChange={setShowIssueGiftCard}
           facilityId={facilityId}
-          onSuccess={(giftCard) => {
-            console.log("Gift card issued:", giftCard);
-            alert(`Gift card ${giftCard.code} issued successfully!`);
-          }}
+          // The modal reports its own outcome now, because only it knows
+          // whether the write landed. This used to alert over a console.log.
+          onSuccess={() => undefined}
         />
 
         <AddCustomerCreditModal
           open={showAddCredit}
           onOpenChange={setShowAddCredit}
           facilityId={facilityId}
-          onSuccess={(credit) => {
-            console.log("Credit added:", credit);
-            alert(`Credit of $${credit.amount.toFixed(2)} added successfully!`);
-          }}
+          onSuccess={() => undefined}
         />
       </div>
     </div>

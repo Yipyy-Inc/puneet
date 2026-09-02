@@ -56,8 +56,18 @@ const ALLOW = /success-claim-ok:/;
  * above it, and a baseline that churns is one nobody trusts.
  *
  * SHRINKING LIST. Delete an entry when the file is wired to something real, or
- * when its copy stops claiming. DO NOT ADD — a stale entry fails too, so the
- * set cannot quietly re-permit a file that was fixed.
+ * when its copy stops claiming. DO NOT ADD for new code — a stale entry fails
+ * too, so the set cannot quietly re-permit a file that was fixed.
+ *
+ * ── THE ONE EXCEPTION, ADDED DELIBERATELY ────────────────────────────────
+ *
+ * "Do not add" cannot hold when the DETECTOR widens, or no detector could ever
+ * widen: every existing offence it newly sees would fail the build at once.
+ * So an entry may be added when, and only when, it is a file the rule did not
+ * previously look at — and the group below says which change revealed it.
+ *
+ * Nothing here was newly written. Everything here was already claiming, and
+ * already lying, before the regex learned to see it.
  */
 const BASELINE = new Set<string>([
   "src/app/customer/bookings/[id]/yipyygo-form/page.tsx",
@@ -77,15 +87,51 @@ const BASELINE = new Set<string>([
   "src/components/facility/ImpersonationBanner.tsx",
   "src/components/facility/grooming/appointment-detail-page.tsx",
   "src/components/facility/operations/OperationsCalendarEventDrawer.tsx",
+
+  // ── REVEALED BY MATCHING BOTH WORD ORDERS ──────────────────────────────
+  //
+  // The regex matched "successfully created" and not "created successfully".
+  // These ten files were always claiming; they were never looked at. The
+  // billing screen's three — a payment, a gift card and a credit, all over
+  // console.log — were fixed rather than baselined, because they were money.
+  //
+  // Each of these is a real claim over a file with nothing that performs it.
+  // They are recorded, not excused.
+  "src/app/customer/pets/[petId]/page.tsx",
+  "src/app/facility/dashboard/services/boarding/settings/page.tsx",
+  "src/app/facility/dashboard/services/daycare/settings/page.tsx",
+  "src/app/facility/dashboard/services/retail/inventory/page.tsx",
+  "src/app/facility/dashboard/services/training/courses/page.tsx",
+  "src/components/communications/rebook/HistoryTab.tsx",
+  "src/components/customer/CustomerBookingModal.tsx",
+  "src/components/customer/billing/PaymentMethodsTab.tsx",
+  "src/components/grooming/GroomingIntakeForm.tsx",
+  "src/components/yipyygo/YipyyGoSettings.tsx",
 ]);
 
 /**
  * Past-tense claims that an action COMPLETED. Deliberately narrow: "Save" and
  * "Send invitation" are labels for something about to happen and are not
  * claims. "has been sent" is.
+ *
+ * ── BOTH WORD ORDERS, BECAUSE ONE HAS ALREADY ESCAPED TWICE ──────────────
+ *
+ * This matched "successfully created" and not "created successfully". The
+ * user-creation form that wrote nobody got through on exactly that — see the
+ * note in facility-access-level.spec.ts, which says the gate "missed it only
+ * because the words happened to be in the wrong order for the regex".
+ *
+ * It happened again: /facility/dashboard/billing alerted "Payment of $X
+ * processed successfully!", "Gift card … issued successfully!" and "Credit of
+ * $X added successfully!" over three handlers that only console.log. Same
+ * blind spot, on money, on a screen in the nav.
+ *
+ * So the verb may come first or second, and `processed`, `issued`, `added`,
+ * `charged` and `refunded` join the list — the words this product uses about
+ * money.
  */
 const CLAIM =
-  /(?:toast\.success\s*\(|>\s*|["'`])[^"'`\n]*\b(?:has been sent|have been sent|was sent|email sent|invitation sent|successfully (?:created|sent|saved|updated|deleted)|created\s+—|created\s+-\s)/i;
+  /(?:toast\.success\s*\(|alert\s*\(|>\s*|["'`])[^"'`\n]*\b(?:has been sent|have been sent|was sent|email sent|invitation sent|successfully (?:created|sent|saved|updated|deleted|processed|issued|added|charged|refunded)|(?:created|sent|saved|updated|deleted|processed|issued|added|charged|refunded) successfully|created\s+—|created\s+-\s)/i;
 
 /** Anything that could actually perform the action being claimed. */
 const PERFORMS =
@@ -109,7 +155,17 @@ type Offence = { file: string; line: number; text: string };
 const offences: Offence[] = [];
 
 for (const file of walk("src")) {
-  const source = readFileSync(file, "utf8");
+  // Block comments come out FIRST, with their line count preserved so the
+  // numbers below still point at the right place. The per-line `//` and `*`
+  // skips beneath handle single-line prose, but not a JSX `{/* … */}` whose
+  // continuation lines start with ordinary words — and a note explaining a
+  // removed claim is written in exactly that shape. check-settings-fixture and
+  // check-derived-location both strip for the same reason: prose about the bug
+  // must not read as the bug.
+  const source = readFileSync(file, "utf8").replace(
+    /\/\*[\s\S]*?\*\//g,
+    (block) => block.replace(/[^\n]/g, " "),
+  );
 
   // A file that can perform the action is not making an empty claim. This is
   // per-FILE rather than per-line on purpose: proving the claim belongs to the
