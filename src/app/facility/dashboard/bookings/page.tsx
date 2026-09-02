@@ -231,15 +231,33 @@ export default function FacilityBookingsPage() {
   // modulo three against a fixed array of location ids. It is a fixture-era
   // stand-in for a column that now exists and is populated.
   //
-  // Measured against the live database on 2026-09-02: of 582 bookings carrying
-  // a real `location_id`, the hash put 389 of them — 66.8% — in a location
-  // they are not in. It agreed on the other third by chance, which is exactly
-  // what a one-in-three guess does.
+  // `currentLocationId` comes from `useFacilityLocations()`, which reads
+  // `public.locations` — so it is a UUID. The hash returns "loc-dv-main".
+  // The comparison could never be true, so the filter did not select the wrong
+  // bookings; it selected NONE.
   //
-  // So a multi-location facility picking a branch saw a random third of its
-  // work, and the third it saw was wrong two times in three. Bookings with no
-  // location recorded (10 of 592) are excluded rather than guessed at: an
-  // unassigned booking belongs to no branch, and the HQ view is where it shows.
+  //   bookings reaching the client      579
+  //   carrying a real location uuid     578   e.g. a0000000-…-0000000000c1
+  //   matching "loc-dv-main"              0
+  //
+  // ── AND IT WAS LATENT, NOT LIVE ────────────────────────────────────────
+  //
+  // `isMultiLocation` is `locations.length > 1`, and every facility on this
+  // deployment has exactly ONE location — the three rows in `public.locations`
+  // are one per facility, not three branches of one. So this branch is never
+  // entered today and nobody has seen an empty table because of it.
+  //
+  // Recorded because the first version of this comment claimed otherwise, on
+  // two counts. It said the hash was "66.8% wrong", which measured the hash's
+  // INDEX against real locations — a hypothetical, not what the code does. And
+  // it said a facility "saw a random third of its work", which nobody could
+  // have: the filter never runs. The bug was a landmine for the day somebody
+  // adds a second branch, which is a good enough reason to fix it without
+  // needing to be a fire.
+  //
+  // Bookings with no location recorded (1 of 582) are excluded rather than
+  // guessed at: an unassigned booking belongs to no branch, and the HQ view is
+  // where it shows.
   const locationScopedBookings =
     isMultiLocation && !isHQView && currentLocationId
       ? facilityBookings.filter((b) => b.locationId === currentLocationId)
