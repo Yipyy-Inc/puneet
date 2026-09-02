@@ -94,6 +94,7 @@ export function toCallLog(row: CallRecordRow): CallLog | null {
       ? (row.follow_up_status as CallLog["followUpStatus"])
       : undefined,
     handledBy: row.handled_by ?? undefined,
+    locationId: row.location_id,
     qaScore: row.qa_score ?? undefined,
     // Nothing routes an AI handler yet. `false` is the measured answer, not a
     // placeholder: no call in this table was handled by one.

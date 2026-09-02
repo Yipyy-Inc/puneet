@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { holds, myPermissions } from "@/lib/auth/permissions";
 import { createServerClient } from "@/lib/supabase/server";
 
 // ============================================================================
@@ -26,6 +27,25 @@ import { createServerClient } from "@/lib/supabase/server";
 // `calling_view`. A caller who asks for another facility's calls gets their
 // own, because there is no parameter to ask with. See
 // `check:facility-from-session`.
+//
+// ── A QA SCORE IS AN ASSESSMENT OF A COLLEAGUE ────────────────────────────
+//
+// `call_record_read` requires `calling_view`, and reception and shift leads
+// both hold it by default. `qa_score` is a manager's rating OF the person who
+// took the call, sitting on the same row as the call itself — so the policy
+// that lets a receptionist see the call also handed them every colleague's
+// score.
+//
+// The screen did gate it, with `getFacilityRole() === "owner" | "manager"` —
+// a cookie the browser can write, which returns "owner" when absent. But the
+// number was in the response either way, and, as
+// tests/e2e/staff-field-exposure.spec.ts says of the same defect in
+// /api/staff: a hidden tab is not a control.
+//
+// So it is dropped HERE, keyed on `view_staff_performance` — the catalogue
+// key for exactly this question, already gating the performance section of a
+// staff profile. Null rather than zero: a zero is a bad score, not an absent
+// one.
 //
 // ── RECORDINGS ARE NOT JOINED IN ──────────────────────────────────────────
 //
@@ -54,6 +74,8 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const limit = Math.min(Number(params.get("limit") ?? 200) || 200, 500);
 
+  const canSeeQa = holds(await myPermissions(), "view_staff_performance");
+
   const supabase = await createServerClient();
   let query = supabase
     .from("call_record")
@@ -75,8 +97,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  // Redacted after the query, not by omitting the column: the select is one
+  // string shared with nothing, and a caller who may see the score and one who
+  // may not must get the same rows, differing in one field.
+  const calls = (data ?? []).map((row) =>
+    canSeeQa ? row : { ...row, qa_score: null },
+  );
+
   return NextResponse.json({
-    calls: data ?? [],
+    calls,
     // So a screen can tell "no calls yet" from "no calls matching that filter",
     // which read the same on the fixture-backed version and meant different
     // things.

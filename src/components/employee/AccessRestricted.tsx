@@ -25,7 +25,27 @@ import type { PermissionKey } from "@/types/facility-staff";
  * page: the Yipyy mark, a large headline, a small grey line, and a single way
  * out (→ /employee). Intentionally carries NO nav, back button, or breadcrumbs.
  */
-export function AccessRestricted() {
+/**
+ * Where the denied screen sends someone. Defaults to the employee portal,
+ * which is where this component was born; the facility portal needs its own,
+ * because offering a facility admin "Go to my dashboard" → /employee routes
+ * them out of the portal they belong to.
+ */
+export interface AccessRestrictedHome {
+  href: string;
+  label: string;
+}
+
+const EMPLOYEE_HOME: AccessRestrictedHome = {
+  href: "/employee",
+  label: "Go to my dashboard",
+};
+
+export function AccessRestricted({
+  home = EMPLOYEE_HOME,
+}: {
+  home?: AccessRestrictedHome;
+} = {}) {
   return (
     <div className="flex min-h-[calc(100vh-8rem)] w-full flex-col items-center justify-center bg-white px-6 py-16 text-center">
       {/* Yipyy mark */}
@@ -49,9 +69,9 @@ export function AccessRestricted() {
         asChild
         className="mt-8 gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
       >
-        <Link href="/employee">
+        <Link href={home.href}>
           <LayoutDashboard className="size-4" />
-          Go to my dashboard
+          {home.label}
         </Link>
       </Button>
     </div>
@@ -78,12 +98,15 @@ export function AccessRestricted() {
 export function RequirePermission({
   permKey,
   children,
+  home,
 }: {
   permKey: PermissionKey;
   children: ReactNode;
+  /** Where the denied screen sends them. Defaults to the employee portal. */
+  home?: AccessRestrictedHome;
 }) {
   const bucket = usePermissionCheck(permKey);
-  if (bucket === "not_granted") return <AccessRestricted />;
+  if (bucket === "not_granted") return <AccessRestricted home={home} />;
   return <>{children}</>;
 }
 
