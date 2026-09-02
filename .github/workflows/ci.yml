@@ -504,13 +504,22 @@ jobs:
           WORKOS_CLIENT_ID: ${{ secrets.WORKOS_CLIENT_ID }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          # The runner needs this one too, for the same reason as the line
+          # above. `call-qa-exposure.spec.ts` seeds a `call_record` as
+          # service_role because there is no other door — the table is a
+          # trigger-fed projection with no insert policy, and the webhook that
+          # fills it needs a provisioned number. Locally the key arrives via
+          # .env.local, which does not exist here, so the spec failed its own
+          # loud check on the first CI run rather than skipping quietly. That
+          # is the design working; this is the missing half.
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         # ── ONE JOB, TWO SUITES, CHOSEN BY WHAT TRIGGERED IT ──────────────
         #
-        # A push or a PR runs the 12-spec gate: the authorisation boundary and
+        # A push or a PR runs the 26-spec gate: the authorisation boundary and
         # money, the two things worth blocking a push over, in minutes rather
         # than three quarters of an hour.
         #
-        # The nightly schedule and a manual workflow_dispatch run all 59. The
+        # The nightly schedule and a manual workflow_dispatch run all 82. The
         # coverage is not dropped, it is rescheduled — and `bun run test:e2e:ci`
         # is still the command to run by hand before anything that matters.
         #
@@ -518,10 +527,10 @@ jobs:
         # server build and purge, and the two would have drifted.
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Full suite (59 specs)."
+            echo "Full suite (82 specs)."
             bun run test:e2e:ci
           else
-            echo "Gate (12 specs: access & money). The full suite runs nightly."
+            echo "Gate (26 specs: access & money). The full suite runs nightly."
             bun run test:e2e:gate
           fi
 
