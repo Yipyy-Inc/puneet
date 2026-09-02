@@ -41,7 +41,12 @@ import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFi
 import { useLocationContext } from "@/hooks/use-location-context";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { bookingMutations, bookingQueries } from "@/lib/api/booking";
+import {
+  bookingMutations,
+  bookingQueries,
+  scopeBookingsToRefs,
+  useAssignedBookingRefs,
+} from "@/lib/api/booking";
 import { useFieldMask } from "@/lib/staff/mask";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 const calculateTaskCount = (booking: Booking): number => {
@@ -203,12 +208,24 @@ export default function FacilityBookingsPage() {
   // viewer's fs-* id; otherwise undefined (full access, as admin sees).
   const assignedStaffId = useAssignedScope("view_bookings");
 
-  // Section 8B scoping is applied by the FACTORY, not here: `bookingQueries.all`
-  // runs `scopeBookingsToStaff` when an assigned id is passed, which is the
-  // same call admin makes with no scope at all.
-  const { data: bookings = [], isLoading } = useQuery(
-    bookingQueries.all(assignedStaffId ? { assignedStaffId } : undefined),
+  // Section 8B scoping is applied HERE now, not by the factory. It used to pass
+  // the viewer's id down to `scopeBookingsToStaff`, whose idea of "assigned"
+  // was `pool[booking.id % pool.length]` over the staff fixture. The set comes
+  // from `bookings.assigned_staff_id` instead — and it has to be applied at the
+  // call site, because only the caller can tell "not assigned" from "not
+  // loaded", which a queryFn cannot.
+  const { refs: assignedRefs } = useAssignedBookingRefs(assignedStaffId);
+  const { data: unscopedBookings = [], isLoading } = useQuery(
+    bookingQueries.all(),
   );
+  // An unknown answer shows nothing rather than everything — the safe
+  // direction, and the one that does not flash the whole facility's diary at a
+  // scoped viewer.
+  const bookings = assignedStaffId
+    ? assignedRefs
+      ? scopeBookingsToRefs(unscopedBookings, assignedRefs)
+      : []
+    : unscopedBookings;
 
   const queryClient = useQueryClient();
   const saveBooking = useMutation({

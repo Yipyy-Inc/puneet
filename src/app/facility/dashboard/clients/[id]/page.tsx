@@ -43,7 +43,7 @@ import { paymentQueries } from "@/lib/api/payments";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Booking, NewBooking } from "@/types/booking";
-import { isPetAssignedTo } from "@/lib/api/booking";
+import { useAssignedBookingRefs } from "@/lib/api/booking";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import type { Evaluation } from "@/types/pet";
 import type { Incident } from "@/types/incidents";
@@ -3024,8 +3024,11 @@ function PetDetailContent({
   const canSeePetMedical = usePermission("view_pet_medical");
   const canAddPetNotes = usePermission("add_pet_notes");
   const petNotesScope = useAssignedScope("add_pet_notes");
+  // Null until known — a note control that appears and then vanishes is worse
+  // than one that arrives a moment late.
+  const { petIds: assignedPetIds } = useAssignedBookingRefs(petNotesScope);
   const petIsAssigned =
-    petNotesScope == null || isPetAssignedTo(pet.id, petNotesScope);
+    petNotesScope == null || (assignedPetIds?.has(pet.id) ?? false);
   const canAddNoteForThisPet = canAddPetNotes && petIsAssigned;
 
   return (

@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+
 import { bookings } from "@/data/bookings";
 import { BOOKING_REQUESTS } from "@/data/booking-requests";
 import { facilityStaff } from "@/data/facility-staff";
@@ -46,52 +48,66 @@ const NAME_TO_ID = new Map<string, string>(
   facilityStaff.map((s) => [`${s.firstName} ${s.lastName}`, s.id]),
 );
 
-/** The fs-* id of the staff member assigned to serve `booking` (8B). */
-export function resolveBookingStaffId(booking: Booking): string | undefined {
-  const named = booking.assignedStaff ?? booking.stylistPreference;
-  if (named && NAME_TO_ID.has(named)) return NAME_TO_ID.get(named);
-  const serviceModule = serviceModuleFor(booking.service);
-  if (!serviceModule) return undefined;
-  const pool = staffPool(serviceModule);
-  if (pool.length === 0) return undefined;
-  return pool[booking.id % pool.length];
+/**
+ * What is assigned to the viewer: booking refs, and the pets they cover.
+ *
+ * ── WHAT THIS REPLACED ───────────────────────────────────────────────────
+ *
+ *   return pool[booking.id % pool.length];          // ← the assignment
+ *
+ * `resolveBookingStaffId` decided WHO A BOOKING BELONGS TO by arithmetic on
+ * its reference number, over a pool built from the staff FIXTURE. Three
+ * permission scopes read it — view_bookings on the list and two detail pages,
+ * and add_pet_notes — so `assigned_shifts` admitted whatever a modulo picked.
+ *
+ * Its other branch matched `assigned_staff_name` against fixture staff names,
+ * and that column is null on every row that carries a real assignment. So the
+ * real column, `bookings.assigned_staff_id`, was never consulted at all.
+ *
+ * MEASURED: with one booking assigned to groomer@yipyy.dev in Postgres, that
+ * groomer's list said "No bookings found".
+ *
+ * The argument is the viewer's SCOPE (undefined for full access), not a staff
+ * id — /api/bookings/assigned resolves the caller from their session, so a
+ * screen cannot ask about somebody else.
+ *
+ * `refs`/`petIds` are null while the answer is unknown. That is not "assigned
+ * to nothing": callers must hold off deciding rather than deny, or the gate
+ * flashes at somebody who has access.
+ */
+export function useAssignedBookingRefs(scoped: string | undefined): {
+  refs: Set<number> | null;
+  petIds: Set<number> | null;
+  pending: boolean;
+} {
+  const { data, isPending } = useQuery({
+    queryKey: ["bookings", "assigned", scoped ?? null] as const,
+    enabled: Boolean(scoped),
+    queryFn: async (): Promise<{ refs: number[]; petIds: number[] }> => {
+      const response = await fetch("/api/bookings/assigned");
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(detail?.error ?? `Request failed (${response.status})`);
+      }
+      return (await response.json()) as { refs: number[]; petIds: number[] };
+    },
+  });
+
+  return {
+    refs: data ? new Set(data.refs) : null,
+    petIds: data ? new Set(data.petIds) : null,
+    pending: Boolean(scoped) && isPending,
+  };
 }
 
-/** Filter a booking list to those assigned to `staffId` (8B data-layer scope). */
-export function scopeBookingsToStaff(
+/** Filter `list` to the bookings in `refs`. */
+export function scopeBookingsToRefs(
   list: Booking[],
-  staffId: string,
+  refs: Set<number>,
 ): Booking[] {
-  return list.filter((b) => resolveBookingStaffId(b) === staffId);
-}
-
-/** Is `booking` in `staffId`'s assigned set? (URL-fetch 403 check.) */
-export function isBookingAssignedTo(
-  booking: Booking,
-  staffId: string,
-): boolean {
-  return resolveBookingStaffId(booking) === staffId;
-}
-
-/** Pet ids with at least one booking assigned to `staffId` (5C). A booking may
- *  cover one pet or several, so petId is number | number[]. */
-export function assignedPetIds(staffId: string): Set<number> {
-  const ids = new Set<number>();
-  for (const b of bookings) {
-    if (resolveBookingStaffId(b) !== staffId) continue;
-    const pet = b.petId;
-    if (Array.isArray(pet)) {
-      for (const p of pet) ids.add(p);
-    } else if (pet != null) {
-      ids.add(pet);
-    }
-  }
-  return ids;
-}
-
-/** Is this pet one the viewer is assigned to? (add_pet_notes = assigned_only.) */
-export function isPetAssignedTo(petId: number, staffId: string): boolean {
-  return assignedPetIds(staffId).has(petId);
+  return list.filter((b) => refs.has(b.id));
 }
 
 // ============================================================================
@@ -133,14 +149,9 @@ export const bookingQueries = {
    * staff member's assigned bookings. Same factory admin uses; admin passes no
    * scope and gets the full set.
    */
-  all: (opts?: { assignedStaffId?: string }) => ({
-    queryKey: ["bookings", opts?.assignedStaffId ?? "all"] as const,
-    queryFn: async () => {
-      const list = await fetchBookings();
-      return opts?.assignedStaffId
-        ? scopeBookingsToStaff(list, opts.assignedStaffId)
-        : list;
-    },
+  all: () => ({
+    queryKey: ["bookings", "all"] as const,
+    queryFn: async () => fetchBookings(),
   }),
   detail: (id: number) => ({
     queryKey: ["bookings", id] as const,
