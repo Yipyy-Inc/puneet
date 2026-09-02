@@ -7405,7 +7405,7 @@ disagrees with the migration history whenever anything has been altered since.
 Adding a settings domain needs no policy work — but if one ever must reach a
 customer, naming it in that function exposes the WHOLE domain, not one field.
 
-### 🟡 The forms list loads every archived form, and the e2e suite is now losing a race against it
+### 🟡 `forms.spec.ts:357` loses a race in the full suite, and the obvious explanation is wrong
 
 `forms.spec.ts:357` — "the screen shows the forms the database holds" — failed
 in the full-suite run of 2026-09-01 and passed on every isolated re-run of the
@@ -7429,10 +7429,33 @@ select status, count(*) from public.forms where name like '[e2e]%' group by stat
 --   has_submissions             400   <- on delete restrict, permanent
 ```
 
-So the page under test loads 665 rows and climbing, and the assertion's
-15-second `toBeVisible` times out when the machine is busy — which is exactly
-what a 56-minute suite run is. It passed alone; it failed at minute ~50 of the
-full run.
+So the page under test loads 665 rows and climbing.
+
+**And the row count is NOT the mechanism — this entry originally said it was,
+and the measurement that followed disproved it.** On 2026-09-02 the 269
+deletable rows were removed, leaving 407. If volume were the cause the test
+would have got faster. It got SLOWER:
+
+```
+                rows   test 357
+before delete   676    8.3s, 9.2s
+after delete    407    19.7s, 22.9s
+```
+
+Twice each, same machine, isolated runs, warm server. Fewer rows, roughly
+double the time. Whatever makes this test lose its race varies between runs and
+is not the size of the list.
+
+**So the cause is still unknown, and this entry no longer claims one.** The
+deletion was worth doing on its own terms — that data was pure litter — but it
+is not a fix and must not be recorded as one. What IS established: the test
+passes alone and failed at minute ~50 of a 56-minute suite, and it is not a
+regression from the calling work.
+
+A useful fact for whoever picks this up: `select count(*) from public.forms
+where name not like '[e2e]%'` returns **0**. Every row that screen has ever
+rendered is test data, so any theory about "a facility with many forms" is
+untested against a single real one.
 
 **It is not a regression.** Bisected against the commit before Phase 1c and the
 same commit in isolation: pass, fail, pass. Nothing in the calling work touches
@@ -7443,9 +7466,15 @@ forms.
 1. Have the list exclude archived by default and offer them behind a filter.
    That is a product improvement independent of the tests — a facility with a
    few hundred archived forms has the same page.
-2. Failing that, have `afterAll` hard-delete the ones with no submissions
-   (265 of the 665 today) and archive only the rest. It slows the growth without
-   fixing it.
+2. Find the real cause before assuming either. The obvious candidate having
+   been eliminated, the next step is a trace of the failing run rather than
+   another plausible story — this entry has already carried one wrong mechanism
+   and should not carry a second.
+
+   (The 269 deletable rows were cleared on 2026-09-02 and 407 remain, all
+   `on delete restrict`. The spec's `afterAll` still archives rather than
+   deletes, because the API has no delete route by design — only SQL can remove
+   them, so this needs doing by hand periodically or not at all.)
 
 **What NOT to do:** raise the 15-second timeout. The assertion is not slow, the
 page is, and a longer timeout hides the only signal that says so.
