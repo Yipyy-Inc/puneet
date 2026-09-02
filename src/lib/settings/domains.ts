@@ -20,6 +20,10 @@ import {
   NO_CALLING_NUMBER,
 } from "@/lib/settings/calling";
 
+import {
+  giftCardConfigSchema,
+  NO_GIFT_CARD_CONFIG,
+} from "@/lib/settings/gift-cards";
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
 import { NO_REBOOK_CONFIG, rebookConfigSchema } from "@/lib/settings/rebook";
 import {
@@ -489,6 +493,27 @@ export const SETTING_DOMAINS = {
   // empty taxonomy costs a facility something and a starting one costs nobody
   // anything, which is when copying a fixture is right.
   calling_tags: { schema: callingTagsSchema, fallback: DEFAULT_CALL_TAGS },
+
+  // ── GIFT CARDS ─────────────────────────────────────────────────────────
+  //
+  // Terms on money the business OWES. A gift card is a liability: somebody
+  // paid for it and holds a claim, and these settings decide when that claim
+  // dies, what it can be spent on, and how much can be spent without proving
+  // ownership of the card.
+  //
+  // The panel's Save was `await new Promise(r => setTimeout(r, 1000))`
+  // followed by a tick — a fake network delay, so it looked more convincing
+  // than the calling panel's version of the same defect.
+  //
+  // The fallback has EXPIRY OFF, and that is the NO_TAX rule applied to
+  // somebody else's money: Quebec's Consumer Protection Act prohibits expiry
+  // on most gift cards, as do Ontario and BC, and the demo data uses a 514
+  // number. A facility that never opens this screen must not be quietly
+  // expiring cards its customers paid for. See lib/settings/gift-cards.ts.
+  gift_card_config: {
+    schema: giftCardConfigSchema,
+    fallback: NO_GIFT_CARD_CONFIG,
+  },
 
   // No exported schema for this one — it is a plain map of id -> hex, defined
   // in lib/operations-calendar rather than types/facility.

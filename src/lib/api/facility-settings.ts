@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { GiftCardConfig } from "@/lib/settings/gift-cards";
 import type {
   CallingDispatch,
   CallingFollowUp,
@@ -159,6 +160,15 @@ export interface FacilitySettings {
    * choice and lose whatever a colleague had set.
    */
   calling_tags: SettingState<CallingTags>;
+  /**
+   * Gift-card terms: expiry, PIN threshold, redemption scope, wallet rules.
+   *
+   * `configured: false` means nobody has set terms — so cards do NOT expire,
+   * which is both the safe default and the legally required one in several
+   * jurisdictions. A screen must not present that as a choice the facility
+   * made, any more than it may present an unset tax rate as zero tax.
+   */
+  gift_card_config: SettingState<GiftCardConfig>;
 }
 
 /**

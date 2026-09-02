@@ -31,6 +31,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import {
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import type { GiftCardConfig } from "@/lib/settings/gift-cards";
 import { giftCardSettings } from "@/data/gift-cards";
 import { getLocationsByFacility } from "@/data/locations";
 import { EmailBrandingCard } from "./EmailBrandingCard";
@@ -54,7 +60,31 @@ interface GiftCardSettingsPanelProps {
 export function GiftCardSettingsPanel({
   facilityId,
 }: GiftCardSettingsPanelProps) {
-  const settings = giftCardSettings.find((s) => s.facilityId === facilityId);
+  // ── THESE ARE TERMS ON MONEY THE BUSINESS OWES ─────────────────────────
+  //
+  // The defaults came from `giftCardSettings` in the fixture, matched on a
+  // hardcoded facility id, and Save was:
+  //
+  //   setSaving(true);
+  //   await new Promise((r) => setTimeout(r, 1000));   // a fake request
+  //   setSaved(true);
+  //
+  // So every control worked, the spinner ran for a second, the tick appeared,
+  // and a reload restored the fixture. Including `expiryEnabled`, which
+  // decides whether a customer's remaining balance is taken from them — and
+  // which several jurisdictions do not permit at all.
+  const { settings: facility, isPending } = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
+  const settings = facility.gift_card_config.value;
+
+  // NOT CONVERTED, and deliberately left visible rather than quietly dropped.
+  // `EmailBrandingCard` is display-only — it has no save path of its own — so
+  // reading these two from the fixture is the same gap it always had, not a
+  // new one. They become part of this domain on the day something can edit
+  // them.
+  const unconvertedBranding = giftCardSettings.find(
+    (row) => row.facilityId === facilityId,
+  );
   const facilityLocations = getLocationsByFacility(facilityId);
   const isMultiLocation = facilityLocations.length > 1;
   const brandName =
@@ -63,30 +93,26 @@ export function GiftCardSettingsPanel({
       ?.name.split(/[–-]/)[0]
       .trim() ?? "Your Facility";
 
-  const [digitalEnabled, setDigitalEnabled] = useState(
-    settings?.digitalEnabled ?? true,
-  );
+  const [digitalEnabled, setDigitalEnabled] = useState(settings.digitalEnabled);
   const [physicalEnabled, setPhysicalEnabled] = useState(
-    settings?.physicalEnabled ?? true,
+    settings.physicalEnabled,
   );
   const [lowStockThreshold, setLowStockThreshold] = useState(
-    settings?.lowStockThreshold ?? 50,
+    settings.lowStockThreshold,
   );
-  const [expiryEnabled, setExpiryEnabled] = useState(
-    settings?.expiryEnabled ?? false,
-  );
-  const [expiryDays, setExpiryDays] = useState(settings?.expiryDays ?? 365);
+  const [expiryEnabled, setExpiryEnabled] = useState(settings.expiryEnabled);
+  const [expiryDays, setExpiryDays] = useState(settings.expiryDays);
   const [partialRedemption, setPartialRedemption] = useState(
-    settings?.partialRedemptionAllowed ?? true,
+    settings.partialRedemptionAllowed,
   );
-  const [pinThreshold, setPinThreshold] = useState(
-    settings?.pinRequiredAbove ?? 200,
-  );
+  const [pinThreshold, setPinThreshold] = useState(settings.pinRequiredAbove);
   const [redemptionScope, setRedemptionScope] = useState(
-    settings?.redemptionLocationScope ?? "this_location",
+    settings.redemptionLocationScope,
   );
   const [redemptionLocationIds, setRedemptionLocationIds] = useState<string[]>(
-    settings?.redemptionLocationIds ?? facilityLocations.map((l) => l.id),
+    settings.redemptionLocationIds.length > 0
+      ? settings.redemptionLocationIds
+      : facilityLocations.map((l) => l.id),
   );
 
   const toggleRedemptionLocation = (id: string) => {
@@ -95,38 +121,74 @@ export function GiftCardSettingsPanel({
     );
   };
   const [refundToGiftCard, setRefundToGiftCard] = useState(
-    settings?.refundToGiftCard ?? true,
+    settings.refundToGiftCard,
   );
   const [allowCancellation, setAllowCancellation] = useState(
-    settings?.allowGiftCardCancellation ?? true,
+    settings.allowGiftCardCancellation,
   );
-  const [walletRules, setWalletRules] = useState(
-    settings?.walletUsageRules ?? {
-      boarding: true,
-      daycare: true,
-      grooming: true,
-      training: true,
-      retail: true,
-      packages: true,
-      deposits: true,
-      addons: true,
-      tips: false,
-    },
-  );
+  const [walletRules, setWalletRules] = useState(settings.walletUsageRules);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      // Awaited, and the failure reported. RLS refuses this write for anyone
+      // without `settings_general`, and an unawaited mutation would show the
+      // same tick for a refusal as for a success.
+      await saveSetting.mutateAsync({
+        domain: "gift_card_config",
+        value: {
+          digitalEnabled,
+          physicalEnabled,
+          lowStockThreshold,
+          expiryEnabled,
+          expiryDays,
+          partialRedemptionAllowed: partialRedemption,
+          pinRequiredAbove: pinThreshold,
+          redemptionLocationScope: redemptionScope,
+          redemptionLocationIds,
+          refundToGiftCard,
+          allowGiftCardCancellation: allowCancellation,
+          walletUsageRules: walletRules,
+        } satisfies GiftCardConfig,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Gift card settings could not be saved",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleWalletRule = (key: keyof typeof walletRules) => {
     setWalletRules((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  // Every control below is seeded from `settings` by useState, which captures
+  // once. If the query is still in flight that capture is the DOCUMENTED
+  // DEFAULTS, and pressing Save would write those over whatever terms the
+  // facility actually has — turning a load delay into data loss on money.
+  //
+  // The same trap the calling settings and the call-tag editor hit. Rendering
+  // nothing until the row has arrived is the whole fix.
+  if (isPending) {
+    return (
+      <Card>
+        <CardContent className="py-16">
+          <div className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
+            <Loader2 className="size-4 animate-spin" />
+            Loading gift card settings…
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -480,8 +542,8 @@ export function GiftCardSettingsPanel({
       {/* Branding */}
       <EmailBrandingCard
         brandName={brandName}
-        branding={settings?.emailBranding}
-        customDesign={settings?.customCardDesign}
+        branding={unconvertedBranding?.emailBranding}
+        customDesign={unconvertedBranding?.customCardDesign}
       />
 
       <Button onClick={handleSave} disabled={saving} className="w-full">
