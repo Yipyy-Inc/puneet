@@ -86,12 +86,14 @@ import {
   Archive,
   List,
 } from "lucide-react";
-import { customerWallets, physicalCardBatches } from "@/data/gift-cards";
+import { physicalCardBatches } from "@/data/gift-cards";
+import { useStoreCredit, useWriteStoreCredit } from "@/lib/api/store-credit";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { clients } from "@/data/clients";
 import { giftCardQueries, useUpdateGiftCard } from "@/lib/api/gift-cards";
 import { toLegacyGiftCard } from "./_lib/to-legacy-card";
 import { toActivityLog } from "./_lib/to-activity-log";
+import { toWallets } from "./_lib/to-wallets";
 import { SellGiftCardModal } from "./_components/SellGiftCardModal";
 import { RedeemGiftCardModal } from "./_components/RedeemGiftCardModal";
 import { GiftCardDetailSheet } from "./_components/GiftCardDetailSheet";
@@ -115,7 +117,6 @@ import type {
   GiftCard,
   GiftCardAuditLog,
   CustomerWallet,
-  WalletTransaction,
   PhysicalCardBatch,
   PhysicalCard,
 } from "@/types/payments";
@@ -206,15 +207,13 @@ export default function FacilityGiftCardsPage() {
     new Set(),
   );
   const [adjustWallet, setAdjustWallet] = useState<CustomerWallet | null>(null);
-  // Session balance overrides + synthetic adjustment history (Adjust Balance modal).
-  const [walletBalances, setWalletBalances] = useState<Record<string, number>>(
-    {},
-  );
-  const [walletAdjustments, setWalletAdjustments] = useState<
-    Record<string, WalletTransaction[]>
-  >({});
-  // Wallets created on the fly when redeeming to a customer who had none.
-  const [sessionWallets, setSessionWallets] = useState<CustomerWallet[]>([]);
+  // What used to be here: `walletBalances`, a session map of overridden
+  // balances, and `walletAdjustments`, a synthetic history to match. The
+  // Adjust Balance modal wrote both and nothing else — no request, no ledger
+  // entry — so a correction to a customer's store credit lasted until the tab
+  // was reloaded. `useWriteStoreCredit` posts an entry and invalidates, which
+  // is why neither is needed to show the result.
+  const writeStoreCredit = useWriteStoreCredit();
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string | number>>(
     new Set(),
   );
@@ -263,12 +262,22 @@ export default function FacilityGiftCardsPage() {
 
   const updateCard = useUpdateGiftCard();
 
+  // ── THE LEDGER THE MONEY IS ACTUALLY ON ─────────────────────────────────
+  //
+  // This read `customerWallets` from src/data, beside a comment further down
+  // this same file stating that the fixture was a duplicate of
+  // `store_credit_entries`. MEASURED before changing it: the tab showed 2
+  // wallets holding $335.00 while the ledger held 194 entries and $7,830.00,
+  // and the Redeem to Credit modal on this page — already on `useStoreCredit`
+  // — showed one customer with $7,515.00 of it.
+  //
+  // `sessionWallets` is gone with it. It existed because redeeming to a
+  // customer who had no fixture wallet had to invent one to display; a ledger
+  // has no such problem, and the redeem mutation invalidates this query.
+  const storeCredit = useStoreCredit();
   const facilityWallets = useMemo(
-    () => [
-      ...customerWallets.filter((w) => w.facilityId === FACILITY_ID),
-      ...sessionWallets,
-    ],
-    [sessionWallets],
+    () => toWallets(storeCredit.data, FACILITY_ID),
+    [storeCredit.data],
   );
 
   const facilityBatches = useMemo(
@@ -498,7 +507,7 @@ export default function FacilityGiftCardsPage() {
     const withClient = facilityWallets.map((wallet) => ({
       wallet,
       client: clients.find((c) => c.id === wallet.clientId),
-      balance: walletBalances[wallet.id] ?? wallet.balance,
+      balance: wallet.balance,
     }));
     const filtered = q
       ? withClient.filter(
@@ -522,7 +531,7 @@ export default function FacilityGiftCardsPage() {
           return (a.client?.name ?? "").localeCompare(b.client?.name ?? "");
       }
     });
-  }, [facilityWallets, walletSearch, walletSort, walletBalances]);
+  }, [facilityWallets, walletSearch, walletSort]);
 
   const toggleWalletHistory = (id: string) =>
     setExpandedWalletIds((prev) => {
@@ -1054,7 +1063,7 @@ export default function FacilityGiftCardsPage() {
           {
             label: "Total Wallet Balance",
             value: `$${totalWalletBalance.toFixed(2)}`,
-            sub: `${facilityWallets.length} wallets`,
+            sub: `${facilityWallets.length} ${facilityWallets.length === 1 ? "wallet" : "wallets"}`,
             icon: Wallet,
             color: "text-blue-600",
             bg: "bg-blue-50 dark:bg-blue-950/20",
@@ -1610,15 +1619,9 @@ export default function FacilityGiftCardsPage() {
                   {displayedWallets.map(({ wallet, client, balance }) => {
                     const isHighlighted = highlightedWalletId === wallet.id;
                     const isExpanded = expandedWalletIds.has(wallet.id);
-                    const allTx = [
-                      ...(walletAdjustments[wallet.id] ?? []),
-                      ...wallet.transactions,
-                    ];
-                    const sortedTx = [...allTx].sort(
-                      (a, b) =>
-                        new Date(b.createdAt).getTime() -
-                        new Date(a.createdAt).getTime(),
-                    );
+                    // `toWallets` already returns these newest-first from the
+                    // ledger; there is no second list to merge in any more.
+                    const sortedTx = wallet.transactions;
                     const shownTx = isExpanded
                       ? sortedTx
                       : sortedTx.slice(0, 3);
@@ -1642,9 +1645,9 @@ export default function FacilityGiftCardsPage() {
                                   {client?.name ?? "Unknown Client"}
                                 </p>
                                 <p className="text-muted-foreground text-xs">
-                                  {allTx.length} transaction
-                                  {allTx.length !== 1 ? "s" : ""} · Last updated{" "}
-                                  {formatDate(wallet.updatedAt)}
+                                  {sortedTx.length} transaction
+                                  {sortedTx.length !== 1 ? "s" : ""} · Last
+                                  updated {formatDate(wallet.updatedAt)}
                                 </p>
                               </div>
                             </div>
@@ -1680,9 +1683,9 @@ export default function FacilityGiftCardsPage() {
                                 </span>
                               </div>
                             ))}
-                            {!isExpanded && allTx.length > 3 && (
+                            {!isExpanded && sortedTx.length > 3 && (
                               <p className="text-muted-foreground text-xs">
-                                +{allTx.length - 3} more transactions
+                                +{sortedTx.length - 3} more transactions
                               </p>
                             )}
                           </div>
@@ -1694,7 +1697,7 @@ export default function FacilityGiftCardsPage() {
                               size="sm"
                               className="gap-1.5"
                               onClick={() => toggleWalletHistory(wallet.id)}
-                              disabled={allTx.length <= 3}
+                              disabled={sortedTx.length <= 3}
                             >
                               {isExpanded ? (
                                 <>
@@ -1980,32 +1983,37 @@ export default function FacilityGiftCardsPage() {
       <WalletAdjustModal
         wallet={adjustWallet}
         open={adjustWallet !== null}
-        currentBalance={
-          adjustWallet
-            ? (walletBalances[adjustWallet.id] ?? adjustWallet.balance)
-            : undefined
-        }
+        currentBalance={adjustWallet?.balance}
         onOpenChange={(v) => !v && setAdjustWallet(null)}
-        onApply={({ walletId, newBalance, delta, reason, notes, staff }) => {
-          setWalletBalances((prev) => ({ ...prev, [walletId]: newBalance }));
-          setWalletAdjustments((prev) => {
-            const existing = prev[walletId] ?? [];
-            const wallet = facilityWallets.find((w) => w.id === walletId);
-            const tx: WalletTransaction = {
-              id: `wt-adj-${walletId}-${existing.length + 1}`,
-              walletId,
-              facilityId: FACILITY_ID,
-              clientId: wallet?.clientId ?? 0,
-              type: "adjustment",
+        onApply={async ({ walletId, delta, reason, notes }) => {
+          // `walletId` is `credit-<clientRef>` — synthetic, made by toWallets
+          // because a ledger has no account row. The write path takes the
+          // client, so resolve it rather than sending an id no table has.
+          const wallet = facilityWallets.find((w) => w.id === walletId);
+          if (!wallet) return;
+          try {
+            await writeStoreCredit.mutateAsync({
+              clientRef: wallet.clientId,
+              // Signed, and `adjustment` is the one reason the CHECK allows
+              // either sign (store_credit_sign_matches_reason) — which is what
+              // a correction needs. `added` is for issuing and is positive-only.
               amount: delta,
-              balanceAfter: newBalance,
-              description: notes ? `${reason} — ${notes}` : reason,
-              referenceType: "adjustment",
-              performedBy: staff,
-              createdAt: new Date().toISOString(),
-            };
-            return { ...prev, [walletId]: [...existing, tx] };
-          });
+              reason: "adjustment",
+              note: notes ? `${reason} — ${notes}` : reason,
+            });
+            toast.success(
+              `${delta < 0 ? "Removed" : "Added"} ${Math.abs(delta).toFixed(2)}.`,
+              { description: "The entry is on the customer's ledger." },
+            );
+          } catch (error) {
+            // The staff member has to know it did NOT happen — this is money,
+            // and the old version could not fail at all because it never asked
+            // anybody.
+            toast.error("Could not adjust that balance.", {
+              description:
+                error instanceof Error ? error.message : "Please try again.",
+            });
+          }
         }}
       />
 

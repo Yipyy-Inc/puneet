@@ -24,8 +24,19 @@ import { cn } from "@/lib/utils";
 import type { CustomerWallet } from "@/types/payments";
 import { clients } from "@/data/clients";
 
-// Acting staff member (mock — no auth context yet).
-const CURRENT_STAFF = "Sarah Johnson";
+// ── THERE WAS AN "ADJUSTED BY" LINE HERE, NAMING SARAH JOHNSON ───────────
+//
+// A module constant — "Acting staff member (mock — no auth context yet)" —
+// rendered as a fact above the amount field. It is wrong twice over now that
+// this modal writes: /api/store-credit records `author_name` from the SESSION,
+// so the dialog told the operator one name while the ledger kept another.
+// MEASURED on a real adjustment: the screen said Sarah Johnson, the entry says
+// Dana Okafor.
+//
+// `useCurrentUser` cannot replace it — it defaults to the same fixture name.
+// So the row is gone rather than guessed at. The ledger knows who did it,
+// which is where it matters, and a dialog that says nothing beats one that
+// says the wrong person signed for money.
 
 const REASONS = [
   "Customer Service Credit",
@@ -43,7 +54,6 @@ export interface WalletAdjustment {
   delta: number;
   reason: string;
   notes: string;
-  staff: string;
 }
 
 interface WalletAdjustModalProps {
@@ -93,7 +103,6 @@ export function WalletAdjustModal({
       delta: signed,
       reason,
       notes: notes.trim(),
-      staff: CURRENT_STAFF,
     });
     const sign = signed >= 0 ? "+" : "−";
     alert(
@@ -129,10 +138,6 @@ export function WalletAdjustModal({
               <span className="price-value font-semibold text-green-600">
                 ${startBalance.toFixed(2)}
               </span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Adjusted by</span>
-              <span className="font-medium">{CURRENT_STAFF}</span>
             </div>
           </div>
 
