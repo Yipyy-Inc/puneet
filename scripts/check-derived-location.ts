@@ -1,5 +1,5 @@
 /**
- * Guards against a fixture-era location hash deciding something about a real row.
+ * Guards against a fixture guess deciding where a real row belongs, or to whom.
  *
  *   bun run check:derived-location
  *
@@ -41,6 +41,27 @@
  *
  * The list should only ever shrink.
  *
+ * ── AND THE SAME GUESS ABOUT PEOPLE ───────────────────────────────────────
+ *
+ * The location hash was not the only one. `resolveBookingStaffId` decided WHO
+ * a booking belonged to with `pool[booking.id % pool.length]` over the staff
+ * fixture, and three permission scopes read it; `assignedClientIds` answered
+ * the same question for clients by walking the bookings fixture. Both are
+ * deleted (a6207b51, d88c01b9) and both are frozen here by name, along with the
+ * wrappers that called them.
+ *
+ * WHY BY NAME, AND NOT BY SHAPE. `x[id % pool.length]` is the obvious rule and
+ * it does not work: 20 of the ~22 occurrences in this repo are chart colour
+ * cycles — `COLORS[i % COLORS.length]` — which are correct, and no syntactic
+ * test separates a palette from an assignment. "A file resolving a permission
+ * scope must not import a fixture" is closer, and still wrong: 10 of the 12
+ * files calling `useAssignedScope` legitimately read fixtures for DISPLAY
+ * data. Telling those apart needs dataflow, not a grep.
+ *
+ * So this gate is narrow on purpose. It cannot catch the next instance of the
+ * pattern; it can stop these ones coming back, and it names them so the next
+ * person recognises the shape.
+ *
  * ── WHAT TO DO WHEN IT FIRES ──────────────────────────────────────────────
  *
  * Read the real column. `bookings`, `incidents` and `call_record` all have
@@ -64,6 +85,31 @@ const ANSI = {
 };
 
 const ROOT = "src";
+
+/**
+ * Names that must not come back. Each derived a real record's owner or place
+ * from a fixture, and each was read by something that decides access.
+ *
+ * The first is still alive with three documented callers (below); the rest are
+ * deleted, and are listed so a reintroduction fails rather than passing review
+ * as new code.
+ */
+const FROZEN = [
+  // src/data/locations.ts — trailingDigits % 3 into one of three slugs.
+  "deriveLocationId",
+  // src/lib/api/booking.ts — pool[booking.id % pool.length] over the staff
+  // fixture, read by view_bookings and add_pet_notes.
+  "resolveBookingStaffId",
+  "scopeBookingsToStaff",
+  "isBookingAssignedTo",
+  "assignedPetIds",
+  "isPetAssignedTo",
+  // src/lib/api/client.ts — the same, over the bookings fixture, read by
+  // view_clients, view_client_list and messages_send.
+  "assignedClientIds",
+  "scopeClientsToStaff",
+  "isClientAssignedTo",
+];
 /** Where the function is declared. The fixture layer may use its own hash. */
 const FIXTURE_LAYER = join("src", "data");
 
@@ -126,7 +172,7 @@ for (const file of walk(ROOT)) {
   const source = stripComments(readFileSync(file, "utf8"));
   // The CALL, not the import and not the word. A file may name it in a comment
   // saying it no longer uses it — four do, as of this being written.
-  const pattern = /\bderiveLocationId\s*\(/g;
+  const pattern = new RegExp(`\\b(?:${FROZEN.join("|")})\\s*\\(`, "g");
 
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(source)) !== null) {
@@ -154,30 +200,31 @@ for (const file of allowedHits) {
 
 if (findings.length === 0) {
   console.log(
-    `${ANSI.green}${ANSI.bold}✓ no location hash decides anything about a real row${ANSI.reset}`,
+    `${ANSI.green}${ANSI.bold}✓ nothing derives a real row’s owner or place from a fixture${ANSI.reset}`,
   );
   process.exit(0);
 }
 
 console.log(
-  `\n${ANSI.red}✗ ${findings.length} new call(s) to deriveLocationId${ANSI.reset}\n`,
+  `\n${ANSI.red}✗ ${findings.length} call(s) to a frozen derivation${ANSI.reset}\n`,
 );
 for (const finding of findings) {
   console.log(`  ${finding.file}:${finding.line}`);
 }
 console.log(
-  `\n  ${ANSI.bold}deriveLocationId returns a fixture slug${ANSI.reset} — "loc-dv-main" and two others.`,
+  `\n  ${ANSI.bold}These derive a real record\'s owner or place from a fixture.${ANSI.reset}`,
 );
 console.log(
-  `  A real location id is a uuid, so the comparison matches nothing and says so silently.`,
+  `  A real id is a uuid, so the comparison matches nothing — silently.`,
 );
 console.log(
-  `  Read the row's own location_id (bookings, incidents, call_record have one).`,
+  `  Read the column: location_id (bookings, incidents, call_record), or the`,
 );
 console.log(
-  `  Where no column exists (clients, gift_cards, staff), the answer is null —`,
+  `  assignment, via /api/bookings/assigned and /api/clients/assigned.`,
 );
 console.log(
-  `  and the consumer must treat an unknown origin as "do not filter, do not refuse".`,
+  `  Where no column exists, the answer is null — and an unknown owner must mean` +
+    ` "do not filter, do not refuse".`,
 );
 process.exit(1);

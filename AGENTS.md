@@ -54,7 +54,7 @@ Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/u
 | `bun run check:passkey-email-verified` | Fails if the magic-auth bridge escapes its one file, or a passkey verify route drops its `emailVerified` check      |
 | `bun run check:migration-versions`     | Fails if two migrations share a version number, so `db push` cannot pick its own order                              |
 | `bun run check:no-review-gating`       | Fails if a control hides a public review link by rating — review gating, which the FTC and Google prohibit          |
-| `bun run check:derived-location`       | Fails if a new caller hashes an id into a fixture location — the guess that refused every gift card                 |
+| `bun run check:derived-location`       | Fails if a fixture guess decides where a real row belongs, or to whom — a location, or an assignment                |
 | `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                   |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check && bun run test:unit`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
