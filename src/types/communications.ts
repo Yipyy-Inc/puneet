@@ -192,6 +192,11 @@ export const callLogSchema = z.object({
   followUpStatus: followUpStatusEnum.nullish(),
   assignedTo: z.string().nullish(), // staff id responsible for the follow-up
   handledBy: z.string().optional(), // staff member who handled the call
+  // The location the call reached, from `call_record.location_id`. Nullish
+  // because a call to a facility's only number belongs to no branch in
+  // particular, and because the number that took it may not be assigned to one
+  // yet — provisioning sets `communication_numbers.location_id`.
+  locationId: z.string().nullish(),
   qaScore: z.number().int().min(1).max(5).optional(), // manager QA score
   managerNote: z.string().optional(), // private QA note (manager/owner only)
   flagged: z.boolean().optional(), // auto-flagged for manager review

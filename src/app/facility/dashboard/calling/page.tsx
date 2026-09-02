@@ -1,3 +1,4 @@
+import { RequirePermission } from "@/components/employee/AccessRestricted";
 import { callingSystemStatus } from "@/lib/calling/system-status";
 
 import { CallingWorkspace } from "./_components/CallingWorkspace";
@@ -20,6 +21,31 @@ import { CallingWorkspace } from "./_components/CallingWorkspace";
 // `missed` is aliased rather than dropped: the same helper emits it, there is
 // no Missed tab, and unanswered calls are what the Live tab is for. An unknown
 // value falls back to Live rather than rendering an empty Tabs body.
+//
+// ── WHY THIS ROUTE IS GATED, AND WHO IT ACTUALLY STOPS ────────────────────
+//
+// /employee/calling wrapped this same component in `calling_view` from the day
+// it was written. This route rendered it bare. Two doors onto one component,
+// one of them locked, is not a design — it is the older door never having been
+// fixed.
+//
+// But be precise about what this catches, because the obvious answer is wrong.
+// `canAccessFacilityPortal` requires `isFacilityAdmin` — access_level 'admin' —
+// so a groomer typing this URL is redirected to /employee/schedule before the
+// route renders. MEASURED: only owner and manager reach the facility portal at
+// all, and both hold calling_view by default. On a stock facility this gate
+// fires for nobody.
+//
+// What makes it reachable is the role editor. `facility_role_permissions` lets
+// an owner set calling_view to 'none' for managers, and until this gate existed
+// that revocation hid the nav link and left the whole module answering at its
+// URL. Verified by revoking it and loading this page.
+//
+// So: not a hole being closed, a revocation being honoured. The security
+// boundary remains RLS (`call_record_read`) and the route, which refuse a caller
+// without the permission whatever this renders. This decides whether someone is
+// shown a Calling screen at all, rather than an empty one they would reasonably
+// read as "no calls".
 // ============================================================================
 
 const TABS = [
@@ -52,9 +78,14 @@ export default async function CallingPage({
 }) {
   const params = await searchParams;
   return (
-    <CallingWorkspace
-      initialTab={resolveTab(params.tab)}
-      systemStatus={callingSystemStatus()}
-    />
+    <RequirePermission
+      permKey="calling_view"
+      home={{ href: "/facility/dashboard", label: "Go to the dashboard" }}
+    >
+      <CallingWorkspace
+        initialTab={resolveTab(params.tab)}
+        systemStatus={callingSystemStatus()}
+      />
+    </RequirePermission>
   );
 }

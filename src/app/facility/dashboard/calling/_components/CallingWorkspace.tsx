@@ -76,7 +76,6 @@ import { VoicemailInbox } from "@/components/calling/VoicemailInbox";
 import { RecordingsList } from "@/components/calling/RecordingsList";
 import { DateRangeFilter } from "@/components/calling/DateRangeFilter";
 import { dateRangeBounds, type DateRange } from "@/lib/calling/date-range";
-import { getFacilityRole } from "@/lib/role-utils";
 import {
   callQueue,
   voicemailGreetings,
@@ -96,7 +95,7 @@ import type { ActiveCall, MissedCallTask } from "@/types/calling";
 import { toast } from "sonner";
 import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
 import { useLocationContext } from "@/hooks/use-location-context";
-import { deriveLocationId } from "@/data/locations";
+import { usePermission } from "@/hooks/use-facility-rbac";
 
 // ─── helpers ────────────────────────────────────────────────
 // Persisted per browser so staff keep their last-used Call Log filters.
@@ -937,13 +936,19 @@ export function CallingWorkspace({
   // Unanswered-call worklist, stateful so Call Back / Mark as handled update it.
   const [missedTasks, setMissedTasks] = useState(missedCallTasks);
 
-  // QA scoring + scores are visible only to managers/owners. Read the facility
-  // role client-side (cookie) to avoid an SSR/hydration mismatch.
-  const [canViewQa, setCanViewQa] = useState(false);
-  useEffect(() => {
-    const role = getFacilityRole();
-    setCanViewQa(role === "owner" || role === "manager");
-  }, []);
+  // QA scoring and scores are an assessment OF the person who took the call,
+  // so they follow `view_staff_performance` — the same key that gates the
+  // performance section of a staff profile.
+  //
+  // This used to be `getFacilityRole()`, which reads a cookie the browser can
+  // write and returns "owner" when the cookie is absent. So the default path
+  // granted it to everyone and the tampering path granted it to anyone else.
+  // `usePermission` answers from `my_permissions()` and treats an absent key
+  // as no.
+  //
+  // It is not the control, though — /api/facility/calling/calls stops sending
+  // the score at all. This decides whether to draw the scoring UI.
+  const canViewQa = usePermission("view_staff_performance");
 
   // Persist the last-used Call Log filter selection per browser (localStorage).
   // The save effect is declared BEFORE the restore effect so that on mount it
@@ -991,8 +996,18 @@ export function CallingWorkspace({
         if (to !== null && t > to) return false;
       }
       if (locationFilter.length > 0) {
-        const callLocId = deriveLocationId(c.id);
-        if (!locationFilter.includes(callLocId)) return false;
+        // `deriveLocationId(c.id)` used to answer this — a hash of the id into
+        // one of three fixture location slugs. Against real rows it compared a
+        // slug to a uuid and matched none, so a branch selection emptied the
+        // log. Latent rather than live: the picker below only renders when a
+        // facility has more than one location, and none does yet.
+        //
+        // `call_record.location_id` is the real answer, and it is nullable —
+        // a call on a number assigned to no branch belongs to no branch, and
+        // must not be swept into whichever one was picked.
+        if (!c.locationId || !locationFilter.includes(c.locationId)) {
+          return false;
+        }
       }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
