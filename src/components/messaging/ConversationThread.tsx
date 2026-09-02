@@ -47,7 +47,7 @@ import type { ConversationStatus } from "@/types/messaging";
 import { clients } from "@/data/clients";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { assignedClientIds } from "@/lib/api/client";
+import { useAssignedClientRefs } from "@/lib/api/client";
 import { facilities } from "@/data/facilities";
 import { threadMeta as defaultThreadMeta } from "@/data/messaging";
 
@@ -179,12 +179,19 @@ export function ConversationThread({
   // The customer portal is never gated (owners reply on their own threads).
   const canSendMessages = usePermission("messages_send");
   const sendScope = useAssignedScope("messages_send");
+  // Whether this viewer may reply HERE. `sendScope` is set only when
+  // messages_send resolves to assigned_only, and the set behind it came from
+  // the bookings fixture — a scoped viewer's right to reply was decided by mock
+  // rows, and matched none of them, so the box was closed whoever they were.
+  //
+  // While the answer is unknown the reply box stays closed: opening it and then
+  // refusing the send is worse than a moment's wait.
+  const { refs: replyRefs } = useAssignedClientRefs(sendScope ?? undefined);
   const canReplyHere =
     isCustomerMode ||
     (canSendMessages &&
       (sendScope == null ||
-        (counterpartyId != null &&
-          assignedClientIds(sendScope).has(counterpartyId))));
+        (counterpartyId != null && (replyRefs?.has(counterpartyId) ?? false))));
   const client = counterpartyId
     ? clients.find((c) => c.id === counterpartyId)
     : null;

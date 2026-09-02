@@ -27,7 +27,7 @@ import { threadMeta as defaultThreadMeta } from "@/data/messaging";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { assignedClientIds } from "@/lib/api/client";
+import { useAssignedClientRefs } from "@/lib/api/client";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import { ConversationRow } from "./ConversationRow";
 import { useConversationState } from "./conversation-state-context";
@@ -152,12 +152,19 @@ export function ContactList({
   const sendScope = useAssignedScope("messages_send");
   const canSend = usePermission("messages_send");
   const canSeeAllThreads = usePermission("messages_view_all_threads");
+  // Which clients are this viewer's, from the bookings that say so rather than
+  // from the fixture `assignedClientIds` used to walk. `refs` is null while
+  // unknown, which reads here exactly as the "no scope" case did — the list is
+  // not narrowed until the answer arrives, and a scoped viewer's contacts are
+  // filtered by `filter`/`canSeeAllThreads` in the meantime.
+  const scopedStaffId =
+    isCustomerMode || (inboxScope == null && sendScope == null)
+      ? undefined
+      : (inboxScope ?? sendScope ?? undefined);
+  const { refs: assignedRefs } = useAssignedClientRefs(scopedStaffId);
   const assignedClients = useMemo(
-    () =>
-      isCustomerMode || (inboxScope == null && sendScope == null)
-        ? null
-        : assignedClientIds(inboxScope ?? sendScope ?? ""),
-    [isCustomerMode, inboxScope, sendScope],
+    () => (scopedStaffId ? assignedRefs : null),
+    [scopedStaffId, assignedRefs],
   );
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>(

@@ -2,7 +2,7 @@
 
 import { use, useMemo } from "react";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { isClientAssignedTo, useClientRecord } from "@/lib/api/client";
+import { useAssignedClientRefs, useClientRecord } from "@/lib/api/client";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import ClientDetailPage from "@/app/facility/dashboard/clients/[id]/page";
 
@@ -19,14 +19,11 @@ import ClientDetailPage from "@/app/facility/dashboard/clients/[id]/page";
 // assigned set gets a 403 → AccessRestricted, never the record. The decision is
 // the data-layer helper isClientAssignedTo (8B).
 //
-// STILL A FIXTURE, AND SAY SO: `isClientAssignedTo` calls `assignedClientIds`,
-// which walks the `bookings` array in src/data. So WHICH clients a scoped
-// viewer may open is computed from mock bookings — wrong in both directions,
-// hiding real assignments and inventing others. It is not fixed here because
-// it is not one call site: `scopeClientsToStaff` filters the client LIST from
-// the same helper, and doing it properly means a real "clients assigned to this
-// staff member" query rather than a swap. The existence check above no longer
-// depends on it.
+// The assigned set is real too, since /api/clients/assigned. It used to come
+// from `assignedClientIds`, which walked the `bookings` array in src/data — so
+// WHICH clients a scoped viewer could open was decided by mock rows. MEASURED
+// before the change: a booking assigned to groomer@yipyy.dev in Postgres left
+// that groomer looking at an empty client list.
 // ============================================================================
 
 export default function EmployeeClientDetailPage({
@@ -63,6 +60,8 @@ export default function EmployeeClientDetailPage({
   // which is what happened here.
   const { client, pending } = useClientRecord(id);
   const assignedClientScope = useAssignedScope("view_clients");
+  const { refs: assignedRefs, pending: assignedPending } =
+    useAssignedClientRefs(assignedClientScope);
 
   // The shared profile reads its route params via use(params); hand it a STABLE
   // promise (a fresh one each render would suspend forever).
@@ -71,12 +70,10 @@ export default function EmployeeClientDetailPage({
   // Nothing is decided while the answer is unknown. Denying during the fetch
   // would flash Access Restricted at somebody who has access — and the reverse,
   // rendering the profile first, would show a record before the check.
-  if (pending) return null;
+  if (pending || assignedPending) return null;
 
   const denied =
-    !client ||
-    (assignedClientScope != null &&
-      !isClientAssignedTo(client, assignedClientScope));
+    !client || (assignedClientScope != null && !assignedRefs?.has(client.id));
 
   if (denied) return <AccessRestricted />;
   return <ClientDetailPage params={detailParams} />;
