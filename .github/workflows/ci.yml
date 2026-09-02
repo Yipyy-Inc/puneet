@@ -516,11 +516,11 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         # ── ONE JOB, TWO SUITES, CHOSEN BY WHAT TRIGGERED IT ──────────────
         #
-        # A push or a PR runs the 26-spec gate: the authorisation boundary and
+        # A push or a PR runs the 27-spec gate: the authorisation boundary and
         # money, the two things worth blocking a push over, in minutes rather
         # than three quarters of an hour.
         #
-        # The nightly schedule and a manual workflow_dispatch run all 82. The
+        # The nightly schedule and a manual workflow_dispatch run all 83. The
         # coverage is not dropped, it is rescheduled — and `bun run test:e2e:ci`
         # is still the command to run by hand before anything that matters.
         #
@@ -528,10 +528,10 @@ jobs:
         # server build and purge, and the two would have drifted.
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Full suite (82 specs)."
+            echo "Full suite (83 specs)."
             bun run test:e2e:ci
           else
-            echo "Gate (26 specs: access & money). The full suite runs nightly."
+            echo "Gate (27 specs: access & money). The full suite runs nightly."
             bun run test:e2e:gate
           fi
 
