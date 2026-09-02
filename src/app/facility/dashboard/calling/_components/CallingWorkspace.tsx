@@ -1875,7 +1875,7 @@ export function CallingWorkspace({
 
           {/* IVR & Routing */}
           <TabsContent value="ivr" className="space-y-6">
-            <IVRBuilder config={ivrConfig} />
+            <IVRBuilder />
             <RoutingRulesBuilder rules={callRoutingRules} />
           </TabsContent>
 

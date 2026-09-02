@@ -20,6 +20,7 @@ import {
   NO_CALLING_NUMBER,
 } from "@/lib/settings/calling";
 
+import { ivrSettingsSchema, NO_IVR } from "@/lib/settings/ivr";
 import {
   giftCardConfigSchema,
   NO_GIFT_CARD_CONFIG,
@@ -493,6 +494,12 @@ export const SETTING_DOMAINS = {
   // empty taxonomy costs a facility something and a starting one costs nobody
   // anything, which is when copying a fixture is right.
   calling_tags: { schema: callingTagsSchema, fallback: DEFAULT_CALL_TAGS },
+  // The menu a caller hears. Ships DISABLED with an EMPTY greeting, and both
+  // halves matter: the only greeting available to default to is the fixture's
+  // "Thank you for calling Yipyy", which names the platform rather than the
+  // facility and is read aloud to whoever rings. An IVR enabled with nothing
+  // to say answers a customer with silence. See lib/settings/ivr.ts.
+  ivr_config: { schema: ivrSettingsSchema, fallback: NO_IVR },
 
   // ── GIFT CARDS ─────────────────────────────────────────────────────────
   //
