@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useQuery } from "@tanstack/react-query";
 import { usePricingRules } from "@/lib/api/facility-settings";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,7 +23,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { TagList } from "@/components/shared/TagList";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { cn } from "@/lib/utils";
-import { clients } from "@/data/clients";
+import { clientQueries } from "@/lib/api/client";
 import { getBookingOverviewHref } from "@/lib/booking-overview-route";
 import {
   getPetImage,
@@ -48,8 +49,28 @@ import {
 } from "@/lib/api/booking-money";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
 
-const findClient = (petId: number) =>
-  clients.find((c) => c.pets.some((p) => p.id === petId));
+// ── WHOSE RECORD THIS CARD LINKS TO ──────────────────────────────────────
+//
+// This was `clients.find((c) => c.pets.some((p) => p.id === petId))` over the
+// src/data fixture, and its answer drove three links: the pet, the owner, and
+// the owner's bookings.
+//
+// MEASURED against Postgres, pet by pet. Thirteen of the seventeen real pets
+// with a fixture entry agree with it. Two do NOT: pet 50 (Daisy) and pet 51
+// (Max) belong to client 15, Alice Johnson, and the fixture assigns them to
+// clients 34 and 31. So those cards linked staff to the WRONG customer's
+// record. Six more real pets — refs 9001 to 9206 — have no fixture entry at
+// all, so their cards linked nowhere.
+//
+// The booking already carries `ownerId` from its own source, which is the
+// answer without a lookup. The client list is the fallback for a source that
+// does not set it, and it is now the REAL list, so the worst case is a missing
+// link rather than somebody else's customer.
+function useOwnerRef(booking: UnifiedBooking): number | undefined {
+  const { data: roster } = useQuery(clientQueries.all());
+  if (booking.ownerId != null) return booking.ownerId;
+  return roster?.find((c) => c.pets.some((p) => p.id === booking.petId))?.id;
+}
 
 interface BookingCardProps {
   booking: UnifiedBooking;
@@ -143,13 +164,13 @@ export function BookingCard({
     null,
   );
   const [reportCardSent, setReportCardSent] = useState(false);
-  const client = findClient(booking.petId);
+  const ownerRef = useOwnerRef(booking);
   const petImage = getPetImage(booking.petId);
-  const petHref = client
-    ? `/facility/dashboard/clients/${client.id}/pets/${booking.petId}`
+  const petHref = ownerRef
+    ? `/facility/dashboard/clients/${ownerRef}/pets/${booking.petId}`
     : "#";
-  const ownerHref = client
-    ? `/facility/dashboard/clients/${client.id}`
+  const ownerHref = ownerRef
+    ? `/facility/dashboard/clients/${ownerRef}`
     : undefined;
 
   const handleOpen = () => {
@@ -162,8 +183,8 @@ export function BookingCard({
       router.push(href);
       return;
     }
-    if (client) {
-      router.push(`/facility/dashboard/clients/${client.id}/bookings`);
+    if (ownerRef) {
+      router.push(`/facility/dashboard/clients/${ownerRef}/bookings`);
       return;
     }
     toast.error("No booking overview found for this card");
