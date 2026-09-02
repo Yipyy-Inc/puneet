@@ -81,12 +81,12 @@ select pg_temp.t(8, 'C8 nor any insert or delete policy',
 
 select pg_temp.t(9, 'C9 annotate_call is not callable by anon',
   not has_function_privilege('anon',
-    'public.annotate_call(uuid, text, text[], text, uuid, integer, uuid, text)',
+    'public.annotate_call(uuid, text, text[], text, uuid, uuid, integer, uuid, text)',
     'EXECUTE'));
 
 select pg_temp.t(10, 'C10 but IS callable by authenticated',
   has_function_privilege('authenticated',
-    'public.annotate_call(uuid, text, text[], text, uuid, integer, uuid, text)',
+    'public.annotate_call(uuid, text, text[], text, uuid, uuid, integer, uuid, text)',
     'EXECUTE'));
 
 -- ── The projection, and the retry that must not double-count ───────────────
