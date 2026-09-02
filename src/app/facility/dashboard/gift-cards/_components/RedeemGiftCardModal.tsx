@@ -37,7 +37,6 @@ import { useStoreCredit } from "@/lib/api/store-credit";
 import { useRedeemGiftCardToCredit } from "@/lib/api/gift-cards";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { canRedeemGiftCard } from "@/lib/hq/redemption";
-import { deriveLocationId } from "@/data/locations";
 import type { GiftCard } from "@/types/payments";
 
 const CameraScanner = dynamic(
@@ -94,8 +93,7 @@ export function RedeemGiftCardModal({
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const { currentLocation, settings, locations, isMultiLocation } =
-    useLocationContext();
+  const { currentLocation, settings, locations } = useLocationContext();
 
   // ── THE CUSTOMER AND THEIR CREDIT ARE BOTH REAL ────────────────────────
   //
@@ -131,8 +129,31 @@ export function RedeemGiftCardModal({
       .slice(0, 6);
   })();
 
-  // Derive the gift card's origin location (until the data model carries it)
-  const giftCardOrigin = foundCard ? deriveLocationId(foundCard.id) : null;
+  // ── WHERE A GIFT CARD WAS BOUGHT, WHEN NOBODY WROTE IT DOWN ─────────────
+  //
+  // This was `deriveLocationId(foundCard.id)` — `trailingDigits % 3` into one
+  // of three fixture location slugs, with the comment "until the data model
+  // carries it". The data model still does not carry it: `public.gift_cards`
+  // has no `location_id` column, and nothing on the purchase path would fill
+  // one.
+  //
+  // What made that expensive is what the value FEEDS. `canRedeemGiftCard`
+  // compares the origin to the till's location, and `crossLocationGiftCards`
+  // defaults to false — so a slug that can never equal a real location uuid
+  // meant "purchased somewhere else" for EVERY card. `cardValid` went false
+  // and Continue died, while the banner explaining why is gated on
+  // `isMultiLocation`, which is false for every facility here.
+  //
+  // MEASURED on a real $40 card: Active, "$40.00 available", Continue
+  // disabled, nothing on screen saying why. Isolated by writing a complete
+  // `network_policy` with `crossLocationGiftCards: true` — Continue enabled —
+  // and back again.
+  //
+  // So: null. A card whose origin was never recorded has no origin to compare,
+  // and refusing money on the strength of a hash is worse than not knowing.
+  // When the column exists, read it here and the check below starts working
+  // without further change.
+  const giftCardOrigin: string | null = null;
   const giftCardOriginLocation = giftCardOrigin
     ? locations.find((l) => l.id === giftCardOrigin)
     : null;
@@ -516,8 +537,11 @@ export function RedeemGiftCardModal({
 
                 {lookupState === "found" && foundCard && (
                   <>
-                    {isMultiLocation &&
-                      giftCardOriginLocation &&
+                    {/* Not gated on `isMultiLocation` any more. The BLOCK
+                        never was — only the explanation of it — so a single-
+                        location facility got a dead Continue button and no
+                        sentence. Whatever refuses a card has to say so. */}
+                    {giftCardOriginLocation &&
                       currentLocation &&
                       giftCardOriginLocation.id !== currentLocation.id && (
                         <div

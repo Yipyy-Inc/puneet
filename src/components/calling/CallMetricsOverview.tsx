@@ -29,7 +29,6 @@ import { TagFrequencyChart } from "@/components/calling/TagFrequencyChart";
 import { StaffPerformanceReport } from "@/components/calling/StaffPerformanceReport";
 import { LocationScopePicker } from "@/components/hq/LocationScopePicker";
 import { useLocationContext } from "@/hooks/use-location-context";
-import { deriveLocationId } from "@/data/locations";
 import {
   dateRangeBounds,
   previousPeriodBounds,
@@ -107,11 +106,24 @@ export function CallMetricsOverview({
 
   // Location filter only — drives the weekly recovery trend (which spans a
   // trailing window independent of the selected period).
+  //
+  // `logs` are real `call_record` rows now, so this reads their own
+  // `location_id` rather than `deriveLocationId(c.id)`, a hash of the id into
+  // one of three fixture slugs. The Call Log's filter, two files away, was
+  // fixed in the same commit that switched this data over — this one consumes
+  // the same array and was missed.
+  //
+  // A call with no location is excluded rather than kept: a number assigned to
+  // no branch belongs to no branch, and counting it under whichever branch was
+  // picked would inflate that branch's metrics with calls it never took.
   const locationLogs = useMemo(
     () =>
       locationFilter.length === 0
         ? logs
-        : logs.filter((c) => locationFilter.includes(deriveLocationId(c.id))),
+        : logs.filter(
+            (c) =>
+              c.locationId != null && locationFilter.includes(c.locationId),
+          ),
     [logs, locationFilter],
   );
 
