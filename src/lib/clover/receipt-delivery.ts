@@ -5,6 +5,8 @@ import {
   buildReceiptSmsText,
   type ReceiptInput,
 } from "@/lib/clover/receipt";
+import { callingProvider } from "@/lib/calling/provider";
+import { toE164 } from "@/lib/phone/format";
 import { platformSendingNumber, platformTwilio } from "@/lib/twilio/config";
 
 // ============================================================================
@@ -119,52 +121,26 @@ export async function smsItemisedReceipt(
   if (!twilio || !from) {
     return { sent: false, detail: "no SMS service configured" };
   }
-  // E.164 or Twilio refuses it. The device may hand back a locally formatted
-  // number, so accept digits and normalise a 10-digit North American one.
-  const digits = to.replace(/[^\d+]/g, "");
-  const e164 = digits.startsWith("+")
-    ? digits
-    : digits.length === 10
-      ? `+1${digits}`
-      : digits.length === 11 && digits.startsWith("1")
-        ? `+${digits}`
-        : null;
-  if (!e164 || !/^\+[1-9]\d{7,14}$/.test(e164)) {
+  // `toE164` — the shared one. This function carried a THIRD hand-rolled
+  // normaliser: startsWith("+"), else 10 digits, else 11 beginning 1. The
+  // "one phone normaliser" change that retired the other two missed it because
+  // it was written inline rather than given a name, which is a good argument
+  // for naming things.
+  const e164 = toE164(to);
+  if (!e164) {
     return { sent: false, detail: "that phone number is not valid" };
   }
 
-  try {
-    const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${twilio.accountSid}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            `${twilio.accountSid}:${twilio.authToken}`,
-          ).toString("base64")}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          To: e164,
-          From: from,
-          Body: buildReceiptSmsText(input),
-        }),
-        signal: AbortSignal.timeout(15_000),
-      },
-    );
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      console.warn(
-        `[receipt] sms -> ${response.status} ${detail}`.slice(0, 300),
-      );
-      return { sent: false, detail: `SMS service said ${response.status}` };
-    }
-    return { sent: true };
-  } catch (error) {
-    console.warn("[receipt] sms failed:", error);
-    return {
-      sent: false,
-      detail: error instanceof Error ? error.message : "network",
-    };
-  }
+  const provider = callingProvider();
+  if (!provider) return { sent: false, detail: "no SMS service configured" };
+
+  // And through the adapter, which reads the carrier's error code. This path
+  // reported `SMS service said 400` — the same sentence whether the customer
+  // had replied STOP or the number was mistyped.
+  const result = await provider.sendSms(twilio, {
+    to: e164,
+    from,
+    body: buildReceiptSmsText(input),
+  });
+  return result.ok ? { sent: true } : { sent: false, detail: result.detail };
 }

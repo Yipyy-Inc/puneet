@@ -40,10 +40,7 @@ import "server-only";
 // ============================================================================
 
 import { toE164 } from "@/lib/phone/format";
-import {
-  describeProviderError,
-  parseProviderErrorCode,
-} from "@/lib/calling/provider-errors";
+import { callingProvider } from "@/lib/calling/provider";
 import { platformSendingNumber, platformTwilio } from "@/lib/twilio/config";
 
 export interface DeliveryResult {
@@ -216,54 +213,20 @@ export async function sendSms(message: SmsMessage): Promise<DeliveryResult> {
   const to = normalisePhone(message.to);
   if (!to) return { sent: false, detail: "that phone number is not valid" };
 
-  try {
-    const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${twilio.accountSid}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            `${twilio.accountSid}:${twilio.authToken}`,
-          ).toString("base64")}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          To: to,
-          From: from,
-          Body: message.body,
-        }),
-        signal: AbortSignal.timeout(15_000),
-      },
-    );
+  // Through the adapter, which owns every carrier URL, the auth header, the
+  // 15-second deadline and the error-code lookup. This function built all four
+  // itself, and `clover/receipt-delivery.ts` built its own copy beside it.
+  const provider = callingProvider();
+  if (!provider) return { sent: false, detail: "no SMS service configured" };
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      const code = parseProviderErrorCode(body);
-      // The status code goes to the log, where somebody who can look it up will
-      // see it. The ROW gets a sentence, because `detail` is what a
-      // receptionist reads — and "SMS service said 400" is the same message
-      // whether the customer replied STOP, the number has a digit missing, or
-      // the campaign was never registered.
-      console.warn(
-        `[messaging] sms -> ${response.status} code=${code ?? "?"} ${body}`.slice(
-          0,
-          300,
-        ),
-      );
-      return { sent: false, detail: describeProviderError(code) };
-    }
-
-    const body = (await response.json().catch(() => null)) as {
-      sid?: string;
-    } | null;
-    return { sent: true, providerId: body?.sid };
-  } catch (error) {
-    console.warn("[messaging] sms failed:", error);
-    return {
-      sent: false,
-      detail: error instanceof Error ? error.message : "network",
-    };
-  }
+  const result = await provider.sendSms(twilio, {
+    to,
+    from,
+    body: message.body,
+  });
+  return result.ok
+    ? { sent: true, providerId: result.providerId }
+    : { sent: false, detail: result.detail };
 }
 
 /**

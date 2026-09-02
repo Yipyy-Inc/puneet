@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { callingProvider } from "@/lib/calling/provider";
 import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
 import {
@@ -96,12 +97,6 @@ export async function GET() {
   });
 }
 
-interface TwilioAccount {
-  friendly_name?: string;
-  status?: string;
-  type?: string;
-}
-
 export async function POST() {
   const refusal = await requirePlatformAdmin();
   if (refusal) return refusal;
@@ -115,52 +110,32 @@ export async function POST() {
     });
   }
 
-  const auth = Buffer.from(`${parent.accountSid}:${parent.authToken}`).toString(
-    "base64",
-  );
-
-  let response: Response;
-  try {
-    response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${parent.accountSid}.json`,
-      {
-        headers: { Authorization: `Basic ${auth}` },
-        // A verification that hangs is a verification nobody waits for, and the
-        // screen would sit on a spinner rather than say the account is
-        // unreachable.
-        signal: AbortSignal.timeout(10_000),
-      },
-    );
-  } catch (error) {
+  // Through the adapter, which owns the URL, the auth header and the deadline.
+  // This route built its own; so did two senders and, shortly, provisioning.
+  //
+  // It is the one caller that shows the CARRIER'S own words rather than our
+  // error map, and deliberately: a platform admin needs to tell a bad token
+  // from a suspended account from a SID that does not exist, three states our
+  // map collapses into one sentence for a receptionist.
+  const provider = callingProvider();
+  if (!provider) {
     return NextResponse.json({
       ok: false,
-      error: error instanceof Error ? error.message : "Could not reach Twilio.",
+      error: "No phone provider is configured on this deployment.",
     });
   }
 
-  if (!response.ok) {
-    // Twilio's own message is more use than anything invented here: it
-    // distinguishes a bad token from a suspended account from a SID that does
-    // not exist, and all three look identical from outside.
-    const detail = (await response.json().catch(() => null)) as {
-      message?: string;
-    } | null;
-    return NextResponse.json({
-      ok: false,
-      error:
-        detail?.message ??
-        `Twilio refused the credentials (${response.status}).`,
-    });
+  const result = await provider.verifyCredentials(parent);
+  if (!result.ok) {
+    return NextResponse.json({ ok: false, error: result.error });
   }
 
-  const account = (await response.json()) as TwilioAccount;
   return NextResponse.json({
     ok: true,
-    friendlyName: account.friendly_name ?? null,
-    // `status` is Twilio's own: active, suspended, closed. A suspended account
+    friendlyName: result.friendlyName || null,
+    // The carrier's own: active, suspended, closed. A suspended account
     // authenticates successfully and sends nothing, so an "ok" that ignored
     // this would be the old fake test with extra steps.
-    accountStatus: account.status ?? null,
-    accountType: account.type ?? null,
+    accountStatus: result.status || null,
   });
 }
