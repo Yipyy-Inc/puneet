@@ -23,7 +23,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Gift } from "lucide-react";
-import { clients } from "@/data/clients";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { clientQueries } from "@/lib/api/client";
+import { useIssueGiftCard } from "@/lib/api/gift-cards";
 
 interface GiftCardTransaction {
   id: string;
@@ -34,32 +37,16 @@ interface GiftCardTransaction {
   timestamp: string;
 }
 
-interface GiftCard {
-  id: string;
-  facilityId: number;
-  code: string;
-  type: "online" | "physical";
-  initialAmount: number;
-  currentBalance: number;
-  currency: "USD";
-  status: "active";
-  purchasedBy?: string;
-  purchasedByClientId?: number;
-  purchaseDate: string;
-  recipientName?: string;
-  recipientEmail?: string;
-  message?: string;
-  neverExpires: boolean;
-  expiryDate?: string;
-  createdAt: string;
-  transactionHistory: GiftCardTransaction[];
-}
-
 interface IssueGiftCardModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   facilityId: number;
-  onSuccess?: (giftCard: GiftCard) => void;
+  /**
+   * Told that a card was issued, and nothing more. It used to receive the
+   * object this modal invented, which the billing page turned into "Gift card
+   * … issued successfully!" over a `console.log`.
+   */
+  onSuccess?: () => void;
 }
 
 export function IssueGiftCardModal({
@@ -77,59 +64,52 @@ export function IssueGiftCardModal({
   const [neverExpires, setNeverExpires] = useState(true);
   const [expiryDate, setExpiryDate] = useState("");
 
-  const facilityClients = clients.filter((c) => c.id >= 15);
+  // ── THE PICKER AND THE CARD WERE BOTH INVENTED ─────────────────────────
+  //
+  // The list was `clients.filter((c) => c.id >= 15)` from src/data — twenty
+  // people, six of whom (23-27, 30) are in no database — and `handleSubmit`
+  // built a card object, `console.log`ed it and closed, while the billing page
+  // alerted "Gift card … issued successfully!". A customer could pay for a card
+  // and be handed a code that existed nowhere: the liability the gift_cards
+  // table exists to record simply was not recorded.
+  //
+  // `generateCode` went with it. The DATABASE issues the code, in the same
+  // transaction as the card and its opening ledger entry — a code minted here
+  // would be one the row does not have.
+  const { data: roster } = useQuery(clientQueries.all());
+  const facilityClients = roster ?? [];
+  const issueGiftCard = useIssueGiftCard();
 
-  const generateCode = () => {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `GIFT-PAWS-${new Date().getFullYear()}-${timestamp}${random}`;
-  };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (amount <= 0) {
-      alert("Please enter a valid amount");
+      toast.error("Please enter a valid amount.");
       return;
     }
 
-    const giftCard = {
-      id: `gc-${Date.now()}`,
-      facilityId,
-      code: generateCode(),
-      type,
-      initialAmount: amount,
-      currentBalance: amount,
-      currency: "USD" as const,
-      status: "active" as const,
-      purchasedBy: purchasedByClientId
-        ? clients.find((c) => c.id === purchasedByClientId)?.name
-        : undefined,
-      purchasedByClientId: purchasedByClientId || undefined,
-      purchaseDate: new Date().toISOString().split("T")[0],
-      recipientName: recipientName || undefined,
-      recipientEmail: recipientEmail || undefined,
-      message: message || undefined,
-      neverExpires,
-      expiryDate: !neverExpires ? expiryDate : undefined,
-      createdAt: new Date().toISOString(),
-      transactionHistory: [
-        {
-          id: `gct-${Date.now()}`,
-          giftCardId: `gc-${Date.now()}`,
-          type: "purchase" as const,
-          amount,
-          balanceAfter: amount,
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    };
-
-    console.log("Gift card issued:", giftCard);
-
-    if (onSuccess) {
-      onSuccess(giftCard);
+    try {
+      const card = await issueGiftCard.mutateAsync({
+        amount,
+        kind: type === "physical" ? "physical" : "online",
+        purchasedByClientRef: purchasedByClientId || undefined,
+        recipientName: recipientName || undefined,
+        recipientEmail: recipientEmail || undefined,
+        message: message || undefined,
+        expiresAt: !neverExpires && expiryDate ? expiryDate : undefined,
+      });
+      // The code comes back from the database, so this is the one the customer
+      // can actually present. Reading it off a locally generated string was how
+      // a card and its code could disagree.
+      toast.success(`Gift card ${card.code} issued.`, {
+        description: `$${amount.toFixed(2)} is now recorded against this facility.`,
+      });
+      onSuccess?.();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error("Could not issue that card.", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
     }
-
-    onOpenChange(false);
   };
 
   return (

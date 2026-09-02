@@ -23,32 +23,22 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { DollarSign } from "lucide-react";
-import { clients } from "@/data/clients";
-
-interface CustomerCredit {
-  id: string;
-  facilityId: number;
-  clientId: number;
-  amount: number;
-  remainingAmount: number;
-  currency: "USD";
-  reason: "refund" | "promotion" | "compensation" | "prepaid" | "other";
-  status: "active";
-  description: string;
-  neverExpires: boolean;
-  expiryDate?: string;
-  createdAt: string;
-  createdBy: string;
-  createdById: number;
-  notes?: string;
-}
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { clientQueries } from "@/lib/api/client";
+import { useWriteStoreCredit } from "@/lib/api/store-credit";
 
 interface AddCustomerCreditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   facilityId: number;
   prefilledClient?: number;
-  onSuccess?: (credit: CustomerCredit) => void;
+  /**
+   * Told that an entry landed, and nothing more. It used to receive the object
+   * this modal invented, which the billing page turned into "Credit of $X added
+   * successfully!" over a `console.log`.
+   */
+  onSuccess?: () => void;
 }
 
 export function AddCustomerCreditModal({
@@ -68,47 +58,58 @@ export function AddCustomerCreditModal({
   const [neverExpires, setNeverExpires] = useState(true);
   const [expiryDate, setExpiryDate] = useState("");
 
-  const facilityClients = clients.filter((c) => c.id >= 15);
+  // ── THE PICKER AND THE WRITE WERE BOTH FICTION ─────────────────────────
+  //
+  // This listed `clients.filter((c) => c.id >= 15)` from src/data — twenty
+  // people, six of whom (23-27, 30) do not exist in Postgres — and `handleSubmit`
+  // built a credit object, `console.log`ed it, and closed. The billing page then
+  // alerted "Credit of $X added successfully!".
+  //
+  // So a counter could add credit to a customer who does not exist, be told it
+  // worked, and leave nothing behind. `store_credit_entries` is where credit
+  // actually lives — the same ledger `record_payment` spends from at checkout.
+  const { data: roster } = useQuery(clientQueries.all());
+  const facilityClients = roster ?? [];
+  const writeStoreCredit = useWriteStoreCredit();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedClient) {
-      alert("Please select a client");
+      toast.error("Please select a client.");
       return;
     }
     if (amount <= 0) {
-      alert("Please enter a valid amount");
+      toast.error("Please enter a valid amount.");
       return;
     }
     if (!description.trim()) {
-      alert("Please enter a description");
+      toast.error("Please enter a description.");
       return;
     }
 
-    const credit = {
-      id: `credit-${Date.now()}`,
-      facilityId,
-      clientId: selectedClient,
-      amount,
-      remainingAmount: amount,
-      currency: "USD" as const,
-      reason,
-      status: "active" as const,
-      description,
-      neverExpires,
-      expiryDate: !neverExpires ? expiryDate : undefined,
-      createdAt: new Date().toISOString(),
-      createdBy: "Current User",
-      createdById: 1,
-      notes: notes || undefined,
-    };
-
-    console.log("Customer credit added:", credit);
-
-    if (onSuccess) {
-      onSuccess(credit);
+    // `added` issues credit and the route requires `process_refund` for it —
+    // giving money away and taking it back are different rights, and the policy
+    // says so rather than this modal. A positive amount is the only shape
+    // `added` allows (store_credit_sign_matches_reason).
+    try {
+      await writeStoreCredit.mutateAsync({
+        clientRef: selectedClient,
+        amount,
+        reason: "added",
+        note: notes ? `${description} — ${notes}` : description,
+      });
+      toast.success(`${amount.toFixed(2)} is on the customer's account.`, {
+        description: "Spendable at the till from now.",
+      });
+      onSuccess?.();
+      onOpenChange(false);
+    } catch (error) {
+      // The counter has to know it did NOT happen. The old version could not
+      // fail, because it never asked anybody.
+      toast.error("Could not add that credit.", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
     }
-
-    onOpenChange(false);
   };
 
   return (
