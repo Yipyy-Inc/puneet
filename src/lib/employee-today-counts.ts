@@ -8,7 +8,6 @@ import { getCurrentGuests } from "@/data/boarding";
 import { groomingAppointments } from "@/data/grooming";
 import { stylistIdForStaff } from "@/lib/api/grooming";
 import { bookings } from "@/data/bookings";
-import { scopeBookingsToStaff } from "@/lib/api/booking";
 import type { PermissionKey } from "@/types/facility-staff";
 
 // ============================================================================
@@ -49,9 +48,20 @@ export function useEmployeeTodayCounts(staffId: string): EmployeeTodayCounts {
         (a) => a.date === today && a.stylistId === stylistId,
       ).length;
     } else if (has("view_bookings")) {
-      appointments = scopeBookingsToStaff(bookings, staffId).filter(
-        (b) => b.startDate === today,
-      ).length;
+      // NOT SCOPED, AND THAT IS THE HONEST OPTION OF THE TWO.
+      //
+      // This counted `bookings` from src/data narrowed by
+      // `scopeBookingsToStaff`, whose idea of "assigned" was
+      // `pool[booking.id % pool.length]` — so a staff member's headline number
+      // for today was a share of a mock list picked by arithmetic.
+      //
+      // The scope is real now (useAssignedBookingRefs, from
+      // bookings.assigned_staff_id) but the LIST here is still the fixture, and
+      // real refs match no fixture row: applying it would print 0 while reading
+      // as though it had been counted. The count stays over the fixture, whole,
+      // until this widget's source is converted — one mock number rather than a
+      // mock number wearing a real scope.
+      appointments = bookings.filter((b) => b.startDate === today).length;
     }
 
     // ── Care tasks ────────────────────────────────────────────────────────

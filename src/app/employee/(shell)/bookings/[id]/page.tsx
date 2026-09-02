@@ -1,9 +1,9 @@
 "use client";
 
 import { use, useMemo } from "react";
-import { bookings } from "@/data/bookings";
+import { useQuery } from "@tanstack/react-query";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { isBookingAssignedTo } from "@/lib/api/booking";
+import { bookingQueries, useAssignedBookingRefs } from "@/lib/api/booking";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import ClientBookingDetailPage from "@/app/facility/dashboard/clients/[id]/bookings/[bookingId]/page";
 
@@ -28,8 +28,16 @@ export default function EmployeeBookingDetailPage({
 }) {
   const { id } = use(params);
   const bookingId = parseInt(id, 10);
-  const booking = bookings.find((b) => b.id === bookingId);
+  // The record came from `bookings` in src/data, so a real booking's ref had to
+  // be one the fixture happened to invent or this gate refused it — the same
+  // defect the employee CLIENT page had (b8c471e8).
+  const { data: booking, isPending: bookingPending } = useQuery({
+    ...bookingQueries.detail(bookingId),
+    enabled: Number.isInteger(bookingId),
+  });
   const assignedStaffId = useAssignedScope("view_bookings");
+  const { refs: assignedRefs, pending: assignedPending } =
+    useAssignedBookingRefs(assignedStaffId);
 
   // The shared detail page reads its route params via use(params); hand it a
   // STABLE promise (a fresh one each render would suspend forever).
@@ -42,9 +50,11 @@ export default function EmployeeBookingDetailPage({
     [booking?.clientId, bookingId],
   );
 
+  // Decide nothing while either answer is outstanding.
+  if (bookingPending || assignedPending) return null;
+
   const denied =
-    !booking ||
-    (assignedStaffId != null && !isBookingAssignedTo(booking, assignedStaffId));
+    !booking || (assignedStaffId != null && !assignedRefs?.has(booking.id));
 
   if (denied) return <AccessRestricted />;
   return <ClientBookingDetailPage params={detailParams} />;

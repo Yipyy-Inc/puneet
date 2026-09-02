@@ -105,7 +105,7 @@ import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { useFieldMask } from "@/lib/staff/mask";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { bookingQueries, isBookingAssignedTo } from "@/lib/api/booking";
+import { bookingQueries, useAssignedBookingRefs } from "@/lib/api/booking";
 import {
   balanceOf,
   checkoutTender,
@@ -192,6 +192,8 @@ export default function ClientBookingDetailPage({
   // Section 8B: viewer's fs-* id when view_bookings is assigned_only, else
   // undefined. Used below to 403 on a booking outside the viewer's assigned set.
   const assignedStaffId = useAssignedScope("view_bookings");
+  const { refs: assignedRefs, pending: assignedPending } =
+    useAssignedBookingRefs(assignedStaffId);
   const clientId = parseInt(id, 10);
   const bookingId = parseInt(bookingIdStr, 10);
 
@@ -640,7 +642,8 @@ export default function ClientBookingDetailPage({
   // Section 8B / Part 0.3: a scoped viewer opening a booking URL outside their
   // assigned set is a 403 — render the branded access screen, never the record.
   // (Admin / full-access viewers have assignedStaffId === undefined → no gate.)
-  if (assignedStaffId && !isBookingAssignedTo(booking, assignedStaffId)) {
+  if (assignedPending) return null;
+  if (assignedStaffId && !assignedRefs?.has(booking.id)) {
     return <AccessRestricted />;
   }
 
