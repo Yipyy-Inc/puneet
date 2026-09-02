@@ -106,7 +106,7 @@ jobs:
 
   # ── THE PROJECT'S OWN RULES ────────────────────────────────────────────────
   #
-  # Fourteen `check:*` scripts live in package.json. Each one exists because a
+  # 22 `check:*` scripts run here. Each one exists because a
   # specific mistake was made and cost something: a route that took its facility
   # from the request body, an update that could not tell an RLS refusal from a
   # no-op, a screen that said "Saved" with nothing behind it, a dialog with a
@@ -119,12 +119,16 @@ jobs:
   # written down three times and broken a fifth was catchable by one of these
   # and caught by none of them.
   #
-  # ── WHY ONE JOB AND NOT FOURTEEN ──────────────────────────────────────────
+  # ── WHY ONE JOB AND NOT TWENTY-TWO ────────────────────────────────────────
   #
   # They are static analysis over `src/` — no build, no browser, no database, no
-  # secrets. The whole set is seconds. Fourteen jobs would be fourteen installs
-  # to save nothing, and fourteen entries to add to branch protection instead of
-  # one.
+  # secrets. The whole set is seconds. One job per script would be one install
+  # each to save nothing, and one branch-protection entry each instead of one.
+  #
+  # The count above said "Fourteen" until 2026-09-02, by which time the list had
+  # reached 22 — the same drift `check:doc-counts` was written for, in the file
+  # that runs it. It is derived from this loop now, so it announces its own
+  # staleness rather than waiting to be noticed.
   #
   # ── AND WHY IT RUNS ALL OF THEM BEFORE FAILING ────────────────────────────
   #
@@ -164,6 +168,7 @@ jobs:
             no-review-gating \
             vendor-strings \
             derived-location \
+            inert-permissions \
             doc-counts
           do
             echo "::group::check:$script"
