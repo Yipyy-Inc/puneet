@@ -37,7 +37,7 @@ import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModa
 import { useFieldMask } from "@/lib/staff/mask";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { isClientAssignedTo, useClientRecord } from "@/lib/api/client";
+import { useAssignedClientRefs, useClientRecord } from "@/lib/api/client";
 import { bookingMutations, bookingQueries } from "@/lib/api/booking";
 import { paymentQueries } from "@/lib/api/payments";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
@@ -173,6 +173,11 @@ export default function ClientDetailPage({
   // Section 8B: viewer's fs-* id when view_clients is assigned_only, else
   // undefined. Used below to 403 on a client outside the viewer's assigned set.
   const assignedClientScope = useAssignedScope("view_clients");
+  // Declared with the other hooks, above every early return — this component
+  // returns in several places before the check below, and a hook after one of
+  // them would change the order between renders.
+  const { refs: assignedRefs, pending: assignedPending } =
+    useAssignedClientRefs(assignedClientScope);
   const resumedBookingRef = useRef<string | null>(null);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [petActiveTab, setPetActiveTab] = useState("overview");
@@ -340,7 +345,12 @@ export default function ClientDetailPage({
   // Section 8B / Part 0.3: a scoped viewer opening a client outside their
   // assigned set is a 403 — render the branded access screen, never the record.
   // (Admin / full-access viewers have assignedClientScope === undefined.)
-  if (assignedClientScope && !isClientAssignedTo(client, assignedClientScope)) {
+  // Nothing is decided while the set is unknown: denying mid-fetch flashes the
+  // refusal at somebody who has access, and admitting mid-fetch shows a record
+  // before the check. `assignedPending` is false for a full-access viewer,
+  // whose scope is undefined and whose query never runs.
+  if (assignedPending) return null;
+  if (assignedClientScope && !assignedRefs?.has(client.id)) {
     return <AccessRestricted />;
   }
 

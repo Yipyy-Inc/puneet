@@ -41,7 +41,7 @@ import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import { createCustomCustomerSegment } from "@/lib/marketing-segments";
 import { useFieldMask } from "@/lib/staff/mask";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { scopeClientsToStaff } from "@/lib/api/client";
+import { scopeClientsToRefs, useAssignedClientRefs } from "@/lib/api/client";
 import {
   Download,
   User,
@@ -221,6 +221,10 @@ export default function FacilityClientsPage() {
     new Set(),
   );
 
+  // Above the early return, because it is a hook: "Facility not found" bails
+  // out below and a hook after it would change the order between renders.
+  const { refs: assignedRefs } = useAssignedClientRefs(assignedClientScope);
+
   if (!facility) {
     return <div>Facility not found</div>;
   }
@@ -260,10 +264,16 @@ export default function FacilityClientsPage() {
   const locationScopedClients = facilityClients;
 
   // Section 8B: when view_client_list resolves to assigned_only, restrict to
-  // clients whose bookings are assigned to the viewer (data-layer helper).
-  // Full-access viewers (admin) pass through unchanged.
+  // the clients whose bookings are assigned to the viewer. Full-access viewers
+  // (admin) pass through unchanged.
+  //
+  // `refs` is null until the answer arrives. Showing the WHOLE list in the
+  // meantime would flash every client at a scoped viewer, so an unknown answer
+  // shows nothing rather than everything — the safe direction of the two.
   const locationClients = assignedClientScope
-    ? scopeClientsToStaff(locationScopedClients, assignedClientScope)
+    ? assignedRefs
+      ? scopeClientsToRefs(locationScopedClients, assignedRefs)
+      : []
     : locationScopedClients;
 
   const handleCreateClient = (newClient: {

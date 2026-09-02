@@ -3,8 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { clients } from "@/data/clients";
-import { bookings } from "@/data/bookings";
-import { resolveBookingStaffId } from "./booking";
 import type { Client } from "@/types/client";
 import type { Pet } from "@/types/pet";
 import { liveFetch } from "./live-fetch";
@@ -17,23 +15,73 @@ import { liveFetch } from "./live-fetch";
 // ============================================================================
 
 /** Client ids with at least one booking assigned to `staffId` (8B). */
-export function assignedClientIds(staffId: string): Set<number> {
-  const ids = new Set<number>();
-  for (const b of bookings) {
-    if (resolveBookingStaffId(b) === staffId) ids.add(b.clientId);
-  }
-  return ids;
+/**
+ * Which clients are assigned to `staffId`, from the bookings that say so.
+ *
+ * ── WHAT THIS REPLACED ───────────────────────────────────────────────────
+ *
+ *   const ids = new Set<number>();
+ *   for (const b of bookings) {                       // ← src/data
+ *     if (resolveBookingStaffId(b) === staffId) ids.add(b.clientId);
+ *   }
+ *
+ * A permission scope decided from the bookings fixture. `view_clients =
+ * assigned_shifts` is a real grant and this answered which records it admits.
+ *
+ * MEASURED: with a client's booking genuinely assigned to groomer@yipyy.dev in
+ * Postgres, the list showed them 0 clients — the fixture's staff ids are
+ * strings like "fs-dev-groomer" and a viewer's id is a uuid, so nothing ever
+ * matched. Empty for everyone, and one id-space collision away from showing a
+ * scoped viewer somebody else's clients.
+ *
+ * The argument is the viewer's SCOPE (undefined for full access), not a staff
+ * id — the route resolves the caller from their session, so a screen cannot ask
+ * about somebody else.
+ *
+ * `refs` is null while the answer is unknown. Callers must not read that as
+ * "assigned to nobody" — an empty Set and "not yet known" are different, and
+ * treating them alike is how a gate flashes at somebody who has access.
+ */
+export function useAssignedClientRefs(scoped: string | undefined): {
+  refs: Set<number> | null;
+  pending: boolean;
+} {
+  const { data, isPending } = useQuery({
+    // `scoped` is the viewer's scope marker, not a parameter — the route
+    // resolves WHO from the session. It stays in the key only so the query is
+    // re-run if a viewer's scope changes within a session (the RBAC previewer
+    // does exactly that).
+    queryKey: ["clients", "assigned", scoped ?? null] as const,
+    enabled: Boolean(scoped),
+    queryFn: async (): Promise<number[]> => {
+      const response = await fetch("/api/clients/assigned");
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(detail?.error ?? `Request failed (${response.status})`);
+      }
+      return ((await response.json()) as { refs: number[] }).refs;
+    },
+  });
+
+  return {
+    refs: data ? new Set(data) : null,
+    pending: Boolean(scoped) && isPending,
+  };
 }
 
-/** Filter clients to those with a booking assigned to `staffId` (8B scope). */
-export function scopeClientsToStaff(list: Client[], staffId: string): Client[] {
-  const ids = assignedClientIds(staffId);
-  return list.filter((c) => ids.has(c.id));
-}
-
-/** Is `client` in `staffId`'s assigned set? (URL-fetch 403 check.) */
-export function isClientAssignedTo(client: Client, staffId: string): boolean {
-  return assignedClientIds(staffId).has(client.id);
+/**
+ * Filter `list` to the clients in `refs`.
+ *
+ * Separate from the fetch so a caller that already holds the set — every one of
+ * them does, via useAssignedClientRefs — does not fetch it twice.
+ */
+export function scopeClientsToRefs(
+  list: Client[],
+  refs: Set<number>,
+): Client[] {
+  return list.filter((c) => refs.has(c.id));
 }
 
 /** Real clients, with their pets nested; mocks only when signed out. */
@@ -43,18 +91,17 @@ async function fetchClients(): Promise<Client[]> {
 
 export const clientQueries = {
   /**
-   * All clients, or — when `assignedStaffId` is passed (the viewer's id when
-   * view_client_list resolves to assigned_only) — only clients whose bookings
-   * are assigned to that staff member. Same factory admin uses (no scope arg).
+   * Every client this facility has, as RLS allows.
+   *
+   * It used to take `assignedStaffId` and narrow the list here, through a
+   * helper that walked the bookings FIXTURE. Scoping now comes from
+   * `useAssignedClientRefs`, which asks the database — and the caller applies
+   * it, because the same caller has to distinguish "not assigned" from "not
+   * loaded yet" and a queryFn cannot.
    */
-  all: (opts?: { assignedStaffId?: string }) => ({
-    queryKey: ["clients", opts?.assignedStaffId ?? "all"] as const,
-    queryFn: async (): Promise<Client[]> => {
-      const list = await fetchClients();
-      return opts?.assignedStaffId
-        ? scopeClientsToStaff(list, opts.assignedStaffId)
-        : list;
-    },
+  all: () => ({
+    queryKey: ["clients", "all"] as const,
+    queryFn: fetchClients,
   }),
   detail: (id: number) => ({
     queryKey: ["clients", id] as const,
