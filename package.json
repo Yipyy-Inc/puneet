@@ -49,7 +49,8 @@
     "check:vendor-strings": "bun scripts/check-vendor-strings.ts",
     "measure:migration-drift": "bun scripts/measure-migration-drift.ts",
     "check:doc-counts": "bun scripts/check-doc-counts.ts",
-    "shoot": "bun scripts/shoot.ts"
+    "shoot": "bun scripts/shoot.ts",
+    "check:settings-seeding": "bun scripts/check-settings-seeding.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.91.1",
