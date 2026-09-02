@@ -45,6 +45,7 @@ Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/u
 | `bun run test:sql`                     | The 78 SQL files — RLS, grants, database invariants. Runs in CI. ~90s; needs `SUPABASE_DB_URL`                      |
 | `bun run check:pricing`                | Project-specific pricing-consistency script                                                                         |
 | `bun run check:settings-wiring`        | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                                          |
+| `bun run check:settings-seeding`       | Fails if a component seeds `useState` from facility settings AND saves them without handling `isPending`            |
 | `bun run check:rls-writes`             | Fails if an API update/delete cannot tell an RLS refusal from a no-op                                               |
 | `bun run check:grooming-menu`          | Fails if a screen reads the grooming menu from the fixture, not Postgres                                            |
 | `bun run check:facility-from-session`  | Fails if an API route takes the facility from the request rather than the session or a parent row                   |

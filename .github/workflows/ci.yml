@@ -148,6 +148,7 @@ jobs:
             rls-writes \
             grooming-menu \
             settings-wiring \
+            settings-seeding \
             settings-fixture \
             quickbooks \
             dialog-widths \
