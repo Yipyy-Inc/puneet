@@ -130,3 +130,45 @@ export const callingQueries = {
     },
   }),
 };
+
+// ============================================================================
+// Annotating a call.
+//
+// `call_record` has no update policy, so this is the only door — the route
+// calls `annotate_call()`, which re-checks permission and cannot reach the
+// measured fields because they are not its parameters.
+//
+// The five handlers in `CallingWorkspace` that write a note, tags, a follow-up
+// status, an assignment or a QA score all come through here. Before this they
+// wrote React state and stopped, so a manager's assessment of a colleague's
+// call survived until the next reload.
+// ============================================================================
+
+export interface CallAnnotation {
+  notes?: string;
+  tags?: string[];
+  followUpStatus?: string;
+  handledBy?: string;
+  assignedTo?: string;
+  qaScore?: number;
+}
+
+export async function annotateCall(
+  callId: string,
+  annotation: CallAnnotation,
+): Promise<void> {
+  const response = await fetch(
+    `/api/facility/calling/calls/${encodeURIComponent(callId)}/annotate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(annotation),
+    },
+  );
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(detail?.error ?? `Failed (${response.status})`);
+  }
+}

@@ -79,7 +79,6 @@ import { dateRangeBounds, type DateRange } from "@/lib/calling/date-range";
 import { getFacilityRole } from "@/lib/role-utils";
 import {
   callQueue,
-  ivrConfig,
   voicemailGreetings,
   missedCallTasks,
   callRoutingRules,
@@ -91,7 +90,7 @@ import {
 } from "@/lib/calling/call-metrics";
 import type { CallingSystemStatus } from "@/lib/calling/system-status";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
-import { callingQueries } from "@/lib/api/calling";
+import { annotateCall, callingQueries } from "@/lib/api/calling";
 import type { CallLog } from "@/types/communications";
 import type { ActiveCall, MissedCallTask } from "@/types/calling";
 import { toast } from "sonner";
@@ -1086,7 +1085,31 @@ export function CallingWorkspace({
   };
 
   // Edit the persisted Staff Notes from the call-log side panel.
+  // ── EVERY ANNOTATION GOES TO THE SERVER ────────────────────────────────
+  //
+  // The five handlers below wrote React state and stopped. A note typed during
+  // a call, a tag, a follow-up status, an assignment, a manager's QA score of
+  // a colleague — all of it survived until the next reload and no further.
+  //
+  // Optimistic on purpose: the local update stays so the panel feels
+  // immediate, and a refusal (RLS, or the QA-score permission) is surfaced and
+  // the server's copy refetched, so the screen stops showing an edit that did
+  // not happen.
+  const persist = (
+    callId: string,
+    annotation: Parameters<typeof annotateCall>[1],
+  ) => {
+    void annotateCall(callId, annotation).catch((error: unknown) => {
+      toast.error(
+        error instanceof Error ? error.message : "That change was not saved",
+      );
+      setLocalLogs(null);
+      void callsQuery.refetch();
+    });
+  };
+
   const handleSaveNotes = (callId: string, notes: string) => {
+    persist(callId, { notes });
     const next = notes.trim() || undefined;
     setLogs((prev) =>
       prev.map((c) => (c.id === callId ? { ...c, notes: next } : c)),
@@ -1098,6 +1121,7 @@ export function CallingWorkspace({
 
   // Set the call's category tags from the side panel (multi-select).
   const handleSetCallTags = (callId: string, tagIds: string[]) => {
+    persist(callId, { tags: tagIds });
     const next = tagIds.length ? tagIds : undefined;
     setLogs((prev) =>
       prev.map((c) => (c.id === callId ? { ...c, tags: next } : c)),
@@ -1130,6 +1154,11 @@ export function CallingWorkspace({
   // call wasn't pending and so had none yet).
   const handleAssign = (call: (typeof callLogs)[number], staffId: string) => {
     const next = staffId || null;
+    // `assigned_to` is a real column since 20260902145724. It is distinct from
+    // `handled_by`: the person who missed a call is rarely the one who chases
+    // it, and before that column existed this control could only ever be local
+    // state — a name on one screen, gone on reload.
+    if (next) persist(call.id, { assignedTo: next });
     setLogs((prev) =>
       prev.map((c) => (c.id === call.id ? { ...c, assignedTo: next } : c)),
     );
@@ -1169,6 +1198,7 @@ export function CallingWorkspace({
   // Resolve a call's follow-up status from the side-panel dropdown. Setting it
   // to "pending" auto-creates a follow-up task (if none exists yet).
   const handleSetFollowUp = (callId: string, status: FollowUpStatus) => {
+    persist(callId, { followUpStatus: status });
     setLogs((prev) =>
       prev.map((c) => (c.id === callId ? { ...c, followUpStatus: status } : c)),
     );
@@ -1195,6 +1225,7 @@ export function CallingWorkspace({
     managerNote: string,
   ) => {
     const note = managerNote.trim() || undefined;
+    persist(callId, { qaScore, notes: note });
     setLogs((prev) =>
       prev.map((c) =>
         c.id === callId ? { ...c, qaScore, managerNote: note } : c,

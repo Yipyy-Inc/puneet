@@ -683,6 +683,7 @@ export type Database = {
       call_record: {
         Row: {
           answered_at: string | null;
+          assigned_to: string | null;
           attribution_source: string | null;
           booking_id: string | null;
           client_id: string | null;
@@ -708,6 +709,7 @@ export type Database = {
         };
         Insert: {
           answered_at?: string | null;
+          assigned_to?: string | null;
           attribution_source?: string | null;
           booking_id?: string | null;
           client_id?: string | null;
@@ -733,6 +735,7 @@ export type Database = {
         };
         Update: {
           answered_at?: string | null;
+          assigned_to?: string | null;
           attribution_source?: string | null;
           booking_id?: string | null;
           client_id?: string | null;
@@ -757,6 +760,20 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "call_record_assigned_to_fkey";
+            columns: ["assigned_to"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "call_record_assigned_to_fkey";
+            columns: ["assigned_to"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "call_record_booking_id_fkey";
             columns: ["booking_id"];
@@ -10466,6 +10483,7 @@ export type Database = {
       };
       annotate_call: {
         Args: {
+          p_assigned_to?: string;
           p_attribution_source?: string;
           p_booking_id?: string;
           p_call_id: string;
@@ -10477,6 +10495,7 @@ export type Database = {
         };
         Returns: {
           answered_at: string | null;
+          assigned_to: string | null;
           attribution_source: string | null;
           booking_id: string | null;
           client_id: string | null;
