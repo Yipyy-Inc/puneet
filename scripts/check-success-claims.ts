@@ -124,7 +124,9 @@ const BASELINE = new Set<string>([
  * It happened again: /facility/dashboard/billing alerted "Payment of $X
  * processed successfully!", "Gift card … issued successfully!" and "Credit of
  * $X added successfully!" over three handlers that only console.log. Same
- * blind spot, on money, on a screen in the nav.
+ * blind spot, on money, on a screen in the nav. (That screen has since been
+ * removed entirely — it was a fixture twin of three real ones — so the file
+ * this paragraph names is gone. The blind spot it proves is not.)
  *
  * So the verb may come first or second, and `processed`, `issued`, `added`,
  * `charged` and `refunded` join the list — the words this product uses about

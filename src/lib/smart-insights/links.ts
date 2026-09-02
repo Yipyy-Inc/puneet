@@ -53,11 +53,18 @@ export const insightLinks = {
       ? `/facility/dashboard/marketing?campaignId=${encodeURIComponent(campaignId)}`
       : `/facility/dashboard/marketing`,
 
-  /** Billing & invoices. */
-  billing: (invoiceId?: string) =>
-    invoiceId
-      ? `/facility/dashboard/billing?invoiceId=${encodeURIComponent(invoiceId)}`
-      : `/facility/dashboard/billing`,
+  /**
+   * Every payment, whichever channel took it.
+   *
+   * This was `billing(invoiceId?)`, pointing at /facility/dashboard/billing —
+   * a fixture screen that has been removed. The invoice form was doubly dead:
+   * that page never read `?invoiceId`, so the deep link had no destination even
+   * while the page existed, exactly as `calling(tab)` produced `?tab=voicemail`
+   * for a page that ignored it. There is no invoices table, no route that makes
+   * one, and nothing to link an invoice id TO — so the parameter is gone rather
+   * than repointed.
+   */
+  payments: () => `/facility/dashboard/payments`,
 
   /** Reports & analytics. */
   reports: () => `/facility/dashboard/reports`,
