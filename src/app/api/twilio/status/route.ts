@@ -1,18 +1,56 @@
+import { callEventTypeFor, recordCallEvent } from "@/lib/calling/record-event";
 import { platformTwilio } from "@/lib/twilio/config";
 import { verifyTwilioWebhook } from "@/lib/twilio/signature";
 import { twimlResponse } from "@/lib/twiml";
 
-// Status / IVR-gather callback. For a menu selection this connects the caller
-// to the next available agent; for plain call-progress events it acknowledges.
+// This URL does two jobs, and they are told apart by what the provider sends.
 //
-// Signature-verified since Phase 1c. It used to accept anything, and its GET
-// returned a bare 200 "OK" — an unauthenticated endpoint that answers 200 is
-// what makes a security assertion pass against a route that has been deleted,
-// so the GET is gone rather than left as a convenience.
+//   `Digits`      — the caller pressed a key on the IVR menu (voice/route.ts
+//                   points its <Gather action> here). Answer with TwiML.
+//   `CallStatus`  — a call-progress callback. Record it; the provider ignores
+//                   the body but insists on a 2xx or it retries for hours.
+//
+// Signature-verified since Phase 1c. Its GET returned a bare 200 "OK" and is
+// gone: an unauthenticated endpoint that answers 200 is what lets a security
+// assertion pass against a route that no longer exists.
 export async function POST(request: Request): Promise<Response> {
   const check = await verifyTwilioWebhook(request, platformTwilio()?.authToken);
   if (!check.ok) return check.response;
 
+  const status = check.params.CallStatus ?? "";
+  const sid = check.params.CallSid ?? "";
+
+  if (status && sid) {
+    const type = callEventTypeFor(status);
+    if (type) {
+      // Awaited here, unlike the voice route: nobody is listening to silence
+      // on a status callback, and a completed event that never lands is a call
+      // missing from every count on the Analytics tab.
+      await recordCallEvent({
+        providerCallSid: sid,
+        type,
+        to: check.params.To ?? "",
+        from: check.params.From ?? "",
+        providerTimestamp: check.params.Timestamp,
+        payload: {
+          direction: check.params.Direction?.startsWith("outbound")
+            ? "outbound"
+            : "inbound",
+          // Twilio sends CallDuration in whole seconds on a completed call.
+          ...(check.params.CallDuration
+            ? { duration_s: check.params.CallDuration }
+            : {}),
+        },
+      });
+    } else {
+      // A status we do not model. Logged rather than dropped silently, because
+      // the alternative is a gap in the log nobody can explain later.
+      console.info(`[calling] unmapped CallStatus '${status}' for ${sid}`);
+    }
+  }
+
+  // The gather response. Returned for a status callback too — the provider
+  // ignores TwiML on those, and a 200 is what stops the retries.
   return twimlResponse(
     `<Response>
   <Say voice="alice">Thanks. Connecting you to the next available Yipyy support agent.</Say>

@@ -1,3 +1,5 @@
+import { recordCallEvent } from "@/lib/calling/record-event";
+import { attachRecording } from "@/lib/calling/attach-recording";
 import { platformTwilio } from "@/lib/twilio/config";
 import { verifyTwilioWebhook } from "@/lib/twilio/signature";
 import { twimlResponse } from "@/lib/twiml";
@@ -6,32 +8,49 @@ import { twimlResponse } from "@/lib/twiml";
 // provider records it and, once its speech-to-text finishes, POSTs the result
 // here — RecordingUrl, RecordingDuration, From, TranscriptionText.
 //
-// ── WHAT IT DOES WITH THAT, HONESTLY ──────────────────────────────────────
+// ── IT USED TO PARSE THE PAYLOAD AND THROW IT AWAY ────────────────────────
 //
-// Nothing yet. There is no table for a voicemail; the inbox reads a fixture.
-// The payload is acknowledged and discarded, and this comment is the whole
-// truth about it — persisting arrives with call records in Phase 3.
+//   const payload = { ... };
+//   // In production: persist `payload` as a SupportVoicemail (isNew: true).
+//   void payload;
 //
-// ── BUT IT NO LONGER ACCEPTS THAT FROM ANYONE ─────────────────────────────
+// It also verified no signature, so any caller could post a RecordingUrl and a
+// transcript. Both are fixed: signed since Phase 1c, and stored since the call
+// tables landed.
 //
-// It verified nothing, so any caller could post a RecordingUrl and a
-// transcript. That mattered less while the handler discards them and will
-// matter enormously the day it does not — and a route that starts storing what
-// it is given is not the moment to remember the signature check.
+// The row goes in `call_recording`, which is SEPARATE from `call_record`
+// because `calling_view_recordings` is a real permission key and a policy
+// filters rows, not columns.
 export async function POST(request: Request): Promise<Response> {
   const check = await verifyTwilioWebhook(request, platformTwilio()?.authToken);
   if (!check.ok) return check.response;
 
-  const payload = {
-    from: check.params.From ?? "",
-    recordingUrl: check.params.RecordingUrl ?? "",
-    recordingSid: check.params.RecordingSid ?? "",
-    durationSeconds: Number(check.params.RecordingDuration ?? 0),
-    transcription: check.params.TranscriptionText ?? "",
-    transcriptionStatus: check.params.TranscriptionStatus ?? "",
-  };
-  // Phase 3: persist as a voicemail row. Until then it is genuinely dropped.
-  void payload;
+  const sid = check.params.CallSid ?? "";
+  const recordingSid = check.params.RecordingSid ?? "";
+
+  if (sid && recordingSid) {
+    const outcome = await recordCallEvent({
+      providerCallSid: sid,
+      type: "recording_ready",
+      to: check.params.To ?? "",
+      from: check.params.From ?? "",
+      providerTimestamp: check.params.Timestamp,
+      payload: { recording_sid: recordingSid },
+    });
+
+    // Only once the facility is known. `attachRecording` needs the call row,
+    // and a recording with no call to hang from is a row nothing can ever read.
+    if (outcome.facilityId) {
+      await attachRecording({
+        facilityId: outcome.facilityId,
+        providerCallSid: sid,
+        providerRecordingSid: recordingSid,
+        recordingUrl: check.params.RecordingUrl ?? null,
+        durationSeconds: Number(check.params.RecordingDuration ?? 0) || null,
+        transcript: check.params.TranscriptionText || null,
+      });
+    }
+  }
 
   return twimlResponse(`<Response></Response>`);
 }
