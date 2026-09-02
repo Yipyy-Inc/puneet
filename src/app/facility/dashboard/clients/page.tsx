@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { clientQueries, useCreateClient } from "@/lib/api/client";
 import { facilities } from "@/data/facilities";
 import { useLocationContext } from "@/hooks/use-location-context";
-import { deriveLocationId } from "@/data/locations";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -240,12 +239,25 @@ export default function FacilityClientsPage() {
   // membership admits, and no string comparison in a browser can improve on it.
   const facilityClients = clientsData;
 
-  const locationScopedClients =
-    isMultiLocation && !isHQView && currentLocationId
-      ? facilityClients.filter(
-          (c) => deriveLocationId(c.id) === currentLocationId,
-        )
-      : facilityClients;
+  // ── A CLIENT HAS NO BRANCH, SO THIS NO LONGER PRETENDS ONE ─────────────
+  //
+  // This filtered real clients by `deriveLocationId(c.id)` — trailing digits
+  // modulo three. `public.clients` has NO location column, so unlike the
+  // bookings screen there is no right answer being ignored here: there is no
+  // answer at all. The filter was inventing one, and hiding two thirds of a
+  // facility's customers behind it.
+  //
+  // Removing it rather than replacing it, because the question is wrong. A
+  // customer is not a branch's property — they book at whichever site suits
+  // them that week, and a multi-location business wants to find a person
+  // regardless of where they last came. The version worth building is "clients
+  // with a booking at this location", which is a query over `bookings`
+  // (location_id is populated there) and belongs with the HQ work, not a
+  // string comparison over client ids.
+  //
+  // Until then the list is unfiltered by location, which is a true statement
+  // about a facility's customers.
+  const locationScopedClients = facilityClients;
 
   // Section 8B: when view_client_list resolves to assigned_only, restrict to
   // clients whose bookings are assigned to the viewer (data-layer helper).

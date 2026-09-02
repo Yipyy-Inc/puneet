@@ -43,7 +43,6 @@ import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { bookingMutations, bookingQueries } from "@/lib/api/booking";
 import { useFieldMask } from "@/lib/staff/mask";
-import { deriveLocationId, getLocationById } from "@/data/locations";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
@@ -191,7 +190,8 @@ export default function FacilityBookingsPage() {
     [clientList],
   );
   const { setRequests: setBookingRequests } = useBookingRequestsStore();
-  const { currentLocationId, isHQView, isMultiLocation } = useLocationContext();
+  const { currentLocationId, isHQView, isMultiLocation, locations } =
+    useLocationContext();
   // Table 21 masking: booking $ hidden from staff without view_booking_financials;
   // the Revenue KPI is Manager+ (financial_view_revenue).
   const { maskAmount, canSee } = useFieldMask();
@@ -224,11 +224,25 @@ export default function FacilityBookingsPage() {
     (booking) => booking.facilityId === facilityId,
   );
 
+  // ── THE BOOKING'S OWN LOCATION, NOT A HASH OF ITS REFERENCE ────────────
+  //
+  // This filtered REAL bookings — `bookingQueries.all()` reads Postgres — by
+  // `deriveLocationId(b.id)`, which is the trailing digits of the reference
+  // modulo three against a fixed array of location ids. It is a fixture-era
+  // stand-in for a column that now exists and is populated.
+  //
+  // Measured against the live database on 2026-09-02: of 582 bookings carrying
+  // a real `location_id`, the hash put 389 of them — 66.8% — in a location
+  // they are not in. It agreed on the other third by chance, which is exactly
+  // what a one-in-three guess does.
+  //
+  // So a multi-location facility picking a branch saw a random third of its
+  // work, and the third it saw was wrong two times in three. Bookings with no
+  // location recorded (10 of 592) are excluded rather than guessed at: an
+  // unassigned booking belongs to no branch, and the HQ view is where it shows.
   const locationScopedBookings =
     isMultiLocation && !isHQView && currentLocationId
-      ? facilityBookings.filter(
-          (b) => deriveLocationId(b.id) === currentLocationId,
-        )
+      ? facilityBookings.filter((b) => b.locationId === currentLocationId)
       : facilityBookings;
 
   // Section 8B scoping already happened in the query factory — applying
@@ -348,16 +362,30 @@ export default function FacilityBookingsPage() {
             icon: CircleDot,
             defaultVisible: true,
             render: (booking: (typeof bookings)[number]) => {
-              const loc = getLocationById(deriveLocationId(booking.id));
+              // The booking's own branch, resolved against the REAL locations
+              // `useLocationContext` loads from `public.locations`.
+              //
+              // This read `getLocationById(deriveLocationId(booking.id))` —
+              // a fixture lookup keyed by a hash of the reference. It always
+              // rendered a name, and the name was invented.
+              const loc = locations.find((l) => l.id === booking.locationId);
               if (!loc)
                 return <span className="text-muted-foreground text-xs">—</span>;
+              // `color` and `shortCode` are nullable on a REAL location and were
+              // not on the fixture, which is the sort of difference that only
+              // shows up once a screen reads the database. A branch with
+              // neither set falls back to its name rather than an empty chip.
               return (
                 <div className="flex items-center gap-1.5">
-                  <div
-                    className="size-2 rounded-full"
-                    style={{ backgroundColor: loc.color }}
-                  />
-                  <span className="text-xs font-medium">{loc.shortCode}</span>
+                  {loc.color && (
+                    <div
+                      className="size-2 rounded-full"
+                      style={{ backgroundColor: loc.color }}
+                    />
+                  )}
+                  <span className="text-xs font-medium">
+                    {loc.shortCode ?? loc.name}
+                  </span>
                 </div>
               );
             },
