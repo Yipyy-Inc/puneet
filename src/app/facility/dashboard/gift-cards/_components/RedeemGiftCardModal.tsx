@@ -139,10 +139,19 @@ export function RedeemGiftCardModal({
   //
   // What made that expensive is what the value FEEDS. `canRedeemGiftCard`
   // compares the origin to the till's location, and `crossLocationGiftCards`
-  // defaults to false — so a slug that can never equal a real location uuid
-  // meant "purchased somewhere else" for EVERY card. `cardValid` went false
-  // and Continue died, while the banner explaining why is gated on
-  // `isMultiLocation`, which is false for every facility here.
+  // defaults to false — so a slug, which can never equal a real location uuid,
+  // meant "purchased somewhere else". `cardValid` went false and Continue
+  // died, while the banner explaining why is gated on `isMultiLocation`,
+  // which is false for every facility here.
+  //
+  // NOT every card, which is what this comment first claimed. The hash was
+  // `parseInt(id) % 3`, and a uuid beginning with a LETTER parses to NaN —
+  // index NaN is undefined, the origin reads falsy, and the check
+  // short-circuits to allowed. MEASURED over this facility's 2,248 cards:
+  // 59.9% begin with a digit and were refused; the rest were fine. The
+  // regression test in gift-cards.spec.ts issues until it gets a card from the
+  // affected 60%, because one card and hope is a coin flip — it passed against
+  // the reintroduced bug on its first attempt, which is how the 60% was found.
   //
   // MEASURED on a real $40 card: Active, "$40.00 available", Continue
   // disabled, nothing on screen saying why. Isolated by writing a complete
