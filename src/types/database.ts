@@ -639,6 +639,223 @@ export type Database = {
           },
         ];
       };
+      call_event: {
+        Row: {
+          created_at: string;
+          facility_id: string;
+          id: string;
+          occurred_at: string;
+          payload: Json;
+          provider: string;
+          provider_call_sid: string;
+          type: string;
+        };
+        Insert: {
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          occurred_at: string;
+          payload?: Json;
+          provider?: string;
+          provider_call_sid: string;
+          type: string;
+        };
+        Update: {
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          occurred_at?: string;
+          payload?: Json;
+          provider?: string;
+          provider_call_sid?: string;
+          type?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "call_event_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      call_record: {
+        Row: {
+          answered_at: string | null;
+          attribution_source: string | null;
+          booking_id: string | null;
+          client_id: string | null;
+          client_match: string;
+          created_at: string;
+          direction: string;
+          duration_s: number | null;
+          ended_at: string | null;
+          facility_id: string;
+          follow_up_status: string | null;
+          from_number: string | null;
+          handled_by: string | null;
+          id: string;
+          location_id: string | null;
+          notes: string | null;
+          provider_call_sid: string;
+          qa_score: number | null;
+          started_at: string | null;
+          status: string;
+          tags: string[];
+          to_number: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          answered_at?: string | null;
+          attribution_source?: string | null;
+          booking_id?: string | null;
+          client_id?: string | null;
+          client_match?: string;
+          created_at?: string;
+          direction?: string;
+          duration_s?: number | null;
+          ended_at?: string | null;
+          facility_id: string;
+          follow_up_status?: string | null;
+          from_number?: string | null;
+          handled_by?: string | null;
+          id?: string;
+          location_id?: string | null;
+          notes?: string | null;
+          provider_call_sid: string;
+          qa_score?: number | null;
+          started_at?: string | null;
+          status?: string;
+          tags?: string[];
+          to_number?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          answered_at?: string | null;
+          attribution_source?: string | null;
+          booking_id?: string | null;
+          client_id?: string | null;
+          client_match?: string;
+          created_at?: string;
+          direction?: string;
+          duration_s?: number | null;
+          ended_at?: string | null;
+          facility_id?: string;
+          follow_up_status?: string | null;
+          from_number?: string | null;
+          handled_by?: string | null;
+          id?: string;
+          location_id?: string | null;
+          notes?: string | null;
+          provider_call_sid?: string;
+          qa_score?: number | null;
+          started_at?: string | null;
+          status?: string;
+          tags?: string[];
+          to_number?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "call_record_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "call_record_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "call_record_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "call_record_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "call_record_handled_by_fkey";
+            columns: ["handled_by"];
+            isOneToOne: false;
+            referencedRelation: "grooming_stylist_stats";
+            referencedColumns: ["staff_id"];
+          },
+          {
+            foreignKeyName: "call_record_handled_by_fkey";
+            columns: ["handled_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "call_record_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      call_recording: {
+        Row: {
+          call_record_id: string;
+          created_at: string;
+          duration_s: number | null;
+          facility_id: string;
+          id: string;
+          provider_recording_sid: string;
+          recording_url: string | null;
+          transcript: string | null;
+        };
+        Insert: {
+          call_record_id: string;
+          created_at?: string;
+          duration_s?: number | null;
+          facility_id: string;
+          id?: string;
+          provider_recording_sid: string;
+          recording_url?: string | null;
+          transcript?: string | null;
+        };
+        Update: {
+          call_record_id?: string;
+          created_at?: string;
+          duration_s?: number | null;
+          facility_id?: string;
+          id?: string;
+          provider_recording_sid?: string;
+          recording_url?: string | null;
+          transcript?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "call_recording_call_record_id_fkey";
+            columns: ["call_record_id"];
+            isOneToOne: false;
+            referencedRelation: "call_record";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "call_recording_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       care_log_entries: {
         Row: {
           booking_id: string;
@@ -936,6 +1153,9 @@ export type Database = {
           created_at: string;
           facility_id: string;
           id: string;
+          is_primary: boolean;
+          label: string | null;
+          location_id: string | null;
           mms_enabled: boolean;
           number_sid: string | null;
           phone_number: string;
@@ -943,6 +1163,7 @@ export type Database = {
           purpose: string;
           released_at: string | null;
           sms_enabled: boolean;
+          status: string;
           updated_at: string;
           voice_enabled: boolean;
         };
@@ -951,6 +1172,9 @@ export type Database = {
           created_at?: string;
           facility_id: string;
           id?: string;
+          is_primary?: boolean;
+          label?: string | null;
+          location_id?: string | null;
           mms_enabled?: boolean;
           number_sid?: string | null;
           phone_number: string;
@@ -958,6 +1182,7 @@ export type Database = {
           purpose?: string;
           released_at?: string | null;
           sms_enabled?: boolean;
+          status?: string;
           updated_at?: string;
           voice_enabled?: boolean;
         };
@@ -966,6 +1191,9 @@ export type Database = {
           created_at?: string;
           facility_id?: string;
           id?: string;
+          is_primary?: boolean;
+          label?: string | null;
+          location_id?: string | null;
           mms_enabled?: boolean;
           number_sid?: string | null;
           phone_number?: string;
@@ -973,6 +1201,7 @@ export type Database = {
           purpose?: string;
           released_at?: string | null;
           sms_enabled?: boolean;
+          status?: string;
           updated_at?: string;
           voice_enabled?: boolean;
         };
@@ -983,6 +1212,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "communication_connections";
             referencedColumns: ["facility_id", "provider"];
+          },
+          {
+            foreignKeyName: "communication_numbers_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -10224,6 +10460,49 @@ export type Database = {
         SetofOptions: {
           from: "*";
           to: "gift_cards";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      annotate_call: {
+        Args: {
+          p_attribution_source?: string;
+          p_booking_id?: string;
+          p_call_id: string;
+          p_follow_up_status?: string;
+          p_handled_by?: string;
+          p_notes?: string;
+          p_qa_score?: number;
+          p_tags?: string[];
+        };
+        Returns: {
+          answered_at: string | null;
+          attribution_source: string | null;
+          booking_id: string | null;
+          client_id: string | null;
+          client_match: string;
+          created_at: string;
+          direction: string;
+          duration_s: number | null;
+          ended_at: string | null;
+          facility_id: string;
+          follow_up_status: string | null;
+          from_number: string | null;
+          handled_by: string | null;
+          id: string;
+          location_id: string | null;
+          notes: string | null;
+          provider_call_sid: string;
+          qa_score: number | null;
+          started_at: string | null;
+          status: string;
+          tags: string[];
+          to_number: string | null;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "call_record";
           isOneToOne: true;
           isSetofReturn: false;
         };
