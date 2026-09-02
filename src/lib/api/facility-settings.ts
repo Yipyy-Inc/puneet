@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { GiftCardConfig } from "@/lib/settings/gift-cards";
+import type { IvrSettings } from "@/lib/settings/ivr";
 import type {
   CallingDispatch,
   CallingFollowUp,
@@ -169,6 +170,14 @@ export interface FacilitySettings {
    * made, any more than it may present an unset tax rate as zero tax.
    */
   gift_card_config: SettingState<GiftCardConfig>;
+  /**
+   * The phone menu callers hear.
+   *
+   * `configured: false` means it is OFF with nothing to say — not that a
+   * facility chose a silent IVR. Nothing may present it as live: see
+   * `ivrIsAnswerable`.
+   */
+  ivr_config: SettingState<IvrSettings>;
 }
 
 /**

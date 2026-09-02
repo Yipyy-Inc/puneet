@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { PlayCircle, Square, Volume2, Phone, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { IVRConfig, IVRNode, IVRAction } from "@/types/calling";
+import type { IVRNode, IVRAction } from "@/types/calling";
+import type { IvrSettings } from "@/lib/settings/ivr";
 
 const ACTION_LABEL: Record<IVRAction, string> = {
   route_staff: "Route to staff",
@@ -64,7 +65,7 @@ export function IVRPreview({
   config,
   className,
 }: {
-  config: IVRConfig;
+  config: IvrSettings;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);

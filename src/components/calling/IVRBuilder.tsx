@@ -1,6 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
+import {
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import type { IvrSettings } from "@/lib/settings/ivr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,14 +76,36 @@ const actionConfig: Record<
   },
 };
 
-interface IVRBuilderProps {
-  config: IVRConfig;
-}
+// ── WHAT SAVE USED TO DO ──────────────────────────────────────────────────
+//
+//   const handleSave = () => {
+//     setSaved(true);
+//     setTimeout(() => setSaved(false), 2000);
+//   };
+//
+// The third instance of this in the calling module, after the settings panel
+// and the call tags. Somebody could rewrite the greeting, add a menu option or
+// change what pressing 3 does, watch the tick appear, and lose all of it on
+// reload. This is the menu a CALLER hears.
+//
+// It takes no props now: the config is the facility's `ivr_config` row.
 
-export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
-  const [config, setConfig] = useState<IVRConfig>(initialConfig);
+export function IVRBuilder() {
+  const { settings: facility, isPending } = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
+  const stored = facility.ivr_config.value;
+
+  // Derived from the server, never seeded into state — so a colleague's save
+  // is picked up rather than shadowed by whatever this browser loaded first.
+  // `check:settings-seeding` is the gate that keeps this shape honest.
+  const [draft, setDraft] = useState<IvrSettings | null>(null);
+  const config = draft ?? stored;
+  const dirty = draft !== null;
+  const setConfig = (update: (previous: IvrSettings) => IvrSettings) =>
+    setDraft((previous) => update(previous ?? stored));
+
   const [editingNode, setEditingNode] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const saved = saveSetting.isSuccess && !dirty;
 
   const updateGreeting = (greeting: string) =>
     setConfig((c) => ({ ...c, greeting }));
@@ -114,9 +142,19 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
   const removeNode = (id: string) =>
     setConfig((c) => ({ ...c, nodes: c.nodes.filter((n) => n.id !== id) }));
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    // Awaited, and the refusal reported. RLS gates this on `settings_general`,
+    // and an unawaited mutation shows the same tick for a refusal as for a
+    // success — which is the bug this whole change is about, in a subtler form.
+    try {
+      await saveSetting.mutateAsync({ domain: "ivr_config", value: config });
+      setDraft(null);
+      toast.success("Phone menu saved");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "The phone menu was not saved",
+      );
+    }
   };
 
   const sortedNodes = [...config.nodes].sort((a, b) => {
@@ -139,6 +177,21 @@ export function IVRBuilder({ config: initialConfig }: IVRBuilderProps) {
     ];
     return order.indexOf(a.key) - order.indexOf(b.key);
   });
+
+  // The draft pattern above already derives rather than seeds, so this is not
+  // strictly the data-loss guard `check:settings-seeding` is about. It is here
+  // because an editor rendered against the documented default shows an EMPTY
+  // menu that looks like a facility with no IVR — and somebody would start
+  // rebuilding one that already exists.
+  if (isPending) {
+    return (
+      <Card>
+        <CardContent className="text-muted-foreground py-16 text-center text-sm">
+          Loading the phone menu…
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
