@@ -10,6 +10,7 @@ import {
   resolveHost,
   type HostAudience,
 } from "@/lib/app-host";
+import { isStaging } from "@/lib/deployment";
 import { NextResponse, type NextRequest } from "next/server";
 
 // ============================================================================
@@ -184,7 +185,36 @@ export async function proxy(request: NextRequest) {
   // today: routing by identity, after the host question is settled here.
   const wants = audienceForPath(pathname);
 
-  if (wants && wants !== here.audience) {
+  // ── STAGING IS ONE HOST, SO THERE IS NOWHERE TO SEND ANYBODY ────────────
+  //
+  // The four-host split is a production arrangement. Staging has exactly one
+  // address, `staging.yipyy.com`, and it has to serve every audience from it —
+  // that is the whole point of a review deployment.
+  //
+  // Left in, this block did the one thing staging must never do: it threw the
+  // reviewer onto PRODUCTION. `staging` is a reserved subdomain, so
+  // `resolveHost` correctly refuses to read it as a facility and answers
+  // `{ audience: "staff", slug: null }`. `/dashboard` then asks for
+  // `platform`, and `platform` is the ONE audience whose origin needs no slug
+  // — `platformOriginFor("yipyy.com")` is `https://hq.yipyy.com` whatever
+  // deployment is asking. So a platform admin signing in at staging.yipyy.com
+  // was 307'd straight to production's platform portal, still signed in
+  // because the AuthKit cookie is `.yipyy.com` and spans both, and every click
+  // from there was a real production write against the shared database.
+  //
+  // The other two audiences were saved only by an accident of shape: with
+  // `slug: null`, `facilityStaffOrigin` and `facilityCustomerOrigin` both
+  // return null and the redirect falls through. It was never the guard, and it
+  // would stop being true the moment staging got a slug.
+  //
+  // Reported from the staging review, 2026-09-03: "we sign in with my admin
+  // account and it takes me to hq.yipyy.com, and I don't think it's staging
+  // there". It was not.
+  //
+  // `isStaging()` reads YIPYY_DEPLOYMENT, which is set on the staging
+  // container's `environment:` block and nowhere else, so production is
+  // unchanged and an unset variable still means production (ADR 0007).
+  if (wants && wants !== here.audience && !isStaging()) {
     const destination = originForAudience(wants, here.slug, apex);
 
     // Only when we can name the address with certainty. `/customer/*` reached

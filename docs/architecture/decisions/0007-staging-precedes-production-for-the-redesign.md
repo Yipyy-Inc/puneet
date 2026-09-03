@@ -84,7 +84,9 @@ a third container is memory rather than money.
   Postgres (`facilities_slug_not_reserved`), so no facility can ever hold the name and the
   hostname cannot collide with a tenant. `resolveHost` returns `{ audience: "staff", slug: null }`
   for it — the same answer it gives `app.yipyy.com` — so `/` opens the portal rather than the
-  marketing page, with no routing change.
+  marketing page. **"With no routing change" is what this line said until 2026-09-03, and it was
+  wrong** — that answer is exactly what sent a platform admin to production. See "Staging is one
+  host" below.
 - **DNS needs nothing.** The wildcard `*.yipyy.com` record already resolves `staging.yipyy.com`
   to the box; verified against a public resolver on 2026-09-03.
 
@@ -101,6 +103,48 @@ service's own `environment:` block and **never in `.env`**, which both colours s
 | `STAGING_SUPPRESS_SENDS=true` | Outbound email, SMS and calls are recorded and not dispatched. Switchable, per the reasoning below |
 | Basic auth, at Caddy          | It is a real login page on a real domain. `X-Robots-Tag: noindex` too                              |
 | A banner in the root layout   | Host-independent, read from `YIPYY_DEPLOYMENT`, so it cannot be switched off by a redesign         |
+| No portal↔host redirect       | Staging is ONE host and has to serve every audience from it. See below — this one was a real bug   |
+
+### Staging is one host, so the four-host split must not apply to it
+
+**Found on the first review of staging, 2026-09-03: signing in as a platform admin at
+`staging.yipyy.com` sent the reviewer to `hq.yipyy.com` — production — still signed in, with every
+click a real write to the shared database.**
+
+The chain, because each link looked correct on its own:
+
+1. `staging` is a reserved subdomain, so `facilitySlugFromHost` rightly refuses to read it as a
+   facility and `resolveHost` answers `{ audience: "staff", slug: null }`.
+2. `/dashboard` asks for the `platform` audience, which does not match `staff`.
+3. `platform` is **the one audience whose origin needs no slug** —
+   `platformOriginFor("yipyy.com")` is `https://hq.yipyy.com` whoever is asking, because staging
+   and production share an apex.
+4. `WORKOS_COOKIE_DOMAIN` is `.yipyy.com`, spanning both, so the proxy judged the session able to
+   follow and issued the 307.
+
+The other two audiences escaped only by an accident of shape: with `slug: null`,
+`facilityStaffOrigin` and `facilityCustomerOrigin` both return `null` and the redirect falls
+through. That was never a guard, and it would stop being true the moment staging had a slug.
+
+So `src/proxy.ts` skips the portal↔host redirect entirely when `isStaging()`, and the same guard is
+on the (currently unreachable) platform-admin redirect in `src/app/route.ts` — the identical
+mistake waiting on a different host shape.
+
+**Measured, not assumed, because one thing here could have made the fix inert.** The image is built
+once and serves both deployments, so if Next inlined `process.env` into the middleware bundle at
+build time, `isStaging()` would be `false` in both containers and nothing would change. It does
+not. The same built artifact, started twice with only the environment differing, on
+`Host: staging.yipyy.test`:
+
+| `YIPYY_DEPLOYMENT` | `GET /dashboard`                                                          |
+| ------------------ | ------------------------------------------------------------------------- |
+| unset              | `307 → https://hq.yipyy.test/dashboard`                                   |
+| `staging`          | `200` — and `/facility`, `/customer`, `/employee`, `/sign-in` all 200 too |
+
+**The general rule this leaves:** a `platformOriginFor` / `facilityStaffOrigin` /
+`facilityCustomerOrigin` call that builds a **redirect** must ask whether it is on staging first.
+The same calls used to build a **link in an email** must NOT — those are production addresses on
+purpose, and staging suppresses sends anyway.
 
 ## Consequences
 
