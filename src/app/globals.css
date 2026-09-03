@@ -672,6 +672,13 @@
   --sh-cta-hover: 0 16px 30px -16px rgba(22, 104, 227, 0.85);
   --sh-cta-active: 0 4px 10px -8px rgba(22, 104, 227, 0.6);
 
+  /* The destructive CTA rests on its own shadow, in the DOT-weight error
+     colour. That is legal precisely because a shadow is not text: #D24545 is
+     4.49:1 and rule 4 bans it as an ink, not as a 26px blur under a button.
+     The button's FILL stays --bad #B23B3B, which carries white at 5.86:1. */
+  --sh-cta-bad: 0 14px 26px -16px rgba(210, 69, 69, 0.8);
+  --sh-cta-bad-active: 0 4px 10px -8px rgba(210, 69, 69, 0.6);
+
   /* ── Motion — durations ── */
   --dur-1: 120ms; /* hover, checkbox, chip */
   --dur-2: 180ms; /* transform + lift, tab underline, accordion */
@@ -892,6 +899,41 @@
      for less motion would still get the full 220ms lift. */
   @media (prefers-reduced-motion: reduce) {
     &.yy-cta {
+      transition-duration: 0.001ms;
+    }
+
+    &:hover,
+    &:active {
+      transform: none;
+    }
+  }
+}
+
+/* The destructive twin of yy-cta. Same structure and the same reasons — one
+ * transition declaration (hard rule 3), the doubled selector so shadcn's
+ * `transition-all` cannot replace §4's three properties, and the doubled
+ * reduced-motion override so it can still beat this rule's own shorthand.
+ * Only the shadow colour differs. */
+@utility yy-cta-bad {
+  &.yy-cta-bad {
+    box-shadow: var(--sh-cta-bad);
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.22s ease,
+      background 0.18s ease;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: var(--sh-cta-bad-active);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &.yy-cta-bad {
       transition-duration: 0.001ms;
     }
 

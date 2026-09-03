@@ -1,7 +1,7 @@
 # Work order — adopting the Yipyy design system
 
-**Stages 0, 1, 2 and 3 are done, and stage 4 is done except for a tail it turned into a ratchet**
-(all 2026-09-03). **Stage 5 is next.**
+**Stages 0–5 are done** (all 2026-09-03), stage 4 with a tail it turned into a ratchet.
+**Stage 6 is next.**
 
 The stage headings below carry the same status, and they are the record — a stage that shipped
 without its heading being updated is how this file drifted from the repo once already.
@@ -298,7 +298,7 @@ comes back.
 
 ---
 
-## Stage 5 — Button · §controls, §4
+## Stage 5 — Button · §controls, §4 · **DONE 2026-09-03**
 
 - Full pill. 40px default, 48px `prominent`, 48px minimum below 1024px. Square icon buttons → circles.
 - Primary: `--primary` fill, white text, rest `0 14px 26px -16px rgba(22,104,227,.85)`, hover
@@ -309,6 +309,47 @@ background .18s ease`. Honour `prefers-reduced-motion`.
 - Never an orange button, except a first-run brand moment.
 
 **Done when:** every CTA visibly lifts on hover, and no style attribute carries two transitions.
+— **Met.** One cva restyles all 3,774 buttons across 959 files; no call site was edited.
+
+Measured in a browser at 1280 and 599, every variant, every state:
+
+|             | rest                  | fill                            | ink       | transition                          |
+| ----------- | --------------------- | ------------------------------- | --------- | ----------------------------------- |
+| primary     | `--sh-cta`, lifts     | `#1668E3`                       | `#FFFFFF` | transform · box-shadow · background |
+| destructive | `--sh-cta-bad`, lifts | `#B23B3B`                       | `#FFFFFF` | transform · box-shadow · background |
+| outline     | `--sh`, lifts         | `#FFFFFF` + 1px `--line-strong` | `#0A1B33` | transform · background              |
+| subtle      | flat                  | `--inset`                       | `#4C5B6C` | background                          |
+| ghost       | flat                  | transparent                     | `#677382` | background                          |
+| disabled    | flat                  | `--inset`                       | `#8C99A3` | —                                   |
+
+40px everywhere, **48px below 1024px** (§1's own breakpoint, and rule 7's
+standing-staff tap target), 48px for `prominent`, icon buttons 40×40 circles,
+full pill, 14.5/600. Verified at 599px: every control is 48.
+
+**The destructive fill is the one place the sources contradicted each other.** §5's prose says
+`--error-dot` (`#D24545`); the rendered page says `var(--bad)` (`#B23B3B`). The page wins, and it
+is also the only one that can carry a label — white is 4.49:1 on the first and 5.86:1 on the
+second. The dot-weight colour survives where it is legal: in the shadow, which is not text.
+
+**Loading is a new state, and §5s required it all along.** Hard rule 9: "A button with no loading
+state double-submits." `<Button loading>` disables the button, sets `aria-busy`, and puts a
+spinner in the leading glyph's slot — the caller's own icons are hidden while `data-loading` is
+set, so the spinner REPLACES the glyph rather than joining it. Width delta measured at **0px** for
+a button that had a glyph; a button with no glyph grows 28px, which is the honest limit and is
+documented on the prop. A loading button is disabled but deliberately does NOT wear the disabled
+fill — that is a different cell of §5s.
+
+**`size="sm"` is now 40px, and that is the largest visual change in the stage.** §1 has ONE control
+height; there is no small button in this system. 1,698 call sites pass `sm`, so the key is kept and
+resolves to `default` rather than editing 1,698 files — a documented compatibility shim, not a
+second size. Every one of those buttons grew from 32px to 40px. Checked on real screens
+(bookings, facilities) at desktop; nothing broke, and the toolbars simply got taller.
+
+**One bug, and only running the app could find it.** `{spinner}{children}` is an array of two
+children even when the spinner is `null`, and Radix's `Slot` calls `React.Children.only` — so
+every `asChild` Button threw at render, 591 `variant="outline"` among them. Typecheck was clean.
+The bookings page rendering stage 3's error state was the only symptom. Fixed with a ternary that
+hands `Slot` the bare children, and the reason is written at the call site.
 
 ---
 
