@@ -1,15 +1,21 @@
-import { Loader2 } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 
+import { RouteState } from "@/components/ui/route-state";
+
+// §5d2 state ladder, "Loading · first paint": pose `loading`, no action. The
+// spinning glyph is the one moving thing on the view (§4) — `yy-float` is
+// refused on this pose for exactly that reason, and the pose itself is a still
+// image. The previous screen said "Please wait", which §5r bans.
 export default function Loading() {
   return (
-    <div className="bg-background text-foreground flex min-h-screen flex-col items-center justify-center">
-      <div className="space-y-4 text-center">
-        <Loader2 className="text-primary mx-auto size-12 animate-spin" />
-        <h2 className="text-xl font-semibold">Loading...</h2>
-        <p className="text-muted-foreground">
-          Please wait while we fetch your content.
-        </p>
-      </div>
-    </div>
+    <RouteState
+      pose="loading"
+      icon={LoaderCircle}
+      inkClassName="text-primary"
+      title="Getting your day ready"
+      description="This takes a moment on the first load."
+      spin
+      className="min-h-screen"
+    />
   );
 }

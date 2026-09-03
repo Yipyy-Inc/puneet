@@ -101,7 +101,14 @@
    * instead of by hex, which is the whole mechanism the governance section
    * (§5v) relies on: a reviewer can grep for a raw hex and find nothing. */
   --color-heading: var(--heading);
-  --color-body: var(--body);
+  /* NOT --color-body: `--text-body` (§1's 14.5px body step) already claims
+   * the bare word "body", and a colour of the same name wins outright —
+   * confirmed by compiling this file, where `.text-body` emitted `color:`
+   * and the font-size utility was never generated at all, so §1's body step
+   * was unreachable. The ink takes the `-ink` suffix its two neighbours
+   * below already use, which leaves `text-body` meaning the SIZE and
+   * `text-body-ink` the COLOUR. Nothing consumed either name yet. */
+  --color-body-ink: var(--body);
   --color-ink-secondary: var(--ink-secondary);
   --color-ink-tertiary: var(--ink-tertiary);
   --color-ink-disabled: var(--ink-disabled);
@@ -186,6 +193,14 @@
   --radius-4xl: var(--r-lg);
   --radius-pill: var(--r-pill);
 
+  /* ── elevation — §1's three shadow steps, as utilities. The raw --sh/--sh-2
+   * /--sh-3 vars already existed; nothing could reach them by class name, so
+   * a card had to fall back to Tailwind's own shadow scale, which is a
+   * different set of values. Named by the job, not the step number. */
+  --shadow-card: var(--sh);
+  --shadow-raised: var(--sh-2);
+  --shadow-overlay: var(--sh-3);
+
   /* ── motion — the exact curves, so `ease-out`/`ease-in` (already used by
    * every Radix primitive in the app) adopt §4's language for free, and
    * `ease-std`/`ease-lift` become new first-class utilities. */
@@ -228,6 +243,16 @@
   --text-micro--line-height: 1.4;
   --text-micro--letter-spacing: 0.06em;
   --text-micro--font-weight: 700;
+
+  /* §5d's empty-state and route-state headline — 19/700, and the one type
+   * step §1's seven-rung scale does not carry. It is not a new value: §5d
+   * writes "headline 19/700" and the reference page renders the failed-view
+   * heading at 19px/700/-0.015em. Exposed here so a route state never spells
+   * it as an arbitrary value. */
+  --text-state-title: 19px;
+  --text-state-title--line-height: 1.3;
+  --text-state-title--letter-spacing: -0.015em;
+  --text-state-title--font-weight: 700;
 
   /* ── raw Tailwind palette, remapped ───────────────────────────────────────
    * ~22,000 occurrences across ~900 files use Tailwind's stock emerald,
@@ -795,13 +820,29 @@
  * declaration lives here once, and a call site adds `yy-cta` instead of
  * hand-writing a transition it could double. Stage 5 (Button) reuses this
  * rather than restating the values.
+ *
+ * ── WHY THE SELECTOR IS DOUBLED ───────────────────────────────────────────
+ *
+ * `&.yy-cta` compiles to `.yy-cta.yy-cta`, which is specificity 0,2,0 rather
+ * than 0,1,0. Without it this loses outright: Tailwind emits custom utilities
+ * BEFORE the built-in ones, and shadcn's Button carries `transition-all` in
+ * its cva base — so `transition-property: all` and the DEFAULT 150ms/ease
+ * landed after this rule and replaced §4's three properties and their three
+ * durations on every yy-cta button in the app. Measured in the browser, not
+ * inferred: the computed `transition-property` on a primary pill read "all".
+ *
+ * Doubling the class is the fix rather than reordering, because a utility's
+ * position in the emitted sheet is Tailwind's business and not something a
+ * call site should have to know.
  */
 @utility yy-cta {
-  box-shadow: var(--sh-cta);
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.22s ease,
-    background 0.18s ease;
+  &.yy-cta {
+    box-shadow: var(--sh-cta);
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.22s ease,
+      background 0.18s ease;
+  }
 
   &:hover {
     transform: translateY(-2px);
@@ -814,9 +855,16 @@
   }
 
   /* The lift is decoration, so it goes entirely; the resting shadow stays and
-     the button is still obviously a button. */
+     the button is still obviously a button.
+
+     Doubled for the same reason as the block above, and here it is not
+     optional: the rule it has to beat is this utility's OWN 0,2,0 shorthand,
+     so at 0,1,0 the duration override would never apply and somebody who asked
+     for less motion would still get the full 220ms lift. */
   @media (prefers-reduced-motion: reduce) {
-    transition-duration: 0.001ms;
+    &.yy-cta {
+      transition-duration: 0.001ms;
+    }
 
     &:hover,
     &:active {

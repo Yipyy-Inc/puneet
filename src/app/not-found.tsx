@@ -1,25 +1,24 @@
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { CircleHelp, House } from "lucide-react";
 
+import { RouteState } from "@/components/ui/route-state";
+
+// §5d2 state ladder, "Not found · 404": pose `confused`, and the copy the
+// system writes for it. Neutral ink rather than error — §5d2 gives neutral
+// "nothing wrong, nothing happening", and a page that moved is not a fault.
+//
+// The action points at `/`, which is a route handler that resolves the
+// visitor's own portal and answers 307 (see src/app/route.ts) — so one link
+// serves the customer, facility, employee and platform portals correctly.
 export default function NotFound() {
   return (
-    <div className="bg-background text-foreground flex min-h-screen flex-col items-center justify-center">
-      <div className="space-y-4 text-center">
-        <h1 className="text-primary text-6xl font-bold">404</h1>
-        <h2 className="text-2xl font-semibold">Page Not Found</h2>
-        <p className="text-muted-foreground max-w-md">
-          Sorry, the page you&apos;re looking for doesn&apos;t exist. It might
-          have been moved or deleted.
-        </p>
-        <div className="flex justify-center gap-4">
-          <Button asChild>
-            <Link href="/">Go Home</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <a href="/dashboard">Go to Dashboard</a>
-          </Button>
-        </div>
-      </div>
-    </div>
+    <RouteState
+      pose="confused"
+      icon={CircleHelp}
+      inkClassName="text-ink-secondary"
+      title="That page has moved"
+      description="The link may be out of date, or the page now lives somewhere else."
+      action={{ label: "Go to your dashboard", icon: House, href: "/" }}
+      className="min-h-screen"
+    />
   );
 }
