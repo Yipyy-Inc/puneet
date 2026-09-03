@@ -17,8 +17,9 @@ There is a real backend: **Supabase Postgres** with row-level security as the au
 voice, formatting, print and governance, all decided and measured, with the eleven-stage adoption
 sequence in [WORK_ORDER.md](docs/design-system/WORK_ORDER.md). It is **not a proposal to evaluate**:
 every screen reworked from here on follows it completely, and CLAUDE.md § "Design System" is the
-standing rule. **Stages 0–4 are done** (documents and assets, the `@theme` tokens, the empty-state
-choke point, the four route-level states, and the status chips); **stage 5 (Button) is next.** The
+standing rule. **Stages 0–5 are done** (documents and assets, the `@theme` tokens, the empty-state
+choke point, the four route-level states, the status chips and Button); **stage 6 (metric and
+filter tiles) is next.** The
 tokens landed, so `src/` renders the new palette everywhere — but most screens still have the old
 LAYOUT, density and glyphs, so the third question about any screen, after "fixture or Postgres?",
 is still **"old system or new?"** [WORK_ORDER.md](docs/design-system/WORK_ORDER.md) is the record;
