@@ -8,7 +8,6 @@ export interface BrandingSettings {
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
-  darkModeEnabled: boolean;
   customCss: string;
   emailLogoUrl: string;
   emailFooterText: string;
@@ -95,7 +94,6 @@ export const brandingSettings: BrandingSettings = {
   primaryColor: "#0ea5e9",
   secondaryColor: "#8b5cf6",
   accentColor: "#f59e0b",
-  darkModeEnabled: true,
   customCss: "",
   emailLogoUrl: "/images/email-logo.png",
   emailFooterText: "© 2025 Yipyy. All rights reserved.",

@@ -60,7 +60,12 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          `bg-background data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-3 overflow-y-auto rounded-lg border p-4 shadow-lg duration-200 sm:max-w-lg md:gap-4 md:p-6`,
+          // rounded-2xl, not rounded-lg: design-system.md §5i names the
+          // modal radius at 24px, matching --r-lg — the same rung
+          // card.tsx already uses for cards. One class, stage 1's own
+          // scope (the token layer); the rest of this component's
+          // treatment (shadow, background, animation) is stage 6/7's.
+          `bg-background data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-3 overflow-y-auto rounded-2xl border p-4 shadow-lg duration-200 sm:max-w-lg md:gap-4 md:p-6`,
           className,
         )}
         {...props}

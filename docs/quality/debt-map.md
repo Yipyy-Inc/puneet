@@ -7655,6 +7655,100 @@ callers of `src/lib/messaging/send.ts` — the duplication that file's own heade
 already complains about. Consolidating them would make this gate exact instead of
 coarse. That is the fix, and it is not this change.
 
+## 2026-09-05 — raw hex literals the design-system token remap cannot reach
+
+**Severity: medium.** Stage 1 of [WORK_ORDER.md](../design-system/WORK_ORDER.md)
+remapped Tailwind's own colour scales in `@theme` — `emerald-600` now compiles to
+the Yipyy success ink, `slate-500` to the tertiary ink, and so on for ~22,000
+occurrences across ~900 files, with zero component files touched. That mechanism
+has a hard edge: it works by overriding what a **class name** compiles to, so it
+does nothing for a colour that never went through a class at all.
+
+**Measured 2026-09-05, seven of the old palette's own hex values:** `#0EA5E9`
+(old primary) 73 occurrences, `#0ea5e9` 43, `#8b5cf6` (old secondary) 73,
+`#f59e0b` (old warning) 70, `#22c55e` (old success) 43, `#ef4444` (old
+destructive) 32, `#fb923c` (old accent/orange) 5 — **296 in total**, across
+21+ files including `src/components/calling/*`, `src/components/facility/grooming/*`,
+`src/components/loyalty/setup/*`, `src/components/forms/*`,
+`src/components/system-admin/GlobalSettings.tsx`. Every one is either an inline
+`style={{ ... }}` object or a Tailwind arbitrary value (`bg-[#0EA5E9]`,
+`text-[#8b5cf6]`) — both bypass the class-name mechanism the remap depends on.
+
+**`src/components/ui` itself is confirmed clean** — zero raw hex literals,
+checked with `rg "#[0-9a-fA-F]{6}\b" src/components/ui` before stage 1 shipped.
+The gap is entirely in feature components, not the shared primitives.
+
+### What to do instead of casually touching it
+
+- **Do not try to fix this with another `@theme` remap.** There is no class
+  name to intercept; each occurrence needs its own edit, replacing the literal
+  with the semantic token it was standing in for (`#0EA5E9` almost always meant
+  "primary," so `bg-primary`/`text-primary`, not a new arbitrary value pointing
+  at the Yipyy hex instead of the old one — that would just be swapping one
+  literal for another).
+- **This is naturally stage-5-through-9 work**, not a blocker for any of them.
+  Whichever stage touches `GlobalSettings.tsx`, the calling components, or the
+  grooming/loyalty/forms components will find these literals sitting in the
+  file it already has open — fix them there rather than as a separate sweep.
+- A grep to re-run before declaring the redesign complete:
+  `rg "#0EA5E9|#0ea5e9|#8b5cf6|#f59e0b|#22c55e|#ef4444|#fb923c" src` — falling
+  to zero is a real, checkable finish line the class-remap alone cannot
+  provide.
+
+## 2026-09-05 — decorative CSS in globals.css: some dead, some load-bearing, none touched by stage 1
+
+**Severity: low.** While rewriting the token block, everything from
+`/* Keyframes for animations */` to end of file (≈550 lines: keyframes, and
+~30 free-standing utility classes like `.badge-success`, `.card-highlight`,
+`.stat-card`, `.glass`) was read and measured but deliberately **not touched**
+— stage 1's scope is the token layer, and CLAUDE.md's own rule is to leave
+existing code alone unless the task is about it.
+
+**Measured usage across `src/**/\*.{ts,tsx}`, 2026-09-05\*\* — mostly zero:
+
+- **Dead (0 usages), safe to delete whenever that file is next touched:**
+  `.badge`, `.badge-primary/success/warning/destructive/info/secondary`,
+  `.card-modern`, `.card-highlight`, `.card-success`, `.card-warning`,
+  `.stat-card`, `.glass` (+ `.dark .glass`), `.text-gradient-primary/warm`,
+  `.trend-up/down/neutral`, `.input-modern`, `.avatar-ring`,
+  `.chart-container`, `.donut-center`, `.hover-scale`, `.shadow-soft`,
+  `.shadow-glow-primary/success`, `.bg-gradient-subtle/success/accent/secondary`,
+  `.divider-gradient`, `.progress-bar`/`.progress-bar-fill`, `.status-dot`,
+  `.status-busy`, `.status-offline`.
+  **Two of these are the exact banned pattern rule 2 exists for**:
+  `.card-highlight`/`.card-success`/`.card-warning` are
+  `border-left: 4px solid var(--X)` — an edge accent — and `.badge-*` are
+  `color-mix(var(--X) 10%, transparent)` — a tint fill. Both are dead, so
+  neither is rendering anywhere today; if either is ever revived, revive it
+  restyled, not as-is.
+- **Alive, and NOT migrated by the token remap because they never read a CSS
+  variable to begin with** — they hardcode hex literally in the rule:
+  `.bg-gradient-primary` (2 files) is
+  `linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)`; `.bg-gradient-mesh`
+  (15 files) is five radial gradients built from `rgba(14,165,233,…)`,
+  `rgba(139,92,246,…)`, `rgba(34,197,94,…)`, `rgba(251,146,60,…)` — the whole
+  old sky/violet/green/orange palette, baked in as literals.
+- **Alive and fine:** `.shadow-card` (51 files — pure `rgba(0,0,0,…)`, colour-
+  neutral, no token dependency to begin with), `.shadow-elevated` (6, same),
+  `.hover-lift` (1), `.status-online` (2), `.price-value` (9).
+
+### What to do instead of casually touching it
+
+- **`bg-gradient-primary` and `bg-gradient-mesh` are the two that actually
+  need attention**, and it is a two-line edit each (point the `linear-gradient`
+  stops at `var(--primary)`/`var(--primary-hover)` and friends) whenever a
+  stage touches one of their 17 combined call sites — most likely stage 6
+  (metric/filter tiles) or stage 8 (orange), given `bg-gradient-mesh` is the
+  visible source of the soft multi-colour wash on the dashboard's live-activity
+  panel, confirmed in a stage-1 screenshot (`bun run shoot`).
+- **The dead classes are `bun run prune` (Knip) territory** — safe to delete
+  in one pass whenever someone is already in `globals.css` for an unrelated
+  reason, not worth a dedicated PR on their own.
+- Do not delete `.dark .glass` as part of any dark-mode cleanup without
+  checking `check:no-dark-mode` first — it is dead (0 usages) but so is
+  everything under `.dark`, and that gate cares about the `@custom-variant`
+  line and the `dark:` utility count, not this selector specifically.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

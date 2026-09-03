@@ -233,13 +233,7 @@ export function MessageCenter({
   };
 
   return (
-    <div
-      className="flex h-full w-full gap-3"
-      style={{
-        fontFamily: "var(--font-inter), system-ui, sans-serif",
-        letterSpacing: "-0.01em",
-      }}
-    >
+    <div className="flex h-full w-full gap-3">
       {/* Contacts — full width on mobile; hidden there once a thread is open
           (single-panel navigation). Fixed width from md up. */}
       {showContactList && (

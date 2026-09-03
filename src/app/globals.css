@@ -29,7 +29,30 @@
  */
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================================
+ * Yipyy design system — tokens. docs/design-system/design-system.md §1-§4.
+ *
+ * Stage 1 of docs/design-system/WORK_ORDER.md. Everything below reads from
+ * ONE place: a colour, radius, duration or shadow used anywhere in the app
+ * traces to a `--*` custom property here, never to a hex literal at the call
+ * site. Section numbers in the comments are the citation format the work order
+ * asks for — quote them in the commit message of anything that touches this
+ * file again.
+ *
+ * `@theme inline` (not `@theme`) is why `--color-primary: var(--primary)`
+ * survives as a `var()` reference in the compiled CSS rather than being
+ * inlined to a literal at build time — the pattern predates this stage and
+ * still matters for shadcn's own tooling, which reads these theme keys back
+ * out of the generated CSS.
+ * ========================================================================= */
+
 @theme inline {
+  /* ── shadcn's own semantic names — mapped, not duplicated ────────────────
+   * Every one of these already drives `bg-primary`, `text-muted-foreground`,
+   * `border-input` and so on across the app. Pointing them at the Yipyy
+   * values (defined in :root, below) is what makes existing utility classes
+   * inherit the redesign without a single file being touched — the whole
+   * point of doing this at the token layer first. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-jakarta), system-ui, -apple-system, sans-serif;
@@ -71,146 +94,606 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
+
+  /* ── the rest of §1's named roles, as first-class utilities ──────────────
+   * `bg-heading`, `text-ink-tertiary`, `border-line-strong`, `bg-brand-orange`
+   * — one class per role, so a component can reach for the token by NAME
+   * instead of by hex, which is the whole mechanism the governance section
+   * (§5v) relies on: a reviewer can grep for a raw hex and find nothing. */
+  --color-heading: var(--heading);
+  --color-body: var(--body);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-tertiary: var(--ink-tertiary);
+  --color-ink-disabled: var(--ink-disabled);
+  --color-code-fg: var(--code-fg);
+  --color-ground: var(--ground);
+  --color-inset: var(--inset);
+  --color-inset-2: var(--inset-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-panel-dark: var(--panel-dark);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-tint: var(--primary-tint);
+  --color-primary-tint-2: var(--primary-tint-2);
+
+  /* `bg-brand-orange` etc. — deliberately NOT named `orange`, which would
+   * collide with the raw Tailwind `orange-*` scale remapped to the warning
+   * family below. Two different concepts (the animal's surface colour vs. a
+   * generic warm hue used as warning text) need two different names, or the
+   * whole reason orange stays legible collapses. §2b names the five
+   * territories this may be used for and nowhere else. */
+  --color-brand-orange: var(--brand-orange);
+  --color-bad: var(--bad);
+
+  /* Status backgrounds/dots are exposed for completeness — §1 keeps them "for
+   * reference"; they fill nothing per rule 2/4, and nothing should reach for
+   * them for a solid fill. The chip pattern is white + a hairline in the ink
+   * (§3), not these. */
+  --color-success-dot: var(--success-dot);
+  --color-warning-dot: var(--warning-dot);
+  --color-error-dot: var(--error-dot);
+  --color-info-dot: var(--info-dot);
+  --color-violet-dot: var(--violet-dot);
+
+  --color-violet: var(--violet);
+  --color-violet-foreground: var(--violet-foreground);
+
+  /* ── radius — direct aliases, not the old base+offset formula ───────────
+   * The previous chain derived every step from one `--radius: 0.875rem` base,
+   * which is exactly the "14px base radius applied uniformly to a data-dense
+   * admin product" design-system.md §8 says does not carry forward. Each step
+   * below points at the Yipyy rung with the closest CURRENT rendered value,
+   * so the migration is as close to zero-regression as the token layer alone
+   * can make it — confirmed against real usage, not guessed:
+   *
+   *   rounded-sm   260 uses,  was 10px → r-xs   12px (+2)
+   *   rounded-md   904 uses,  was 12px → r-xs   12px ( 0 — exact)
+   *   rounded-lg  2219 uses,  was 14px → r-row  14px ( 0 — exact)
+   *   rounded-xl  1215 uses,  was 18px → r      16px (-2)
+   *   rounded-2xl  268 uses,  was 22px → r-lg   24px (+2 — confirmed against
+   *                                                    card.tsx, which is the
+   *                                                    one component in the
+   *                                                    app that already uses
+   *                                                    rounded-2xl for cards)
+   *   rounded-3xl   16 uses,  was 24px → r-lg   24px ( 0 — exact; this step
+   *                                                    was NEVER covered by
+   *                                                    the old formula and
+   *                                                    silently rendered
+   *                                                    Tailwind's stock value)
+   *
+   * Buttons, inputs, filters, nav and chips want the FULL PILL (§1 shape),
+   * which no named rung below provides — that is a component-level class
+   * change (`rounded-lg` → `rounded-full`), not a token remap, and it is
+   * stage 5's job, not this one. */
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-xs);
+  --radius-md: var(--r-xs);
+  --radius-lg: var(--r-row);
+  --radius-xl: var(--r);
+  --radius-2xl: var(--r-lg);
+  --radius-3xl: var(--r-lg);
+  --radius-4xl: var(--r-lg);
+  --radius-pill: var(--r-pill);
+
+  /* ── motion — the exact curves, so `ease-out`/`ease-in` (already used by
+   * every Radix primitive in the app) adopt §4's language for free, and
+   * `ease-std`/`ease-lift` become new first-class utilities. */
+  --ease-out: var(--ease-out-curve);
+  --ease-in: var(--ease-in-curve);
+  --ease-std: var(--ease-std-curve);
+  --ease-lift: var(--ease-lift-curve);
+
+  /* ── type scale — §4. One utility per named size, carrying its own
+   * line-height, tracking and weight, so `text-page-title` is the whole
+   * declaration rather than three classes that can drift apart. */
+  --text-display: 2.375rem; /* 38px */
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 700;
+
+  --text-page-title: 2rem; /* 32px */
+  --text-page-title--line-height: 1.2;
+  --text-page-title--letter-spacing: -0.028em;
+  --text-page-title--font-weight: 700;
+
+  --text-section: 1.0625rem; /* 17px */
+  --text-section--line-height: 1.3;
+  --text-section--letter-spacing: -0.008em;
+  --text-section--font-weight: 700;
+
+  --text-body-strong: 15px;
+  --text-body-strong--line-height: 1.45;
+  --text-body-strong--font-weight: 600;
+
+  --text-body: 14.5px;
+  --text-body--line-height: 1.6;
+  --text-body--font-weight: 400;
+
+  --text-meta: 13.5px;
+  --text-meta--line-height: 1.5;
+  --text-meta--font-weight: 400;
+
+  --text-micro: 12px;
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 0.06em;
+  --text-micro--font-weight: 700;
+
+  /* ── raw Tailwind palette, remapped ───────────────────────────────────────
+   * ~22,000 occurrences across ~900 files use Tailwind's stock emerald,
+   * slate, amber, sky and 16 other scales directly rather than a semantic
+   * name — measured 2026-09-05. Rewriting every call site is a project of
+   * its own; overriding what each step COMPILES TO is not, and it is exactly
+   * what "map, do not duplicate" already does for the shadcn semantic names
+   * above. Decided with the product owner: remap the scales rather than
+   * rewrite ~900 files.
+   *
+   * Two rules, applied identically to every family below, and nothing here
+   * is an invented colour — every value is a `var()` reference to a token
+   * already defined in :root from §1:
+   *
+   *   50 and 100   → white (--card). Any existing `bg-emerald-50`/
+   *                  `bg-amber-100` was a tint fill — the exact pattern rule 2
+   *                  and rule 4 ban — so it becomes the one thing the spec
+   *                  allows instead: a solid or nothing. A wash that used to
+   *                  read as "a light success background" now reads as
+   *                  white, which is correct: the redesign's answer to "how
+   *                  do I show a light success background" is not a lighter
+   *                  green, it is a white card with a status chip on it.
+   *
+   *   everything else (200-950) → the family's INK, never its DOT. A raw
+   *                  utility carries no information about whether the
+   *                  author meant a 7px dot or a line of text, and rule 13
+   *                  is explicit that a dot-weight colour must never carry
+   *                  text — `#F08A3C` is 2.50:1, below the AA floor. Ink is
+   *                  the only value that is correct in both positions: text
+   *                  keeps its contrast, and a solid fill using it satisfies
+   *                  rule 5 exactly ("solid fills use the ink, not the
+   *                  dot"). This flattens the visual gradient a raw Tailwind
+   *                  scale used to have — that gradient was never one this
+   *                  system offers; a status has exactly one ink, not nine.
+   */
+
+  /* success family — emerald, green, teal. */
+  --color-emerald-50: var(--card);
+  --color-emerald-100: var(--card);
+  --color-emerald-200: var(--success);
+  --color-emerald-300: var(--success);
+  --color-emerald-400: var(--success);
+  --color-emerald-500: var(--success);
+  --color-emerald-600: var(--success);
+  --color-emerald-700: var(--success);
+  --color-emerald-800: var(--success);
+  --color-emerald-900: var(--success);
+  --color-emerald-950: var(--success);
+  --color-green-50: var(--card);
+  --color-green-100: var(--card);
+  --color-green-200: var(--success);
+  --color-green-300: var(--success);
+  --color-green-400: var(--success);
+  --color-green-500: var(--success);
+  --color-green-600: var(--success);
+  --color-green-700: var(--success);
+  --color-green-800: var(--success);
+  --color-green-900: var(--success);
+  --color-green-950: var(--success);
+  --color-teal-50: var(--card);
+  --color-teal-100: var(--card);
+  --color-teal-200: var(--success);
+  --color-teal-300: var(--success);
+  --color-teal-400: var(--success);
+  --color-teal-500: var(--success);
+  --color-teal-600: var(--success);
+  --color-teal-700: var(--success);
+  --color-teal-800: var(--success);
+  --color-teal-900: var(--success);
+  --color-teal-950: var(--success);
+
+  /* warning family — amber, orange, yellow, lime. */
+  --color-amber-50: var(--card);
+  --color-amber-100: var(--card);
+  --color-amber-200: var(--warning);
+  --color-amber-300: var(--warning);
+  --color-amber-400: var(--warning);
+  --color-amber-500: var(--warning);
+  --color-amber-600: var(--warning);
+  --color-amber-700: var(--warning);
+  --color-amber-800: var(--warning);
+  --color-amber-900: var(--warning);
+  --color-amber-950: var(--warning);
+  --color-orange-50: var(--card);
+  --color-orange-100: var(--card);
+  --color-orange-200: var(--warning);
+  --color-orange-300: var(--warning);
+  --color-orange-400: var(--warning);
+  --color-orange-500: var(--warning);
+  --color-orange-600: var(--warning);
+  --color-orange-700: var(--warning);
+  --color-orange-800: var(--warning);
+  --color-orange-900: var(--warning);
+  --color-orange-950: var(--warning);
+  --color-yellow-50: var(--card);
+  --color-yellow-100: var(--card);
+  --color-yellow-200: var(--warning);
+  --color-yellow-300: var(--warning);
+  --color-yellow-400: var(--warning);
+  --color-yellow-500: var(--warning);
+  --color-yellow-600: var(--warning);
+  --color-yellow-700: var(--warning);
+  --color-yellow-800: var(--warning);
+  --color-yellow-900: var(--warning);
+  --color-yellow-950: var(--warning);
+  --color-lime-50: var(--card);
+  --color-lime-100: var(--card);
+  --color-lime-200: var(--warning);
+  --color-lime-300: var(--warning);
+  --color-lime-400: var(--warning);
+  --color-lime-500: var(--warning);
+  --color-lime-600: var(--warning);
+  --color-lime-700: var(--warning);
+  --color-lime-800: var(--warning);
+  --color-lime-900: var(--warning);
+  --color-lime-950: var(--warning);
+
+  /* error family — red, rose. */
+  --color-red-50: var(--card);
+  --color-red-100: var(--card);
+  --color-red-200: var(--error);
+  --color-red-300: var(--error);
+  --color-red-400: var(--error);
+  --color-red-500: var(--error);
+  --color-red-600: var(--error);
+  --color-red-700: var(--error);
+  --color-red-800: var(--error);
+  --color-red-900: var(--error);
+  --color-red-950: var(--error);
+  --color-rose-50: var(--card);
+  --color-rose-100: var(--card);
+  --color-rose-200: var(--error);
+  --color-rose-300: var(--error);
+  --color-rose-400: var(--error);
+  --color-rose-500: var(--error);
+  --color-rose-600: var(--error);
+  --color-rose-700: var(--error);
+  --color-rose-800: var(--error);
+  --color-rose-900: var(--error);
+  --color-rose-950: var(--error);
+
+  /* info family — sky, blue, cyan. */
+  --color-sky-50: var(--card);
+  --color-sky-100: var(--card);
+  --color-sky-200: var(--info);
+  --color-sky-300: var(--info);
+  --color-sky-400: var(--info);
+  --color-sky-500: var(--info);
+  --color-sky-600: var(--info);
+  --color-sky-700: var(--info);
+  --color-sky-800: var(--info);
+  --color-sky-900: var(--info);
+  --color-sky-950: var(--info);
+  --color-blue-50: var(--card);
+  --color-blue-100: var(--card);
+  --color-blue-200: var(--info);
+  --color-blue-300: var(--info);
+  --color-blue-400: var(--info);
+  --color-blue-500: var(--info);
+  --color-blue-600: var(--info);
+  --color-blue-700: var(--info);
+  --color-blue-800: var(--info);
+  --color-blue-900: var(--info);
+  --color-blue-950: var(--info);
+  --color-cyan-50: var(--card);
+  --color-cyan-100: var(--card);
+  --color-cyan-200: var(--info);
+  --color-cyan-300: var(--info);
+  --color-cyan-400: var(--info);
+  --color-cyan-500: var(--info);
+  --color-cyan-600: var(--info);
+  --color-cyan-700: var(--info);
+  --color-cyan-800: var(--info);
+  --color-cyan-900: var(--info);
+  --color-cyan-950: var(--info);
+
+  /* violet family — violet, indigo, purple, fuchsia, pink. pink has no clean home in a six-status system and is grouped here rather than with error: closer in hue, and it keeps error meaning exactly one thing — failed, unpaid, blocking. */
+  --color-violet-50: var(--card);
+  --color-violet-100: var(--card);
+  --color-violet-200: var(--violet);
+  --color-violet-300: var(--violet);
+  --color-violet-400: var(--violet);
+  --color-violet-500: var(--violet);
+  --color-violet-600: var(--violet);
+  --color-violet-700: var(--violet);
+  --color-violet-800: var(--violet);
+  --color-violet-900: var(--violet);
+  --color-violet-950: var(--violet);
+  --color-indigo-50: var(--card);
+  --color-indigo-100: var(--card);
+  --color-indigo-200: var(--violet);
+  --color-indigo-300: var(--violet);
+  --color-indigo-400: var(--violet);
+  --color-indigo-500: var(--violet);
+  --color-indigo-600: var(--violet);
+  --color-indigo-700: var(--violet);
+  --color-indigo-800: var(--violet);
+  --color-indigo-900: var(--violet);
+  --color-indigo-950: var(--violet);
+  --color-purple-50: var(--card);
+  --color-purple-100: var(--card);
+  --color-purple-200: var(--violet);
+  --color-purple-300: var(--violet);
+  --color-purple-400: var(--violet);
+  --color-purple-500: var(--violet);
+  --color-purple-600: var(--violet);
+  --color-purple-700: var(--violet);
+  --color-purple-800: var(--violet);
+  --color-purple-900: var(--violet);
+  --color-purple-950: var(--violet);
+  --color-fuchsia-50: var(--card);
+  --color-fuchsia-100: var(--card);
+  --color-fuchsia-200: var(--violet);
+  --color-fuchsia-300: var(--violet);
+  --color-fuchsia-400: var(--violet);
+  --color-fuchsia-500: var(--violet);
+  --color-fuchsia-600: var(--violet);
+  --color-fuchsia-700: var(--violet);
+  --color-fuchsia-800: var(--violet);
+  --color-fuchsia-900: var(--violet);
+  --color-fuchsia-950: var(--violet);
+  --color-pink-50: var(--card);
+  --color-pink-100: var(--card);
+  --color-pink-200: var(--violet);
+  --color-pink-300: var(--violet);
+  --color-pink-400: var(--violet);
+  --color-pink-500: var(--violet);
+  --color-pink-600: var(--violet);
+  --color-pink-700: var(--violet);
+  --color-pink-800: var(--violet);
+  --color-pink-900: var(--violet);
+  --color-pink-950: var(--violet);
+
+  /* neutral family — slate, gray, zinc, neutral, stone. One ramp: the app
+     used five different Tailwind grays to mean the same thing, so all five
+     now read the one ink scale. 900/950 lands on body ink, not heading —
+     heading is titles only, and a raw gray utility is never provably a
+     title. */
+  --color-slate-50: var(--card);
+  --color-slate-100: var(--card);
+  --color-slate-200: var(--line);
+  --color-slate-300: var(--line-strong);
+  --color-slate-400: var(--ink-disabled);
+  --color-slate-500: var(--ink-tertiary);
+  --color-slate-600: var(--ink-secondary);
+  --color-slate-700: var(--body);
+  --color-slate-800: var(--body);
+  --color-slate-900: var(--body);
+  --color-slate-950: var(--body);
+  --color-gray-50: var(--card);
+  --color-gray-100: var(--card);
+  --color-gray-200: var(--line);
+  --color-gray-300: var(--line-strong);
+  --color-gray-400: var(--ink-disabled);
+  --color-gray-500: var(--ink-tertiary);
+  --color-gray-600: var(--ink-secondary);
+  --color-gray-700: var(--body);
+  --color-gray-800: var(--body);
+  --color-gray-900: var(--body);
+  --color-gray-950: var(--body);
+  --color-zinc-50: var(--card);
+  --color-zinc-100: var(--card);
+  --color-zinc-200: var(--line);
+  --color-zinc-300: var(--line-strong);
+  --color-zinc-400: var(--ink-disabled);
+  --color-zinc-500: var(--ink-tertiary);
+  --color-zinc-600: var(--ink-secondary);
+  --color-zinc-700: var(--body);
+  --color-zinc-800: var(--body);
+  --color-zinc-900: var(--body);
+  --color-zinc-950: var(--body);
+  --color-neutral-50: var(--card);
+  --color-neutral-100: var(--card);
+  --color-neutral-200: var(--line);
+  --color-neutral-300: var(--line-strong);
+  --color-neutral-400: var(--ink-disabled);
+  --color-neutral-500: var(--ink-tertiary);
+  --color-neutral-600: var(--ink-secondary);
+  --color-neutral-700: var(--body);
+  --color-neutral-800: var(--body);
+  --color-neutral-900: var(--body);
+  --color-neutral-950: var(--body);
+  --color-stone-50: var(--card);
+  --color-stone-100: var(--card);
+  --color-stone-200: var(--line);
+  --color-stone-300: var(--line-strong);
+  --color-stone-400: var(--ink-disabled);
+  --color-stone-500: var(--ink-tertiary);
+  --color-stone-600: var(--ink-secondary);
+  --color-stone-700: var(--body);
+  --color-stone-800: var(--body);
+  --color-stone-900: var(--body);
+  --color-stone-950: var(--body);
 }
+
+/* ============================================================================
+ * §1's own token block, close to verbatim. Ratios are on white cards, where
+ * this text lives; on --ground each is ~5% lower and all still pass AA by a
+ * wide margin (§1's own note).
+ * ========================================================================= */
 
 :root {
-  /* Border radius - generous for modern feel */
-  --radius: 0.875rem;
+  /* ── Brand ── */
+  --primary: #1668e3; /* 5.09:1 on white */
+  --primary-hover: #0f58c6; /* 6.50:1 on white */
+  --primary-tint: #e8f0fd; /* retired as a fill — transient hover tone only */
+  --primary-tint-2: #d5e4fb; /* hairlines, progress tracks. Never a fill behind text */
+  --brand-orange: #f08a3c; /* accent: ALWAYS a solid fill under #0A1B33 (6.90:1) —
+                               2px pet-avatar rings, presence badges, capacity
+                               fills, the now-line, 7px dots. Never an ink */
+  --panel-dark: #0e3a5c; /* the ONE dark surface — same value as --heading */
 
-  /* Light mode - clean, minimal, professional */
-  --background: #f8fafc;
-  --foreground: #1e293b;
+  /* ── Ink ── */
+  --heading: #0e3a5c; /* 11.81:1 — titles only */
+  --body: #0a1b33; /* 17.25:1 */
+  --ink-secondary: #4c5b6c; /* 6.95:1 */
+  --ink-tertiary: #677382; /* 4.83:1 — the floor for text */
+  --ink-disabled: #8c99a3; /* non-text only */
+  --code-fg: #c8d6ea; /* 11.71:1 on --body — code only */
 
+  /* ── Surface ── */
+  --ground: #f6f9ff;
+  --ground-gradient: linear-gradient(
+    150deg,
+    #ffffff 0%,
+    #fbfcff 34%,
+    #f2f6fd 100%
+  );
   --card: #ffffff;
-  --card-foreground: #1e293b;
+  --inset: #f1f5fd;
+  --inset-2: #e6edf9;
+  --line: #e4eaf5;
+  --line-strong: #d3ddee;
 
-  --popover: #ffffff;
-  --popover-foreground: #1e293b;
+  /* ── Status — the ink IS the token. Chips are white with a 1px hairline of
+     the same ink; the -bg tints below fill nothing (rule 2/4) and are kept
+     for reference only, per §1. ── */
+  --success: #0f7a52;
+  --success-bg: #e9f7f1;
+  --success-dot: #18a66e;
+  --warning: #8a5115;
+  --warning-bg: #fef3e8;
+  --warning-dot: #f08a3c;
+  --error: #b23b3b;
+  --error-bg: #fdf0f0;
+  --error-dot: #d24545;
+  --info: #0f58c6;
+  --info-bg: #e8f0fd;
+  --info-dot: #1668e3;
+  --violet: #4c3bb8;
+  --violet-bg: #efedfc;
+  --violet-dot: #6b5ae0;
+  --violet-foreground: #ffffff;
+  --neutral-ink: var(
+    --ink-secondary
+  ); /* alias — §3 cancelled chip is literally this value */
+  --neutral-dot: var(
+    --ink-disabled
+  ); /* alias — §3 cancelled dot is literally this value */
 
-  /* Primary - modern teal/blue */
-  --primary: #0ea5e9;
+  /* WORK_ORDER stage 5's name for the destructive ink — same value as
+     --error, aliased so `--bad` reads correctly wherever that stage's own
+     prose is followed literally. */
+  --bad: var(--error);
+
+  /* ── Charts — desaturated status families, so a series reads as a category
+     and never as an alert. NEVER the saturated status colours above. ── */
+  --chart-1: #1668e3; /* primary as-is — first series */
+  --chart-2: #4f9e85; /* success family, desaturated */
+  --chart-3: #d9a46a; /* warning family, desaturated */
+  --chart-4: #8d85d6; /* violet family, desaturated */
+  --chart-5: #c06a6a; /* error family, desaturated */
+  --chart-grid: #e4eaf5;
+  --chart-axis: #8c99a3;
+
+  /* ── Radius ── */
+  --r-xs: 12px; /* calendar blocks, date badges */
+  --r-row: 14px; /* table + list rows */
+  --r: 16px; /* medium containers, tiles */
+  --r-lg: 24px; /* cards, modals */
+  --r-pill: 999px; /* buttons, inputs, filters, nav, chips */
+
+  /* ── Elevation — tinted to brand navy, never pure black ── */
+  --sh: 0 1px 2px rgba(10, 27, 51, 0.05);
+  --sh-2: 0 12px 26px -18px rgba(10, 27, 51, 0.5);
+  --sh-3: 0 34px 64px -34px rgba(10, 27, 51, 0.4);
+  --sh-cta: 0 14px 26px -16px rgba(22, 104, 227, 0.85);
+  --sh-cta-hover: 0 16px 30px -16px rgba(22, 104, 227, 0.85);
+  --sh-cta-active: 0 4px 10px -8px rgba(22, 104, 227, 0.6);
+
+  /* ── Motion — durations ── */
+  --dur-1: 120ms; /* hover, checkbox, chip */
+  --dur-2: 180ms; /* transform + lift, tab underline, accordion */
+  --dur-3: 220ms; /* shadow growth, colour crossfade */
+  --dur-4: 280ms; /* popover + dropdown enter, toast in */
+  --dur-5: 340ms; /* drawer slide, modal scale-in */
+
+  /* Named `-curve` here and aliased to Tailwind's own `--ease-*` namespace
+     above, so `var(--ease-lift-curve)` and the `ease-lift` utility class
+     always agree — one source, two ways to reach it. */
+  --ease-out-curve: cubic-bezier(0.22, 0.61, 0.36, 1); /* entering */
+  --ease-in-curve: cubic-bezier(0.55, 0.06, 0.68, 0.19); /* leaving */
+  --ease-std-curve: cubic-bezier(0.4, 0, 0.2, 1); /* moving */
+  --ease-lift-curve: cubic-bezier(
+    0.34,
+    1.36,
+    0.64,
+    1
+  ); /* the CTA lift, and nothing else */
+
+  /* ── Layers — gaps of 100 are room to think, not permission to write 301 ── */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-nav: 200;
+  --z-dropdown: 300;
+  --z-drawer: 400;
+  --z-modal: 500;
+  --z-toast: 600;
+  --z-tooltip: 700; /* clears everything, including modal content */
+
+  /* ── Size ── */
+  --control-h: 40px;
+  --control-h-lg: 48px; /* page-header primary action, empty-state CTAs, and
+                            every control below 1024px */
+  --row-h: 48px; /* balanced. compact 40 · roomy 56 */
+  --row-pad: 12px 16px;
+  --row-av: 32px;
+  --tap-min: 48px; /* phone + tablet. 44 is the seated floor, not ours */
+  --nav-h: 40px;
+  --sidebar-w: 266px; /* 68px icon rail 600-1023px, bottom bar ≤599px */
+  --topbar-h: 60px;
+
+  /* ── shadcn-required semantic vars — mapped onto the Yipyy roles above,
+     never a second definition of the same colour. See the table in the
+     stage-1 commit message for why each landed where it did (--secondary
+     and --accent have no named role in the spec at all: this app's own
+     usage of them is a neutral hover/subtle surface in both cases, which is
+     exactly what --inset already is). ── */
+  --background: var(--ground);
+  --foreground: var(--body);
+
+  --card-foreground: var(--body);
+
+  --popover: var(--card);
+  --popover-foreground: var(--body);
+
   --primary-foreground: #ffffff;
 
-  /* Secondary - soft purple */
-  --secondary: #8b5cf6;
-  --secondary-foreground: #ffffff;
+  --secondary: var(--inset);
+  --secondary-foreground: var(--body);
 
-  /* Muted - very light gray */
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted: var(--inset);
+  --muted-foreground: var(--ink-tertiary);
 
-  /* Accent - warm coral/orange for highlights */
-  --accent: #fb923c;
-  --accent-foreground: #ffffff;
+  --accent: var(--inset);
+  --accent-foreground: var(--body);
 
-  /* Destructive - soft red */
-  --destructive: #ef4444;
+  --destructive: var(--bad);
   --destructive-foreground: #ffffff;
 
-  /* Success - fresh green */
-  --success: #22c55e;
   --success-foreground: #ffffff;
-
-  /* Warning - amber */
-  --warning: #f59e0b;
-  --warning-foreground: #1e293b;
-
-  /* Info - sky blue */
-  --info: #0ea5e9;
+  --warning-foreground: #ffffff;
   --info-foreground: #ffffff;
 
-  /* Borders and inputs - subtle */
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #0ea5e9;
+  --border: var(--line);
+  --input: var(--line-strong);
+  --ring: var(--primary);
 
-  /* Chart colors - harmonious palette */
-  --chart-1: #0ea5e9;
-  --chart-2: #22c55e;
-  --chart-3: #8b5cf6;
-  --chart-4: #fb923c;
-  --chart-5: #ec4899;
-
-  /* Sidebar - clean white with subtle separation */
-  --sidebar: #ffffff;
-  --sidebar-foreground: #475569;
-  --sidebar-primary: #0ea5e9;
+  /* ── Sidebar — nav item spec: white + primary hairline when active ── */
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--body);
+  --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #1e293b;
-  --sidebar-border: #f1f5f9;
-  --sidebar-ring: #0ea5e9;
-}
-
-.dark {
-  /* Dark mode - sophisticated and cozy */
-  --background: #0f172a;
-  --foreground: #f1f5f9;
-
-  --card: #1e293b;
-  --card-foreground: #f1f5f9;
-
-  --popover: #1e293b;
-  --popover-foreground: #f1f5f9;
-
-  /* Primary - brighter in dark mode */
-  --primary: #38bdf8;
-  --primary-foreground: #0f172a;
-
-  /* Secondary */
-  --secondary: #a78bfa;
-  --secondary-foreground: #0f172a;
-
-  /* Muted */
-  --muted: #334155;
-  --muted-foreground: #94a3b8;
-
-  /* Accent */
-  --accent: #fb923c;
-  --accent-foreground: #0f172a;
-
-  /* Destructive */
-  --destructive: #f87171;
-  --destructive-foreground: #0f172a;
-
-  /* Success */
-  --success: #4ade80;
-  --success-foreground: #0f172a;
-
-  /* Warning */
-  --warning: #fbbf24;
-  --warning-foreground: #0f172a;
-
-  /* Info */
-  --info: #38bdf8;
-  --info-foreground: #0f172a;
-
-  /* Borders and inputs */
-  --border: #334155;
-  --input: #334155;
-  --ring: #38bdf8;
-
-  /* Chart colors - vibrant for dark mode */
-  --chart-1: #38bdf8;
-  --chart-2: #4ade80;
-  --chart-3: #a78bfa;
-  --chart-4: #fb923c;
-  --chart-5: #f472b6;
-
-  /* Sidebar */
-  --sidebar: #1e293b;
-  --sidebar-foreground: #cbd5e1;
-  --sidebar-primary: #38bdf8;
-  --sidebar-primary-foreground: #0f172a;
-  --sidebar-accent: #334155;
-  --sidebar-accent-foreground: #f1f5f9;
-  --sidebar-border: #334155;
-  --sidebar-ring: #38bdf8;
+  --sidebar-accent: var(--inset);
+  --sidebar-accent-foreground: var(--primary-hover);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--primary);
 }
 
 @layer base {
@@ -230,9 +713,14 @@
     scroll-behavior: smooth;
   }
 
-  /* Better focus states */
+  /* ── Focus ring — §5k, verbatim. A ring wide enough to see past a
+     component's own hover state, layered on top of it rather than
+     replacing it (rule: "Never: outline: none without an equivalent
+     replacement"). ── */
   :focus-visible {
-    @apply outline-ring outline-2 outline-offset-2;
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(22, 104, 227, 0.12);
   }
 }
 

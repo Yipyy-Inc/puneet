@@ -2,17 +2,16 @@ import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import type { Metadata } from "next";
 import { getLocale } from "next-intl/server";
 import { headers } from "next/headers";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/lib/query-provider";
 import { StagingBanner } from "@/components/staging-banner";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
+// Inter was loaded here and used by exactly one component
+// (MessageCenter.tsx), an inline style override with no deliberate reason
+// behind it. design-system.md §4: "Plus Jakarta Sans throughout... Drop the
+// unused Inter request." Dropped 2026-09-05, stage 1.
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -71,7 +70,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={` ${inter.variable} ${plusJakarta.variable} `}
+      className={` ${plusJakarta.variable} `}
       suppressHydrationWarning
     >
       <head suppressHydrationWarning>

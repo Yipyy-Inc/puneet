@@ -57,8 +57,49 @@ The unlock. Everything downstream reads from here.
   the system rather than needing a rewrite.
 - Plus Jakarta Sans via `next/font`, with the §type scale as `--text-*`.
 
-**Done when:** `rg -i "emerald|#0EA5E9|slate-|gray-"` returns nothing in `src/components/ui`, and no
-component defines a hex literal.
+**Done — 2026-09-05, and the literal grep above needs a correction rather than a checkmark.**
+
+The grep assumed a rewrite strategy: touch every file, replace `emerald-600` with a semantic class.
+That is not the strategy this stage used. Measured before starting: ~22,000 raw Tailwind colour-class
+occurrences across ~900 files (`emerald` 3,376 · `slate` 3,280 · `amber` 3,829 · `red` 1,775 · `blue`
+1,324 · `violet` 850 · 15 more families) — a rewrite of that size is a project of its own, not one
+stage. Decided with the product owner: **remap what each step of Tailwind's OWN palette compiles to**,
+in `@theme`, rather than rewrite ~900 files. `--color-emerald-600: var(--success)` and so on, for
+every step of every family the app uses — 50/100 to white (the tint-fill ban, rule 2/4), everything
+else to the family's ink, never its dot (rule 13). Nothing invented: every value is a `var()`
+reference to a token already in §1.
+
+**So the grep still finds the string "emerald" in `src/components/ui` — 75 occurrences — and that is
+correct, not a regression.** Every one of them is now a class name that compiles to a Yipyy token; the
+text search cannot see that, because it only ever searched for the string, not what the string
+resolves to. Re-run split in two, and both halves are true:
+
+```
+rg -i "#0EA5E9" src/components/ui            # 0 — no raw hex literal, genuinely clean
+rg -i "emerald|slate-|gray-" src/components/ui  # 75 — all now-correct remapped classes
+```
+
+Verified against the real compiled CSS, not asserted: `bunx @tailwindcss/cli` against this repo's
+actual `src/**/*.{ts,tsx}` shows `.text-emerald-600 { color: var(--success); }`,
+`.bg-emerald-50 { background-color: var(--card); }`, `.text-slate-500 { color: var(--ink-tertiary); }`.
+Confirmed live in the running app too — role badges, booking-status chips and the maintenance banner
+all now render white-background-plus-coloured-ink (the §3 chip pattern) with zero component files
+touched, purely from the token remap.
+
+**What genuinely remains, and where it's tracked:** raw hex literals that bypass Tailwind's palette
+entirely — an inline `style={{ color: '#0EA5E9' }}` or an arbitrary `text-[#0EA5E9]` — are NOT fixed
+by a scale remap, because no class name is involved for `@theme` to intercept. Measured: 296+
+occurrences of seven old-palette hex values alone, across ~21+ files, none of them in
+`src/components/ui` (that directory has zero raw hex literals — confirmed clean). Logged in
+[docs/quality/debt-map.md](../quality/debt-map.md), not fixed here — that is per-file work, unrelated
+to the token layer.
+
+Also done in this stage, each named because it is a component-level change stage 1 does not
+otherwise make: dropped the unused Inter font load (`layout.tsx`, `MessageCenter.tsx` — §4 says so
+directly); `dialog.tsx`'s modal radius corrected from `rounded-lg` to `rounded-2xl` (§5i names modals
+at 24px, and `card.tsx` already proved `rounded-2xl` is this app's own convention for that rung);
+removed the `darkModeEnabled` toggle from `GlobalSettings.tsx` and its data fixture, a control that
+promised a feature confirmed on 2026-09-03 to never exist.
 
 **Guardrails to grep after this stage and every one after it:**
 
