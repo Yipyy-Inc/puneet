@@ -1,0 +1,99 @@
+# ============================================================================
+# staging.yipyy.com — where the redesign is reviewed before production sees it.
+#
+# ADR 0007. This file exists ONLY on a box running staging: the Caddyfile
+# imports `/etc/caddy/sites/*.caddy`, and a glob that matches nothing is not an
+# error, so a box without staging needs no edit and no placeholder.
+#
+# ── WHY A NAMED SITE, AND NOT THE CATCH-ALL ───────────────────────────────
+#
+# The catch-all `https://` block at the bottom of the Caddyfile would match this
+# hostname — it matches any SNI a named block does not claim — and send it to
+# `(upstream)`, which is the PRODUCTION colour. Staging would then be
+# production wearing a different address.
+#
+# Naming the site also settles the certificate, and that is the part that would
+# otherwise not work at all. The catch-all issues on demand, and on-demand
+# issuance asks `/api/internal/tls-ask` first, which allows the apex, `www`,
+# `app.`, `hq.` and hostnames that resolve to a real facility — and nothing
+# else. `staging` is one of the 37 RESERVED labels in `src/lib/facility-host.ts`
+# (and in Postgres), so it can never name a facility, so tls-ask answers 403 and
+# the handshake fails before a byte reaches the app. A NAMED site is obtained at
+# startup and never consults that route, so the reserved label stays reserved
+# and staging still gets a certificate.
+#
+# ── THE BASIC AUTH IS NOT DECORATION ──────────────────────────────────────
+#
+# This is a real login page for a real product on a real domain, and it reads
+# and writes the PRODUCTION database (ADR 0007). It is not a sandbox. Anyone who
+# finds it is one password away from live customer records, so it is gated
+# before the app ever sees the request.
+#
+# STAGING_BASIC_AUTH_USER and STAGING_BASIC_AUTH_HASH come from the box's .env.
+# The hash is bcrypt, from `caddy hash-password`. If the hash is empty this file
+# does not parse — which is deliberate and safe: `deploy-staging.sh` validates
+# the config and restores the previous file before anything is reloaded, so a
+# missing credential fails the staging deploy loudly instead of publishing an
+# unguarded site quietly.
+# ============================================================================
+
+staging.yipyy.com {
+	encode zstd gzip
+
+	basic_auth {
+		{$STAGING_BASIC_AUTH_USER:yipyy} {$STAGING_BASIC_AUTH_HASH}
+	}
+
+	# Not in a search index, ever. The gate above already stops a crawler, but a
+	# link pasted into a chat that unfurls it is not a crawler, and the header
+	# costs nothing.
+	header X-Robots-Tag "noindex, nofollow, noarchive"
+
+	# Same rule as the production blocks: the TLS gate is Caddy→app over the
+	# container network. Answering it publicly would let anyone enumerate which
+	# facility slugs exist.
+	handle /api/internal/* {
+		abort
+	}
+
+	handle {
+		reverse_proxy app_staging:3000 {
+			# Host is preserved, exactly as in `upstream.caddy`, and for the
+			# same three readers: `src/proxy.ts` decodes the audience from it,
+			# `workos-actions.ts` builds the OAuth redirect_uri from it, and
+			# `passkeys.ts` compares the WebAuthn origin byte for byte. Which is
+			# what makes ONE image serve both hostnames correctly — sign-in on
+			# staging returns to staging.
+			#
+			# `staging` being a reserved label means `resolveHost` answers
+			# `{ audience: "staff", slug: null }` here, the same answer it gives
+			# `app.yipyy.com`, so `/` opens the portal rather than the marketing
+			# page. No routing change was needed for any of this.
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+
+			transport http {
+				dial_timeout 5s
+
+				# Node's server.keepAliveTimeout is 5s and Caddy's upstream
+				# idle keep-alive is two minutes, so Caddy pools connections
+				# Node has already closed and loses the race a few times per
+				# thousand requests. Shorter than Node's, so Caddy closes
+				# first. Staging is not exempt from this — it is the same
+				# server — and a handful of unexplained 502s during a client
+				# review is exactly the wrong moment to be debugging it.
+				keepalive 3s
+				keepalive_idle_conns 16
+			}
+
+			# No `response_header_timeout` as long as production's: nothing here
+			# waits 150 seconds for somebody to tap a card, because staging runs
+			# CLOVER_ENVIRONMENT=sandbox. 60s is generous for a page.
+			response_header_timeout 60s
+			read_timeout 90s
+
+			lb_try_duration 3s
+			lb_try_interval 250ms
+		}
+	}
+}

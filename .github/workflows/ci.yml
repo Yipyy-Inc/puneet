@@ -4,11 +4,25 @@ name: CI
 # release-only. Both are protected and require typecheck/lint/format/build, so
 # both must appear here — a protected branch whose required checks never run
 # blocks every merge into it, permanently and with no obvious cause.
+#
+# ── AND `redesign`, WHICH DEPLOYS SOMEWHERE ELSE ENTIRELY ──────────────────
+#
+# ADR 0007. The design system imported on 2026-09-03 is adopted on its own
+# branch, and that branch deploys to staging.yipyy.com rather than to
+# production. It is here so the same gates run on it — a redesign that does not
+# typecheck is not a redesign — and so `image` builds the artifact the staging
+# deploy needs.
+#
+# The two never cross. `deploy` is main-only and `deploy-staging` is
+# redesign-only, both written as explicit `github.ref` conditions rather than
+# as an absence, because "this job happens not to run on that branch" is a fact
+# somebody edits away by accident and "this job refuses to run on that branch"
+# is not.
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, redesign]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, redesign]
   # The full 59-spec suite, nightly. 03:00 UTC is after the working day in both
   # timezones this is developed in and before the Clover sweep's busiest window.
   schedule:
@@ -32,9 +46,15 @@ on:
 # killing it — runs stay serialised, which is what the shared database needs,
 # and no job is ever interrupted halfway. Feature branches still cancel, because
 # there the only cost is CI minutes.
+#
+# `redesign` is in the never-cancelled set for BOTH of those reasons and not by
+# analogy: it deploys, so a cancelled run can kill deploy-staging.sh between
+# "started the container" and "reloaded Caddy"; and it runs against the same one
+# Postgres, so a cancelled e2e job skips its `afterAll` and leaks rows into it.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: >-
+    ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/redesign' }}
 
 jobs:
   typecheck:
@@ -598,7 +618,14 @@ jobs:
     name: image (build & push to GHCR)
     runs-on: ubuntu-latest
     needs: [typecheck, lint, format, unit, checks, sql, build]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Both deploying branches. ONE image per commit, whichever branch it is on:
+    # production and staging run the same artifact from the same registry, and
+    # the only difference between them is the runtime environment their
+    # container is given (ADR 0007). Two images would be two things to be
+    # confused about which one the client approved.
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/redesign')
     permissions:
       contents: read
       packages: write
@@ -669,7 +696,12 @@ jobs:
     name: deploy (VPS)
     runs-on: ubuntu-latest
     needs: image
-    if: vars.DEPLOY_ENABLED == 'true'
+    # `github.ref` is named EXPLICITLY rather than left to `image`'s condition.
+    # Since ADR 0007 the image job also builds on `redesign`, so inheriting its
+    # branch rule through `needs:` would have quietly started deploying the
+    # redesign to production — one edit, in a different job, with no line
+    # anywhere saying that is what it did.
+    if: vars.DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
     # Queued, never cancelled, never parallel. Two deploys racing each other
     # over one compose project is how a box ends up running an image nobody
     # chose.
@@ -830,3 +862,159 @@ jobs:
               exit 1
             }
             systemctl list-timers messaging-tick.timer --no-pager
+
+  # ── THE STAGING DEPLOY ────────────────────────────────────────────────────
+  #
+  # ADR 0007. staging.yipyy.com is where the redesign is reviewed before the
+  # client's customers ever see it, and it is a THIRD CONTAINER on the same box
+  # rather than a second server: 1200m beside production's two 2600m colours,
+  # behind the same Caddy, against the same Postgres.
+  #
+  # DARK until `vars.DEPLOY_STAGING_ENABLED` is "true", the same switch shape as
+  # the production deploy — so this job can sit on the branch through the whole
+  # setup without touching a box that is not ready for it.
+  #
+  # ── WHY IT COPIES FILES AND THE PRODUCTION DEPLOY DOES NOT ────────────────
+  #
+  # The production deploy has never synced `caddy/` or `docker-compose.yml`;
+  # both are applied to the box by hand, and this job does not change that. What
+  # it copies are three files that DID NOT EXIST before staging and that
+  # production never reads: the staging compose overlay, the staging Caddy site
+  # block, and its deploy script. Nothing in any of them can alter what the blue
+  # or green containers do, which is what makes it safe to let CI write them.
+  #
+  # The one edit that is NOT automated is the `import /etc/caddy/sites/*.caddy`
+  # line in the Caddyfile, because that file also defines production's site
+  # blocks. It is a one-time hand-edit, checked for below; after it, every
+  # future site file needs no further Caddyfile change.
+  deploy-staging:
+    name: deploy (staging.yipyy.com)
+    runs-on: ubuntu-latest
+    needs: image
+    # Branch named explicitly for the same reason `deploy` names `main`: this
+    # must refuse to run from anywhere else, rather than merely happening not
+    # to.
+    if: vars.DEPLOY_STAGING_ENABLED == 'true' && github.ref == 'refs/heads/redesign'
+    # Its own group, NOT `deploy-production`. A staging deploy must never queue
+    # behind a production one or the reverse — they touch different containers,
+    # and making a client review wait on a hotfix is a delay with no safety in
+    # it.
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            deploy
+            caddy/sites
+
+      # `docker-compose.staging.yml` sits at the repo root, which sparse
+      # checkout's cone mode always includes. This step exists to fail loudly
+      # with the reason if that ever stops being true, rather than to let scp
+      # report `tar: Cowardly refusing to create an empty archive` — which is
+      # what a missing source looks like, and does not obviously mean "there is
+      # no file".
+      - name: Check the staging files are present
+        run: |
+          for f in docker-compose.staging.yml caddy/sites/staging.caddy deploy/deploy-staging.sh; do
+            test -f "$f" || { echo "::error::$f is missing from the checkout."; exit 1; }
+          done
+          echo "all three staging files are present"
+
+      - name: Copy the staging files
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "docker-compose.staging.yml,caddy/sites/staging.caddy,deploy/deploy-staging.sh"
+          target: /tmp/yipyy-staging
+
+      - name: Deploy staging over SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          # The same 60s connect timeout as the production deploy, and for the
+          # same measured reason: the action's default is 30s, and a runner that
+          # cannot route to this host expires there before a byte of the script
+          # has run.
+          timeout: 60s
+          command_timeout: 10m
+          envs: GHCR_TOKEN,GHCR_USER
+          script: |
+            set -e
+            trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+            cd /opt/yipyy
+            mkdir -p caddy/sites
+
+            # `install` writes a new file and moves it into place, replacing the
+            # inode. That is safe here only because the caddy DIRECTORY is
+            # bind-mounted rather than the individual files — see the header of
+            # caddy/Caddyfile, where getting this wrong cost an hour on
+            # 2026-08-25.
+            install -m 0644 /tmp/yipyy-staging/docker-compose.staging.yml ./docker-compose.staging.yml
+            install -m 0644 /tmp/yipyy-staging/caddy/sites/staging.caddy   ./caddy/sites/staging.caddy
+            install -m 0755 /tmp/yipyy-staging/deploy/deploy-staging.sh    ./deploy-staging.sh
+            rm -rf /tmp/yipyy-staging
+
+            # The Caddyfile on the box has to import the sites directory. It is
+            # the one file this job will not write, because it also defines what
+            # production serves — so it is checked instead, with the fix in the
+            # message rather than in a runbook nobody has open.
+            grep -q 'import /etc/caddy/sites/' caddy/Caddyfile || {
+              echo "The Caddyfile on this box does not import the sites directory,"
+              echo "so staging.yipyy.com would fall through to the catch-all and be"
+              echo "served by the PRODUCTION container. Add this line to"
+              echo "/opt/yipyy/caddy/Caddyfile, above the catch-all https:// block:"
+              echo
+              echo "  import /etc/caddy/sites/*.caddy"
+              echo
+              exit 1
+            }
+
+            ./deploy-staging.sh ${{ github.sha }}
+
+      # ── 401 IS THE PASS, NOT A FAILURE ────────────────────────────────────
+      #
+      # From the public internet, like the production check, and it deliberately
+      # asserts the GATE rather than the app. A 401 from Caddy proves four
+      # things at once: DNS resolves here, the certificate is valid and issued
+      # for this name, the named site block is live rather than the catch-all,
+      # and the basic auth is armed.
+      #
+      # A 200 is the alarming answer, not a passing one — it would mean
+      # staging.yipyy.com is answering the open internet without a password, in
+      # front of the production database. The app's own health was already
+      # proved inside the box by deploy-staging.sh, which renders /sign-in.
+      #
+      # No credential is needed in CI to assert any of that, which is the point:
+      # a plaintext staging password in GitHub secrets is a plaintext staging
+      # password.
+      - name: Verify the gate from outside
+        run: |
+          code=""
+          for i in $(seq 1 12); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://staging.yipyy.com/api/health || true)
+            if [ "$code" = 401 ]; then echo "staging is up and gated"; exit 0; fi
+            if [ "$code" = 200 ]; then
+              echo "::error::staging.yipyy.com answered 200 WITHOUT a password, in front of the production database."
+              echo "Check basic_auth in caddy/sites/staging.caddy and STAGING_BASIC_AUTH_HASH in the box's .env."
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "::error::staging.yipyy.com never answered 401 (last code: ${code:-none})."
+          echo "The container may be healthy but unreachable — check the Caddy site block."
+          exit 1
