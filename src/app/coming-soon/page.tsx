@@ -146,10 +146,18 @@ export default function ComingSoonPage() {
           <section className={styles.mascotWrap}>
             <span className={styles.mascotGlow} aria-hidden="true" />
             <Image
-              src="/yipyy-mascot.png"
-              alt="The Yipyy mascot holding a tablet that reads Coming Soon"
-              width={1151}
-              height={1367}
+              // The retired render is gone; `welcome` is §5d2's own pose
+              // for the product's front door. Square 720, not the old
+              // 1151×1367 portrait — the rule below is width/height auto with
+              // object-fit: contain, so the new ratio is honoured, not cropped.
+              src="/mascot/yipyy-mascot-welcome.webp"
+              // Empty by design (§5d1): he sits beside the words, never
+              // instead of them, and the headline already says what this page
+              // is. The old string also described a tablet this pose is not
+              // holding.
+              alt=""
+              width={720}
+              height={720}
               className={styles.mascot}
               priority
               sizes="(max-width: 1100px) 60vw, 420px"

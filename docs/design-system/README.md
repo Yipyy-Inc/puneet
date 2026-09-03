@@ -97,8 +97,9 @@ Stage 0 of the work order is **complete**. Nothing here needs copying again.
 | The mark                      | `public/yipyy-logo.svg`                                         | Per-path inks corrected. `public/transparent-logo.svg` stays in place                                                                                                        |
 | The old system                | `docs/design-system/as-built-audit-2026-08-31.md`               | What is being replaced. Reference only                                                                                                                                       |
 
-`public/yipyy-mascot.png` is still present on purpose — it is deleted in stage 3, once
-`src/app/coming-soon/page.tsx` line 149 stops loading it.
+`public/yipyy-mascot.png` is **gone** — stage 3 repointed `src/app/coming-soon/page.tsx` to
+`/mascot/yipyy-mascot-welcome.webp` (§5d2's own pose for the front door) and deleted the retired
+render, 2026-09-03.
 
 ## The system in one page
 
@@ -172,9 +173,10 @@ Four insertion points carry most of the system. They are stages 1–3 of the wor
 
 ## Known defects the adoption fixes
 
-- `table-empty-state.tsx` hardcodes `bg-emerald-600 hover:bg-emerald-700` on its action button —
-  off-palette. It becomes `--primary`.
-- `coming-soon/page.tsx` line 149 still loads the retired `/yipyy-mascot.png`.
+- ~~`table-empty-state.tsx` hardcodes `bg-emerald-600 hover:bg-emerald-700` on its action button —
+  off-palette.~~ Cleared in stage 2: it is `--primary` on a `yy-cta` pill.
+- ~~`coming-soon/page.tsx` line 149 still loads the retired `/yipyy-mascot.png`.~~ Cleared in
+  stage 3; the file is deleted.
 - Six nav glyph collisions in `src/lib/nav/facility-nav.ts` (§5b1 lists each with its resolution).
 - Micro labels previously specified at `#8C99A3` (2.92:1) — a non-text ink. They are `#677382`.
 

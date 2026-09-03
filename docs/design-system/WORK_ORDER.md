@@ -1,6 +1,9 @@
 # Work order — adopting the Yipyy design system
 
-**Stage 0 is done** (2026-09-03). Stage 1 is next, and nothing downstream is right until it is.
+**Stages 0, 1, 2 and 3 are done** (all 2026-09-03). **Stage 4 is next.**
+
+The stage headings below carry the same status, and they are the record — a stage that shipped
+without its heading being updated is how this file drifted from the repo once already.
 
 Eleven stages. One PR each, in order. Every stage cites its spec section; put the section number in
 the commit message. Do not start a stage before the previous one is merged. This repo pushes straight to `main` (see
@@ -24,8 +27,8 @@ Everything below has been done. It is kept as the record of where each file went
   place; `yipyy-logo.svg` → `public/`.
 - The previous `docs/design-system.md` — an audit of the system being replaced — moved to
   `docs/design-system/as-built-audit-2026-08-31.md`.
-- `public/yipyy-mascot.png` is **still present**: it is deleted in stage 3, after its one consumer
-  is repointed.
+- `public/yipyy-mascot.png` was still present here; stage 3 repointed its one consumer and
+  **deleted it** (2026-09-03).
 
 **Done when — and this was checked rather than assumed, 2026-09-03:**
 
@@ -45,7 +48,7 @@ Everything below has been done. It is kept as the record of where each file went
 
 ---
 
-## Stage 1 — tokens in `@theme` · §1, §2, §3, §4
+## Stage 1 — tokens in `@theme` · §1, §2, §3, §4 · **DONE 2026-09-03**
 
 The unlock. Everything downstream reads from here.
 
@@ -112,7 +115,7 @@ rg "bg-(orange|amber)-[0-9]{3}"                                  # orange as any
 
 ---
 
-## Stage 2 — the empty-state choke point · §5d, §5d1, §5d2
+## Stage 2 — the empty-state choke point · §5d, §5d1, §5d2 · **DONE 2026-09-03**
 
 Highest leverage in the codebase. ~28 call sites, one component.
 
@@ -160,7 +163,7 @@ portal**, at which point these become lookups instead of analogies.
 
 ---
 
-## Stage 3 — the four route-level states · §5d2 state ladder
+## Stage 3 — the four route-level states · §5d2 state ladder · **DONE 2026-09-03**
 
 These files already exist and take a pose directly.
 
@@ -178,7 +181,38 @@ Also repoint `src/app/coming-soon/page.tsx` line 149 from `/yipyy-mascot.png` to
 `/mascot/yipyy-mascot-welcome.webp`.
 
 **Done when:** all four routes render their pose, and deleting the `<img>` leaves a surface that still
-reads correctly.
+reads correctly. — **Met.** Verified in a browser at 1280 and at 599 (§6 rule 7), and by deleting
+every `<img>` on the page and re-reading it: glyph, ink, heading, sentence and action survive with
+no gap left behind.
+
+**What shipped, beyond the four files.** The surface is one component,
+[`src/components/ui/route-state.tsx`](../../src/components/ui/route-state.tsx), built to the
+reference page's own rendered "a whole view that failed" panel. Three things it uncovered are
+recorded here because they were invisible to every gate:
+
+1. `--color-body` shadowed `--text-body`, so §1's body type step generated no utility at all. The
+   ink is now `--color-body-ink`.
+2. `tailwind-merge` reads any unknown `text-*` class as a COLOUR, so putting a §1 type step in a
+   `cn()` silently DELETED the ink beside it — a primary pill shipped with near-black type on
+   `#1668E3`. `cn` now names the scale (`src/lib/utils.ts`); keep that list in step with `@theme`.
+3. `transition-all` in shadcn's Button base was overriding `yy-cta`'s §4 transition on every CTA in
+   the app, stage 2's 80 empty states included. `yy-cta` is now specificity 0,2,0.
+
+**Three §5v questions this stage could not answer from the four sources** — each is one line to
+change if the answer differs:
+
+- **No glyph owns "permission denied."** §5b1's map has 32 nav areas, 20 actions, 18 objects and 8
+  statuses, and none of them mean restricted. `lock` is used, which collides with nothing.
+- **No ink is assigned to a 404 or to a first-paint load.** The status-ink map covers six statuses;
+  `confused` and `loading` are on the state ladder but not in it. Neutral `#4C5B6C` and `--primary`
+  respectively.
+- **The map and the reference page disagree on the retry glyph.** icon-map.json says `refresh-cw`;
+  the rendered failed-view panel draws `rotate-ccw`. `refresh-cw` is used, because "one glyph per
+  meaning" is the rule the map exists to enforce and `rotate-ccw` would be its synonym.
+
+And one asset observation, for the design owner rather than for code: the shipped
+`yipyy-mascot-error` render reads level-to-pleasant rather than the **low** register its own
+character sheet assigns it — `confused` is visibly the sadder of the two.
 
 ---
 
