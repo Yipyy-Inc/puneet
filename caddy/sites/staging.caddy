@@ -84,13 +84,22 @@ staging.yipyy.com {
 				# review is exactly the wrong moment to be debugging it.
 				keepalive 3s
 				keepalive_idle_conns 16
-			}
 
-			# No `response_header_timeout` as long as production's: nothing here
-			# waits 150 seconds for somebody to tap a card, because staging runs
-			# CLOVER_ENVIRONMENT=sandbox. 60s is generous for a page.
-			response_header_timeout 60s
-			read_timeout 90s
+				# ── THESE TWO LIVE INSIDE `transport`, NOT BESIDE IT ──────────
+				#
+				# They shipped one level out and this file was never validated,
+				# because staging never deployed: `caddy validate` fails with
+				# "unrecognized subdirective response_header_timeout" and
+				# deploy-staging.sh exits before reloading. Production's own
+				# upstream.caddy has always had them in the right place — this
+				# file simply did not match it.
+				#
+				# No response_header_timeout as long as production's: nothing
+				# here waits 150 seconds for somebody to tap a card, because
+				# staging runs CLOVER_ENVIRONMENT=sandbox. 60s suits a page.
+				response_header_timeout 60s
+				read_timeout 90s
+			}
 
 			lb_try_duration 3s
 			lb_try_interval 250ms

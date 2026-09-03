@@ -154,11 +154,44 @@ there because Caddy reads them, not the app:
 
 ```
 STAGING_BASIC_AUTH_USER=yipyy
-STAGING_BASIC_AUTH_HASH=<the bcrypt hash it printed>
+STAGING_BASIC_AUTH_HASH=<the hash, with every $ DOUBLED — see below>
+```
+
+**Double every `$` in the hash.** A bcrypt hash is
+`$2a$14$<salt><digest>`, and Docker Compose interpolates `$` in a
+`.env` value: it read `$VWagk8E6gfLuqYgx3SegxegOFaG0br7kVd` as a variable name,
+found nothing, and substituted empty. The container received
+`$2a$14.42vLE0n5XGx2romoo2` — a hash that still PARSES, so Caddy starts and the
+gate looks up, and then rejects the correct password. Measured on 2026-09-03.
+
+```
+STAGING_BASIC_AUTH_HASH=$$2a$$14$$VWagk8E6gfLuqYgx3SegxegOFaG0br7kVd.42vLE...
+```
+
+Confirm what ARRIVED rather than what you wrote — that gap is the failure mode:
+
+```
+docker inspect yipyy-caddy --format '{{range .Config.Env}}{{println .}}{{end}}' | grep STAGING_BASIC
 ```
 
 `deploy-staging.sh` refuses to start without the hash, so a missing one fails
 the deploy rather than publishing an unguarded site.
+
+**1b. Take `staging.yipyy.com` OUT of `PRIMARY_HOSTS`.** It was left there by the
+Vercel cutover, which used that hostname to obtain certificates before the apex
+resolved here. While it stays, the named primary block claims the SNI and
+staging.yipyy.com serves **production, with no password** — verified answering
+200 on 2026-09-03 — and adding a second site block for the same address makes
+Caddy refuse the whole config as a duplicate.
+
+```
+PRIMARY_HOSTS=yipyy.com, www.yipyy.com
+```
+
+This one needs the container RECREATED, not reloaded: Caddy expands `{$VAR}` from
+its process environment at load, so `caddy reload` re-reads the file with the old
+values. `docker compose -f docker-compose.yml up -d caddy` — a second or two of
+proxy downtime, so do it deliberately and check the apex straight after.
 
 **2. One line in the box's Caddyfile.** The only file CI will not write, because
 it also defines what production serves. Above the catch-all `https://` block in
