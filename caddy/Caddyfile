@@ -105,6 +105,25 @@ import /etc/caddy/upstream.caddy
 	import yipyy_upstream
 }
 
+# ── EXTRA SITES, IF THIS BOX HAS ANY ───────────────────────────────────────
+#
+# A glob that matches nothing is not an error in Caddy, so a box with no extra
+# sites needs neither this directory nor a placeholder in it. One box has one:
+# `sites/staging.caddy`, where the redesign is reviewed before production sees
+# it (ADR 0007).
+#
+# It must be imported BEFORE the catch-all below to be legible, though Caddy
+# does not actually care: it matches the most specific site address rather than
+# the first, so a named `staging.yipyy.com` beats `https://` wherever it sits.
+# Written here anyway, because the next person reading top to bottom should not
+# have to know that rule to believe the file.
+#
+# Anything landing here is a WHOLE site block with its own address, its own
+# upstream and its own gate. It is deliberately not the (upstream) snippet: that
+# one is the blue/green pair a deploy rewrites, and a second site pointing at it
+# would be production wearing a different hostname.
+import /etc/caddy/sites/*.caddy
+
 # ── Every facility subdomain ───────────────────────────────────────────────
 # A bare `https://` is a catch-all: it matches any SNI the block above does not
 # claim. It cannot be written `*.yipyy.com`, because a wildcard SITE address

@@ -1,0 +1,151 @@
+# ============================================================================
+# staging.yipyy.com — the third container.
+#
+# ADR 0007. An OVERLAY, applied as:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml \
+#     --profile staging up -d app_staging
+#
+# ── WHY A SEPARATE FILE RATHER THAN A THIRD SERVICE IN THE MAIN ONE ───────
+#
+# The deploy job SSHes to the box and copies `deploy/` — it has never synced
+# `docker-compose.yml` or `caddy/`, which are applied by hand. So a staging
+# service added to the main compose file would have to be applied by hand too,
+# and every future edit to it would be a hand-edit of the file that also defines
+# what production runs.
+#
+# This file is NEW, staging-only, and CI may copy it freely: there is no
+# service, volume or network in it that production reads, so a bad version of it
+# cannot change what the blue or green containers do. The blast radius is one
+# container that nobody's customer has ever heard of.
+#
+# ── IT SHARES THE PRODUCTION DATABASE, ON PURPOSE ─────────────────────────
+#
+# Decided in ADR 0007 and it is the single most important thing to know here.
+# The Supabase URL and publishable key are inlined by `next build`, so a
+# separate database would mean a separate image per commit; sharing means ONE
+# image and what the client approves is what ships. The cost is that every write
+# on staging is a production write, and the three overrides below are what keep
+# that survivable.
+# ============================================================================
+
+name: yipyy
+
+services:
+  app_staging:
+    profiles: ["staging"]
+    container_name: yipyy-app-staging
+    image: ghcr.io/yipyy-inc/puneet:${IMAGE_TAG_STAGING:-latest}
+    restart: unless-stopped
+    init: true
+
+    # The SAME runtime secrets as production — the same Supabase, the same
+    # WorkOS, the same Postgres. See the header.
+    env_file:
+      - .env
+
+    # ── AND THESE THREE OVERRIDE IT ─────────────────────────────────────────
+    #
+    # `environment:` beats `env_file:` in compose, which is the whole mechanism.
+    # NONE of these may ever be moved into `.env`: that file is shared by both
+    # production colours, so a `YIPYY_DEPLOYMENT=staging` leaking into it would
+    # stop production sending a single message and nothing would say why.
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      TZ: UTC
+
+      # What every guard in `src/lib/deployment.ts` reads. Unset means
+      # production, so the default is always the safe-for-customers answer and
+      # a container has to opt IN to being staging.
+      YIPYY_DEPLOYMENT: staging
+
+      # No real card can be charged from here. The code already refuses to mix
+      # sandbox and live credentials, so this cannot half-apply.
+      #
+      # It does NOT mean no row is written: a sandbox payment still writes to
+      # the live money tables, because the database is shared.
+      CLOVER_ENVIRONMENT: sandbox
+
+      # Outbound email, SMS and voice are recorded and not dispatched.
+      #
+      # This is the guard that matters most, and the reason is not obvious: the
+      # messaging tick is a systemd timer on THIS box that polls `message_sends`
+      # and dispatches what is due. It reads the shared table and has no idea
+      # which hostname queued the row. So a message queued from staging would be
+      # sent, for real, to a real customer, by production — and staging
+      # installing no timer of its own changes nothing.
+      #
+      # Set to "false" deliberately, for a review that needs to watch a message
+      # actually arrive, and set it back afterwards.
+      STAGING_SUPPRESS_SENDS: "true"
+
+      # 900 MB, against production's 1800. Two viewers, not a facility's
+      # traffic — and an uncapped Node heap on a 7.8 GB box with two production
+      # colours already resident is how all three get OOM-killed at once.
+      NODE_OPTIONS: "--max-old-space-size=900"
+
+    # Nothing here waits 150 seconds for somebody to tap a card, so there is no
+    # reason to hold a stop open. 30s is a page finishing.
+    stop_grace_period: 30s
+
+    # Production's colours cap at 2600m each and BOTH stay resident so a
+    # rollback is one reload. 2600 + 2600 + 1200 + Caddy leaves the box room;
+    # a third 2600m service would not.
+    mem_limit: 1200m
+
+    # Deliberately no `ports:` — same rule as production. Docker publishes ports
+    # by writing iptables rules directly, bypassing ufw entirely, so a published
+    # port here would put an unfirewalled staging site on the internet whatever
+    # ufw says. The ONLY way in is Caddy, which is where the basic auth is.
+    expose:
+      - "3000"
+
+    tmpfs:
+      - /tmp:size=128m,mode=1777,uid=10001,gid=10001
+
+    volumes:
+      # Shared with the production colours on purpose: Next writes
+      # content-hashed paths, so several readers and writers are safe, and
+      # staging re-optimising every facility logo on 2 vCPU would compete with
+      # production for the CPU it needs to serve customers.
+      - next_image_cache:/app/.next/cache
+
+    networks:
+      edge:
+        # NOT the `app` alias. That name is what the Caddyfile's on-demand-TLS
+        # `ask` endpoint resolves, and it is answered by whichever container
+        # holds it — so adding staging to it would let a coin-flip decide
+        # whether a facility's certificate request is authorised by a container
+        # running unreviewed redesign code.
+        aliases:
+          - staging
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      start_period: 45s
+      retries: 4
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Declared so this file can be used on its own for `config`; compose merges them
+# with the definitions in docker-compose.yml rather than redefining them.
+volumes:
+  next_image_cache:
+
+networks:
+  edge:
+    driver: bridge

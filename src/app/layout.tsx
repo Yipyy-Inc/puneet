@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/lib/query-provider";
+import { StagingBanner } from "@/components/staging-banner";
 import "./globals.css";
 
 const inter = Inter({
@@ -159,6 +160,11 @@ export default async function RootLayout({
             AuthKitProvider is NOT optional even though most of this app reads
             auth on the server: it is what makes useAccessToken() work, and
             useWorkosSupabaseClient() is built on that. */}
+        {/* Outside AuthKitProvider and outside the flex column on purpose: it
+            is fixed, out of flow, and must render on every route including the
+            ones that fail before a provider mounts. Returns null in production
+            (ADR 0007), which is every deployment but staging.yipyy.com. */}
+        <StagingBanner />
         <AuthKitProvider>
           <div className="flex min-h-screen flex-col" suppressHydrationWarning>
             <main className="flex-1">
