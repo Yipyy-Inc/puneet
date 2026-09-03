@@ -1,6 +1,32 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
+
 import { cn } from "@/lib/utils";
+
+// ============================================================================
+// Metric tile. docs/design-system/design-system.md §tiles.
+//
+// Same anatomy as `KpiTile`: 24px radius, 1px --line, 18px padding, the
+// measured wash, a 40px SOLID carrier, a 12/700/.07em label with two lines
+// reserved, a 30px tabular value and one 13px sub-line.
+//
+// Three things went, all named in §tiles' own "never" list or in rule 2:
+//
+//   - `bg-gradient-to-br from-<x> to-<x>/80` on every badge. The carrier is
+//     one solid fill; a gradient at 80% opacity is a tint by another route.
+//   - A `radial-gradient(... currentColor ...)` overlay at `opacity-5`. Rule 4
+//     puts opacity off-limits as a de-emphasis tool, and a decorative smear
+//     that changes with the ink is not a system value at all.
+//   - `border-0`. §tiles gives every tile a 1px --line hairline; without it
+//     the tile has no edge on the --ground it sits on.
+// ============================================================================
+
+type StatCardVariant =
+  | "default"
+  | "primary"
+  | "success"
+  | "warning"
+  | "info"
+  | "secondary";
 
 interface StatCardProps {
   title: string;
@@ -9,40 +35,36 @@ interface StatCardProps {
   change?: string;
   changeType?: "up" | "down" | "neutral";
   icon: LucideIcon;
-  variant?:
-    | "default"
-    | "primary"
-    | "success"
-    | "warning"
-    | "info"
-    | "secondary";
+  variant?: StatCardVariant;
 }
 
-const variantStyles = {
-  default: {
-    iconBg: "bg-muted",
-    iconColor: "text-muted-foreground",
-  },
+const VARIANT_STYLES: Record<
+  StatCardVariant,
+  { wash: string; badge: string; glyph: string }
+> = {
   primary: {
-    iconBg: "bg-gradient-to-br from-primary to-primary/80",
-    iconColor: "text-primary-foreground",
+    wash: "yy-wash-primary",
+    badge: "bg-primary",
+    glyph: "text-white",
   },
   success: {
-    iconBg: "bg-gradient-to-br from-success to-success/80",
-    iconColor: "text-success-foreground",
+    wash: "yy-wash-success",
+    badge: "bg-success",
+    glyph: "text-white",
   },
   warning: {
-    iconBg: "bg-gradient-to-br from-warning to-warning/80",
-    iconColor: "text-warning-foreground",
+    wash: "yy-wash-warning",
+    badge: "bg-warning",
+    glyph: "text-white",
   },
-  info: {
-    iconBg: "bg-gradient-to-br from-info to-info/80",
-    iconColor: "text-info-foreground",
-  },
+  info: { wash: "yy-wash-primary", badge: "bg-info", glyph: "text-white" },
   secondary: {
-    iconBg: "bg-gradient-to-br from-secondary to-secondary/80",
-    iconColor: "text-secondary-foreground",
+    wash: "yy-wash-violet",
+    badge: "bg-violet",
+    glyph: "text-white",
   },
+  // Neutral is not one of the five washes, so the tile is plain white.
+  default: { wash: "", badge: "bg-ink-secondary", glyph: "text-white" },
 };
 
 export function StatCard({
@@ -54,57 +76,59 @@ export function StatCard({
   icon: Icon,
   variant = "primary",
 }: StatCardProps) {
-  const styles = variantStyles[variant];
+  const styles = VARIANT_STYLES[variant];
 
   return (
-    <Card className="hover:shadow-elevated group shadow-card relative overflow-hidden border-0 transition-all duration-300">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 space-y-1">
-            <p className="text-muted-foreground text-sm font-medium">{title}</p>
-            <div className="flex items-baseline gap-2">
-              <h3 className="text-2xl font-bold tracking-tight">{value}</h3>
-              {change && (
-                <span
-                  className={cn(
-                    "inline-flex items-center text-xs font-medium",
-                    changeType === "up" && "text-success",
-                    changeType === "down" && "text-destructive",
-                    changeType === "neutral" && "text-muted-foreground",
-                  )}
-                >
-                  {changeType === "up" && (
-                    <TrendingUp className="mr-0.5 size-3" />
-                  )}
-                  {changeType === "down" && (
-                    <TrendingDown className="mr-0.5 size-3" />
-                  )}
-                  {change}
-                </span>
-              )}
-            </div>
-            {subtitle && (
-              <p className="text-muted-foreground text-xs">{subtitle}</p>
+    <div
+      className={cn(
+        "border-line bg-card shadow-card rounded-2xl border p-[18px]",
+        styles.wash,
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {/* Two lines reserved so a wrapping French label cannot push its own
+              figure down and break a row of tiles (§tiles, §5q). */}
+          <p className="text-ink-secondary min-h-[2.6em] text-[12px] leading-[1.3] font-bold tracking-[0.07em] uppercase">
+            {title}
+          </p>
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-body-ink text-[30px] leading-[1.1] font-bold tracking-[-0.02em] tabular-nums">
+              {value}
+            </h3>
+            {change && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-0.5 text-[13px] font-semibold tabular-nums",
+                  changeType === "up" && "text-success",
+                  changeType === "down" && "text-bad",
+                  changeType === "neutral" && "text-ink-secondary",
+                )}
+              >
+                {/* The glyph is what carries direction for a reader who cannot
+                    separate the green from the red (§3). */}
+                {changeType === "up" && <TrendingUp className="size-4" />}
+                {changeType === "down" && <TrendingDown className="size-4" />}
+                {change}
+              </span>
             )}
           </div>
-          <div
-            className={cn(
-              `flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-transform duration-300 group-hover:scale-110`,
-              styles.iconBg,
-            )}
-          >
-            <Icon className={cn("size-5", styles.iconColor)} />
-          </div>
+          {subtitle && (
+            <p className="text-ink-secondary mt-1 line-clamp-2 text-[13px]">
+              {subtitle}
+            </p>
+          )}
         </div>
-      </CardContent>
-
-      {/* Decorative gradient overlay */}
-      <div
-        className="pointer-events-none absolute top-0 right-0 size-24 opacity-5"
-        style={{
-          background: `radial-gradient(circle at top right, currentColor 0%, transparent 70%)`,
-        }}
-      />
-    </Card>
+        <div
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-xl",
+            styles.badge,
+            styles.glyph,
+          )}
+        >
+          <Icon className="size-5" />
+        </div>
+      </div>
+    </div>
   );
 }
