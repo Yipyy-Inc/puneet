@@ -41,6 +41,7 @@ import type {
 } from "@/types/rooms";
 import type { OccupancyKennel } from "./_lib/calendar-types";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { PageHeader } from "@/components/ui/page-header";
 
 type Kennel = OccupancyKennel;
 
@@ -520,63 +521,63 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
   return (
     <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Occupancy</h2>
-          <p className="text-muted-foreground">
-            {serviceType === "boarding"
-              ? "Manage kennel occupancy and bookings"
-              : serviceType === "daycare"
-                ? "Manage daycare play areas and reservations"
-                : "Manage kennel occupancy and daycare reservations"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Service Type Toggle */}
-          <div className="flex overflow-hidden rounded-lg border">
-            <Button
-              variant={serviceType === "boarding" ? "secondary" : "ghost"}
-              size="sm"
-              className="gap-2 rounded-none"
-              onClick={() => setServiceType("boarding")}
-            >
-              <Moon className="size-4" />
-              Boarding
-            </Button>
-            <Button
-              variant={serviceType === "daycare" ? "secondary" : "ghost"}
-              size="sm"
-              className="gap-2 rounded-none"
-              onClick={() => setServiceType("daycare")}
-            >
-              <Sun className="size-4" />
-              Daycare
-            </Button>
-            <Button
-              variant={serviceType === "both" ? "secondary" : "ghost"}
-              size="sm"
-              className="rounded-none"
-              onClick={() => setServiceType("both")}
-            >
-              Both
-            </Button>
-          </div>
-          {/* Custom Services Toggle (Boarding Only) */}
-          {serviceType !== "daycare" && (
-            <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5">
-              <Sparkles className="text-muted-foreground size-3.5" />
-              <span className="text-muted-foreground text-xs font-medium whitespace-nowrap">
-                Add-ons
-              </span>
-              <Switch
-                checked={showCustomServices}
-                onCheckedChange={setShowCustomServices}
-                className="scale-75"
-              />
+      <PageHeader
+        title="Occupancy"
+        description={
+          serviceType === "boarding"
+            ? "Manage kennel occupancy and bookings"
+            : serviceType === "daycare"
+              ? "Manage daycare play areas and reservations"
+              : "Manage kennel occupancy and daycare reservations"
+        }
+        secondary={
+          <div className="flex items-center gap-2">
+            {/* Service Type Toggle */}
+            <div className="flex overflow-hidden rounded-lg border">
+              <Button
+                variant={serviceType === "boarding" ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-2 rounded-none"
+                onClick={() => setServiceType("boarding")}
+              >
+                <Moon className="size-4" />
+                Boarding
+              </Button>
+              <Button
+                variant={serviceType === "daycare" ? "secondary" : "ghost"}
+                size="sm"
+                className="gap-2 rounded-none"
+                onClick={() => setServiceType("daycare")}
+              >
+                <Sun className="size-4" />
+                Daycare
+              </Button>
+              <Button
+                variant={serviceType === "both" ? "secondary" : "ghost"}
+                size="sm"
+                className="rounded-none"
+                onClick={() => setServiceType("both")}
+              >
+                Both
+              </Button>
             </div>
-          )}
-        </div>
-      </div>
+            {/* Custom Services Toggle (Boarding Only) */}
+            {serviceType !== "daycare" && (
+              <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5">
+                <Sparkles className="text-muted-foreground size-3.5" />
+                <span className="text-muted-foreground text-xs font-medium whitespace-nowrap">
+                  Add-ons
+                </span>
+                <Switch
+                  checked={showCustomServices}
+                  onCheckedChange={setShowCustomServices}
+                  className="scale-75"
+                />
+              </div>
+            )}
+          </div>
+        }
+      />
 
       {serviceType !== "daycare" && (
         <>

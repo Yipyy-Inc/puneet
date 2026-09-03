@@ -46,6 +46,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/ui/page-header";
 
 type CategoryTab = FormType | "templates";
 
@@ -88,31 +89,29 @@ export default function IntakeFormsPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Intake Forms</h2>
-          <p className="text-muted-foreground">
-            View and manage forms by category. Create and edit in Form Builder.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setCreateModalOpen(true)}>
-            <Plus className="mr-2 size-4" />
-            Create New
-          </Button>
+      <PageHeader
+        title="Intake forms"
+        description="View and manage forms by category. Create and edit in Form builder."
+        secondary={
           <Button variant="outline" asChild>
             <Link href="/facility/dashboard/forms/audit">
-              <Shield className="mr-2 size-4" />
-              Audit Trail
+              <Shield />
+              Audit trail
             </Link>
           </Button>
-        </div>
-        <CreateFormModal
-          open={createModalOpen}
-          onOpenChange={setCreateModalOpen}
-          defaultCategory={category === "templates" ? "intake" : category}
-        />
-      </div>
+        }
+        action={
+          <Button size="prominent" onClick={() => setCreateModalOpen(true)}>
+            <Plus />
+            Create a form
+          </Button>
+        }
+      />
+      <CreateFormModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        defaultCategory={category === "templates" ? "intake" : category}
+      />
 
       <Tabs
         value={category}

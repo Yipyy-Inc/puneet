@@ -13,7 +13,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
 import {
@@ -49,6 +48,8 @@ import {
 } from "@/lib/api/booking";
 import { useFieldMask } from "@/lib/staff/mask";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
+import { PageHeader } from "@/components/ui/page-header";
+import { SavedViews } from "@/components/ui/saved-views";
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
 
@@ -777,24 +778,22 @@ export default function FacilityBookingsPage() {
     <div className="flex-1 space-y-5 p-4 pt-6">
       {/* Header */}
       <div className="space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Bookings</h2>
-            <p className="text-muted-foreground text-sm">
-              {profile.businessName}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+        {/* §5b pattern 01 — one 32px title, and Export stays a 40px outline
+            control: this header has no primary action, and §1 allows exactly
+            one prominent control per screen, not at least one. */}
+        <PageHeader
+          title="Bookings"
+          description={profile.businessName}
+          secondary={
             <Button
               variant="outline"
-              size="sm"
               onClick={() => exportBookingsToCSV(getDataForTab(), clientById)}
             >
-              <Download className="mr-2 size-4" />
-              Export
+              <Download />
+              Export bookings
             </Button>
-          </div>
-        </div>
+          }
+        />
         <LocationFilterBanner />
       </div>
 
@@ -843,28 +842,25 @@ export default function FacilityBookingsPage() {
         )}
       </div>
 
-      {/* Table View */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center gap-3 overflow-x-auto pb-1">
-          <TabsList className="bg-muted/60 h-9 shrink-0 gap-0.5 p-1">
-            {(
-              [
-                { value: "all", label: "All", count: allBookings.length },
-                { value: "today", label: "Today", count: todayBookings.length },
-              ] as const
-            ).map(({ value, label, count }) => (
-              <TabsTrigger
-                key={value}
-                value={value}
-                className="h-7 gap-1.5 px-3 text-xs font-medium"
-              >
-                {label}
-                <span className="bg-background/70 text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums shadow-sm">
-                  {count}
-                </span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+      {/* ── Saved views. §5b pattern 02, and the one legal underline. ───────
+          These were `TabsList` pills carrying their count in a second pill
+          inside the label — three shapes deep for two words and a number.
+          The strip is what §5b asks for: the count IS the label, "the
+          difference between a tab and an answer".
+
+          `Tabs` went with them. Its `TabsContent` was `value={activeTab}`,
+          so it always rendered whichever panel was selected — the component
+          was doing nothing that a div does not. */}
+      <div className="w-full">
+        <div className="flex items-center gap-4 overflow-x-auto pb-1">
+          <SavedViews
+            views={[
+              { key: "all", label: "All bookings", count: allBookings.length },
+              { key: "today", label: "Today", count: todayBookings.length },
+            ]}
+            activeKey={activeTab}
+            onSelect={setActiveTab}
+          />
           <BookingDateRangeFilter
             rangeStart={filterStart}
             rangeEnd={filterEnd}
@@ -874,7 +870,7 @@ export default function FacilityBookingsPage() {
             }}
           />
         </div>
-        <TabsContent value={activeTab} className="mt-4">
+        <div className="mt-4">
           {getDataForTab().length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-20">
@@ -908,8 +904,8 @@ export default function FacilityBookingsPage() {
               }
             />
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* Edit Booking Modal */}
       {editingBooking && (

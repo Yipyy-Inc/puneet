@@ -25,6 +25,7 @@ import {
   Inbox,
   Search,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ============================================================================
 // The submissions inbox, from Postgres.
@@ -120,12 +121,10 @@ export default function SubmissionsInboxPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Submissions Inbox</h2>
-        <p className="text-muted-foreground">
-          Read what people answered, and file it under the right customer.
-        </p>
-      </div>
+      <PageHeader
+        title="Submissions inbox"
+        description="Read what people answered, and file it under the right customer."
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
