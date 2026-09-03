@@ -157,6 +157,25 @@ services:
       # retry loop against a 5-failures-per-hour limit. It becomes
       # `yipyy.com, www.yipyy.com` once the apex actually resolves here.
       PRIMARY_HOSTS: ${PRIMARY_HOSTS:-yipyy.com, www.yipyy.com}
+
+      # ── THE STAGING GATE'S CREDENTIALS, AND WHY THEY LIVE HERE ──────────
+      #
+      # caddy/sites/staging.caddy reads these two with {$VAR}, which Caddy
+      # expands from ITS OWN PROCESS ENVIRONMENT — not from .env, and not from
+      # the app's environment. Nothing passed them, so the moment that site
+      # file existed Caddy failed to parse it ("username and password cannot be
+      # empty or missing") and CRASH-LOOPED, taking production down with it.
+      # Measured on 2026-09-03, in about 35 seconds of downtime.
+      #
+      # They are in the BASE file rather than docker-compose.staging.yml on
+      # purpose. The overlay is only passed when somebody remembers both -f
+      # flags; a plain `docker compose up -d caddy` — which is what a person
+      # reaches for — would drop them and crash again. A staging credential in
+      # the production file is harmless (Caddy reads it, the app never sees it)
+      # and the empty default means a box with no staging is unaffected: the
+      # sites glob matches nothing there, so nothing reads them.
+      STAGING_BASIC_AUTH_USER: ${STAGING_BASIC_AUTH_USER:-}
+      STAGING_BASIC_AUTH_HASH: ${STAGING_BASIC_AUTH_HASH:-}
       TZ: UTC
 
     networks:
