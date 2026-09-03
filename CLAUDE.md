@@ -281,6 +281,13 @@ rg "bg-(emerald|red|amber|blue|violet|slate)-(50|100)"           # tint fills, a
 - Use `@/*` path alias for imports (unless the file is in the same directory)
 - Use conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`, etc.
 - **Any commit that touches the interface cites its design-system section** in the message — `feat(empty-states): a filtered table now says who it was looking for (§5d2)`. The section number is how the next person finds the rule that decided the value
+- **Design work goes to the `redesign` branch** (ADR 0007, 2026-09-03), which
+  deploys to **staging.yipyy.com** for the client to review. `main` still
+  deploys to production on every push, so hotfixes are never blocked by
+  unreviewed design work, and the cutover is one merge at the end. Merge `main`
+  into `redesign` often. Staging shares the **production** database — every
+  click on it is a real write — so any new outbound sender must consult
+  `outboundSendsSuppressed()`; `bun run check:staging-sends` enforces it.
 - **Commit and push straight to `main`. Do not open a pull request** unless
   explicitly asked. `main` is protected but `enforce_admins` is false, so the
   push is accepted. Decided 2026-08-19: the review round trip was costing more

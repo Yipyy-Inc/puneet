@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { callingProvider, platformCredentials } from "@/lib/calling/provider";
+import { outboundSendsSuppressed } from "@/lib/deployment";
 import { buildStatusSubscribeEmail } from "@/lib/status-subscribe-message";
 import { buildStatusSubscribeSms } from "@/lib/status-subscribe-message";
 import { platformSendingNumber } from "@/lib/twilio/config";
@@ -23,6 +24,13 @@ interface ChannelResult {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function sendEmail(email: string): Promise<ChannelResult> {
+  // `not_configured` reads correctly to the subscriber here: the form renders
+  // it as "subscription saved — confirmation delivery isn't enabled on this
+  // environment yet", which is true of staging (ADR 0007) in the only sense
+  // that matters to them.
+  if (outboundSendsSuppressed())
+    return { sent: false, reason: "not_configured" };
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { sent: false, reason: "not_configured" };
   const msg = buildStatusSubscribeEmail();
@@ -57,6 +65,9 @@ async function sendEmail(email: string): Promise<ChannelResult> {
 }
 
 async function sendSms(phone: string): Promise<ChannelResult> {
+  if (outboundSendsSuppressed())
+    return { sent: false, reason: "not_configured" };
+
   // Through the adapter. This path built its own request and — unlike the two
   // other senders — carried NO timeout at all, so a carrier that stopped
   // answering would have held this route open until something upstream gave up.

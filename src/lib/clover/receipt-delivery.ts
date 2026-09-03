@@ -6,6 +6,7 @@ import {
   type ReceiptInput,
 } from "@/lib/clover/receipt";
 import { callingProvider } from "@/lib/calling/provider";
+import { outboundSendsSuppressed, SUPPRESSED_DETAIL } from "@/lib/deployment";
 import { toE164 } from "@/lib/phone/format";
 import { platformSendingNumber, platformTwilio } from "@/lib/twilio/config";
 
@@ -55,6 +56,13 @@ export async function emailItemisedReceipt(
   to: string,
   input: ReceiptInput,
 ): Promise<DeliveryResult> {
+  // A sandbox Clover payment is still a payment as far as this is concerned:
+  // the card is not charged, but the receipt would go to the real address on
+  // the real client record, because staging reads the production database.
+  if (outboundSendsSuppressed()) {
+    return { sent: false, detail: SUPPRESSED_DETAIL };
+  }
+
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return { sent: false, detail: "no email service configured" };
   // A device keyboard produces typos, and Resend answers a malformed address
@@ -116,6 +124,10 @@ export async function smsItemisedReceipt(
   to: string,
   input: ReceiptInput,
 ): Promise<DeliveryResult> {
+  if (outboundSendsSuppressed()) {
+    return { sent: false, detail: SUPPRESSED_DETAIL };
+  }
+
   const twilio = platformTwilio();
   const from = platformSendingNumber();
   if (!twilio || !from) {

@@ -126,7 +126,7 @@ jobs:
 
   # ── THE PROJECT'S OWN RULES ────────────────────────────────────────────────
   #
-  # 22 `check:*` scripts run here. Each one exists because a
+  # 24 `check:*` scripts run here. Each one exists because a
   # specific mistake was made and cost something: a route that took its facility
   # from the request body, an update that could not tell an RLS refusal from a
   # no-op, a screen that said "Saved" with nothing behind it, a dialog with a
@@ -146,7 +146,8 @@ jobs:
   # each to save nothing, and one branch-protection entry each instead of one.
   #
   # The count above said "Fourteen" until 2026-09-02, by which time the list had
-  # reached 22 — the same drift `check:doc-counts` was written for, in the file
+  # reached 22, and 23 the moment staging-sends joined on 2026-09-03 — the same
+  # drift `check:doc-counts` was written for, in the file
   # that runs it. It is derived from this loop now, so it announces its own
   # staleness rather than waiting to be noticed.
   #
@@ -189,6 +190,8 @@ jobs:
             vendor-strings \
             derived-location \
             inert-permissions \
+            staging-sends \
+            no-dark-mode \
             doc-counts
           do
             echo "::group::check:$script"

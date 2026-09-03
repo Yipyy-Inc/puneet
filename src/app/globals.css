@@ -1,6 +1,32 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ── DO NOT DELETE THIS LINE. IT IS WHAT KEEPS DARK MODE OFF ───────────────
+ *
+ * It reads as leftover configuration for a feature nobody uses, and it is the
+ * opposite: the only thing switching dark mode off.
+ *
+ * This app has 3,780 `dark:` utilities across 505 files and no way to turn
+ * dark mode on — no next-themes, no ThemeProvider, no classList call, nothing
+ * in src that ever adds `dark` as a class. The product owner confirmed on
+ * 2026-09-03 that it never will be, and the design system has no dark palette:
+ * every ratio in it is measured on white.
+ *
+ * Tailwind v4's BUILT-IN `dark` variant is `@media (prefers-color-scheme:
+ * dark)`. This line overrides it with a class selector nothing satisfies, which
+ * is why those 3,780 utilities are dead. Remove it and the built-in returns, so
+ * every one of them activates for anyone whose OS is set to dark — the old
+ * sky/slate/amber dark styling, layered over a light-only redesign.
+ *
+ * Measured rather than assumed: compiling `@import "tailwindcss"` against this
+ * repo with no @custom-variant line emitted @media (prefers-color-scheme: dark)
+ * carrying this app's own .dark\:divide-slate-800 and
+ * .dark\:border-amber-400\/30 rules.
+ *
+ * `bun run check:no-dark-mode` fails if this line goes, because the breakage is
+ * invisible in review and invisible in CI — it appears first on a customer's
+ * laptop.
+ */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

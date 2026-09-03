@@ -1,6 +1,7 @@
 import "server-only";
 
 import { facilityCustomerOrigin } from "@/lib/app-host";
+import { outboundSendsSuppressed, SUPPRESSED_DETAIL } from "@/lib/deployment";
 import { renderEmail } from "@/lib/email/shell";
 import {
   UNRESOLVED_TAG,
@@ -117,6 +118,23 @@ interface RuleRow {
  * makes it safe to call this from `after()` AND from the tick.
  */
 export async function dispatchEvent(eventId: number): Promise<DispatchResult> {
+  // ── NOTHING FROM STAGING ENTERS THE SHARED OUTBOX ───────────────────────
+  //
+  // Guarding the SENDERS is not enough here, and the reason is the shared
+  // database (ADR 0007). A rule with a positive `offset_minutes` does not send
+  // — it writes a rendered row to `message_sends` with a future
+  // `scheduled_for` and stops. `deploy/messaging-tick.sh` is a systemd timer
+  // on the box that comes back for those rows every five minutes, and it reads
+  // the shared table with no idea which hostname queued them. So a row written
+  // from staging is a message PRODUCTION sends, for real, to a real customer.
+  //
+  // Refusing before the claim also leaves the event unclaimed
+  // (`processed_at is null`), so production dispatches it normally when it
+  // happens — staging observing an event must not consume it.
+  if (outboundSendsSuppressed()) {
+    return { ...EMPTY, problems: [SUPPRESSED_DETAIL] };
+  }
+
   if (!hasServiceRoleKey()) {
     return { ...EMPTY, problems: ["no service-role key; nothing dispatched"] };
   }

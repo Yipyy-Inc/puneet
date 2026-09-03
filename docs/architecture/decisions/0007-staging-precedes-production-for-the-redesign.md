@@ -137,6 +137,63 @@ Nothing here changes that. `tests/e2e/_fixtures.ts` treats an `E2E_BASE_URL` on 
 local run, and CI's suite runs against its own built server. Pointing the suite at staging would
 mean it and the client competing for the same rows in the same database.
 
+### Setting it up — the steps a person has to take
+
+Everything in the repository is done. These are the five that need a human,
+because each needs a credential or a console nobody's CI should hold.
+
+**1. A password for the site.** It gates live customer records, so pick it
+accordingly.
+
+```
+docker run --rm caddy:2-alpine caddy hash-password --plaintext '<password>'
+```
+
+Then, in `/opt/yipyy/.env` on the box — the shared one, and these two are safe
+there because Caddy reads them, not the app:
+
+```
+STAGING_BASIC_AUTH_USER=yipyy
+STAGING_BASIC_AUTH_HASH=<the bcrypt hash it printed>
+```
+
+`deploy-staging.sh` refuses to start without the hash, so a missing one fails
+the deploy rather than publishing an unguarded site.
+
+**2. One line in the box's Caddyfile.** The only file CI will not write, because
+it also defines what production serves. Above the catch-all `https://` block in
+`/opt/yipyy/caddy/Caddyfile`:
+
+```
+import /etc/caddy/sites/*.caddy
+```
+
+The deploy job checks for it and prints this if it is absent.
+
+**3. WorkOS.** Add `https://staging.yipyy.com/auth/callback` to the allowed
+redirect URIs. Sign-in derives its `redirect_uri` from the request host
+(`requestOrigin()` in `src/lib/auth/workos-actions.ts`), so staging returns to
+staging — but WorkOS refuses a URI it has not been told about, and the failure
+looks like a successful sign-in that bounces back to the login page.
+
+**4. GitHub.** `DEPLOY_STAGING_ENABLED=true` as a repository _variable_. The job
+is dark until it is set, and it reuses `VPS_HOST` and `VPS_SSH_KEY`, so there
+is no new secret.
+
+**5. The branch.**
+
+```
+git switch -c redesign && git push -u origin redesign
+```
+
+The first push builds an image and deploys it. Watch for the `401` — the deploy
+job treats it as the pass, because a `200` would mean the site is answering the
+open internet without a password.
+
+**Not needed:** DNS. The wildcard `*.yipyy.com` record already resolves
+`staging.yipyy.com` to the box, verified against a public resolver on
+2026-09-03.
+
 ### Reverting is one merge and one variable
 
 If the redesign is abandoned, `redesign` is deleted and nothing on `main` ever knew about it. If
