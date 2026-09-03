@@ -8,6 +8,32 @@ Read [design-system.md](design-system.md) for the spec, [WORK_ORDER.md](WORK_ORD
 staged adoption sequence, and open `Yipyy Design System.dc.html` in a browser for the live visual
 reference. Where the prose and the reference page disagree, **the page is right**.
 
+### Two things about opening the reference page
+
+**It is not offline, despite what the handoff said.** It pulls the icon set from
+`unpkg.com/lucide@0.475.0` and its two typefaces from Google Fonts. With no
+network it still opens, but every icon in the specimen sheet is missing and the type falls
+back — which is most of what you opened it to look at. Measured 2026-09-03.
+
+**Its image paths were fixed on import.** The page shipped with 17 relative
+`public/…` references, which resolve only when it is opened from the repository
+ROOT — so from `docs/design-system/`, where the work order puts it, every
+mascot pose and every photograph was a broken image. They now read `../../public/…`
+and resolve from this folder. If you move this file, they move with it.
+
+### Two things about opening the reference page
+
+**It is not offline, despite what the handoff said.** It pulls the icon set from
+`unpkg.com/lucide@0.475.0` and its two typefaces from Google Fonts. With no
+network it still opens, but every icon in the specimen sheet is missing and the type falls
+back — which is most of what you opened it to look at. Measured 2026-09-03.
+
+**Its image paths were fixed on import.** The page shipped with 17 relative
+`public/…` references, which resolve only when it is opened from the repository
+ROOT — so from `docs/design-system/`, where the work order puts it, every
+mascot pose and every photograph was a broken image. They now read `../../public/…`
+and resolve from this folder. If you move this file, they move with it.
+
 [as-built-audit-2026-08-31.md](as-built-audit-2026-08-31.md) is the _old_ system — what the codebase
 rendered before this import, including everything wrong with it. It is a record of what is being
 replaced, not a rule.
@@ -62,7 +88,7 @@ Stage 0 of the work order is **complete**. Nothing here needs copying again.
 | The standing rules            | [CLAUDE.md](../../CLAUDE.md) § "Design system"                  | Merged into the repo's own rules file — read on every task                                                                                                                   |
 | The spec                      | `docs/design-system/design-system.md`                           | ~40 numbered sections. `§5d1`, `§5b1`, `§5d2` are the citation format; use them in commit messages                                                                           |
 | The stages                    | `docs/design-system/WORK_ORDER.md`                              | Eleven stages, each with the exact files and a definition of done                                                                                                            |
-| The live reference            | `docs/design-system/Yipyy Design System.dc.html` + `support.js` | Opens offline from that folder. Every token, component, state and pose rendered with its contrast ratio                                                                      |
+| The live reference            | `docs/design-system/Yipyy Design System.dc.html` + `support.js` | Every token, component, state and pose rendered with its contrast ratio. **Needs a network connection** — see below                                                          |
 | The icon map                  | `docs/design-system/icon-map.json`                              | §5b1 machine-readable — 37 nav areas + actions + objects + status, plus the six nav collisions and their fixes. Wire `src/lib/nav/facility-nav.ts` from this, not from prose |
 | The six custom glyphs (React) | `src/components/icons/yipyy-icons.tsx`                          | lucide-compatible API — `<CheckedIn className="size-5" />`                                                                                                                   |
 | The six custom glyphs (SVG)   | `docs/design-system/icons/svg/*.svg`                            | 24×24 files for Figma, email and print. Not needed in `src`                                                                                                                  |

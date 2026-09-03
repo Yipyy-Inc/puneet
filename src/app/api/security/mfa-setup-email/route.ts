@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { buildMfaSetupEmail } from "@/lib/mfa-setup-email";
 import { platformOrigin } from "@/lib/public-origin";
+import { outboundSendsSuppressed } from "@/lib/deployment";
 
 // Honest, env-gated "Resend MFA Setup Email". Sends a real email via Resend when
 // RESEND_API_KEY is configured; otherwise returns sent:false + reason
@@ -44,6 +45,23 @@ export async function POST(req: Request) {
   // the administrator sending it happened to be looking at.
   const origin = platformOrigin(req);
   const message = buildMfaSetupEmail({ userName, origin });
+
+  // ── STAGING DOES NOT PUT THIS ON THE WIRE ───────────────────────────────
+  //
+  // ADR 0007: staging reads the PRODUCTION database, so the address on this
+  // record is a real person's. `not_configured` is reused rather than given a
+  // reason of its own because every caller already branches on it to show
+  // "copy the link and share it yourself" — which is exactly the right
+  // outcome here, and lets a reviewer finish the journey without a message
+  // leaving the building. The `message` says what actually happened.
+  if (outboundSendsSuppressed()) {
+    return NextResponse.json({
+      sent: false,
+      reason: "not_configured",
+      message:
+        "Staging suppresses outbound email (ADR 0007). Share the link below instead.",
+    });
+  }
 
   try {
     const res = await fetch("https://api.resend.com/emails", {

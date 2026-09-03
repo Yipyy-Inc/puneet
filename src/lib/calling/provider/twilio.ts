@@ -13,6 +13,7 @@ import type {
   SendSmsResult,
   Subaccount,
 } from "./types";
+import { outboundSendsSuppressed, SUPPRESSED_DETAIL } from "@/lib/deployment";
 
 // ============================================================================
 // The one module that talks to the carrier.
@@ -197,6 +198,20 @@ export const twilioProvider: CallingProvider = {
     credentials: ProviderCredentials,
     input: SendSmsInput,
   ): Promise<SendSmsResult> {
+    // ── THE BACKSTOP, NOT THE GATE ──────────────────────────────────────────
+    //
+    // Every caller that should be suppressed on staging already is, one layer
+    // up, where it can record a useful reason on its own row. This is here for
+    // the caller that arrives later and does not know it needs to: an SMS is
+    // not recallable, and staging reads the PRODUCTION database (ADR 0007), so
+    // the number in `input.to` belongs to a real person.
+    //
+    // `errorCode: null` deliberately — there is no carrier verdict, because
+    // nothing was ever sent to a carrier.
+    if (outboundSendsSuppressed()) {
+      return { ok: false, errorCode: null, detail: SUPPRESSED_DETAIL };
+    }
+
     try {
       const outcome = await request(
         credentials,

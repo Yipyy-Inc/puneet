@@ -1,5 +1,3 @@
-import "server-only";
-
 // ============================================================================
 // Which deployment this container is, and what that is allowed to do.
 //
@@ -32,6 +30,24 @@ import "server-only";
 // It is deliberately NOT a `NEXT_PUBLIC_*` value. Those are inlined by
 // `next build`, and the whole point is one image serving both deployments.
 // ============================================================================
+
+// ── AND WHY THERE IS NO `server-only` MARKER ──────────────────────────────
+//
+// Every sender that consults this is server-only already, and the marker was
+// here first. It came out because `src/lib/calling/provider/twilio.ts` imports
+// it, and that adapter is covered by `tests/unit/calling-provider.test.ts` —
+// which exists precisely BECAUSE its `sendSms` texts a real handset and no e2e
+// test can safely reach it. `server-only` throws outside a React Server
+// Component, so the marker made the one sender with real unit coverage
+// impossible to test.
+//
+// Nothing leaks by dropping it. None of the three variables read here is
+// `NEXT_PUBLIC_`, so Next replaces them with `undefined` in a client bundle
+// rather than inlining a value — which lands on `deployment() === "production"`
+// and `outboundSendsSuppressed() === false`, the same safe default an unset
+// variable gives on the server. There is no secret in this file to disclose and
+// no behaviour to get wrong; there was only an assertion about where it belongs,
+// and it cost more than it stated.
 
 export type Deployment = "production" | "staging";
 

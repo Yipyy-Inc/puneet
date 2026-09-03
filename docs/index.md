@@ -20,6 +20,7 @@ Documentation for the Yipyy platform. Start with [AGENTS.md](../AGENTS.md) (the 
 - [architecture/decisions/0002-playwright-e2e-smoke.md](architecture/decisions/0002-playwright-e2e-smoke.md) — ADR: Playwright as the e2e harness.
 - [architecture/decisions/0003-clerk-owns-identity-supabase-owns-data.md](architecture/decisions/0003-clerk-owns-identity-supabase-owns-data.md) — ADR: an identity provider owns identity, Supabase owns data, RLS is the authorisation boundary. **The provider named here is superseded by 0004; the seam is not.**
 - [architecture/decisions/0004-workos-replaces-clerk-as-identity-provider.md](architecture/decisions/0004-workos-replaces-clerk-as-identity-provider.md) — ADR: WorkOS AuthKit replaces Clerk (per-MAU cost at scale). Custom UI kept, tenancy stays in Postgres.
+- [architecture/decisions/0007-staging-precedes-production-for-the-redesign.md](architecture/decisions/0007-staging-precedes-production-for-the-redesign.md) — ADR: the redesign is reviewed on staging.yipyy.com first and reaches production in one cutover; `redesign` deploys to staging, `main` to production. Staging shares the production database, and what that costs.
 - [architecture/decisions/0005-three-facility-roles-one-staff-portal.md](architecture/decisions/0005-three-facility-roles-one-staff-portal.md) — ADR: a facility has three roles as an ACCESS model; the thirteen job roles survive as permission templates. One staff portal.
 
 ## Conventions

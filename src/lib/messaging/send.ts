@@ -39,6 +39,7 @@ import "server-only";
 // Every function returns a result and the caller records it.
 // ============================================================================
 
+import { outboundSendsSuppressed, SUPPRESSED_DETAIL } from "@/lib/deployment";
 import { toE164 } from "@/lib/phone/format";
 import { callingProvider } from "@/lib/calling/provider";
 import { platformSendingNumber, platformTwilio } from "@/lib/twilio/config";
@@ -123,6 +124,13 @@ export interface EmailMessage {
 export async function sendEmail(
   message: EmailMessage,
 ): Promise<DeliveryResult> {
+  // BEFORE the API key is read, so a suppressed send on staging reports why it
+  // was suppressed rather than "no email service configured" — which would be
+  // a lie, and the kind that sends somebody to check the wrong variable.
+  if (outboundSendsSuppressed()) {
+    return { sent: false, detail: SUPPRESSED_DETAIL };
+  }
+
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return { sent: false, detail: "no email service configured" };
 
@@ -204,6 +212,10 @@ export interface SmsMessage {
  * facility sharing it.
  */
 export async function sendSms(message: SmsMessage): Promise<DeliveryResult> {
+  if (outboundSendsSuppressed()) {
+    return { sent: false, detail: SUPPRESSED_DETAIL };
+  }
+
   const twilio = platformTwilio();
   const from = platformSendingNumber();
   if (!twilio || !from) {

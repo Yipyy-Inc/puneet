@@ -5,6 +5,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { buildOwnerInviteEmail } from "@/lib/facility-owner-invite-email";
 import { facilityStaffLinkOrigin } from "@/lib/public-origin";
+import { outboundSendsSuppressed } from "@/lib/deployment";
 
 // ============================================================================
 // Inviting a facility's owner — sending, re-sending, withdrawing, and reading
@@ -161,6 +162,27 @@ export async function POST(
       reason: "not_configured",
       message:
         "Email service not configured (set RESEND_API_KEY). Share the link below instead — their access is already recorded.",
+      signUpUrl,
+      ownerEmail: grant.email,
+      alreadyRegistered: grant.claimed,
+      expiresAt,
+    });
+  }
+
+  // ── STAGING DOES NOT PUT THIS ON THE WIRE ───────────────────────────────
+  //
+  // ADR 0007: staging reads the PRODUCTION database, so the address on this
+  // record is a real person's. `not_configured` is reused rather than given a
+  // reason of its own because every caller already branches on it to show
+  // "copy the link and share it yourself" — which is exactly the right
+  // outcome here, and lets a reviewer finish the journey without a message
+  // leaving the building. The `message` says what actually happened.
+  if (outboundSendsSuppressed()) {
+    return NextResponse.json({
+      sent: false,
+      reason: "not_configured",
+      message:
+        "Staging suppresses outbound email (ADR 0007). Share the link below instead.",
       signUpUrl,
       ownerEmail: grant.email,
       alreadyRegistered: grant.claimed,

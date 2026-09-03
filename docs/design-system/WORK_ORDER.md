@@ -27,8 +27,21 @@ Everything below has been done. It is kept as the record of where each file went
 - `public/yipyy-mascot.png` is **still present**: it is deleted in stage 3, after its one consumer
   is repointed.
 
-**Done when:** the reference page opens offline from `docs/design-system/` and the mascot files are
-served at `/mascot/yipyy-mascot-welcome.webp`. ✓
+**Done when — and this was checked rather than assumed, 2026-09-03:**
+
+- The mascot files are served. `GET /mascot/yipyy-mascot-welcome.webp` → 200, 99,416 bytes,
+  `image/webp`; the `-sm` pair → 200, 23,462 bytes. All 46 files present and all 23
+  slugs match §5d1 exactly. `/yipyy-logo.svg` → 200. ✓
+- **The reference page does NOT open offline, and that claim was wrong.** It pulls the icon set
+  from `unpkg.com/lucide@0.475.0` and its typefaces from Google Fonts, so with no network it
+  opens with no icons and fallback type — which is most of what it exists to show. Left as it is:
+  vendoring lucide and two font families into `docs/` to make a reference page work on a plane
+  is not worth the megabytes. Just know it needs a connection.
+- **17 of its image paths were broken and are now fixed.** It shipped with relative
+  `public/…` references, which resolve only from the repository ROOT — so from this folder,
+  where step 0 above puts it, every mascot pose and photograph was a broken image. Rewritten to
+  `../../public/…`. This is the one edit made to the page, and it is a path fix rather than a
+  port: nothing about the design changed.
 
 ---
 

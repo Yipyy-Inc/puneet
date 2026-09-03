@@ -7578,6 +7578,83 @@ reads. If you add a helper that encodes a parameter, grep the destination for it
 exists before converting. The instinct is to wire the fixture screen to the
 database; here that would have built a fourth listing of the same money.
 
+## 2026-09-03 — staging.yipyy.com shares the production database
+
+**Severity: high.** Not a defect — a deliberate trade, made with the product
+owner and recorded in
+[ADR 0007](../architecture/decisions/0007-staging-precedes-production-for-the-redesign.md).
+It is here because the consequences are not visible from any screen and will
+outlive the memory of the decision.
+
+`staging.yipyy.com` runs the same image as production against **the same
+Supabase Postgres**. It exists so the client can review the redesign before
+production sees it. The alternative — a second Supabase project — was rejected
+because `NEXT_PUBLIC_SUPABASE_URL` and the publishable key are inlined by
+`next build`, so it would mean a second image per commit and a seed to keep
+current.
+
+**So every write on staging is a production write.** A redesigned check-in
+checks a real dog in. A redesigned cancel cancels a real booking. There is no
+sandbox and no undo. The banner in the root layout exists so nobody is surprised
+by that, and `caddy/sites/staging.caddy` gates the site with basic auth so
+nobody arrives at it by accident.
+
+**A sandbox Clover payment still writes to the live money tables.**
+`CLOVER_ENVIRONMENT=sandbox` in the staging container means no real card can be
+charged. It does not mean no row appears in the production ledger. A test
+payment taken during a review is a real row that a real facility's takings
+report will count.
+
+**The one that reaches a customer, and why guarding the senders was not
+enough.** A rule with a positive `offset_minutes` does not send — it writes a
+rendered row into `message_sends` with a future `scheduled_for` and stops.
+`deploy/messaging-tick.sh` is a systemd timer **on the box** that polls that
+table every five minutes and dispatches whatever is due, and it reads the shared
+table with no idea which hostname queued the row. So a message queued from
+staging is a message **production** sends, for real, to a real customer, and
+staging installing no timer of its own changes nothing whatsoever.
+
+That is why `outboundSendsSuppressed()` is consulted at the top of
+`dispatchEvent` as well as inside every sender: nothing from staging may enter
+the shared outbox in the first place. It refuses **before** the event is claimed
+(`processed_at is null` stays true), so production still dispatches the event
+normally — staging observing an event must not consume it.
+
+### What to do instead of casually touching it
+
+- **Adding an outbound sender?** Consult `outboundSendsSuppressed()` before the
+  provider call. `bun run check:staging-sends` fails the build if a file reaches
+  `api.resend.com/emails`, `/Messages.json` or `/Calls.json` without naming the
+  guard.
+- **Never put `YIPYY_DEPLOYMENT`, `CLOVER_ENVIRONMENT` or
+  `STAGING_SUPPRESS_SENDS` in the box's `.env`.** Both production colours read
+  that file. They belong in the staging service's own `environment:` block,
+  where compose gives them precedence. A `YIPYY_DEPLOYMENT=staging` that leaked
+  into `.env` would stop production sending a single message, and nothing
+  anywhere would say why.
+- **Do not point the Playwright suite at staging.** It and the client would
+  compete for rows in the same database, and the suite's `afterAll` cleanup
+  would delete what the client was looking at.
+
+### The gap in the gate, stated rather than implied
+
+`check:staging-sends` is a **whole-file** rule: a file that reaches a provider
+must mention the guard somewhere in it. Proving that a particular guard
+dominates a particular `fetch` needs a control-flow graph, and that is not what
+this is.
+
+So it has a real false-pass: a file that guards one sender and later gains a
+second, unguarded one still passes. It was written for the failure that actually
+happens — a **new file** with no guard in it at all — and it catches that.
+Measured on 2026-09-03: 8 sender files in `src`, all guarded; a probe file
+containing an unguarded `fetch("https://api.resend.com/emails")` was reported and
+exited 1, and the check returned to 0 when it was removed.
+
+**Five of those eight are hand-rolled `fetch` calls** to Resend rather than
+callers of `src/lib/messaging/send.ts` — the duplication that file's own header
+already complains about. Consolidating them would make this gate exact instead of
+coarse. That is the fix, and it is not this change.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.
