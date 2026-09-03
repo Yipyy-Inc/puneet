@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { TransactionsTab } from "@/components/facility/yipyy-pay/dashboard/TransactionsTab";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ============================================================================
 // Payments — every payment, whichever channel took it.
@@ -33,12 +34,10 @@ export const metadata: Metadata = {
 export default function PaymentsPage() {
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
-        <p className="text-muted-foreground text-sm">
-          Everything taken, in person and online.
-        </p>
-      </div>
+      <PageHeader
+        title="Payments"
+        description="Everything taken, in person and online."
+      />
 
       <TransactionsTab />
     </div>

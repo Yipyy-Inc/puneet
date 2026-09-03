@@ -4,7 +4,6 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { compareSortValues } from "@/lib/table/sort";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -39,14 +38,20 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import {
-  Search,
-  Filter,
   Columns,
   ArrowUp,
   ArrowDown,
   Inbox,
   SearchX,
+  Minus,
 } from "lucide-react";
+import {
+  AddFilterChip,
+  AllFiltersButton,
+  FilterBand,
+  FilterBandSearch,
+  FilterPill,
+} from "@/components/ui/filter-band";
 import { LucideIcon } from "lucide-react";
 import {
   TableEmptyState,
@@ -100,6 +105,20 @@ export interface DataTableProps<T> {
   selectedIds?: Set<string | number>;
   /** Selection change callback */
   onSelectionChange?: (ids: Set<string | number>) => void;
+  /**
+   * Controls for the bulk-selection bar (§5b pattern 04). The moment anything
+   * is ticked the HEADER ROW becomes a solid `--primary` bar carrying the
+   * count and these actions — it replaces the header rather than sitting
+   * above it, "so the table never changes height".
+   *
+   * Pass `<BulkActionButton>`s from `@/components/ui/bulk-action-button`:
+   * an ordinary outline Button is white-on-white against this bar.
+   *
+   * Omit it and the bar still appears with the count and the clear control,
+   * which is the honest state — the selection is real whether or not this
+   * screen has anything to do with it yet.
+   */
+  bulkActions?: (selectedIds: Set<string | number>) => React.ReactNode;
   /** Extra content rendered at the end of the toolbar row */
   toolbarExtra?: React.ReactNode;
   /** Stick the header row to the top on vertical scroll. Off by default. */
@@ -146,6 +165,7 @@ export function DataTable<T extends object>({
   getItemId,
   selectedIds: externalSelectedIds,
   onSelectionChange,
+  bulkActions,
   toolbarExtra,
   emptyState,
   stickyHeader = false,
@@ -244,6 +264,24 @@ export function DataTable<T extends object>({
     (selectable && getItemId ? 1 : 0) +
     visibleColumnDefs.length +
     (actions ? 1 : 0);
+  // ── The filter band (§5b pattern 03) ──────────────────────────────────
+  // Every applied built-in filter becomes a removable solid pill; the band
+  // itself only renders when it has something in it, so a table with no
+  // search, no filters, one column and no extras does not gain an empty
+  // --inset strip above it.
+  const hasSearch = Boolean(searchKey || searchKeys || getSearchValue);
+  const hasColumnPicker = columns.length > 1;
+  const appliedFilters = filters
+    .map((filter) => ({ filter, value: filterValues[filter.key] }))
+    .filter(({ value }) => value && value !== "all");
+  const hasToolbar =
+    hasSearch ||
+    filters.length > 0 ||
+    Boolean(onFilterClick) ||
+    hasColumnPicker ||
+    Boolean(toolbarExtra);
+  const selectionCount =
+    selectable && getItemId ? (externalSelectedIds?.size ?? 0) : 0;
   // Distinguish "nothing here yet" from "your search/filter hid everything".
   const isFilteredEmpty =
     data.length > 0 &&
@@ -252,192 +290,265 @@ export function DataTable<T extends object>({
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        {(searchKey || searchKeys || getSearchValue) && (
-          <div className="relative max-w-sm flex-1">
-            <Search className="text-muted-foreground absolute top-2.5 left-2 size-4" />
-            <Input
+      {/* ── The filter band. §5b pattern 03. ────────────────────────────────
+          What this replaced was a bare `flex gap-2` row of controls with no
+          surface of its own, so the search box, the filter button and the
+          column picker read as three unrelated things floating above the
+          table. The band gives them one ground — `--inset`, which rule 2
+          allows because it is a neutral surface and not a hue at low
+          opacity. */}
+      {hasToolbar && (
+        <FilterBand>
+          {hasSearch && (
+            <FilterBandSearch
               placeholder={searchPlaceholder}
-              className="pl-8"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
             />
-          </div>
-        )}
-        {showFilters &&
-          filters.map((filter) => (
-            <Select
-              key={filter.key}
-              value={filterValues[filter.key]}
-              onValueChange={(value) => {
-                setFilterValues((prev) => ({ ...prev, [filter.key]: value }));
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger aria-label={filter.label} className="w-[180px]">
-                <SelectValue placeholder={filter.label} />
-              </SelectTrigger>
-              <SelectContent>
-                {filter.options.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
+          )}
+
+          {/* A call site with its own filter panel gets "All filters"; the
+              built-in Select set gets the dashed "Add filter" chip instead,
+              because that is what it does — one criterion at a time. Never
+              both: two controls opening the same panel is rule 9's problem
+              wearing a different label. */}
+          {onFilterClick && (
+            <AllFiltersButton onClick={onFilterClick} count={filterCount} />
+          )}
+
+          {appliedFilters.map(({ filter, value }) => {
+            const option = filter.options.find((o) => o.value === value);
+            const label = option?.label ?? value;
+            return (
+              <FilterPill
+                key={filter.key}
+                label={label}
+                removeLabel={`Remove the ${label} filter`}
+                onRemove={() => {
+                  setFilterValues((prev) => ({ ...prev, [filter.key]: "all" }));
+                  setCurrentPage(1);
+                }}
+              />
+            );
+          })}
+
+          {!onFilterClick && filters.length > 0 && (
+            <AddFilterChip
+              onClick={() => setShowFilters(!showFilters)}
+              label={showFilters ? "Hide filters" : "Add filter"}
+            />
+          )}
+
+          {hasColumnPicker && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Choose columns"
+                >
+                  <Columns className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="space-y-1">
+                <DropdownMenuLabel>Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {columns.map((col) => (
+                  <DropdownMenuItem
+                    key={col.key}
+                    className="p-0"
+                    onSelect={(e) => {
+                      e.preventDefault();
+                    }}
+                  >
+                    <Label className="has-aria-checked:bg-surface-inset flex w-full cursor-pointer items-center gap-2 rounded-lg border p-2">
+                      <Checkbox
+                        checked={visibleColumns[col.key]}
+                        onCheckedChange={(checked) =>
+                          setVisibleColumns((prev) => ({
+                            ...prev,
+                            [col.key]: !!checked,
+                          }))
+                        }
+                      />
+                      <div className="grid gap-1 font-normal">
+                        <p className="flex items-center gap-2 text-xs leading-none font-medium">
+                          {col.icon && <col.icon className="size-3.5" />}
+                          {col.label}
+                        </p>
+                      </div>
+                    </Label>
+                  </DropdownMenuItem>
                 ))}
-              </SelectContent>
-            </Select>
-          ))}
-        {onFilterClick && (
-          <Button
-            variant={filterCount ? "default" : "outline"}
-            size="icon"
-            className="relative"
-            onClick={onFilterClick}
-          >
-            <Filter className="size-4" />
-            {!!filterCount && filterCount > 0 && (
-              <span className="bg-primary-foreground text-primary absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full text-[10px] font-medium">
-                {filterCount}
-              </span>
-            )}
-          </Button>
-        )}
-        {!onFilterClick && filters.length > 0 && (
-          <Button
-            variant={showFilters ? "default" : "outline"}
-            size="icon"
-            aria-label={showFilters ? "Hide filters" : "Show filters"}
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="size-4" />
-          </Button>
-        )}
-        {columns.length > 1 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="Choose columns">
-                <Columns className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="space-y-1">
-              <DropdownMenuLabel>Filter</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {columns.map((col) => (
-                <DropdownMenuItem
-                  key={col.key}
-                  className="p-0"
-                  onSelect={(e) => {
-                    e.preventDefault();
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {toolbarExtra}
+
+          {/* The built-in Selects drop onto their own line so a table with
+              five filters does not push its search box down to 60px wide. */}
+          {showFilters && filters.length > 0 && (
+            <div className="flex w-full basis-full flex-wrap items-center gap-[11px]">
+              {filters.map((filter) => (
+                <Select
+                  key={filter.key}
+                  value={filterValues[filter.key]}
+                  onValueChange={(value) => {
+                    setFilterValues((prev) => ({
+                      ...prev,
+                      [filter.key]: value,
+                    }));
+                    setCurrentPage(1);
                   }}
                 >
-                  <Label className="hover:bg-primary/30 has-aria-checked:bg-accent/5 flex w-full cursor-pointer items-center gap-2 rounded-md border p-2">
-                    <Checkbox
-                      checked={visibleColumns[col.key]}
-                      onCheckedChange={(checked) =>
-                        setVisibleColumns((prev) => ({
-                          ...prev,
-                          [col.key]: !!checked,
-                        }))
-                      }
-                      className="data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-primary-foreground mt-0.5"
-                    />
-                    <div className="grid gap-1 font-normal">
-                      <p className="flex items-center gap-2 text-xs leading-none font-medium">
-                        {col.icon && <col.icon className="size-3.5" />}
-                        {col.label}
-                      </p>
-                    </div>
-                  </Label>
-                </DropdownMenuItem>
+                  <SelectTrigger
+                    aria-label={filter.label}
+                    className="border-line-strong bg-card h-10 w-[180px] rounded-full max-lg:h-12"
+                  >
+                    <SelectValue placeholder={filter.label} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filter.options.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        {toolbarExtra}
-      </div>
+            </div>
+          )}
+        </FilterBand>
+      )}
 
       {/* Table */}
       <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
-            <TableRow>
-              {selectable && getItemId && (
+            {/* ── Bulk selection. §5b pattern 04. ──────────────────────────
+                "A checkbox column turns the header into a selection bar the
+                moment anything is ticked." Into, not above: the bar REPLACES
+                the header row's cells rather than being inserted as a second
+                row, which is what keeps the table from jumping down 40px the
+                instant a checkbox is ticked and back up when it is cleared.
+
+                The clear control is a button, not a Checkbox: the reference
+                draws it with the `remove` dash, meaning a partial selection,
+                and this Checkbox renders a tick in every state including
+                indeterminate. A button that says what it does is truer than
+                a checkbox that shows the wrong glyph. */}
+            {selectionCount > 0 ? (
+              <TableRow className="bg-primary hover:bg-primary border-b-0">
                 <TableHead
+                  colSpan={emptyColSpan}
                   className={cn(
-                    "w-10",
-                    stickyHeader && "bg-background sticky top-0 z-10",
+                    "bg-primary px-4 text-white",
+                    stickyHeader && "sticky top-0 z-10",
                   )}
                 >
-                  <Checkbox
-                    aria-label="Select all rows"
-                    checked={
-                      filteredData.length > 0 &&
-                      filteredData.every((item) =>
-                        (externalSelectedIds ?? new Set()).has(getItemId(item)),
-                      )
-                    }
-                    onCheckedChange={(checked) => {
-                      if (!onSelectionChange || !getItemId) return;
-                      if (checked) {
-                        const all = new Set(externalSelectedIds);
-                        filteredData.forEach((item) =>
-                          all.add(getItemId(item)),
-                        );
-                        onSelectionChange(all);
-                      } else {
-                        onSelectionChange(new Set());
+                  <div className="flex flex-wrap items-center gap-3.5">
+                    <button
+                      type="button"
+                      aria-label="Clear the selection"
+                      onClick={() => onSelectionChange?.(new Set())}
+                      className="text-primary relative flex size-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[5px] bg-white outline-none before:absolute before:content-[''] focus-visible:ring-2 focus-visible:ring-white max-lg:before:-inset-[15px]"
+                    >
+                      <Minus className="size-4" aria-hidden />
+                    </button>
+                    <span className="text-[14px] font-bold whitespace-nowrap tabular-nums">
+                      {selectionCount} selected
+                    </span>
+                    {bulkActions && (
+                      <div className="ml-auto flex flex-wrap items-center gap-2">
+                        {bulkActions(externalSelectedIds ?? new Set())}
+                      </div>
+                    )}
+                  </div>
+                </TableHead>
+              </TableRow>
+            ) : (
+              <TableRow>
+                {selectable && getItemId && (
+                  <TableHead
+                    className={cn(
+                      "w-10",
+                      stickyHeader && "bg-background sticky top-0 z-10",
+                    )}
+                  >
+                    <Checkbox
+                      aria-label="Select all rows"
+                      checked={
+                        filteredData.length > 0 &&
+                        filteredData.every((item) =>
+                          (externalSelectedIds ?? new Set()).has(
+                            getItemId(item),
+                          ),
+                        )
                       }
+                      onCheckedChange={(checked) => {
+                        if (!onSelectionChange || !getItemId) return;
+                        if (checked) {
+                          const all = new Set(externalSelectedIds);
+                          filteredData.forEach((item) =>
+                            all.add(getItemId(item)),
+                          );
+                          onSelectionChange(all);
+                        } else {
+                          onSelectionChange(new Set());
+                        }
+                      }}
+                    />
+                  </TableHead>
+                )}
+                {visibleColumnDefs.map((col) => (
+                  <TableHead
+                    key={col.key}
+                    className={cn(
+                      col.sortable !== false && "cursor-pointer select-none",
+                      col.align === "right" && "text-right",
+                      col.align === "center" && "text-center",
+                      stickyHeader && "bg-background sticky top-0 z-10",
+                    )}
+                    onClick={() => {
+                      if (col.sortable === false) return;
+                      if (sortKey === col.key) {
+                        setSortDirection(
+                          sortDirection === "asc" ? "desc" : "asc",
+                        );
+                      } else {
+                        setSortKey(col.key);
+                        setSortDirection("asc");
+                      }
+                      setCurrentPage(1);
                     }}
-                  />
-                </TableHead>
-              )}
-              {visibleColumnDefs.map((col) => (
-                <TableHead
-                  key={col.key}
-                  className={cn(
-                    col.sortable !== false && "cursor-pointer select-none",
-                    col.align === "right" && "text-right",
-                    col.align === "center" && "text-center",
-                    stickyHeader && "bg-background sticky top-0 z-10",
-                  )}
-                  onClick={() => {
-                    if (col.sortable === false) return;
-                    if (sortKey === col.key) {
-                      setSortDirection(
-                        sortDirection === "asc" ? "desc" : "asc",
-                      );
-                    } else {
-                      setSortKey(col.key);
-                      setSortDirection("asc");
-                    }
-                    setCurrentPage(1);
-                  }}
-                >
-                  {col.icon && <col.icon className="mr-2 inline size-4" />}
-                  {col.label}
-                  {sortKey === col.key &&
-                    col.sortable !== false &&
-                    (sortDirection === "asc" ? (
-                      <ArrowUp className="ml-1 inline size-4" />
-                    ) : (
-                      <ArrowDown className="ml-1 inline size-4" />
-                    ))}
-                </TableHead>
-              ))}
-              {actions && (
-                <TableHead
-                  className={cn(
-                    "text-right",
-                    stickyHeader && "bg-background sticky top-0 z-10",
-                  )}
-                >
-                  Actions
-                </TableHead>
-              )}
-            </TableRow>
+                  >
+                    {col.icon && <col.icon className="mr-2 inline size-4" />}
+                    {col.label}
+                    {sortKey === col.key &&
+                      col.sortable !== false &&
+                      (sortDirection === "asc" ? (
+                        <ArrowUp className="ml-1 inline size-4" />
+                      ) : (
+                        <ArrowDown className="ml-1 inline size-4" />
+                      ))}
+                  </TableHead>
+                ))}
+                {actions && (
+                  <TableHead
+                    className={cn(
+                      "text-right",
+                      stickyHeader && "bg-background sticky top-0 z-10",
+                    )}
+                  >
+                    Actions
+                  </TableHead>
+                )}
+              </TableRow>
+            )}
           </TableHeader>
           <TableBody>
             {paginatedData.length === 0 ? (

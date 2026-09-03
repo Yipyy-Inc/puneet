@@ -18,6 +18,7 @@ import dynamic from "next/dynamic";
 import { taskQueries } from "@/lib/api/facility-tasks";
 import { chorelistQueries } from "@/lib/api/task-groups";
 import { getOffboardingInstances } from "@/data/staff-onboarding";
+import { PageHeader } from "@/components/ui/page-header";
 
 const ShiftTasksTab = dynamic(
   () => import("./ShiftTasksTab").then((m) => m.ShiftTasksTab),
@@ -179,20 +180,16 @@ export default function TaskManagementPage() {
   return (
     <div className="space-y-5 p-5 md:p-7">
       {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Task Management</h1>
-          <p className="text-muted-foreground mt-0.5 text-sm">
-            Shift tasks, position tasks, and one-off staff assignments
-          </p>
-        </div>
-        {/* The page-level "Create Task" button is gone with `TaskWizard`. It
-            opened a 1,114-line wizard whose only outcome was
-            `toast.success("Task assigned to …")` — it created nothing, in any
-            of its three modes. Every tab now has its own New button that
-            writes to Postgres, so there is nothing for a page-level one to do
-            that is not already better done one click away. */}
-      </div>
+      {/* The page-level "Create Task" button is gone with `TaskWizard`. It
+          opened a 1,114-line wizard whose only outcome was
+          `toast.success("Task assigned to …")` — it created nothing, in any
+          of its three modes. Every tab now has its own New button that
+          writes to Postgres, so there is nothing for a page-level one to do
+          that is not already better done one click away. */}
+      <PageHeader
+        title="Tasks"
+        description="Shift tasks, position tasks, and one-off staff assignments"
+      />
 
       {/* Overview stats */}
       <OverviewStats />

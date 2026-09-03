@@ -275,7 +275,15 @@ rg "bg-(orange|amber)-[0-9]{3}"                                  # orange as any
 rg -i "emerald|#0EA5E9|slate-|gray-" src/components/ui           # off-palette leftovers
 rg "bg-(emerald|red|amber|blue|violet|slate)-(50|100)"           # tint fills — see the note below
 bun run check:badge-glyph                                        # a colour-coded badge with no glyph (§3)
+bun run check:hover-actions                                      # a control revealed only on hover (§6 rule 11)
 ```
+
+**One of these greps fires on a file that is correct, and it is meant to.**
+`src/components/ui/saved-views.tsx` matches the edge-accent grep, because the
+tab strip is rule 1's single sanctioned exception. The grep's job there is to
+make somebody re-read the three conditions — open rail, no radius, no fill, no
+border box — and confirm they still hold. Give that strip a radius or a
+background and the same hit stops being a false positive.
 
 **The tint-fill grep no longer measures what it was written to measure.** It
 predates stage 1, which remapped every `-50` and `-100` step of Tailwind's raw

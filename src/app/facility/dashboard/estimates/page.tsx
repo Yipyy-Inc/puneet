@@ -35,6 +35,7 @@ import { EstimateCard } from "@/components/bookings/EstimateCard";
 import { EstimateWizard } from "@/components/estimates/EstimateWizard";
 import { formatBookingRef } from "@/lib/booking-id";
 import { downloadReportCsv } from "@/lib/report-export";
+import { PageHeader } from "@/components/ui/page-header";
 
 type TabFilter =
   | "all"
@@ -380,19 +381,16 @@ export default function EstimatesPage() {
   return (
     <div className="flex-1 space-y-6 p-4 pt-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Estimates</h2>
-          <p className="text-muted-foreground">
-            Create, manage, and track service estimates for clients and
-            prospects.
-          </p>
-        </div>
-        <Button className="gap-2" onClick={openEstimateCreate}>
-          <Plus className="size-4" />
-          Create Estimate
-        </Button>
-      </div>
+      <PageHeader
+        title="Estimates"
+        description="Create, manage, and track service estimates for clients and prospects."
+        action={
+          <Button size="prominent" onClick={openEstimateCreate}>
+            <Plus />
+            Create an estimate
+          </Button>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">

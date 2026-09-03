@@ -47,6 +47,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
 
 type NotifyMode = "none" | "text" | "email" | "both";
 type ConfirmAction = "decline" | "waitlist";
@@ -422,12 +423,10 @@ export default function OnlineBookingPage() {
 
   return (
     <div className="flex w-full max-w-none flex-1 flex-col gap-6 px-6 pt-6 pb-10 lg:px-8">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Booking Requests</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Manage incoming requests, waiting list, and unfinished bookings
-        </p>
-      </div>
+      <PageHeader
+        title="Booking requests"
+        description="Manage incoming requests, waiting list, and unfinished bookings"
+      />
 
       <Tabs
         value={activeTab}

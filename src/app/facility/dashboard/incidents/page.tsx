@@ -47,6 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/page-header";
 
 // A task this far past due is legacy — offer to dismiss it as historical.
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
@@ -292,18 +293,16 @@ export default function IncidentsPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">Incident Reporting</h1>
-          <p className="text-muted-foreground mt-1">
-            Track and manage facility incidents
-          </p>
-        </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="mr-2 size-4" />
-          Report Incident
-        </Button>
-      </div>
+      <PageHeader
+        title="Incidents"
+        description="Track and manage facility incidents"
+        action={
+          <Button size="prominent" onClick={() => setShowCreateModal(true)}>
+            <Plus />
+            Report an incident
+          </Button>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">

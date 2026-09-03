@@ -17,13 +17,15 @@ There is a real backend: **Supabase Postgres** with row-level security as the au
 voice, formatting, print and governance, all decided and measured, with the eleven-stage adoption
 sequence in [WORK_ORDER.md](docs/design-system/WORK_ORDER.md). It is **not a proposal to evaluate**:
 every screen reworked from here on follows it completely, and CLAUDE.md § "Design System" is the
-standing rule. **Stages 0–6 are done** (documents and assets, the `@theme` tokens, the empty-state
-choke point, the four route-level states, the status chips, Button, and the metric and filter
-tiles); **stage 7 (page header, saved views, filter band, row actions) is next.** The
-tokens landed, so `src/` renders the new palette everywhere — but most screens still have the old
+standing rule. **Stages 0–7 are done** (documents and assets, the `@theme` tokens, the empty-state
+choke point, the four route-level states, the status chips, Button, the metric and filter tiles,
+and the page header / saved views / filter band / bulk bar); **stage 8 (the orange territories) is
+next.** The tokens landed, so `src/` renders the new palette everywhere, and stage 7's band and
+bulk bar reached 87 screens through `DataTable` alone — but most screens still have the old
 LAYOUT, density and glyphs, so the third question about any screen, after "fixture or Postgres?",
 is still **"old system or new?"** [WORK_ORDER.md](docs/design-system/WORK_ORDER.md) is the record;
-each stage heading carries its own status.
+each stage heading carries its own status. It also names the one gap outside the eleven stages:
+**`Input` is still shadcn's `h-9 rounded-md` against §5's 40px pill, and no stage owns it.**
 
 The codebase is new and large (266 routes). The operating model is **discipline while building fast**: new code follows the target conventions; existing code is left alone unless the task is about it.
 
@@ -71,6 +73,7 @@ Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/u
 | `bun run check:inert-permissions`      | Fails if a permission offered in the role editor is consulted by nothing — a switch that decides nothing            |
 | `bun run check:staging-sends`          | Fails if a file reaches Resend or Twilio without consulting the staging suppression guard                           |
 | `bun run check:badge-glyph`            | Fails if a colour-coded badge carries no glyph — §3's "colour is never the only channel". Ratcheted at 374          |
+| `bun run check:hover-actions`          | Fails if a control is revealed only on hover — §6 rule 11, and two of three contexts have none. Ratcheted at 58     |
 | `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                   |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check && bun run test:unit`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.

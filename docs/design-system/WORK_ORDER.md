@@ -1,7 +1,10 @@
 # Work order — adopting the Yipyy design system
 
-**Stages 0–6 are done** (all 2026-09-03), stage 4 with a tail it turned into a ratchet.
-**Stage 7 is next.**
+**Stages 0–7 are done** (all 2026-09-03), stages 4 and 7 with tails they turned into ratchets.
+**Stage 8 (the orange territories) is next.**
+
+One gap sits outside the eleven and nobody owns it: **`Input` is still shadcn's `h-9 rounded-md`
+against §5's 40px pill.** See the end of stage 7.
 
 The stage headings below carry the same status, and they are the record — a stage that shipped
 without its heading being updated is how this file drifted from the repo once already.
@@ -406,7 +409,7 @@ the render to a single visual line turned "$8,557 pending" into "$8557…" and "
 
 ---
 
-## Stage 7 — page header, saved views, filter band, row actions · §patterns
+## Stage 7 — page header, saved views, filter band, row actions · §patterns · **DONE 2026-09-03**
 
 - Page header as a component: one 32px title, inline rename where the object is user-named, the
   single 48px primary pill on the right.
@@ -417,6 +420,60 @@ the render to a single visual line turned "$8,557 pending" into "$8557…" and "
 - **Row actions are persistent, never hover-revealed** (§devices — two of three contexts have no
   hover). Bulk select turns the header row into a solid `--primary` bar so the table never changes
   height.
+
+**Done. Measured in Chromium at 1280 and 599, not inferred from a clean typecheck:**
+
+| Pattern         | Measured                                                                                 |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| Page title      | `<h1>` 32px / 700 / `-0.896px` (= −0.028em) / `#0E3A5C`                                  |
+| Saved-view rail | radius **0**, background **transparent**, border **0** — the three mechanical conditions |
+| Active view     | 48px, `#1668E3`, weight 700, `2px #1668E3` under its own label                           |
+| Inactive view   | `2px transparent`, `#4C5B6C`                                                             |
+| Filter band     | `#F1F5FD` (`--inset`), radius 16, padding 16, gap 11                                     |
+| Search          | 40px pill, white, `#D3DDEE` hairline, 14px                                               |
+| Applied filter  | 36px **solid** `#1668E3`, white 600, an 18px remove at white/24 — and removing it works  |
+| Add filter      | 36px, **dashed**, pill                                                                   |
+| Bulk bar        | solid `#1668E3`, white, "1 selected", `colspan=10`                                       |
+
+Four new components — `page-header.tsx`, `saved-views.tsx`, `filter-band.tsx`,
+`bulk-action-button.tsx` — plus `DataTable.tsx`, which is where the stage actually reaches the
+product: **87 files import it**, so the band and the bulk bar landed on 87 screens without a call
+site being edited. `PageHeader` is wired into ten facility screens (bookings, clients-adjacent
+list pages, payments, tasks, estimates, forms, submissions, incidents, occupancy, pet cams,
+booking requests) and `SavedViews` replaced the bookings tab pills, count-in-a-second-pill and
+all.
+
+**"So the table never changes height" is the requirement, and it was measured rather than
+asserted.** The header row is **40px before selection, 40px during, and 40px after clearing**.
+That is why the bar replaces the header row's cells via `colSpan` instead of being inserted above
+it: a second row would push the whole table down 40px the instant a checkbox is ticked and back up
+when it is cleared.
+
+**Rule 7 at 599px: search 48 · add chip 48 · saved view 48 · column picker 48, and 0px of
+horizontal overflow.** The two controls the spec draws below the floor — the 36px pill's 18px
+remove dot and the 32px dashed `+` — keep their drawn size and gain a transparent 48px hit area
+below 1024px (`before:-inset-[15px]` on an 18px box is exactly 48). A 48px dot would have
+destroyed the pill; rule 7 asks for a 48px target, not a 48px glyph.
+
+**Rule 11 now has a gate**: `bun run check:hover-actions`, ratcheted at **58**. 61 was the raw
+grep count; reading `className` one attribute at a time rather than one file at a time drops three
+false positives where a file hides element A and reveals element B. It was **watched failing on a
+planted violation before being trusted** — the lesson `check:badge-glyph` taught this repo when
+its first version passed one.
+
+**Two controls duplicated each other and one was cut.** The reference band carries both "All
+filters" and a dashed "+ Add filter", and they do different things there — one opens the whole
+panel, one adds a criterion. Against `DataTable`'s existing `Select` model they would have opened
+the same thing, which is rule 9's problem wearing a second label. So a call site with its own
+filter panel (`onFilterClick`) gets "All filters"; the built-in filter set gets the dashed chip,
+because that is what it does.
+
+**One gap this stage found and did not close: `Input` is still shadcn's `h-9 rounded-md`.** §5
+specifies 40px, full pill, 1px `--line-strong`, focus 2px `--primary` + a 3px ring at 12% — and
+**no stage in this document owns it.** Stage 5 was Button only; stages 8–11 are orange, DataTable
+density, icons and French. The band's search wears the §5 geometry as an override so this stage is
+whole, but every other input in 266 routes is still the old control. It needs a stage of its own
+(the blast radius is every form in the product) and it should be decided, not absorbed.
 
 ---
 
