@@ -1,0 +1,219 @@
+{
+  "source": "design-system.md §5b1",
+  "tier1": {
+    "library": "lucide-react",
+    "spec": {
+      "grid": 24,
+      "strokeWidth": 1.75,
+      "strokeWidthAt16": 2,
+      "sizes": [16, 20, 24],
+      "caps": "round",
+      "colour": "currentColor"
+    },
+    "navigation": {
+      "Dashboard": "house",
+      "Facility Calendar": "calendar-days",
+      "Occupancy": "layout-grid",
+      "Calling": "phone",
+      "Inbox": "message-square",
+      "Grooming": "scissors",
+      "Training": "graduation-cap",
+      "Retail": "shopping-cart",
+      "Automations": "zap",
+      "Insights": "lightbulb",
+      "Customer": "users",
+      "Scheduling": "clock",
+      "Daily Care": "heart-handshake",
+      "Bookings": "calendar-check",
+      "Estimates": "file-text",
+      "Tasks": "clipboard-list",
+      "Booking Requests": "calendar-clock",
+      "Evaluations": "clipboard-check",
+      "Staff": "user-check",
+      "Inventory": "package",
+      "Memberships": "tags",
+      "Pet Cams": "camera",
+      "Payments": "credit-card",
+      "Billing": "wallet",
+      "Register": "vault",
+      "Payroll": "receipt",
+      "Subscription": "repeat",
+      "Gift Cards": "gift",
+      "Reports": "bar-chart-3",
+      "Marketing": "megaphone",
+      "Loyalty": "award",
+      "Loyalty Reports": "trending-up",
+      "Reputation": "shield-check",
+      "Incidents": "triangle-alert",
+      "Digital Waivers": "file-signature",
+      "Intake Forms": "clipboard-pen",
+      "Settings": "settings"
+    },
+    "actions": {
+      "add": "plus",
+      "edit": "pencil",
+      "delete": "trash-2",
+      "close": "x",
+      "confirm": "check",
+      "search": "search",
+      "filter": "filter",
+      "sort": "arrow-up-down",
+      "more": "ellipsis",
+      "export": "download",
+      "import": "upload",
+      "print": "printer",
+      "share": "share-2",
+      "duplicate": "copy",
+      "retry": "refresh-cw",
+      "undo": "undo-2",
+      "show": "eye",
+      "hide": "eye-off",
+      "link": "link",
+      "externalLink": "external-link"
+    },
+    "objects": {
+      "dog": "dog",
+      "cat": "cat",
+      "client": "user",
+      "household": "users-round",
+      "vaccination": "syringe",
+      "vet": "stethoscope",
+      "medication": "pill",
+      "feeding": "utensils",
+      "bath": "bath",
+      "treat": "bone",
+      "checkInOut": "door-open",
+      "boarding": "bed",
+      "daycare": "sun",
+      "location": "map-pin",
+      "attachment": "paperclip",
+      "photo": "image",
+      "petRecord": "paw-print",
+      "recoveryHold": "cone"
+    },
+    "status": {
+      "confirmed": "circle-check",
+      "pending": "clock-3",
+      "inService": "circle-dot",
+      "cancelled": "circle-x",
+      "needsAttention": "triangle-alert",
+      "noShow": "circle-slash",
+      "loading": "loader-circle",
+      "unknown": "circle-help",
+      "note": "Glyph is mandatory. Never colour alone."
+    }
+  },
+  "tier1Collisions": [
+    {
+      "glyph": "calendar",
+      "currentlyOn": ["Facility Calendar", "Bookings"],
+      "fix": {
+        "area": "Bookings",
+        "glyph": "calendar-check"
+      },
+      "why": "The calendar is the grid you look at; a booking is one confirmed reservation."
+    },
+    {
+      "glyph": "credit-card",
+      "currentlyOn": ["Payments", "Subscription & Billing"],
+      "fix": {
+        "area": "Subscription",
+        "glyph": "repeat"
+      },
+      "why": "What Yipyy charges the facility is a recurring charge, not a card taken at the desk."
+    },
+    {
+      "glyph": "bar-chart-3",
+      "currentlyOn": ["Reports & Analytics", "Loyalty Reports"],
+      "fix": {
+        "area": "Loyalty Reports",
+        "glyph": "trending-up"
+      },
+      "why": "One metric over time, not the reporting suite."
+    },
+    {
+      "glyph": "file-text",
+      "currentlyOn": ["Estimates", "Digital Waivers"],
+      "fix": {
+        "area": "Digital Waivers",
+        "glyph": "file-signature"
+      },
+      "why": "A waiver's whole nature is that it is signed."
+    },
+    {
+      "glyph": "clipboard-list",
+      "currentlyOn": ["Tasks", "Intake Forms"],
+      "fix": {
+        "area": "Intake Forms",
+        "glyph": "clipboard-pen"
+      },
+      "why": "A form is filled in; a task is ticked off."
+    },
+    {
+      "glyph": "dollar-sign",
+      "currentlyOn": ["Payments & Billing"],
+      "fix": {
+        "area": "Billing",
+        "glyph": "wallet"
+      },
+      "why": "Two money screens with two money glyphs and near-identical names; the titles need separating too."
+    }
+  ],
+  "custom": [
+    {
+      "name": "Kennel run",
+      "slug": "kennel-run",
+      "component": "KennelRun",
+      "svg": "icons/svg/kennel-run.svg",
+      "react": "icons/yipyy-icons.tsx",
+      "alternativeConsidered": "closest: fence",
+      "why": "The unit the boarding business is measured in; Grid3X3 stands in for it today. A fence is a boundary; a run is one enclosure a named animal occupies."
+    },
+    {
+      "name": "Occupancy",
+      "slug": "occupancy",
+      "component": "Occupancy",
+      "svg": "icons/svg/occupancy.svg",
+      "react": "icons/yipyy-icons.tsx",
+      "alternativeConsidered": "closest: grid-2x2-check",
+      "why": "How full the building is — the figure orange marks. Fill is the meaning; grid-2x2-check means a grid that has been verified."
+    },
+    {
+      "name": "Boarding night",
+      "slug": "boarding-night",
+      "component": "BoardingNight",
+      "svg": "icons/svg/boarding-night.svg",
+      "react": "icons/yipyy-icons.tsx",
+      "alternativeConsidered": "closest: moon-star",
+      "why": "Boarding is priced by the night. moon-star already means dark mode in every product a user has opened; the paw pads are what make it a stay."
+    },
+    {
+      "name": "Playgroup",
+      "slug": "playgroup",
+      "component": "Playgroup",
+      "svg": "icons/svg/playgroup.svg",
+      "react": "icons/yipyy-icons.tsx",
+      "alternativeConsidered": "no candidate",
+      "why": "Daycare's core object — several animals loose together. users and users-round are both people, and nothing in 1,756 glyphs is a group of animals."
+    },
+    {
+      "name": "Grooming table",
+      "slug": "grooming-table",
+      "component": "GroomingTable",
+      "svg": "icons/svg/grooming-table.svg",
+      "react": "icons/yipyy-icons.tsx",
+      "alternativeConsidered": "no candidate",
+      "why": "Distinguishes the grooming station from the service — scissors is the service. table and table-2 are both data tables."
+    },
+    {
+      "name": "Checked in",
+      "slug": "checked-in",
+      "component": "CheckedIn",
+      "svg": "icons/svg/checked-in.svg",
+      "react": "icons/yipyy-icons.tsx",
+      "alternativeConsidered": "no candidate",
+      "why": "The most-performed action in the product. paw-print says pet and circle-check says done; neither says the arrival, and it is one event so it needs one glyph."
+    }
+  ],
+  "addingASeventh": "Search Object.keys(lucide.icons) — 1,756 glyphs — not the app's current imports. paw-print and cone were already there. Then the governance gate in the spec."
+}

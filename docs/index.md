@@ -2,6 +2,17 @@
 
 Documentation for the Yipyy platform. Start with [AGENTS.md](../AGENTS.md) (the operating manual) and [CLAUDE.md](../CLAUDE.md) (the authoritative architecture/style rules). These docs add product context and the harness around them.
 
+## Design system
+
+**Every screen reworked from here on follows this, completely.** CLAUDE.md § "Design System" is the short form; this folder is the source.
+
+- [design-system/README.md](design-system/README.md) — the index: what landed where, and the system in one page.
+- [design-system/design-system.md](design-system/design-system.md) — **the spec**, ~40 numbered sections. `§1`, `§5b1`, `§5d2`, `§6` are the citation format; put the number in the commit message.
+- `design-system/Yipyy Design System.dc.html` — the live visual reference, opens offline in a browser. Where it and the prose disagree, **the page is right**.
+- [design-system/WORK_ORDER.md](design-system/WORK_ORDER.md) — the eleven adoption stages, in order, each with its files and a definition of done. Stage 0 done 2026-09-03; stage 1 (tokens) is next.
+- [design-system/icon-map.json](design-system/icon-map.json) — §5b1 machine-readable: one glyph per meaning, plus the six collisions in the shipped nav and their fixes.
+- [design-system/as-built-audit-2026-08-31.md](design-system/as-built-audit-2026-08-31.md) — the system being replaced, measured. Reference only; never build from it.
+
 ## Architecture
 
 - [architecture/overview.md](architecture/overview.md) — the system as it actually is: rendering model, directory layout, external services, known deviations from the target architecture.
