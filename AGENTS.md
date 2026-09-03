@@ -12,15 +12,24 @@ There is a real backend: **Supabase Postgres** with row-level security as the au
 
 **So establish which half you are in before you edit anything.** A screen that looks finished may be reading a fixture and writing nowhere; a screen that looks rough may be moving real money. Grep for what it imports. The mistakes that have cost the most time in this repo are all the same mistake: assuming.
 
+**And it is being redesigned.** A finished design system landed on 2026-09-03 in
+[docs/design-system/](docs/design-system/) — colour, shape, motion, size, density, icons, mascot,
+voice, formatting, print and governance, all decided and measured, with the eleven-stage adoption
+sequence in [WORK_ORDER.md](docs/design-system/WORK_ORDER.md). It is **not a proposal to evaluate**:
+every screen reworked from here on follows it completely, and CLAUDE.md § "Design System" is the
+standing rule. Stage 0 (the documents and assets) is done; stage 1 (tokens in `@theme`) is next and
+unlocks everything after it. Until stage 1 lands, most of `src/` still renders the old system — so
+the third question about any screen, after "fixture or Postgres?", is **"old system or new?"**
+
 The codebase is new and large (266 routes). The operating model is **discipline while building fast**: new code follows the target conventions; existing code is left alone unless the task is about it.
 
 ## The loop
 
 Every task follows: **Ground → Plan → Implement → Verify → Encode.**
 
-1. **Ground** — Read the relevant doc below and the neighboring code before writing anything. Inventory what exists (components, hooks, `src/lib/api/` factories, `src/data/` shapes) and reuse it — never recreate. **Confirm the target component is actually wired in before editing it** — a file that typechecks can still be dead code (a superseded duplicate). When a task names a component (especially a settings section), grep its host page for the import first; if it's absent, find what the section really renders and edit that. For settings: `grep -n "<Component>" src/app/facility/dashboard/settings/page.tsx` — no match means it's likely dead (e.g. the old `RolesPermissionsSettings.tsx` vs the live `FacilityRolesStudio.tsx`, 2026-07). The gate `bun run check:settings-wiring` fails on any orphaned `*Settings.tsx`; `bun run prune` (Knip) also flags files imported nowhere.
+1. **Ground** — Read the relevant doc below and the neighboring code before writing anything. **Touching an interface? Read [docs/design-system/design-system.md](docs/design-system/design-system.md) and open the reference page `docs/design-system/Yipyy Design System.dc.html` in a browser first** — where the prose and the page disagree, the page is right. Inventory what exists (components, hooks, `src/lib/api/` factories, `src/data/` shapes) and reuse it — never recreate. **Confirm the target component is actually wired in before editing it** — a file that typechecks can still be dead code (a superseded duplicate). When a task names a component (especially a settings section), grep its host page for the import first; if it's absent, find what the section really renders and edit that. For settings: `grep -n "<Component>" src/app/facility/dashboard/settings/page.tsx` — no match means it's likely dead (e.g. the old `RolesPermissionsSettings.tsx` vs the live `FacilityRolesStudio.tsx`, 2026-07). The gate `bun run check:settings-wiring` fails on any orphaned `*Settings.tsx`; `bun run prune` (Knip) also flags files imported nowhere.
 2. **Plan** — For anything beyond a trivial fix, state a short plan first (CLAUDE.md: "Plan before coding").
-3. **Implement** — Small steps, keep the build green. New code follows [docs/conventions/code-style.md](docs/conventions/code-style.md) §(b).
+3. **Implement** — Small steps, keep the build green. New code follows [docs/conventions/code-style.md](docs/conventions/code-style.md) §(b). **Anything with an interface follows [docs/design-system/design-system.md](docs/design-system/design-system.md)** — never invent a colour, radius, duration, size, glyph or pose; every value is already in §1, and if one seems to be missing, stop and ask rather than choosing (§5v). Cite the section in the commit message.
 4. **Verify** — Run the green sequence below and prove the change works (for UI, run the app and look at the touched journey). Never claim done without evidence.
 5. **Encode** — If a mistake could repeat, write the fix into a doc, a lint rule, or [docs/quality/debt-map.md](docs/quality/debt-map.md) in the same change. Use the `encode-lesson` skill.
 
@@ -79,22 +88,26 @@ E2E_BASE_URL=http://localhost:3000 bun run test:e2e:ci
 
 ## Docs map
 
-| Read this                                                                        | For tasks about                                                                                            |
-| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| [CLAUDE.md](CLAUDE.md)                                                           | Architecture, build-performance rules, data-fetching/forms patterns, code style — the authoritative manual |
-| [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md)                                   | **Start here after a break** — machine setup, what is actually done, and the traps                         |
-| [docs/architecture/overview.md](docs/architecture/overview.md)                   | How the system fits together; where routes/components/logic/state/data live; known deviations              |
-| [docs/conventions/code-style.md](docs/conventions/code-style.md)                 | Detected conventions vs. target conventions for new code                                                   |
-| [docs/quality/debt-map.md](docs/quality/debt-map.md)                             | Known landmines, fragile areas, risk zones — read before touching them                                     |
-| [docs/product/onboarding-and-roles.md](docs/product/onboarding-and-roles.md)     | **Who creates whom** — the two addresses, the four roles, invitations, one login across facilities         |
-| [docs/product/overview.md](docs/product/overview.md)                             | What the product does and for whom                                                                         |
-| [docs/product/prd.md](docs/product/prd.md)                                       | Reverse-engineered product intent, scope, open questions                                                   |
-| [docs/product/critical-user-journeys.md](docs/product/critical-user-journeys.md) | Flows that must not break; verify the touched one before claiming done                                     |
-| [docs/architecture/decisions/](docs/architecture/decisions/)                     | Why architectural choices were made (ADRs)                                                                 |
+| Read this                                                                        | For tasks about                                                                                                                        |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [CLAUDE.md](CLAUDE.md)                                                           | Architecture, the design system in short, build-performance rules, data-fetching/forms patterns, code style — the authoritative manual |
+| [docs/design-system/design-system.md](docs/design-system/design-system.md)       | **Anything with an interface** — the full spec, ~40 numbered sections. Cite §numbers in commits                                        |
+| `docs/design-system/Yipyy Design System.dc.html`                                 | The live visual reference — open it in a browser. Where it and the prose disagree, **the page is right**                               |
+| [docs/design-system/WORK_ORDER.md](docs/design-system/WORK_ORDER.md)             | Where the redesign is up to — eleven stages, the exact files, a definition of done for each                                            |
+| [docs/design-system/icon-map.json](docs/design-system/icon-map.json)             | One glyph per meaning — wire nav from this, never from prose. Also the six shipped-nav collisions                                      |
+| [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md)                                   | **Start here after a break** — machine setup, what is actually done, and the traps                                                     |
+| [docs/architecture/overview.md](docs/architecture/overview.md)                   | How the system fits together; where routes/components/logic/state/data live; known deviations                                          |
+| [docs/conventions/code-style.md](docs/conventions/code-style.md)                 | Detected conventions vs. target conventions for new code                                                                               |
+| [docs/quality/debt-map.md](docs/quality/debt-map.md)                             | Known landmines, fragile areas, risk zones — read before touching them                                                                 |
+| [docs/product/onboarding-and-roles.md](docs/product/onboarding-and-roles.md)     | **Who creates whom** — the two addresses, the four roles, invitations, one login across facilities                                     |
+| [docs/product/overview.md](docs/product/overview.md)                             | What the product does and for whom                                                                                                     |
+| [docs/product/prd.md](docs/product/prd.md)                                       | Reverse-engineered product intent, scope, open questions                                                                               |
+| [docs/product/critical-user-journeys.md](docs/product/critical-user-journeys.md) | Flows that must not break; verify the touched one before claiming done                                                                 |
+| [docs/architecture/decisions/](docs/architecture/decisions/)                     | Why architectural choices were made (ADRs)                                                                                             |
 
 ## Architecture as it is
 
-App Router with RSC enabled and the React Compiler on (babel plugin). Three+ portals under [src/app/](src/app/): `customer/` (pet owners), `facility/` (business admin + `hq/` multi-location), `dashboard/` (platform super-admin), plus `employee/`, `groomer/`, `staff/`, and public token routes (`book/`, `review/`, `forms/`). UI in [src/components/](src/components/) (shadcn primitives under `components/ui/`), hooks in [src/hooks/](src/hooks/), shared logic in [src/lib/](src/lib/), API/query factories in [src/lib/api/](src/lib/api/), mock data in [src/data/](src/data/), types in [src/types/](src/types/), i18n in [src/i18n/](src/i18n/) + [messages/](messages/). Real Anthropic calls live in [src/app/api/ai/](src/app/api/ai/) (the only non-mock surface). Full detail and deviations: [docs/architecture/overview.md](docs/architecture/overview.md).
+App Router with RSC enabled and the React Compiler on (babel plugin). Three+ portals under [src/app/](src/app/): `customer/` (pet owners), `facility/` (business admin + `hq/` multi-location), `dashboard/` (platform super-admin), plus `employee/`, `groomer/`, `staff/`, and public token routes (`book/`, `review/`, `forms/`). UI in [src/components/](src/components/) (shadcn primitives under `components/ui/`), hooks in [src/hooks/](src/hooks/), shared logic in [src/lib/](src/lib/), API/query factories in [src/lib/api/](src/lib/api/), mock data in [src/data/](src/data/), types in [src/types/](src/types/), i18n in [src/i18n/](src/i18n/) + [messages/](messages/). Real Anthropic calls live in [src/app/api/ai/](src/app/api/ai/) (the only non-mock surface). Design tokens belong in [src/app/globals.css](src/app/globals.css) `@theme` and nowhere else; the six custom glyphs are [src/components/icons/yipyy-icons.tsx](src/components/icons/yipyy-icons.tsx), the mascot's 23 poses `public/mascot/`, and the spec [docs/design-system/](docs/design-system/). Full detail and deviations: [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ## Rules for new code
 
@@ -102,6 +115,8 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
 
 - New code follows the conventions doc; **existing code is left alone unless the task is about it.** Extend existing patterns before inventing new ones; inventory first, reuse, never recreate.
 - **TypeScript:** no new `any`, no new `@ts-ignore` (use `@ts-expect-error` with a reason) — even though older code has them.
+- **Every interface follows the design system, completely** — [docs/design-system/design-system.md](docs/design-system/design-system.md), summarised in CLAUDE.md § "Design System". No hex literal in a component; every colour, radius, duration, easing, size, glyph and mascot pose comes from a token or the map, and **§5v is the only way to add one**. The rules broken most often, in order: an accent line on an edge (banned everywhere but a tab strip), a tint fill (banned but for the measured metric-tile wash), two `transition` declarations in one style (the second silently kills the first), opacity as text de-emphasis, a row action revealed on hover (two of three contexts have no hover), and orange used as an action or a state instead of as the animal. Nothing needs installing — Tailwind v4 `@theme`, Radix, `lucide-react`, `next-intl`, `sonner` and `recharts` are already here, and the reference page's HTML is never ported, only recreated.
+- **Cite the design-system section in the commit message** of any interface change — `fix(status-badge): a colour-blind reader can now tell overdue from confirmed (§3)`. The number is how the next person finds the rule that decided the value.
 - Follow the CLAUDE.md build-performance rules for all new code: Server Components by default for pages, types separated from mock data, components under ~500 lines, dynamic imports for heavy/conditional components, consume data via `src/lib/api/` factories (not direct `src/data/` imports).
 - **Conventional Commits** for every commit (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:` …).
 - **Push straight to `main`; do not open a PR** unless asked. Decided
@@ -155,6 +170,7 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
   anything on the server.
 
 - **Never weaken a gate** (a lint rule, the tsconfig `strict` flag, a CI step, a husky hook) to make work pass. Propose gate changes explicitly and separately.
+- **Interface work is verified by eye, at 599px as well as at desktop** — the suite has no opinion on a hairline or a lift. Run the guardrail greps in CLAUDE.md § "The guardrail greps", and read the label at its longest real string in `messages/fr.json` (`common.save` grows 175%).
 - **Manual verification against the touched journey is still mandatory** — the suite covers authorisation and identity, not every screen. What it does cover, CI now enforces: `bun run test:e2e:gate` runs on every push and the full suite nightly, so a loosened gate fails the build instead of shipping.
 - A spec added to either suite **must clean up after itself**. There is one Postgres and CI writes to it; see the `afterAll` in [role-editor-writes.spec.ts](tests/e2e/role-editor-writes.spec.ts).
 - **Touched a migration, a policy, a grant or a `SECURITY DEFINER` function? Run `bun run test:sql`.** It is 78 files and ~90 seconds, it runs in CI on every push, and it is the only thing that reads the database back rather than trusting that a migration applied. Until 2026-08-22 nothing ran it at all: `rpc-session-required.sql` had been failing unread, naming eleven anon-callable functions, while the rule it enforces was broken a fifth time. A test nobody runs is worse than no test — it is the appearance of a gate.
@@ -164,6 +180,8 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
 ## Legacy / risk zones — handle with care
 
 See [docs/quality/debt-map.md](docs/quality/debt-map.md) for the full map. The headline zones: the `DataTable` component (shared by many tables — additions must not break existing callers), the 168 `"use client"` pages and co-mingled type+data files (mid-refactor toward the CLAUDE.md rules — match the target in new files, don't mass-convert in passing), the FormWizard/FormBuilder dynamic-form system (uses `useState` + `evaluateLogicRules` deliberately — do **not** port it to TanStack Form), and the committed debug artifacts at the repo root (don't depend on them).
+
+**The design system adds one more, and it is temporary by design.** Until [WORK_ORDER.md](docs/design-system/WORK_ORDER.md) stage 1 lands, `src/app/globals.css` still carries the old token set — `#0EA5E9` primary, emerald/slate/gray literals, a uniform 14px radius, and white-on-brand pairs that fail WCAG AA at 2.77:1. [docs/design-system/as-built-audit-2026-08-31.md](docs/design-system/as-built-audit-2026-08-31.md) measures all of it. **Do not build from it and do not match it** — new interface work reads the new spec even while its neighbours still render the old one, and the mismatch is expected until the stage that fixes that screen. The known defects the adoption clears: `table-empty-state.tsx` hardcodes `bg-emerald-600`, `coming-soon/page.tsx` line 149 still loads the retired `/yipyy-mascot.png`, and `src/lib/nav/facility-nav.ts` has six glyph collisions.
 
 ## When unsure
 

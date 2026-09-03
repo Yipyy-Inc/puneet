@@ -35,6 +35,16 @@ const eslintConfig = defineConfig([
     // all. Scoped to `worktrees/` rather than `.claude/**` so that a future
     // `.claude` script would still be linted.
     ".claude/worktrees/**",
+    // The design system's live reference page ships its own runtime. It is a
+    // browser-only specimen sheet that opens offline from a file:// URL — React
+    // 17 UMD off a CDN, an IIFE, no build step — and the whole point of it is
+    // that it is NOT this app: the work order says recreate its designs in this
+    // repo's environment and never port its markup, its runtime or its inline
+    // styles. Linting it reports React 18 and Next rules against code nobody
+    // here will ever change, and two of them are errors, so it takes the gate
+    // down. Scoped to the one file rather than `docs/**` so a script the project
+    // actually owns would still be linted.
+    "docs/design-system/support.js",
   ]),
   {
     // SCOPED ON PURPOSE, and it must stay scoped. The `react-hooks` rules below

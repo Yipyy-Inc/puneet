@@ -1,4 +1,11 @@
-# Yipyy design system — as it exists today
+# Yipyy design system — the one being replaced (audit, 2026-08-31)
+
+> **Superseded 2026-09-03.** This is the _old_ system: what the codebase rendered before the new
+> design system landed, including the parts that are wrong. It is kept as the record of what the
+> redesign is removing, and as the evidence behind [design-system.md](design-system.md) §8.
+> **Do not build from it.** The rules are [design-system.md](design-system.md) and the
+> [live reference page](<Yipyy Design System.dc.html>); the sequence is [WORK_ORDER.md](WORK_ORDER.md).
+> Paths below were relative to `docs/` and are now one level deeper — read `../src/…` as `../../src/…`.
 
 Extracted from the codebase on 2026-08-31 at `556a89fa`. Every value below was read out of
 [src/app/globals.css](../src/app/globals.css) (762 lines), [src/app/layout.tsx](../src/app/layout.tsx),
