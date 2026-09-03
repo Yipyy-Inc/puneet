@@ -332,6 +332,7 @@ export function IntegrationDetailClient({
               searchKey="message"
               searchPlaceholder="Search errors…"
               emptyState={{
+                pose: "notification",
                 icon: CircleCheck,
                 title: "No errors logged",
                 description:

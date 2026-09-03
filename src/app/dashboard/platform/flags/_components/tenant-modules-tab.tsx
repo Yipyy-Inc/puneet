@@ -158,6 +158,7 @@ export function TenantModulesTab() {
         itemsPerPage={10}
         onRowClick={(c) => setSelected(c)}
         emptyState={{
+          pose: "secure",
           icon: ToggleRight,
           title: "No tenants configured",
         }}

@@ -501,6 +501,7 @@ export function TaskLibraryTab() {
           searchPlaceholder="Search the library…"
           itemsPerPage={10}
           emptyState={{
+            pose: "celebration",
             icon: ClipboardList,
             title: showRetired ? "No chores" : "No active chores",
             description:

@@ -355,6 +355,7 @@ export function FacilitySubscriptionsTable() {
             searchKey="facilityName"
             searchPlaceholder="Search facilities..."
             emptyState={{
+              pose: "working",
               icon: CreditCard,
               title: "No subscriptions",
               description: "No facility subscriptions to display yet.",
@@ -374,6 +375,7 @@ export function FacilitySubscriptionsTable() {
             searchKey="facilityName"
             searchPlaceholder="Search facilities..."
             emptyState={{
+              pose: "working",
               icon: CheckCircle,
               title: "No active subscriptions",
               description:
@@ -394,6 +396,7 @@ export function FacilitySubscriptionsTable() {
             searchKey="facilityName"
             searchPlaceholder="Search facilities..."
             emptyState={{
+              pose: "working",
               icon: Clock,
               title: "No trial subscriptions",
               description: "No facilities are currently on a trial plan.",
@@ -415,6 +418,7 @@ export function FacilitySubscriptionsTable() {
             searchKey="facilityName"
             searchPlaceholder="Search facilities..."
             emptyState={{
+              pose: "working",
               icon: PauseCircle,
               title: "No suspended subscriptions",
               description: "No facility subscriptions are currently suspended.",

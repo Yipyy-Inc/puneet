@@ -142,6 +142,7 @@ export function FacilityClients({ facilityId }: { facilityId: string }) {
           },
         ]}
         emptyState={{
+          pose: "presenting",
           icon: UserCheck,
           title: "No clients yet",
           description:

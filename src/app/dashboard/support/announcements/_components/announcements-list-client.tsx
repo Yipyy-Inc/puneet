@@ -223,6 +223,7 @@ export function AnnouncementsListClient() {
         searchPlaceholder="Search announcements…"
         itemsPerPage={10}
         emptyState={{
+          pose: "speaking",
           icon: Megaphone,
           title: "No announcements yet",
           description: "Broadcast updates to facilities across the platform.",

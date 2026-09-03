@@ -203,6 +203,7 @@ export function UsageReportClient({ report }: { report: UsageReport }) {
             searchPlaceholder="Search modules…"
             itemsPerPage={10}
             emptyState={{
+              pose: "working",
               icon: Gauge,
               title: "No module usage yet",
               description:
@@ -233,6 +234,7 @@ export function UsageReportClient({ report }: { report: UsageReport }) {
               searchPlaceholder="Search facilities…"
               itemsPerPage={10}
               emptyState={{
+                pose: "working",
                 icon: Cpu,
                 title: "No AI usage yet",
                 description:

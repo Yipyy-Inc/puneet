@@ -639,6 +639,7 @@ export function SystemStatus() {
                 columns={serverColumns}
                 data={serverStatuses}
                 emptyState={{
+                  pose: "notification",
                   icon: Server,
                   title: "No server status data",
                 }}
@@ -661,6 +662,7 @@ export function SystemStatus() {
                 columns={resourceColumns}
                 data={resourceUtilizations}
                 emptyState={{
+                  pose: "notification",
                   icon: Gauge,
                   title: "No resource utilization data",
                 }}
@@ -686,6 +688,7 @@ export function SystemStatus() {
                 columns={databaseColumns}
                 data={databaseMetrics}
                 emptyState={{
+                  pose: "notification",
                   icon: Database,
                   title: "No database metrics",
                 }}
@@ -711,6 +714,7 @@ export function SystemStatus() {
                 columns={apiColumns}
                 data={apiEndpoints}
                 emptyState={{
+                  pose: "notification",
                   icon: Link,
                   title: "No API endpoints",
                 }}
@@ -733,6 +737,7 @@ export function SystemStatus() {
                 columns={performanceColumns}
                 data={performanceMetrics}
                 emptyState={{
+                  pose: "notification",
                   icon: BarChart3,
                   title: "No performance metrics",
                 }}
@@ -758,6 +763,7 @@ export function SystemStatus() {
                 columns={serviceColumns}
                 data={serviceUptimes}
                 emptyState={{
+                  pose: "notification",
                   icon: Globe,
                   title: "No service uptime data",
                 }}

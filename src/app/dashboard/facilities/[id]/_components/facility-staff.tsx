@@ -171,6 +171,7 @@ export function FacilityStaff({ facilityId }: { facilityId: string }) {
           },
         ]}
         emptyState={{
+          pose: "pointing",
           icon: Users,
           title: "No staff recorded",
           description:

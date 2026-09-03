@@ -148,6 +148,7 @@ export function TrainingServiceCatalogClient({ series }: Props) {
         searchKeys={["name", "courseTypeName"]}
         searchPlaceholder="Search classes…"
         emptyState={{
+          pose: "idea",
           icon: GraduationCap,
           title: "No training classes yet",
           description:

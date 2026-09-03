@@ -312,6 +312,7 @@ export default function AuditTrailPage() {
         searchPlaceholder="Quick search by user…"
         itemsPerPage={10}
         emptyState={{
+          pose: "reviewing",
           icon: Shield,
           title:
             audit.length === 0

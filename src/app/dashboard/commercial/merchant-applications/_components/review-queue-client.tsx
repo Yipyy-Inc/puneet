@@ -239,6 +239,7 @@ export function ReviewQueueClient() {
           router.push(`/dashboard/commercial/merchant-applications/${row.id}`)
         }
         emptyState={{
+          pose: "reviewing",
           icon: ClipboardList,
           title:
             scope === "open"

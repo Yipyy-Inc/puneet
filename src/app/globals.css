@@ -735,6 +735,96 @@
   }
 }
 
+/* ============================================================================
+ * The design system's own motion, §4. Stage 2 of WORK_ORDER.md is the first
+ * consumer; the keyframes below are added as each stage needs them rather
+ * than all at once, so nothing here is unused.
+ *
+ * `yy-breathe` (the orange presence dot) and `yy-rise` (the staggered
+ * once-only entrance) are the other two of §4's four ambient patterns and
+ * belong to stages 8 and 7 — deliberately not pre-added here.
+ * ========================================================================= */
+
+/* Yipyy, on an empty state. 4px and 6s are §4's ceilings, not suggestions:
+   "4px and 2.4s are the ceilings... Faster or larger stops reading as
+   ambience and starts reading as a spinner or a bug." */
+@keyframes yy-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* ── WHY @utility AND NOT A PLAIN CLASS ────────────────────────────────────
+ *
+ * Both of these started as ordinary `.yy-float { … }` rules and worked fine,
+ * but `better-tailwindcss/no-unknown-classes` flagged each call site as an
+ * unknown class — correctly, from its point of view: a plain CSS class is
+ * invisible to a linter that reads Tailwind's own utility registry. Two
+ * warnings today, and one per button from stage 5 onward.
+ *
+ * `@utility` is Tailwind v4's own mechanism for exactly this, so the classes
+ * become real registered utilities: the linter recognises them, they can take
+ * variants, and the CSS compiles unchanged. Nesting and a nested media query
+ * inside `@utility` were verified against the real compiler before this was
+ * written, not assumed.
+ */
+
+/* §5p: reduced motion turns animations off. Nothing here is load-bearing —
+   "the reduced-motion view is not a degraded one, it is the same screen". */
+@utility yy-float {
+  animation: yy-float 6s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* ── THE CTA LIFT, AS ONE DECLARATION ──────────────────────────────────────
+ *
+ * §4 requires a primary CTA to physically respond: rest on --sh-cta, lift 2px
+ * on hover, settle on active. It also requires EXACTLY ONE `transition`
+ * declaration per style — hard rule 3 — because "the template compiles to a
+ * React style object, so a second `transition:` silently overwrites the first
+ * and the animation dies with no error".
+ *
+ * One utility is how that rule becomes enforceable rather than remembered: the
+ * declaration lives here once, and a call site adds `yy-cta` instead of
+ * hand-writing a transition it could double. Stage 5 (Button) reuses this
+ * rather than restating the values.
+ */
+@utility yy-cta {
+  box-shadow: var(--sh-cta);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.22s ease,
+    background 0.18s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sh-cta-hover);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: var(--sh-cta-active);
+  }
+
+  /* The lift is decoration, so it goes entirely; the resting shadow stays and
+     the button is still obviously a button. */
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0.001ms;
+
+    &:hover,
+    &:active {
+      transform: none;
+    }
+  }
+}
+
 /* Keyframes for animations */
 @keyframes fade-in {
   from {

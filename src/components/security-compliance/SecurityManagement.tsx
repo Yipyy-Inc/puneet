@@ -929,6 +929,7 @@ export function SecurityManagement() {
                 data={security.mfa}
                 actions={mfaActions}
                 emptyState={{
+                  pose: "secure",
                   icon: Lock,
                   title: "No MFA settings yet",
                   description:
@@ -966,6 +967,7 @@ export function SecurityManagement() {
                 data={security.ips}
                 actions={ipActions}
                 emptyState={{
+                  pose: "secure",
                   icon: Globe,
                   title: "No IP rules yet",
                   description:
@@ -1004,6 +1006,7 @@ export function SecurityManagement() {
                 data={security.sessions}
                 actions={sessionActions}
                 emptyState={{
+                  pose: "secure",
                   icon: Clock,
                   title: "No active sessions",
                   description:
@@ -1030,6 +1033,7 @@ export function SecurityManagement() {
                 data={security.policies}
                 actions={policyActions}
                 emptyState={{
+                  pose: "secure",
                   icon: Key,
                   title: "No password policies yet",
                   description:
@@ -1198,6 +1202,7 @@ export function SecurityManagement() {
                 columns={failedLoginColumns}
                 data={failedLoginAttempts}
                 emptyState={{
+                  pose: "secure",
                   icon: AlertTriangle,
                   title: "No failed login attempts",
                   description:
@@ -1224,6 +1229,7 @@ export function SecurityManagement() {
                 data={securityAlerts}
                 actions={alertActions}
                 emptyState={{
+                  pose: "secure",
                   icon: ShieldCheck,
                   title: "No security alerts",
                   description:

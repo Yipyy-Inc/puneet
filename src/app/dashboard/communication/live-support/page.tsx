@@ -381,6 +381,7 @@ export default function LiveSupportPage() {
                   searchPlaceholder="Search tickets..."
                   itemsPerPage={10}
                   emptyState={{
+                    pose: "speaking",
                     icon: Ticket,
                     title: "No tickets yet",
                     description:

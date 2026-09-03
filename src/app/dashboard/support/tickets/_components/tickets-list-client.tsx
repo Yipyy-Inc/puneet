@@ -281,6 +281,7 @@ export function TicketsListClient() {
         itemsPerPage={12}
         onRowClick={(t) => router.push(`/dashboard/support/tickets/${t.id}`)}
         emptyState={{
+          pose: "speaking",
           icon: TicketIcon,
           title: "No tickets yet",
           description:

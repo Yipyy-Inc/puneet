@@ -326,6 +326,7 @@ export function MySubscriptionView() {
               </Button>
             )}
             emptyState={{
+              pose: "secure",
               icon: Receipt,
               title: "No invoices yet",
               description: "Your Yipyy subscription invoices will appear here.",

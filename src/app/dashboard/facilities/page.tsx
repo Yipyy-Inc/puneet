@@ -681,6 +681,7 @@ export default function FacilitiesPage() {
                 router.push(`/dashboard/facilities/${facility.id}`)
               }
               emptyState={{
+                pose: "presenting",
                 icon: Building2,
                 title: "No facilities yet",
                 description:

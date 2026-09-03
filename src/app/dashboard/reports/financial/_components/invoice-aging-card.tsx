@@ -139,6 +139,7 @@ export function InvoiceAgingCard({
           searchPlaceholder="Search facilities..."
           itemsPerPage={8}
           emptyState={{
+            pose: "working",
             icon: CircleCheck,
             title: "No outstanding invoices",
             description: "All receivables are settled — nothing is aging.",

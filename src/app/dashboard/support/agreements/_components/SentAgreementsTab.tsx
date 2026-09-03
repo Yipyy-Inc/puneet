@@ -283,6 +283,7 @@ export function SentAgreementsTab() {
           );
         }}
         emptyState={{
+          pose: "reviewing",
           icon: Send,
           title: "No agreements sent yet",
           description:

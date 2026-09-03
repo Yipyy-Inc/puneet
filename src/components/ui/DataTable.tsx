@@ -52,6 +52,7 @@ import {
   TableEmptyState,
   type TableEmptyStateAction,
 } from "@/components/ui/table-empty-state";
+import type { YipyyPoseProps } from "@/components/ui/yipyy-pose";
 
 export interface ColumnDef<T> {
   key: string;
@@ -112,6 +113,15 @@ export interface DataTableProps<T> {
    */
   emptyState?: {
     icon?: LucideIcon;
+    /**
+     * Yipyy's pose for THIS module's true-empty state — §5d2 assigns one to
+     * every nav area, so look it up there rather than picking.
+     *
+     * Only the true-empty branch reads it. The filtered-empty branch always
+     * gets `searching`, because "no rows match your filters" is the same
+     * moment on every screen in the product.
+     */
+    pose?: YipyyPoseProps["name"];
     title?: string;
     description?: string;
     action?: TableEmptyStateAction;
@@ -433,15 +443,27 @@ export function DataTable<T extends object>({
             {paginatedData.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={emptyColSpan} className="p-0">
+                  {/* The branch this table already drew — SearchX for a
+                      filter that cleared the rows, Inbox for a table that
+                      never had any — turns out to be exactly §5d2's own
+                      distinction, so each side simply gains its pose.
+
+                      Filtered: `searching`, always. §5d1 reversed an earlier
+                      ban to allow this specifically ("a filtered empty IS an
+                      empty surface, so it takes searching at 132"), and it is
+                      the same moment on every screen, so no call site chooses
+                      it. True-empty: the module's own pose, from §5d2. */}
                   {isFilteredEmpty ? (
                     <TableEmptyState
                       icon={SearchX}
+                      pose="searching"
                       title="No matching results"
                       description="Try adjusting your search or filters."
                     />
                   ) : (
                     <TableEmptyState
                       icon={emptyState?.icon ?? Inbox}
+                      pose={emptyState?.pose}
                       title={emptyState?.title ?? "No data yet"}
                       description={emptyState?.description}
                       action={emptyState?.action}

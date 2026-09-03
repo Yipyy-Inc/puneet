@@ -664,6 +664,7 @@ export function AlertsNotifications() {
                 data={alerts}
                 actions={alertActions}
                 emptyState={{
+                  pose: "notification",
                   icon: BellRing,
                   title: "No system alerts",
                   description:
@@ -707,6 +708,7 @@ export function AlertsNotifications() {
                 data={configs}
                 actions={configActions}
                 emptyState={{
+                  pose: "notification",
                   icon: Settings,
                   title: "No alert rules configured",
                   description:
@@ -744,6 +746,7 @@ export function AlertsNotifications() {
                 columns={channelColumns}
                 data={notificationChannels}
                 emptyState={{
+                  pose: "notification",
                   icon: Bell,
                   title: "No notification channels",
                   description:

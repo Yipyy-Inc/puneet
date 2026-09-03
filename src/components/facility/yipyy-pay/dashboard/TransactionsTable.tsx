@@ -223,6 +223,7 @@ export function TransactionsTable({
         }
         searchPlaceholder="Search customer, pet, card, booking…"
         emptyState={{
+          pose: "working",
           icon: Receipt,
           title: "No payments in this period",
           description:

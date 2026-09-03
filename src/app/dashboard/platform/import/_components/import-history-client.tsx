@@ -136,6 +136,7 @@ export function ImportHistoryClient() {
           searchPlaceholder="Search facility, source, or importer…"
           itemsPerPage={12}
           emptyState={{
+            pose: "working",
             icon: Upload,
             title: "No imports yet",
             description:

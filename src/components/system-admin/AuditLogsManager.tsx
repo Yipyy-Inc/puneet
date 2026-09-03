@@ -1133,6 +1133,7 @@ export function AuditLogsManager() {
                 searchKey="action"
                 searchPlaceholder="Search by action, user, or entity..."
                 emptyState={{
+                  pose: "reviewing",
                   icon: ScrollText,
                   title: "No audit events",
                   description:
