@@ -695,6 +695,7 @@ export function DataManagement() {
                 searchKey="backupName"
                 searchPlaceholder="Search backups..."
                 emptyState={{
+                  pose: "secure",
                   icon: Database,
                   title: "No backups yet",
                   description:
@@ -730,6 +731,7 @@ export function DataManagement() {
                 searchKey="recoveryName"
                 searchPlaceholder="Search recovery operations..."
                 emptyState={{
+                  pose: "secure",
                   icon: RefreshCw,
                   title: "No restore requests",
                   description:
@@ -817,6 +819,7 @@ export function DataManagement() {
                 searchKey="policyName"
                 searchPlaceholder="Search policies..."
                 emptyState={{
+                  pose: "secure",
                   icon: Archive,
                   title: "No retention policies",
                   description:

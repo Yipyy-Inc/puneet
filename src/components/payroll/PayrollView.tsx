@@ -402,6 +402,7 @@ export function PayrollView() {
           searchKey="employeeName"
           searchPlaceholder="Search staff…"
           emptyState={{
+            pose: "working",
             icon: Clock,
             title: "Nobody clocked in during this period",
             description:

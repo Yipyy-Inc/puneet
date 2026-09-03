@@ -320,6 +320,7 @@ export function TrialsClient() {
           itemsPerPage={12}
           actions={rowActions}
           emptyState={{
+            pose: "waiting",
             icon: Hourglass,
             title: "No active trials",
             description:

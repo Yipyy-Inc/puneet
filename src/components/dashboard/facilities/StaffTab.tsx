@@ -347,6 +347,7 @@ export function StaffTab({
           itemsPerPage={10}
           actions={rowActions}
           emptyState={{
+            pose: "pointing",
             icon: Users,
             title: "No staff accounts yet",
             description:

@@ -162,6 +162,7 @@ export function FacilityLogs({ facilityId }: { facilityId: string }) {
           },
         ]}
         emptyState={{
+          pose: "reviewing",
           icon: History,
           title: since
             ? "Nothing recorded for this facility"

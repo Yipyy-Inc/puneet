@@ -667,6 +667,7 @@ export default function AnnouncementsPage() {
                     searchPlaceholder="Search announcements..."
                     itemsPerPage={10}
                     emptyState={{
+                      pose: "speaking",
                       icon: Megaphone,
                       title:
                         tab === "published"

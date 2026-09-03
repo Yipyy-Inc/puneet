@@ -127,8 +127,36 @@ Highest leverage in the codebase. ~28 call sites, one component.
 - Fill in `pose` at the ~28 `emptyState={{…}}` call sites using the **§5d2 module map** — no
   judgement calls, every one of the 36 nav areas is already assigned.
 
-**Done when:** every `emptyState={{…}}` in `src/app` and `src/components` names a pose, and a filtered
-table shows `searching` while an unpopulated one shows its module pose.
+**Done — 2026-09-05. Both halves hold, and one of them needed a decision the map does not cover.**
+
+- Every `emptyState={{…}}` names a pose: **80 call sites across 51 files**, not the ~28 estimated
+  here. Enforced by the type system rather than by a grep — `pose` is the `YipyyPose` union, so a
+  typo or an invented name fails `bun run typecheck`.
+- A filtered table shows `searching` and an unpopulated one shows its module pose. Confirmed by
+  rendering both in the real app against the real CSS (a scratch route, since no table in the shared
+  database happened to be empty), plus the compiled output: `@keyframes yy-float` at 4px/6s,
+  `.yy-cta` carrying **one** `transition` declaration with §4's exact values, and both
+  reduced-motion guards.
+
+**§5d2 does not cover most of these call sites, and that is worth knowing before stage 3.** The map
+assigns a pose to all 36 **facility** nav areas. Of the 80 call sites, roughly 70 are the **platform
+super-admin portal** — compliance tooling, system health, audit logs, merchant applications, churn
+reports, feature flags — which has no rows in §5d2 at all. So "no judgement calls, every one of the
+36 nav areas is already assigned" was true of the facility portal and not of the app.
+
+Nothing was invented to close that: no new pose, no new size, no new rule. Each of those surfaces
+was assigned **by analogy to §5d2's own categories**, and the reason for every group is recorded in
+the commit — `secure` for settings/security/compliance, `notification` for an empty alert list (the
+ladder's own "all caught up" rung), `working` for reports and money, `reviewing` for review queues
+and audit logs, `speaking` for ticket queues and announcements, and so on.
+
+**Two calls in there are worth a design owner's eye rather than a maintainer's**, and neither is
+load-bearing: within `SecurityManagement.tsx`, "No failed login attempts" and "No security alerts"
+are arguably the ladder's `notification` rather than the module's `secure` — the file was kept
+uniform on `secure` because per-file consistency is easier to review than a split, and either
+reading is defensible. And `knowledge-base` took `speaking` (Marketing-shaped, outbound writing)
+where `reviewing` would also fit. **The real fix is upstream: §5d2 should gain rows for the platform
+portal**, at which point these become lookups instead of analogies.
 
 ---
 

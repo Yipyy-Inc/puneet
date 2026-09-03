@@ -259,6 +259,7 @@ export function CustomReportsManager() {
             data={rows}
             actions={renderActions}
             emptyState={{
+              pose: "working",
               icon: FileText,
               title: "No saved reports yet",
               description:

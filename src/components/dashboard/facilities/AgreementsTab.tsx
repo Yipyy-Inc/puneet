@@ -214,6 +214,7 @@ export function AgreementsTab({
               </Button>
             )}
             emptyState={{
+              pose: "reviewing",
               icon: ShieldCheck,
               title: "No agreements on file",
               description:

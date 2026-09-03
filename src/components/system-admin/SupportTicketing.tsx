@@ -536,6 +536,7 @@ export function SupportTicketing() {
                 searchPlaceholder="Search tickets..."
                 itemsPerPage={10}
                 emptyState={{
+                  pose: "speaking",
                   icon: Ticket,
                   title: "No support tickets yet",
                   description:

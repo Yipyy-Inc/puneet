@@ -440,6 +440,7 @@ export function FacilityPerformanceMetrics() {
                 Record<string, unknown>)[]
             }
             emptyState={{
+              pose: "working",
               icon: TrendingUp,
               title: "No performance data yet",
               description:

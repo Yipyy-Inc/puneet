@@ -1255,6 +1255,7 @@ export function ComplianceTools() {
                 searchKey="requesterName"
                 searchPlaceholder="Search by name or email..."
                 emptyState={{
+                  pose: "secure",
                   icon: ShieldCheck,
                   title: "No data subject requests",
                   description:
@@ -1346,6 +1347,7 @@ export function ComplianceTools() {
                 data={gdprCompliance}
                 actions={gdprActions}
                 emptyState={{
+                  pose: "secure",
                   icon: Shield,
                   title: "No GDPR requirements tracked",
                   description:
@@ -1372,6 +1374,7 @@ export function ComplianceTools() {
                 data={dataProtectionSettings}
                 actions={dataProtectionActions}
                 emptyState={{
+                  pose: "secure",
                   icon: Lock,
                   title: "No data protection settings",
                   description:
@@ -1398,6 +1401,7 @@ export function ComplianceTools() {
                 data={privacyPolicies}
                 actions={privacyPolicyActions}
                 emptyState={{
+                  pose: "secure",
                   icon: FileText,
                   title: "No privacy policies",
                   description:
@@ -1423,6 +1427,7 @@ export function ComplianceTools() {
                 columns={userConsentColumns}
                 data={userConsents}
                 emptyState={{
+                  pose: "secure",
                   icon: Users,
                   title: "No consent records",
                   description:
@@ -1487,6 +1492,7 @@ export function ComplianceTools() {
                 data={complianceFrameworks}
                 actions={frameworkActions}
                 emptyState={{
+                  pose: "secure",
                   icon: Award,
                   title: "No compliance frameworks",
                   description:
@@ -1513,6 +1519,7 @@ export function ComplianceTools() {
                 data={complianceReports}
                 actions={reportActions}
                 emptyState={{
+                  pose: "secure",
                   icon: FileText,
                   title: "No compliance reports",
                   description:
@@ -1539,6 +1546,7 @@ export function ComplianceTools() {
                 data={certificates}
                 actions={certificateActions}
                 emptyState={{
+                  pose: "secure",
                   icon: FileCheck,
                   title: "No certificates",
                   description:
@@ -1564,6 +1572,7 @@ export function ComplianceTools() {
                 columns={auditTrailColumns}
                 data={auditTrails}
                 emptyState={{
+                  pose: "secure",
                   icon: Database,
                   title: "No audit trail entries",
                   description:

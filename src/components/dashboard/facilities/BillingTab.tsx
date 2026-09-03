@@ -397,6 +397,7 @@ export function BillingTab({
             searchPlaceholder="Search invoices…"
             itemsPerPage={10}
             emptyState={{
+              pose: "working",
               icon: Receipt,
               title: "No invoices yet",
               description:

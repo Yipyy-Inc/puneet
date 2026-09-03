@@ -259,6 +259,7 @@ export default function UserManagementPage() {
         itemsPerPage={10}
         onRowClick={(row) => setSelected(row as unknown as PlatformTeamRow)}
         emptyState={{
+          pose: "pointing",
           icon: Users,
           title: "Nobody on the platform team yet",
           description:

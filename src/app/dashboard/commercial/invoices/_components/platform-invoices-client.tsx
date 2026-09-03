@@ -389,6 +389,7 @@ export function PlatformInvoicesClient() {
           itemsPerPage={12}
           onRowClick={(i) => setSelectedId(i.id)}
           emptyState={{
+            pose: "working",
             icon: Receipt,
             title: "No invoices yet",
             description:

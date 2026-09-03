@@ -275,6 +275,7 @@ export function SupportReportClient({ report }: { report: SupportReport }) {
             searchPlaceholder="Search agents…"
             itemsPerPage={10}
             emptyState={{
+              pose: "working",
               icon: Headphones,
               title: "No agent activity yet",
               description:

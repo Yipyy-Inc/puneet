@@ -152,6 +152,7 @@ export function ChurnedFacilityLog({
           searchPlaceholder="Search facilities..."
           itemsPerPage={10}
           emptyState={{
+            pose: "working",
             icon: TrendingDown,
             title: "No churned facilities",
             description: "No facilities have churned in the last 12 months.",

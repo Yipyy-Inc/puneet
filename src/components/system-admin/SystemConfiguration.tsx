@@ -714,6 +714,7 @@ export function SystemConfiguration() {
                 }
                 rowClassName={() => "cursor-pointer"}
                 emptyState={{
+                  pose: "secure",
                   icon: Plug,
                   title: "No integrations connected",
                   description:
@@ -743,6 +744,7 @@ export function SystemConfiguration() {
                 searchKey="name"
                 searchPlaceholder="Search API keys..."
                 emptyState={{
+                  pose: "secure",
                   icon: KeyRound,
                   title: "No API keys yet",
                   description:
@@ -780,6 +782,7 @@ export function SystemConfiguration() {
                 searchKey="name"
                 searchPlaceholder="Search settings..."
                 emptyState={{
+                  pose: "secure",
                   icon: Settings,
                   title: "No system settings",
                   description:
@@ -809,6 +812,7 @@ export function SystemConfiguration() {
                 searchKey="name"
                 searchPlaceholder="Search feature flags..."
                 emptyState={{
+                  pose: "secure",
                   icon: Flag,
                   title: "No feature flags",
                   description:

@@ -170,6 +170,7 @@ export function FacilityRequestsClient() {
           searchPlaceholder="Search applications…"
           itemsPerPage={10}
           emptyState={{
+            pose: "question",
             icon: ClipboardCheck,
             title: "No pending applications",
             description:

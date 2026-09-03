@@ -185,6 +185,7 @@ export function AgreementsReportClient() {
             searchPlaceholder="Search facility or agreement…"
             itemsPerPage={15}
             emptyState={{
+              pose: "reviewing",
               icon: CircleCheck,
               title: "No agreements to review",
               description:

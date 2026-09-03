@@ -773,6 +773,7 @@ export default function AiSettingsPage() {
                 searchPlaceholder="Search facility…"
                 itemsPerPage={10}
                 emptyState={{
+                  pose: "secure",
                   icon: Sparkles,
                   title: "No AI usage yet",
                   description:

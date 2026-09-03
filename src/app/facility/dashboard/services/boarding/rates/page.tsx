@@ -397,6 +397,7 @@ export default function BoardingRatesPage() {
                 searchKey="name"
                 searchPlaceholder="Search rates..."
                 emptyState={{
+                  pose: "waiting",
                   icon: DollarSign,
                   title: "No kennel classes yet",
                   description:

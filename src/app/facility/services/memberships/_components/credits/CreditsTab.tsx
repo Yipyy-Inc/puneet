@@ -189,6 +189,7 @@ export function CreditsTab() {
         searchPlaceholder="Search by customer..."
         onRowClick={(item) => openHistory(item as StoreCreditAccount)}
         emptyState={{
+          pose: "presenting",
           icon: Wallet,
           title: "No store credit yet",
           description:

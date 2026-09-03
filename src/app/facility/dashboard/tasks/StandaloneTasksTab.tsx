@@ -523,6 +523,7 @@ export function StandaloneTasksTab() {
           searchPlaceholder="Search tasks…"
           itemsPerPage={10}
           emptyState={{
+            pose: "celebration",
             icon: ClipboardList,
             title: "No tasks here",
             description:

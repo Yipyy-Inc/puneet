@@ -154,6 +154,7 @@ export function FacilitiesReportClient({
             searchPlaceholder="Search facilities…"
             itemsPerPage={11}
             emptyState={{
+              pose: "working",
               icon: Building2,
               title: "No facility revenue yet",
               description:

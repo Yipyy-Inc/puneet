@@ -289,6 +289,7 @@ export function SubscriptionsClient() {
           router.push(`/dashboard/facilities/${r.facilityId}?tab=billing`)
         }
         emptyState={{
+          pose: "working",
           icon: Repeat,
           title: "No subscriptions yet",
           description:

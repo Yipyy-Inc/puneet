@@ -236,6 +236,7 @@ export function CreditsClient() {
         searchPlaceholder="Search facility, reason, or admin…"
         itemsPerPage={20}
         emptyState={{
+          pose: "working",
           icon: Gift,
           title: "No credits or discounts yet",
           description:

@@ -275,6 +275,7 @@ export function RecordingsTab() {
         columns={columns}
         itemsPerPage={10}
         emptyState={{
+          pose: "listening",
           icon: Mic,
           title: "No recordings yet",
           description:

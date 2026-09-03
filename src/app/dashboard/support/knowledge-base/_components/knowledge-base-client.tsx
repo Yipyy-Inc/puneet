@@ -271,6 +271,7 @@ export function KnowledgeBaseClient() {
         searchPlaceholder="Search articles…"
         itemsPerPage={10}
         emptyState={{
+          pose: "speaking",
           icon: BookOpen,
           title: "No articles yet",
           description:
