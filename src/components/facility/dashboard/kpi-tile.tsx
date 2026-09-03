@@ -1,10 +1,54 @@
 "use client";
 
 import { ArrowRight, type LucideIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
+
 import { DeltaBadge } from "@/components/ui/delta-badge";
 import type { Delta } from "@/lib/format";
+import { cn } from "@/lib/utils";
+
+// ============================================================================
+// Metric and filter tile. docs/design-system/design-system.md §tiles, §5s, §6.
+//
+// Every value below is the reference page's own tile anatomy table:
+//
+//   Surface     linear-gradient(135deg, <wash> 0%, #FFF 58%) · 1px #E4EAF5 · r24
+//   Carrier     a 40px SOLID badge with the glyph on top
+//   Label       12 / 700 / .07em / uppercase / #4C5B6C · min-height 2.6em
+//   Value       30 / 700 / -.02em / #0A1B33 · tabular
+//   Sub-line    13 / #4C5B6C · exactly one
+//   Selected    inset 0 0 0 2px #1668E3, value steps to #0F58C6
+//   Applied     solid #1668E3, white text, one at a time
+//
+// ── WHAT THIS REPLACED, AND WHY EACH ONE HAD TO GO ────────────────────────
+//
+// The tile carried five patterns §tiles names as defects, by name:
+//
+//   1. `absolute bottom-0 left-0 right-0 h-0.5` on the active state — THE
+//      BOTTOM ACCENT. §6 rule 1 bans an accent line on any edge, and the tile
+//      section says why twice: "it reads as a progress bar that never fills,
+//      and it breaks the tile's radius on two corners". Replaced by the full
+//      2px inset ring, which "survives reorder and reads on any edge".
+//   2. `border-t border-dashed` above the trail and the link. "A dashed
+//      divider inside a 5-line tile is decoration, not structure. Space the
+//      action instead." So they are spaced.
+//   3. Multi-hue gradient badges (`from-amber-400 via-orange-500 to-rose-500`)
+//      where the spec asks for one solid fill. "This is what made the old
+//      tiles readable at a glance — a saturated circle."
+//   4. A `halo` gradient at opacity behind everything, which is a tint fill
+//      wearing a costume.
+//   5. A 10px label and a 20px value, against the specified 12 and 30.
+//
+// ── THE TONE NAMES ARE KEPT, THE COLOURS ARE NOT ──────────────────────────
+//
+// 65 files pass `tone="indigo"` and friends, so the keys stay and map onto
+// §1's roles. `amber` is the one that does NOT map to what its name suggests:
+// it resolves to the WARNING family, not to orange. In this app `amber` labels
+// "Escalated", "Overdue invoices", "Paused", "Drafts" — states — and §2b's
+// whole guardrail is that orange is the animal and "never becomes an action or
+// a state". The reference page's one orange tile is "Trials expiring · 7
+// days", a countdown, which is §2b's "now" territory. So orange is available
+// as its own opt-in tone, and no legacy name resolves to it by accident.
+// ============================================================================
 
 export type KpiTone =
   | "indigo"
@@ -12,7 +56,38 @@ export type KpiTone =
   | "rose"
   | "emerald"
   | "slate"
-  | "violet";
+  | "violet"
+  /** §2b's territories only — presence, capacity, now. Never a state. */
+  | "brand";
+
+interface ToneStyle {
+  /** The §tiles wash, or none for the neutral tone (there are only five). */
+  wash: string;
+  /** The 40px solid carrier. */
+  badge: string;
+  /** White, except on orange, where §1 says body ink (6.90:1). */
+  glyph: string;
+}
+
+const TONE_STYLES: Record<KpiTone, ToneStyle> = {
+  indigo: { wash: "yy-wash-primary", badge: "bg-primary", glyph: "text-white" },
+  emerald: {
+    wash: "yy-wash-success",
+    badge: "bg-success",
+    glyph: "text-white",
+  },
+  rose: { wash: "yy-wash-error", badge: "bg-bad", glyph: "text-white" },
+  amber: { wash: "yy-wash-warning", badge: "bg-warning", glyph: "text-white" },
+  violet: { wash: "yy-wash-violet", badge: "bg-violet", glyph: "text-white" },
+  // Five washes exist and neutral is not one of them, so this tile is plain
+  // white — which is rule 2's default answer anyway.
+  slate: { wash: "", badge: "bg-ink-secondary", glyph: "text-white" },
+  brand: {
+    wash: "yy-wash-warning",
+    badge: "bg-brand-orange",
+    glyph: "text-body-ink",
+  },
+};
 
 interface KpiTileProps {
   label: string;
@@ -21,103 +96,22 @@ interface KpiTileProps {
   icon: LucideIcon;
   tone?: KpiTone;
   trail?: { label: string; value: number | string }[];
-  /** Optional colored sub-label below the hint (e.g. an SLA-breach warning). */
+  /** A coloured sub-label below the hint (e.g. an SLA breach). */
   alert?: { label: string; tone?: "rose" | "amber" };
-  /** Optional period-over-period delta (▲/▼ vs previous period), shown by the hint. */
+  /** Period-over-period delta, shown beside the hint. */
   delta?: Delta;
-  /** Optional footer call-to-action, rendered as a "label →" link. */
+  /** Footer call-to-action, rendered as a "label →" link. */
   link?: { label: string; onClick: () => void };
   onClick?: () => void;
+  /**
+   * §tiles distinguishes two: SELECTED is a 2px inset ring with the value in
+   * primary ink; APPLIED is the solid blue filter currently narrowing the
+   * view, and there is only ever one at a time. `active` is the selected ring;
+   * `applied` is the solid.
+   */
   active?: boolean;
+  applied?: boolean;
 }
-
-const TONE_STYLES: Record<
-  KpiTone,
-  {
-    accentBg: string;
-    accentText: string;
-    halo: string;
-    border: string;
-    iconRing: string;
-    activeRing: string;
-    activeBorder: string;
-    activeHalo: string;
-    activeBar: string;
-  }
-> = {
-  indigo: {
-    accentBg: "bg-gradient-to-br from-indigo-500 via-indigo-500 to-blue-600",
-    accentText: "text-indigo-600 dark:text-indigo-300",
-    halo: "from-indigo-200/60 via-transparent to-transparent dark:from-indigo-500/15",
-    border: "border-indigo-100/80 dark:border-indigo-900/40",
-    iconRing: "ring-indigo-200/70 dark:ring-indigo-900/40",
-    activeRing: "ring-indigo-500 dark:ring-indigo-400",
-    activeBorder: "border-indigo-300 dark:border-indigo-600",
-    activeHalo:
-      "from-indigo-100/80 via-indigo-50/40 to-transparent dark:from-indigo-500/25",
-    activeBar: "bg-gradient-to-r from-indigo-500 to-blue-600",
-  },
-  amber: {
-    accentBg: "bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500",
-    accentText: "text-amber-600 dark:text-amber-300",
-    halo: "from-amber-200/60 via-transparent to-transparent dark:from-amber-500/15",
-    border: "border-amber-100/80 dark:border-amber-900/40",
-    iconRing: "ring-amber-200/70 dark:ring-amber-900/40",
-    activeRing: "ring-amber-500 dark:ring-amber-400",
-    activeBorder: "border-amber-300 dark:border-amber-600",
-    activeHalo:
-      "from-amber-100/80 via-amber-50/40 to-transparent dark:from-amber-500/25",
-    activeBar: "bg-gradient-to-r from-amber-400 to-orange-500",
-  },
-  rose: {
-    accentBg: "bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500",
-    accentText: "text-rose-600 dark:text-rose-300",
-    halo: "from-rose-200/60 via-transparent to-transparent dark:from-rose-500/15",
-    border: "border-rose-100/80 dark:border-rose-900/40",
-    iconRing: "ring-rose-200/70 dark:ring-rose-900/40",
-    activeRing: "ring-rose-500 dark:ring-rose-400",
-    activeBorder: "border-rose-300 dark:border-rose-600",
-    activeHalo:
-      "from-rose-100/80 via-rose-50/40 to-transparent dark:from-rose-500/25",
-    activeBar: "bg-gradient-to-r from-rose-500 to-pink-500",
-  },
-  emerald: {
-    accentBg: "bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500",
-    accentText: "text-emerald-600 dark:text-emerald-300",
-    halo: "from-emerald-200/60 via-transparent to-transparent dark:from-emerald-500/15",
-    border: "border-emerald-100/80 dark:border-emerald-900/40",
-    iconRing: "ring-emerald-200/70 dark:ring-emerald-900/40",
-    activeRing: "ring-emerald-500 dark:ring-emerald-400",
-    activeBorder: "border-emerald-300 dark:border-emerald-600",
-    activeHalo:
-      "from-emerald-100/80 via-emerald-50/40 to-transparent dark:from-emerald-500/25",
-    activeBar: "bg-gradient-to-r from-emerald-500 to-teal-500",
-  },
-  slate: {
-    accentBg: "bg-gradient-to-br from-slate-500 via-slate-600 to-slate-700",
-    accentText: "text-slate-700 dark:text-slate-200",
-    halo: "from-slate-200/60 via-transparent to-transparent dark:from-slate-500/15",
-    border: "border-slate-200/70 dark:border-slate-800/60",
-    iconRing: "ring-slate-200/70 dark:ring-slate-800/60",
-    activeRing: "ring-slate-500 dark:ring-slate-400",
-    activeBorder: "border-slate-400 dark:border-slate-500",
-    activeHalo:
-      "from-slate-100/80 via-slate-50/40 to-transparent dark:from-slate-500/25",
-    activeBar: "bg-gradient-to-r from-slate-500 to-slate-600",
-  },
-  violet: {
-    accentBg: "bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500",
-    accentText: "text-violet-600 dark:text-violet-300",
-    halo: "from-violet-200/60 via-transparent to-transparent dark:from-violet-500/15",
-    border: "border-violet-100/80 dark:border-violet-900/40",
-    iconRing: "ring-violet-200/70 dark:ring-violet-900/40",
-    activeRing: "ring-violet-500 dark:ring-violet-400",
-    activeBorder: "border-violet-300 dark:border-violet-600",
-    activeHalo:
-      "from-violet-100/80 via-violet-50/40 to-transparent dark:from-violet-500/25",
-    activeBar: "bg-gradient-to-r from-violet-500 to-purple-500",
-  },
-};
 
 export function KpiTile({
   label,
@@ -131,29 +125,47 @@ export function KpiTile({
   link,
   onClick,
   active,
+  applied,
 }: KpiTileProps) {
   const styles = TONE_STYLES[tone];
   const isInteractive = !!onClick;
   // A `link` renders a nested <button> inside the tile; a button containing a
-  // button is a WCAG "nested-interactive" failure, so the tile only takes the
-  // button role/tab stop when it has no nested control.
+  // button is a WCAG nested-interactive failure, so the tile only takes the
+  // button role and tab stop when it has no nested control.
   const takesButtonRole = isInteractive && !link;
 
   return (
-    <Card
+    <div
       data-tone={tone}
       data-active={active ? "true" : undefined}
+      data-applied={applied ? "true" : undefined}
       role={takesButtonRole ? "button" : undefined}
       tabIndex={takesButtonRole ? 0 : undefined}
       className={cn(
-        "group bg-card relative overflow-hidden border transition-all duration-300",
-        "hover:-translate-y-0.5 hover:shadow-lg",
-        isInteractive &&
-          "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-        active ? styles.activeBorder : styles.border,
-        isInteractive && "cursor-pointer",
-        active && "ring-offset-background shadow-md ring-2 ring-offset-2",
-        active && styles.activeRing,
+        `border-line relative overflow-hidden rounded-2xl border p-[18px] transition-[transform,box-shadow,border-color] duration-180 ease-[ease] motion-reduce:transition-none`,
+        // ── EXACTLY ONE SHADOW CLASS REACHES THE ELEMENT ─────────────────
+        //
+        // `shadow-card` used to sit in the base string with the state shadow
+        // added after it, and tailwind-merge kept BOTH: it reads the leading
+        // `inset` of the ring as a different class group, so nothing was
+        // deduped and the emitted CSS order decided the winner — which was
+        // `shadow-card`. The selected tile rendered with the rest shadow and
+        // no ring at all. Measured in the browser, not guessed.
+        //
+        // So the shadow is chosen once, per state, and never layered.
+        applied
+          ? "bg-primary border-transparent shadow-(--sh-cta)"
+          : cn("bg-card", styles.wash),
+        // §5s Selected: a full 2px ring, never a line on one side.
+        active && !applied
+          ? "border-transparent shadow-[inset_0_0_0_2px_var(--primary),var(--sh)]"
+          : !applied && "shadow-card",
+        isInteractive && [
+          "cursor-pointer",
+          "hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-18px_rgba(10,27,51,0.4)]",
+          !applied && !active && "hover:border-line-strong",
+          "motion-reduce:hover:translate-y-0",
+        ],
       )}
       onClick={onClick}
       onKeyDown={
@@ -167,33 +179,54 @@ export function KpiTile({
           : undefined
       }
     >
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-0 bg-linear-to-br opacity-90",
-          active ? styles.activeHalo : styles.halo,
-        )}
-      />
-      {active && (
-        <div
-          className={cn(
-            "absolute right-0 bottom-0 left-0 h-0.5",
-            styles.activeBar,
-          )}
-        />
-      )}
-      <div className="relative flex items-center justify-between gap-3 px-4 py-2">
-        <div className="min-w-0 flex-1 space-y-0.5">
-          <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {/*
+            min-h-[2.6em] is load-bearing, not padding: it reserves two lines
+            so a label that wraps — and `common.save` grows 175% in French —
+            cannot push its own figure down and break the alignment of a row
+            of tiles (§tiles, §5q).
+          */}
+          <p
+            className={cn(
+              "min-h-[2.6em] text-[12px] leading-[1.3] font-bold tracking-[0.07em] uppercase",
+              applied
+                ? "text-white/80"
+                : active
+                  ? "text-primary-hover"
+                  : "text-ink-secondary",
+            )}
+          >
             {label}
           </p>
-          <p className="text-xl/tight font-semibold tracking-tight tabular-nums">
+          <p
+            className={cn(
+              "text-[30px] leading-[1.1] font-bold tracking-[-0.02em] tabular-nums",
+              applied
+                ? "text-white"
+                : active
+                  ? "text-primary-hover"
+                  : "text-body-ink",
+            )}
+          >
             {value}
           </p>
           {(delta || hint) && (
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0">
-              {delta && <DeltaBadge delta={delta} />}
+            <div className="mt-1 flex flex-wrap items-center gap-x-1.5">
+              {delta && <DeltaBadge delta={delta} onSolid={applied} />}
               {hint && (
-                <p className="text-muted-foreground line-clamp-1 text-[11px]">
+                <p
+                  className={cn(
+                    // Two lines, not one. §tiles asks for "one line of
+                    // context", which is about CONTENT — one fact, not a
+                    // table — and clamping the render to a single visual line
+                    // turned "$8,557 pending" into "$8557…" on a five-up row.
+                    // The tiles share a grid row, so they stay the same
+                    // height whether this wraps or not.
+                    "line-clamp-2 text-[13px]",
+                    applied ? "text-white/80" : "text-ink-secondary",
+                  )}
+                >
                   {hint}
                 </p>
               )}
@@ -202,34 +235,47 @@ export function KpiTile({
           {alert && (
             <p
               className={cn(
-                "line-clamp-1 text-[11px] font-semibold",
-                alert.tone === "amber"
-                  ? "text-amber-600 dark:text-amber-400"
-                  : "text-rose-600 dark:text-rose-400",
+                "mt-0.5 line-clamp-1 text-[13px] font-semibold",
+                applied
+                  ? "text-white"
+                  : alert.tone === "amber"
+                    ? "text-warning"
+                    : "text-bad",
               )}
             >
               {alert.label}
             </p>
           )}
         </div>
+        {/* The colour carrier — 40px, one solid fill, glyph on top. */}
         <div
           className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-xl text-white shadow-sm ring-2 transition-transform group-hover:scale-105",
-            styles.accentBg,
-            styles.iconRing,
+            "flex size-10 shrink-0 items-center justify-center rounded-xl",
+            applied ? "bg-white/16 text-white" : [styles.badge, styles.glyph],
           )}
         >
-          <Icon className="size-4" />
+          <Icon className="size-5" />
         </div>
       </div>
+
+      {/* Spaced, not ruled — the dashed divider that used to sit here is
+          named in §tiles' own "never" list. */}
       {trail && trail.length > 0 && (
-        <div className="relative flex flex-wrap gap-x-3 gap-y-0.5 border-t border-dashed border-current/10 px-4 py-1.5">
+        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-0.5">
           {trail.map((t) => (
             <span
               key={t.label}
-              className="text-muted-foreground inline-flex items-center gap-1 text-xs"
+              className={cn(
+                "inline-flex items-center gap-1 text-[13px]",
+                applied ? "text-white/80" : "text-ink-secondary",
+              )}
             >
-              <span className="text-foreground font-semibold tabular-nums">
+              <span
+                className={cn(
+                  "font-semibold tabular-nums",
+                  applied ? "text-white" : "text-body-ink",
+                )}
+              >
                 {t.value}
               </span>
               {t.label}
@@ -237,8 +283,9 @@ export function KpiTile({
           ))}
         </div>
       )}
+
       {link && (
-        <div className="relative border-t border-dashed border-current/10 px-4 py-1.5">
+        <div className="mt-3">
           <button
             type="button"
             onClick={(e) => {
@@ -246,15 +293,16 @@ export function KpiTile({
               link.onClick();
             }}
             className={cn(
-              "group/link inline-flex items-center gap-1 text-[11px] font-semibold hover:underline focus-visible:ring-1 focus-visible:outline-none",
-              styles.accentText,
+              "group/link inline-flex items-center gap-1 text-[13px] font-semibold",
+              "hover:underline",
+              applied ? "text-white" : "text-primary",
             )}
           >
             {link.label}
-            <ArrowRight className="size-3 transition-transform group-hover/link:translate-x-0.5" />
+            <ArrowRight className="size-4 transition-transform group-hover/link:translate-x-0.5" />
           </button>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

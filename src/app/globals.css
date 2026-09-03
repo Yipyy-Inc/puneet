@@ -199,6 +199,9 @@
    * different set of values. Named by the job, not the step number. */
   --shadow-card: var(--sh);
   --shadow-raised: var(--sh-2);
+  /* The old system's name for the same step — 10 call sites keep working,
+     and now read §1's value instead of their own. */
+  --shadow-elevated: var(--sh-2);
   --shadow-overlay: var(--sh-3);
 
   /* ── motion — the exact curves, so `ease-out`/`ease-in` (already used by
@@ -616,6 +619,19 @@
   --line: #e4eaf5;
   --line-strong: #d3ddee;
 
+  /* ── §tiles — THE ONE SANCTIONED EXCEPTION TO RULE 2 ──────────────────
+     Rule 2 bans tint fills outright. A metric or filter tile is the single
+     measured exception, and it is measured: body ink reads 15.30-16.12:1 on
+     these against 17.25:1 on pure white, so the wash costs no contrast and is
+     decoration rather than information. It comes with a condition — the tile
+     LABEL steps from --ink-tertiary (4.32:1 on the wash, fails) to
+     --ink-secondary (6.23:1). One hue per badge colour, and no others. */
+  --wash-primary: #edf2fe;
+  --wash-success: #e9f8f2;
+  --wash-error: #fdeff3;
+  --wash-warning: #fdf7e6;
+  --wash-violet: #f4effe;
+
   /* ── Status — the ink IS the token. Chips are white with a 1px hairline of
      the same ink; the -bg tints below fill nothing (rule 2/4) and are kept
      for reference only, per §1. ── */
@@ -944,6 +960,50 @@
   }
 }
 
+/* The tile wash, §tiles: linear-gradient(135deg, <wash> 0%, #FFF 58%). The
+ * 58% stop is part of the measurement — the hue is gone before it reaches the
+ * value, which is what keeps body ink above 15:1. One utility per hue so a
+ * tile names its tone and never spells a gradient. */
+@utility yy-wash-primary {
+  background-image: linear-gradient(
+    135deg,
+    var(--wash-primary) 0%,
+    var(--card) 58%
+  );
+}
+
+@utility yy-wash-success {
+  background-image: linear-gradient(
+    135deg,
+    var(--wash-success) 0%,
+    var(--card) 58%
+  );
+}
+
+@utility yy-wash-error {
+  background-image: linear-gradient(
+    135deg,
+    var(--wash-error) 0%,
+    var(--card) 58%
+  );
+}
+
+@utility yy-wash-warning {
+  background-image: linear-gradient(
+    135deg,
+    var(--wash-warning) 0%,
+    var(--card) 58%
+  );
+}
+
+@utility yy-wash-violet {
+  background-image: linear-gradient(
+    135deg,
+    var(--wash-violet) 0%,
+    var(--card) 58%
+  );
+}
+
 /* Keyframes for animations */
 @keyframes fade-in {
   from {
@@ -1029,28 +1089,25 @@
   }
 }
 
-/* Shadow utilities */
-.shadow-soft {
-  box-shadow:
-    0 2px 8px -2px rgba(0, 0, 0, 0.05),
-    0 4px 16px -4px rgba(0, 0, 0, 0.08);
-}
-
-.shadow-card {
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-.shadow-elevated {
-  box-shadow:
-    0 4px 16px -2px rgba(0, 0, 0, 0.08),
-    0 8px 32px -4px rgba(0, 0, 0, 0.12);
-}
-
-.shadow-glow-primary {
-  box-shadow: 0 0 20px -5px var(--primary);
-}
+/* ── THE OLD SYSTEM'S SHADOWS LIVED HERE, AND THEY WERE WINNING ───────────
+ *
+ * Four hand-written classes — .shadow-soft, .shadow-card, .shadow-elevated,
+ * .shadow-glow-primary — sat here as PLAIN, UNLAYERED CSS. Unlayered rules beat
+ * everything in a @layer no matter the specificity, so `.shadow-card` beat
+ * every Tailwind shadow utility in the app, including the `--shadow-card`
+ * theme token added in stage 3. That token has been inert since the day it
+ * landed, and `shadow-[...]` on any element that also carried `shadow-card`
+ * silently did nothing — which is how a tile's 2px selected ring rendered as
+ * the old two-part card shadow instead.
+ *
+ * Measured, not inferred: the computed box-shadow on a rest tile read
+ * "rgba(0,0,0,.04) 0 1px 3px, rgba(0,0,0,.06) 0 4px 12px" — this block — where
+ * §1's --sh is "0 1px 2px rgba(10,27,51,.05)".
+ *
+ * They are gone. `shadow-card` now resolves through @theme to --sh, which is
+ * what §1 specifies, and every other shadow utility works again.
+ * `.shadow-soft` and `.shadow-glow-primary` had ZERO call sites; `shadow-card`
+ * has 240 and `shadow-elevated` 10, and both now read from §1's three steps. */
 
 .shadow-glow-success {
   box-shadow: 0 0 20px -5px var(--success);

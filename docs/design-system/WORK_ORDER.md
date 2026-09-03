@@ -1,7 +1,7 @@
 # Work order — adopting the Yipyy design system
 
-**Stages 0–5 are done** (all 2026-09-03), stage 4 with a tail it turned into a ratchet.
-**Stage 6 is next.**
+**Stages 0–6 are done** (all 2026-09-03), stage 4 with a tail it turned into a ratchet.
+**Stage 7 is next.**
 
 The stage headings below carry the same status, and they are the record — a stage that shipped
 without its heading being updated is how this file drifted from the repo once already.
@@ -353,7 +353,7 @@ hands `Slot` the bare children, and the reason is written at the call site.
 
 ---
 
-## Stage 6 — metric and filter tiles · §tiles
+## Stage 6 — metric and filter tiles · §tiles · **DONE 2026-09-03**
 
 `StatCard.tsx`, `ClickableStatCard.tsx`, `delta-badge.tsx`, `src/app/dashboard/_components/business-health-tiles.tsx`.
 
@@ -364,6 +364,45 @@ hands `Slot` the bare children, and the reason is written at the call site.
   Tile label steps to `#4C5B6C` on the wash.
 - Selected `inset 0 0 0 2px #1668E3`; applied solid `#1668E3` with white text, one at a time.
 - **No edge line, ever** — the bottom accent these had is the banned pattern on a different side.
+
+**Done. Measured in a browser, every value:** radius 24px, padding 18px, 1px `#E4EAF5`, the five
+washes exact (`#EDF2FE` `#E9F8F2` `#FDEFF3` `#FDF7E6` `#F4EFFE`), 40px solid badges at
+`#1668E3` `#0F7A52` `#B23B3B` `#F08A3C` `#4C3BB8` `#8A5115` — body ink on the orange one —
+label 12/700 with `letter-spacing: 0.84px` and `min-height: 31.2px` (2.6em), value 30/700 tabular,
+selected `inset 0 0 0 2px #1668E3` with label and value at `#0F58C6`, applied solid `#1668E3` on
+`--sh-cta`.
+
+**The file list above was incomplete, and the omission was the whole stage.** It names `StatCard`
+(20 consumers) and `ClickableStatCard` (4) but not `src/components/facility/dashboard/kpi-tile.tsx`
+— which **65 files** use and which carried every defect §tiles names: the bottom accent bar on the
+active state, dashed rules above the trail and the link, multi-hue gradient badges, a `halo`
+gradient at opacity behind everything, a 10px label and a 20px value.
+
+**`amber` does not map to orange, deliberately.** In this app that tone labels "Escalated",
+"Overdue invoices", "Paused", "Drafts" — states — and §2b's guardrail is that orange is the animal
+and "never becomes an action or a state". It resolves to the WARNING family; orange ships as its
+own opt-in `brand` tone for §2b's territories, so nothing inherits it by accident. The reference
+page's one orange tile, "Trials expiring · 7 days", is a countdown, which is §2b's "now".
+
+**Two bugs found by measuring rather than looking, both older than this stage:**
+
+1. **`.shadow-card` was unlayered CSS and beat every Tailwind shadow in the app.** Four
+   hand-written classes from the old system sat outside any `@layer`, and unlayered rules win over
+   layered ones whatever the specificity — so `--shadow-card`, added in stage 3, **had been inert
+   since the day it landed**, and any `shadow-[…]` on an element that also carried `shadow-card`
+   silently did nothing. Measured: a rest tile computed
+   `rgba(0,0,0,.04) 0 1px 3px, rgba(0,0,0,.06) 0 4px 12px` where §1's `--sh` is
+   `0 1px 2px rgba(10,27,51,.05)`. The block is gone; `shadow-soft` and `shadow-glow-primary` had
+   ZERO call sites, `shadow-card` has 240 and `shadow-elevated` 10, and all now read §1's steps.
+2. **tailwind-merge does not dedupe `shadow-card` against `shadow-[inset_…]`** — it reads the
+   leading `inset` as a different class group, so both survived and emitted-CSS order picked the
+   winner. The selected tile rendered with the rest shadow and **no ring at all**. Each state now
+   chooses exactly one shadow class rather than layering one over the base.
+
+**One deviation from the letter of §tiles, stated plainly:** the sub-line renders `line-clamp-2`,
+not one line. "One line of context" is a rule about CONTENT — one fact, not a table — and clamping
+the render to a single visual line turned "$8,557 pending" into "$8557…" and "Awaiting action" into
+"Awaiting…" on a five-up row. The tiles share a grid row, so wrapping costs no alignment.
 
 ---
 

@@ -15,7 +15,6 @@ import {
   KpiTile,
   type KpiTone,
 } from "@/components/facility/dashboard/kpi-tile";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 function deltaHint(delta: number, unit: "facilities" | "mrr"): string {
@@ -31,16 +30,19 @@ function deltaHint(delta: number, unit: "facilities" | "mrr"): string {
 
 function TileSkeleton() {
   return (
-    <Card className="bg-card relative overflow-hidden border">
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="bg-muted h-2.5 w-20 animate-pulse rounded-sm" />
-          <div className="bg-muted h-5 w-14 animate-pulse rounded-sm" />
-          <div className="bg-muted h-2 w-24 animate-pulse rounded-sm" />
+    // §5d: "A skeleton mirrors the shape of what is loading." These bars are
+    // the tile's own label, value and sub-line at their real sizes, and the
+    // block is the real 40px carrier — so nothing moves when the data lands.
+    <div className="border-line bg-card shadow-card rounded-2xl border p-[18px]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="bg-surface-inset-2 h-3 w-24 animate-pulse rounded-sm" />
+          <div className="bg-surface-inset-2 mt-3 h-7 w-16 animate-pulse rounded-sm" />
+          <div className="bg-surface-inset-2 mt-2 h-3 w-28 animate-pulse rounded-sm" />
         </div>
-        <div className="bg-muted size-8 shrink-0 animate-pulse rounded-xl" />
+        <div className="bg-surface-inset-2 size-10 shrink-0 animate-pulse rounded-xl" />
       </div>
-    </Card>
+    </div>
   );
 }
 
