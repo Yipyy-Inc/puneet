@@ -119,8 +119,8 @@ export function FacilityModal({ facility }: FacilityModalProps) {
             <div>
               <h2 className="text-xl font-bold">{facility.name}</h2>
               <div className="mt-1 flex items-center gap-2">
-                <StatusBadge type="status" value={facility.status} showIcon />
-                <StatusBadge type="plan" value={facility.plan} showIcon />
+                <StatusBadge type="status" value={facility.status} />
+                <StatusBadge type="plan" value={facility.plan} />
               </div>
             </div>
           </div>

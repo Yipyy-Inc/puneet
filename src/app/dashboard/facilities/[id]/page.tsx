@@ -287,8 +287,8 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
                   {facility.name}
                 </h1>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <StatusBadge type="status" value={currentStatus} showIcon />
-                  <StatusBadge type="plan" value={facility.plan} showIcon />
+                  <StatusBadge type="status" value={currentStatus} />
+                  <StatusBadge type="plan" value={facility.plan} />
                   {uniqueServices.length > 0 && (
                     <div className="flex flex-wrap gap-1 sm:ml-2">
                       {uniqueServices.slice(0, 3).map((service) => {

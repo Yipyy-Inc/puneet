@@ -154,17 +154,11 @@ export function BookingModal({ booking }: BookingModalProps) {
     <DetailsModal
       title={`Booking #${booking.id}`}
       badges={[
-        <StatusBadge
-          key="status"
-          type="status"
-          value={booking.status}
-          showIcon
-        />,
+        <StatusBadge key="status" type="status" value={booking.status} />,
         <StatusBadge
           key="payment"
           type="status"
           value={booking.paymentStatus}
-          showIcon
         />,
       ]}
       linkHref={`/facility/dashboard/bookings/${booking.id}`}
