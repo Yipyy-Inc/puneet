@@ -56,7 +56,6 @@ import {
   FileText,
   Upload,
   Link,
-  Moon,
   Eye,
   RefreshCw,
   AlertTriangle,
@@ -535,24 +534,6 @@ export function GlobalSettings() {
                       </button>
                     ))}
                   </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t pt-4">
-                  <div className="space-y-0.5">
-                    <Label className="flex flex-wrap items-center gap-2">
-                      <Moon className="size-4" />
-                      Dark Mode
-                    </Label>
-                    <p className="text-muted-foreground text-xs">
-                      Allow users to switch to dark theme
-                    </p>
-                  </div>
-                  <Switch
-                    checked={branding.darkModeEnabled}
-                    onCheckedChange={(checked) =>
-                      handleBrandingChange("darkModeEnabled", checked)
-                    }
-                  />
                 </div>
               </CardContent>
             </Card>
