@@ -107,8 +107,19 @@
   --color-ink-disabled: var(--ink-disabled);
   --color-code-fg: var(--code-fg);
   --color-ground: var(--ground);
-  --color-inset: var(--inset);
-  --color-inset-2: var(--inset-2);
+
+  /* NOT --color-inset: Tailwind reserves the bare word "inset" as the
+   * ring/shadow positioning modifier (ring-inset sets --tw-ring-inset).
+   * Exposing a colour utility under the identical name makes "ring-inset"
+   * ambiguous between "flip the ring inside the border" and "colour the
+   * ring #F1F5FD" — confirmed by compiling this file for real: Tailwind
+   * emitted TWO separate .ring-inset {} rules, one per meaning, so every
+   * existing ring-inset call site in the app would have silently started
+   * recolouring its ring. `--inset` stays the internal variable name,
+   * matching §1 exactly (var(--inset) is unaffected everywhere it's used
+   * below and in :root); only the Tailwind-facing utility name changes. */
+  --color-surface-inset: var(--inset);
+  --color-surface-inset-2: var(--inset-2);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-panel-dark: var(--panel-dark);
