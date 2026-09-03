@@ -254,6 +254,35 @@
   --text-state-title--letter-spacing: -0.015em;
   --text-state-title--font-weight: 700;
 
+  /* NO --text-chip, AND THAT IS A DECISION ────────────────────────────────
+   *
+   * §3's chip label is "13 / 600", a step §1's seven-rung scale does not
+   * carry, so stage 4 added `--text-chip` here. It was taken out again the
+   * same day, and the reason is worth keeping because the next person will
+   * reach for it too.
+   *
+   * 53 places in this repo already hand-write `text-[13px]`. The moment a
+   * token claims that value, `better-tailwindcss/enforce-canonical-classes`
+   * offers to rewrite every one of them to `text-chip` — 57 warnings, all
+   * autofixable. Two ways to hold it, both bad:
+   *
+   *   compound (13/600, like every other step) — `bun run lint:fix`, a
+   *     DOCUMENTED command, would silently embolden 57 pieces of unrelated
+   *     body copy, because the token carries a weight the sites never asked
+   *     for. A fixable warning whose fix is wrong is worse than no token.
+   *
+   *   size-only — the autofix is safe, but the noise is worse (57 rather
+   *     than 30) and `text-chip` ends up naming ordinary 13px body text.
+   *
+   * A token exists to be SHARED, and this one is used by exactly one
+   * component. So badge.tsx writes `text-[13px] font-semibold` directly,
+   * which is §3's value at §3's weight, in the one place §3 applies it. The
+   * "never invent a value" rule (§5v) is satisfied — 13/600 is measured, from
+   * the anatomy table, not chosen here.
+   *
+   * If a SECOND component ever needs this step, revisit — but fix the 53
+   * hand-written sites in the same change, or the trap comes back. */
+
   /* ── raw Tailwind palette, remapped ───────────────────────────────────────
    * ~22,000 occurrences across ~900 files use Tailwind's stock emerald,
    * slate, amber, sky and 16 other scales directly rather than a semantic

@@ -604,7 +604,7 @@ export default function ClientDetailPage({
               <h2 className="text-3xl font-bold tracking-tight">
                 {client.name}
               </h2>
-              <StatusBadge type="status" value={client.status} showIcon />
+              <StatusBadge type="status" value={client.status} />
               {clientBanRecord && (
                 <Badge variant="destructive" className="gap-1">
                   <AlertTriangle className="size-3" />

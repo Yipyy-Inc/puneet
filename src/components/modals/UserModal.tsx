@@ -47,8 +47,8 @@ export function UserModal({ user }: UserModalProps) {
     <DetailsModal
       title={user.name}
       badges={[
-        <StatusBadge key="role" type="role" value={user.role} showIcon />,
-        <StatusBadge key="status" type="status" value={user.status} showIcon />,
+        <StatusBadge key="role" type="role" value={user.role} />,
+        <StatusBadge key="status" type="status" value={user.status} />,
       ]}
       linkHref={`/dashboard/users/${user.id}`}
       linkText="View Full Profile"

@@ -1,6 +1,7 @@
 # Work order — adopting the Yipyy design system
 
-**Stages 0, 1, 2 and 3 are done** (all 2026-09-03). **Stage 4 is next.**
+**Stages 0, 1, 2 and 3 are done, and stage 4 is done except for a tail it turned into a ratchet**
+(all 2026-09-03). **Stage 5 is next.**
 
 The stage headings below carry the same status, and they are the record — a stage that shipped
 without its heading being updated is how this file drifted from the repo once already.
@@ -216,7 +217,7 @@ character sheet assigns it — `confused` is visibly the sadder of the two.
 
 ---
 
-## Stage 4 — StatusBadge · §status chips, §3
+## Stage 4 — StatusBadge · §status chips, §3 · **DONE 2026-09-03**
 
 - White surface, 1px hairline in the same ink as the label, ink text, **glyph mandatory** (colour-blind
   safety), pill radius. No tint fill, no white-on-saturated.
@@ -225,6 +226,75 @@ character sheet assigns it — `confused` is visibly the sadder of the two.
 
 **Done when:** `rg "bg-(emerald|red|amber|blue|violet|slate)-(50|100)"` returns nothing, and every
 badge has an icon.
+
+**What was met.** `StatusBadge` is rebuilt on §3: white, a 1px hairline in the same ink as the
+label, full pill, 26px, 13/600 sentence case, and a mandatory 16px lucide glyph on every value.
+Measured in the browser rather than eyeballed — the six inks come back exactly `#0F7A52`,
+`#0F58C6`, `#8A5115`, `#B23B3B`, `#4C5B6C`, `#4C3BB8`. `badge.tsx` gained the six §3 chip
+variants; the four solid ones stay, because §3 allows a status to be filled solid with the ink at
+full strength and since stage 1 those fills are the real inks (5.35–6.50:1 under white), not the
+dot-weight colours rule 4 bans.
+
+**What it replaced was a real accessibility defect, not a style.** The old component signalled with
+a 6px COLOURED DOT and nothing else — emerald active, red suspended, amber pending. §3's anatomy
+table says why that cannot ship: "1 in 12 men cannot separate the green from the orange."
+
+**Neither half of the done-when above survived contact, and both were wrong rather than unmet.**
+
+1. **The tint grep measures nothing now.** It was written before stage 1, which remapped every
+   `-50`/`-100` step to `var(--card)`. `bg-emerald-100` has rendered WHITE since then. Its ~3,250
+   remaining hits across ~740 files are dead class names, not tint fills — clearing them is a
+   rename with no visual change and a 740-file merge cost against `main`. **Not done, deliberately.**
+   The note now in CLAUDE.md § "The guardrail greps" says how to read a hit.
+
+2. **"Every badge has an icon" cannot mean all 1,946 of them.** Two thirds carry no status colour
+   at all — a service tag, a count, an overflow `+2`. Colour is not their channel and §3's rule does
+   not bite. The set that matters is the colour-coded ones, and it measures:
+
+   | Badge elements | colour-coded, has glyph | colour-coded, NO glyph | not colour-coded |
+   | -------------- | ----------------------- | ---------------------- | ---------------- |
+   | 1,947          | 275                     | **374**                | 1,298            |
+
+   Those 374 sit in 224 files, most holding exactly one. There is no mechanical transform: picking
+   the glyph means knowing what the badge means, §5b1 allows one glyph per meaning, and a wrong
+   pick is worse than the omission. So it is 374 judgements, and it is now a **ratchet** —
+   `bun run check:badge-glyph`, frozen at 374, in CI. A new colour-only badge fails the build;
+   fixing some prints an instruction to lower the baseline. Same shape as
+   `check:inert-permissions`, and for the same reason: a defect nobody counts only grows.
+
+   **The first version of that gate was wrong, and how it was caught is the point.** Its glyph
+   regex ran over the whole element including the opening tag, where `<[A-Z][A-Za-z0-9]*s*className`
+   matched `<Badge className` — so every badge coloured by a utility class counted as already
+   having a glyph. It reported a tidy 280 and **passed a deliberately planted violation on its
+   first trial run.** The real number is 94 higher. A gate is not verified by being written and
+   going green; it is verified by being watched to fail. That is the `test:sql` lesson of
+   2026-08-22 in a different costume.
+
+**A token was added and then withdrawn, and the withdrawal is the finding.** §3's chip label is
+"13 / 600", a step §1's seven-rung scale does not carry, so `--text-chip` went into `@theme`. It
+came straight back out, because 53 places in this repo already hand-write `text-[13px]`: the moment
+a token claims that value, `better-tailwindcss/enforce-canonical-classes` offers to rewrite every
+one of them to `text-chip` — **57 warnings, all autofixable**, against a 276 baseline. Both ways of
+holding the token were bad:
+
+- **compound** (13/600, matching every other step) — `bun run lint:fix`, a documented command in
+  AGENTS.md, would have silently emboldened 57 pieces of unrelated body copy, because the token
+  carries a weight those sites never asked for. A fixable warning whose fix is wrong is worse than
+  no token at all.
+- **size-only** — the autofix becomes a true no-op (verified by compiling: `text-chip` and
+  `text-[13px]` emit byte-identical CSS), but the noise gets _worse_, 30 warnings to 57, and
+  `text-chip` ends up as the name for ordinary 13px body text.
+
+A token exists to be shared, and this one had exactly one consumer. `badge.tsx` writes
+`text-[13px] font-semibold` directly — §3's value at §3's weight, in the one place §3 applies it —
+and the warning count is back to the 276 baseline. The reasoning is parked in `globals.css` where
+the token used to be, because the next person will reach for it too. **If a second component ever
+needs this step, add the token and fix all 53 hand-written sites in the same change**, or the trap
+comes back.
+
+**One §5v question, the same shape as stage 3's.** §5b1's status list has no glyph for **Overdue** —
+`triangle-alert` there means Incidents (a nav area) and `circle-x` is already cancelled.
+`circle-alert` is used, which is what the reference page itself draws for a view that failed.
 
 ---
 

@@ -273,8 +273,19 @@ rg "opacity-(1|2|3|4|5|6|7)0.*text-|text-.*opacity-"             # opacity as te
 rg "transition:[^\"]*transition:"                                # two transitions in one style
 rg "bg-(orange|amber)-[0-9]{3}"                                  # orange as anything but a surface
 rg -i "emerald|#0EA5E9|slate-|gray-" src/components/ui           # off-palette leftovers
-rg "bg-(emerald|red|amber|blue|violet|slate)-(50|100)"           # tint fills, and a badge with no glyph
+rg "bg-(emerald|red|amber|blue|violet|slate)-(50|100)"           # tint fills — see the note below
+bun run check:badge-glyph                                        # a colour-coded badge with no glyph (§3)
 ```
+
+**The tint-fill grep no longer measures what it was written to measure.** It
+predates stage 1, which remapped every `-50` and `-100` step of Tailwind's raw
+palette to `var(--card)` in `@theme` — so `bg-emerald-100` has rendered **white**
+since then, and `text-emerald-700` renders `#0F7A52`. Its ~3,250 remaining hits
+across ~740 files are dead class names, not tint fills: correct on screen,
+untidy in source. Read a hit as "this file has not been through the redesign
+yet", not as "this is a rule 2 violation" — and do not treat clearing it as a
+visual fix, because there is nothing left to see. The rule it stands for is
+still absolute for **new** code: white, or a solid.
 
 ## Code Style
 
