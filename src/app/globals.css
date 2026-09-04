@@ -605,19 +605,41 @@
   --ink-disabled: #8c99a3; /* non-text only */
   --code-fg: #c8d6ea; /* 11.71:1 on --body — code only */
 
-  /* ── Surface ── */
-  --ground: #f6f9ff;
-  --ground-gradient: linear-gradient(
-    150deg,
-    #ffffff 0%,
-    #fbfcff 34%,
-    #f2f6fd 100%
-  );
-  --card: #ffffff;
-  --inset: #f1f5fd;
-  --inset-2: #e6edf9;
-  --line: #e4eaf5;
-  --line-strong: #d3ddee;
+  /* ── Surface ────────────────────────────────────────────────────────────
+     NEUTRAL SINCE 2026-09-04, ON THE PRODUCT OWNER'S CALL. §1 shipped this
+     family blue-tinted — ground #F6F9FF, inset #F1F5FD, line #E4EAF5 — so a
+     faint blue sat under every screen and inside every muted field, search
+     box, avatar and hairline. The brief was "a clean white background, and a
+     card that floats slightly above it but is also white".
+
+     So the hue is gone from the surfaces and NOT from the inks: --primary,
+     the status inks and --panel-dark are untouched. Blue still means "what
+     the software does"; it just no longer means "page".
+
+     ── WHY THE GROUND IS NOT PURE WHITE ──────────────────────────────────
+
+     Pure white on pure white leaves the SHADOW as the only thing saying
+     where a card ends, and this product is read on a tablet held on a kennel
+     floor under whatever light is there. #FAFAFB is white to the eye and
+     measurably lighter than the card, so the separation survives glare, a
+     dimmed screen and a projector — and it still holds when the shadow is
+     the first thing a cheap panel crushes.
+
+     ── AND IT MEASURES BETTER THAN WHAT IT REPLACED ──────────────────────
+
+     --ink-tertiary #677382 is §1's floor for text. On the old #F6F9FF ground
+     it was 4.58:1; on #FAFAFB it is 4.63:1. Every other ink gains slightly
+     too, because the ground got lighter rather than darker. Nothing that
+     passed before fails now.
+
+     `--ground-gradient` was removed rather than neutralised: it was defined
+     here and referenced by nothing in src/. */
+  --ground: #fafafb; /* neutral near-white — the page */
+  --card: #ffffff; /* pure white — every raised panel */
+  --inset: #f4f4f6; /* muted fields, rows, avatars */
+  --inset-2: #ebebee;
+  --line: #e6e6e9; /* the default hairline */
+  --line-strong: #d5d5da;
 
   /* ── §tiles — THE ONE SANCTIONED EXCEPTION TO RULE 2 ──────────────────
      Rule 2 bans tint fills outright. A metric or filter tile is the single
@@ -670,7 +692,7 @@
   --chart-3: #d9a46a; /* warning family, desaturated */
   --chart-4: #8d85d6; /* violet family, desaturated */
   --chart-5: #c06a6a; /* error family, desaturated */
-  --chart-grid: #e4eaf5;
+  --chart-grid: #e6e6e9; /* matches --line; neutral since 2026-09-04 */
   --chart-axis: #8c99a3;
 
   /* ── Radius ── */
@@ -680,8 +702,22 @@
   --r-lg: 24px; /* cards, modals */
   --r-pill: 999px; /* buttons, inputs, filters, nav, chips */
 
-  /* ── Elevation — tinted to brand navy, never pure black ── */
-  --sh: 0 1px 2px rgba(10, 27, 51, 0.05);
+  /* ── Elevation — tinted to brand navy, never pure black ──────────────────
+     `--sh` is the resting card, and it was `0 1px 2px rgba(10,27,51,.05)`: a
+     hairline's worth of shadow, which was enough while the ground was
+     #F6F9FF and the fill difference did the separating on its own. On the
+     neutral #FAFAFB ground the card is only a shade lighter than the page,
+     so the lift has to be real — a card that "floats slightly" was the brief.
+
+     Two layers, and both are doing a job. The 1px contact shadow is what
+     stops the card looking pasted on; the 10px ambient one is what makes it
+     sit ABOVE the page rather than on it. A single blurred layer reads as a
+     smudge at this opacity and a single tight one reads as a border.
+
+     Still navy rather than black: a neutral ground does not make a neutral
+     shadow correct. Grey shadows on a warm-neutral page go muddy, and every
+     other elevation here is already keyed to --body. */
+  --sh: 0 1px 2px rgba(10, 27, 51, 0.05), 0 6px 16px -6px rgba(10, 27, 51, 0.1);
   --sh-2: 0 12px 26px -18px rgba(10, 27, 51, 0.5);
   --sh-3: 0 34px 64px -34px rgba(10, 27, 51, 0.4);
   --sh-cta: 0 14px 26px -16px rgba(22, 104, 227, 0.85);
@@ -991,49 +1027,27 @@
   }
 }
 
-/* The tile wash, §tiles: linear-gradient(135deg, <wash> 0%, #FFF 58%). The
- * 58% stop is part of the measurement — the hue is gone before it reaches the
- * value, which is what keeps body ink above 15:1. One utility per hue so a
- * tile names its tone and never spells a gradient. */
-@utility yy-wash-primary {
-  background-image: linear-gradient(
-    135deg,
-    var(--wash-primary) 0%,
-    var(--card) 58%
-  );
-}
-
-@utility yy-wash-success {
-  background-image: linear-gradient(
-    135deg,
-    var(--wash-success) 0%,
-    var(--card) 58%
-  );
-}
-
-@utility yy-wash-error {
-  background-image: linear-gradient(
-    135deg,
-    var(--wash-error) 0%,
-    var(--card) 58%
-  );
-}
-
-@utility yy-wash-warning {
-  background-image: linear-gradient(
-    135deg,
-    var(--wash-warning) 0%,
-    var(--card) 58%
-  );
-}
-
-@utility yy-wash-violet {
-  background-image: linear-gradient(
-    135deg,
-    var(--wash-violet) 0%,
-    var(--card) 58%
-  );
-}
+/* ── THE TILE WASH IS RETIRED (2026-09-04) ──────────────────────────────
+ *
+ * Five @utility blocks lived here, one per hue, each painting
+ * linear-gradient(135deg, <wash> 0%, #FFF 58%) behind a metric or filter
+ * tile. They were §6 rule 2's ONE sanctioned exception, and a measured one:
+ * body ink stayed above 15:1 on every wash, so the tint cost no contrast.
+ *
+ * They are gone because the product owner asked for a platform with no
+ * tinted surfaces at all — "a clean white background, and each card section
+ * white too". A tile is a card section. The rule's default answer, white or
+ * a solid, now applies with no exception anywhere.
+ *
+ * NOTHING IS LOST FROM THE TILE. The tone was never carried by the wash: it
+ * is carried by the 40px solid badge beside the label, which is untouched.
+ * The wash was a second, quieter copy of the same signal.
+ *
+ * The --wash-* tokens above are kept deliberately. Restoring this is one
+ * edit — put the five utilities back and point the tone maps in kpi-tile.tsx
+ * and StatCard.tsx at them again — and keeping the measured values means
+ * nobody has to re-derive them to do it.
+ */
 
 /* Keyframes for animations */
 @keyframes fade-in {

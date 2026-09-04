@@ -43,23 +43,23 @@ const VARIANT_STYLES: Record<
   { wash: string; badge: string; glyph: string }
 > = {
   primary: {
-    wash: "yy-wash-primary",
+    wash: "",
     badge: "bg-primary",
     glyph: "text-white",
   },
   success: {
-    wash: "yy-wash-success",
+    wash: "",
     badge: "bg-success",
     glyph: "text-white",
   },
   warning: {
-    wash: "yy-wash-warning",
+    wash: "",
     badge: "bg-warning",
     glyph: "text-white",
   },
-  info: { wash: "yy-wash-primary", badge: "bg-info", glyph: "text-white" },
+  info: { wash: "", badge: "bg-info", glyph: "text-white" },
   secondary: {
-    wash: "yy-wash-violet",
+    wash: "",
     badge: "bg-violet",
     glyph: "text-white",
   },

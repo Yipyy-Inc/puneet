@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 //
 // ── THE BAND IS --inset, AND THAT IS NOT A TINT FILL ──────────────────────
 //
-// Rule 2 bans tint fills: white, or a solid. `--inset` (#F1F5FD) is a neutral
+// Rule 2 bans tint fills: white, or a solid. `--inset` (#F4F4F6) is a neutral
 // surface, not a hue at low opacity — the reference says so where it
 // introduces the band: "The band sits on --inset, which is a neutral surface
 // and not a tint, so rule 04 holds." An applied filter is the other half of
