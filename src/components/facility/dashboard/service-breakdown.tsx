@@ -8,7 +8,7 @@ import { CalendarDays, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ServiceBreakdown() {
-  const { services, counts } = useUnifiedBookings();
+  const { services, counts, isLoading } = useUnifiedBookings();
   const { serviceFilter, setServiceFilter, setTab } = useDashboardFilters();
 
   // The main-dashboard board covers Boarding & Daycare only. Every other
@@ -27,6 +27,33 @@ export function ServiceBreakdown() {
     setServiceFilter(key);
     setTab("scheduled");
   };
+
+  // The third surface that printed a number before it had one: "0 across 2
+  // services", with a 0 on each pill, while the queries were still in flight.
+  // Same shape, same height, no figures until there are figures.
+  if (isLoading) {
+    return (
+      <Card className="relative overflow-hidden border" aria-busy="true">
+        <div
+          aria-hidden
+          className="yy-skel relative flex flex-col gap-3 p-3 lg:flex-row lg:items-center"
+        >
+          <div className="flex items-center gap-2.5 lg:min-w-[180px]">
+            <div className="bg-muted size-8 shrink-0 rounded-xl" />
+            <div className="flex flex-col gap-1.5">
+              <div className="bg-muted h-[10px] w-28 rounded-full" />
+              <div className="bg-muted h-[14px] w-36 rounded-full" />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="bg-muted h-8 w-20 rounded-full" />
+            <div className="bg-muted h-8 w-28 rounded-full" />
+            <div className="bg-muted h-8 w-28 rounded-full" />
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="relative overflow-hidden border">
