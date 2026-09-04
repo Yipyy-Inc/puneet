@@ -1,8 +1,8 @@
 # Work order — adopting the Yipyy design system
 
-**Stages 0–9 are done**, plus **8b, the form controls** (0–7 on 2026-09-03; 8, 8b and 9 on
-2026-09-04). Stages 4 and 7 grew ratchets; stage 7's was corrected in 8b's change.
-**Stage 10 (icons) is next.**
+**Stages 0–10 are done**, plus **8b, the form controls** (0–7 on 2026-09-03; 8, 8b, 9 and 10 on
+2026-09-04). Stages 4, 7 and 10 grew gates; stage 7's was corrected in 8b's change.
+**Stage 11 (French, print, accessibility) is the last one.**
 
 The gap that sat outside the eleven — `Input` — was closed on 2026-09-04 as **stage 8b**, below,
 after the product owner chose to do the whole form family at once rather than defer it.
@@ -661,20 +661,79 @@ the spec.
 
 ---
 
-## Stage 10 — icons · §5b1
+## Stage 10 — icons · §5b1 · **DONE 2026-09-04**
 
 - `src/lib/nav/facility-nav.ts`: wire the glyph for every area from `docs/design-system/icon-map.json`
   (`tier1.navigation`) rather than from prose, so a synonym cannot creep back in.
 - The six custom glyphs are already real components after stage 0 — import them from
-  `@/components/icons/yipyy-icons`. They take `className`/`size` exactly like lucide, so a call site
-  never needs to know which tier a glyph came from.
-- Resolve the six nav collisions per `tier1Collisions` in the map (also §5b1): Calendar/Calendars, Payments/Billing, Reports/Loyalty
-  Reports, Estimates/Waivers, Tasks/Intake Forms, and the `dollar-sign`/`credit-card` money pair.
+  `@/components/icons/yipyy-icons`.
+- Resolve the six nav collisions per `tier1Collisions` in the map (also §5b1).
 - Sizes 16/20/24 only, 1.75px stroke (2px at 16), `currentColor`, round caps.
-- An icon never introduces a colour — it inherits its label's ink. Exceptions: white on a solid fill,
-  a status glyph in its status ink, body ink on a solid orange badge.
-- Before drawing a custom glyph, search `Object.keys(lucide.icons)` — 1,756 glyphs. Three customs are
-  sanctioned (playgroup, grooming table, checked in); a fourth needs the §governance gate.
+- An icon never introduces a colour — it inherits its label's ink.
+
+**Done. Measured in Chromium across all 37 rendered nav buttons:**
+
+| Property        | Measured                               |
+| --------------- | -------------------------------------- |
+| Size            | **20×20**, every one                   |
+| Stroke          | **1.75px**, every one                  |
+| Ink             | **37/37** inherit their label's colour |
+| Duplicate glyph | **none**                               |
+
+**Nine glyphs changed — five collisions and four synonyms.** The collisions are the ones that
+mattered, because a glyph on two areas carries no information at all: the label does the work and
+the icon is decoration. Per `tier1Collisions`, with the map's own reasoning:
+
+| Was              | On                                    | Fix                             |
+| ---------------- | ------------------------------------- | ------------------------------- |
+| `calendar`       | Facility Calendar + **Bookings**      | Bookings → `calendar-check`     |
+| `credit-card`    | Payments + **Subscription & Billing** | Subscription → `repeat`         |
+| `bar-chart-3`    | Reports + **Loyalty Reports**         | Loyalty Reports → `trending-up` |
+| `file-text`      | Estimates + **Digital Waivers**       | Waivers → `file-signature`      |
+| `clipboard-list` | Tasks + **Intake Forms**              | Forms → `clipboard-pen`         |
+
+And four that had simply drifted from the map: Dashboard `house` (was lucide's deprecated `Home`
+alias), Facility Calendar `calendar-days` (was the bare `Calendar`), Occupancy `layout-grid` (was
+`Grid3X3`), Incidents `triangle-alert` (was the deprecated `AlertTriangle`).
+
+**The sixth collision was NOT applied, deliberately.** The map's `dollar-sign` entry fixes "Billing"
+to `wallet`, but this nav has one item called "Subscription & Billing" and no dollar-sign anywhere;
+the map's own note says "the titles need separating too", which is a product decision about what
+those screens are rather than an icon swap. The `credit-card` duplicate it shared is resolved
+either way. Left for whoever splits them.
+
+**Two defects found by measuring rather than by reading the nav file:**
+
+1. **The nav glyph was 16px on all 36 areas.** §5b1: "16 inline with text and in badges, 20 THE
+   DEFAULT FOR BUTTONS, ROWS AND NAV, 24 for page headers." At 16 the rail read as text with
+   decorations beside it rather than as a set of glyphs.
+2. **The ACTIVE item's glyph went grey while its label went primary** — `isActive &&
+"text-muted-foreground"` in `generic-sidebar.tsx`, which is §5b1's "an icon never introduces a
+   colour" broken in the one state where the colour matters most. The same component carried an
+   `iconColor` prop letting a call site paint a glyph from data; no nav item ever set it, and it is
+   removed rather than left as a legal-looking way to break the rule.
+
+**The stroke is fixed in CSS, not by a prop.** lucide ships `stroke-width: 2`; §5b1 wants 1.75 at
+20px. CSS `stroke-width` beats the SVG presentation attribute, so one `[&>svg]:[stroke-width:1.75]`
+on the menu button fixes all 36 without threading a prop through the nav model or touching a call
+site.
+
+**`bun run check:nav-icons` is the encoding, and it was watched failing.** It compares every nav
+item against the map AND fails on any glyph used twice — the second half matters because a new
+collision could otherwise pass while both halves individually match. Planting `calendar-days` back
+on Bookings produced both errors at once:
+
+```
+✗ 1 glyph(s) do not match the map
+    Bookings                 is CalendarDays, map says CalendarCheck
+✗ 1 glyph(s) used by more than one area
+    CalendarDays         Facility Calendar + Bookings
+```
+
+**The first plant did not land, and that is worth recording.** The line number was stale — the doc
+block added earlier in the same change had shifted the file by ~48 lines — so the gate passed a
+violation that was never actually written. Caught by checking the planted line rather than trusting
+the `sed`. A gate is only verified by watching it fail on a change you have confirmed is present.
 
 ---
 

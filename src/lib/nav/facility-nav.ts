@@ -1,8 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Home,
-  Calendar,
-  Grid3X3,
+  House,
+  CalendarDays,
+  LayoutGrid,
   Phone,
   MessageSquare,
   Scissors,
@@ -15,8 +15,11 @@ import {
   HeartHandshake,
   FileText,
   ClipboardList,
+  CalendarCheck,
   CalendarClock,
   ClipboardCheck,
+  ClipboardPen,
+  FileSignature,
   UserCheck,
   Package,
   Tags,
@@ -26,10 +29,12 @@ import {
   Receipt,
   Gift,
   BarChart3,
+  TrendingUp,
+  Repeat,
   Megaphone,
   Award,
   ShieldCheck,
-  AlertTriangle,
+  TriangleAlert,
   Settings,
 } from "lucide-react";
 
@@ -38,6 +43,54 @@ import {
   type PermissionGroup,
   type PermissionKey,
 } from "@/types/facility-staff";
+
+// ============================================================================
+// THE GLYPHS COME FROM docs/design-system/icon-map.json, NOT FROM TASTE.
+// §5b1, and stage 10 of WORK_ORDER.md.
+//
+// "One glyph per meaning — take it from icon-map.json, never a synonym." The
+// map's `tier1.navigation` names a lucide glyph for all 36 areas, and
+// `bun run check:nav-icons` compares this file against it on every push, so a
+// synonym cannot creep back in the way six of them already had.
+//
+// ── THE SIX COLLISIONS THE MAP RECORDS, AND HOW EACH RESOLVED ─────────────
+//
+// A collision is two nav areas wearing the same glyph, which makes the glyph
+// carry no information at all — the label is doing all the work and the icon
+// is decoration. The map names the loser and the replacement, with a reason:
+//
+//   calendar        Facility Calendar + Bookings
+//                   -> Bookings takes `calendar-check`. "The calendar is the
+//                      grid you look at; a booking is one confirmed
+//                      reservation."
+//   credit-card     Payments + Subscription & Billing
+//                   -> Subscription takes `repeat`. "What Yipyy charges the
+//                      facility is a recurring charge, not a card taken at
+//                      the desk."
+//   bar-chart-3     Reports & Analytics + Loyalty Reports
+//                   -> Loyalty Reports takes `trending-up`. "One metric over
+//                      time, not the reporting suite."
+//   file-text       Estimates + Digital Waivers
+//                   -> Waivers take `file-signature`. "A waiver's whole
+//                      nature is that it is signed."
+//   clipboard-list  Tasks + Intake Forms
+//                   -> Forms take `clipboard-pen`. "A form is filled in; a
+//                      task is ticked off."
+//   dollar-sign     the money pair
+//                   -> `wallet` for Billing. NOT APPLIED: this nav has one
+//                      item, "Subscription & Billing", and no dollar-sign
+//                      anywhere. The map's own note says "the titles need
+//                      separating too", which is a product decision about
+//                      what those screens are, not an icon swap. Left for
+//                      whoever splits them; the credit-card collision above
+//                      is resolved either way.
+//
+// Three more were plain drift rather than collisions, and the map is equally
+// specific: Dashboard is `house` (was `Home`, lucide's deprecated alias),
+// Facility Calendar is `calendar-days` (was the bare `Calendar`), Occupancy is
+// `layout-grid` (was `Grid3X3`), and Incidents is `triangle-alert` (was
+// `AlertTriangle`, the deprecated alias again).
+// ============================================================================
 
 /**
  * The single source-of-truth facility navigation model.
@@ -87,7 +140,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         title: "Dashboard",
         url: "/facility/dashboard",
-        icon: Home,
+        icon: House,
         permKey: "view_dashboard",
         exact: true,
       },
@@ -100,13 +153,13 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         title: "Facility Calendar",
         url: "/facility/dashboard/calendar",
-        icon: Calendar,
+        icon: CalendarDays,
         permKey: "view_all_calendars",
       },
       {
         title: "Occupancy Calendar",
         url: "/facility/dashboard/kennel-view",
-        icon: Grid3X3,
+        icon: LayoutGrid,
         permKey: "view_occupancy_calendar",
       },
     ],
@@ -205,7 +258,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         title: "Bookings",
         url: "/facility/dashboard/bookings",
-        icon: Calendar,
+        icon: CalendarCheck,
         permKey: "view_bookings",
       },
       {
@@ -303,7 +356,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         title: "Subscription & Billing",
         url: "/facility/settings/billing",
-        icon: CreditCard,
+        icon: Repeat,
         permKey: "settings_billing",
       },
       {
@@ -345,7 +398,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         title: "Loyalty Reports",
         url: "/facility/dashboard/marketing/loyalty-reports",
-        icon: BarChart3,
+        icon: TrendingUp,
         permKey: "marketing_view_analytics",
       },
       {
@@ -363,19 +416,19 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         title: "Incidents",
         url: "/facility/dashboard/incidents",
-        icon: AlertTriangle,
+        icon: TriangleAlert,
         permKey: "ops_incidents_view",
       },
       {
         title: "Digital Waivers",
         url: "/facility/dashboard/waivers",
-        icon: FileText,
+        icon: FileSignature,
         permKey: "view_waivers",
       },
       {
         title: "Intake Forms",
         url: "/facility/dashboard/forms",
-        icon: ClipboardList,
+        icon: ClipboardPen,
         permKey: "view_intake_forms",
       },
     ],

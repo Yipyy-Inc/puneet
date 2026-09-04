@@ -276,6 +276,7 @@ rg -i "emerald|#0EA5E9|slate-|gray-" src/components/ui           # off-palette l
 rg "bg-(emerald|red|amber|blue|violet|slate)-(50|100)"           # tint fills — see the note below
 bun run check:badge-glyph                                        # a colour-coded badge with no glyph (§3)
 bun run check:hover-actions                                      # a control revealed only on hover (§6 rule 11)
+bun run check:nav-icons                                          # a nav glyph off the map, or on two areas (§5b1)
 ```
 
 **One of these greps fires on a file that is correct, and it is meant to.**
