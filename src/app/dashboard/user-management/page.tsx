@@ -26,6 +26,7 @@ import {
 import { PLATFORM_ROLE_LABEL } from "@/lib/auth/platform-role";
 import { CreateAdminUserModal } from "@/components/user-management/CreateAdminUserModal";
 import { PlatformMemberSheet } from "@/components/user-management/PlatformMemberSheet";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ============================================================================
 // The Yipyy platform team — from Postgres.
@@ -167,23 +168,27 @@ export default function UserManagementPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Platform team</h2>
-        <div className="flex items-center space-x-2">
+      {/* §1: exactly one 48px prominent control per screen. Inviting an admin
+          is what this page is FOR; exporting is a secondary 40px outline. */}
+      <PageHeader
+        title="Platform team"
+        secondary={
           <Button
             variant="outline"
             onClick={() => exportTeamToCSV(rows)}
             disabled={rows.length === 0}
           >
-            <Download className="mr-2 size-4" />
+            <Download />
             Export
           </Button>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="mr-2 size-4" />
-            Invite admin
+        }
+        action={
+          <Button size="prominent" onClick={() => setIsCreateModalOpen(true)}>
+            <Plus />
+            Invite an admin
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {error && (
         <p

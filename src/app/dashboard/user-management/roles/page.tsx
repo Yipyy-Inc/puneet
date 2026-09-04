@@ -26,6 +26,7 @@ import {
   PLATFORM_ROLE_LABEL,
   type PlatformRole,
 } from "@/lib/auth/platform-role";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ============================================================================
 // The platform roles, as Postgres defines them.
@@ -119,16 +120,21 @@ export default function PlatformRolesPage() {
 
   return (
     <div className="flex-1 space-y-6 p-4 pt-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Platform roles</h2>
-        <p className="text-muted-foreground mt-1">
-          The four roles of{" "}
-          <code className="bg-muted rounded-sm px-1.5 py-0.5 text-xs">
-            public.platform_role
-          </code>
-          , and who holds them
-        </p>
-      </div>
+      {/* The description keeps its <code> — it names a Postgres enum, and
+          §5r's "some strings are not translatable" covers exactly this: an
+          identifier is not prose. PageHeader takes a ReactNode for it. */}
+      <PageHeader
+        title="Platform roles"
+        description={
+          <>
+            The four roles of{" "}
+            <code className="bg-surface-inset rounded-sm px-1.5 py-0.5 text-xs">
+              public.platform_role
+            </code>
+            , and who holds them
+          </>
+        }
+      />
 
       <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/20">
         <Lock className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
