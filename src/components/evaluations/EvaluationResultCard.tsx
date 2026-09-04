@@ -118,8 +118,8 @@ export function EvaluationResultCard({
       <div
         className={cn(
           passed
-            ? "border-b border-emerald-100 bg-emerald-50"
-            : "border-b border-rose-100 bg-rose-50",
+            ? "border-border border-b bg-emerald-50"
+            : "border-border border-b bg-rose-50",
         )}
       >
         {hasBranding ? (

@@ -821,7 +821,7 @@ export function KennelCalendarView({
                               {isMaint && (
                                 <div
                                   className={cn(
-                                    "pointer-events-none mx-0.5 my-1.5 flex items-center gap-2 rounded-sm border-l-4 border-l-red-500 bg-red-100 px-2 dark:bg-red-900/30",
+                                    "pointer-events-none mx-0.5 my-1.5 flex items-center gap-2 rounded-sm bg-red-100 px-2 dark:bg-red-900/30",
                                     colStart(1),
                                     colSpan(numDays),
                                   )}

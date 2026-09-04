@@ -152,7 +152,7 @@ function DocumentCard({
   return (
     <div
       className={cn(
-        "border-border/50 overflow-hidden rounded-xl border border-l-4",
+        "border-border/50 overflow-hidden rounded-xl border",
         TYPE_BORDER[doc.type],
       )}
     >

@@ -266,7 +266,7 @@ function NavTabs({ items, pathname }: { items: NavItem[]; pathname: string }) {
               href={item.href}
               data-active={isActive}
               className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-t-lg border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all",
+                "flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all",
                 isActive
                   ? "border-primary bg-primary/5 text-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-transparent",

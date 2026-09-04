@@ -1287,7 +1287,7 @@ export function ClientFiltersInline({
                   className={cn(
                     "block w-full px-3 py-1.5 text-left text-[11px] font-medium whitespace-nowrap transition-colors",
                     activeCategory === cat.id
-                      ? "border-r-2 border-r-sky-500 bg-white text-sky-700"
+                      ? "bg-white text-sky-700 shadow-[inset_0_0_0_2px_var(--primary)]"
                       : "text-slate-600 hover:bg-sky-50/70 hover:text-slate-900",
                   )}
                 >

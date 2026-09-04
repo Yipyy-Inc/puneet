@@ -298,7 +298,7 @@ function SortableQuestionRow({
       <div
         ref={setNodeRef}
         style={style}
-        className={`flex items-center gap-2 rounded-md border p-2 ${isDragging ? `opacity-50 shadow-md` : ""} ${selectedQuestionId === q.id ? "border-primary bg-muted/50" : ""} ${isFollowUp ? "ml-8 border-l-2 border-l-indigo-200 dark:border-l-indigo-800" : ""} `}
+        className={`flex items-center gap-2 rounded-md border p-2 ${isDragging ? `opacity-50 shadow-md` : ""} ${selectedQuestionId === q.id ? "border-primary bg-muted/50" : ""} ${isFollowUp ? "border-border ml-8 border-l" : ""} `}
       >
         <div
           {...attributes}

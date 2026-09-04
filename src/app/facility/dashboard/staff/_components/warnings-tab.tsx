@@ -228,7 +228,7 @@ function WarningCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-l-4",
+        "overflow-hidden rounded-xl border",
         TYPE_BORDER[w.type],
         TYPE_BG[w.type],
         "border-border/50",

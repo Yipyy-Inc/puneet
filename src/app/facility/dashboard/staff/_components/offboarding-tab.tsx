@@ -206,7 +206,7 @@ function OffboardingTaskRow({
   return (
     <div
       className={cn(
-        "rounded-xl border border-l-4 p-3",
+        "rounded-xl border p-3",
         complete
           ? "border-l-emerald-400"
           : overdue

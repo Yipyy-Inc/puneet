@@ -104,6 +104,19 @@ export default async function FacilityLayout({
                           }}
                         />
                       </header>
+                      {/* ── A CONTENT MEASURE WAS TRIED HERE AND REVERTED ──
+
+                          `mx-auto max-w-app` capped this at 1440px to stop the
+                          text-left / void / button-right shape on a wide
+                          monitor. It did stop it, and it was still wrong: at
+                          2552px it left ~550px of dead margin on EACH side, so
+                          the void moved from inside each row to both sides of
+                          the whole page. Worse, and more obviously so.
+
+                          The answer is to USE the width — more columns at the
+                          wide breakpoints — not to narrow the page. See the
+                          grids in bookings-board.tsx and
+                          SmartInsightsWidget.tsx. */}
                       <main className="min-w-0 flex-1 overflow-x-clip">
                         <ImpersonationBanner />
                         <AnnouncementBanner facilityId={11} />
