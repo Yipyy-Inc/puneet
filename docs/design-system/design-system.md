@@ -35,19 +35,26 @@ Visual reference with live examples: `Yipyy Design System.dc.html`.
   --ink-disabled: #8c99a3; /* non-text only */
   --code-fg: #c8d6ea; /* 11.71:1 on --body — code only */
 
-  /* Surface */
-  --ground: #f6f9ff;
-  --ground-gradient: linear-gradient(
-    150deg,
-    #ffffff 0%,
-    #fbfcff 34%,
-    #f2f6fd 100%
-  );
+  /* Surface — NEUTRAL since 2026-09-04. The family shipped blue-tinted
+     (ground #F6F9FF, inset #F1F5FD, line #E4EAF5) and was neutralised on the
+     product owner's call: a clean white page, and cards that float slightly
+     above it and are also white. The hue left the SURFACES only — --primary,
+     the status inks and --panel-dark are unchanged, so blue still means what
+     the software does and no longer means "page".
+
+     The ground is not pure white on purpose. White on white leaves the shadow
+     as the only thing saying where a card ends, and this product is read on a
+     tablet held on a kennel floor. #FAFAFB is white to the eye and measurably
+     lighter than the card, so the separation survives glare and a dim screen.
+
+     It also measures better than what it replaced: --ink-tertiary #677382,
+     the floor for text, was 4.58:1 on #F6F9FF and is 4.63:1 on #FAFAFB. */
+  --ground: #fafafb;
   --card: #ffffff;
-  --inset: #f1f5fd;
-  --inset-2: #e6edf9;
-  --line: #e4eaf5;
-  --line-strong: #d3ddee;
+  --inset: #f4f4f6;
+  --inset-2: #ebebee;
+  --line: #e6e6e9;
+  --line-strong: #d5d5da;
 
   /* Status — the INK is the token. Chips are white with a 1px hairline of
      the same ink; the -bg tints below fill nothing and are kept for reference. */
@@ -144,7 +151,7 @@ Visual reference with live examples: `Yipyy Design System.dc.html`.
 | Secondary ink | `#4C5B6C` | Emphasised metadata, secondary values                                                                                                 |
 | Tertiary ink  | `#677382` | Column heads, timestamps, helper text. Never lighter for words                                                                        |
 | Disabled ink  | `#8C99A3` | Placeholder glyphs, chevrons. Non-text only                                                                                           |
-| Ground        | `#F6F9FF` | App background; white cards sit on it                                                                                                 |
+| Ground        | `#FAFAFB` | App background — neutral, no hue. White cards float slightly above it (2026-09-04)                                                    |
 | Code ink      | `#C8D6EA` | Monospace code on `--body`; 11.71:1. The only light-on-dark text                                                                      |
 | Card          | `#FFFFFF` | Every raised panel, popover, modal, table container                                                                                   |
 | Line          | `#E4EAF5` | Card borders, dividers, table header rule — the default hairline                                                                      |
@@ -1259,14 +1266,18 @@ Every print stylesheet:
    for hover and for "this row changed" — it invents no colour and survives print. Never a tint fill
    for any of them, and never an orange dot: orange marks the animal, not a row's state.
 3. **One `transition` declaration per inline style.** A second one silently overwrites the first.
-4. **No tint fills — one exception, and it is measured.** A metric or filter tile may carry a
-   near-white gradient in its badge's hue: `linear-gradient(135deg, <wash> 0%, #FFF 58%)` with
-   `#EDF2FE` / `#E9F8F2` / `#FDEFF3` / `#FDF7E6` / `#F4EFFE`. Body ink measures 15.30–16.12:1 on
-   these against 17.25:1 on white, so the wash is decoration at no cost. Two conditions: it stays
-   near-white (body ink above 15:1), and the tile label steps to `--ink-secondary` `#4C5B6C`
-   (6.23:1) because `--ink-tertiary` is 4.32:1 on the wash. Chips, badges, callouts and anything
-   with small coloured text stay white — that is the case this rule was written against, where a
-   tint costs real contrast (green on its own tint is 4.85:1).
+4. **No tint fills. No exception — the tile wash was retired 2026-09-04.** White, or a solid.
+   A metric or filter tile used to be allowed a near-white gradient in its badge's hue —
+   `linear-gradient(135deg, <wash> 0%, #FFF 58%)` from `#EDF2FE` / `#E9F8F2` / `#FDEFF3` /
+   `#FDF7E6` / `#F4EFFE` — and it was genuinely measured: body ink held 15.30–16.12:1 on those
+   washes against 17.25:1 on white, so it cost no contrast. It was retired anyway, on the product
+   owner's call, when the surface family went neutral: the brief was a platform with **no tinted
+   surface anywhere**, and a tile is a card section like any other. Nothing was lost from the tile,
+   because the tone was never carried by the wash — it is carried by the 40px solid badge beside
+   the label, and the wash was a second, quieter copy of the same signal. The `--wash-*` values are
+   kept in `globals.css` so restoring this is one edit rather than a re-derivation. Chips, badges
+   and callouts were always white and still are — that is the case this rule was written against,
+   where a tint costs real contrast (green on its own tint is 4.85:1).
 5. **Status is dark ink on white**, with a 1px hairline of that same ink — never a tint fill, and
    never white on a _dot-weight_ colour (`#18A66E` is 2.28:1). Solid fills use the ink, not the dot.
 6. **Every `fr`/fixed grid column needs `minmax(0, …)`**; flex children need `min-width: 0`.

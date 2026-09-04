@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 //
 // Every value below is the reference page's own tile anatomy table:
 //
-//   Surface     linear-gradient(135deg, <wash> 0%, #FFF 58%) · 1px #E4EAF5 · r24
+//   Surface     linear-gradient(135deg, <wash> 0%, #FFF 58%) · 1px #E6E6E9 · r24
 //   Carrier     a 40px SOLID badge with the glyph on top
 //   Label       12 / 700 / .07em / uppercase / #4C5B6C · min-height 2.6em
 //   Value       30 / 700 / -.02em / #0A1B33 · tabular
@@ -70,20 +70,20 @@ interface ToneStyle {
 }
 
 const TONE_STYLES: Record<KpiTone, ToneStyle> = {
-  indigo: { wash: "yy-wash-primary", badge: "bg-primary", glyph: "text-white" },
+  indigo: { wash: "", badge: "bg-primary", glyph: "text-white" },
   emerald: {
-    wash: "yy-wash-success",
+    wash: "",
     badge: "bg-success",
     glyph: "text-white",
   },
-  rose: { wash: "yy-wash-error", badge: "bg-bad", glyph: "text-white" },
-  amber: { wash: "yy-wash-warning", badge: "bg-warning", glyph: "text-white" },
-  violet: { wash: "yy-wash-violet", badge: "bg-violet", glyph: "text-white" },
+  rose: { wash: "", badge: "bg-bad", glyph: "text-white" },
+  amber: { wash: "", badge: "bg-warning", glyph: "text-white" },
+  violet: { wash: "", badge: "bg-violet", glyph: "text-white" },
   // Five washes exist and neutral is not one of them, so this tile is plain
   // white — which is rule 2's default answer anyway.
   slate: { wash: "", badge: "bg-ink-secondary", glyph: "text-white" },
   brand: {
-    wash: "yy-wash-warning",
+    wash: "",
     badge: "bg-brand-orange",
     glyph: "text-body-ink",
   },

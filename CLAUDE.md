@@ -81,11 +81,11 @@ loses.
 | Tint strong   | `#D5E4FB`             | Hairlines and progress tracks. Never behind text                                                                       |
 | Heading ink   | `#0E3A5C`             | Page and section titles only                                                                                           |
 | Body ink      | `#0A1B33`             | All body copy, cells, names, numbers                                                                                   |
-| Secondary ink | `#4C5B6C`             | Emphasised metadata, secondary values, a tile label on a wash                                                          |
+| Secondary ink | `#4C5B6C`             | Emphasised metadata, secondary values, a metric tile's label                                                           |
 | Tertiary ink  | `#677382`             | Column heads, timestamps, helper text — 4.83:1, **the floor for text**                                                 |
 | Disabled ink  | `#8C99A3`             | Chevrons and placeholder glyphs. **Non-text only**                                                                     |
-| Ground        | `#F6F9FF`             | App background; white cards sit on it                                                                                  |
-| Card · line   | `#FFFFFF` · `#E4EAF5` | Every raised panel; the default hairline (`#D3DDEE` strong)                                                            |
+| Ground        | `#FAFAFB`             | App background — **neutral, no hue**. White cards float on it. `--inset`/`--line` are neutral too                      |
+| Card · line   | `#FFFFFF` · `#E6E6E9` | Every raised panel, floating on the ground; the default hairline (`#D5D5DA` strong)                                    |
 | Dark panel    | `#0E3A5C`             | The **one** dark surface — the heading ink reused. White at 11.74:1                                                    |
 | Orange        | `#F08A3C`             | The animal and the live moment — **a surface, never an ink**                                                           |
 
@@ -203,10 +203,11 @@ error, sad) at 132 compact, in a dialog, a panel or a whole failed view.
    radius or a background and the ban applies again.**
 2. **No tint fills.** White, or a solid. A status is its glyph, its word, its ink and a 1px hairline
    of that same ink; where one must dominate, fill it solid with the ink at full strength — never
-   white on a dot-weight colour. The **one** exception is measured: a metric or filter tile may
-   carry `linear-gradient(135deg, <wash> 0%, #FFF 58%)` from `#EDF2FE` / `#E9F8F2` / `#FDEFF3` /
-   `#FDF7E6` / `#F4EFFE`, keeping body ink above 15:1, with the tile label stepping to `#4C5B6C`.
-   Chips, badges and callouts stay white.
+   white on a dot-weight colour. **There is no longer any exception.** The metric-tile wash — the
+   one measured case — was retired on 2026-09-04 when the surface family went neutral: the brief
+   was a platform with no tinted surface anywhere, and a tile is a card section like any other. The
+   tile lost nothing, because its tone lives in the solid badge beside the label, not in the wash.
+   Chips, badges and callouts were always white and still are.
 3. **One `transition` declaration per inline style, ever.** The template compiles to a React style
    object, so a second `transition:` silently overwrites the first and the animation dies with no
    error.
