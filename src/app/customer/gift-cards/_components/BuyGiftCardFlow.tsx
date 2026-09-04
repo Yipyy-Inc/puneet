@@ -30,9 +30,9 @@ import {
   CheckCircle2,
   Loader2,
   ChevronRight,
-  Sparkles,
   Send,
 } from "lucide-react";
+import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { cn } from "@/lib/utils";
 import { giftCardSettings } from "@/data/gift-cards";
 
@@ -296,14 +296,10 @@ export function BuyGiftCardFlow({
   if (done) {
     return (
       <div className="flex flex-col items-center gap-6 py-8 text-center">
-        <div className="relative">
-          <div className="flex size-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-            <CheckCircle2 className="size-10 text-green-600" />
-          </div>
-          <div className="absolute -top-1 -right-1 flex size-6 items-center justify-center rounded-full bg-green-500 text-white">
-            <Sparkles className="size-3.5" />
-          </div>
-        </div>
+        {/* §5d2: a finished flow gets `success` at 132 on its confirmation
+            panel. He replaces the green disc-and-sparkle stack, which was two
+            decorations doing one job. */}
+        <YipyyPose name="success" size={132} />
 
         {/* Gift card visual */}
         <div

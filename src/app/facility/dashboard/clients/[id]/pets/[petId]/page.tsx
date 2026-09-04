@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -449,16 +450,26 @@ export default function PetDetailPage({
         </div>
 
         {/* Deceased/Inactive Banner */}
+        {/* §5d2's ladder has a rung for exactly this: "A sad record, not a
+            fault → `sad`", named as "a pet marked deceased". It is the one
+            place in the product where the low register is right, and the
+            pose's own note is "quiet, not pitiful".
+
+            The red this used to wear was wrong twice over — a closed record
+            is not an error, and §6 rule 2 bans the tint fill regardless. It
+            is now a white panel with a neutral hairline and secondary ink,
+            which is what "archived, closed" reads as in §1. */}
         {pet.petStatus === "deceased" && (
-          <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
-            <Heart className="size-5 text-red-500" />
-            <div>
-              <p className="text-sm font-medium text-red-800 dark:text-red-300">
-                {pet.name} has been marked as deceased
+          <div className="border-line-strong bg-card flex flex-col items-center gap-4 rounded-2xl border p-4 text-center sm:flex-row sm:text-left">
+            <YipyyPose name="sad" size={132} />
+            <div className="min-w-0 flex-1">
+              <p className="text-heading text-sm font-semibold">
+                {pet.name}&rsquo;s record is now closed
               </p>
-              <p className="text-xs text-red-600 dark:text-red-400">
-                This pet is no longer shown in active pet lists. Profile is
-                preserved for records.
+              <p className="text-ink-secondary mt-1 text-xs">
+                {pet.name} no longer appears in active pet lists or in booking
+                and scheduling workflows. The profile stays here for your
+                records.
               </p>
             </div>
           </div>

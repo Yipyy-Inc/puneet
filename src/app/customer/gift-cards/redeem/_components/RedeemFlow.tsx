@@ -10,13 +10,13 @@ import {
   Gift,
   Search,
   Wallet,
-  CheckCircle2,
   AlertCircle,
   Loader2,
   ArrowRight,
   QrCode,
   Lock,
 } from "lucide-react";
+import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { cn } from "@/lib/utils";
 import { giftCards, customerWallets } from "@/data/gift-cards";
 import Link from "next/link";
@@ -428,9 +428,8 @@ export function RedeemFlow() {
       {/* Step: Done */}
       {step === "done" && (
         <div className="flex flex-col items-center gap-5 py-6 text-center">
-          <div className="flex size-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-            <CheckCircle2 className="size-9 text-green-600" />
-          </div>
+          {/* §5d2: the confirmation panel at the end of a flow. */}
+          <YipyyPose name="success" size={132} />
           <div>
             <p className="text-xl font-bold">Added to your wallet!</p>
             <p className="text-muted-foreground mt-1 text-sm">

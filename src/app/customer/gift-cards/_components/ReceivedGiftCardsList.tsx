@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Wallet, CheckCircle2, Loader2, Inbox, ArrowRight } from "lucide-react";
+import { Wallet, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
 import { giftCards, customerWallets } from "@/data/gift-cards";
 import { clients } from "@/data/clients";
 import type { GiftCard } from "@/types/payments";
@@ -108,7 +108,7 @@ export function ReceivedGiftCardsList({
     <>
       {received.length === 0 ? (
         <EmptyState
-          icon={<Inbox className="size-6" />}
+          pose="medal"
           text="No gift cards received yet"
           note="Share the Gift Cards page with friends and family so they can send you one."
         />

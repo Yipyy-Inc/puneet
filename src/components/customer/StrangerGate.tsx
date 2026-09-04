@@ -3,7 +3,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
-import { Store, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
+
+import { YipyyPose } from "@/components/ui/yipyy-pose";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,11 +87,24 @@ export function StrangerGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-4">
         <Card className="w-full max-w-md">
+          {/* ── §5d2, "First run — no account data" → `welcome` ─────────────
+
+              The ladder assigns this rung by name and gives the surface as
+              "sign-in panel · the front door", which is exactly what this is:
+              somebody signed in with no record anywhere yet. The pose is
+              looked up, never picked at the call site (§5d2).
+
+              It replaced a 48px muted disc holding a lucide `Store`. That
+              glyph is the correct answer on a row or a toast — §5d1 puts the
+              floor at "96px of clear vertical room" — but this is a whole
+              centred view with room to spare, which is the case the
+              empty-state family exists for. 320 is that family's size.
+
+              He is beside the words, not instead of them: delete the image and
+              the title, the sentence and the action still say everything. */}
           <CardHeader className="text-center">
             <div className="mb-2 flex justify-center">
-              <div className="bg-muted flex size-12 items-center justify-center rounded-full">
-                <Store className="text-muted-foreground size-6" />
-              </div>
+              <YipyyPose name="welcome" size={320} float priority />
             </div>
             <CardTitle>No bookings yet</CardTitle>
             <CardDescription>
@@ -116,11 +131,12 @@ export function StrangerGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-4">
       <Card className="w-full max-w-md">
+        {/* Same rung, same pose — this is the other half of the front door:
+            signed in, but a stranger to THIS facility. The form below is the
+            "exactly one primary action" the empty-state family asks for. */}
         <CardHeader className="text-center">
           <div className="mb-2 flex justify-center">
-            <div className="bg-muted flex size-12 items-center justify-center rounded-full">
-              <Store className="text-muted-foreground size-6" />
-            </div>
+            <YipyyPose name="welcome" size={320} float priority />
           </div>
           <CardTitle>You are not registered here yet</CardTitle>
           <CardDescription>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
+import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { cn } from "@/lib/utils";
 import { loyaltyLedgerQueries } from "@/lib/api/loyalty-ledger";
 import type { LoyaltyVoucherRow } from "@/app/api/loyalty/vouchers/route";
@@ -278,9 +279,13 @@ export default function RedemptionsPage() {
             // bare "No data found". The richer `ui/DataTable` takes an
             // `emptyState`, and swapping which table this screen uses is not
             // part of making it read real rows.
-            <div className="text-muted-foreground py-12 text-center">
-              <Receipt className="mx-auto mb-3 size-10 opacity-40" />
-              <p className="font-medium">No rewards issued yet</p>
+            // §5d2's nav map: loyalty is a `medal` module. He also retires
+            // the `opacity-40` glyph this used to lead with — opacity is not
+            // a de-emphasis tool (§6 rule 4), and a pose says "nothing earned
+            // yet" better than a faded receipt.
+            <div className="text-muted-foreground flex flex-col items-center py-12 text-center">
+              <YipyyPose name="medal" size={132} float />
+              <p className="mt-3 font-medium">No rewards issued yet</p>
               <p className="mt-1 text-xs">
                 A reward appears here the moment a customer redeems points,
                 reaches a tier, or earns a badge that carries one.

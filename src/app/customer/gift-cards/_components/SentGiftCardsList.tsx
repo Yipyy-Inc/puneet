@@ -116,7 +116,7 @@ export function SentGiftCardsList({
   if (sent.length === 0) {
     return (
       <EmptyState
-        icon={<Send className="size-6" />}
+        pose="medal"
         text="You haven't sent any gift cards yet."
         action={
           onSendFirst && (

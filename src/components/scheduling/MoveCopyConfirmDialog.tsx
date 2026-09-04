@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { YipyyPose } from "@/components/ui/yipyy-pose";
 import type { ScheduleEmployee, Position } from "@/types/scheduling";
 
 export interface PendingDrop {
@@ -72,12 +73,19 @@ export function MoveCopyConfirmDialog({
       }}
     >
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Move or copy shift?</DialogTitle>
-          <DialogDescription>
-            Choose an action to avoid accidental changes.
-          </DialogDescription>
-        </DialogHeader>
+        {/* §5d2's ladder: "Conflict · needs a decision" takes `thinking` at
+            132 — a judgement the record cannot make for you. A dialog is one
+            of the three surfaces §5d1 allows the moment family, and it has
+            the 96px of clear room he needs. */}
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+          <YipyyPose name="thinking" size={132} />
+          <DialogHeader className="min-w-0 flex-1">
+            <DialogTitle>Move or copy shift?</DialogTitle>
+            <DialogDescription>
+              Choose an action to avoid accidental changes.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
         {pending && (
           <div className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-3 text-sm">
