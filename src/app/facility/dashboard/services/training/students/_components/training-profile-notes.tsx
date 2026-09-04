@@ -630,7 +630,7 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
                       Deactivated: {n.deactivationReason}
                     </p>
                   )}
-                  <div className="mt-2 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="mt-2 flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"
                       size="sm"

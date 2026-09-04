@@ -299,7 +299,7 @@ export function InvoicePanel({
                         ${fmt(item.price)}
                       </span>
                       {canEditItemAt(i, item.type) ? (
-                        <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                        <div className="flex items-center gap-0.5">
                           <button
                             className="text-muted-foreground hover:text-foreground flex size-5 items-center justify-center rounded-sm"
                             onClick={() => {

@@ -19,14 +19,16 @@ sequence in [WORK_ORDER.md](docs/design-system/WORK_ORDER.md). It is **not a pro
 every screen reworked from here on follows it completely, and CLAUDE.md § "Design System" is the
 standing rule. **Stages 0–8 are done** (documents and assets, the `@theme` tokens, the empty-state
 choke point, the four route-level states, the status chips, Button, the metric and filter tiles,
-the page header / saved views / filter band / bulk bar, and the orange territories); **stage 9
-(DataTable budget and density) is next.** The tokens landed, so `src/` renders the new palette
+the page header / saved views / filter band / bulk bar, the orange territories, and the form
+controls); **stage 9 (DataTable budget and density) is next.** The tokens landed, so `src/` renders the new palette
 everywhere; stage 7's band and bulk bar reached 87 screens through `DataTable` alone; and stage 8
 put the 2px orange ring on every pet — but most screens still have the old LAYOUT, density and
 glyphs, so the third question about any screen, after "fixture or Postgres?", is still **"old
 system or new?"** [WORK_ORDER.md](docs/design-system/WORK_ORDER.md) is the record; each stage
-heading carries its own status. It also names the one gap outside the eleven stages: **`Input` is
-still shadcn's `h-9 rounded-md` against §5's 40px pill, and no stage owns it.**
+heading carries its own status. The one gap that sat outside the eleven — `Input` — was closed on
+2026-09-04 as stage 8b, which did the whole form family at once: `input`, `textarea`, `select` and
+both pickers all carried the same `h-9 rounded-md`, and `h-9` was a §5g defect in its own right
+(a fixed height on a control holding translated text).
 
 **Two of CLAUDE.md's guardrail greps no longer measure what they were written to measure**, both
 because stage 1 remapped Tailwind's own palette in `@theme` rather than rewriting ~900 files: the
@@ -80,7 +82,7 @@ Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/u
 | `bun run check:inert-permissions`      | Fails if a permission offered in the role editor is consulted by nothing — a switch that decides nothing            |
 | `bun run check:staging-sends`          | Fails if a file reaches Resend or Twilio without consulting the staging suppression guard                           |
 | `bun run check:badge-glyph`            | Fails if a colour-coded badge carries no glyph — §3's "colour is never the only channel". Ratcheted at 374          |
-| `bun run check:hover-actions`          | Fails if a control is revealed only on hover — §6 rule 11, and two of three contexts have none. Ratcheted at 58     |
+| `bun run check:hover-actions`          | Fails if a control is revealed only on hover — §6 rule 11, and two of three contexts have none. Ratcheted at 41     |
 | `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                   |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check && bun run test:unit`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.

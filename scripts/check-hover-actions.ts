@@ -31,12 +31,18 @@
  *
  * ── WHY A RATCHET AND NOT A SWEEP ─────────────────────────────────────────
  *
- * Measured at stage 7: 61 of these across 50 files. Each one is a judgement
- * — make it persistent, move it into an overflow menu, or decide the whole
- * affordance was decoration and delete it — and the right answer depends on
- * how crowded the row already is. That is 61 decisions, not one edit, and
- * the wrong bulk answer (making all 61 permanently visible) would produce
- * rows nobody can read.
+ * Stage 7 measured 61 raw grep hits; reading className one attribute at a
+ * time, and excluding the two false-positive classes above, the honest
+ * starting number was 58. On 2026-09-04 the ELEVEN action-group containers
+ * — `flex … gap-N` wrappers holding edit/delete/copy buttons in a row — were
+ * made persistent, taking it to 41.
+ *
+ * The rest are not one job. They are icon hints, captions and single
+ * buttons, and each is a judgement: make it persistent, move it into an
+ * overflow menu, or decide the affordance was decoration and delete it. The
+ * right answer depends on how crowded the row already is, and the wrong bulk
+ * answer — making all 41 permanently visible — would produce rows nobody can
+ * read.
  *
  * So the number is frozen. A new one fails. Fixing some and dropping below
  * the baseline reports too, with an instruction to lower it, so the count
@@ -59,13 +65,33 @@ const ANSI = {
  * The count on the day the rule got a gate (stage 7, 2026-09-03). Lower it
  * whenever the real number drops — the script tells you to.
  */
-const BASELINE = 58;
+const BASELINE = 41;
 
 /** The reveal half: something becomes opaque because a pointer is near it. */
 const REVEAL = /\b(?:group-hover(?:\/[a-z0-9-]+)?|hover):opacity-100\b/;
 
-/** The hide half, on the same element. */
-const HIDDEN = /\bopacity-0\b/;
+/**
+ * The hide half, on the same element — and NOT behind a breakpoint.
+ *
+ * `sm:opacity-0` is the CORRECT pattern, not a violation: it leaves the
+ * control visible at small widths and hides it only where a pointer exists.
+ * That is precisely what rule 11 asks for, so a gate that flags it is telling
+ * somebody to un-fix working code. Measured when this exclusion was added:
+ * one such site, `CustomServiceModuleCard`, which also carries `min-h-[44px]
+ * min-w-[44px]` — it had clearly been thought about.
+ */
+const HIDDEN = /(?<![a-z0-9]:)\bopacity-0\b/;
+
+/**
+ * A decorative overlay is not an affordance. `pointer-events-none` means the
+ * element cannot be clicked at all, so it is not a control being hidden — it
+ * is a glow, a scrim or a gradient that appears on hover. Five of these were
+ * inflating the count.
+ *
+ * This is checked on the same className, which is the same one-attribute
+ * discipline the rest of the script uses.
+ */
+const NOT_A_CONTROL = /\bpointer-events-none\b/;
 
 /**
  * className is read one attribute at a time rather than one file at a time:
@@ -96,6 +122,7 @@ for (const file of tsxFiles("src")) {
 
   for (const match of source.matchAll(CLASS_ATTR)) {
     const value = match[1] ?? match[2] ?? match[3] ?? "";
+    if (NOT_A_CONTROL.test(value)) continue;
     if (HIDDEN.test(value) && REVEAL.test(value)) inFile += 1;
   }
 

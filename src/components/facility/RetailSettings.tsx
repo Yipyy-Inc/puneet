@@ -1355,7 +1355,7 @@ function SupplierSection({
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
                       size="icon"

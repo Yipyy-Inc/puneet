@@ -188,7 +188,11 @@ export function TimePickerLux({
       variant="outline"
       disabled={disabled}
       className={cn(
-        "h-9 w-full justify-between border-slate-200 bg-white/90 px-3 text-left font-normal text-slate-900 shadow-xs hover:bg-slate-50",
+        // Matches the field family (§5, §5c): 40px minimum, full pill, 1px
+        // --line-strong on --card. It was `h-9 border-slate-200 bg-white/90
+        // shadow-xs` — a 36px raised box in old-palette classes, sitting
+        // beside inputs that are now 40px pills.
+        "border-line-strong bg-card text-body-ink min-h-10 w-full justify-between rounded-full px-4 text-left text-[14.5px] font-normal shadow-none max-lg:min-h-12",
         !display && "text-muted-foreground",
         className,
       )}

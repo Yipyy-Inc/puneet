@@ -219,7 +219,7 @@ export function ScheduledMessagesClient() {
                               </div>
                             </div>
 
-                            <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                            <div className="flex shrink-0 gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
