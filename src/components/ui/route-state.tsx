@@ -30,8 +30,10 @@ import { cn } from "@/lib/utils";
 // So `bare` is the default and the full-view answer: no card, no border, no
 // shadow, one centred column with the pose ABOVE the words. The state sits
 // directly on the ground, which is what a state that IS the whole page should
-// do. Nothing about the content changes — same pose at the same 132, same
-// glyph, same ink, same sentence, same single 48px control.
+// do. The content is unchanged — same pose from §5d2's ladder, same glyph,
+// same ink, same sentence, same single 48px control — but the pose renders at
+// 320 rather than 132 here, which is the one deliberate deviation. See the
+// note beside it for why.
 //
 // ── HE IS NEVER THE MESSAGE (§5d1) ────────────────────────────────────────
 // The glyph, the status ink and the sentence carry it. `YipyyPose` collapses
@@ -116,8 +118,27 @@ export function RouteState({
           "flex",
         )}
       >
+        {/* ── 320 ON THE FULL VIEW, 132 IN THE CARD ────────────────────────
+
+            §5d1 assigns the moment family "compact 132 only", and says it
+            twice — the second time naming "a dialog, a panel or a whole
+            failed view". So this is a real deviation and not a gap the spec
+            left, unlike the card-vs-full-view split above. It is here on the
+            product owner's call: at 132, alone in the middle of an empty
+            1440px viewport with nothing else on it, he reads as an icon
+            somebody forgot to finish rather than as the subject of the
+            screen.
+
+            320 and not something between: §5d1's other half is "three sizes
+            and no fourth", so the choice was 132, 320 or inventing a value.
+            320 is the sanctioned one. The source files are 720x720, so it is
+            still downscaling.
+
+            The CARD keeps 132 exactly as specified — that is the dialog and
+            panel case the rule was written for, and nothing about it
+            changed. */}
         <div className="shrink-0">
-          <YipyyPose name={pose} size={132} priority />
+          <YipyyPose name={pose} size={carded ? 132 : 320} priority />
         </div>
         {/* basis-80 is the reference's `flex: 1 1 320px`; min-w-0 is the
             flex-child rule every column in this repo needs (§6). Neither
