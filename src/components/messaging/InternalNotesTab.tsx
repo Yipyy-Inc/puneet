@@ -100,7 +100,7 @@ export function InternalNotesTab({
       <div className="flex-1 overflow-y-auto">
         {/* Compose area */}
         {isAdding && (
-          <div className="border-b border-amber-200/60 bg-amber-50/30 p-4">
+          <div className="border-border border-b bg-amber-50/30 p-4">
             <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}

@@ -18,7 +18,7 @@ export function WriteUpAckBanner({ staffId }: { staffId: string }) {
   return (
     <Link
       href="/employee/write-ups"
-      className="flex items-center justify-between gap-3 border-b border-rose-300 bg-rose-100 px-4 py-2 text-sm text-rose-800 transition-colors hover:bg-rose-200 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200 dark:hover:bg-rose-950"
+      className="flex items-center justify-between gap-3 border border-rose-300 bg-rose-100 px-4 py-2 text-sm text-rose-800 transition-colors hover:bg-rose-200 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200 dark:hover:bg-rose-950"
     >
       <span className="flex items-center gap-2 font-medium">
         <CircleAlert className="size-4 shrink-0" />

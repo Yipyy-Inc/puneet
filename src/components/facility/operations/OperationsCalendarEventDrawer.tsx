@@ -2630,7 +2630,7 @@ function LeadReviewBanner({
   };
 
   return (
-    <div className="border-b border-amber-200 bg-amber-50 px-5 py-3">
+    <div className="border-border border-b bg-amber-50 px-5 py-3">
       <div className="flex items-start gap-2.5">
         <Sparkles className="mt-0.5 size-4 shrink-0 text-amber-500" />
         <div className="min-w-0 flex-1">

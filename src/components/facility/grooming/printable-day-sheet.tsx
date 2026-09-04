@@ -118,7 +118,7 @@ export function PrintableDaySheet({
       // Visible only when printing; the regular calendar gets print:hidden.
       className="hidden bg-white text-black print:block"
     >
-      <header className="mb-4 border-b-2 border-black pb-3">
+      <header className="mb-4 border-b border-black pb-3">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl/tight font-bold">

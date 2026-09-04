@@ -159,7 +159,7 @@ export function InvoiceDetailDrawer({
                       </TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="border-t-2">
+                  <TableRow className="border-t">
                     <TableCell className="font-semibold">Total</TableCell>
                     <TableCell className="text-right font-semibold tabular-nums">
                       {formatMoney(invoice.amount, invoice.currency)}

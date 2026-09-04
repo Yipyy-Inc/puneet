@@ -268,7 +268,6 @@ headers wrap, `overflow-x: auto` on tabs. Read the label at its longest real str
 Run these after any interface change:
 
 ```
-rg "border-l-4|border-l-\[|border-b-2 border-(?!transparent)"   # banned edge accents (tab strip excepted)
 rg "opacity-(1|2|3|4|5|6|7)0.*text-|text-.*opacity-"             # opacity as text de-emphasis
 rg "transition:[^\"]*transition:"                                # two transitions in one style
 rg "bg-(orange|amber)-[0-9]{3}"                                  # orange as anything but a surface
@@ -276,16 +275,32 @@ rg -i "emerald|#0EA5E9|slate-|gray-" src/components/ui           # off-palette l
 rg "bg-(emerald|red|amber|blue|violet|slate)-(50|100)"           # tint fills — see the note below
 bun run check:badge-glyph                                        # a colour-coded badge with no glyph (§3)
 bun run check:hover-actions                                      # a control revealed only on hover (§6 rule 11)
+bun run check:edge-accents                                       # an accent line on an edge (§6 rule 1)
 bun run check:nav-icons                                          # a nav glyph off the map, or on two areas (§5b1)
 bun run check:hardcoded-locale                                   # a formatter told a locale the user did not choose (§5q)
 ```
 
-**One of these greps fires on a file that is correct, and it is meant to.**
-`src/components/ui/saved-views.tsx` matches the edge-accent grep, because the
-tab strip is rule 1's single sanctioned exception. The grep's job there is to
-make somebody re-read the three conditions — open rail, no radius, no fill, no
-border box — and confirm they still hold. Give that strip a radius or a
-background and the same hit stops being a false positive.
+**The edge-accent grep became a gate on 2026-09-04, and why is worth knowing.**
+`rg "border-l-4|border-b-2 …"` used to head this list and fired on
+`saved-views.tsx`, which was correct — the tab strip is rule 1's single
+sanctioned exception — so the hit was documented here as a false positive to be
+re-read. That paragraph was doing a gate's job, badly. `bun run
+check:edge-accents` now applies the spec's **own** mechanical test instead: a
+bottom rule that rests transparent, on something with no radius and no fill, is
+a tab strip and passes; give it a radius or a background and it fails, exactly
+as §6 rule 1 says it should. Writing it that way immediately found a SECOND
+legitimate tab strip — `OperationsCalendarEventDrawer` — that a filename
+allowlist would have reported as a violation.
+
+**The gate is deliberately narrower than the grep was.** `src/` holds 1,169
+one-sided border utilities across 514 files and only 152 were ever accents. The
+rest are 1px neutral hairlines — a divider under a table header, a rule above a
+card footer — which rule 1 never mentions and **rule 10 actively requires** on
+paper. So a one-sided border is flagged only when it is thicker than a hairline
+or carries a hue: a grey is not an accent, because an accent says "this row is
+different" and a grey says nothing at all. `slate-*` and `gray-*` on an edge are
+still off-palette and still want `--line` — that is the leftover-palette grep's
+job two lines up, not rule 1's.
 
 **The orange grep has the same problem, and it is worth knowing before stage
 8's work is judged by it.** `rg "bg-(orange|amber)-[0-9]{3}"` returns ~720

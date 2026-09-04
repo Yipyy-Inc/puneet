@@ -176,7 +176,7 @@ function AppointmentCard({
       style={forcePageBreak ? { pageBreakAfter: "always" } : undefined}
     >
       {/* Header */}
-      <header className="flex items-start justify-between gap-4 border-b-2 border-black pb-2">
+      <header className="flex items-start justify-between gap-4 border-b border-black pb-2">
         <div className="flex items-start gap-3">
           {/* Pet photo */}
           {pet?.imageUrl || appointment.petPhotoUrl ? (

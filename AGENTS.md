@@ -87,6 +87,7 @@ Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/u
 | `bun run check:staging-sends`          | Fails if a file reaches Resend or Twilio without consulting the staging suppression guard                           |
 | `bun run check:badge-glyph`            | Fails if a colour-coded badge carries no glyph — §3's "colour is never the only channel". Ratcheted at 374          |
 | `bun run check:hover-actions`          | Fails if a control is revealed only on hover — §6 rule 11, and two of three contexts have none. **At zero**         |
+| `bun run check:edge-accents`           | Fails on an accent line pinned to one edge — §6 rule 1. A neutral 1px hairline is not that and stays. **At zero**   |
 | `bun run check:nav-icons`              | Fails if a nav glyph drifts from `icon-map.json`, or if any glyph lands on two areas — §5b1                         |
 | `bun run check:hardcoded-locale`       | Fails if a formatter is told a literal locale instead of the user's — §5q. Ratcheted at 534                         |
 | `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                   |

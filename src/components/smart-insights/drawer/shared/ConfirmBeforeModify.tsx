@@ -50,7 +50,7 @@ export function ConfirmBeforeModify({ title, changes, note }: Props) {
       </ul>
 
       {note && (
-        <p className="border-t border-amber-200 pt-2 text-xs text-amber-900">
+        <p className="border-border border-t pt-2 text-xs text-amber-900">
           {note}
         </p>
       )}

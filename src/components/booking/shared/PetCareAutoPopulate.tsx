@@ -188,7 +188,7 @@ export function FeedingAutoPopulate({
         </div>
       </div>
       {expanded && (
-        <div className="border-t border-blue-200 bg-white/50 px-4 py-2.5">
+        <div className="border-border border-t bg-white/50 px-4 py-2.5">
           {petsWithCare.map(({ pet, care }) => (
             <div key={pet.id} className="space-y-1">
               <p className="text-xs font-semibold text-blue-900">{pet.name}</p>
@@ -308,7 +308,7 @@ export function MedicationAutoPopulate({
         </div>
       </div>
       {expanded && (
-        <div className="border-t border-amber-200 bg-white/50 px-4 py-2.5">
+        <div className="border-border border-t bg-white/50 px-4 py-2.5">
           {petsWithMeds.map(({ pet, care }) => (
             <div key={pet.id} className="space-y-1">
               <p className="text-xs font-semibold text-amber-900">{pet.name}</p>

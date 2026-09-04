@@ -65,7 +65,7 @@ export function TaxSummaryTable({
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 font-semibold">
+            <tr className="border-t font-semibold">
               <td className="px-2 py-2" colSpan={5}>
                 Total
               </td>

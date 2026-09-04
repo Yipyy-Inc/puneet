@@ -138,7 +138,7 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
       data-logged={isLogged}
       data-served={isServed}
       data-flagged={isFlagged}
-      className="group bg-card flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border px-3 py-2 transition-colors data-[flagged=true]:ring-1 data-[flagged=true]:ring-red-400 data-[logged=true]:border-l-4 data-[logged=true]:border-l-green-500 data-[logged=true]:bg-green-50/50 data-[served=true]:border-l-4 data-[served=true]:border-l-sky-400 data-[served=true]:bg-sky-50/40 dark:data-[logged=true]:bg-green-950/20 dark:data-[served=true]:bg-sky-950/20"
+      className="group bg-card flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border px-3 py-2 transition-colors data-[flagged=true]:ring-1 data-[flagged=true]:ring-red-400 data-[logged=true]:ring-1 data-[logged=true]:ring-green-500 data-[served=true]:ring-1 data-[served=true]:ring-sky-400/20 dark:data-[served=true]:bg-sky-950/20"
     >
       <Avatar className="size-9 shrink-0">
         {task.petPhotoUrl && (

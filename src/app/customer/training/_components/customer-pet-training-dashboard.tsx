@@ -398,7 +398,7 @@ function SessionHistoryPanel({
   }
   return (
     <Panel icon={CalendarDays} title="Session History" iconTone="sky">
-      <ol className="relative ml-1.5 space-y-3 border-l-2 border-slate-200 pl-4">
+      <ol className="border-border relative ml-1.5 space-y-3 border-l pl-4">
         {sessionHistory.recentSessions.map((entry) => {
           const a = entry.attendance;
           return (

@@ -477,7 +477,7 @@ export function FeedingSection({
 
                   {/* Expanded content */}
                   {isExpanded && (
-                    <div className="space-y-4 border-t border-orange-100 px-4 pb-4">
+                    <div className="border-border space-y-4 border-t px-4 pb-4">
                       {/* Occasion name + time */}
                       <div className="grid grid-cols-2 gap-3 pt-3">
                         <div className="space-y-1">

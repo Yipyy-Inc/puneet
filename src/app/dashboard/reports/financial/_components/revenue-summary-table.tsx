@@ -59,7 +59,7 @@ export function RevenueSummaryTable({
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 font-semibold">
+            <tr className="border-t font-semibold">
               <td className="px-2 py-2">{totals.month}</td>
               <td className="px-2 py-2 text-right tabular-nums">
                 {money(totals.subscription)}

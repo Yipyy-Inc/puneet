@@ -116,7 +116,7 @@ export function OperationsCalendarPrintSheet({
   return (
     <div id="ops-print-sheet" className="hidden text-black print:block">
       <style>{PRINT_CSS}</style>
-      <div className="mb-2 border-b-2 border-black pb-1">
+      <div className="mb-2 border-b border-black pb-1">
         <p className="text-[13px] font-bold">
           {facilityName} · Daily Schedule · {dateLabel}
         </p>
@@ -133,7 +133,7 @@ export function OperationsCalendarPrintSheet({
             {PRINT_COLUMNS.map((column) => (
               <th
                 key={column.key}
-                className="border-b-2 border-black p-1 text-left font-bold"
+                className="border-b border-black p-1 text-left font-bold"
               >
                 {column.label}
               </th>

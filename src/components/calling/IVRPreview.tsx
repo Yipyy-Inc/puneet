@@ -145,7 +145,7 @@ export function IVRPreview({
               <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wide uppercase">
                 Menu — click an option to hear what the caller hears
               </p>
-              <div className="border-border space-y-1.5 border-l-2 border-dashed pl-3">
+              <div className="border-border space-y-1.5 border-l border-dashed pl-3">
                 {sortedNodes.map((node) => {
                   const isActive = active === node.id;
                   return (

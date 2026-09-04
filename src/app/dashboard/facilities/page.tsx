@@ -611,7 +611,7 @@ export default function FacilitiesPage() {
 
       {/* Pending Requests Alert */}
       {pendingRequestsCount > 0 && (
-        <Card className="border-l-warning bg-warning/5 shadow-card border-0 border-l-4">
+        <Card className="border-warning bg-warning/5 shadow-card border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

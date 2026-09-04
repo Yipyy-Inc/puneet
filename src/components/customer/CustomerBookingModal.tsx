@@ -3955,7 +3955,7 @@ export function CustomerBookingModal({
                               </span>
                             </div>
                           </div>
-                          <div className="mt-3 flex items-center justify-between border-t-2 border-dashed pt-3 text-lg font-bold">
+                          <div className="mt-3 flex items-center justify-between border-t border-dashed pt-3 text-lg font-bold">
                             <span>Total</span>
                             <span className="text-primary">
                               ${receiptTotal.toFixed(2)}

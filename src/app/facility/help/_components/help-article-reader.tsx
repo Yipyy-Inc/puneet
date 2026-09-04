@@ -389,7 +389,7 @@ export function HelpArticleReader({
                     href={`#${t.id}`}
                     onClick={(e) => scrollToHeading(e, t.id)}
                     data-active={activeHeading === t.id ? "true" : undefined}
-                    className="text-muted-foreground hover:text-foreground data-[active=true]:border-primary data-[active=true]:text-primary -ml-px block border-l-2 border-transparent py-1 pl-3 text-sm transition-colors data-[active=true]:font-medium"
+                    className="text-muted-foreground hover:text-foreground data-[active=true]:text-primary block py-1 pl-3 text-sm transition-colors data-[active=true]:font-bold"
                   >
                     {t.text}
                   </a>

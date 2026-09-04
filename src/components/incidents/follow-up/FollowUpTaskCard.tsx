@@ -388,7 +388,7 @@ export function FollowUpTaskCard({
                     />
                   </button>
                   {historyOpen && (
-                    <div className="space-y-2 border-t border-amber-200 px-3 py-3 dark:border-amber-900">
+                    <div className="border-border space-y-2 border-t px-3 py-3">
                       <p className="text-[11px] text-amber-800 dark:text-amber-300">
                         Read this before calling — what was already said, by
                         whom, and on what date.
@@ -574,7 +574,7 @@ function PriorConversationItem({
 
       {/* The exchange — what customer said + what we said */}
       {entry.customerStatement && (
-        <div className="rounded-md border-l-2 border-blue-300 bg-blue-50/60 px-2.5 py-1.5 text-[11px] dark:bg-blue-900/10">
+        <div className="rounded-md border border-blue-300 px-2.5 py-1.5 text-[11px]">
           <p className="text-muted-foreground mb-0.5 font-semibold">
             Customer said
           </p>
@@ -584,7 +584,7 @@ function PriorConversationItem({
         </div>
       )}
       {entry.staffResponse && (
-        <div className="rounded-md border-l-2 border-emerald-300 bg-emerald-50/60 px-2.5 py-1.5 text-[11px] dark:bg-emerald-900/10">
+        <div className="rounded-md border border-emerald-300 px-2.5 py-1.5 text-[11px]">
           <p className="text-muted-foreground mb-0.5 font-semibold">
             We told them
           </p>
@@ -673,7 +673,7 @@ function ConversationEntryCard({
 
       {/* Customer / staff exchange */}
       {entry.customerStatement && (
-        <div className="rounded-md border-l-2 border-blue-300 bg-blue-50/50 px-3 py-2 text-xs dark:bg-blue-900/10">
+        <div className="rounded-md border border-blue-300 px-3 py-2 text-xs">
           <p className="text-muted-foreground mb-1 font-semibold">
             Customer said
           </p>
@@ -681,7 +681,7 @@ function ConversationEntryCard({
         </div>
       )}
       {entry.staffResponse && (
-        <div className="rounded-md border-l-2 border-emerald-300 bg-emerald-50/50 px-3 py-2 text-xs dark:bg-emerald-900/10">
+        <div className="rounded-md border border-emerald-300 px-3 py-2 text-xs">
           <p className="text-muted-foreground mb-1 font-semibold">
             Staff response
           </p>

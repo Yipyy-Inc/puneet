@@ -573,7 +573,7 @@ export default function CustomerDashboardPage() {
                 />
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="divide-y divide-amber-100 border-t border-amber-200 dark:divide-amber-900 dark:border-amber-800">
+                <div className="border-border divide-y divide-amber-100 border-t dark:divide-amber-900">
                   {unfinishedBookings.slice(0, 3).map((ub) => {
                     const ServiceIcon = getServiceIcon(ub.service ?? "");
                     const stepInfo =
@@ -980,7 +980,7 @@ export default function CustomerDashboardPage() {
                       action.priority === "high" ? "destructive" : "default"
                     }
                     data-express-checkin={isExpressCheckin || undefined}
-                    className="border-l-4 bg-white/75 shadow-sm data-[express-checkin=true]:animate-pulse data-[express-checkin=true]:border-red-500 data-[express-checkin=true]:bg-red-50 data-[express-checkin=true]:text-red-900"
+                    className="bg-white/75 shadow-sm data-[express-checkin=true]:animate-pulse data-[express-checkin=true]:bg-red-50 data-[express-checkin=true]:text-red-900 data-[express-checkin=true]:ring-2 data-[express-checkin=true]:ring-red-500"
                   >
                     <AlertCircle
                       className={
