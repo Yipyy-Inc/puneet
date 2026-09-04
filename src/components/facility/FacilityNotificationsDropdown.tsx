@@ -103,9 +103,7 @@ function NotificationRow({
     <div
       className={cn(
         "hover:bg-muted/50 flex gap-2.5 px-4 py-2.5 transition-colors",
-        urgent
-          ? "border-l-2 border-red-500 bg-red-50/50 dark:bg-red-950/20"
-          : !n.read && "bg-primary/5",
+        urgent ? "bg-red-50/50 dark:bg-red-950/20" : !n.read && "bg-primary/5",
       )}
     >
       <div className="mt-0.5 shrink-0">

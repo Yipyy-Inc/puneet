@@ -304,7 +304,7 @@ export function GenericCalendar<T extends CalendarItem>({
                             key={item.id}
                             onClick={() => config.onItemClick?.(item)}
                             className={cn(
-                              `hover:bg-accent w-full rounded-sm border-l-2 p-1 text-left text-xs transition-colors`,
+                              `hover:bg-accent border-border w-full rounded-sm border-l p-1 text-left text-xs transition-colors`,
                               config.getItemBorderColor?.(item) ||
                                 "border-gray-500",
                             )}

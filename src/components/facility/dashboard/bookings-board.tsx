@@ -145,7 +145,12 @@ interface BookingListProps {
   isLoading: boolean;
 }
 
-const GRID = "grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3";
+// The ladder ends at 4 rather than 3: on a 27-inch screen three booking cards
+// left two thirds of the row empty, which is the same void the page-level
+// max-width tried and failed to fix. A card is ~300px, so a fourth fits from
+// 1536px with room to spare.
+const GRID =
+  "grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4";
 
 function BookingList({
   items,

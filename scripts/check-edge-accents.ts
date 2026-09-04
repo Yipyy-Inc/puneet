@@ -106,8 +106,41 @@ const NEUTRAL =
 const HUED =
   /\bborder-(?!l\b|r\b|t\b|b\b|x\b|y\b|s\b|e\b|\d|border\b|line\b|sidebar-border\b|muted\b|input\b|transparent\b|card\b|collapse\b|separate\b|solid\b|dashed\b|dotted\b|double\b|hidden\b|none\b|spacing\b)[a-z][a-z0-9-]*(?:\/\d+)?\b/;
 
+/**
+ * ── WHY THIS SCANS EVERY STRING LITERAL, NOT JUST `className=` ────────────
+ *
+ * It used to read `class(?:Name)?\s*=\s*…` only, and that missed a whole
+ * shape this codebase uses constantly: the class list assembled somewhere
+ * else and interpolated in. `WeatherWidget`'s `getCardBg()` returned
+ * `"bg-amber-50/60 border-l-amber-300 border-l-3"` from a plain function, six
+ * variants of it, and the gate reported the file clean because no `className`
+ * attribute contained the words. The same hole covers every `TONE_STYLES`,
+ * `CATEGORY_CLASSES` and `PRIORITY_CLASSES` map in `src/`, which is most of
+ * the tone systems in the product.
+ *
+ * So the unit is now the STRING LITERAL wherever it appears.
+ *
+ * ── COMMENTS MUST BE EATEN FIRST, AND THAT WAS LEARNED THE HARD WAY ──────
+ *
+ * The first version of this note claimed "a comment cannot produce a false
+ * positive — a comment is not a string literal". That is wrong, and it was
+ * wrong within a minute: prose routinely quotes a class name, and a
+ * backticked border-l-3 written inside a block comment matched the
+ * template-literal branch and reported the very file that had just been
+ * FIXED.
+ *
+ * The alternation below closes it by consuming comments BEFORE strings. Order
+ * is the whole mechanism: at a block-comment opener the engine takes that
+ * branch and swallows the block whole, so quotes and backticks inside it
+ * never reach the string branches. The capture groups are only ever set for
+ * real literals.
+ *
+ * A line-comment marker INSIDE a string is safe for the same reason in
+ * reverse — at the opening quote the comment branches cannot match, so the
+ * string branch takes the whole literal, slashes and all.
+ */
 const CLASS_ATTR =
-  /class(?:Name)?\s*=\s*(?:"([^"]*)"|'([^']*)'|\{`([^`]*)`\})/g;
+  /\/\*[\s\S]*?\*\/|\/\/[^\n]*|"([^"\n]*)"|'([^'\n]*)'|`([^`]*)`/g;
 
 /**
  * Rule 1's single named exception, applied as the spec's OWN mechanical test
@@ -127,10 +160,31 @@ const CLASS_ATTR =
  */
 function isTabStrip(cls: string): boolean {
   const bottomRule = /\bborder-b-[2-9]\b/.test(cls);
-  const restsTransparent = /\bborder-(b-)?transparent\b/.test(cls);
   const hasRadius = /\brounded(-|\b)/.test(cls);
-  const hasFill = /\bbg-(?!transparent\b)[a-z]/.test(cls);
-  return bottomRule && restsTransparent && !hasRadius && !hasFill;
+  // `bg-background` IS the page, which is the same as no fill — an open rail
+  // sitting on the ground. Only a real surface counts here.
+  //
+  // And only a RESTING one. The lookbehind drops anything variant-prefixed —
+  // `hover:bg-muted/50`, `data-[state=active]:bg-background` — because a fill
+  // that exists only in a state is not the object's background. §1 makes the
+  // same distinction for `--primary-tint`: "retired as a fill, transient hover
+  // tone only". Without this, `tabs.tsx` counted its own hover tint as a
+  // background and reported the app's shared tab strip as a violation.
+  const hasFill = /(?<![:\w-])bg-(?!transparent\b|background\b)[a-z]/.test(cls);
+
+  // And that is the whole test, because it is the whole test the SPEC gives:
+  // "an open rail with no radius, no fill and no border box". Nothing about
+  // which colour, and deliberately so — a strip's rest and active states are
+  // routinely two separate strings, and neither half can see the other. Two
+  // earlier versions of this asked for `border-b-transparent`, then for that
+  // OR `border-primary`, and both reported legitimate rails as violations
+  // because the colour lives in the other branch of a ternary.
+  //
+  // The radius is what actually decides it, and the spec says so outright:
+  // "give it a radius or a background and the ban applies again." A
+  // `rounded-t-lg border-b-2` tab is a folder tab, not a rail — two corners to
+  // square — and it is still caught.
+  return bottomRule && !hasRadius && !hasFill;
 }
 
 /** Paper. Horizontal hairlines only; see note 2. */

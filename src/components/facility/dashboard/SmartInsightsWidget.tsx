@@ -124,7 +124,11 @@ export function SmartInsightsWidget() {
           No active insights right now.
         </div>
       ) : (
-        <div className="grid gap-2">
+        // One insight per row is right up to about 1500px and wasteful past
+        // it: the card is a sentence and two buttons, so a second column uses
+        // the width instead of turning it into gap. `2xl` is 1536px, which is
+        // where a 1440p monitor stops and a 27-inch begins.
+        <div className="grid gap-2 2xl:grid-cols-2">
           {insights.map((insight) => (
             <InsightCardCompact
               key={insight.insightId}

@@ -96,7 +96,7 @@ export function StaffTasksSection({ staff }: { staff: StaffProfile }) {
               <li
                 key={task.id}
                 className={cn(
-                  "border-border/50 flex items-start gap-3 rounded-xl border border-l-4 p-3",
+                  "border-border/50 flex items-start gap-3 rounded-xl border p-3",
                   meta.border,
                 )}
               >

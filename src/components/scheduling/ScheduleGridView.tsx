@@ -362,7 +362,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
                 <div
                   key={`open-${dateStr}`}
                   className={cn(
-                    "group/open-cell sticky bottom-[52px] z-20 flex min-h-[60px] cursor-pointer flex-col gap-1 border-t-2 border-r border-b border-dashed border-amber-300 bg-linear-to-b from-amber-50/70 to-amber-50/30 p-1.5 backdrop-blur-md transition-colors hover:from-amber-100/80 hover:to-amber-100/40 dark:border-amber-700/40 dark:from-amber-950/30 dark:to-amber-950/10 dark:hover:from-amber-900/30",
+                    "group/open-cell border-border sticky bottom-[52px] z-20 flex min-h-[60px] cursor-pointer flex-col gap-1 border-t border-r border-b border-dashed bg-linear-to-b from-amber-50/70 to-amber-50/30 p-1.5 backdrop-blur-md transition-colors hover:from-amber-100/80 hover:to-amber-100/40 dark:border-amber-700/40 dark:from-amber-950/30 dark:to-amber-950/10 dark:hover:from-amber-900/30",
                     isToday(date) &&
                       "from-indigo-50/70 to-amber-50/30 dark:from-indigo-950/30",
                   )}
@@ -430,7 +430,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
             <div
               key={`total-${i}`}
               className={cn(
-                "border-border/60 sticky bottom-0 z-30 flex h-[52px] items-center justify-center border-t-2 border-r bg-slate-50/95 backdrop-blur-md dark:bg-slate-900/80",
+                "border-border/60 sticky bottom-0 z-30 flex h-[52px] items-center justify-center border-t border-r bg-slate-50/95 backdrop-blur-md dark:bg-slate-900/80",
                 weekend &&
                   "bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_6px,rgba(248,250,252,0.95)_6px,rgba(248,250,252,0.95)_12px)] dark:bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_6px,rgba(15,23,42,0.8)_6px,rgba(15,23,42,0.8)_12px)]",
                 todayFlag && "bg-indigo-50/80 dark:bg-indigo-950/30",

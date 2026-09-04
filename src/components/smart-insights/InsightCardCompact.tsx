@@ -53,9 +53,27 @@ export function InsightCardCompact({
   return (
     <div
       data-priority={insight.priority}
-      className="border-border/80 bg-card hover:border-border space-y-1 rounded-xl border-2 p-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.08),0_10px_20px_-4px_rgba(0,0,0,0.06)]"
+      // ── ONE ROW, NOT THREE ──────────────────────────────────────────────
+      //
+      // This card stacked chips / title / description / a right-aligned row of
+      // actions. Three of those four lines were short, so the card was mostly
+      // empty on the right and the buttons sat a long way under the sentence
+      // they belong to — the text-left / void / button-right shape, repeated
+      // once per insight.
+      //
+      // It is two columns now: the content grows, the actions shrink and sit
+      // vertically centred beside it. That deletes a whole row per card and
+      // puts each button next to its own sentence.
+      //
+      // `items-center` and not `items-start`: with the actions on the same
+      // row, aligning them to the top would leave the same void underneath
+      // that this change is removing.
+      className="border-border/80 bg-card hover:border-border flex items-center gap-3 rounded-xl border-2 p-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.08),0_10px_20px_-4px_rgba(0,0,0,0.06)]"
     >
-      <div className="flex items-start justify-between gap-2">
+      {/* min-w-0 is the flex-child rule §6 requires, and it is load-bearing
+          here: without it `line-clamp-1` on the description cannot shrink and
+          the actions get pushed off the right edge. */}
+      <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge
             variant="outline"
@@ -71,14 +89,14 @@ export function InsightCardCompact({
           </Badge>
           <TrendIcon trend={insight.trend} />
         </div>
+
+        <h4 className="text-sm/tight font-semibold">{insight.title}</h4>
+        <p className="text-muted-foreground line-clamp-1 text-xs">
+          {insight.description}
+        </p>
       </div>
 
-      <h4 className="text-sm/tight font-semibold">{insight.title}</h4>
-      <p className="text-muted-foreground line-clamp-1 text-xs">
-        {insight.description}
-      </p>
-
-      <div className="flex items-center justify-end gap-2 pt-1">
+      <div className="flex shrink-0 items-center gap-2">
         <Button
           type="button"
           variant="ghost"
