@@ -26,6 +26,7 @@ import type {
   EnhancedTimeOffRequest,
   HolidayRate,
 } from "@/types/scheduling";
+import { NowLine } from "@/components/ui/now-line";
 
 const DAY_START_HOUR = 6;
 const DAY_END_HOUR = 23;
@@ -305,17 +306,26 @@ export function ScheduleDayView({
 
         {/* Employee rows */}
         <div className="relative">
-          {/* Vertical "now" line spanning all rows */}
+          {/* ── §2b territory 4: NOW. ────────────────────────────────────
+              "The 'now' marker on a staff schedule: a 2px orange rule with a
+              7px dot at its head."
+
+              This was a dashed INDIGO rule with an indigo dot — blue, which
+              §2b gives to what the software does. The present moment is not
+              an action and not a state; it is the live moment, and that is
+              the one thing orange owns besides the animal.
+
+              Solid rather than dashed, too: a dashed line at 60% opacity
+              reads as a boundary somebody dragged, not as the time. */}
           {nowPct !== null && (
-            <div
-              className="pointer-events-none absolute top-0 bottom-0 z-10"
-              style={{
-                left: `calc(${empColWidth}px + (100% - ${empColWidth}px) * ${nowPct} / 100)`,
-              }}
-            >
-              <div className="absolute inset-y-0 w-px border-l-2 border-dashed border-indigo-500/60" />
-              <div className="absolute -top-1 -left-1.5 size-3 rounded-full bg-indigo-500 shadow-md shadow-indigo-500/50" />
-            </div>
+            <NowLine
+              orientation="vertical"
+              offset={`calc(${empColWidth}px + (100% - ${empColWidth}px) * ${nowPct} / 100)`}
+              label={new Date().toLocaleTimeString("en-CA", {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            />
           )}
 
           {employees.map((employee) => {

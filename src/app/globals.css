@@ -817,9 +817,9 @@
  * consumer; the keyframes below are added as each stage needs them rather
  * than all at once, so nothing here is unused.
  *
- * `yy-breathe` (the orange presence dot) and `yy-rise` (the staggered
- * once-only entrance) are the other two of §4's four ambient patterns and
- * belong to stages 8 and 7 — deliberately not pre-added here.
+ * `yy-breathe` (the orange presence dot) arrived with stage 8, below.
+ * `yy-rise` (the staggered once-only entrance) is the last of §4's four and
+ * is still unused — deliberately not pre-added here.
  * ========================================================================= */
 
 /* Yipyy, on an empty state. 4px and 6s are §4's ceilings, not suggestions:
@@ -854,6 +854,37 @@
    "the reduced-motion view is not a degraded one, it is the same screen". */
 @utility yy-float {
   animation: yy-float 6s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* The presence dot, §4 and §2b. "Orange means the live moment, so the one
+   thing allowed to pulse is the mark saying an animal is here."
+
+   The values are §4's own keyframes, unaltered: a 9px expanding ring at 50%
+   alpha fading to nothing over 2.8s — under the 4px/2.4s ceilings because it
+   is a shadow spreading rather than a box moving, and it is the pattern the
+   spec prints for exactly this mark.
+
+   It carries NO information. The dot is drawn whether or not it pulses, and
+   the badge beside it says "Here now" in words; if every loop froze, nothing
+   would become unknowable (§5p). */
+@keyframes yy-breathe {
+  0% {
+    box-shadow: 0 0 0 0 rgba(240, 138, 60, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 9px rgba(240, 138, 60, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(240, 138, 60, 0);
+  }
+}
+
+@utility yy-breathe {
+  animation: yy-breathe 2.8s ease-out infinite;
 
   @media (prefers-reduced-motion: reduce) {
     animation: none;

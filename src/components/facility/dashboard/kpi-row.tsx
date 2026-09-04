@@ -48,12 +48,25 @@ export function KpiRow() {
         active={tab === "scheduled"}
         onClick={() => setTab("scheduled")}
       />
+      {/* ── §2b territory 2: PRESENCE. ────────────────────────────────────
+          "The dashboard 'on premises' tile" is named in the section's own
+          screen-by-screen table, and this is that tile — the pets physically
+          in the building right now.
+
+          It was `tone="indigo"`, which made it say what the software does
+          rather than what is in the room. `brand` is the one tone that
+          resolves to orange, and it is opt-in precisely so nothing inherits
+          it by accident (see the tone table in kpi-tile.tsx).
+
+          The other three tiles stay as they are, and that is the budget
+          holding: arrivals, departures and check-outs are STATES of a record,
+          which orange may never mean. One orange idea on this screen. */}
       <KpiTile
         label="Current Guests"
         value={counts.currentGuests}
         hint="Pets currently on-site"
         icon={PawPrint}
-        tone="indigo"
+        tone="brand"
         active={tab === "checked-in"}
         onClick={() => setTab("checked-in")}
       />

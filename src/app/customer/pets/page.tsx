@@ -17,11 +17,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Search, Dog, Cat, AlertTriangle } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { vaccinationRecords } from "@/data/pet-data";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { TagList } from "@/components/shared/TagList";
+import { PetAvatar } from "@/components/ui/pet-avatar";
 
 export default function CustomerPetsPage() {
   const { selectedFacility } = useCustomerFacility();
@@ -166,19 +166,14 @@ export default function CustomerPetsPage() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-lg">
-                          {pet.imageUrl ? (
-                            <Image
-                              src={pet.imageUrl}
-                              alt={pet.name}
-                              width={64}
-                              height={64}
-                              className="size-full rounded-lg object-cover"
-                            />
-                          ) : (
-                            <PetIcon className="text-primary size-8" />
-                          )}
-                        </div>
+                        {/* §2b territory 1 — and a circle, not a 16px-radius
+                            square: the ring is defined on the avatar circle,
+                            and §5l already says pets get photographs. */}
+                        <PetAvatar
+                          name={pet.name}
+                          src={pet.imageUrl}
+                          size="xl"
+                        />
                         <div>
                           <CardTitle className="text-xl">{pet.name}</CardTitle>
                           <CardDescription>

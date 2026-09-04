@@ -58,6 +58,7 @@ import {
   ABANDONMENT_STEP_LABELS,
 } from "@/data/unfinished-bookings";
 import { CustomerTrainingCreditsBanner } from "@/components/customer/training/customer-training-credits-banner";
+import { PetAvatar } from "@/components/ui/pet-avatar";
 
 // ============================================================================
 // WHO THIS PAGE IS FOR comes from the session now.
@@ -1064,21 +1065,15 @@ export default function CustomerDashboardPage() {
                         href={`/customer/pets/${pet.id}`}
                         className="bg-background/65 hover:bg-accent/50 hover:shadow-primary/10 flex items-center gap-3 rounded-lg border p-3 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                       >
-                        <div className="ring-primary/20 relative size-12 shrink-0 overflow-hidden rounded-full ring-2">
-                          {pet.imageUrl ? (
-                            <Image
-                              src={pet.imageUrl}
-                              alt={`${pet.name} photo`}
-                              width={48}
-                              height={48}
-                              className="size-12 object-cover"
-                            />
-                          ) : (
-                            <div className="bg-primary/10 flex size-12 items-center justify-center">
-                              <Dog className="text-primary size-6" />
-                            </div>
-                          )}
-                        </div>
+                        {/* §2b territory 1. This carried `ring-primary/20` — a
+                            BLUE ring on a pet, which is the exact collision the
+                            section warns about: blue owns what the software
+                            does, and the ring on a pet is the animal. */}
+                        <PetAvatar
+                          name={pet.name}
+                          src={pet.imageUrl}
+                          size="lg"
+                        />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium">{pet.name}</p>
