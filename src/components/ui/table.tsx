@@ -4,11 +4,31 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  containerClassName,
+  ...props
+}: React.ComponentProps<"table"> & {
+  /**
+   * Classes for the scroll container around the table.
+   *
+   * It exists so `DataTable` can turn the sideways scroll OFF. §6 rule 6: "a
+   * table that will not fit LOSES COLUMNS, it does not scroll", because a
+   * sideways-scrolling table pushes the identity column out of view and
+   * identity is what makes the other columns legible.
+   *
+   * The default keeps `overflow-x-auto` rather than dropping it globally:
+   * every table NOT going through `DataTable` still has whatever column count
+   * it was written with and no budget enforcing anything, so removing the
+   * escape hatch under them would replace a scroll with a clipped table —
+   * worse, and silent. They lose it when they gain a budget.
+   */
+  containerClassName?: string;
+}) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className={cn("relative w-full overflow-x-auto", containerClassName)}
     >
       <table
         data-slot="table"
