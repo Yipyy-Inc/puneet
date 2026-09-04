@@ -17,15 +17,22 @@ There is a real backend: **Supabase Postgres** with row-level security as the au
 voice, formatting, print and governance, all decided and measured, with the eleven-stage adoption
 sequence in [WORK_ORDER.md](docs/design-system/WORK_ORDER.md). It is **not a proposal to evaluate**:
 every screen reworked from here on follows it completely, and CLAUDE.md § "Design System" is the
-standing rule. **Stages 0–7 are done** (documents and assets, the `@theme` tokens, the empty-state
+standing rule. **Stages 0–8 are done** (documents and assets, the `@theme` tokens, the empty-state
 choke point, the four route-level states, the status chips, Button, the metric and filter tiles,
-and the page header / saved views / filter band / bulk bar); **stage 8 (the orange territories) is
-next.** The tokens landed, so `src/` renders the new palette everywhere, and stage 7's band and
-bulk bar reached 87 screens through `DataTable` alone — but most screens still have the old
-LAYOUT, density and glyphs, so the third question about any screen, after "fixture or Postgres?",
-is still **"old system or new?"** [WORK_ORDER.md](docs/design-system/WORK_ORDER.md) is the record;
-each stage heading carries its own status. It also names the one gap outside the eleven stages:
-**`Input` is still shadcn's `h-9 rounded-md` against §5's 40px pill, and no stage owns it.**
+the page header / saved views / filter band / bulk bar, and the orange territories); **stage 9
+(DataTable budget and density) is next.** The tokens landed, so `src/` renders the new palette
+everywhere; stage 7's band and bulk bar reached 87 screens through `DataTable` alone; and stage 8
+put the 2px orange ring on every pet — but most screens still have the old LAYOUT, density and
+glyphs, so the third question about any screen, after "fixture or Postgres?", is still **"old
+system or new?"** [WORK_ORDER.md](docs/design-system/WORK_ORDER.md) is the record; each stage
+heading carries its own status. It also names the one gap outside the eleven stages: **`Input` is
+still shadcn's `h-9 rounded-md` against §5's 40px pill, and no stage owns it.**
+
+**Two of CLAUDE.md's guardrail greps no longer measure what they were written to measure**, both
+because stage 1 remapped Tailwind's own palette in `@theme` rather than rewriting ~900 files: the
+tint-fill grep, and the orange one (`bg-orange-*` and `bg-amber-*` all compile to `--warning`, so
+none of its ~720 hits is orange on screen). Real orange is `rg "brand-orange|#[fF]08[aA]3[cC]"`.
+CLAUDE.md § "The guardrail greps" carries both notes — read them before treating a hit as a defect.
 
 The codebase is new and large (266 routes). The operating model is **discipline while building fast**: new code follows the target conventions; existing code is left alone unless the task is about it.
 

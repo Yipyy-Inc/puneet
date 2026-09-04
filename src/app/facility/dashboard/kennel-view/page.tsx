@@ -42,6 +42,7 @@ import type {
 import type { OccupancyKennel } from "./_lib/calendar-types";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { PageHeader } from "@/components/ui/page-header";
+import { OccupancyMeter } from "@/components/ui/occupancy-meter";
 
 type Kennel = OccupancyKennel;
 
@@ -581,6 +582,31 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
 
       {serviceType !== "daycare" && (
         <>
+          {/* ── §2b territory 3: CAPACITY. ─────────────────────────────────
+              "The occupancy meter... solid orange fill on an --inset track,
+              figure in body ink beside it. At capacity it does NOT turn red —
+              full is not an error."
+
+              This screen is literally called Occupancy and had no meter on
+              it: four count tiles and a grid, so how full the building is was
+              something you worked out by reading two numbers and subtracting.
+
+              The tiles below stay on their status tones, because vacant /
+              occupied / reserved / maintenance are STATES of a room. The
+              meter is the one orange idea here. */}
+          <div className="border-line bg-card shadow-card rounded-2xl border p-[18px]">
+            <OccupancyMeter
+              used={statusCounts.occupied}
+              capacity={kennels.length}
+              label={
+                statusCounts.vacant > 0
+                  ? `${statusCounts.vacant} ${statusCounts.vacant === 1 ? "room" : "rooms"} free`
+                  : "Full"
+              }
+              sublabel="Rooms occupied right now"
+            />
+          </div>
+
           {/* Status Summary */}
           <div className="grid gap-4 md:grid-cols-4">
             <KpiTile

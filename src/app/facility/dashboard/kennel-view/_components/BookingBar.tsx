@@ -1,6 +1,6 @@
 "use client";
 
-import { PawPrint } from "lucide-react";
+import { PetAvatar } from "@/components/ui/pet-avatar";
 import { cn } from "@/lib/utils";
 import { getTagsForEntity } from "@/data/tags-notes";
 import {
@@ -95,23 +95,10 @@ export function BookingBar({
         onMoveStart?.(e);
       }}
     >
-      {/* Pet photo — plain <img> so no inline left/top from next/image. */}
-      <div className="ring-background size-10 shrink-0 overflow-hidden rounded-full ring-2">
-        {booking.petPhotoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={booking.petPhotoUrl}
-            alt={booking.petName ?? ""}
-            width={40}
-            height={40}
-            className="size-full object-cover"
-          />
-        ) : (
-          <div className="bg-muted flex size-full items-center justify-center">
-            <PawPrint className="text-muted-foreground size-5" />
-          </div>
-        )}
-      </div>
+      {/* §2b territory 1: every pet avatar carries the 2px orange ring, and a
+          board block is named in the spec's own list of where. `PetAvatar`
+          keeps the plain <img> this block needed — see the note in it. */}
+      <PetAvatar name={booking.petName ?? "Guest"} src={booking.petPhotoUrl} />
 
       {/* Pet name + date range */}
       <div className="flex min-w-0 flex-1 flex-col leading-tight">

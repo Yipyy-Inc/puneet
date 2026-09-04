@@ -1,7 +1,8 @@
 # Work order — adopting the Yipyy design system
 
-**Stages 0–7 are done** (all 2026-09-03), stages 4 and 7 with tails they turned into ratchets.
-**Stage 8 (the orange territories) is next.**
+**Stages 0–8 are done** (0–7 on 2026-09-03, stage 8 on 2026-09-04), stages 4 and 7 with tails
+they turned into ratchets.
+**Stage 9 (DataTable budget and density) is next.**
 
 One gap sits outside the eleven and nobody owns it: **`Input` is still shadcn's `h-9 rounded-md`
 against §5's 40px pill.** See the end of stage 7.
@@ -477,7 +478,7 @@ whole, but every other input in 266 routes is still the old control. It needs a 
 
 ---
 
-## Stage 8 — the orange territories · §orange
+## Stage 8 — the orange territories · §orange · **DONE 2026-09-04**
 
 `avatar.tsx` and the board/occupancy components.
 
@@ -488,6 +489,57 @@ whole, but every other input in 266 routes is still the old control. It needs a 
 - Nowhere else. Not invoices, charts, staff, settings, or any button that is not first-run.
 
 **Done when:** forty ringed avatars on one screen, and no second orange idea competing with them.
+
+**Done, and the budget was COUNTED in a browser rather than eyeballed.** A script walked every
+element on five screens, grouped everything painted `#F08A3C` by what it belongs to, and flagged
+any orange that had become an ink:
+
+| Screen             | Orange ideas                      |
+| ------------------ | --------------------------------- |
+| Bookings           | **1** — 15 pet rings, one per row |
+| Facility dashboard | **1** — the presence tile         |
+| Occupancy          | **1** — the capacity meter        |
+| Clients            | 0                                 |
+| Payments           | **0**, as §2b requires            |
+| Staff              | **0**, as §2b requires            |
+
+Zero orange text anywhere. "Forty" is the spec's illustration of _repetition is free_: the
+bookings page shows 15 rows, so it shows 15 rings, and they read as one idea exactly as 40 would.
+
+**Measured values:** ring `rgb(255,255,255) 0 0 0 2px, rgb(240,138,60) 0 0 0 4px` — the 2px ring
+at 2px offset, on a full circle. Presence tile badge solid `#F08A3C`, 40×40, glyph in `#0A1B33`
+body ink (6.90:1 — §2b's only orange pairing). Presence dot solid orange running
+`yy-breathe 2.8s ease-out`. Meter fill `#F08A3C` on an `#F1F5FD` `--inset` track. Now-line mark: a
+2px `#F08A3C` rule with a 7px orange dot.
+
+**Four things arrived, three of them replacing something that was the wrong colour:**
+
+- `pet-avatar.tsx` — a SEPARATE component, not a `ring` prop on `Avatar`. The rule is not "an
+  avatar may have a ring", it is "a pet has one and a person never does"; a prop makes that
+  something 38 call sites must remember, and the failure is silent. Wired into the board block,
+  the bookings table, the customer dashboard and the customer pets list. The customer dashboard's
+  was `ring-primary/20` — a BLUE ring on a pet, the exact collision §2b warns about.
+- `occupancy-meter.tsx` — and the screen called Occupancy had no meter on it at all: four count
+  tiles and a grid, so "how full is the building" was two numbers and a subtraction. It refuses a
+  tone prop, because **full is not an error** and the figure carries the difference. Over capacity
+  is the one branch that takes `--bad`, and it is a status, not a fullness.
+- `now-line.tsx` — the staff schedule's marker was a dashed INDIGO rule. Blue is what the software
+  does; the present moment is neither an action nor a state.
+- `KpiRow`'s "Current Guests" tile moved from `indigo` to `brand`. It is §2b's named "on premises"
+  tile and it was saying what the software does rather than what is in the room. The other three
+  tiles stayed put — arrivals, departures and check-outs are STATES, which orange may never mean.
+
+**`yy-breathe` landed with this stage** (§4's keyframes verbatim), and the PULSE is opt-in while
+the DOT is not. Two rules meet on the presence dot: §4 assigns it `yy-breathe`, and §4 also says
+one moving thing per view. Forty breathing dots down a table breaks the second and §5p's ban on
+ambient loops over data. So the dot renders wherever presence is true, and `pulse` belongs on the
+one place a view shows a single pet — a profile header, a presence tile. Nothing is lost when it
+is off: the dot and the words carry the meaning either way.
+
+**The stage was additive, because there was no real orange to clean up.** Measured first: the only
+`brand-orange` in `src/` was one `KpiTile` tone nothing opted into, and zero raw `#F08A3C`. The
+~720 `bg-orange-*` / `bg-amber-*` class names all compile to `--warning` after stage 1's remap —
+see the note in CLAUDE.md, because that grep will mislead the next person who runs it.
 
 ---
 

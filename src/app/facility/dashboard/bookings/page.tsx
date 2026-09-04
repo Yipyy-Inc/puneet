@@ -50,6 +50,7 @@ import { useFieldMask } from "@/lib/staff/mask";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 import { PageHeader } from "@/components/ui/page-header";
 import { SavedViews } from "@/components/ui/saved-views";
+import { PetAvatar } from "@/components/ui/pet-avatar";
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
 
@@ -440,11 +441,37 @@ export default function FacilityBookingsPage() {
         const client = clientById.get(booking.clientId);
         const pet = client?.pets.find((p) => p.id === booking.petId);
         return (
-          <div className="flex flex-col">
-            <span className="font-medium">{client?.name || "Unknown"}</span>
-            <span className="text-muted-foreground text-xs">
-              Pet: {pet?.name || "Unknown"}
-            </span>
+          <div className="flex items-center gap-2.5">
+            {/* ── §2b territory 1, and the whole point of the budget. ──────
+                "Bookings list — a ring on each pet avatar down the column:
+                thirty of them, still ONE idea." Repetition is free;
+                competition is not.
+
+                The CLIENT gets no ring and no avatar here: §2b is explicit
+                that "the client has no ring", and §5l that people get
+                initials while pets get photographs. The ring is how you tell
+                the animal from the paperwork at a glance.
+
+                `present` is the booking's real presence field, the same one
+                the "On site" column reads — so the dot turns off at
+                check-out on its own. A badge that never turns off is
+                decoration. */}
+            {pet && (
+              <PetAvatar
+                name={pet.name}
+                src={pet.imageUrl}
+                size="sm"
+                present={booking.presence === "on-site"}
+              />
+            )}
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate font-medium">
+                {client?.name || "Unknown"}
+              </span>
+              <span className="text-ink-tertiary truncate text-xs">
+                {pet?.name || "Unknown pet"}
+              </span>
+            </div>
           </div>
         );
       },

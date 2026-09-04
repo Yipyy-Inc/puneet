@@ -285,6 +285,23 @@ make somebody re-read the three conditions — open rail, no radius, no fill, no
 border box — and confirm they still hold. Give that strip a radius or a
 background and the same hit stops being a false positive.
 
+**The orange grep has the same problem, and it is worth knowing before stage
+8's work is judged by it.** `rg "bg-(orange|amber)-[0-9]{3}"` returns ~720
+hits, and **not one of them renders orange.** Stage 1 remapped every step of
+Tailwind's own `orange` and `amber` scales in `@theme`: `-50`/`-100` compile to
+`var(--card)` (white) and `-200` through `-950` to `var(--warning)` `#8A5115`.
+So those class names paint the WARNING ink, which is exactly what a state
+should be, and orange-the-brand reaches the screen only through
+`--brand-orange` / `bg-brand-orange`. The honest version of this grep is:
+
+```
+rg "brand-orange|#[fF]08[aA]3[cC]" src   # every real orange in the product
+```
+
+Read a `bg-amber-500` hit as "this file has not been through the redesign
+yet", not as a §2b violation — and check any NEW orange against §2b's five
+territories rather than against the class name.
+
 **The tint-fill grep no longer measures what it was written to measure.** It
 predates stage 1, which remapped every `-50` and `-100` step of Tailwind's raw
 palette to `var(--card)` in `@theme` — so `bg-emerald-100` has rendered **white**
