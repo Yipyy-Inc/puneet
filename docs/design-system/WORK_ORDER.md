@@ -1,8 +1,8 @@
 # Work order — adopting the Yipyy design system
 
-**Stages 0–8 are done**, plus **8b, the form controls** (0–7 on 2026-09-03, 8 and 8b on
+**Stages 0–9 are done**, plus **8b, the form controls** (0–7 on 2026-09-03; 8, 8b and 9 on
 2026-09-04). Stages 4 and 7 grew ratchets; stage 7's was corrected in 8b's change.
-**Stage 9 (DataTable budget and density) is next.**
+**Stage 10 (icons) is next.**
 
 The gap that sat outside the eleven — `Input` — was closed on 2026-09-04 as **stage 8b**, below,
 after the product owner chose to do the whole form family at once rather than defer it.
@@ -600,13 +600,64 @@ measuring rather than reading, because it was the first input the probe happened
 
 ---
 
-## Stage 9 — DataTable budget and density · §devices, §density
+## Stage 9 — DataTable budget and density · §devices, §density · **DONE 2026-09-04**
 
 - Column budget enforced: 7 / 5 / 4-field card. Extras into the existing column picker with a saved
   per-user preference. **No horizontal scroll** — it hides the identity column.
 - Density is one token in three values, moving row height, cell padding and avatar only. Never font
   size. Below 1024px roomy wins regardless of preference.
 - Cells may stack two values with the qualifier in parentheses in `--ink-tertiary` and a bold `+1`.
+
+**Done. Measured in Chromium at 1440, 800 and 599 — every one of §5m's three contexts:**
+
+| Context             | Measured                                                              |
+| ------------------- | --------------------------------------------------------------------- |
+| Desktop (1440)      | **7 columns**, 0px horizontal overflow                                |
+| Tablet (800)        | **5 columns**, roomy forced, and the density control is **not shown** |
+| Phone (599)         | **0 tables**, 15 cards, **4 fields** each, 0px page overflow          |
+| Density, three ways | 55 → 63 → 71px, and the **font never moved** (14px throughout)        |
+| After a reload      | still roomy — the preference persisted                                |
+
+**The row heights are 8px apart, which is right, and 15px above §5n's absolutes, which is
+content.** §5n's 40/48/56 assume a 24px line box inside `12px 16px` padding. Measured on a real row:
+padding is exactly `12px/12px`, and the row is 65px because one cell holds a 40px element — a
+thumbnail, an avatar, a two-line stack. 24 + 40 = 64. The density is doing its job; the cell is
+taller than one line of text. Stated here rather than rounded off, because "48px rows" is the kind
+of claim somebody later measures.
+
+**The density control is offered only at ≥1024px**, because that is the only place it applies —
+§5n: "below 1024px the preference is ignored and roomy wins". IGNORED, not overwritten: a manager
+who chose compact at their desk still has compact when they sit back down, and the tablet does not
+quietly rewrite their choice. Verified: 0 density controls at 800px.
+
+**The budget trims from the right, after the user's own column choice.** What somebody hid in the
+column picker stays hidden; the budget then keeps the leftmost survivors, which is where identity
+is. When it trims, the picker says so — "Showing 7 of 9. Hide one to show another" — because rule
+6 turns the overflow into "a choice someone makes once", and a choice nobody is told about is not
+one.
+
+**Two `overflow-x-auto` containers had to go, not one.** `DataTable`'s own wrapper AND the `Table`
+primitive's, so a table past its budget scrolled twice over. `Table` gained a `containerClassName`
+prop rather than losing the scroll globally: every table NOT going through `DataTable` still has
+whatever column count it was written with and no budget enforcing anything, so removing the escape
+hatch under them would replace a scroll with a clipped table — worse, and silent. They lose it when
+they gain a budget.
+
+**The phone card is not a read-only fallback.** It reuses `col.render` verbatim, so a status chip
+stays a chip and a ringed pet avatar stays ringed, and it carries selection and row actions —
+because §5m's phone user is the floor staff member actually doing the work.
+
+**The honest limit: "saved per user" is saved per BROWSER.** `localStorage`, keyed by `tableId`.
+Per-table is exact; per-user is not — the same person on a second device starts from the default. A
+row in Postgres would fix it and is a migration, an API route and an RLS policy, deliberately not
+smuggled into a design stage.
+
+**A source conflict found here and NOT acted on, because two of three sources agree against it.**
+§5e says "Bulk bar sits above the header row on white with a `--primary` hairline". §5b pattern 04,
+the rendered reference page, and this document's own stage 7 all say the header row BECOMES a solid
+`--primary` bar. The page wins by CLAUDE.md's own rule, and stage 7 shipped the solid bar with the
+row height measured identical before, during and after selection. Flagged for whoever reconciles
+the spec.
 
 ---
 

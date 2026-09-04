@@ -17,10 +17,10 @@ There is a real backend: **Supabase Postgres** with row-level security as the au
 voice, formatting, print and governance, all decided and measured, with the eleven-stage adoption
 sequence in [WORK_ORDER.md](docs/design-system/WORK_ORDER.md). It is **not a proposal to evaluate**:
 every screen reworked from here on follows it completely, and CLAUDE.md § "Design System" is the
-standing rule. **Stages 0–8 are done** (documents and assets, the `@theme` tokens, the empty-state
+standing rule. **Stages 0–9 are done** (documents and assets, the `@theme` tokens, the empty-state
 choke point, the four route-level states, the status chips, Button, the metric and filter tiles,
-the page header / saved views / filter band / bulk bar, the orange territories, and the form
-controls); **stage 9 (DataTable budget and density) is next.** The tokens landed, so `src/` renders the new palette
+the page header / saved views / filter band / bulk bar, the orange territories, the form controls,
+and the DataTable column budget and density); **stage 10 (icons) is next.** The tokens landed, so `src/` renders the new palette
 everywhere; stage 7's band and bulk bar reached 87 screens through `DataTable` alone; and stage 8
 put the 2px orange ring on every pet — but most screens still have the old LAYOUT, density and
 glyphs, so the third question about any screen, after "fixture or Postgres?", is still **"old

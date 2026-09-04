@@ -922,6 +922,12 @@ export default function FacilityBookingsPage() {
               searchKey="id"
               searchPlaceholder={"Search by booking ID, client, or pet..."}
               itemsPerPage={15}
+              // §5n: names this table so its column choice and row height
+              // survive a reload. §5m: the four fields a phone shows are a
+              // decision only this screen can make — identity, what it is,
+              // when, and whether the pet is in the building.
+              tableId="facility.bookings"
+              cardColumns={["client", "service", "dates", "presence"]}
               onRowClick={(booking) =>
                 router.push(
                   inEmployeePortal
