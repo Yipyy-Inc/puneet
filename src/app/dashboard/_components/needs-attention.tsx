@@ -17,6 +17,7 @@ import type { LucideIcon } from "lucide-react";
 import { platformDashboardQueries } from "@/lib/api/platform-dashboard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ToneMark, type MarkTone } from "@/components/ui/tone-mark";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -26,7 +27,7 @@ import {
 } from "@/components/ui/accordion";
 
 function SectionHeader({
-  icon: Icon,
+  icon,
   title,
   count,
   tone,
@@ -34,21 +35,11 @@ function SectionHeader({
   icon: LucideIcon;
   title: string;
   count: number;
-  tone: "rose" | "amber" | "indigo" | "violet";
+  tone: MarkTone;
 }) {
-  const toneRing: Record<typeof tone, string> = {
-    rose: "bg-gradient-to-br from-rose-500 to-pink-500",
-    amber: "bg-gradient-to-br from-amber-400 to-orange-500",
-    indigo: "bg-gradient-to-br from-indigo-500 to-blue-600",
-    violet: "bg-gradient-to-br from-violet-500 to-purple-500",
-  };
   return (
     <div className="flex flex-1 items-center gap-3">
-      <span
-        className={`flex size-8 items-center justify-center rounded-xl text-white shadow-sm ${toneRing[tone]}`}
-      >
-        <Icon className="size-4" />
-      </span>
+      <ToneMark icon={icon} tone={tone} size="sm" />
       <span className="text-sm font-semibold">{title}</span>
       <Badge
         variant={count > 0 ? "secondary" : "outline"}
@@ -125,10 +116,12 @@ export function NeedsAttention() {
 
   return (
     <Card className="bg-card overflow-hidden border">
-      <div className="from-card relative flex items-center gap-3 border-b bg-linear-to-br to-amber-50/40 px-5 py-4 dark:to-amber-950/10">
-        <span className="flex size-11 items-center justify-center rounded-2xl bg-linear-to-br from-amber-400 via-orange-500 to-rose-500 text-white shadow-sm">
-          <AlertTriangle className="size-5" />
-        </span>
+      {/* The header's own field was `from-card to-amber-50/40`, which stage 1
+          made white-to-white — a gradient declaration that has painted nothing
+          for months. §6 rule 2 wants a white card anyway, so it is gone rather
+          than restored. */}
+      <div className="border-line relative flex items-center gap-3 border-b px-5 py-4">
+        <ToneMark icon={AlertTriangle} tone="warning" />
         <div>
           <h2 className="text-lg font-semibold tracking-tight">
             Needs Attention
@@ -164,7 +157,7 @@ export function NeedsAttention() {
                   icon={ShieldAlert}
                   title="Flagged for Suspension"
                   count={flags.length}
-                  tone="rose"
+                  tone="error"
                 />
               </AccordionTrigger>
               <AccordionContent className="space-y-2 pb-3">
@@ -207,7 +200,7 @@ export function NeedsAttention() {
                   icon={FileWarning}
                   title="Overdue Invoices"
                   count={overdue.length}
-                  tone="rose"
+                  tone="error"
                 />
               </AccordionTrigger>
               <AccordionContent className="space-y-2 pb-3">
@@ -253,7 +246,7 @@ export function NeedsAttention() {
                   icon={ClipboardList}
                   title="Pending Facility Requests"
                   count={requests.length}
-                  tone="indigo"
+                  tone="info"
                 />
               </AccordionTrigger>
               <AccordionContent className="space-y-2 pb-3">
@@ -288,7 +281,7 @@ export function NeedsAttention() {
                   icon={LifeBuoy}
                   title="SLA-Breached Tickets"
                   count={slaTickets.length}
-                  tone="amber"
+                  tone="warning"
                 />
               </AccordionTrigger>
               <AccordionContent className="space-y-2 pb-3">

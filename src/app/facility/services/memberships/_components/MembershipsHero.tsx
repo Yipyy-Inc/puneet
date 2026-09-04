@@ -49,7 +49,7 @@ export function MembershipsHero() {
       <div className="relative flex flex-col gap-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-linear-to-br from-amber-400/90 to-amber-600/80 text-white shadow-sm ring-1 ring-amber-600/20">
+            <div className="bg-wash-warning text-warning flex size-11 items-center justify-center rounded-xl">
               <Crown className="size-5" />
             </div>
             <div>

@@ -7,6 +7,7 @@ import { Megaphone, PlusCircle, Search, Upload } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
+import { ToneMark, type MarkTone } from "@/components/ui/tone-mark";
 import { cn } from "@/lib/utils";
 import { FindFacilityDialog } from "./find-facility-dialog";
 
@@ -24,7 +25,12 @@ interface QuickAction {
   label: string;
   description: string;
   icon: LucideIcon;
-  gradient: string;
+  /**
+   * Was `gradient`, and every one of them rendered as a flat dark disc —
+   * stage 1 remapped the palette steps they were built from onto the status
+   * inks, which are text weights. See tone-mark.tsx.
+   */
+  tone: MarkTone;
   onClick: () => void;
 }
 
@@ -39,7 +45,7 @@ export function QuickActions() {
       label: "Add Facility",
       description: "Onboarding wizard",
       icon: PlusCircle,
-      gradient: "from-indigo-500 via-indigo-500 to-blue-600",
+      tone: "info",
       onClick: () => setWizardOpen(true),
     },
     {
@@ -47,7 +53,9 @@ export function QuickActions() {
       label: "Find Facility",
       description: "Global search",
       icon: Search,
-      gradient: "from-slate-500 via-slate-600 to-slate-700",
+      // Finding a facility is not a status, so it takes the neutral mark
+      // rather than borrowing a status ink to look decorative.
+      tone: "neutral",
       onClick: () => setFindOpen(true),
     },
     {
@@ -55,7 +63,7 @@ export function QuickActions() {
       label: "Create Announcement",
       description: "Broadcast composer",
       icon: Megaphone,
-      gradient: "from-violet-500 via-purple-500 to-fuchsia-500",
+      tone: "violet",
       onClick: () => router.push("/dashboard/communication/announcements"),
     },
     {
@@ -63,7 +71,7 @@ export function QuickActions() {
       label: "Run Data Import",
       description: "Import wizard",
       icon: Upload,
-      gradient: "from-emerald-500 via-teal-500 to-cyan-500",
+      tone: "success",
       onClick: () => router.push("/dashboard/system-admin/data-management"),
     },
   ];
@@ -72,7 +80,6 @@ export function QuickActions() {
     <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {actions.map((a) => {
-          const Icon = a.icon;
           return (
             <Card
               key={a.key}
@@ -90,14 +97,11 @@ export function QuickActions() {
                 "hover:-translate-y-0.5 hover:shadow-lg",
               )}
             >
-              <span
-                className={cn(
-                  "flex size-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br text-white shadow-sm transition-transform group-hover:scale-105",
-                  a.gradient,
-                )}
-              >
-                <Icon className="size-5" />
-              </span>
+              <ToneMark
+                icon={a.icon}
+                tone={a.tone}
+                className="transition-transform group-hover:scale-105"
+              />
               <div className="min-w-0">
                 <p className="text-sm font-semibold tracking-tight">
                   {a.label}

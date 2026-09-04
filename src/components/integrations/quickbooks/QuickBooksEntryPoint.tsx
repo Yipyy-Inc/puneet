@@ -54,11 +54,11 @@ export function QuickBooksEntryPoint({
       <Card className="border-emerald-500/20">
         <CardContent className="space-y-6 py-8 text-center">
           <div className="flex items-center justify-center gap-4">
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-500 to-green-700 text-white shadow-sm">
+            <span className="bg-wash-success text-success flex size-14 shrink-0 items-center justify-center rounded-2xl">
               <Landmark className="size-7" />
             </span>
             <Link2 className="text-muted-foreground size-5 shrink-0" />
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-amber-400 to-amber-600 text-white shadow-sm">
+            <span className="bg-wash-warning text-warning flex size-14 shrink-0 items-center justify-center rounded-2xl">
               <PawPrint className="size-7" />
             </span>
           </div>

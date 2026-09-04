@@ -432,7 +432,7 @@ function SectionBlock({
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-linear-to-br from-white via-slate-50/70 to-sky-50/50 shadow-sm">
       <div className="flex items-center gap-3 border-b border-slate-200/70 bg-white/80 px-5 py-4">
-        <div className="flex size-10 items-center justify-center rounded-2xl bg-linear-to-br from-sky-500 to-cyan-500 text-white shadow-sm shadow-sky-500/20">
+        <div className="bg-wash-primary text-info flex size-10 items-center justify-center rounded-2xl">
           {renderSectionIcon(section.id)}
         </div>
         <div>
@@ -868,7 +868,7 @@ export function StaffEvaluationFormModal({
         <Card className="overflow-hidden rounded-3xl border-slate-200/80 bg-white shadow-sm">
           <CardHeader className="border-b border-slate-200/70 bg-linear-to-r from-white via-emerald-50/40 to-sky-50/60 pb-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-500 to-sky-500 text-white shadow-sm">
+              <div className="bg-wash-success text-success flex size-11 items-center justify-center rounded-2xl">
                 <ShieldCheck className="size-5" />
               </div>
               <div>
@@ -1129,7 +1129,7 @@ export function StaffEvaluationFormModal({
             {/* Header */}
             <div className="border-border flex items-center justify-between border-b bg-linear-to-r from-violet-50 via-white to-sky-50 px-5 py-4">
               <div className="flex items-center gap-2.5">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-linear-to-br from-violet-500 to-sky-500 text-white shadow-sm">
+                <div className="bg-wash-violet text-violet flex size-10 items-center justify-center rounded-2xl">
                   <Sparkles className="size-5" />
                 </div>
                 <div>

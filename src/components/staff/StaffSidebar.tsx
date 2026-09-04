@@ -27,8 +27,8 @@ export function StaffSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-linear-to-br from-blue-500 to-indigo-500">
-            <Calendar className="size-4 text-white" />
+          <div className="bg-wash-primary text-info flex size-8 items-center justify-center rounded-lg">
+            <Calendar className="size-4" />
           </div>
           <span className="font-semibold">Staff Portal</span>
         </div>

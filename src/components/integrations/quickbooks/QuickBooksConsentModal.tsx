@@ -159,7 +159,7 @@ export function QuickBooksConsentModal({
           <>
             <DialogHeader>
               <div className="flex items-center gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-green-700 text-white">
+                <span className="bg-wash-success text-success flex size-10 shrink-0 items-center justify-center rounded-xl">
                   <Landmark className="size-5" />
                 </span>
                 <div className="min-w-0">

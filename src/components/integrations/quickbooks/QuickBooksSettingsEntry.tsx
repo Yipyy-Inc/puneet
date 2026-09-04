@@ -29,7 +29,7 @@ export function QuickBooksSettingsEntry() {
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-green-700 text-white shadow-sm">
+      <span className="bg-wash-success text-success flex size-10 shrink-0 items-center justify-center rounded-xl">
         <Landmark className="size-5" />
       </span>
 

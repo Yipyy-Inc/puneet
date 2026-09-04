@@ -70,7 +70,7 @@ export function ActivityFeed() {
   return (
     <Card className="bg-card flex h-full flex-col overflow-hidden border">
       <div className="from-card relative flex items-center gap-3 border-b bg-linear-to-br to-sky-50/40 px-5 py-4 dark:to-sky-950/20">
-        <span className="flex size-11 items-center justify-center rounded-2xl bg-linear-to-br from-sky-500 via-sky-500 to-cyan-500 text-white shadow-sm">
+        <span className="bg-wash-primary text-info flex size-11 items-center justify-center rounded-2xl">
           <Activity className="size-5" />
         </span>
         <div className="flex-1">
