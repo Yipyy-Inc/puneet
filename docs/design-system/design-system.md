@@ -47,14 +47,18 @@ Visual reference with live examples: `Yipyy Design System.dc.html`.
      tablet held on a kennel floor. #FAFAFB is white to the eye and measurably
      lighter than the card, so the separation survives glare and a dim screen.
 
-     It also measures better than what it replaced: --ink-tertiary #677382,
-     the floor for text, was 4.58:1 on #F6F9FF and is 4.63:1 on #FAFAFB. */
-  --ground: #fafafb;
+     WARMED on 2026-09-04, a few hours after it went neutral. Cool neutral read
+     clinical beside the warm off-white a competitor uses, and warmth turned
+     out to be most of what "glowing" meant. Each step gains contrast rather
+     than losing it: --ink-tertiary #677382, the floor for text, measures
+     4.58:1 on the original #F6F9FF, 4.63:1 on neutral #FAFAFB and 4.71:1 on
+     the warm #FDFCFA it is now. */
+  --ground: #fdfcfa; /* warm near-white */
   --card: #ffffff;
-  --inset: #f4f4f6;
-  --inset-2: #ebebee;
-  --line: #e6e6e9;
-  --line-strong: #d5d5da;
+  --inset: #f6f4f1;
+  --inset-2: #edeae5;
+  --line: #e9e6e1;
+  --line-strong: #d9d5cf;
 
   /* Status — the INK is the token. Chips are white with a 1px hairline of
      the same ink; the -bg tints below fill nothing and are kept for reference. */
@@ -1266,7 +1270,19 @@ Every print stylesheet:
    for hover and for "this row changed" — it invents no colour and survives print. Never a tint fill
    for any of them, and never an orange dot: orange marks the animal, not a row's state.
 3. **One `transition` declaration per inline style.** A second one silently overwrites the first.
-4. **No tint fills. No exception — the tile wash was retired 2026-09-04.** White, or a solid.
+4. **No tinted SURFACE. A MARK may be tinted.** The line moved on 2026-09-04 and it is worth
+   stating precisely, because it moved twice in one day. A page, a card and a metric tile are
+   surfaces: white, always, no exception — the tile wash that used to be this rule's one sanctioned
+   case is gone. A status chip, a badge disc and a small tag are marks: they carry a light `--wash-*`
+   fill with the saturated ink on top, which is where the tint went instead of away.
+
+   The reason is measurable rather than aesthetic. A 40px disc filled with a TEXT-weight ink is dark
+   by construction — those values exist so words clear 4.5:1, which forces them to `#8A5115` (a
+   brown), `#0F7A52` and `#4C3BB8` — and as a large solid they read heavy. Inverted, the same pair
+   is luminous and measures BETTER, since a glyph needs only 3:1: violet 7.09:1, warning 6.00:1,
+   info 5.80:1, error 5.25:1, success 4.88:1, primary 4.54:1, neutral 6.33:1.
+
+   The old rule read as follows, and the first half of it still holds. White, or a solid.
    A metric or filter tile used to be allowed a near-white gradient in its badge's hue —
    `linear-gradient(135deg, <wash> 0%, #FFF 58%)` from `#EDF2FE` / `#E9F8F2` / `#FDEFF3` /
    `#FDF7E6` / `#F4EFFE` — and it was genuinely measured: body ink held 15.30–16.12:1 on those
@@ -1278,6 +1294,7 @@ Every print stylesheet:
    kept in `globals.css` so restoring this is one edit rather than a re-derivation. Chips, badges
    and callouts were always white and still are — that is the case this rule was written against,
    where a tint costs real contrast (green on its own tint is 4.85:1).
+
 5. **Status is dark ink on white**, with a 1px hairline of that same ink — never a tint fill, and
    never white on a _dot-weight_ colour (`#18A66E` is 2.28:1). Solid fills use the ink, not the dot.
 6. **Every `fr`/fixed grid column needs `minmax(0, …)`**; flex children need `min-width: 0`.

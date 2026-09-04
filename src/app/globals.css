@@ -115,6 +115,31 @@
   --color-code-fg: var(--code-fg);
   --color-ground: var(--ground);
 
+  /* ── THE WASHES, AS COLOUR UTILITIES (2026-09-04) ────────────────────────
+   * These five were a gradient stop and nothing else while the tile wash
+   * existed. They are exposed as flat fills now because §3's marks — a status
+   * chip, a badge disc, a small tag — carry a light wash with the saturated
+   * ink on top, instead of the dark ink as a solid.
+   *
+   * The reason is measurable rather than a matter of taste. A 40px disc
+   * filled with a TEXT-weight ink is dark by construction: those values are
+   * chosen so words clear 4.5:1, which forces them down to #8A5115 (a brown),
+   * #0F7A52 and #4C3BB8. As a large solid they read heavy. Inverted — the
+   * wash as the fill, the ink as the glyph — the same pair reads luminous and
+   * measures BETTER, because a glyph needs 3:1 and gets 4.5-7.1:1:
+   *
+   *   violet  #4C3BB8 on #F4EFFE  7.09:1     error   #B23B3B on #FDEFF3  5.25:1
+   *   warning #8A5115 on #FDF7E6  6.00:1     success #0F7A52 on #E9F8F2  4.88:1
+   *   primary #1668E3 on #EDF2FE  4.54:1
+   *
+   * A MARK may be tinted. A SURFACE may not — the page, cards and tiles are
+   * white, and that has not changed. §6 rule 2 says exactly this now. */
+  --color-wash-primary: var(--wash-primary);
+  --color-wash-success: var(--wash-success);
+  --color-wash-error: var(--wash-error);
+  --color-wash-warning: var(--wash-warning);
+  --color-wash-violet: var(--wash-violet);
+
   /* NOT --color-inset: Tailwind reserves the bare word "inset" as the
    * ring/shadow positioning modifier (ring-inset sets --tw-ring-inset).
    * Exposing a colour utility under the identical name makes "ring-inset"
@@ -634,12 +659,12 @@
 
      `--ground-gradient` was removed rather than neutralised: it was defined
      here and referenced by nothing in src/. */
-  --ground: #fafafb; /* neutral near-white — the page */
+  --ground: #fdfcfa; /* warm near-white — the page */
   --card: #ffffff; /* pure white — every raised panel */
-  --inset: #f4f4f6; /* muted fields, rows, avatars */
-  --inset-2: #ebebee;
-  --line: #e6e6e9; /* the default hairline */
-  --line-strong: #d5d5da;
+  --inset: #f6f4f1; /* muted fields, rows, avatars */
+  --inset-2: #edeae5;
+  --line: #e9e6e1; /* the default hairline */
+  --line-strong: #d9d5cf;
 
   /* ── §tiles — THE ONE SANCTIONED EXCEPTION TO RULE 2 ──────────────────
      Rule 2 bans tint fills outright. A metric or filter tile is the single

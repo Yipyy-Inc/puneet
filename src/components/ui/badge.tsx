@@ -65,33 +65,48 @@ const badgeVariants = cva(
         //
         // The glyph is not optional here — see StatusBadge, which supplies one
         // for every value. Colour is never the only channel.
+        //
+        // ── THE CHIP IS A LIGHT WASH NOW (2026-09-04) ────────────────────
+        //
+        // It was `bg-card` with a 1px hairline in the label's own ink, which
+        // is what §3 shipped and what the prose above still describes. The
+        // product owner asked for the lighter, warmer register a competitor
+        // uses, where a chip is a pale fill carrying a saturated ink and no
+        // border at all. Same ink, same glyph, same word — only the ground
+        // under it changed, and it measures 4.5-7.1:1 (see --color-wash-* in
+        // globals.css).
+        //
+        // The hairline goes to TRANSPARENT rather than being deleted, so the
+        // pill keeps its 1px of geometry and nothing shifts by a pixel when a
+        // chip changes variant. Paper is unaffected either way: the print
+        // block forces every badge back to white with a body-ink border.
         confirmed: `
-            border-success bg-card text-success
+            border-transparent bg-wash-success text-success
             h-[26px] gap-1.5 px-2.5 text-[13px] leading-none font-semibold md:text-[13px]
             [&>svg]:size-4 [&>svg]:md:size-4
           `,
         checkedIn: `
-            border-info bg-card text-info
+            border-transparent bg-wash-primary text-info
             h-[26px] gap-1.5 px-2.5 text-[13px] leading-none font-semibold md:text-[13px]
             [&>svg]:size-4 [&>svg]:md:size-4
           `,
         inService: `
-            border-violet bg-card text-violet
+            border-transparent bg-wash-violet text-violet
             h-[26px] gap-1.5 px-2.5 text-[13px] leading-none font-semibold md:text-[13px]
             [&>svg]:size-4 [&>svg]:md:size-4
           `,
         pending: `
-            border-warning bg-card text-warning
+            border-transparent bg-wash-warning text-warning
             h-[26px] gap-1.5 px-2.5 text-[13px] leading-none font-semibold md:text-[13px]
             [&>svg]:size-4 [&>svg]:md:size-4
           `,
         overdue: `
-            border-destructive bg-card text-destructive
+            border-transparent bg-wash-error text-destructive
             h-[26px] gap-1.5 px-2.5 text-[13px] leading-none font-semibold md:text-[13px]
             [&>svg]:size-4 [&>svg]:md:size-4
           `,
         cancelled: `
-            border-ink-secondary bg-card text-ink-secondary
+            border-transparent bg-muted text-ink-secondary
             h-[26px] gap-1.5 px-2.5 text-[13px] leading-none font-semibold md:text-[13px]
             [&>svg]:size-4 [&>svg]:md:size-4
           `,

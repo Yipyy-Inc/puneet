@@ -84,12 +84,14 @@ loses.
 | Secondary ink | `#4C5B6C`             | Emphasised metadata, secondary values, a metric tile's label                                                           |
 | Tertiary ink  | `#677382`             | Column heads, timestamps, helper text — 4.83:1, **the floor for text**                                                 |
 | Disabled ink  | `#8C99A3`             | Chevrons and placeholder glyphs. **Non-text only**                                                                     |
-| Ground        | `#FAFAFB`             | App background — **neutral, no hue**. White cards float on it. `--inset`/`--line` are neutral too                      |
-| Card · line   | `#FFFFFF` · `#E6E6E9` | Every raised panel, floating on the ground; the default hairline (`#D5D5DA` strong)                                    |
+| Ground        | `#FDFCFA`             | App background — **warm near-white**. Cards float on it; `--inset`/`--line` share its warmth                           |
+| Card · line   | `#FFFFFF` · `#E9E6E1` | Every raised panel, floating on the ground; the default hairline (`#D9D5CF` strong)                                    |
 | Dark panel    | `#0E3A5C`             | The **one** dark surface — the heading ink reused. White at 11.74:1                                                    |
 | Orange        | `#F08A3C`             | The animal and the live moment — **a surface, never an ink**                                                           |
 
-Status inks — the ink _is_ the token, there are no tint fills: success `#0F7A52` 5.35:1 · info
+Status inks — the ink _is_ the token, and since 2026-09-04 a MARK carrying it (a chip, a badge disc,
+a small tag) sits on that ink's own `--wash-*` rather than on white; a SURFACE never does: success
+`#0F7A52` 5.35:1 · info
 `#0F58C6` 6.50:1 · warning `#8A5115` 6.43:1 · error `#B23B3B` 5.86:1 · violet `#4C3BB8` 8.00:1 ·
 neutral `#4C5B6C` 6.95:1, all on white. Chart series are the **desaturated** families — `#1668E3`,
 `#4F9E85`, `#D9A46A`, `#8D85D6`, `#C06A6A` — never the saturated status colours, or a "Boarding"
@@ -203,11 +205,12 @@ error, sad) at 132 compact, in a dialog, a panel or a whole failed view.
    radius or a background and the ban applies again.**
 2. **No tint fills.** White, or a solid. A status is its glyph, its word, its ink and a 1px hairline
    of that same ink; where one must dominate, fill it solid with the ink at full strength — never
-   white on a dot-weight colour. **There is no longer any exception.** The metric-tile wash — the
-   one measured case — was retired on 2026-09-04 when the surface family went neutral: the brief
-   was a platform with no tinted surface anywhere, and a tile is a card section like any other. The
-   tile lost nothing, because its tone lives in the solid badge beside the label, not in the wash.
-   Chips, badges and callouts were always white and still are.
+   white on a dot-weight colour. **The line is SURFACE vs MARK, and it moved twice on 2026-09-04.**
+   A page, a card and a metric tile are surfaces: white, always, and the tile wash that was this
+   rule's one sanctioned exception is gone. A status chip, a badge disc and a small tag are marks:
+   they take a light `--wash-*` fill carrying the saturated ink, because a text-weight ink used as a
+   40px solid is dark by construction and reads heavy. Inverted it measures better — a glyph needs
+   3:1 and gets 4.54–7.09:1 on its own wash.
 3. **One `transition` declaration per inline style, ever.** The template compiles to a React style
    object, so a second `transition:` silently overwrites the first and the animation dies with no
    error.
