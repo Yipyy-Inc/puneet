@@ -1121,27 +1121,68 @@
   }
 }
 
-/* ── THE TILE WASH IS RETIRED (2026-09-04) ──────────────────────────────
+/* ── THE TILE WASH, RESTORED 2026-09-04 ──────────────────────────────────
  *
- * Five @utility blocks lived here, one per hue, each painting
- * linear-gradient(135deg, <wash> 0%, #FFF 58%) behind a metric or filter
- * tile. They were §6 rule 2's ONE sanctioned exception, and a measured one:
- * body ink stayed above 15:1 on every wash, so the tint cost no contrast.
+ * §tiles: linear-gradient(135deg, <wash> 0%, #FFF 58%). The 58% stop is part
+ * of the measurement — the hue is gone before it reaches the value, which is
+ * what keeps body ink above 15:1. One utility per hue so a tile names its
+ * tone and never spells a gradient.
  *
- * They are gone because the product owner asked for a platform with no
- * tinted surfaces at all — "a clean white background, and each card section
- * white too". A tile is a card section. The rule's default answer, white or
- * a solid, now applies with no exception anywhere.
+ * ── IT WAS REMOVED AND PUT BACK ON THE SAME DAY, AND THAT IS THE RECORD ──
  *
- * NOTHING IS LOST FROM THE TILE. The tone was never carried by the wash: it
- * is carried by the 40px solid badge beside the label, which is untouched.
- * The wash was a second, quieter copy of the same signal.
+ * Retired earlier today when the surface family went neutral, on the reading
+ * that a tile is a card section and the brief was "no tinted surface". The
+ * client likes the washed tiles, so they are back. Keeping the --wash-*
+ * values through the removal is what made this one edit instead of a
+ * re-derivation, which was the reason for keeping them.
  *
- * The --wash-* tokens above are kept deliberately. Restoring this is one
- * edit — put the five utilities back and point the tone maps in kpi-tile.tsx
- * and StatCard.tsx at them again — and keeping the measured values means
- * nobody has to re-derive them to do it.
+ * So §6 rule 2 has its measured exception again, and it is genuinely
+ * measured: body ink reads 15.30-16.12:1 on these washes against 17.25:1 on
+ * white, so the tint costs no contrast. Two conditions still hold — it stays
+ * near-white, and the tile label steps to --ink-secondary because
+ * --ink-tertiary is only 4.32:1 on a wash. Chips, badges and callouts are
+ * NOT this: they take a flat --wash-* fill with the saturated ink on top,
+ * which is a different treatment for a different object.
  */
+@utility yy-wash-primary {
+  background-image: linear-gradient(
+    135deg,
+    var(--wash-primary) 0%,
+    var(--card) 58%
+  );
+}
+
+@utility yy-wash-success {
+  background-image: linear-gradient(
+    135deg,
+    var(--wash-success) 0%,
+    var(--card) 58%
+  );
+}
+
+@utility yy-wash-error {
+  background-image: linear-gradient(
+    135deg,
+    var(--wash-error) 0%,
+    var(--card) 58%
+  );
+}
+
+@utility yy-wash-warning {
+  background-image: linear-gradient(
+    135deg,
+    var(--wash-warning) 0%,
+    var(--card) 58%
+  );
+}
+
+@utility yy-wash-violet {
+  background-image: linear-gradient(
+    135deg,
+    var(--wash-violet) 0%,
+    var(--card) 58%
+  );
+}
 
 /* Keyframes for animations */
 @keyframes fade-in {

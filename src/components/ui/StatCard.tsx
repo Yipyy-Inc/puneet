@@ -42,32 +42,30 @@ const VARIANT_STYLES: Record<
   StatCardVariant,
   { wash: string; badge: string; glyph: string }
 > = {
-  // A light wash carrying the saturated ink, not the ink as a dark solid —
-  // the same inversion as kpi-tile.tsx, and the note there explains why.
+  // Washed tile, solid disc — the pairing kpi-tile.tsx explains.
   primary: {
-    wash: "",
-    badge: "bg-wash-primary",
-    glyph: "text-primary",
+    wash: "yy-wash-primary",
+    badge: "bg-primary",
+    glyph: "text-white",
   },
   success: {
-    wash: "",
-    badge: "bg-wash-success",
-    glyph: "text-success",
+    wash: "yy-wash-success",
+    badge: "bg-success",
+    glyph: "text-white",
   },
   warning: {
-    wash: "",
-    badge: "bg-wash-warning",
-    glyph: "text-warning",
+    wash: "yy-wash-warning",
+    badge: "bg-warning",
+    glyph: "text-white",
   },
-  info: { wash: "", badge: "bg-wash-primary", glyph: "text-info" },
+  info: { wash: "yy-wash-primary", badge: "bg-info", glyph: "text-white" },
   secondary: {
-    wash: "",
-    badge: "bg-wash-violet",
-    glyph: "text-violet",
+    wash: "yy-wash-violet",
+    badge: "bg-violet",
+    glyph: "text-white",
   },
-  // No neutral wash exists; --inset is the neutral surface, reached through
-  // `bg-muted` because Tailwind reserves the bare word "inset".
-  default: { wash: "", badge: "bg-muted", glyph: "text-ink-secondary" },
+  // Neutral is not one of the five washes, so the tile is plain white.
+  default: { wash: "", badge: "bg-ink-secondary", glyph: "text-white" },
 };
 
 export function StatCard({

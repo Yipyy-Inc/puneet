@@ -205,12 +205,13 @@ error, sad) at 132 compact, in a dialog, a panel or a whole failed view.
    radius or a background and the ban applies again.**
 2. **No tint fills.** White, or a solid. A status is its glyph, its word, its ink and a 1px hairline
    of that same ink; where one must dominate, fill it solid with the ink at full strength — never
-   white on a dot-weight colour. **The line is SURFACE vs MARK, and it moved twice on 2026-09-04.**
-   A page, a card and a metric tile are surfaces: white, always, and the tile wash that was this
-   rule's one sanctioned exception is gone. A status chip, a badge disc and a small tag are marks:
-   they take a light `--wash-*` fill carrying the saturated ink, because a text-weight ink used as a
-   40px solid is dark by construction and reads heavy. Inverted it measures better — a glyph needs
-   3:1 and gets 4.54–7.09:1 on its own wash.
+   white on a dot-weight colour. **Two things may be tinted and nothing else, settled 2026-09-04
+   after three passes in one day.** (a) A METRIC OR FILTER TILE carries the measured §tiles wash,
+   `linear-gradient(135deg, <wash> 0%, #FFF 58%)` — body ink holds 15.30–16.12:1 on it, and the tile
+   label steps to `#4C5B6C` because `--ink-tertiary` is only 4.32:1 there. Its 40px disc stays a
+   SOLID ink with a white glyph, because light-on-light disappears against the wash. (b) A STATUS
+   CHIP takes a flat `--wash-*` fill with the saturated ink on top and no border — 4.54–7.09:1,
+   better than the white-pill-with-a-hairline it replaced. Pages and cards are white, always.
 3. **One `transition` declaration per inline style, ever.** The template compiles to a React style
    object, so a second `transition:` silently overwrites the first and the animation dies with no
    error.

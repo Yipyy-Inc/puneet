@@ -1270,11 +1270,24 @@ Every print stylesheet:
    for hover and for "this row changed" — it invents no colour and survives print. Never a tint fill
    for any of them, and never an orange dot: orange marks the animal, not a row's state.
 3. **One `transition` declaration per inline style.** A second one silently overwrites the first.
-4. **No tinted SURFACE. A MARK may be tinted.** The line moved on 2026-09-04 and it is worth
-   stating precisely, because it moved twice in one day. A page, a card and a metric tile are
-   surfaces: white, always, no exception — the tile wash that used to be this rule's one sanctioned
-   case is gone. A status chip, a badge disc and a small tag are marks: they carry a light `--wash-*`
-   fill with the saturated ink on top, which is where the tint went instead of away.
+4. **No tint fills, with exactly two exceptions, both measured.** This rule was rewritten three
+   times on 2026-09-04 — the wash removed, the marks tinted, the wash restored on the client's call —
+   so it is worth stating as the settled position rather than as a diff.
+
+   (a) A **metric or filter tile** carries the §tiles wash: `linear-gradient(135deg, <wash> 0%,
+#FFF 58%)` from `#EDF2FE` / `#E9F8F2` / `#FDEFF3` / `#FDF7E6` / `#F4EFFE`. Body ink measures
+   15.30–16.12:1 on these against 17.25:1 on white, so the wash is decoration at no cost. Two
+   conditions: it stays near-white, and the tile label steps to `--ink-secondary` `#4C5B6C` because
+   `--ink-tertiary` is 4.32:1 on the wash. The tile's 40px disc stays a **solid** ink under a white
+   glyph — a pale disc on a pale tile does not read.
+
+   (b) A **status chip** takes a flat `--wash-*` fill with the saturated ink on top and no border.
+   That is a different treatment for a different object: a chip is a small mark inside a white row,
+   where a pale fill is what makes it legible without shouting; a tile is a large surface that
+   already carries a wash, so the mark on top has to be the dark half of the pair. Same two values,
+   opposite roles, decided by what sits behind them.
+
+   Pages and cards are white, always. Callouts stay white too.
 
    The reason is measurable rather than aesthetic. A 40px disc filled with a TEXT-weight ink is dark
    by construction — those values exist so words clear 4.5:1, which forces them to `#8A5115` (a
