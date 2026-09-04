@@ -18,97 +18,72 @@ import {
   ChevronUp,
   RefreshCw,
   CloudSun,
+  CloudMoon,
+  Moon,
   History,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import {
   addAlertToLog,
   WeatherAlertLog,
 } from "@/components/facility/WeatherAlertLog";
+import { WeatherSky, skyKind } from "@/components/facility/weather-sky";
 import type { WeatherWarningRule } from "@/types/facility";
 
 // ── WMO weather code mapping ─────────────────────────────────────────
 
-function getAnimStyle(code: number): React.CSSProperties | undefined {
-  if (code === 0) return { animation: "spin 20s linear infinite" };
-  if (code <= 3) return { animation: "float 4s ease-in-out infinite" };
-  if (code <= 48) return { animation: "pulse 3s ease-in-out infinite" };
-  if (code <= 57) return { animation: "sway 3s ease-in-out infinite" };
-  if (code <= 67) return { animation: "sway 3s ease-in-out infinite" };
-  if (code <= 77) return { animation: "bounce 4s ease-in-out infinite" };
-  if (code <= 82) return { animation: "sway 3s ease-in-out infinite" };
-  if (code <= 86) return { animation: "bounce 4s ease-in-out infinite" };
-  if (code <= 99) return { animation: "pulse 1.5s ease-in-out infinite" };
-  return { animation: "float 4s ease-in-out infinite" };
+// ── THE GLYPHS WEAR REAL WEATHER COLOUR, NOT STATUS INK ──────────────────
+//
+// They always tried to: the branches below said text-amber-400 for the sun,
+// text-sky-400 for drizzle, text-blue-400 for rain, text-violet-400 for a
+// storm. Then stage 1 remapped every step of Tailwind's raw palette onto the
+// six status inks, and the result was a SUN THAT RENDERS BROWN — #8A5115, the
+// warning ink — with drizzle, rain, freezing rain, snow and showers all
+// collapsed onto one #0F58C6. Five different skies in a single colour, and
+// the one everybody knows the real colour of got it wrong.
+//
+// §5b1 says an icon never introduces a colour, and that rule is about UI
+// glyphs standing beside a label whose ink they should inherit. These are not
+// that. They are a picture of the sky, on a picture of the sky, and they are
+// the one set of marks in the product where the colour IS the information —
+// which is why the values are governed --weather-* tokens rather than hex
+// literals, and why nothing outside this panel may reach for them.
+//
+// A shadow rather than a glow: every one of these now sits on a photograph-
+// dark sky, where the old drop-shadow-[0_0_6px_…] halos read as smudges.
+
+// The two conditions where the sky itself is visible are the two that have
+// to know the time of day: a bright sun over a 2 a.m. column is the single
+// most obviously wrong thing a weather strip can show, and it is what the
+// first live screenshot showed. Everything else looks the same at night —
+// rain is rain — so only clear and partly get a night face.
+function weatherGlyph(code: number, night = false) {
+  if (code === 0)
+    return night
+      ? { Icon: Moon, tone: "text-weather-snow" }
+      : { Icon: Sun, tone: "text-weather-sun" };
+  if (code <= 2)
+    return night
+      ? { Icon: CloudMoon, tone: "text-weather-snow" }
+      : { Icon: CloudSun, tone: "text-weather-sun" };
+  if (code === 3) return { Icon: Cloud, tone: "text-weather-cloud" };
+  if (code <= 48) return { Icon: CloudFog, tone: "text-weather-fog" };
+  if (code <= 57) return { Icon: CloudDrizzle, tone: "text-weather-rain" };
+  if (code <= 67) return { Icon: CloudRain, tone: "text-weather-rain" };
+  if (code <= 77) return { Icon: Snowflake, tone: "text-weather-snow" };
+  if (code <= 82) return { Icon: CloudRain, tone: "text-weather-rain" };
+  if (code <= 86) return { Icon: CloudSnow, tone: "text-weather-snow" };
+  if (code <= 99) return { Icon: CloudLightning, tone: "text-weather-bolt" };
+  return { Icon: Cloud, tone: "text-weather-cloud" };
 }
 
-function getWeatherIcon(code: number, size = "size-6", animated = false) {
-  const style = animated ? getAnimStyle(code) : undefined;
-  if (code === 0)
-    return (
-      <Sun
-        className={`${size} text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]`}
-        style={style}
-      />
-    );
-  if (code <= 3)
-    return (
-      <CloudSun
-        className={`${size} text-amber-300 drop-shadow-sm`}
-        style={style}
-      />
-    );
-  if (code <= 48)
-    return (
-      <CloudFog
-        className={`${size} text-slate-400 drop-shadow-sm`}
-        style={style}
-      />
-    );
-  if (code <= 57)
-    return (
-      <CloudDrizzle
-        className={`${size} text-sky-400 drop-shadow-sm`}
-        style={style}
-      />
-    );
-  if (code <= 67)
-    return (
-      <CloudRain
-        className={`${size} text-blue-400 drop-shadow-[0_0_4px_rgba(96,165,250,0.3)]`}
-        style={style}
-      />
-    );
-  if (code <= 77)
-    return (
-      <Snowflake
-        className={`${size} text-sky-300 drop-shadow-[0_0_4px_rgba(125,211,252,0.4)]`}
-        style={style}
-      />
-    );
-  if (code <= 82)
-    return (
-      <CloudRain
-        className={`${size} text-blue-500 drop-shadow-[0_0_4px_rgba(59,130,246,0.3)]`}
-        style={style}
-      />
-    );
-  if (code <= 86)
-    return (
-      <CloudSnow
-        className={`${size} text-sky-400 drop-shadow-sm`}
-        style={style}
-      />
-    );
-  if (code <= 99)
-    return (
-      <CloudLightning
-        className={`${size} text-violet-400 drop-shadow-[0_0_6px_rgba(167,139,250,0.4)]`}
-        style={style}
-      />
-    );
+function getWeatherIcon(code: number, size = "size-6", night = false) {
+  const { Icon, tone } = weatherGlyph(code, night);
   return (
-    <Cloud className={`${size} text-slate-400 drop-shadow-sm`} style={style} />
+    <Icon
+      className={cn(size, tone, "drop-shadow-[0_1px_3px_rgba(4,14,30,0.55)]")}
+    />
   );
 }
 
@@ -152,15 +127,10 @@ function codeToWeatherType(
   return "cloudy";
 }
 
-function getCardBg(code: number): string {
-  if (code === 0) return "bg-amber-50/60 border-l-amber-300 border-l-3";
-  if (code <= 3) return "bg-slate-50/60 border-l-slate-300 border-l-3";
-  if (code <= 48) return "bg-slate-50/50 border-l-slate-300 border-l-3";
-  if (code <= 67) return "bg-blue-50/60 border-l-blue-300 border-l-3";
-  if (code <= 86) return "bg-sky-50/60 border-l-sky-300 border-l-3";
-  if (code <= 99) return "bg-violet-50/60 border-l-violet-300 border-l-3";
-  return "";
-}
+// The card's field used to be a flat --wash-* tint chosen from the WMO code.
+// It is a drawn sky now — see weather-sky.tsx, which carries the reasoning and
+// the reason the four status washes were the wrong four colours for fourteen
+// conditions.
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-US", {
@@ -184,6 +154,8 @@ interface HourlyEntry {
   temperature: number;
   weatherCode: number;
   precipitationProbability: number;
+  /** Per hour, not per card — a forecast strip crosses sunset. */
+  isDay: boolean;
 }
 
 type TriggeredRule = WeatherWarningRule & {
@@ -274,6 +246,12 @@ interface WeatherData {
     humidity: number;
     windSpeed: number;
     weatherCode: number;
+    /**
+     * Whether the sun is up AT THE FACILITY, from the API rather than from
+     * the viewer's clock. A manager in Vancouver checking a Montreal site at
+     * 21 h would otherwise get a bright blue afternoon sky over a dark city.
+     */
+    isDay: boolean;
   };
   hourly: HourlyEntry[];
   fetchedAt: number;
@@ -334,7 +312,7 @@ export function WeatherWidget() {
 
       // Fetch weather
       const weatherRes = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,apparent_temperature&hourly=temperature_2m,weather_code,precipitation_probability&forecast_days=2&timezone=auto&temperature_unit=${unit}`,
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,apparent_temperature,is_day&hourly=temperature_2m,weather_code,precipitation_probability,is_day&forecast_days=2&timezone=auto&temperature_unit=${unit}`,
       );
       const weatherData = await weatherRes.json();
 
@@ -351,6 +329,7 @@ export function WeatherWidget() {
           weatherCode: weatherData.hourly.weather_code[currentHourIndex + i],
           precipitationProbability:
             weatherData.hourly.precipitation_probability[currentHourIndex + i],
+          isDay: weatherData.hourly.is_day[currentHourIndex + i] !== 0,
         }));
 
       const result: WeatherData = {
@@ -360,6 +339,7 @@ export function WeatherWidget() {
           humidity: weatherData.current.relative_humidity_2m,
           windSpeed: Math.round(weatherData.current.wind_speed_10m),
           weatherCode: weatherData.current.weather_code,
+          isDay: weatherData.current.is_day !== 0,
         },
         hourly: hourlySlice,
         fetchedAt: Date.now(),
@@ -476,17 +456,26 @@ export function WeatherWidget() {
   if (collapsed) {
     return (
       <Card
-        className={`cursor-pointer border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${getCardBg(data.current.weatherCode)}`}
+        className="border-line/40 shadow-card relative cursor-pointer overflow-hidden transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-md"
         onClick={toggleCollapsed}
       >
-        <CardContent className="flex items-center justify-between px-4 py-2.5">
+        <WeatherSky
+          kind={skyKind(data.current.weatherCode)}
+          night={!data.current.isDay}
+        />
+        {/* Everything above the sky is white — see the note on the full view. */}
+        <CardContent className="relative flex items-center justify-between px-4 py-2.5 text-white">
           <div className="flex items-center gap-3">
-            {getWeatherIcon(data.current.weatherCode, "size-5", true)}
-            <span className="text-lg font-bold tabular-nums">
+            {getWeatherIcon(
+              data.current.weatherCode,
+              "size-5",
+              !data.current.isDay,
+            )}
+            <span className="text-lg font-bold tabular-nums drop-shadow-[0_1px_3px_rgba(4,14,30,0.6)]">
               {data.current.temperature}
               {unitSymbol}
             </span>
-            <span className="text-muted-foreground text-sm">
+            <span className="text-sm text-white/80">
               {city}, {state}
             </span>
           </div>
@@ -495,15 +484,15 @@ export function WeatherWidget() {
               <Badge
                 className={
                   warnings[0].severity === "critical"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-amber-100 text-amber-800"
+                    ? "text-destructive bg-white"
+                    : "text-warning bg-white"
                 }
               >
                 <AlertTriangle className="mr-1 size-3" />
                 {warnings.length} alert{warnings.length !== 1 ? "s" : ""}
               </Badge>
             )}
-            <ChevronDown className="text-muted-foreground size-4" />
+            <ChevronDown className="size-4 text-white/80" />
           </div>
         </CardContent>
       </Card>
@@ -513,29 +502,43 @@ export function WeatherWidget() {
   // Full view
   return (
     <>
+      {/* ── THE PANEL IS A WINDOW, NOT A CARD ────────────────────────────
+          It reports the sky, so it shows the sky: the condition and the time
+          of day AT THE FACILITY choose the scene, and everything on top of it
+          is white with a shadow, the way every weather app on a phone does
+          it. The scrim inside WeatherSky is what keeps the readout legible
+          over a bright horizon. */}
       <Card
-        className={`overflow-hidden border-slate-200 transition-all duration-500 ${getCardBg(data.current.weatherCode)}`}
+        className="border-line/40 shadow-card relative overflow-hidden"
         style={{ animation: "slideIn 0.4s ease-out" }}
       >
-        <CardContent className="p-0">
+        <WeatherSky
+          kind={skyKind(data.current.weatherCode)}
+          night={!data.current.isDay}
+        />
+        <CardContent className="relative p-0 text-white">
           {/* Main weather row */}
           <div className="flex items-center justify-between px-5 py-4">
             {/* Left: current weather */}
             <div className="flex items-center gap-4">
-              {getWeatherIcon(data.current.weatherCode, "size-10", true)}
-              <div>
+              {getWeatherIcon(
+                data.current.weatherCode,
+                "size-10",
+                !data.current.isDay,
+              )}
+              <div className="[text-shadow:0_1px_4px_rgba(4,14,30,0.55)]">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold tracking-tight text-slate-800 tabular-nums">
+                  <span className="text-4xl font-bold tracking-tight tabular-nums">
                     {data.current.temperature}
                   </span>
-                  <span className="text-lg font-medium text-slate-400">
+                  <span className="text-lg font-medium text-white/70">
                     {unitSymbol}
                   </span>
                 </div>
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="text-sm font-semibold">
                   {getWeatherName(data.current.weatherCode)}
                 </p>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-white/75">
                   Feels like {data.current.feelsLike}
                   {unitSymbol} · Wind {data.current.windSpeed} km/h · {city},{" "}
                   {state}
@@ -543,24 +546,45 @@ export function WeatherWidget() {
               </div>
             </div>
 
-            {/* Right: 6-hour forecast — scrolls on mobile rather than being
-                clipped (needs ~330px, viewport is 390px minus the current
-                conditions block). */}
+            {/* Right: the hourly forecast — scrolls on mobile rather than
+                being clipped (six hours needs ~330px, viewport is 390px minus
+                the current-conditions block).
+
+                ── TWELVE HOURS ON A WIDE SCREEN, SIX BELOW ─────────────────
+
+                Six hours in a fixed block left ~800px of nothing between the
+                temperature and the forecast on a 2552px monitor. Capping the
+                page was tried and was worse — it moved the void to the outside
+                edges. So the card USES the width instead: hours seven to
+                twelve render from 2xl (1536px) and are display:none below it.
+
+                More forecast, not more gap. And it is real content rather than
+                six items stretched apart, which is the difference between a
+                filled row and a padded one. */}
             <div className="flex max-w-full items-center gap-1 overflow-x-auto">
-              <div className="border-border mr-3 hidden h-12 border-l sm:block" />
-              {data.hourly.slice(0, 6).map((h, i) => (
+              <div className="mr-3 hidden h-12 border-l border-white/25 sm:block" />
+              {data.hourly.slice(0, 12).map((h, i) => (
                 <div
                   key={i}
-                  className="flex flex-col items-center gap-0.5 px-2"
+                  className={cn(
+                    "flex flex-col items-center gap-0.5 px-2",
+                    i >= 6 && "hidden 2xl:flex",
+                  )}
                   style={{
                     animation: `fadeSlideUp 0.3s ease-out ${i * 0.08}s both`,
                   }}
                 >
-                  <span className="text-[10px] font-medium text-slate-400">
+                  {/* 85 and a shadow, not 70 and none. The strip crosses
+                      whatever the sky is doing behind it — at 599px the sun
+                      lands squarely on the first column — and white at .70
+                      over #FFC23D is not a contrast anyone can read. The
+                      shadow is what makes one ink work on every sky, which
+                      is cheaper than moving the sun per breakpoint. */}
+                  <span className="text-[10px] font-medium text-white/85 [text-shadow:0_1px_3px_rgba(4,14,30,0.7)]">
                     {formatTime(h.time)}
                   </span>
-                  {getWeatherIcon(h.weatherCode, "size-5", true)}
-                  <span className="text-sm font-semibold text-slate-700 tabular-nums">
+                  {getWeatherIcon(h.weatherCode, "size-5", !h.isDay)}
+                  <span className="text-sm font-semibold tabular-nums drop-shadow-[0_1px_3px_rgba(4,14,30,0.6)]">
                     {Math.round(h.temperature)}°
                   </span>
                 </div>
@@ -571,12 +595,12 @@ export function WeatherWidget() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-6"
+                  className="size-6 text-white hover:bg-white/15 hover:text-white"
                   onClick={toggleCollapsed}
                 >
                   <ChevronUp className="size-3.5" />
                 </Button>
-                <span className="text-muted-foreground text-[9px]">
+                <span className="text-[9px] text-white/70">
                   {minutesAgo < 1 ? "now" : `${minutesAgo}m`}
                 </span>
               </div>
