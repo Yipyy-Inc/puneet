@@ -67,6 +67,31 @@ interface ToneStyle {
   badge: string;
   /** White, except on orange, where §1 says body ink (6.90:1). */
   glyph: string;
+  /**
+   * SELECTED wears the tile's OWN ink, not the primary.
+   *
+   * §6 rule 1 lists four ways to signal state — "weight, a step of ink, a
+   * full 2px ring, or a solid fill" — and this used to take the ring. The
+   * ring is blue by definition (`var(--primary)`), which put a blue outline
+   * around an orange presence tile and a violet departures tile: the
+   * selection read as a fifth colour arriving rather than as THIS tile being
+   * chosen. So it takes the OTHER sanctioned signal, a step of ink, in the
+   * colour the tile already is.
+   *
+   * `brand` maps to `--warning` and not to orange, because §2b is explicit:
+   * orange is a surface, never an ink, and "where words must read as orange
+   * they are #8A5115 on white". The disc above stays solid orange, so the
+   * territory is intact.
+   */
+  ink: string;
+  /**
+   * The 1px full-box hairline of that same ink — §6 rule 2's own
+   * prescription, "a status is its glyph, its word, its ink and a 1px
+   * hairline of that same ink". A full border is not an edge accent; rule 1
+   * bans the ONE-SIDED line, which is why this is `border` and never
+   * `border-l`.
+   */
+  line: string;
 }
 
 // ── THE TILE IS WASHED AND THE DISC IS SOLID ─────────────────────────────
@@ -90,30 +115,53 @@ const TONE_STYLES: Record<KpiTone, ToneStyle> = {
     wash: "yy-wash-primary",
     badge: "bg-primary",
     glyph: "text-white",
+    ink: "text-primary",
+    line: "border-primary",
   },
   emerald: {
     wash: "yy-wash-success",
     badge: "bg-success",
     glyph: "text-white",
+    ink: "text-success",
+    line: "border-success",
   },
-  rose: { wash: "yy-wash-error", badge: "bg-bad", glyph: "text-white" },
+  rose: {
+    wash: "yy-wash-error",
+    badge: "bg-bad",
+    glyph: "text-white",
+    ink: "text-bad",
+    line: "border-bad",
+  },
   amber: {
     wash: "yy-wash-warning",
     badge: "bg-warning",
     glyph: "text-white",
+    ink: "text-warning",
+    line: "border-warning",
   },
   violet: {
     wash: "yy-wash-violet",
     badge: "bg-violet",
     glyph: "text-white",
+    ink: "text-violet",
+    line: "border-violet",
   },
   // Five washes exist and neutral is not one of them, so this tile is plain
   // white — which is rule 2's default answer anyway.
-  slate: { wash: "", badge: "bg-ink-secondary", glyph: "text-white" },
+  slate: {
+    wash: "",
+    badge: "bg-ink-secondary",
+    glyph: "text-white",
+    ink: "text-ink-secondary",
+    line: "border-ink-secondary",
+  },
   brand: {
     wash: "yy-wash-warning",
     badge: "bg-brand-orange",
     glyph: "text-body-ink",
+    // §2b: orange is a surface, never an ink. The words step to #8A5115.
+    ink: "text-warning",
+    line: "border-warning",
   },
 };
 
@@ -184,9 +232,36 @@ export function KpiTile({
         applied
           ? "bg-primary border-transparent shadow-(--sh-cta)"
           : cn("bg-card", styles.wash),
-        // §5s Selected: a full 2px ring, never a line on one side.
+        // ── SELECTED IS LIFTED AND IN ITS OWN INK, NOT RINGED IN BLUE ────
+        //
+        // It was `inset 0 0 0 2px var(--primary)`. That is one of §6 rule 1's
+        // four sanctioned signals, so it was not wrong — but the ring is
+        // ALWAYS blue, and these tiles are not: selecting the orange presence
+        // tile drew a blue box around orange, and selecting the violet one
+        // drew a blue box around violet. The outline read as a new colour
+        // arriving rather than as this tile being the chosen one.
+        //
+        // So it takes rule 1's other signals instead, all three at once and
+        // none of them invented:
+        //
+        //   · A STEP OF INK — the label and the figure move to the tile's own
+        //     status ink (see `ink` in the tone table). Rule 1, verbatim.
+        //   · A 1px HAIRLINE OF THAT SAME INK, full box. Rule 2's own
+        //     sentence. A full border is not an edge accent — rule 1 bans the
+        //     one-sided line, which is why nothing here says `border-l`.
+        //   · IT RESTS LIFTED. The tile sits at the same -2px and the same
+        //     shadow the hover already used, so a selected tile physically
+        //     stands out of the row. No new distance, no new shadow, no
+        //     scale — scaling would resize a grid cell and drag its
+        //     neighbours' baselines with it.
+        //
+        // Exactly one shadow class still reaches the element; see the note
+        // above about tailwind-merge keeping both.
         active && !applied
-          ? "border-transparent shadow-[inset_0_0_0_2px_var(--primary),var(--sh)]"
+          ? cn(
+              styles.line,
+              "-translate-y-0.5 shadow-[0_16px_30px_-18px_rgba(10,27,51,0.4)] motion-reduce:translate-y-0",
+            )
           : !applied && "shadow-card",
         isInteractive && [
           "cursor-pointer",
@@ -221,7 +296,7 @@ export function KpiTile({
               applied
                 ? "text-white/80"
                 : active
-                  ? "text-primary-hover"
+                  ? styles.ink
                   : "text-ink-secondary",
             )}
           >
@@ -230,11 +305,7 @@ export function KpiTile({
           <p
             className={cn(
               "text-[30px] leading-[1.1] font-bold tracking-[-0.02em] tabular-nums",
-              applied
-                ? "text-white"
-                : active
-                  ? "text-primary-hover"
-                  : "text-body-ink",
+              applied ? "text-white" : active ? styles.ink : "text-body-ink",
             )}
           >
             {value}
