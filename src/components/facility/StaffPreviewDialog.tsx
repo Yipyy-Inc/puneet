@@ -79,7 +79,7 @@ export function StaffPreviewDialog({
 function PreviewBanner({ onClose }: { onClose: () => void }) {
   const preview = useStaffPreview();
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-300 bg-amber-100 px-4 py-2 text-amber-900 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-200">
+    <div className="flex shrink-0 items-center justify-between gap-3 border border-amber-300 bg-amber-100 px-4 py-2 text-amber-900 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-200">
       <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
         <Eye className="size-4 shrink-0" />
         <span className="truncate">

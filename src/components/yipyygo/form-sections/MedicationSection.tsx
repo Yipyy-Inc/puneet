@@ -345,7 +345,7 @@ export function MedicationSection({
 
                   {/* Expanded details */}
                   {isExpanded && (
-                    <div className="space-y-4 border-t border-violet-100 px-4 pb-4">
+                    <div className="border-border space-y-4 border-t px-4 pb-4">
                       {/* Name + Purpose */}
                       <div className="grid grid-cols-1 gap-3 pt-3 sm:grid-cols-2">
                         <div className="space-y-1">

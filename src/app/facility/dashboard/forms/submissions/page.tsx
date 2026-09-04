@@ -283,7 +283,7 @@ export default function SubmissionsInboxPage() {
                     return (
                       <tr
                         key={row.id}
-                        className={`hover:bg-muted/50 cursor-pointer border-b ${awaiting ? "border-l-primary border-l-2 font-medium" : ""}`}
+                        className={`hover:bg-muted/50 cursor-pointer border-b ${awaiting ? "text-primary font-bold" : ""}`}
                         onClick={() =>
                           router.push(
                             `/facility/dashboard/forms/submissions/${row.id}`,

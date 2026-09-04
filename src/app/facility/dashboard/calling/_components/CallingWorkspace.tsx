@@ -1743,7 +1743,7 @@ export function CallingWorkspace({
                           return (
                             <div
                               key={call.id}
-                              className={`hover:bg-muted/50 flex items-center transition-colors ${isSelected ? "bg-primary/5 border-primary border-l-2" : ""}`}
+                              className={`hover:bg-muted/50 flex items-center transition-colors ${isSelected ? "bg-primary/5 shadow-[inset_0_0_0_2px_var(--primary)]" : ""}`}
                             >
                               <button
                                 type="button"

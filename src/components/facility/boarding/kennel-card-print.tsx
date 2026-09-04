@@ -172,7 +172,7 @@ export function KennelCardTemplate({
   return (
     <div className="w-[640px] bg-white p-6 font-sans text-black print:w-full">
       {/* Header */}
-      <div className="flex items-start gap-4 border-b-2 border-gray-800 pb-4">
+      <div className="flex items-start gap-4 border-b border-gray-800 pb-4">
         <div className="flex size-28 shrink-0 items-center justify-center rounded-xl bg-gray-100">
           <PawPrint className="size-14 text-gray-400" />
         </div>

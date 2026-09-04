@@ -277,7 +277,7 @@ function PetPickerDialog({
           </DialogPrimitive.Description>
 
           {/* Header */}
-          <div className="flex items-center gap-3 rounded-t-xl border-b border-orange-100 bg-orange-50 px-4 py-3 dark:border-orange-900/50 dark:bg-orange-900/20">
+          <div className="border-border flex items-center gap-3 rounded-t-xl border-b bg-orange-50 px-4 py-3 dark:bg-orange-900/20">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/40">
               <PawPrint className="size-4 text-orange-600 dark:text-orange-400" />
             </div>
@@ -438,7 +438,7 @@ function StaffPickerDialog({
           </DialogPrimitive.Description>
 
           {/* Header */}
-          <div className="flex items-center gap-3 rounded-t-xl border-b border-blue-100 bg-blue-50 px-4 py-3 dark:border-blue-900/50 dark:bg-blue-900/20">
+          <div className="border-border flex items-center gap-3 rounded-t-xl border-b bg-blue-50 px-4 py-3 dark:bg-blue-900/20">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/40">
               <Users className="size-4 text-blue-600 dark:text-blue-400" />
             </div>

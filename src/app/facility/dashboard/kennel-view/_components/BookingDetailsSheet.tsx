@@ -309,7 +309,7 @@ export function BookingDetailsSheet({
                         </div>
                       )}
                       {booking.specialRequests && (
-                        <p className="text-muted-foreground border-l-2 pl-2 text-xs italic">
+                        <p className="text-muted-foreground border-border border-l pl-2 text-xs italic">
                           {booking.specialRequests}
                         </p>
                       )}

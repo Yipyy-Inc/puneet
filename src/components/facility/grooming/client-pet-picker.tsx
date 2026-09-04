@@ -486,7 +486,7 @@ export function ClientPetPicker({ value, onChange }: ClientPetPickerProps) {
                     )}
                   </div>
                   {quickEditOpen && (
-                    <div className="mt-2.5 grid grid-cols-2 gap-2.5 border-t border-yellow-200 pt-2.5 dark:border-yellow-800">
+                    <div className="border-border mt-2.5 grid grid-cols-2 gap-2.5 border-t pt-2.5">
                       {!value.petSize && (
                         <div>
                           <Label className="text-xs">Size</Label>

@@ -493,7 +493,7 @@ function ReportCardPanel({
 
         {/* Session summary — verbatim from the completion log ─────────── */}
         {card.sessionSummary && (
-          <div className="rounded-lg border-l-2 border-l-indigo-300 bg-indigo-50/40 px-3 py-2.5">
+          <div className="rounded-lg border border-indigo-300 px-3 py-2.5">
             <p className="mb-1 inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-indigo-700 uppercase">
               <Quote className="size-3" />
               {isGraduation ? "Series wrap-up" : "Session summary"}

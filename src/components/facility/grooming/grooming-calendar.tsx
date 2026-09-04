@@ -1143,7 +1143,7 @@ function AppointmentBlock({
         className="w-72 p-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-red-200 bg-red-50 px-3 py-2 dark:border-red-900 dark:bg-red-950/30">
+        <div className="border-border border-b bg-red-50 px-3 py-2 dark:bg-red-950/30">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-red-800 dark:text-red-200">
             <AlertTriangle className="size-3.5" />
             {alertCount} alert note{alertCount > 1 ? "s" : ""}

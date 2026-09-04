@@ -999,19 +999,19 @@ export function KennelCalendarView({
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <div className="flex items-center gap-2">
-          <div className="size-4 rounded-sm border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-900/30" />
+          <div className="size-4 rounded-sm border border-amber-500 bg-amber-50" />
           <span className="text-muted-foreground">Pending</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="size-4 rounded-sm border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-900/30" />
+          <div className="size-4 rounded-sm border border-blue-500 bg-blue-50" />
           <span className="text-muted-foreground">Confirmed</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="size-4 rounded-sm border-l-4 border-l-emerald-500 bg-emerald-50 dark:bg-emerald-900/30" />
+          <div className="size-4 rounded-sm border border-emerald-500 bg-emerald-50" />
           <span className="text-muted-foreground">Checked-in</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="size-4 rounded-sm border-l-4 border-l-slate-400 bg-slate-100 dark:bg-slate-800/40" />
+          <div className="size-4 rounded-sm border border-slate-400 bg-slate-100" />
           <span className="text-muted-foreground">Checked-out</span>
         </div>
         <div className="flex items-center gap-2">

@@ -88,7 +88,7 @@ export function DailyCarePrintSheet({
       <table className="w-full border-collapse text-[11px] leading-snug">
         <thead>
           <tr>
-            <th colSpan={2} className="border-b-2 border-black pb-1 text-left">
+            <th colSpan={2} className="border-b border-black pb-1 text-left">
               <span className="text-[12px] font-bold">
                 {facilityName} · Daily Care · {dateLabel} · Printed at{" "}
                 {printedAt || "—"} by {staffName}

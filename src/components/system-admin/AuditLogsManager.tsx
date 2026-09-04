@@ -1278,7 +1278,7 @@ export function AuditLogsManager() {
                         ) => (
                           <div
                             key={index}
-                            className="border-primary border-l-2 pl-4"
+                            className="border-border border-l pl-4"
                           >
                             <p className="text-sm font-medium">
                               {change.field}

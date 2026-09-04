@@ -76,7 +76,7 @@ export function ImpersonationBanner() {
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-300 bg-amber-100 px-4 py-2 text-amber-900 sm:px-6 dark:border-amber-700/60 dark:bg-amber-950/50 dark:text-amber-200">
+    <div className="flex flex-wrap items-center justify-between gap-2 border border-amber-300 bg-amber-100 px-4 py-2 text-amber-900 sm:px-6 dark:border-amber-700/60 dark:bg-amber-950/50 dark:text-amber-200">
       <span className="flex items-center gap-2 text-sm">
         <ShieldAlert className="size-4 shrink-0" />
         <span>

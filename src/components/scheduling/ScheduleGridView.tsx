@@ -216,7 +216,11 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
             className="pointer-events-none absolute top-0 bottom-0 z-10"
             style={{ left: todayLeftCalc }}
           >
-            <div className="absolute inset-y-0 -translate-x-1/2 border-l-2 border-dashed border-indigo-500/40" />
+            {/* §2b territory 4 — NOW. Today's marker is one of the five things
+              orange owns, and it was indigo, which reads as an action. Drawn as
+              a 2px filled rule rather than a left border, so §6 rule 1 never
+              applies to it in the first place. */}
+            <div className="bg-brand-orange absolute inset-y-0 w-0.5 -translate-x-1/2" />
           </div>
         )}
         {/* ─── Header row ───────────────────────────────────── */}
@@ -338,7 +342,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
         {/* ─── Open shifts row (anchored at the bottom) ───── */}
         {hasOpenShifts && (
           <Fragment>
-            <div className="border-border/50 sticky bottom-[52px] left-0 z-30 flex items-center gap-3 border-t-2 border-r border-b border-dashed bg-amber-50 px-4 py-3 backdrop-blur-md dark:border-amber-700/40 dark:bg-amber-950/40">
+            <div className="border-border/50 sticky bottom-[52px] left-0 z-30 flex items-center gap-3 border-t border-r border-b border-dashed bg-amber-50 px-4 py-3 backdrop-blur-md dark:border-amber-700/40 dark:bg-amber-950/40">
               <div className="flex size-10 items-center justify-center rounded-full border border-dashed border-amber-400 bg-white shadow-sm dark:bg-amber-950/30">
                 <UserX className="size-4 text-amber-600" />
               </div>
@@ -397,14 +401,14 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
                 </div>
               );
             })}
-            <div className="border-border/50 sticky bottom-[52px] z-20 flex items-center justify-center border-t-2 border-b border-l border-dashed bg-amber-50/40 px-2 backdrop-blur-md dark:border-amber-700/40 dark:bg-amber-950/10">
+            <div className="border-border/50 sticky bottom-[52px] z-20 flex items-center justify-center border-t border-b border-l border-dashed bg-amber-50/40 px-2 backdrop-blur-md dark:border-amber-700/40 dark:bg-amber-950/10">
               <span className="text-muted-foreground text-xs">—</span>
             </div>
           </Fragment>
         )}
 
         {/* ─── Daily totals row (anchored at the bottom) ───── */}
-        <div className="border-border/60 sticky bottom-0 left-0 z-40 flex h-[52px] items-center gap-2 border-t-2 border-r bg-slate-50 px-4 backdrop-blur-md dark:bg-slate-900">
+        <div className="border-border/60 sticky bottom-0 left-0 z-40 flex h-[52px] items-center gap-2 border-t border-r bg-slate-50 px-4 backdrop-blur-md dark:bg-slate-900">
           <div className="bg-background flex size-7 items-center justify-center rounded-full border shadow-sm">
             <Sigma className="size-3.5 text-indigo-600 dark:text-indigo-400" />
           </div>
@@ -447,7 +451,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
             </div>
           );
         })}
-        <div className="border-border/60 sticky right-0 bottom-0 z-30 flex h-[52px] items-center justify-center border-t-2 border-b border-l bg-indigo-50/80 px-2 backdrop-blur-md dark:bg-indigo-950/30">
+        <div className="border-border/60 sticky right-0 bottom-0 z-30 flex h-[52px] items-center justify-center border-t border-b border-l bg-indigo-50/80 px-2 backdrop-blur-md dark:bg-indigo-950/30">
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="cursor-default rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-bold text-white tabular-nums shadow-sm dark:bg-indigo-500">

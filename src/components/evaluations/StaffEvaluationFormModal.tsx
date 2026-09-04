@@ -1127,7 +1127,7 @@ export function StaffEvaluationFormModal({
         {saved && evaluationReportCard.enabled && (
           <div className="overflow-hidden rounded-3xl border border-violet-200/80 bg-white shadow-sm">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-violet-100 bg-linear-to-r from-violet-50 via-white to-sky-50 px-5 py-4">
+            <div className="border-border flex items-center justify-between border-b bg-linear-to-r from-violet-50 via-white to-sky-50 px-5 py-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex size-10 items-center justify-center rounded-2xl bg-linear-to-br from-violet-500 to-sky-500 text-white shadow-sm">
                   <Sparkles className="size-5" />

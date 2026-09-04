@@ -307,7 +307,7 @@ export function GenericSidebar({
                       </button>
                     </SidebarGroupLabel>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="border-sidebar-border data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down ml-3 overflow-hidden border-l-2 pl-3">
+                  <CollapsibleContent className="border-sidebar-border data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down ml-3 overflow-hidden border-l pl-3">
                     <SidebarGroupContent>
                       <SidebarMenu className="gap-0.5">
                         {section.items.map((item) => {

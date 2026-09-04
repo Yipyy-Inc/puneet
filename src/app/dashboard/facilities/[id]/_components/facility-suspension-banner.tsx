@@ -23,7 +23,7 @@ export function FacilitySuspensionBanner({
   if (!flag || status === "suspended") return null;
 
   return (
-    <div className="border-b border-rose-500/30 bg-rose-500/10 px-6 py-3">
+    <div className="border border-rose-500/30 bg-rose-500/10 px-6 py-3">
       <div className="flex flex-wrap items-center gap-3">
         <ShieldAlert className="size-5 shrink-0 text-rose-600 dark:text-rose-400" />
         <div className="min-w-0 flex-1">

@@ -51,7 +51,7 @@ export function RegisterCloseWatcher({ staffId }: { staffId: string }) {
   if (!session || dismissed || !isPastCloseTime(hours)) return null;
 
   return (
-    <div className="flex items-center gap-3 border-b border-amber-300 bg-amber-100 px-4 py-2 text-sm text-amber-900">
+    <div className="flex items-center gap-3 border border-amber-300 bg-amber-100 px-4 py-2 text-sm text-amber-900">
       <Vault className="size-4 shrink-0" />
       <span className="flex-1">
         It&apos;s past closing time

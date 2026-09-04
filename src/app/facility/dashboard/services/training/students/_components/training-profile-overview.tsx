@@ -281,7 +281,7 @@ export function TrainingProfileOverview({
     <div className="space-y-4">
       {pinnedNote && (
         <section
-          className="rounded-xl border-l-4 border-amber-400 bg-amber-50/60 px-4 py-3 shadow-sm"
+          className="rounded-xl border border-amber-400 px-4 py-3 shadow-sm"
           aria-label="Pinned trainer note"
         >
           <div className="flex items-start gap-3">

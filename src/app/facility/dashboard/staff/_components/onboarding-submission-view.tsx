@@ -341,7 +341,7 @@ export function OnboardingSubmissionReview({
             <SubmittedData task={task} data={section?.data ?? {}} />
 
             {flagged && (
-              <p className="text-muted-foreground mt-2 border-l-2 border-amber-400 pl-2 text-xs italic">
+              <p className="text-muted-foreground mt-2 rounded-md border border-amber-400 px-2 py-1 text-xs italic">
                 “{flagged.note}”
               </p>
             )}

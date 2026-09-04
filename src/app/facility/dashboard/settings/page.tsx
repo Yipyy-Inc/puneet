@@ -709,7 +709,7 @@ function LanguageSettingsCard() {
             </div>
 
             {localLanguageSettings.customerLanguagePreferenceEnabled && (
-              <div className="space-y-2 border-t border-emerald-200/70 pt-3">
+              <div className="border-border space-y-2 border-t pt-3">
                 <p className="text-xs font-medium text-emerald-900">
                   Languages available to customers
                 </p>

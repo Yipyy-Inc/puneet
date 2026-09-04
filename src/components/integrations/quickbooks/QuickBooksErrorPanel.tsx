@@ -210,7 +210,7 @@ export function QuickBooksErrorPanel({
           {open && (
             <div className="space-y-3">
               {retryable.length > 1 && (
-                <div className="flex items-center gap-3 border-t border-rose-500/20 pt-3">
+                <div className="border-border flex items-center gap-3 border-t pt-3">
                   <Button
                     size="sm"
                     disabled={busy !== null}
@@ -231,7 +231,7 @@ export function QuickBooksErrorPanel({
                 </div>
               )}
 
-              <ul className="divide-y divide-rose-500/15 border-t border-rose-500/20">
+              <ul className="border-border divide-y divide-rose-500/15 border-t">
                 {entries.map((entry) => (
                   <li
                     key={entry.job.id}

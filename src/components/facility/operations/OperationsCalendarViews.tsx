@@ -650,7 +650,7 @@ export function EventChip({
 
         {/* Completed indicator */}
         {isCompletedEvent && (
-          <div className="border-t border-emerald-100 bg-emerald-50 px-4 py-2">
+          <div className="border-border border-t bg-emerald-50 px-4 py-2">
             <div className="flex items-center justify-center gap-1.5 text-[12px] font-semibold text-emerald-600">
               <Check className="size-3.5" />
               Completed
@@ -1172,7 +1172,7 @@ export function ResourceColumnsView({
               </Badge>
             </div>
             {conflictCount > 0 && (
-              <div className="border-b border-rose-100 bg-rose-50 px-3 py-1">
+              <div className="border-border border-b bg-rose-50 px-3 py-1">
                 <p className="text-[11px] font-medium text-rose-600">
                   ⚠ {conflictCount} conflict(s)
                 </p>

@@ -41,7 +41,7 @@ export function BookingDepositPrompt({
 
   return (
     <div className="mx-1 mb-4 overflow-hidden rounded-xl border border-emerald-200 bg-linear-to-br from-emerald-50 to-emerald-100/40">
-      <div className="flex items-start gap-3 border-b border-emerald-200/70 bg-white/60 px-4 py-3">
+      <div className="border-border flex items-start gap-3 border-b bg-white/60 px-4 py-3">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
           <ShieldCheck className="size-4.5 text-emerald-700" />
         </div>

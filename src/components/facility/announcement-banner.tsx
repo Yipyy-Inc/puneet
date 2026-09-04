@@ -43,7 +43,7 @@ export function AnnouncementBanner({ facilityId }: { facilityId: number }) {
   const preview = stripHtml(urgent.body);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rose-300 bg-rose-100 px-4 py-2 text-rose-900 sm:px-6 dark:border-rose-900/60 dark:bg-rose-950/50 dark:text-rose-100">
+    <div className="flex flex-wrap items-center justify-between gap-2 border border-rose-300 bg-rose-100 px-4 py-2 text-rose-900 sm:px-6 dark:border-rose-900/60 dark:bg-rose-950/50 dark:text-rose-100">
       <span className="flex min-w-0 items-center gap-2 text-sm">
         <Megaphone className="size-4 shrink-0" />
         <span className="min-w-0">

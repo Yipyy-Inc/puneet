@@ -67,7 +67,7 @@ export function FeeByFacilityTable({ matrix }: { matrix: FeeMatrix }) {
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 font-semibold">
+            <tr className="border-t font-semibold">
               <td className="bg-card sticky left-0 px-2 py-2">
                 All facilities
               </td>

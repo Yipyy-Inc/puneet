@@ -389,10 +389,10 @@ export function ScheduleDayView({
           {/* Open shifts row — anchored at the bottom */}
           {openShifts.length > 0 && (
             <div
-              className="border-border/50 sticky bottom-0 z-20 grid border-t-2 border-b border-dashed bg-linear-to-r from-amber-50 via-amber-50/70 to-amber-50/30 backdrop-blur-md dark:border-amber-700/40 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-amber-950/10"
+              className="border-border/50 sticky bottom-0 z-20 grid border-t border-b border-dashed bg-linear-to-r from-amber-50 via-amber-50/70 to-amber-50/30 backdrop-blur-md dark:border-amber-700/40 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-amber-950/10"
               style={{ gridTemplateColumns: timelineGridTemplate }}
             >
-              <div className="flex items-center gap-3 border-r border-dashed border-amber-300/60 px-6 py-4 dark:border-amber-700/40">
+              <div className="border-border flex items-center gap-3 border-r border-dashed px-6 py-4">
                 <div className="flex size-10 items-center justify-center rounded-full border border-dashed border-amber-400 bg-white text-amber-600 shadow-sm dark:bg-amber-950/30">
                   <UserX className="size-4" />
                 </div>

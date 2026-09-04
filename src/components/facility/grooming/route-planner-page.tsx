@@ -740,7 +740,7 @@ export function RoutePlannerPage() {
                                   className="space-y-1"
                                 >
                                   {/* Drive segment from previous stop — time + km */}
-                                  <div className="text-muted-foreground ml-3 flex items-center gap-1.5 border-l-2 border-dashed pl-3 text-[11px]">
+                                  <div className="text-muted-foreground border-border ml-3 flex items-center gap-1.5 border-l border-dashed pl-3 text-[11px]">
                                     <ArrowRight className="size-3" />
                                     <span className="font-medium">
                                       {c.driveMinutesIn} min drive

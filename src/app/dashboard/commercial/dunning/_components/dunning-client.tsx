@@ -131,7 +131,7 @@ export function DunningClient() {
       {/* Flagged for suspension */}
       {flags.length > 0 && (
         <Card className="border-rose-500/20 p-0">
-          <div className="flex items-center gap-2 border-b border-rose-500/20 bg-rose-500/5 px-4 py-3">
+          <div className="border-border flex items-center gap-2 border-b bg-rose-500/5 px-4 py-3">
             <ShieldAlert className="size-4 text-rose-600 dark:text-rose-400" />
             <h2 className="text-sm font-semibold">
               Flagged for Suspension ({flags.length})
