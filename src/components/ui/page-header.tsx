@@ -43,11 +43,24 @@ interface PageHeaderProps {
   /** One line of context under the title. Optional and usually unnecessary. */
   description?: React.ReactNode;
   /**
-   * The inline rename affordance — pass `<PageHeaderRenameButton />`. Only
-   * where the object carries a name the user typed (a service, a saved view,
-   * a room), never on a fixed screen like "Bookings".
+   * What sits inline with the title, to the right of it.
+   *
+   * Two things legitimately live here, and both are §5b pattern 01's "sits
+   * inline with it":
+   *
+   *   - The rename affordance, `<PageHeaderRenameButton />`, where the object
+   *     carries a name the user typed — a service, a saved view, a room —
+   *     and never on a fixed screen like "Bookings".
+   *   - The status chips on an ENTITY page. A client, a facility or a pet is
+   *     titled by its own name and its state belongs beside that name, not
+   *     out on the right with the actions: "Amara Osei · Active" is one fact
+   *     about one record.
+   *
+   * It was called `rename` when stage 7 built it and nothing had used it yet.
+   * Broadened here rather than pressing status chips into a slot named for
+   * something else.
    */
-  rename?: React.ReactNode;
+  inline?: React.ReactNode;
   /** 40px outline controls. Never the prominent one. */
   secondary?: React.ReactNode;
   /**
@@ -62,7 +75,7 @@ interface PageHeaderProps {
 export function PageHeader({
   title,
   description,
-  rename,
+  inline,
   secondary,
   action,
   className,
@@ -87,7 +100,7 @@ export function PageHeader({
             </p>
           )}
         </div>
-        {rename}
+        {inline}
       </div>
       {(secondary || action) && (
         <div className="flex flex-wrap items-center gap-2.5">

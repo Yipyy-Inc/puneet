@@ -63,6 +63,7 @@ import { FacilityLogs } from "./_components/facility-logs";
 import { FacilityModules } from "./_components/facility-modules";
 import { FacilityReport } from "./_components/facility-report";
 import { FacilityData } from "./_components/facility-data";
+import { PageHeader } from "@/components/ui/page-header";
 
 const tabs = [
   {
@@ -283,9 +284,9 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
                 <Building className="size-6 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold tracking-tight">
-                  {facility.name}
-                </h1>
+                {/* A facility's own name — not translated (§5r) — with its
+                    state beside it rather than out with the actions. */}
+                <PageHeader title={facility.name} />
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <StatusBadge type="status" value={currentStatus} />
                   <StatusBadge type="plan" value={facility.plan} />

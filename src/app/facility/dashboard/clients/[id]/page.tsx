@@ -115,6 +115,7 @@ import {
   Settings as SettingsIcon,
   CalendarDays,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 // Compact badge styling for the Overview → Incidents section.
 const INCIDENT_SEVERITY_STYLES: Record<string, string> = {
@@ -600,22 +601,29 @@ export default function ClientDetailPage({
             )}
           </div>
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-3xl font-bold tracking-tight">
-                {client.name}
-              </h2>
-              <StatusBadge type="status" value={client.status} />
-              {clientBanRecord && (
-                <Badge variant="destructive" className="gap-1">
-                  <AlertTriangle className="size-3" />
-                  Banned
-                </Badge>
-              )}
-            </div>
-            <div className="text-muted-foreground mt-1 flex items-center gap-2">
-              <Building className="size-4" />
-              <span>{client.facility}</span>
-            </div>
+            {/* §5r: a client's name never passes through the locale layer,
+                and their state belongs beside it rather than out with the
+                actions — see the `inline` slot's note. */}
+            <PageHeader
+              title={client.name}
+              inline={
+                <div className="flex flex-wrap items-center gap-3">
+                  <StatusBadge type="status" value={client.status} />
+                  {clientBanRecord && (
+                    <Badge variant="destructive" className="gap-1">
+                      <AlertTriangle className="size-3" />
+                      Banned
+                    </Badge>
+                  )}
+                </div>
+              }
+              description={
+                <span className="flex items-center gap-2">
+                  <Building className="size-4" />
+                  {client.facility}
+                </span>
+              }
+            />
             {clientBanRecord && (
               <div className="border-destructive/20 bg-destructive/10 mt-2 rounded-md border p-2">
                 <p className="text-destructive text-xs font-medium">

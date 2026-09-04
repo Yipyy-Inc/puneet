@@ -38,6 +38,7 @@ import {
   UserCheck,
   ArrowLeft,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 // User type definitions
 type UserType = "platform" | "facility" | "client";
@@ -205,12 +206,12 @@ export default function ProfilePage() {
               </Link>
             </Button>
           </div>
-          <h1 className="text-foreground text-2xl font-bold tracking-tight lg:text-3xl">
-            Profile Settings
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your account and preferences
-          </p>
+          {/* Was `text-2xl … lg:text-3xl` — a title that changed size with the
+              viewport, which §1's one-title-per-screen rule does not do. */}
+          <PageHeader
+            title="Profile settings"
+            description="Manage your account and preferences"
+          />
         </div>
 
         {/* User Context Switcher */}
