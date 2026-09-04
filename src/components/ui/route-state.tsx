@@ -9,16 +9,36 @@ import { cn } from "@/lib/utils";
 // A whole view that is in ONE state — failed, missing, loading, gated.
 // docs/design-system/design-system.md §5d2 (the state ladder), §5d1, §5r.
 //
-// Every value below is measured off the reference page's own rendered
-// "In place — a whole view that failed" panel, which is the only place the
-// system draws this surface: card at --r-lg on --line/--card with --sh, 22px
-// padding, 24px gap, the pose in a 132 slot on the left, and a column of
-// glyph+heading / sentence / one 48px pill on the right.
+// ── TWO SURFACES, AND THE REFERENCE ONLY EVER DREW ONE ───────────────────
+//
+// The reference page draws this as a card: --r-lg on --line/--card with --sh,
+// 22px padding, 24px gap, the pose in a 132 slot on the LEFT and a column of
+// glyph+heading / sentence / one 48px pill on the right. Those values are
+// measured off it and they are reproduced exactly by `surface="card"`.
+//
+// But read the label above that panel: **"In place — a whole view that
+// failed."** In place means inside a layout, standing where a section used to
+// be. A card is right there, because it sits among other cards.
+//
+// Every caller in this repo is the other case. `app/loading.tsx`,
+// `error.tsx`, `not-found.tsx` and `forbidden.tsx` are ROUTE-level states
+// that own the entire viewport — `min-h-screen`, nothing else on the page —
+// and the reference never drew that. Rendering the in-place card there put a
+// small left-aligned panel adrift in an empty screen, which reads as a
+// fragment of a page that failed to finish rather than as a state.
+//
+// So `bare` is the default and the full-view answer: no card, no border, no
+// shadow, one centred column with the pose ABOVE the words. The state sits
+// directly on the ground, which is what a state that IS the whole page should
+// do. Nothing about the content changes — same pose at the same 132, same
+// glyph, same ink, same sentence, same single 48px control.
 //
 // ── HE IS NEVER THE MESSAGE (§5d1) ────────────────────────────────────────
 // The glyph, the status ink and the sentence carry it. `YipyyPose` collapses
 // its own slot when a file is missing, so deleting the image leaves a surface
 // that still reads — which is the stated definition of done for this stage.
+// That is why the pose can move above the text without anything being lost:
+// it was never the thing doing the talking.
 // ============================================================================
 
 type RouteStateAction =
@@ -47,6 +67,15 @@ export interface RouteStateProps {
    * not an option here: `YipyyPose` refuses it on the whole moment family.
    */
   spin?: boolean;
+  /**
+   * `bare` (default) is a route-level state that owns the whole viewport: a
+   * centred column on the ground, pose above the words.
+   *
+   * `card` is the reference page's "In place" panel, for a state standing
+   * where a SECTION used to be. Nothing uses it yet; it exists because the
+   * reference drew it and a section-level state will want it.
+   */
+  surface?: "bare" | "card";
   /** The centring box. Full-height at the root, shorter inside a layout. */
   className?: string;
 }
@@ -59,8 +88,11 @@ export function RouteState({
   description,
   action,
   spin = false,
+  surface = "bare",
   className,
 }: RouteStateProps) {
+  const carded = surface === "card";
+
   return (
     <main
       className={cn(
@@ -69,18 +101,33 @@ export function RouteState({
       )}
     >
       <div
-        // w-full, not shrink-to-fit: without it each state sized itself to its
-        // own longest line, so four cards that are one component came out four
-        // different widths and the one with no action collapsed narrow enough
-        // to wrap the pose above its own heading.
-        className={`border-line bg-card shadow-card flex w-full max-w-2xl flex-wrap items-center gap-6 rounded-2xl border p-[22px]`}
+        className={cn(
+          carded
+            ? // w-full, not shrink-to-fit: without it each state sized itself
+              // to its own longest line, so four cards that are one component
+              // came out four different widths and the one with no action
+              // collapsed narrow enough to wrap the pose above its heading.
+              "border-line bg-card shadow-card w-full max-w-2xl flex-row flex-wrap items-center gap-6 rounded-2xl border p-[22px]"
+            : // Bare: one centred column, pose on top. `max-w-md` keeps the
+              // sentence off the full width of a 1440px screen — the 38ch cap
+              // below does the real work, this stops the pose drifting from
+              // the text it belongs to.
+              "max-w-md flex-col items-center gap-6 text-center",
+          "flex",
+        )}
       >
         <div className="shrink-0">
           <YipyyPose name={pose} size={132} priority />
         </div>
         {/* basis-80 is the reference's `flex: 1 1 320px`; min-w-0 is the
-            flex-child rule every column in this repo needs (§6). */}
-        <div className="flex min-w-0 flex-1 basis-80 flex-col gap-[11px]">
+            flex-child rule every column in this repo needs (§6). Neither
+            applies to the bare column, which is already centred and sized. */}
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-[11px]",
+            carded ? "flex-1 basis-80" : "items-center",
+          )}
+        >
           <div className="flex items-center gap-[9px]">
             <Icon
               aria-hidden
@@ -110,7 +157,12 @@ export function RouteState({
               // and shadcn's Button base sets `font-medium`, which Tailwind
               // emits AFTER it — measured at 500 in the browser. Naming the
               // weight lets tailwind-merge drop `font-medium` outright.
-              className={`yy-cta text-body-strong mt-1 h-12 gap-[9px] self-start rounded-full px-6 font-semibold [&_svg]:size-5`}
+              className={cn(
+                "yy-cta text-body-strong mt-1 h-12 gap-[9px] rounded-full px-6 font-semibold [&_svg]:size-5",
+                // Left-aligned in the card's right-hand column; centred under
+                // the sentence when the whole state is one centred column.
+                carded ? "self-start" : "self-center",
+              )}
             >
               {action.href !== undefined ? (
                 <Link href={action.href}>
