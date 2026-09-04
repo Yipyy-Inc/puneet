@@ -43,13 +43,28 @@ export function AnnouncementBanner({ facilityId }: { facilityId: number }) {
   const preview = stripHtml(urgent.body);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border border-rose-300 bg-rose-100 px-4 py-2 text-rose-900 sm:px-6 dark:border-rose-900/60 dark:bg-rose-950/50 dark:text-rose-100">
+    // ── A BANNER IS A STATUS MARK THE WIDTH OF THE PAGE ──────────────────
+    //
+    // It was white with a 1px error-ink box — correct under §3, and austere:
+    // an outlined rectangle rather than something that reads as red.
+    //
+    // It takes the same treatment as a status chip now: the ink's own wash as
+    // the field, the saturated ink on top, a soft edge in that ink. §6 rule 2
+    // allows a tinted MARK and not a tinted surface, and this is a mark — it
+    // announces one status and nothing is laid out inside it. #B23B3B on
+    // #FDEFF3 measures 5.25:1.
+    //
+    // The preview text dropped its /90 alpha. Rule 4 bans opacity as a
+    // de-emphasis tool for text; the weight step from semibold to regular is
+    // what separates the title from the sentence, which is rule 1's own
+    // sanctioned alternative.
+    <div className="border-destructive/30 bg-wash-error text-destructive flex flex-wrap items-center justify-between gap-2 border px-4 py-2 sm:px-6">
       <span className="flex min-w-0 items-center gap-2 text-sm">
         <Megaphone className="size-4 shrink-0" />
         <span className="min-w-0">
           <span className="font-semibold">{urgent.title}</span>
           {preview && (
-            <span className="text-rose-800/90 dark:text-rose-200/90">
+            <span>
               {" — "}
               {preview}
             </span>
@@ -59,7 +74,7 @@ export function AnnouncementBanner({ facilityId }: { facilityId: number }) {
       <Button
         size="sm"
         variant="outline"
-        className="h-7 shrink-0 border-rose-400 bg-rose-50 text-rose-900 hover:bg-rose-200 dark:bg-rose-900/40 dark:text-rose-100 dark:hover:bg-rose-900"
+        className="border-destructive/40 text-destructive hover:bg-wash-error h-7 shrink-0 bg-transparent"
         onClick={() => dismissAnnouncement(urgent.id)}
       >
         <X className="mr-1.5 size-3.5" />
