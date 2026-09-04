@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
-  Inbox,
   Loader2,
   MessageSquare,
   Send,
@@ -26,6 +25,7 @@ import {
   reputationAnalyticsQueries,
   type ReputationAnalytics,
 } from "@/lib/api/reputation-analytics";
+import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -106,9 +106,9 @@ function Analytics({ data }: { data: ReputationAnalytics }) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
-          <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-2xl">
-            <Inbox className="size-6" />
-          </div>
+          {/* §5d2's nav map: reputation sits with loyalty and gift cards in
+              the `medal` group. py-14 clears §5d1's 96px floor. */}
+          <YipyyPose name="medal" size={132} float />
           <div>
             <p className="font-medium">Nobody has been asked yet</p>
             {/* The likeliest cause by a wide margin, and it costs one click.

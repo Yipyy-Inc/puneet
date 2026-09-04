@@ -1,4 +1,5 @@
 import { Gift } from "lucide-react";
+import { YipyyPose, type YipyyPoseProps } from "@/components/ui/yipyy-pose";
 import { cn } from "@/lib/utils";
 import type { GiftCard } from "@/types/payments";
 
@@ -51,20 +52,33 @@ export function Thumb({ id }: { id: string }) {
 
 export function EmptyState({
   icon,
+  pose,
   text,
   note,
   action,
 }: {
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
+  /**
+   * §5d2's nav map groups gift cards with loyalty and reputation under
+   * `medal` — the three modules whose emptiness reads "nothing earned yet"
+   * rather than "nothing scheduled". py-12 plus the 132 slot clears §5d1's
+   * 96px floor. The icon disc stays as the fallback for a call site that has
+   * not been given a pose.
+   */
+  pose?: YipyyPoseProps["name"];
   text: string;
   note?: string;
   action?: React.ReactNode;
 }) {
   return (
     <div className="text-muted-foreground flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-center text-sm">
-      <div className="bg-muted flex size-12 items-center justify-center rounded-full">
-        {icon}
-      </div>
+      {pose ? (
+        <YipyyPose name={pose} size={132} float />
+      ) : (
+        <div className="bg-muted flex size-12 items-center justify-center rounded-full">
+          {icon}
+        </div>
+      )}
       <p className="font-medium">{text}</p>
       {note && <p className="max-w-xs px-4 text-xs">{note}</p>}
       {action && <div className="mt-2">{action}</div>}

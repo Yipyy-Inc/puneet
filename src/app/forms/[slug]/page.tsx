@@ -14,11 +14,11 @@ import { notifyStaffOnFormSubmission } from "@/data/facility-notifications";
 import { triggerFormEvent } from "@/lib/form-automation-events";
 import { clients } from "@/data/clients";
 import { Button } from "@/components/ui/button";
+import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  CheckCircle,
   Mail,
   KeyRound,
   Shield,
@@ -514,8 +514,11 @@ export default function PublicFormPage() {
       <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center pt-6 text-center">
-            <CheckCircle className="mb-4 size-12 text-green-600" />
-            <h2 className="mb-2 text-xl font-semibold">Thank you</h2>
+            {/* §5d2's ladder: a finished flow takes `success` on the
+                confirmation panel. `text-green-600` was off-palette anyway —
+                the success ink is #0F7A52 (§1). */}
+            <YipyyPose name="success" size={132} />
+            <h2 className="mt-3 mb-2 text-xl font-semibold">Thank you</h2>
             <p className="text-muted-foreground">
               {form?.settings?.submitMessage ||
                 "Your response has been submitted successfully."}

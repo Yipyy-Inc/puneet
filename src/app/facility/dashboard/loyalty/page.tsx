@@ -3,6 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +24,7 @@ import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { LoyaltyPerformanceBanner } from "@/components/loyalty/LoyaltyPerformanceBanner";
 import { SaveBar } from "@/components/loyalty/config/SaveBar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import {
   Coins,
@@ -225,26 +237,55 @@ export default function LoyaltyOverviewPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <Button
-            variant="outline"
-            disabled={isSaving}
-            onClick={async () => {
-              try {
-                await resetConfig();
-                handleReset();
-                toast.success("Loyalty configuration cleared");
-              } catch (error) {
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : "The configuration was not cleared.",
-                );
-              }
-            }}
-          >
-            <RotateCcw className="mr-2 size-4" />
-            Clear the programme
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" disabled={isSaving}>
+                <RotateCcw className="mr-2 size-4" />
+                Clear the programme
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+                <YipyyPose name="warning" size={132} />
+                <AlertDialogHeader className="min-w-0 flex-1">
+                  <AlertDialogTitle>
+                    Clear the whole loyalty programme?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Every tier, earn rule and badge goes, and the programme is
+                    switched off. Points already earned stay on each
+                    customer&rsquo;s record, but nothing here is restored from a
+                    template.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep the programme</AlertDialogCancel>
+                <AlertDialogAction
+                  // §5d2: the pose sits BESIDE the warning ink, never
+                  // instead of it — so the action that does the damage wears
+                  // the error ink (#B23B3B, §1) rather than the primary blue
+                  // every other confirm uses.
+                  className="bg-destructive hover:bg-destructive/90 text-white"
+                  onClick={async () => {
+                    try {
+                      await resetConfig();
+                      handleReset();
+                      toast.success("Loyalty configuration cleared");
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "The configuration was not cleared.",
+                      );
+                    }
+                  }}
+                >
+                  Clear the programme
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
 
