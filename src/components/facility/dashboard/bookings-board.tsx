@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { PawPrint, Search } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useUnifiedBookings } from "@/hooks/use-unified-bookings";
@@ -9,7 +11,7 @@ import { useDashboardFilters } from "@/components/facility/dashboard/dashboard-f
 import { BookingCard } from "@/components/facility/dashboard/booking-card";
 
 export function BookingsBoard() {
-  const { bookings } = useUnifiedBookings();
+  const { bookings, isLoading } = useUnifiedBookings();
   const { tab, serviceFilter, query, setQuery } = useDashboardFilters();
 
   // The main-dashboard Live Activity Board tracks Boarding & Daycare only.
@@ -129,6 +131,7 @@ export function BookingsBoard() {
           items={visible}
           empty={emptyText}
           primaryAction={primaryAction}
+          isLoading={isLoading}
         />
       </CardContent>
     </Card>
@@ -139,9 +142,50 @@ interface BookingListProps {
   items: ReturnType<typeof useUnifiedBookings>["bookings"];
   empty: string;
   primaryAction: "check-in" | "check-out" | "none";
+  isLoading: boolean;
 }
 
-function BookingList({ items, empty, primaryAction }: BookingListProps) {
+const GRID = "grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3";
+
+function BookingList({
+  items,
+  empty,
+  primaryAction,
+  isLoading,
+}: BookingListProps) {
+  // ── "NO SCHEDULED ARRIVALS" IS A CLAIM, AND IT WAS BEING MADE TOO EARLY ──
+  //
+  // `items` is [] until the day queries answer, so this board told the desk
+  // there was nobody coming while six pets were on site. The empty sentence
+  // below is now reserved for what it actually means: the query answered, and
+  // the answer is none.
+  //
+  // Three card-shaped skeletons rather than one bar, because the row that
+  // arrives is a grid of cards — the placeholder should be the shape of the
+  // thing it stands in for, or the layout jumps when the data lands.
+  if (isLoading) {
+    return (
+      <div className={GRID} aria-busy="true" aria-live="polite">
+        <span className="sr-only">Loading today&apos;s activity</span>
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            aria-hidden
+            className="border-line bg-card yy-skel flex h-[86px] items-center gap-3 rounded-2xl border p-3"
+          >
+            <div className="bg-muted size-11 shrink-0 rounded-full" />
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="bg-muted h-[13px] w-24 rounded-full" />
+              <div className="bg-muted h-[11px] w-32 rounded-full" />
+              <div className="bg-muted h-[11px] w-20 rounded-full" />
+            </div>
+            <div className="bg-muted h-9 w-24 shrink-0 rounded-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="text-muted-foreground flex h-40 items-center justify-center rounded-2xl border border-dashed text-sm">
@@ -154,9 +198,15 @@ function BookingList({ items, empty, primaryAction }: BookingListProps) {
   // zero width instead of overflowing — so a clipping probe reports it clean
   // while it is unusable.
   return (
-    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-      {items.map((b) => (
-        <BookingCard key={b.id} booking={b} primaryAction={primaryAction} />
+    <div className={cn(GRID, "*:yy-rise")}>
+      {items.map((b, i) => (
+        // §4's stagger: 24ms per item, CAPPED AT EIGHT. The cap is the whole
+        // reason this is arithmetic rather than a class per row — a board can
+        // hold forty cards, and "past 192ms a stagger stops reading as
+        // choreography and starts reading as a slow server".
+        <div key={b.id} style={{ "--yy-i": Math.min(i, 7) } as CSSProperties}>
+          <BookingCard booking={b} primaryAction={primaryAction} />
+        </div>
       ))}
     </div>
   );

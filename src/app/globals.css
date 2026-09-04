@@ -883,6 +883,75 @@
  * is still unused — deliberately not pre-added here.
  * ========================================================================= */
 
+/* ── THE ENTRANCE, AND THE SKELETON (2026-09-04) ─────────────────────────────
+ *
+ * §4 specifies both exactly and neither existed. `yy-rise` was left out on
+ * purpose — the note above said "still unused — deliberately not pre-added" —
+ * and the dashboard is the first surface that needs it.
+ *
+ *   Rise, staggered   `yy-rise .28s var(--ease-out) both`, 24ms apart, capped
+ *                     at 8. "The only motion allowed on a surface already
+ *                     showing data, because it runs once and stops."
+ *   Enter             opacity + translateY(6px). Exit is opacity only, which
+ *                     is why there is no `yy-fall`.
+ *   Skeleton          `yy-skel`, a 1.4s ease-in-out opacity pulse. "No
+ *                     sweeping gradient: with no tint fills there is nothing
+ *                     to sweep."
+ *
+ * The stagger is a custom property rather than eight classes, so a list sets
+ * `--yy-i` from its index and the cap is arithmetic at the call site. §4 gives
+ * the reason for the cap in the same breath as the number: "past 192ms a
+ * stagger stops reading as choreography and starts reading as a slow server."
+ *
+ * `both` matters. Without it the element is at its natural position for one
+ * frame before the animation applies, which reads as a flicker — and with a
+ * delay on top, as a jump. */
+@keyframes yy-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility yy-rise {
+  animation: yy-rise 0.28s var(--ease-out) both;
+  animation-delay: calc(var(--yy-i, 0) * 24ms);
+
+  /* `animation: none` drops the fill-mode with it, so the element renders at
+     its natural position and full opacity — visible, not hidden. That is §4's
+     rule for this: "the reduced-motion view is not a degraded one, it is the
+     same screen." */
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* The loading pulse. NOT a fifth ambient pattern (§4 says so outright): it
+   stands in for a surface that cannot do its job yet, and it is gone the
+   instant data arrives. */
+@keyframes yy-skel {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@utility yy-skel {
+  animation: yy-skel 1.4s ease-in-out infinite;
+
+  /* Static at full opacity — still plainly a placeholder, just not pulsing. */
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* Yipyy, on an empty state. 4px and 6s are §4's ceilings, not suggestions:
    "4px and 2.4s are the ceilings... Faster or larger stops reading as
    ambience and starts reading as a spinner or a bug." */

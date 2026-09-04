@@ -1,13 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
+
+import { cn } from "@/lib/utils";
 import { LogIn, LogOut, PawPrint, Home } from "lucide-react";
-import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
+import {
+  KpiTile,
+  KpiTileSkeleton,
+} from "@/components/facility/dashboard/kpi-tile";
 import { useUnifiedBookings } from "@/hooks/use-unified-bookings";
 import { useDashboardFilters } from "@/components/facility/dashboard/dashboard-filters-context";
 
 export function KpiRow() {
-  const { bookings } = useUnifiedBookings();
+  const { bookings, isLoading } = useUnifiedBookings();
   const { tab, setTab, serviceFilter } = useDashboardFilters();
 
   const counts = useMemo(() => {
@@ -37,8 +42,45 @@ export function KpiRow() {
     return { currentGuests, todaysArrivals, goingHomeToday, checkedOutToday };
   }, [bookings, serviceFilter]);
 
+  const grid = "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4";
+
+  // ── FOUR ZEROS ARE NOT A LOADING STATE ─────────────────────────────────
+  //
+  // Every count above is derived from `bookings`, which is [] until the day
+  // queries answer — so this row used to render "0 · 0 · 0 · 0" over a
+  // facility with six pets in the building, and the Live Activity Board said
+  // "No scheduled arrivals match your filters" beside it. That is not a slow
+  // screen, it is a wrong one, and §6 rule 9 is explicit that a state a
+  // component does not implement is a bug rather than a decision.
+  //
+  // The live region is here rather than on each tile: one fact, announced
+  // once.
+  if (isLoading) {
+    return (
+      <div className={grid} aria-busy="true" aria-live="polite">
+        <span className="sr-only">Loading today&apos;s numbers</span>
+        <KpiTileSkeleton />
+        <KpiTileSkeleton />
+        <KpiTileSkeleton />
+        <KpiTileSkeleton />
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    // §4's staggered entrance — `yy-rise .28s`, 24ms apart. It is the ONE
+    // motion allowed on a surface already showing data, "because it runs once
+    // and stops". The stagger is set per child through --yy-i; four tiles is
+    // well inside the cap of eight.
+    <div
+      className={cn(
+        grid,
+        "*:yy-rise",
+        "[&>*:nth-child(2)]:[--yy-i:1]",
+        "[&>*:nth-child(3)]:[--yy-i:2]",
+        "[&>*:nth-child(4)]:[--yy-i:3]",
+      )}
+    >
       <KpiTile
         label="Today's Arrivals"
         value={counts.todaysArrivals}

@@ -139,6 +139,24 @@ export interface ServiceMeta {
 }
 
 export interface UnifiedBookingsContextValue {
+  /**
+   * True until the four day queries have answered at least once.
+   *
+   * ── WHY THIS EXISTS ────────────────────────────────────────────────────
+   *
+   * It did not, and the dashboard was worse than slow — it was WRONG. Every
+   * consumer derives counts from `bookings`, which is `[]` while the queries
+   * are in flight, so on first paint the screen rendered "0 arrivals, 0
+   * guests, 0 going home, 0 checked out" and "No scheduled arrivals match
+   * your filters" over a facility that had six pets on site. A zero you do
+   * not mean is not a loading state; §6 rule 9 calls an unimplemented state a
+   * bug rather than a decision.
+   *
+   * `isLoading` and not `isFetching`: a background refetch must NOT blank a
+   * screen that already holds good numbers. This is true only before the
+   * first answer.
+   */
+  isLoading: boolean;
   bookings: UnifiedBooking[];
   services: ServiceMeta[];
   counts: {
@@ -406,10 +424,17 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
   const { currentLocationId, isHQView } = useLocationContext();
 
   // ── The three that are real ──────────────────────────────────────────────
-  const { data: boardingDay } = useBoardingDay();
-  const { data: daycareDay } = useDaycareDay();
-  const { data: groomingData } = useQuery(groomingQueries.appointments());
-  const { data: trainingDay } = useTrainingDay();
+  const { data: boardingDay, isLoading: boardingLoading } = useBoardingDay();
+  const { data: daycareDay, isLoading: daycareLoading } = useDaycareDay();
+  const { data: groomingData, isLoading: groomingLoading } = useQuery(
+    groomingQueries.appointments(),
+  );
+  const { data: trainingDay, isLoading: trainingLoading } = useTrainingDay();
+
+  // Any one of the four still on its first round trip means the counts below
+  // are not yet the answer. See the note on `isLoading` in the context type.
+  const isLoading =
+    boardingLoading || daycareLoading || groomingLoading || trainingLoading;
 
   const boardingState = useMemo(() => boardingDay?.guests ?? [], [boardingDay]);
   const daycareState = useMemo(() => daycareDay?.visits ?? [], [daycareDay]);
@@ -774,8 +799,8 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<UnifiedBookingsContextValue>(
-    () => ({ bookings, services, counts, updateStatus }),
-    [bookings, services, counts, updateStatus],
+    () => ({ isLoading, bookings, services, counts, updateStatus }),
+    [isLoading, bookings, services, counts, updateStatus],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

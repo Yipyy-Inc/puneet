@@ -322,3 +322,40 @@ export function KpiTile({
     </div>
   );
 }
+
+/**
+ * The tile before its number exists.
+ *
+ * ── IT MIRRORS THE TILE'S GEOMETRY, NOT A GENERIC BOX ─────────────────────
+ *
+ * Same `rounded-2xl border p-[18px]`, same `min-h-[2.6em]` label reservation,
+ * same 30px figure line, same 40px disc. That is the whole point: the tiles do
+ * not resize or jump when the data lands, they just stop pulsing. A skeleton
+ * of a different shape is a second layout shift dressed as a loading state.
+ *
+ * `yy-skel` rather than Tailwind's `animate-pulse`: §4 specifies a 1.4s
+ * ease-in-out opacity pulse and says why there is no sweeping gradient —
+ * "with no tint fills there is nothing to sweep."
+ *
+ * `aria-hidden` with the live region left to the row: four tiles each
+ * announcing "loading" is four announcements of one fact.
+ */
+export function KpiTileSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="border-line bg-card shadow-card yy-skel rounded-2xl border p-[18px]"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="min-h-[2.6em]">
+            <div className="bg-muted h-[12px] w-24 rounded-full" />
+          </div>
+          <div className="bg-muted h-[26px] w-14 rounded-md" />
+          <div className="bg-muted mt-2 h-[12px] w-28 rounded-full" />
+        </div>
+        <div className="bg-muted size-10 shrink-0 rounded-full" />
+      </div>
+    </div>
+  );
+}
