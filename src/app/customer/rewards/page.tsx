@@ -67,6 +67,7 @@ import { customerLoyaltyQueries } from "@/lib/api/loyalty-ledger";
 import { RedeemPointsDialog } from "@/components/customer/RedeemPointsDialog";
 import { LoyaltyTransactionHistory } from "@/components/loyalty/LoyaltyTransactionHistory";
 import { BadgeCelebration } from "@/components/customer/BadgeCelebration";
+import { PageHeader } from "@/components/ui/page-header";
 
 // Captured once at module load for deterministic expiry math (gated behind
 // isMounted at render time to avoid SSR hydration mismatch).
@@ -362,18 +363,16 @@ export default function CustomerRewardsPage() {
     <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
-        <div>
-          {/* The facility's OWN name for its programme when it has given one.
-              A customer reads what their business calls it, not a platform
-              label — the name has been configurable since the programme moved
-              into `facility_settings` and nothing had shown it. */}
-          <h1 className="text-3xl font-bold">
-            {wallet?.programName ?? "Loyalty & Rewards"}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Earn points, unlock rewards, and refer friends to earn more
-          </p>
-        </div>
+        {/* The facility's OWN name for its programme when it has given one.
+            A customer reads what their business calls it, not a platform
+            label — the name has been configurable since the programme moved
+            into `facility_settings` and nothing had shown it. It is also a
+            string §5r keeps out of the locale layer: a business named its
+            programme, and that name is not translated. */}
+        <PageHeader
+          title={wallet?.programName ?? "Loyalty & rewards"}
+          description="Earn points, unlock rewards, and refer friends to earn more"
+        />
 
         {/* Points Summary Card */}
         {loyaltyData && (

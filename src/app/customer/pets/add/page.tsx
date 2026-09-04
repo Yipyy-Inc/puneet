@@ -28,6 +28,7 @@ import { ArrowLeft, Save, Loader2, Dog, Cat, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { FormWizard } from "@/components/forms/FormWizard";
 import type { Pet } from "@/types/pet";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface PetFormData {
   name: string;
@@ -200,12 +201,11 @@ export default function AddPetPage() {
             >
               <ArrowLeft className="size-4" />
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold">Required Forms</h1>
-              <p className="text-muted-foreground text-sm">
-                Complete these forms for {formData.name}
-              </p>
-            </div>
+            {/* §5r: use the pet's name wherever the record knows it. */}
+            <PageHeader
+              title="Required forms"
+              description={`Complete these forms for ${formData.name}`}
+            />
           </div>
           <FormWizard
             petId={newPetId}

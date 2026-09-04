@@ -1,6 +1,7 @@
 import { estimates } from "@/data/estimates";
 import { businessProfile } from "@/data/settings";
 import { CustomerEstimatesClient } from "@/components/customer/estimates/CustomerEstimatesClient";
+import { PageHeader } from "@/components/ui/page-header";
 
 // Mock logged-in customer — TODO: derive from auth/session.
 const CUSTOMER_ID = 15;
@@ -12,13 +13,10 @@ export default function CustomerEstimatesPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Estimates</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Review and respond to service estimates from{" "}
-          {businessProfile.businessName}.
-        </p>
-      </div>
+      <PageHeader
+        title="Your estimates"
+        description={`Review and respond to service estimates from ${businessProfile.businessName}.`}
+      />
 
       <CustomerEstimatesClient
         estimates={myEstimates}

@@ -59,6 +59,7 @@ import {
 } from "@/data/unfinished-bookings";
 import { CustomerTrainingCreditsBanner } from "@/components/customer/training/customer-training-credits-banner";
 import { PetAvatar } from "@/components/ui/pet-avatar";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ============================================================================
 // WHO THIS PAGE IS FOR comes from the session now.
@@ -651,17 +652,17 @@ export default function CustomerDashboardPage() {
                 className="h-12 w-auto"
               />
             )}
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight">
-                Welcome back{customer ? `, ${customer.name.split(" ")[0]}` : ""}
-                !
-              </h1>
-              <p className="text-muted-foreground">
-                {isMounted && selectedFacility
+            {/* §5r: second person, and the person's own name where the record
+                knows it. A customer's first name is one of the strings that
+                never passes through the locale layer. */}
+            <PageHeader
+              title={`Welcome back${customer ? `, ${customer.name.split(" ")[0]}` : ""}!`}
+              description={
+                isMounted && selectedFacility
                   ? `Manage your pets and book services at ${selectedFacility.name}`
-                  : "Manage your pets and book services with ease"}
-              </p>
-            </div>
+                  : "Manage your pets and book services with ease"
+              }
+            />
           </div>
         </div>
 

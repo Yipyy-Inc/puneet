@@ -37,6 +37,7 @@ import {
   type ReportCardTimelineItem,
 } from "@/components/customer/report-cards/report-card-shared";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/ui/page-header";
 
 // Service-type filter chips — value matches ReportCard.serviceType.
 const SERVICE_FILTERS = [
@@ -248,12 +249,10 @@ export default function CustomerReportCardsPage() {
   return (
     <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
       <div className="mx-auto max-w-5xl space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Report Cards History</h1>
-          <p className="text-muted-foreground">
-            A warm timeline of your pet&apos;s stays at {facilityName}.
-          </p>
-        </div>
+        <PageHeader
+          title="Report cards"
+          description={`A warm timeline of your pet's stays at ${facilityName}.`}
+        />
 
         {/* Filters */}
         <div className="border-primary/20 bg-card overflow-hidden rounded-2xl border shadow-sm">
