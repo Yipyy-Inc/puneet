@@ -386,8 +386,8 @@ function UnitTile({
           </p>
         )}
       </div>
-      {/* Hover overlay */}
-      <div className="from-card via-card/80 absolute inset-x-0 bottom-0 flex items-center justify-between bg-linear-to-t to-transparent px-2 pt-6 pb-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+      {/* Row actions, in flow rather than an overlay (§6 rule 11). */}
+      <div className="flex items-center justify-between px-2.5 pb-2.5">
         <button
           onClick={onEdit}
           className="text-muted-foreground hover:text-foreground text-[10px] underline underline-offset-1"
@@ -396,7 +396,7 @@ function UnitTile({
         </button>
         <button
           onClick={onDelete}
-          className="text-destructive/70 hover:text-destructive text-[10px] underline underline-offset-1"
+          className="text-destructive text-[10px] underline underline-offset-1"
         >
           Remove
         </button>

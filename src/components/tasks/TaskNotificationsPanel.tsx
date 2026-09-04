@@ -219,7 +219,7 @@ export function TaskNotificationsPanel() {
                           e.stopPropagation();
                           handleDismiss(notif.id);
                         }}
-                        className="text-muted-foreground/40 hover:text-muted-foreground absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
+                        className="text-muted-foreground hover:text-foreground absolute top-2 right-2 transition-colors"
                       >
                         <X className="size-3" />
                       </button>

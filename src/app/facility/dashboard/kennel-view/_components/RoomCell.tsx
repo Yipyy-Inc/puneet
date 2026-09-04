@@ -55,12 +55,16 @@ export function RoomCell({
       data-cell="room"
       onClick={() => !disabled && onAddBooking?.()}
     >
+      {/* §6 rule 11: the add affordance was revealed on hover, so on the
+          tablet the floor runs this board on, an empty run looked inert.
+          A placeholder glyph is persistent and quiet enough to repeat across
+          a whole week of empty cells; the words go to the reader who cannot
+          see it. `--ink-disabled` is §1's placeholder-glyph token, non-text
+          by definition. */}
       {!disabled && (
-        <div className="flex h-full items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
-          <div className="bg-background text-muted-foreground flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[10px] shadow-sm">
-            <Plus className="size-3" />
-            Add
-          </div>
+        <div className="flex h-full items-center justify-center">
+          <Plus className="text-ink-disabled size-4" aria-hidden />
+          <span className="sr-only">Add booking</span>
         </div>
       )}
       {isBlocked && (

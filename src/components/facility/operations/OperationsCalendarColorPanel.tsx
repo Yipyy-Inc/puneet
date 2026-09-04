@@ -117,7 +117,7 @@ function ColorRow({
               e.stopPropagation();
               onReset();
             }}
-            className="flex size-6 items-center justify-center rounded-md text-slate-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-slate-200 hover:text-slate-600"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-6 items-center justify-center rounded-md transition-colors max-lg:size-12"
             title="Reset to default"
           >
             <RotateCcw className="size-3" />

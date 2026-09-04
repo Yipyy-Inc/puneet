@@ -264,9 +264,6 @@ export default function ProfilePage() {
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
-                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                  <Camera className="size-8 text-white" />
-                </div>
               </div>
               <Button
                 variant="outline"

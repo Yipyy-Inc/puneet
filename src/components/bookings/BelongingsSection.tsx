@@ -332,8 +332,12 @@ export function BelongingsSection({
                               alt={item.name}
                               className="size-16 object-cover transition-transform group-hover:scale-105"
                             />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-                              <Camera className="size-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                            {/* Pointer feedback only — the photo itself is the
+                                trigger, so nothing is hidden behind the mouse
+                                (§6 rule 11), and inert keeps it from eating
+                                the trigger's clicks. */}
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+                              <Camera className="size-4 text-white" />
                             </div>
                           </>
                         ) : (

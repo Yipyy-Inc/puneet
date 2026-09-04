@@ -376,7 +376,7 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
           >
             <User className="text-muted-foreground size-4" />
             <span>Open {call.clientName}&#39;s client profile</span>
-            <ExternalLink className="text-muted-foreground ml-auto size-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+            <ExternalLink className="text-muted-foreground ml-auto size-3.5" />
           </Link>
         )}
       </div>

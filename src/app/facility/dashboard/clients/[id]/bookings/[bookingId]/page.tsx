@@ -1681,7 +1681,7 @@ export default function ClientBookingDetailPage({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 text-[10px] opacity-0 group-hover:opacity-100"
+                            className="h-6 text-[10px] max-lg:h-12 max-lg:px-4 max-lg:text-sm"
                             onClick={() => {
                               completeTask(task.id, "You");
                               setTasks(

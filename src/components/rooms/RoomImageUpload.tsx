@@ -76,8 +76,11 @@ export function RoomImageUpload({
             alt="Room preview"
             className="absolute inset-0 h-full w-full object-cover"
           />
-          {/* Overlay on hover */}
-          <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-colors group-hover:bg-black/40 group-hover:opacity-100">
+          {/* The buttons are persistent (§6 rule 11) — they carry their own
+                solid fill and shadow, so they read over any photo. Only the
+                scrim reacts to the pointer, and a scrim is feedback, not an
+                affordance. */}
+          <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 transition-colors group-hover:bg-black/40">
             <Button
               type="button"
               size="sm"

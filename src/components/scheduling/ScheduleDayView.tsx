@@ -9,6 +9,7 @@ import {
   CircleDashed,
   Heart,
   Palmtree,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -508,8 +509,9 @@ function TimelineRow({
 
       {/* Empty hint */}
       {shifts.length === 0 && (
-        <span className="text-muted-foreground/50 absolute inset-0 flex items-center justify-center text-[11px] italic opacity-0 transition-opacity group-hover/timeline:opacity-100">
-          Click to add shift
+        <span className="text-ink-disabled absolute inset-0 flex items-center justify-center">
+          <Plus className="size-4" aria-hidden />
+          <span className="sr-only">Add shift</span>
         </span>
       )}
     </button>

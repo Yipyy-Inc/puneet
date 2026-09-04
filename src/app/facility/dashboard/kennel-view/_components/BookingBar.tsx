@@ -129,12 +129,25 @@ export function BookingBar({
         </div>
       )}
 
-      {/* Resize handles — hidden in past-week mode and when explicitly disabled (e.g. daycare = 1-day stays) */}
+      {/* Resize grips — hidden in past-week mode and when explicitly disabled
+          (e.g. daycare = 1-day stays).
+
+          They carried `opacity-0 group-hover:opacity-100`, which read as a
+          control hidden behind the mouse (§6 rule 11) and was doing nothing:
+          the grip has no background at rest, so opacity-0 and opacity-100
+          render identically, and `opacity` never blocked the pointer either
+          way. The only thing hover actually changes is `hover:bg-black/10`,
+          which is feedback on a grip that was always there. Dropping the pair
+          changes no pixel and stops the class lying about the element.
+
+          What a tablet user loses is the GESTURE, not the reveal — both
+          handlers are onMouseDown. Changing a stay's dates on touch goes
+          through tapping the bar, which opens the booking. */}
       {!isPastWeek && !hideResizeHandles && (
         <>
           <div
             data-handle="start"
-            className="absolute top-0 bottom-0 left-0 w-2 cursor-ew-resize rounded-l opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/10"
+            className="absolute top-0 bottom-0 left-0 w-2 cursor-ew-resize rounded-l transition-colors hover:bg-black/10"
             onMouseDown={(e) => {
               e.stopPropagation();
               onResizeStart?.("start", e);
@@ -142,7 +155,7 @@ export function BookingBar({
           />
           <div
             data-handle="end"
-            className="absolute top-0 right-0 bottom-0 w-2 cursor-ew-resize rounded-r opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/10"
+            className="absolute top-0 right-0 bottom-0 w-2 cursor-ew-resize rounded-r transition-colors hover:bg-black/10"
             onMouseDown={(e) => {
               e.stopPropagation();
               onResizeStart?.("end", e);

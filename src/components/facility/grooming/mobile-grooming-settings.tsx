@@ -496,7 +496,7 @@ export function MobileGroomingSettings() {
                               style={{ backgroundColor: color }}
                             >
                               <TypeIcon className="size-5 text-white drop-shadow-sm" />
-                              <span className="bg-card ring-border absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full opacity-0 shadow-sm ring-1 transition-opacity group-hover:opacity-100">
+                              <span className="bg-card ring-border absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full shadow-sm ring-1">
                                 <Palette className="text-muted-foreground size-2.5" />
                               </span>
                             </button>

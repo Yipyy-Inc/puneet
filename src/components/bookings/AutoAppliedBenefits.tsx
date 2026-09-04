@@ -179,7 +179,7 @@ export function AutoAppliedBenefits({
                   tone.bg,
                   "hover:brightness-95",
                 )}
-                title="Click to remove this benefit"
+                title="Remove this benefit"
               >
                 <div
                   className={cn(
@@ -208,9 +208,7 @@ export function AutoAppliedBenefits({
                   >
                     -${benefit.savings.toFixed(2)}
                   </p>
-                  <p className="text-muted-foreground/60 text-[9px] opacity-0 transition-opacity group-hover:opacity-100">
-                    click to remove
-                  </p>
+                  <p className="text-muted-foreground text-[9px]">Remove</p>
                 </div>
               </button>
             );
@@ -223,7 +221,7 @@ export function AutoAppliedBenefits({
               key={`disabled-${kind}`}
               onClick={() => toggleKind(kind, label)}
               className="group bg-muted/30 hover:bg-muted/50 flex w-full items-center gap-2 rounded-md border border-dashed px-2.5 py-1.5 text-left transition-colors"
-              title="Click to re-apply this benefit"
+              title="Re-apply this benefit"
             >
               <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-zinc-200">
                 <X className="size-3 text-zinc-500" />

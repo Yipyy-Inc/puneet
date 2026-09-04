@@ -21,8 +21,10 @@ standing rule. **Stages 0–11 are done** (documents and assets, the `@theme` to
 choke point, the four route-level states, the status chips, Button, the metric and filter tiles,
 the page header / saved views / filter band / bulk bar, the orange territories, the form controls,
 the DataTable column budget and density, the nav glyphs, and French / print / focus). **All twelve
-are done.** What remains is four ratchets holding per-item work — 374 colour-only badges, 41
-hover-revealed controls, 534 hardcoded locales, and the three §5u print documents. The tokens landed, so `src/` renders the new palette
+are done.** What remains is three ratchets holding per-item work — 374 colour-only badges, 534
+hardcoded locales, and the three §5u print documents. The fourth, **rule 11's hover-revealed
+controls, is at ZERO** as of 2026-09-04: the 41 were cleared one at a time, and the gate's own
+header records the five answers that were needed, because there was no single one. The tokens landed, so `src/` renders the new palette
 everywhere; stage 7's band and bulk bar reached 87 screens through `DataTable` alone; and stage 8
 put the 2px orange ring on every pet — but most screens still have the old LAYOUT, density and
 glyphs, so the third question about any screen, after "fixture or Postgres?", is still **"old
@@ -84,7 +86,7 @@ Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/u
 | `bun run check:inert-permissions`      | Fails if a permission offered in the role editor is consulted by nothing — a switch that decides nothing            |
 | `bun run check:staging-sends`          | Fails if a file reaches Resend or Twilio without consulting the staging suppression guard                           |
 | `bun run check:badge-glyph`            | Fails if a colour-coded badge carries no glyph — §3's "colour is never the only channel". Ratcheted at 374          |
-| `bun run check:hover-actions`          | Fails if a control is revealed only on hover — §6 rule 11, and two of three contexts have none. Ratcheted at 41     |
+| `bun run check:hover-actions`          | Fails if a control is revealed only on hover — §6 rule 11, and two of three contexts have none. **At zero**         |
 | `bun run check:nav-icons`              | Fails if a nav glyph drifts from `icon-map.json`, or if any glyph lands on two areas — §5b1                         |
 | `bun run check:hardcoded-locale`       | Fails if a formatter is told a literal locale instead of the user's — §5q. Ratcheted at 534                         |
 | `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                   |
