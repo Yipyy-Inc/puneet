@@ -213,7 +213,7 @@ export function TipPromptDialog({
                 </div>
               ))}
             </div>
-            <div className="flex-1 text-[12px] leading-tight">
+            <div className="text-micro/tight flex-1">
               <p className="font-medium">
                 Cared for by{" "}
                 {staffList

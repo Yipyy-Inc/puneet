@@ -140,6 +140,7 @@ import {
   startTask,
 } from "@/data/generated-tasks";
 import { taskTemplateQueries } from "@/lib/api/task-templates";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ========================================
 // Helpers
@@ -1014,9 +1015,9 @@ export default function ClientBookingDetailPage({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight">
-                  {bookingRef}
-                </h1>
+                {/* §5r: an invoice number and a booking reference never pass
+                    through the locale layer. */}
+                <PageHeader title={bookingRef} />
                 <BookingStatusDropdown
                   currentStatus={booking.status}
                   // Was a toast and nothing else: the dropdown reported a

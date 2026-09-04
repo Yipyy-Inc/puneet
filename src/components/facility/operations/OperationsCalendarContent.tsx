@@ -108,7 +108,7 @@ export function OperationsCalendarContent({
                 <h3 className="text-xl font-bold tracking-tight text-slate-800">
                   Your schedule is clear
                 </h3>
-                <p className="text-[15px] leading-relaxed font-medium text-slate-500 drop-shadow-sm">
+                <p className="text-body-strong/relaxed font-medium text-slate-500 drop-shadow-sm">
                   You&apos;re perfectly caught up. Select a different date or
                   add a new luxury appointment above to get started.
                 </p>

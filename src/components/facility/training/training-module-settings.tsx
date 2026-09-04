@@ -598,7 +598,7 @@ export function TrainingModuleSettings() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-muted-foreground mt-1 text-[12px]/relaxed">
+                        <p className="text-muted-foreground text-micro/relaxed mt-1">
                           {waiver.summary}
                         </p>
                       </div>

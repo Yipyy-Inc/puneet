@@ -57,6 +57,7 @@ import type {
   AiFacilityConfig,
   AiFacilityUsageSummary,
 } from "@/types/ai-settings";
+import { PageHeader } from "@/components/ui/page-header";
 
 const AiCostTrendChart = dynamic(
   () =>
@@ -168,15 +169,12 @@ export default function AiSettingsPage() {
   return (
     <div className="flex-1 space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <Sparkles className="size-6 text-violet-500" />
-          AI Integration Settings
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Manage API keys, usage limits, and AI features across all facilities.
-        </p>
-      </div>
+      {/* The `text-violet-500` glyph went with the hand-rolled title — §5b1,
+          an icon never introduces a colour. */}
+      <PageHeader
+        title="AI integration settings"
+        description="Manage API keys, usage limits, and AI features across all facilities."
+      />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">

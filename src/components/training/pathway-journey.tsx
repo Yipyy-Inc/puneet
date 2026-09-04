@@ -350,7 +350,7 @@ function UpcomingStepDetail({
           {program.name}
         </p>
         {program.description && (
-          <p className="text-muted-foreground mt-1 text-[12px]/relaxed">
+          <p className="text-muted-foreground text-micro/relaxed mt-1">
             {program.description}
           </p>
         )}

@@ -108,7 +108,7 @@ function WaiverRow({
               </Badge>
             )}
           </div>
-          <p className="text-muted-foreground mt-0.5 text-[12px]/relaxed">
+          <p className="text-muted-foreground text-micro/relaxed mt-0.5">
             {waiver.summary}
           </p>
           <Collapsible open={expanded} onOpenChange={setExpanded}>

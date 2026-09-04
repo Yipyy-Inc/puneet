@@ -551,7 +551,7 @@ export function TrainingProfileHistory({
                         <StickyNote className="size-3" />
                         Session summary
                       </p>
-                      <p className="bg-muted/40 rounded-md px-3 py-2 text-[12px]/relaxed text-slate-700">
+                      <p className="bg-muted/40 text-micro/relaxed rounded-md px-3 py-2 text-slate-700">
                         {attendance.trainerNotes}
                       </p>
                     </div>

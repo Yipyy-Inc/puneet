@@ -287,7 +287,7 @@ function HomeworkCard({
           )}
 
           {homework.instructions.length > 0 && (
-            <ul className="space-y-1 pl-4 text-[12px]/relaxed text-slate-600">
+            <ul className="text-micro/relaxed space-y-1 pl-4 text-slate-600">
               {homework.instructions.map((inst, idx) => (
                 <li key={`${homework.id}-inst-${idx}`} className="list-disc">
                   {inst}

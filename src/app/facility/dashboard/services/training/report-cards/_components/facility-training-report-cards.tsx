@@ -561,7 +561,7 @@ function GraduationProgressionSection({ card }: { card: TrainingReportCard }) {
             {card.recommendedNextProgram.packageName}
           </p>
           {card.recommendedNextProgram.description && (
-            <p className="text-muted-foreground mt-0.5 text-[12px]/relaxed">
+            <p className="text-muted-foreground text-micro/relaxed mt-0.5">
               {card.recommendedNextProgram.description}
             </p>
           )}
