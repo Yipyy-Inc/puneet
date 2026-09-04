@@ -181,6 +181,32 @@
   --color-violet: var(--violet);
   --color-violet-foreground: var(--violet-foreground);
 
+  /* ── THE SKY — ILLUSTRATIVE, AND NOT UI VALUES (§5v) ──────────────
+   *
+   * Weather is the only thing in this product that is a PICTURE of the
+   * outside world rather than a state of a record. It cannot be told in
+   * status ink: the sun in #8A5115 is brown, and drizzle, rain, snow and
+   * showers all collapse onto the same #0F58C6 — five different skies in
+   * one colour, which is what the raw-palette remap had been doing here
+   * silently since stage 1.
+   *
+   * So these are named, governed and namespaced, and they sit on exactly
+   * the same footing §1 already gives the logo: "these are mark values,
+   * not UI values". Nothing in the interface may reach for them — the
+   * names are deliberately not status words, so there is no route from
+   * weather-sun to a button, a chip or a row.
+   *
+   * They are used in ONE place: the weather panel's sky and its condition
+   * glyphs, where the thing being coloured is a cloud.                  */
+  --color-weather-sun: var(--weather-sun);
+  --color-weather-sun-core: var(--weather-sun-core);
+  --color-weather-cloud: var(--weather-cloud);
+  --color-weather-cloud-shade: var(--weather-cloud-shade);
+  --color-weather-rain: var(--weather-rain);
+  --color-weather-snow: var(--weather-snow);
+  --color-weather-bolt: var(--weather-bolt);
+  --color-weather-fog: var(--weather-fog);
+
   /* ── radius — direct aliases, not the old base+offset formula ───────────
    * The previous chain derived every step from one `--radius: 0.875rem` base,
    * which is exactly the "14px base radius applied uniformly to a data-dense
@@ -709,6 +735,20 @@
      --error, aliased so `--bad` reads correctly wherever that stage's own
      prose is followed literally. */
   --bad: var(--error);
+
+  /* ── The sky — illustrative only, never UI (§5v; see the @theme note) ──
+     Real weather colour, the way every weather app on a phone draws it. The
+     sun is yellow because the sun is yellow; a cloud is white with a cool
+     underside; rain is a deeper blue than the sky it falls out of; snow is
+     barely blue at all. None of these is a status and none may become one. */
+  --weather-sun: #ffc23d; /* the disc and the glyph */
+  --weather-sun-core: #fff0b8; /* the hot centre and the glow */
+  --weather-cloud: #ffffff; /* lit top of a cloud */
+  --weather-cloud-shade: #b9c9dd; /* its cool underside */
+  --weather-rain: #3f8fd6; /* falling water, darker than the sky */
+  --weather-snow: #eaf4ff; /* almost white, a breath of blue */
+  --weather-bolt: #ffd83d; /* lightning — hotter than the sun */
+  --weather-fog: #c3ccd6; /* the grey that eats the horizon */
 
   /* ── Charts — desaturated status families, so a series reads as a category
      and never as an alert. NEVER the saturated status colours above. ── */
@@ -1669,6 +1709,108 @@ button {
 .report-card-pattern-snowflakes {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='0.5'%3E%3Cpath d='M20 0v40M0 20h40M5 5l30 30M35 5L5 35'/%3E%3Cpath d='M20 5v30M5 20h30' transform='rotate(45 20 20)'/%3E%3C/g%3E%3C/svg%3E");
   background-size: 40px 40px;
+}
+
+/* ── THE SKY, MOVING ──────────────────────────────────────────
+ *
+ * §4 allows one moving thing per view and these are one thing — the weather.
+ * A cloud deck that drifts and rain that falls are not two animations any
+ * more than rain is separate from the cloud it comes out of. They replaced
+ * five simultaneous per-glyph animations (spin, float, pulse, sway, bounce,
+ * one on every hour of the forecast), so the moving-parts count went DOWN.
+ *
+ * Tempo is set per element in weather-sky.tsx; only the path is here, which
+ * is why each rule declares `animation` once and never a second time.
+ * Everything stops under prefers-reduced-motion — the sky simply holds.    */
+@keyframes yy-weather-drift {
+  from {
+    transform: translateX(-14%);
+  }
+  to {
+    transform: translateX(114%);
+  }
+}
+@keyframes yy-weather-rain {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: -34px 100px;
+  }
+}
+@keyframes yy-weather-snow {
+  from {
+    background-position:
+      0 0,
+      19px 11px;
+  }
+  to {
+    background-position:
+      -26px 120px,
+      14px 131px;
+  }
+}
+@keyframes yy-weather-fog {
+  from {
+    transform: translateX(-8%);
+  }
+  to {
+    transform: translateX(8%);
+  }
+}
+
+/* Each call site overrides only `animation-duration` inline, so the shorthand
+   here is declared ONCE per rule and never a second time (§6 rule 3). Under
+   reduced motion the shorthand resets animation-name to none, which the inline
+   duration cannot undo — the sky holds still rather than degrading. */
+@keyframes yy-weather-deck {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-1200px);
+  }
+}
+
+/* The noise deck. One viewBox width of travel over three minutes — slow
+   enough that it reads as weather rather than as a scroll, and the rect is
+   three widths long so the loop never shows an edge. */
+@utility yy-weather-deck {
+  animation: yy-weather-deck 180s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility yy-weather-drift {
+  animation: yy-weather-drift 110s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@utility yy-weather-rain {
+  animation: yy-weather-rain 0.7s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@utility yy-weather-snow {
+  animation: yy-weather-snow 8s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@utility yy-weather-fog {
+  animation: yy-weather-fog 40s ease-in-out infinite alternate;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@utility yy-weather-fog-alt {
+  animation: yy-weather-fog 40s ease-in-out infinite alternate-reverse;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 
 /* Weather widget animations */
