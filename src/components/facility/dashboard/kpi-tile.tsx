@@ -69,37 +69,49 @@ interface ToneStyle {
   glyph: string;
 }
 
-// ── THE DISC IS A LIGHT WASH, NOT A DARK SOLID (2026-09-04) ──────────────
+// ── THE TILE IS WASHED AND THE DISC IS SOLID ─────────────────────────────
 //
-// Every badge here was the status ink at full strength with a white glyph on
-// it. That is why the tiles read heavy: a text-weight ink is DARK by
-// construction — the values exist so words clear 4.5:1, which forces
-// #8A5115 (a brown), #0F7A52 and #4C3BB8 — and a 40px solid of one is the
-// largest, darkest thing on an otherwise white screen.
+// Both halves were changed and both are back, on the client's call, and the
+// pairing is the reason they travel together: a SOLID disc on a WASHED tile
+// is what reads. Light-on-light does not — a --wash-primary disc sits on the
+// pale end of a --wash-primary tile and nearly disappears.
 //
-// Inverted, the same pair reads luminous and measures better: the glyph needs
-// 3:1 and gets 4.54-7.09:1 on its own wash. See the note beside
-// --color-wash-* in globals.css for the five ratios.
+// The status CHIPS keep the light-fill treatment (see badge.tsx). That is not
+// an inconsistency: a chip is a small mark inside a white row, where a pale
+// fill is what makes it legible without shouting. A tile is a large surface
+// that already carries a wash, where the mark on top has to be the dark half
+// of the pair. Same two values, opposite roles, decided by what sits behind
+// them.
 //
-// `brand` is the exception and stays solid, because §2b says so: orange is
-// ALWAYS a solid fill carrying body ink (6.90:1), never an ink on a tint.
-// It is also the one tile that was never dark.
+// `brand` is solid for its own reason and always was: §2b requires orange to
+// be a solid fill carrying body ink (6.90:1), never an ink on a tint.
 const TONE_STYLES: Record<KpiTone, ToneStyle> = {
-  indigo: { wash: "", badge: "bg-wash-primary", glyph: "text-primary" },
-  emerald: {
-    wash: "",
-    badge: "bg-wash-success",
-    glyph: "text-success",
+  indigo: {
+    wash: "yy-wash-primary",
+    badge: "bg-primary",
+    glyph: "text-white",
   },
-  rose: { wash: "", badge: "bg-wash-error", glyph: "text-bad" },
-  amber: { wash: "", badge: "bg-wash-warning", glyph: "text-warning" },
-  violet: { wash: "", badge: "bg-wash-violet", glyph: "text-violet" },
-  // There is no neutral wash, and inventing one would be a sixth value for a
-  // tone that has no status. --inset is the neutral surface already, reached
-  // through `bg-muted` because Tailwind reserves the bare word "inset".
-  slate: { wash: "", badge: "bg-muted", glyph: "text-ink-secondary" },
+  emerald: {
+    wash: "yy-wash-success",
+    badge: "bg-success",
+    glyph: "text-white",
+  },
+  rose: { wash: "yy-wash-error", badge: "bg-bad", glyph: "text-white" },
+  amber: {
+    wash: "yy-wash-warning",
+    badge: "bg-warning",
+    glyph: "text-white",
+  },
+  violet: {
+    wash: "yy-wash-violet",
+    badge: "bg-violet",
+    glyph: "text-white",
+  },
+  // Five washes exist and neutral is not one of them, so this tile is plain
+  // white — which is rule 2's default answer anyway.
+  slate: { wash: "", badge: "bg-ink-secondary", glyph: "text-white" },
   brand: {
-    wash: "",
+    wash: "yy-wash-warning",
     badge: "bg-brand-orange",
     glyph: "text-body-ink",
   },

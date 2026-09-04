@@ -59,7 +59,7 @@ export function ClickableStatCard({
         // stacking them silently loses the selected ring.
         isApplied
           ? "bg-primary border-transparent shadow-(--sh-cta)"
-          : "bg-card",
+          : "bg-card yy-wash-primary",
         isActive && !isApplied
           ? "border-transparent shadow-[inset_0_0_0_2px_var(--primary),var(--sh)]"
           : !isApplied && "shadow-card",
