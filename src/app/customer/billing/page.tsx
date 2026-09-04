@@ -8,6 +8,7 @@ import { BookingInvoicesTab } from "@/components/customer/billing/BookingInvoice
 import { BalancesTab } from "@/components/customer/billing/BalancesTab";
 import { BalanceSummaryCards } from "@/components/customer/billing/BalanceSummaryCards";
 import { CreditCard, FileText, Wallet } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function CustomerBillingPage() {
   const [activeTab, setActiveTab] = useState("payment-methods");
@@ -15,12 +16,10 @@ export default function CustomerBillingPage() {
   return (
     <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Billing & Payments</h1>
-          <p className="text-muted-foreground">
-            Manage your payment methods, view invoices, and track your balances
-          </p>
-        </div>
+        <PageHeader
+          title="Billing & Payments"
+          description="Manage your payment methods, view invoices, and track your balances"
+        />
 
         {/* Balance cards stay visible above the tabs (Task 36) */}
         <BalanceSummaryCards />

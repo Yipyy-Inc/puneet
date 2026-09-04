@@ -31,6 +31,7 @@ import {
   ADDITIONAL_CONTACT_TAGS,
   type AdditionalContact,
 } from "@/types/client";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function CustomerHouseholdPage() {
   const { client: customer } = useCurrentCustomer();
@@ -78,13 +79,10 @@ export default function CustomerHouseholdPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Household & Contacts</h1>
-            <p className="text-muted-foreground mt-1">
-              People your facility may contact for pickup, drop-off, or
-              emergencies.
-            </p>
-          </div>
+          <PageHeader
+            title="Household & Contacts"
+            description="People your facility may contact for pickup, drop-off, or emergencies."
+          />
           {!isEditing ? (
             <Button onClick={() => setIsEditing(true)}>
               <Edit className="mr-2 size-4" />

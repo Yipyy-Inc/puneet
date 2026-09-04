@@ -58,6 +58,7 @@ import {
   Search,
   Loader2,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 /**
  * What /api/facilities/domains answers.
@@ -545,14 +546,10 @@ export default function FacilitiesPage() {
     <div className="flex-1 space-y-6 p-6">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {"Facilities Management"}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and monitor all facility operations
-          </p>
-        </div>
+        <PageHeader
+          title="Facilities Management"
+          description="Manage and monitor all facility operations"
+        />
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type { FacilityResource } from "@/types/facility";
+import { PageHeader } from "@/components/ui/page-header";
 
 const RESOURCE_TYPE_ICONS: Record<
   string,
@@ -124,15 +125,10 @@ export default function ResourcesPage() {
   return (
     <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Facility Resources
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Manage rooms, pools, vans, equipment, and other resources used by
-            services
-          </p>
-        </div>
+        <PageHeader
+          title="Facility Resources"
+          description="Manage rooms, pools, vans, equipment, and other resources used by services"
+        />
         <Button onClick={openCreateModal}>
           <Plus className="mr-2 size-4" />
           Add Resource

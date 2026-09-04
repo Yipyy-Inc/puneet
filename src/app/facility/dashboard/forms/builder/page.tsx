@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FormBuilderEditor } from "@/components/forms/FormBuilderEditor";
 import { ArrowLeft } from "lucide-react";
 import type { Form, ServiceType } from "@/data/forms";
+import { PageHeader } from "@/components/ui/page-header";
 
 const FACILITY_ID = 11;
 
@@ -31,13 +32,10 @@ export default function FormBuilderPage() {
             <ArrowLeft className="size-4" />
           </Link>
         </Button>
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Form Builder</h2>
-          <p className="text-muted-foreground">
-            Create and edit forms. Add questions, set conditions, and map fields
-            to profiles.
-          </p>
-        </div>
+        <PageHeader
+          title="Form Builder"
+          description="Create and edit forms. Add questions, set conditions, and map fields to profiles."
+        />
       </div>
 
       <FormBuilderEditor

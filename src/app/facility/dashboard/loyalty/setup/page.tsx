@@ -30,6 +30,7 @@ import {
   reconcileEarnRules,
 } from "@/lib/loyalty/earn-rule-versioning";
 import type { EarnRule, Tier, Badge } from "@/types/loyalty";
+import { PageHeader } from "@/components/ui/page-header";
 
 const STEPS = [
   {
@@ -221,18 +222,18 @@ function SetupWizard() {
           <div className="flex size-10 items-center justify-center rounded-lg bg-linear-to-br from-amber-500 to-orange-500">
             <Sparkles className="size-5 text-white" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {editMode
+          <PageHeader
+            title={
+              editMode
                 ? "Edit your loyalty program"
-                : "Set up your loyalty program"}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              {editMode
+                : "Set up your loyalty program"
+            }
+            description={
+              editMode
                 ? "Update any step — each saves independently."
-                : "Five quick steps — most facilities finish in under 30 minutes."}
-            </p>
-          </div>
+                : "Five quick steps — most facilities finish in under 30 minutes."
+            }
+          />
         </div>
         <Button variant="ghost" size="sm" asChild>
           <Link href="/facility/dashboard/loyalty">

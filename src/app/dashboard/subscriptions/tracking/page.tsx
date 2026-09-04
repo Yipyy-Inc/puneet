@@ -1,17 +1,14 @@
 import { FacilitySubscriptionsTable } from "@/components/subscriptions/FacilitySubscriptionsTable";
 import { SubscriptionAnalytics } from "@/components/subscriptions/SubscriptionAnalytics";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function TrackingPage() {
   return (
     <div className="space-y-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Subscription Tracking & Analytics
-        </h1>
-        <p className="text-muted-foreground">
-          Monitor facility subscriptions, usage, and identify opportunities
-        </p>
-      </div>
+      <PageHeader
+        title="Subscription Tracking & Analytics"
+        description="Monitor facility subscriptions, usage, and identify opportunities"
+      />
 
       <SubscriptionAnalytics />
 

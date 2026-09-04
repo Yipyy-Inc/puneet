@@ -65,6 +65,7 @@ import type {
   TrainingSeries,
   TrainingSeriesSession,
 } from "@/lib/training-series";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function FacilityMakeupSessionsPage() {
   const queryClient = useQueryClient();
@@ -300,16 +301,10 @@ export default function FacilityMakeupSessionsPage() {
   return (
     <div className="space-y-6">
       <header className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            Make-up Sessions
-          </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Every student across every active series who has an Absent mark and
-            is inside the make-up eligibility window. Offer a host slot or mark
-            the absence ineligible.
-          </p>
-        </div>
+        <PageHeader
+          title="Make-up Sessions"
+          description="Every student across every active series who has an Absent mark and is inside the make-up eligibility window. Offer a host slot or mark the absence ineligible."
+        />
         <div className="relative w-72">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
           <Input

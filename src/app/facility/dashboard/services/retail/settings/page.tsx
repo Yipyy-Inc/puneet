@@ -47,6 +47,7 @@ import {
 import { retailConfig, type BrandMarginRule } from "@/data/retail-config";
 import { retailMutations, resolveBrandRule } from "@/lib/api/retail";
 import { sellingFromMargin } from "@/lib/retail-pricing";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function RetailSettingsPage() {
   const [settings, setSettings] = useState({
@@ -265,12 +266,10 @@ export default function RetailSettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Retail Settings</h2>
-          <p className="text-muted-foreground">
-            Configure retail and POS preferences
-          </p>
-        </div>
+        <PageHeader
+          title="Retail Settings"
+          description="Configure retail and POS preferences"
+        />
         <div className="flex gap-2">
           {isEditing ? (
             <>

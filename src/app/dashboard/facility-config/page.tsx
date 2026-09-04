@@ -10,6 +10,7 @@ import { ScheduleSettings } from "@/components/facility-config/ScheduleSettings"
 import { PoliciesSettings } from "@/components/facility-config/PoliciesSettings";
 import { AdvancedSettings } from "@/components/facility-config/AdvancedSettings";
 import { Save, AlertTriangle } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 type FacilityConfig = typeof facilityConfig;
 
@@ -43,16 +44,10 @@ export default function FacilityConfigPage() {
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">
-              {"Facility Configuration"}
-            </h2>
-            <p className="text-muted-foreground">
-              {
-                "Configure global settings that apply to all facilities in the platform, including service availability, pricing structures, booking rules, and operational policies."
-              }
-            </p>
-          </div>
+          <PageHeader
+            title="Facility Configuration"
+            description="Configure global settings that apply to all facilities in the platform, including service availability, pricing structures, booking rules, and operational policies."
+          />
           <Button onClick={handleSave}>
             <Save className="mr-2 size-4" />
             {"Save All Changes"}

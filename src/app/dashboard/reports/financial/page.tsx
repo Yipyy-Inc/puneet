@@ -5,18 +5,17 @@ import { FinancialKpis } from "./_components/financial-kpis";
 import { InvoiceAgingCard } from "./_components/invoice-aging-card";
 import { RevenueSummaryTable } from "./_components/revenue-summary-table";
 import { TaxSummaryTable } from "./_components/tax-summary-table";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function FinancialReportPage() {
   const report = getFinancialReport();
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Financial Report</h1>
-        <p className="text-muted-foreground">
-          Platform revenue, receivables, credits, fees, and tax
-        </p>
-      </div>
+      <PageHeader
+        title="Financial Report"
+        description="Platform revenue, receivables, credits, fees, and tax"
+      />
 
       <FinancialKpis kpis={report.kpis} />
 

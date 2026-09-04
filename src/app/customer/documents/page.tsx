@@ -41,6 +41,7 @@ import { getFormsByFacility } from "@/data/forms";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { PendingWaiversCard } from "./_components/PendingWaiversCard";
 import { SignedAgreementsCard } from "./_components/SignedAgreementsCard";
+import { PageHeader } from "@/components/ui/page-header";
 
 // Services this facility offers — drives pending-waiver category grouping.
 // TODO: read from facility settings when wired to a real API.
@@ -161,13 +162,10 @@ export default function CustomerDocumentsPage() {
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Documents & Agreements</h1>
-            <p className="text-muted-foreground mt-1">
-              View and manage your signed agreements, waivers, and uploaded
-              documents.
-            </p>
-          </div>
+          <PageHeader
+            title="Documents & Agreements"
+            description="View and manage your signed agreements, waivers, and uploaded documents."
+          />
         </div>
 
         {/* Search + Tabs */}

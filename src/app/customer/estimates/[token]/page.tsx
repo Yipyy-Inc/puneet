@@ -19,6 +19,7 @@ import { EstimatePdfDownload } from "@/components/estimates/EstimatePdfDownload"
 import { AcceptEstimateDialog } from "@/components/customer/estimates/AcceptEstimateDialog";
 import { DeclineEstimateDialog } from "@/components/customer/estimates/DeclineEstimateDialog";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
 
 function fmtDate(d: string) {
   return new Date(d + "T12:00:00").toLocaleDateString("en-US", {
@@ -56,12 +57,10 @@ export default function CustomerEstimateViewPage() {
   if (!estimate) {
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Estimate Not Found</h1>
-          <p className="text-muted-foreground mt-2">
-            This estimate link may have expired or is invalid.
-          </p>
-        </div>
+        <PageHeader
+          title="Estimate Not Found"
+          description="This estimate link may have expired or is invalid."
+        />
       </div>
     );
   }

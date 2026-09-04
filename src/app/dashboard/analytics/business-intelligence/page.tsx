@@ -2,20 +2,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomerAcquisitionMetrics } from "@/components/analytics/CustomerAcquisitionMetrics";
 import { ReservationAnalytics } from "@/components/analytics/ReservationAnalytics";
 import { FacilityUtilizationMetrics } from "@/components/analytics/FacilityUtilizationMetrics";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function BusinessIntelligencePage() {
   return (
     <div className="bg-gradient-mesh bg-background min-h-screen flex-1 p-6 lg:p-8">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Business Intelligence
-          </h1>
-          <p className="text-muted-foreground">
-            Customer acquisition, reservation analytics, and facility
-            utilization metrics
-          </p>
-        </div>
+        <PageHeader
+          title="Business Intelligence"
+          description="Customer acquisition, reservation analytics, and facility utilization metrics"
+        />
 
         <Tabs defaultValue="acquisition" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">

@@ -61,6 +61,7 @@ import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PageHeader } from "@/components/ui/page-header";
 
 /** Facility-wide drop-in toggle. Eventually owned by Settings → Training;
  *  hardcoded for now so the demo can showcase the single-session flow. */
@@ -473,12 +474,10 @@ export default function CustomerTrainingPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Training</h2>
-        <p className="text-muted-foreground">
-          Browse classes, enroll your pets, and manage makeup sessions
-        </p>
-      </div>
+      <PageHeader
+        title="Training"
+        description="Browse classes, enroll your pets, and manage makeup sessions"
+      />
 
       <Tabs defaultValue={defaultTab}>
         <TabsList>

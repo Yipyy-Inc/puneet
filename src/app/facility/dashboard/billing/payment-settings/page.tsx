@@ -54,6 +54,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function PaymentSettingsPage() {
   const facilityId = 11; // TODO: Get from auth context
@@ -267,14 +268,10 @@ export default function PaymentSettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Payment Settings
-          </h2>
-          <p className="text-muted-foreground">
-            Configure Fiserv payment processing and payment methods
-          </p>
-        </div>
+        <PageHeader
+          title="Payment Settings"
+          description="Configure Fiserv payment processing and payment methods"
+        />
         <div className="flex gap-2">
           {isEditing ? (
             <>

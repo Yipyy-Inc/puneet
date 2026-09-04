@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { OwnDataExport } from "./own-data-export";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
   title: "Export Data — Yipyy",
@@ -16,13 +17,10 @@ export const metadata: Metadata = {
 export default function ExportDataPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Export Data</h1>
-        <p className="text-muted-foreground">
-          Download a portable copy of your facility&rsquo;s data — customers,
-          pets, bookings, payments and staff — as CSV files in a single ZIP.
-        </p>
-      </div>
+      <PageHeader
+        title="Export Data"
+        description="Download a portable copy of your facility&rsquo;s data — customers, pets, bookings, payments and staff — as CSV files in a single ZIP."
+      />
       <OwnDataExport />
     </div>
   );

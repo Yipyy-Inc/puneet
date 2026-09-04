@@ -1,19 +1,16 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FacilityPerformanceMetrics } from "@/components/analytics/FacilityPerformanceMetrics";
 import { SystemPerformanceMetrics } from "@/components/analytics/SystemPerformanceMetrics";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function PerformanceMetricsPage() {
   return (
     <div className="bg-gradient-mesh bg-background min-h-screen flex-1 p-6 lg:p-8">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Performance Metrics
-          </h1>
-          <p className="text-muted-foreground">
-            Facility and system performance monitoring
-          </p>
-        </div>
+        <PageHeader
+          title="Performance Metrics"
+          description="Facility and system performance monitoring"
+        />
 
         <Tabs defaultValue="facility" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">

@@ -73,6 +73,7 @@ import {
   type ApplyToUpcomingAffected,
   type ApplyToUpcomingChange,
 } from "@/components/facility/services/apply-to-upcoming-prompt";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function TrainingCourseCatalogPage() {
   const [courseTypes, setCourseTypes] = useState<TrainingCourseType[]>(
@@ -385,12 +386,10 @@ export default function TrainingCourseCatalogPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Course Catalog</h2>
-          <p className="text-muted-foreground">
-            Configure your training course types (class definitions)
-          </p>
-        </div>
+        <PageHeader
+          title="Course Catalog"
+          description="Configure your training course types (class definitions)"
+        />
         <Button onClick={handleAddNew}>
           <Plus className="mr-2 size-4" />
           Add Course Type

@@ -33,6 +33,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatBookingRef } from "@/lib/booking-id";
 import type { Booking } from "@/types/booking";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -194,14 +195,10 @@ export default function BookingDetailPage({
 
       {/* Header */}
       <div className="animate-in fade-in slide-in-from-top-2 mb-6 flex items-start justify-between gap-3 duration-300">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {formatBookingRef(booking.id)}
-          </h1>
-          <p className="text-muted-foreground mt-0.5 text-sm">
-            {fmtDate(booking.startDate)}
-          </p>
-        </div>
+        <PageHeader
+          title={formatBookingRef(booking.id)}
+          description={fmtDate(booking.startDate)}
+        />
         <Badge variant={status.variant} className="text-xs">
           {status.label}
         </Badge>

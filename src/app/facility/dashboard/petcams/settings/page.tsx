@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CameraIntegrationSettings } from "@/components/camera-integration/CameraIntegrationSettings";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function PetCamSettingsPage() {
   return (
@@ -16,14 +17,10 @@ export default function PetCamSettingsPage() {
           </Link>
         </Button>
       </div>
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">
-          Live Pet Cam Settings
-        </h2>
-        <p className="text-muted-foreground">
-          Configure your camera provider, credentials, and access rules.
-        </p>
-      </div>
+      <PageHeader
+        title="Live Pet Cam Settings"
+        description="Configure your camera provider, credentials, and access rules."
+      />
 
       <CameraIntegrationSettings />
     </div>

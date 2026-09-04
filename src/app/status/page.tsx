@@ -13,6 +13,7 @@ import { OverallBanner } from "./_components/overall-banner";
 import { STATUS_META } from "./_components/status-styles";
 import { StatusFreshness } from "./_components/status-freshness";
 import { SubscribeForm } from "./_components/subscribe-form";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
   title: "Yipyy System Status",
@@ -41,12 +42,10 @@ export default function StatusPage() {
           className="h-9 w-auto"
           priority
         />
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">System Status</h1>
-          <p className="text-muted-foreground text-sm">
-            Real-time status of the Yipyy platform
-          </p>
-        </div>
+        <PageHeader
+          title="System Status"
+          description="Real-time status of the Yipyy platform"
+        />
       </header>
 
       <div className="space-y-8">

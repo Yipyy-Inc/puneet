@@ -1,18 +1,14 @@
 import { FinancialReports } from "@/components/financial/FinancialReports";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function FinancialReportsPage() {
   return (
     <div className="bg-gradient-mesh bg-background min-h-screen flex-1 p-6 lg:p-8">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Financial Reports
-          </h1>
-          <p className="text-muted-foreground">
-            Comprehensive financial reporting with revenue trends, facility
-            performance, and growth analysis
-          </p>
-        </div>
+        <PageHeader
+          title="Financial Reports"
+          description="Comprehensive financial reporting with revenue trends, facility performance, and growth analysis"
+        />
 
         <FinancialReports />
       </div>

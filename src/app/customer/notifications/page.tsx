@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle2, X } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
 
 // Mock notifications - in production, this would come from an API
 const mockNotifications: Notification[] = [
@@ -165,14 +166,14 @@ export default function NotificationsPage() {
   return (
     <div className="container mx-auto space-y-6 py-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
-          <p className="text-muted-foreground">
-            {unreadCount > 0
+        <PageHeader
+          title="Notifications"
+          description={
+            unreadCount > 0
               ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}`
-              : "All caught up!"}
-          </p>
-        </div>
+              : "All caught up!"
+          }
+        />
         {unreadCount > 0 && (
           <Button variant="outline" onClick={markAllAsRead}>
             <CheckCircle2 className="mr-2 size-4" />

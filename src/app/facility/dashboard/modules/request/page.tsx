@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ClipboardList, Plus, Clock, CheckCircle, XCircle } from "lucide-react";
 import { ModuleRequestForm } from "@/components/facility/ModuleRequestForm";
 import { getRequestsForFacility } from "@/data/module-requests";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function ModuleRequestPage() {
   const [formOpen, setFormOpen] = useState(false);
@@ -33,12 +34,10 @@ export default function ModuleRequestPage() {
   return (
     <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Module Requests</h2>
-          <p className="text-muted-foreground text-sm">
-            Request new service modules for your facility
-          </p>
-        </div>
+        <PageHeader
+          title="Module Requests"
+          description="Request new service modules for your facility"
+        />
         <Button onClick={() => setFormOpen(true)} className="gap-1.5">
           <Plus className="size-4" />
           Request New Module

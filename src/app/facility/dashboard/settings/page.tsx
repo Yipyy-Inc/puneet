@@ -205,6 +205,7 @@ import type {
   ReportCardCustomQuestion,
   CustomFeedbackType,
 } from "@/types/facility";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ============================================================================
 // Business Profile — the facility's own name, contact details and address.
@@ -3888,12 +3889,10 @@ export default function SettingsPage() {
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground mt-1">
-            Configure your facility settings and preferences
-          </p>
-        </div>
+        <PageHeader
+          title="Settings"
+          description="Configure your facility settings and preferences"
+        />
       </div>
 
       {/* Sidebar + Content layout. On phones it's a single panel: the sidebar

@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   DoorOpen,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 const OPS_TABS = ["requests", "eligibility", "kennels"] as const;
 
@@ -65,13 +66,10 @@ export default function BoardingOpsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Boarding Ops</h2>
-          <p className="text-muted-foreground text-sm">
-            Staff-only workflow: requests, eligibility checks, assignments,
-            payments, and PreCheck.
-          </p>
-        </div>
+        <PageHeader
+          title="Boarding Ops"
+          description="Staff-only workflow: requests, eligibility checks, assignments, payments, and PreCheck."
+        />
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline">
             <Bell className="mr-2 size-4" />
