@@ -1,8 +1,13 @@
 # Work order — adopting the Yipyy design system
 
-**Stages 0–10 are done**, plus **8b, the form controls** (0–7 on 2026-09-03; 8, 8b, 9 and 10 on
-2026-09-04). Stages 4, 7 and 10 grew gates; stage 7's was corrected in 8b's change.
-**Stage 11 (French, print, accessibility) is the last one.**
+**ALL TWELVE ARE DONE** — the eleven stages plus **8b, the form controls** (0–7 on 2026-09-03;
+8, 8b, 9, 10 and 11 on 2026-09-04). Stages 4, 7, 10 and 11 grew gates; stage 7's was corrected in
+8b's change.
+
+**What is left is not a stage.** Four ratchets hold real per-item work that no single edit can do:
+374 colour-only badges (§3), 41 hover-revealed controls (rule 11), 534 hardcoded locales (§5q), and
+the three §5u print documents — invoice, run card, board sheet — which need their own page setup
+and belong with the screens that own them.
 
 The gap that sat outside the eleven — `Input` — was closed on 2026-09-04 as **stage 8b**, below,
 after the product owner chose to do the whole form family at once rather than defer it.
@@ -737,15 +742,90 @@ the `sed`. A gate is only verified by watching it fail on a change you have conf
 
 ---
 
-## Stage 11 — French, print, accessibility · §formatting, §print, §focus
+## Stage 11 — French, print, accessibility · §formatting, §print, §focus · **DONE 2026-09-04**
 
 - Every date, time, number, currency, weight and duration through `Intl`. Never a format string,
   never a numeric MM/DD. French `14 h 30`, `\u00A0` before `$ % :`.
-- No fixed heights on anything holding a translated string — `common.save` grows 175% in fr.
+- No fixed heights on anything holding a translated string — closed in stage 8b.
 - Print: every colour drops out except the mark; a status becomes a bordered word; one hairline
   under the table header, no zebra. `print-color-adjust: exact` on the logo and nowhere else.
-- `aria-live` on async completion: a table finishing, a toast appearing, a form failing. Focus rings
-  from `--primary`. Mind the nested-interactive trap the DataTable source already documents.
+- `aria-live` on async completion. Focus rings from `--primary`.
+
+**The most useful thing found in this stage: §5q is not a specification to implement, it is a
+description of what `Intl` already does.** Checked against this repo's own ICU before a line was
+written — every row of the table matches character for character, including the U+00A0:
+
+```
+fr-CA time      "14 h 30"          en-CA time      "2:30 p.m."
+fr-CA currency  "42,50\u00A0$"     en-CA currency  "$42.50"
+fr-CA percent   "82\u00A0%"        fr-CA thousands "1\u00A0240"
+fr-CA date      "mar. 1 sept. 2026"  en-CA date    "Tue, Sep 1, 2026"
+```
+
+**So the defect was never that French formatting is hard. It is that 534 call sites across 330
+files pass a LITERAL locale tag, and 461 of those say `"en-US"`.** A facility that switches to
+French still reads American dates. And `en-US` is wrong in English too: it renders `9/1/2026`,
+which is exactly the numeric MM/DD form rule 8 bans — "Canada reads all three orders and this is a
+boarding product, where the wrong month is a dog in the wrong week."
+
+`src/lib/i18n/format.ts` is the layer that takes the locale, and `bun run check:hardcoded-locale`
+freezes 534 so the migration can only go one way. Not swept in one change: a client component can
+call `useAppLocale()`, a server component cannot, and a pure helper has to take the locale as an
+argument — which changes its signature and every one of its own callers. That is a refactor with a
+shape per file.
+
+**Money was being formatted as US dollars.** `src/lib/format.ts` builds every figure with
+`currency: "USD"` on `en-US`, in a Canadian product taking Canadian dollars through Clover. In
+English the two render identically — `$42.50` — which is precisely why it survived; in French the
+right answer is `42,50 $` and the wrong one is `42,50 $US`. The new layer uses `CAD`.
+
+**Two assertions failed on the first run and NEITHER was a bug in the code:**
+
+1. **French time uses PLAIN spaces, not NBSP.** `14 h 30` is U+0020 either side; §5q asks for a
+   non-breaking space "before `$ % :`", which is money and percent, and money does carry U+00A0.
+   The test was wrong and asserting NBSP would have failed correct code. Checked by printing
+   codepoints rather than comparing two strings that look identical in a terminal.
+2. **§5q's own weight example is arithmetically wrong.** The table prints `12.4 kg (28 lb)`;
+   12.4 × 2.20462 = 27.34, which rounds to **27**. 28 lb is 12.70 kg. The implementation converts
+   correctly and the test asserts 27 — **not fudged to match the spec**, because a weight on this
+   product sits next to a medication dose. **Flagged here for whoever corrects the spec.**
+
+**24 unit tests** assert the table line by line, with the non-breaking spaces written as `\u00A0`
+escapes on purpose: a test using a normal space passes while the bug ships, which makes the escape
+the entire point.
+
+**Print did not exist.** No `@media print` anywhere in the app — every screen printed as a
+screenshot of itself: sidebar, toasts, buttons, coloured chips and truncations, in ink somebody
+pays for. Now: `@page letter/18mm`, the chrome hidden by role and `data-slot` rather than by utility
+class, **every truncation expanded** (§5u: "there is no hover on paper, so an ellipsis is
+information destroyed"), status chips become bordered words, one hairline under the table header
+and no zebra, `thead` repeats across pages, and `print-color-adjust: exact` on the mark and nothing
+else. The three §5u documents — invoice, run card, board sheet — need their own page setup and
+belong with the screens that own them; what is here is what is true of all three and of every page
+somebody hits Ctrl+P on by accident.
+
+**`Button` had no focus indicator at all, and stage 5 is where it went.** That rewrite carried
+`outline-none` across from shadcn WITHOUT its `focus-visible:ring-*`, so from that commit until
+this one not one of the **3,774 buttons** in this app showed a keyboard user where they were.
+Nothing failed and nothing looked wrong, because a mouse never reveals it. Found by tabbing through
+a real page and reading the computed style at each stop.
+
+**And the first reading of that probe was wrong, which is worth recording.** It measured `outline`
+only and reported 1 of 6 tab stops visible — the sidebar looked broken too. It was not: the sidebar
+uses a RING (a box-shadow), which is a perfectly good focus indicator. Measuring both gives
+**12/12 visible**. A probe that checks one of the two mechanisms manufactures defects.
+
+**The global `:focus-visible` rule is real but narrower than it first looks.** It upgrades the
+browser default to §5k's ring for anything that has not removed its outline. It CANNOT help an
+element carrying `outline-none`, because that is a utility and utilities beat `@layer base` — which
+is why Button needed its own and why the 13 bare elements across 7 files (the feeding-form input,
+both message composers, the rich-text variable input, three modals) each still need one.
+
+**`aria-live` went on the one place it is worth having.** A sighted user watches a table shrink as
+they type; a screen-reader user gets nothing, because rows change without focus moving. `DataTable`
+now announces "N of M shown" politely — 87 screens from one region. `polite` rather than
+`assertive` because a changing count is not an interruption and would otherwise talk over the
+user mid-keystroke.
 
 ---
 
