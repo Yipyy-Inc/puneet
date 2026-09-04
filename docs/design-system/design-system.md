@@ -620,6 +620,14 @@ Only the body attitude and the prop change. A new pose is checked against this b
 
 Compact 132 only, in a dialog, a panel or a whole failed view. Never a toast, a field or a row.
 
+> **One deviation, 2026-09-04.** A ROUTE-level state that owns the entire viewport —
+> `app/loading.tsx`, `error.tsx`, `not-found.tsx`, `forbidden.tsx`, rendered by `RouteState` with
+> `surface="bare"` — takes the pose at **320**, not 132. At 132, alone in the middle of an empty
+> 1440px screen with nothing else on it, he reads as an unfinished icon rather than as the subject.
+> 320 rather than an intermediate value because "three sizes and no fourth" still holds, and the
+> source files are 720×720 so it is still downscaling. Everything this rule was written for — a
+> dialog, a sign-in panel, a section that failed in place — keeps 132.
+
 | #   | Pose         | Reg.   | Body attitude                                                    | Serves                                                                              | Copy                                     | CTA               |
 | --- | ------------ | ------ | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------- | ----------------- |
 | 15  | **Success**  | Bright | Thumb up, eyes bright, chest square to you                       | A finished flow — the confirmation panel, never the toast                           | "Kofi is checked in"                     | Back to the board |
