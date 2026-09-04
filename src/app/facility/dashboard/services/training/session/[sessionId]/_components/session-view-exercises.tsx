@@ -937,7 +937,7 @@ function SessionPhotosCard({
                   <button
                     type="button"
                     onClick={() => onRemovePhoto(photo.id)}
-                    className="absolute top-1.5 right-1.5 inline-flex size-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-black/80 focus-visible:opacity-100"
+                    className="absolute top-1.5 right-1.5 inline-flex size-7 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80 max-lg:size-12"
                     aria-label="Remove photo"
                     title="Remove photo"
                   >

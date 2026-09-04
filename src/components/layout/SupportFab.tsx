@@ -24,10 +24,21 @@ export function SupportFab() {
       onClick={() => setSupportDrawerOpen(!open)}
       aria-label="Help & Support"
       aria-expanded={open}
-      className="group fixed right-6 bottom-6 z-50 flex h-12 items-center gap-0 rounded-full bg-violet-600 px-3 text-white shadow-lg shadow-violet-600/30 transition-all duration-200 hover:gap-2 hover:bg-violet-700 hover:shadow-xl focus-visible:gap-2 focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="group fixed right-6 bottom-6 z-50 flex h-12 items-center gap-0 rounded-full bg-violet-600 px-3 text-white shadow-lg shadow-violet-600/30 transition-all duration-200 hover:bg-violet-700 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:outline-none lg:hover:gap-2 lg:focus-visible:gap-2"
     >
       <HelpCircle className="size-6 shrink-0" />
-      <span className="max-w-0 overflow-hidden text-sm font-medium whitespace-nowrap opacity-0 transition-all duration-200 group-hover:max-w-[140px] group-hover:opacity-100 group-focus-visible:max-w-[140px] group-focus-visible:opacity-100">
+      {/* The expanding label is a DESKTOP flourish and says so in its
+          breakpoints, which is also why the gate does not count it: both
+          halves of the hide are behind `lg:`.
+
+          It was briefly made persistent everywhere, on the reading that §6
+          rule 11 covers anything a pointer reveals. At 599px that put a
+          140px pill across the bottom tab bar's last item, which is a worse
+          bug than the one it fixed — and the reading was wrong anyway. Rule
+          11 is about CONTROLS. The control here is the button, it is visible
+          in every context, and `aria-label` gives it a complete name with or
+          without this span. A decorative label is not an affordance. */}
+      <span className="hidden max-w-0 overflow-hidden text-sm font-medium whitespace-nowrap transition-all duration-200 lg:inline-block lg:opacity-0 lg:group-hover:max-w-[140px] lg:group-hover:opacity-100 lg:group-focus-visible:max-w-[140px] lg:group-focus-visible:opacity-100">
         Help &amp; Support
       </span>
     </button>

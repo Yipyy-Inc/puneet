@@ -423,7 +423,7 @@ export function ShiftOpportunityBoard({
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="text-muted-foreground size-7 opacity-0 group-hover:opacity-100"
+                                className="text-muted-foreground size-7 max-lg:size-12"
                                 onClick={() => handleCancel(opp.id)}
                               >
                                 <XCircle className="size-4" />

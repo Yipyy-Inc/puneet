@@ -4,10 +4,19 @@
 8, 8b, 9, 10 and 11 on 2026-09-04). Stages 4, 7, 10 and 11 grew gates; stage 7's was corrected in
 8b's change.
 
-**What is left is not a stage.** Four ratchets hold real per-item work that no single edit can do:
-374 colour-only badges (§3), 41 hover-revealed controls (rule 11), 534 hardcoded locales (§5q), and
-the three §5u print documents — invoice, run card, board sheet — which need their own page setup
-and belong with the screens that own them.
+**What is left is not a stage.** Three ratchets hold real per-item work that no single edit can do:
+374 colour-only badges (§3), 534 hardcoded locales (§5q), and the three §5u print documents —
+invoice, run card, board sheet — which need their own page setup and belong with the screens that
+own them.
+
+**Rule 11's ratchet reached zero on 2026-09-04.** The 41 hover-revealed controls were not one job
+and five different answers were needed — persistent, a placeholder glyph, in flow, inert, deleted —
+which is written up in `scripts/check-hover-actions.ts`. Two things came out of it worth keeping:
+the kennel board's empty runs and the schedule's empty cells had NO visible add affordance at all on
+a tablet, which is the context the floor actually uses; and `/profile` drew a camera scrim over the
+avatar with no click handler on it, so the one surface that looked most like a hidden control was
+not a control at all. Making a control persistent also means giving it a tap target, so the icon
+buttons took `max-lg:size-12` alongside (§6 rule 7).
 
 The gap that sat outside the eleven — `Input` — was closed on 2026-09-04 as **stage 8b**, below,
 after the product owner chose to do the whole form family at once rather than defer it.

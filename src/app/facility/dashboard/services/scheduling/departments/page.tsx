@@ -337,7 +337,7 @@ export default function DepartmentsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="size-7 opacity-0 group-hover:opacity-100"
+                          className="size-7 max-lg:size-12"
                         >
                           <MoreHorizontal className="size-4" />
                           <span className="sr-only">Open menu</span>
@@ -423,7 +423,7 @@ export default function DepartmentsPage() {
                             onClick={() =>
                               removeEmployeeFromDept(dept.id, emp.id)
                             }
-                            className="hover:bg-destructive/15 hover:text-destructive text-muted-foreground flex size-4 items-center justify-center rounded-full opacity-0 transition-opacity group-hover/chip:opacity-100"
+                            className="hover:bg-destructive/15 hover:text-destructive text-muted-foreground flex size-4 items-center justify-center rounded-full transition-colors"
                             aria-label={`Remove ${emp.name}`}
                           >
                             <X className="size-3" />

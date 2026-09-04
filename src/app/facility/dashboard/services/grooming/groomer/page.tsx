@@ -552,7 +552,7 @@ export default function GroomerDashboardPage() {
                       <button
                         type="button"
                         onClick={() => handleRemovePhoto(idx)}
-                        className="bg-destructive text-destructive-foreground absolute top-1 right-1 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                        className="bg-destructive text-destructive-foreground absolute top-1 right-1 rounded-full p-1"
                       >
                         <X className="size-3" />
                       </button>

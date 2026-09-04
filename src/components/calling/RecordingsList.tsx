@@ -327,7 +327,7 @@ export function RecordingsList({
                           <span className="truncate text-sm/tight font-semibold group-hover:underline">
                             {rec.clientName || "Unknown Caller"}
                           </span>
-                          <ExternalLink className="text-muted-foreground size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                          <ExternalLink className="text-muted-foreground size-3 shrink-0" />
                         </Link>
                       ) : (
                         <span className="text-muted-foreground truncate text-sm font-semibold">

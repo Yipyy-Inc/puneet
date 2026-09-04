@@ -169,7 +169,7 @@ function DesktopWidget({
                 <span className="text-body-strong/tight truncate font-bold text-white underline-offset-2 transition-colors group-hover:text-[#CDEAF5] group-hover:underline">
                   {call.clientName}
                 </span>
-                <ExternalLink className="size-3 shrink-0 text-[#CDEAF5]/30 opacity-0 transition-opacity group-hover:opacity-100" />
+                <ExternalLink className="size-3 shrink-0 text-[#CDEAF5]" />
               </Link>
             ) : (
               <p className="text-body-strong/tight truncate font-bold text-white">
@@ -401,7 +401,7 @@ function MobileFullscreen({
                 <span className="text-2xl font-bold tracking-tight underline-offset-2 transition-colors group-hover:text-[#CDEAF5] group-hover:underline">
                   {call.clientName}
                 </span>
-                <ExternalLink className="size-4 shrink-0 text-[#CDEAF5]/35 opacity-0 transition-opacity group-hover:opacity-100" />
+                <ExternalLink className="size-4 shrink-0 text-[#CDEAF5]" />
               </Link>
             ) : (
               <p className="text-2xl font-bold tracking-tight">

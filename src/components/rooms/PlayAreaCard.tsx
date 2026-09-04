@@ -447,8 +447,11 @@ function SectionTile({
         </p>
       </div>
 
-      {/* Hover actions */}
-      <div className="from-card via-card/90 absolute inset-x-0 bottom-0 flex items-center justify-between bg-linear-to-t to-transparent px-3 pt-5 pb-2 opacity-0 transition-opacity group-hover:opacity-100">
+      {/* Row actions, in flow rather than an overlay (§6 rule 11). Two of
+          three contexts have no pointer, so these were absent on tablet and
+          phone; and a scrim made persistent would have covered the capacity
+          label underneath it, which is the reason it was an overlay at all. */}
+      <div className="flex items-center justify-between px-3 pt-1 pb-2.5">
         <button
           onClick={onEdit}
           className="text-muted-foreground hover:text-foreground text-[10px] underline underline-offset-2"
@@ -457,7 +460,7 @@ function SectionTile({
         </button>
         <button
           onClick={onDelete}
-          className="text-destructive/70 hover:text-destructive text-[10px] underline underline-offset-2"
+          className="text-destructive text-[10px] underline underline-offset-2"
         >
           Remove
         </button>

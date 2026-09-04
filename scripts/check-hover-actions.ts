@@ -29,25 +29,41 @@
  * (§5k) and a good thing — but a tablet has no keyboard focus to give it
  * either, so the control is still absent in the context the rule is about.
  *
- * ── WHY A RATCHET AND NOT A SWEEP ─────────────────────────────────────────
+ * ── THE BASELINE IS ZERO, AND IT GOT THERE THE SLOW WAY ───────────────────
  *
  * Stage 7 measured 61 raw grep hits; reading className one attribute at a
  * time, and excluding the two false-positive classes above, the honest
- * starting number was 58. On 2026-09-04 the ELEVEN action-group containers
- * — `flex … gap-N` wrappers holding edit/delete/copy buttons in a row — were
- * made persistent, taking it to 41.
+ * starting number was 58. The ELEVEN action-group containers — `flex … gap-N`
+ * wrappers holding edit/delete/copy buttons in a row — went persistent first,
+ * taking it to 41. The remaining 41 were cleared on 2026-09-04, one at a
+ * time, because they were never one job. Five answers were needed:
  *
- * The rest are not one job. They are icon hints, captions and single
- * buttons, and each is a judgement: make it persistent, move it into an
- * overflow menu, or decide the affordance was decoration and delete it. The
- * right answer depends on how crowded the row already is, and the wrong bulk
- * answer — making all 41 permanently visible — would produce rows nobody can
- * read.
+ *   PERSISTENT — the bulk. Overflow triggers, dismiss buttons, remove-photo
+ *     controls, the manager-override lock. The control now rests at
+ *     `--ink-tertiary` and hover changes its COLOUR, never its alpha, so the
+ *     fix does not walk into §6 rule 4 on the way out.
+ *   A PLACEHOLDER GLYPH — the empty-cell hints. A kennel board and a month
+ *     grid have dozens of empty cells, and 35 persistent copies of "Click to
+ *     add shift" is a worse screen than the bug. A `Plus` at `--ink-disabled`
+ *     (§1's placeholder-glyph token, non-text by definition) with the words
+ *     in `sr-only` says the same thing quietly.
+ *   IN FLOW — the two room cards, whose actions were an absolutely positioned
+ *     scrim OVER the capacity label. Persistent would have covered the data,
+ *     which is why they were an overlay at all; the fix was to stop making
+ *     them one.
+ *   INERT — a scrim with a glyph on an already-tappable thumbnail. Nothing is
+ *     hidden behind the mouse when the whole tile is the button, and
+ *     `pointer-events-none` is the honest label for a decoration that should
+ *     never have been eating the trigger's clicks either.
+ *   DELETED — `/profile` drew a camera scrim over the avatar with no click
+ *     handler anywhere on it. It was not a hidden control, it was a lie about
+ *     one, and the real "Change Photo" button sits directly underneath.
  *
- * So the number is frozen. A new one fails. Fixing some and dropping below
- * the baseline reports too, with an instruction to lower it, so the count
- * can only shrink. Same shape as `check:badge-glyph`, and for the same
- * reason: a defect nobody counts is a defect that only grows.
+ * So the number is frozen at zero and every new one fails. Do NOT reach for
+ * a sixth answer — `focus-within:opacity-100` does not rescue a control, and
+ * neither does a `title` attribute. A breakpoint- or pointer-prefixed hide
+ * (`lg:opacity-0`) IS allowed and is deliberately not counted: it leaves the
+ * thing visible in the contexts that cannot hover, which is the whole ask.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -62,10 +78,11 @@ const ANSI = {
 };
 
 /**
- * The count on the day the rule got a gate (stage 7, 2026-09-03). Lower it
- * whenever the real number drops — the script tells you to.
+ * Zero since 2026-09-04. It was 58 when the rule got a gate (stage 7,
+ * 2026-09-03). Never raise it — the point of a ratchet is that it only turns
+ * one way, and at zero the message is simply "do not add one".
  */
-const BASELINE = 41;
+const BASELINE = 0;
 
 /** The reveal half: something becomes opaque because a pointer is near it. */
 const REVEAL = /\b(?:group-hover(?:\/[a-z0-9-]+)?|hover):opacity-100\b/;

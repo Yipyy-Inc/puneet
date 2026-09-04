@@ -326,7 +326,7 @@ export function InvoicePanel({
                         </div>
                       ) : !isClosed && isItemBase(item.type) ? (
                         <button
-                          className="text-muted-foreground flex size-5 items-center justify-center rounded-sm opacity-0 transition-opacity group-hover:opacity-100 hover:text-amber-600"
+                          className="text-muted-foreground flex size-5 items-center justify-center rounded-sm transition-colors hover:text-amber-600"
                           onClick={() => grantOverride(i, item.name)}
                           title="Locked — click for manager override"
                         >

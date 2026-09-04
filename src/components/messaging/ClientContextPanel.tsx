@@ -925,9 +925,9 @@ export function ClientContextPanel({
                       {link.label}
                     </span>
                     {link.href ? (
-                      <ExternalLink className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
+                      <ExternalLink className="text-muted-foreground size-3" />
                     ) : (
-                      <Copy className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
+                      <Copy className="text-muted-foreground size-3" />
                     )}
                   </>
                 );
@@ -977,8 +977,12 @@ export function ClientContextPanel({
                     alt=""
                     className="size-full object-cover transition-transform group-hover:scale-110"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-                    <Eye className="size-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                  {/* Pointer feedback only. The thumbnail itself is the button
+                      and it is tappable without this, so the scrim is not an
+                      affordance being hidden (§6 rule 11) — and marking it
+                      inert keeps it from eating the button's own clicks. */}
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Eye className="size-4 text-white" />
                   </div>
                 </button>
               ))}

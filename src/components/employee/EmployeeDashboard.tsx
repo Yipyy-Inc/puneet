@@ -291,7 +291,7 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
                       <div className="bg-muted flex size-9 items-center justify-center rounded-lg">
                         <Icon className={`size-5 ${action.accent}`} />
                       </div>
-                      <ArrowRight className="text-muted-foreground size-4 opacity-0 transition-opacity group-hover:opacity-100" />
+                      <ArrowRight className="text-muted-foreground size-4" />
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0 pb-4">

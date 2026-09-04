@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useMemo } from "react";
-import { UserX, Star, Sigma } from "lucide-react";
+import { UserX, Star, Sigma, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import {
@@ -375,8 +375,9 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
                   onDrop={(e) => onDrop(e, undefined, dateStr)}
                 >
                   {cellShifts.length === 0 ? (
-                    <span className="text-muted-foreground/40 m-auto text-[10px] italic opacity-0 transition-opacity group-hover/open-cell:opacity-100">
-                      + Post open shift
+                    <span className="text-ink-disabled m-auto flex items-center">
+                      <Plus className="size-4" aria-hidden />
+                      <span className="sr-only">Post open shift</span>
                     </span>
                   ) : (
                     cellShifts.map((shift) => (

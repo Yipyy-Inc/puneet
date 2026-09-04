@@ -145,7 +145,7 @@ export function NotificationsDropdown() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="size-6 p-0 opacity-0 group-hover:opacity-100"
+                  className="size-6 p-0 max-lg:size-12"
                   onClick={(e) => {
                     e.stopPropagation();
                     removeNotification(notification.id);

@@ -217,8 +217,8 @@ export function PhotoAlbums({
                 className="absolute inset-0 size-full object-cover"
               />
               {photo.caption && (
-                <div className="absolute inset-0 flex items-end bg-black/0 transition-colors group-hover:bg-black/40">
-                  <p className="w-full truncate p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end bg-black/55">
+                  <p className="w-full truncate p-2 text-xs text-white">
                     {photo.caption}
                   </p>
                 </div>
@@ -349,8 +349,8 @@ export function PhotoAlbums({
                       className="absolute inset-0 size-full object-cover"
                     />
                     {photo.caption && (
-                      <div className="absolute inset-0 flex items-end bg-black/0 transition-colors group-hover:bg-black/40">
-                        <p className="w-full truncate p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end bg-black/55">
+                        <p className="w-full truncate p-2 text-xs text-white">
                           {photo.caption}
                         </p>
                       </div>

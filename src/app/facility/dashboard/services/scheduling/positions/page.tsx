@@ -257,7 +257,7 @@ export default function PositionsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="size-6 opacity-0 group-hover:opacity-100"
+                            className="size-6 max-lg:size-12"
                           >
                             <MoreHorizontal className="size-3.5" />
                             <span className="sr-only">Open menu</span>

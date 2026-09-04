@@ -263,7 +263,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
                           </span>
                         )}
                       </p>
-                      <Eye className="text-muted-foreground/40 group-hover:text-foreground mt-0.5 size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                      <Eye className="text-muted-foreground group-hover:text-foreground mt-0.5 size-3 shrink-0 transition-colors" />
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-[10.5px]">
                       <span className="font-medium">{event.staffName}</span>

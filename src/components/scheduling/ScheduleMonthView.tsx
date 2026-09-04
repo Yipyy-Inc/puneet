@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { UserX, Star, Coffee } from "lucide-react";
+import { UserX, Star, Coffee, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -274,8 +274,9 @@ export function ScheduleMonthView({
                 {assignedShifts.length === 0 &&
                   openShifts.length === 0 &&
                   inCurrentMonth && (
-                    <span className="text-muted-foreground/50 mt-auto text-[10px] italic opacity-0 transition-opacity group-hover:opacity-100">
-                      + Add shift
+                    <span className="text-ink-disabled mt-auto flex items-center">
+                      <Plus className="size-4" aria-hidden />
+                      <span className="sr-only">Add shift</span>
                     </span>
                   )}
               </div>

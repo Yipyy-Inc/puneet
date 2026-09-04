@@ -236,7 +236,7 @@ export function EstimateCard({
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
-                    className="text-muted-foreground hover:bg-muted flex size-7 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 max-md:opacity-100"
+                    className="text-muted-foreground hover:bg-muted flex size-7 items-center justify-center rounded-md transition-colors max-lg:size-12"
                   >
                     <MoreHorizontal className="size-4" />
                   </button>
