@@ -137,7 +137,7 @@ export function AddOnCategorySheet({
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="flex items-center gap-1">
                   <Button
                     size="sm"
                     variant="ghost"

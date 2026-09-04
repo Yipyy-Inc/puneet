@@ -531,7 +531,7 @@ export function MessagingSettingsView() {
                       </p>
                     )}
                   </div>
-                  <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex shrink-0 gap-0.5">
                     <Button
                       variant="ghost"
                       size="icon"

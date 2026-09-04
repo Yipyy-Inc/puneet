@@ -333,7 +333,11 @@ function SidebarInput({
     <Input
       data-slot="sidebar-input"
       data-sidebar="input"
-      className={cn("bg-background h-8 w-full shadow-none", className)}
+      // `bg-background h-8` was shadcn's own override, and it is the one
+      // place a field escaped the family: --ground instead of --card, and a
+      // 32px box that only looked 40 because `min-h-10` outranked it. A
+      // search field in the sidebar is still a field (§5, §5c).
+      className={cn("w-full", className)}
       {...props}
     />
   );

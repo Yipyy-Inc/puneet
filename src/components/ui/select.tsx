@@ -37,14 +37,26 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        `border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:ring-destructive/40 [&_svg:not([class*='text-'])]:text-muted-foreground flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+        // The same control as `Input` — §5 gives one shape and one height to
+        // every field in a form, and a select that does not match the text
+        // box beside it is the thing that made this family worth doing in one
+        // pass. See input.tsx for the inset focus ring and the `min-h` rule.
+        //
+        // `size="sm"` is kept and resolves to the SAME height, exactly as
+        // Button's `sm` does: §1 has one control height, and the alternative
+        // was editing every call site that passes it.
+        `border-line-strong bg-card text-body-ink data-placeholder:text-ink-tertiary [&_svg:not([class*='text-'])]:text-ink-disabled focus-visible:border-primary aria-invalid:border-error-dot disabled:bg-surface-inset disabled:text-ink-disabled flex min-h-10 w-fit items-center justify-between gap-2 rounded-full border px-4 text-[14.5px] whitespace-nowrap transition-[color,border-color,box-shadow] duration-120 ease-[ease] outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--primary),0_0_0_3px_rgba(22,104,227,0.12)] disabled:cursor-not-allowed aria-invalid:focus-visible:shadow-[inset_0_0_0_2px_var(--error-dot),0_0_0_3px_rgba(210,69,69,0.12)] data-[size=default]:min-h-10 data-[size=sm]:min-h-10 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 motion-reduce:transition-none max-lg:min-h-12 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className,
       )}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-4 opacity-50" />
+        {/* `opacity-50` was rule 4's problem in miniature. §1 has a token for
+            exactly this — --ink-disabled #8C99A3, "chevrons and placeholder
+            glyphs, non-text only" — which passes on its own instead of
+            compositing to whatever the background happens to be. */}
+        <ChevronDownIcon className="text-ink-disabled size-4" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );

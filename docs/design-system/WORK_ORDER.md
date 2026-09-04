@@ -1,11 +1,11 @@
 # Work order — adopting the Yipyy design system
 
-**Stages 0–8 are done** (0–7 on 2026-09-03, stage 8 on 2026-09-04), stages 4 and 7 with tails
-they turned into ratchets.
+**Stages 0–8 are done**, plus **8b, the form controls** (0–7 on 2026-09-03, 8 and 8b on
+2026-09-04). Stages 4 and 7 grew ratchets; stage 7's was corrected in 8b's change.
 **Stage 9 (DataTable budget and density) is next.**
 
-One gap sits outside the eleven and nobody owns it: **`Input` is still shadcn's `h-9 rounded-md`
-against §5's 40px pill.** See the end of stage 7.
+The gap that sat outside the eleven — `Input` — was closed on 2026-09-04 as **stage 8b**, below,
+after the product owner chose to do the whole form family at once rather than defer it.
 
 The stage headings below carry the same status, and they are the record — a stage that shipped
 without its heading being updated is how this file drifted from the repo once already.
@@ -540,6 +540,63 @@ is off: the dot and the words carry the meaning either way.
 `brand-orange` in `src/` was one `KpiTile` tone nothing opted into, and zero raw `#F08A3C`. The
 ~720 `bg-orange-*` / `bg-amber-*` class names all compile to `--warning` after stage 1's remap —
 see the note in CLAUDE.md, because that grep will mislead the next person who runs it.
+
+---
+
+## Stage 8b — the form controls · §5, §5c, §5g · **DONE 2026-09-04**
+
+Not one of the original eleven. `Input` was flagged at the end of stage 7 as a gap no stage owned;
+the product owner chose to close it as its own stage, covering the whole FAMILY rather than the one
+component.
+
+**Doing `Input` alone would have made the product worse.** `input`, `textarea`, `select`,
+`date-picker`, `time-picker-lux` and shadcn's `SidebarInput` all carried the identical
+`h-9 rounded-md`, so fixing one would have put 40px pill inputs beside 36px rounded-rectangle
+selects inside the same form.
+
+**And `h-9` was a §5g defect, not a style preference.** §5c: "Field `min-height: 40px` — never a
+fixed height." CLAUDE.md says why in general — no fixed height on anything holding a translated
+string, because `common.save` grows 175% in French. A fixed-height field clips its own value, in
+the locale nobody on the team reads first. The size change IS the fix.
+
+**Measured in Chromium, on a real settings form:**
+
+| Control  | Measured                                                                              |
+| -------- | ------------------------------------------------------------------------------------- |
+| Input    | 40px min · full pill · 1px `#D3DDEE` on `#FFFFFF` · 14.5px · 48px at 599px            |
+| Focus    | `inset 0 0 0 2px #1668E3` + `0 0 0 3px rgba(22,104,227,.12)` — **0px layout shift**   |
+| Select   | 40px · full pill · `--inset` `#F1F5FD` when disabled, which is §5's own disabled fill |
+| Textarea | 16px radius · white · grows past its 80px resting height                              |
+
+**The focus ring is an inset shadow, and that is a deliberate reading of §5.** The spec asks for a
+2px border on focus over a 1px resting border. Written literally that is a 1px layout shift every
+time somebody tabs into a field — twelve small jumps on a twelve-field form. `inset 0 0 0 2px`
+paints the identical 2px edge inside the existing box. Measured: the field is 40px at rest and 40px
+focused.
+
+**One judgement the spec does not make, written down rather than buried.** There is no textarea
+specimen anywhere in the reference page, and a 999px radius on a 96px-tall box is a lozenge whose
+first and last lines sit inside the curve. So the textarea takes §1's radius scale on its own
+terms — 16px, the "medium containers" step. No new value enters the system, but it IS a choice, and
+`rounded-full` is a one-word change if the client disagrees.
+
+**Two things went that were rule violations rather than old styling:** `disabled:opacity-50` on
+every field (rule 4 — opacity rewrites every ratio in the subtree; disabled is now `--inset` behind
+`--ink-disabled`, which passes on its own), and `opacity-50` on the select chevron, which §1 has a
+token for: `--ink-disabled`, "chevrons and placeholder glyphs, non-text only".
+
+**`md:text-sm` came out of the base string.** A breakpoint override on the field's own size is
+exactly what silently beat two arbitrary `text-[…]` values earlier in this redesign. One size now,
+at every width.
+
+**Blast radius, measured before starting:** 1,867 `<Input>` in 500 files, 795 `<SelectTrigger>` in
+347, 403 `<Textarea>` in 268 — and only **three** call sites override height or radius. The same
+shape as stage 5, where 1,698 buttons grew from 32px to 40px and nothing broke. `size="sm"` on
+SelectTrigger is kept and resolves to the same height, exactly as Button's does.
+
+`SidebarInput` was the one field that had escaped the family — `bg-background h-8`, so `--ground`
+instead of `--card` and a 32px box that only looked 40 because `min-h-10` outranked it. Found by
+measuring rather than reading, because it was the first input the probe happened to land on.
 
 ---
 

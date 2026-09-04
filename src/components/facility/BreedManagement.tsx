@@ -369,7 +369,7 @@ export function BreedManagement() {
                           >
                             <Ban className="size-3" />
                           </button>
-                          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <div className="flex items-center gap-1">
                             <button
                               onClick={() => openEditDialog(breed)}
                               className="text-muted-foreground hover:text-foreground rounded-sm p-1 transition-colors"

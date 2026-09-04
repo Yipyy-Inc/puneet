@@ -850,7 +850,7 @@ function StationCard({
           )}
 
           {/* Secondary row — appears on hover, keeps the card glanceable */}
-          <div className="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex gap-2">
             <Button
               size="sm"
               variant="outline"
