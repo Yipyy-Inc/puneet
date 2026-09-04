@@ -17,10 +17,11 @@ There is a real backend: **Supabase Postgres** with row-level security as the au
 voice, formatting, print and governance, all decided and measured, with the eleven-stage adoption
 sequence in [WORK_ORDER.md](docs/design-system/WORK_ORDER.md). It is **not a proposal to evaluate**:
 every screen reworked from here on follows it completely, and CLAUDE.md § "Design System" is the
-standing rule. **Stages 0–9 are done** (documents and assets, the `@theme` tokens, the empty-state
+standing rule. **Stages 0–10 are done** (documents and assets, the `@theme` tokens, the empty-state
 choke point, the four route-level states, the status chips, Button, the metric and filter tiles,
 the page header / saved views / filter band / bulk bar, the orange territories, the form controls,
-and the DataTable column budget and density); **stage 10 (icons) is next.** The tokens landed, so `src/` renders the new palette
+the DataTable column budget and density, and the nav glyphs); **stage 11 (French, print,
+accessibility) is the last one.** The tokens landed, so `src/` renders the new palette
 everywhere; stage 7's band and bulk bar reached 87 screens through `DataTable` alone; and stage 8
 put the 2px orange ring on every pet — but most screens still have the old LAYOUT, density and
 glyphs, so the third question about any screen, after "fixture or Postgres?", is still **"old
@@ -83,6 +84,7 @@ Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/u
 | `bun run check:staging-sends`          | Fails if a file reaches Resend or Twilio without consulting the staging suppression guard                           |
 | `bun run check:badge-glyph`            | Fails if a colour-coded badge carries no glyph — §3's "colour is never the only channel". Ratcheted at 374          |
 | `bun run check:hover-actions`          | Fails if a control is revealed only on hover — §6 rule 11, and two of three contexts have none. Ratcheted at 41     |
+| `bun run check:nav-icons`              | Fails if a nav glyph drifts from `icon-map.json`, or if any glyph lands on two areas — §5b1                         |
 | `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                   |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check && bun run test:unit`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.

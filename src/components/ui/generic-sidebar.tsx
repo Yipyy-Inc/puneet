@@ -40,8 +40,6 @@ export interface MenuItem {
   }>;
   disabled?: boolean;
   count?: number;
-  /** Optional brand color (CSS color) applied to the icon when not active. */
-  iconColor?: string;
 }
 
 export interface MenuSection {
@@ -253,15 +251,13 @@ export function GenericSidebar({
                               >
                                 <div className="relative">
                                   <item.icon
-                                    className={cn(
-                                      "size-4 shrink-0 transition-colors",
-                                      isActive && "text-muted-foreground",
-                                    )}
-                                    style={
-                                      !isActive && item.iconColor
-                                        ? { color: item.iconColor }
-                                        : undefined
-                                    }
+                                    // §5b1: "An icon never introduces a colour; it
+                                    // inherits its label's ink." This did both
+                                    // halves of what that bans: the ACTIVE item's
+                                    // glyph went grey while its label went primary,
+                                    // and `iconColor` let a call site paint one from
+                                    // data. No nav item ever set it.
+                                    className="size-5 shrink-0 transition-colors"
                                   />
                                   {item.count && item.count > 0 && (
                                     <div className="absolute -top-1 -left-1 size-2 rounded-full bg-red-500" />
@@ -361,17 +357,7 @@ export function GenericSidebar({
                                       isExpanded ? "gap-3" : "justify-center",
                                     )}
                                   >
-                                    <item.icon
-                                      className={cn(
-                                        "size-4 shrink-0 transition-colors",
-                                        isActive && "text-muted-foreground",
-                                      )}
-                                      style={
-                                        !isActive && item.iconColor
-                                          ? { color: item.iconColor }
-                                          : undefined
-                                      }
-                                    />
+                                    <item.icon className="size-5 shrink-0 transition-colors" />
                                     {isExpanded && (
                                       <>
                                         <span className="flex-1 truncate">
@@ -441,17 +427,9 @@ export function GenericSidebar({
                                 href={item.url}
                                 className="flex items-center gap-3"
                               >
-                                <item.icon
-                                  className={cn(
-                                    "size-4 shrink-0 transition-colors",
-                                    isActive && "text-muted-foreground",
-                                  )}
-                                  style={
-                                    !isActive && item.iconColor
-                                      ? { color: item.iconColor }
-                                      : undefined
-                                  }
-                                />
+                                {/* §5b1 — inherits its label's ink. See the
+                                    note on the first of these. */}
+                                <item.icon className="size-5 shrink-0 transition-colors" />
                                 <span className="flex-1 truncate">
                                   {itemLabel}
                                 </span>
@@ -513,12 +491,8 @@ export function GenericSidebar({
                               href={activeItem.url}
                               className="flex items-center gap-3"
                             >
-                              <activeItem.icon
-                                className={cn(
-                                  "size-4 shrink-0 transition-colors",
-                                  "text-muted-foreground",
-                                )}
-                              />
+                              {/* §5b1 — inherits its label's ink. */}
+                              <activeItem.icon className="size-5 shrink-0 transition-colors" />
                               <span className="flex-1 truncate">
                                 {activeItemLabel}
                               </span>

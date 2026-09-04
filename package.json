@@ -56,7 +56,7 @@
     "check:staging-sends": "bun scripts/check-staging-sends.ts",
     "check:no-dark-mode": "bun scripts/check-no-dark-mode.ts",
     "check:badge-glyph": "bun scripts/check-badge-glyph.ts",
-    "check:hover-actions": "bun scripts/check-hover-actions.ts",
+    "check:nav-icons": "bun scripts/check-nav-icons.ts",
     "check:hover-actions": "bun scripts/check-hover-actions.ts"
   },
   "dependencies": {

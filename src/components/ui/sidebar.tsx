@@ -484,6 +484,18 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
   );
 }
 
+// §5b1 sizes the nav glyph at 20px: "16 inline with text and in badges, 20 THE
+// DEFAULT FOR BUTTONS, ROWS AND NAV, 24 for page headers, empty-state heads and
+// 40px solid badges. No other size."
+//
+// It was `size-4` — the inline-with-text size — on all 36 nav areas, which is
+// why the rail read as text with decorations beside it rather than as a set of
+// glyphs. See `[&>svg]:size-5` in the base string below.
+//
+// The stroke goes with it: 00a75b1 specifies 1.75px on a 24px grid (2px only at
+// 16), and lucide ships 2 by default. CSS `stroke-width` beats the SVG
+// presentation attribute, so one rule here fixes all 36 without touching a
+// single call site or passing a prop through the nav model.
 const sidebarMenuButtonVariants = cva(
   `
     peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md
@@ -501,7 +513,7 @@ const sidebarMenuButtonVariants = cva(
     data-[state=open]:hover:bg-sidebar-accent
     data-[state=open]:hover:text-sidebar-accent-foreground
     [&>span:last-child]:truncate
-    [&>svg]:size-4 [&>svg]:shrink-0
+    [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:[stroke-width:1.75]
   `,
   {
     variants: {
