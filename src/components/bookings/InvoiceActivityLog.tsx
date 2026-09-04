@@ -255,7 +255,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
                     title={`View invoice as of ${full}`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-foreground text-[12px] leading-snug">
+                      <p className="text-foreground text-micro/snug">
                         {event.description}
                         {event.amount !== undefined && (
                           <span className="ml-1 font-[tabular-nums] font-semibold">

@@ -111,7 +111,7 @@ export function PublicReviewWall({ facilityName, reviews, summary }: Props) {
                     </span>
                   </div>
 
-                  <p className="text-sm leading-relaxed">{review.comment}</p>
+                  <p className="text-sm/relaxed">{review.comment}</p>
 
                   <p className="text-muted-foreground text-xs">
                     {/* A first name and an initial. Consent to display a review

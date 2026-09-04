@@ -55,6 +55,7 @@ import { notifyFacilityStaffVaccinationUploaded } from "@/data/facility-notifica
 import { PhotoAlbums } from "@/components/customer/PhotoAlbums";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { careInstructions, type CareInstructions } from "@/data/pet-data";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface Pet {
   id: number;
@@ -855,10 +856,14 @@ export default function CustomerPetDetailPage({
               <ArrowLeft className="size-4" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">{pet.name}</h1>
-              <p className="text-muted-foreground">
-                {pet.breed} • {pet.age} {pet.age === 1 ? "year" : "years"} old
-              </p>
+              {/* The file the codemod broke: its description mixes text with
+                  three expressions, which is why it refused it and why this
+                  one is written by hand. §5r keeps the pet's name and the
+                  breed as the owner typed it out of the locale layer. */}
+              <PageHeader
+                title={pet.name}
+                description={`${pet.breed} • ${pet.age} ${pet.age === 1 ? "year" : "years"} old`}
+              />
               <div className="mt-1">
                 <TagList
                   entityType="pet"

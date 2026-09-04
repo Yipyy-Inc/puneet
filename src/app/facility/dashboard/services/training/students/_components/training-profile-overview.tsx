@@ -633,7 +633,7 @@ export function TrainingProfileOverview({
                         {formatShortDate(n.date)}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-[12px]/relaxed text-slate-700">
+                    <p className="text-micro/relaxed mt-1.5 text-slate-700">
                       {n.note}
                     </p>
                     <p className="text-muted-foreground mt-1 text-[10px]">

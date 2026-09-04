@@ -513,7 +513,7 @@ const sidebarMenuButtonVariants = cva(
     data-[state=open]:hover:bg-sidebar-accent
     data-[state=open]:hover:text-sidebar-accent-foreground
     [&>span:last-child]:truncate
-    [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:[stroke-width:1.75]
+    [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:stroke-[1.75]
   `,
   {
     variants: {

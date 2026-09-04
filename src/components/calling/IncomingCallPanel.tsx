@@ -166,13 +166,13 @@ function DesktopWidget({
                 className="group flex items-center gap-1.5 truncate"
                 title="Open client account"
               >
-                <span className="truncate text-[15px] leading-tight font-bold text-white underline-offset-2 transition-colors group-hover:text-[#CDEAF5] group-hover:underline">
+                <span className="text-body-strong/tight truncate font-bold text-white underline-offset-2 transition-colors group-hover:text-[#CDEAF5] group-hover:underline">
                   {call.clientName}
                 </span>
                 <ExternalLink className="size-3 shrink-0 text-[#CDEAF5]/30 opacity-0 transition-opacity group-hover:opacity-100" />
               </Link>
             ) : (
-              <p className="truncate text-[15px] leading-tight font-bold text-white">
+              <p className="text-body-strong/tight truncate font-bold text-white">
                 {call.clientName ?? "Unknown Caller"}
               </p>
             )}

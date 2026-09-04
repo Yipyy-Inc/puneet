@@ -830,7 +830,7 @@ function HomeworkRow({
         </Button>
       </div>
       {item.description && (
-        <p className="mt-2 text-[12px]/relaxed text-slate-600">
+        <p className="text-micro/relaxed mt-2 text-slate-600">
           {item.description}
         </p>
       )}
@@ -839,7 +839,7 @@ function HomeworkRow({
           {item.instructions.map((line, idx) => (
             <li
               key={`${item.id}-inst-${idx}`}
-              className="flex items-start gap-2 text-[12px]/relaxed text-slate-700"
+              className="text-micro/relaxed flex items-start gap-2 text-slate-700"
             >
               <Circle className="text-muted-foreground/40 mt-1 size-2 shrink-0 fill-current" />
               <span>{line}</span>

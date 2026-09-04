@@ -60,6 +60,7 @@ import { TipPromptDialog } from "@/components/yipyygo/TipPromptDialog";
 import { Separator } from "@/components/ui/separator";
 import type { TipSelection } from "@/types/yipyygo";
 import { CheckCircle2, PartyPopper } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 type AuthState = "checking" | "authenticated" | "login" | "verification";
 
@@ -681,16 +682,20 @@ export default function YipyyGoFormPage({
               <ArrowLeft className="mr-2 size-4" />
               Back
             </Button>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold">Yipyy Express Check-in</h1>
-              <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">
-                <Zap className="size-3" />
-                ~2 min
-              </span>
-            </div>
-            <p className="text-muted-foreground mt-0.5 text-sm">
-              {pet.name} · {booking.service} · {stepLabel}
-            </p>
+            {/* "Yipyy" here is the product, not the mascot — CLAUDE.md's
+                asset rule: he is "Yipyy" only where a character is plainly
+                meant, and never let one sentence mean both. */}
+            <PageHeader
+              className="mt-2"
+              title="Yipyy express check-in"
+              inline={
+                <span className="bg-surface-inset text-primary inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                  <Zap className="size-3" />
+                  ~2 min
+                </span>
+              }
+              description={`${pet.name} · ${booking.service} · ${stepLabel}`}
+            />
           </div>
           {deadlineInfo && !deadlineInfo.isPastDeadline && (
             <div className="text-muted-foreground flex items-center gap-2 text-sm">

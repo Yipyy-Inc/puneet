@@ -926,7 +926,7 @@ function HomeworkSummarySection({
                   {row.assignedItems.map((item) => (
                     <li
                       key={item.id}
-                      className="flex items-center gap-1.5 text-[12px]/snug text-slate-700 dark:text-slate-200"
+                      className="text-micro/snug flex items-center gap-1.5 text-slate-700 dark:text-slate-200"
                     >
                       <Circle className="text-muted-foreground/50 mt-0.5 size-2 shrink-0 fill-current" />
                       <span className="truncate">{item.title}</span>

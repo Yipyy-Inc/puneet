@@ -20,7 +20,6 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowLeft,
-  FileText,
   Lock,
   User,
 } from "lucide-react";
@@ -32,6 +31,7 @@ import {
 } from "@/components/forms/SubmissionAnswers";
 import { submissionFlags } from "@/components/forms/submission-shape";
 import { FileUnderCustomer } from "./_components/FileUnderCustomer";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ============================================================================
 // One submission: what was asked, what was answered, and what staff do next.
@@ -180,17 +180,21 @@ export default function SubmissionDetailPage({
               Submissions
             </Link>
           </Button>
-          <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <FileText className="size-5" />
-            {submission.formName ?? "Submission"}
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Submitted {formatSubmittedAt(submission.submittedAt)}
-            {submission.versionNumber !== null && (
-              <> · version {submission.versionNumber} of the form</>
-            )}
-            {submission.staffAssisted && <> · captured by staff</>}
-          </p>
+          {/* The form's own name, which the facility typed — §5r keeps it out
+              of the locale layer. The decorative FileText glyph went: §5b1,
+              an icon never introduces a colour and a title needs no badge. */}
+          <PageHeader
+            title={submission.formName ?? "Submission"}
+            description={
+              <>
+                Submitted {formatSubmittedAt(submission.submittedAt)}
+                {submission.versionNumber !== null && (
+                  <> · version {submission.versionNumber} of the form</>
+                )}
+                {submission.staffAssisted && <> · captured by staff</>}
+              </>
+            }
+          />
         </div>
         <Badge variant="outline" className="mt-8 capitalize">
           {status}

@@ -168,7 +168,7 @@ export function PetAvatar({
           <span
             aria-hidden
             className={cn(
-              "bg-brand-orange absolute right-0 bottom-0 rounded-full ring-2 ring-[var(--card)]",
+              "bg-brand-orange absolute right-0 bottom-0 rounded-full ring-2 ring-(--card)",
               s.dot,
               pulse && "yy-breathe",
             )}

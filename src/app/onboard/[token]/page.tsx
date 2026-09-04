@@ -28,6 +28,7 @@ import {
   isSectionValid,
   isAccountValid,
 } from "./section-forms";
+import { PageHeader } from "@/components/ui/page-header";
 
 type Data = Record<string, unknown>;
 
@@ -211,15 +212,13 @@ export default function OnboardTokenPage() {
     <Shell>
       <div className="space-y-5">
         {/* Welcome */}
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Welcome{firstName ? `, ${firstName}` : ""}!
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {instance.welcomeMessage ||
-              "Let’s get you set up before your first shift. It only takes a few minutes."}
-          </p>
-        </div>
+        <PageHeader
+          title={`Welcome${firstName ? `, ${firstName}` : ""}!`}
+          description={
+            instance.welcomeMessage ||
+            "Let's get you set up before your first shift. It only takes a few minutes."
+          }
+        />
 
         {/* Progress */}
         <div>

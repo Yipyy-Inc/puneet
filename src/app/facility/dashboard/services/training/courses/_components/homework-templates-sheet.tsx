@@ -620,7 +620,7 @@ function TemplateEditorDialog({
                           patchItem(item.id, { resources: next })
                         }
                         placeholder="Video / resource links — one per line"
-                        className="min-h-[60px] text-[12px]/relaxed"
+                        className="text-micro/relaxed min-h-[60px]"
                       />
                       <div className="space-y-1">
                         <Label className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">

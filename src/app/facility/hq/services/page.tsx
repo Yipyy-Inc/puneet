@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Boxes } from "lucide-react";
 import { ServiceCatalogClient } from "@/components/hq/ServiceCatalogClient";
 import { BoardingServiceCatalogClient } from "@/components/hq/BoardingServiceCatalogClient";
 import { DaycareServiceCatalogClient } from "@/components/hq/DaycareServiceCatalogClient";
@@ -14,6 +13,7 @@ import { useFacilityLocations } from "@/lib/api/locations";
 import { useRooms } from "@/hooks/use-rooms";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { useTrainingSeriesList } from "@/lib/api/training-series";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function HQServicesPage() {
   const { data: services = [], isPending: servicesPending } =
@@ -48,15 +48,13 @@ export default function HQServicesPage() {
 
   return (
     <div className="flex-1 space-y-8 p-4 pt-6 md:p-8">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <Boxes className="size-6 text-sky-600" />
-          Service Catalog
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Pricing across every branch, by module.
-        </p>
-      </div>
+      {/* The glyph went with the hand-rolled title. §5b1: an icon never
+          introduces a colour — this one was `text-sky-600`, off-palette — and
+          a page title does not need a decorative glyph to be found. */}
+      <PageHeader
+        title="Service catalog"
+        description="Pricing across every branch, by module."
+      />
       <ServiceCatalogClient services={services} locations={locations} />
       <BoardingServiceCatalogClient
         categories={boardingCategories}

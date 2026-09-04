@@ -74,6 +74,7 @@ import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { hasPermission } from "@/lib/role-utils";
+import { PageHeader } from "@/components/ui/page-header";
 
 /* ── Report-card theme visuals ────────────────────────────────────── */
 interface ThemeStyle {
@@ -378,9 +379,9 @@ export default function PetDetailPage({
                 )}
               </div>
               <div>
-                <h2 className="text-3xl font-bold tracking-tight">
-                  {pet.name}
-                </h2>
+                {/* §5r: a pet's name and its breed as the owner typed it both
+                    stay out of the locale layer. */}
+                <PageHeader title={pet.name} />
                 <div className="mt-1 flex items-center gap-2">
                   <Badge variant="outline">
                     {pet.type} • {pet.breed}

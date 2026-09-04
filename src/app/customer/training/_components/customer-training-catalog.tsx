@@ -418,7 +418,7 @@ function CourseCard({
               {showIncludes.map((item, idx) => (
                 <li
                   key={`${course.id}-inc-${idx}`}
-                  className="flex items-start gap-1.5 text-[12px]/relaxed text-slate-700"
+                  className="text-micro/relaxed flex items-start gap-1.5 text-slate-700"
                 >
                   <Check className="mt-0.5 size-3 shrink-0 text-emerald-500" />
                   <span>{item}</span>

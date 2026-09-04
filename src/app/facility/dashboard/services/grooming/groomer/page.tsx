@@ -38,6 +38,7 @@ import {
   type GroomingPhoto,
 } from "@/data/grooming";
 import { useStylists } from "@/lib/api/stylists";
+import { PageHeader } from "@/components/ui/page-header";
 
 const statusColors: Record<
   GroomingStatus,
@@ -337,12 +338,10 @@ export default function GroomerDashboardPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Today&apos;s Dogs</h1>
-        <p className="text-muted-foreground mt-1">
-          Welcome back, {currentStylist.name}
-        </p>
-      </div>
+      <PageHeader
+        title="Today's dogs"
+        description={`Welcome back, ${currentStylist.name}`}
+      />
 
       {/* Timeline View */}
       <Card>

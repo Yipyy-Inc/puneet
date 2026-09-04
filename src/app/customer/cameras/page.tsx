@@ -45,6 +45,7 @@ import type {
   CameraRuleSet,
   CameraServiceType,
 } from "@/types/camera-integration";
+import { PageHeader } from "@/components/ui/page-header";
 
 type AccessReason =
   | { type: "active_stay"; service: CameraServiceType }
@@ -345,11 +346,10 @@ export default function CustomerCamerasPage() {
       <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
         <div className="mx-auto max-w-4xl space-y-6">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold">Live Cameras</h1>
-            <p className="text-muted-foreground">
-              Watch your pet in real-time at{" "}
-              {selectedFacility?.name ?? "the facility"}
-            </p>
+            <PageHeader
+              title="Live cameras"
+              description={`Watch your pet in real time at ${selectedFacility?.name ?? "the facility"}`}
+            />
           </div>
           <Card>
             <CardContent className="py-12 text-center">
@@ -372,11 +372,10 @@ export default function CustomerCamerasPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold">Live Cameras</h1>
-            <p className="text-muted-foreground">
-              Watch your pet in real-time at{" "}
-              {selectedFacility?.name ?? "the facility"}
-            </p>
+            <PageHeader
+              title="Live cameras"
+              description={`Watch your pet in real time at ${selectedFacility?.name ?? "the facility"}`}
+            />
           </div>
           <Badge className="gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
             <CircleDot className="size-2.5 animate-pulse" />

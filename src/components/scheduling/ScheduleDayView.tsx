@@ -594,7 +594,7 @@ function ShiftBar({
           <div className="flex h-full items-center gap-2 px-3 pl-4">
             <div className="min-w-0 flex-1">
               <p
-                className="truncate text-[12px] leading-tight font-semibold"
+                className="text-micro/tight truncate font-semibold"
                 style={{ color: isDraft ? color : "#ffffff" }}
               >
                 {position?.name ?? "Shift"}
