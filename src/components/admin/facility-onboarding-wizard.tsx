@@ -154,7 +154,7 @@ export function FacilityOnboardingWizard({
     >
       <header className="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-violet-500 via-purple-500 to-fuchsia-500 text-white shadow-sm">
+          <span className="bg-wash-violet text-violet flex size-10 shrink-0 items-center justify-center rounded-2xl">
             <Building2 className="size-5" />
           </span>
           <div className="min-w-0">

@@ -51,7 +51,7 @@ export function TwilioIntegrationCard() {
     <Card className="border-violet-500/20">
       <CardHeader className="border-b">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-rose-500 to-red-600 text-white shadow-sm">
+          <span className="bg-wash-error text-destructive flex size-11 shrink-0 items-center justify-center rounded-xl">
             <Phone className="size-5" />
           </span>
           <div className="min-w-0">

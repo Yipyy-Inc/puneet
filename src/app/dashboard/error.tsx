@@ -18,7 +18,7 @@ export default function DashboardError({
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-10 text-center">
-      <span className="flex size-12 items-center justify-center rounded-2xl bg-linear-to-br from-amber-400 via-orange-500 to-rose-500 text-white shadow-sm">
+      <span className="bg-wash-warning text-warning flex size-12 items-center justify-center rounded-2xl">
         <AlertTriangle className="size-6" />
       </span>
       <div className="space-y-1">

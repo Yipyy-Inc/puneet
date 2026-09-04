@@ -25,8 +25,12 @@ export function StaffHeader() {
     <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 backdrop-blur-sm sm:px-6">
       <div className="flex items-center gap-3">
         <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
-        <div className="flex size-10 items-center justify-center rounded-lg bg-linear-to-br from-blue-500 to-indigo-500">
-          <Calendar className="size-5 text-white" />
+        {/* The gradient here was from-blue-500 to-indigo-500, which stage 1
+            compiles to #0F58C6 → #4C3BB8 — a flat dark disc, not the bright
+            two-tone the class name still reads as. Same treatment as every
+            other mark in the platform now (§6 rule 2, tone-mark.tsx). */}
+        <div className="bg-wash-primary text-info flex size-10 items-center justify-center rounded-lg">
+          <Calendar className="size-5" />
         </div>
         <div>
           <h1 className="text-lg font-semibold">My Schedule</h1>

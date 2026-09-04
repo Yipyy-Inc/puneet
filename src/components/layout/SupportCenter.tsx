@@ -57,7 +57,7 @@ export function SupportCenter() {
         <div className="flex items-start justify-between gap-2 border-b p-4">
           <div className="space-y-1">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <span className="flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-violet-500 to-fuchsia-500 text-white">
+              <span className="bg-wash-violet text-violet flex size-7 items-center justify-center rounded-lg">
                 <Headset className="size-4" />
               </span>
               Support Center
