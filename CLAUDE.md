@@ -277,6 +277,7 @@ rg "bg-(emerald|red|amber|blue|violet|slate)-(50|100)"           # tint fills �
 bun run check:badge-glyph                                        # a colour-coded badge with no glyph (§3)
 bun run check:hover-actions                                      # a control revealed only on hover (§6 rule 11)
 bun run check:nav-icons                                          # a nav glyph off the map, or on two areas (§5b1)
+bun run check:hardcoded-locale                                   # a formatter told a locale the user did not choose (§5q)
 ```
 
 **One of these greps fires on a file that is correct, and it is meant to.**

@@ -57,6 +57,7 @@
     "check:no-dark-mode": "bun scripts/check-no-dark-mode.ts",
     "check:badge-glyph": "bun scripts/check-badge-glyph.ts",
     "check:nav-icons": "bun scripts/check-nav-icons.ts",
+    "check:hardcoded-locale": "bun scripts/check-hardcoded-locale.ts",
     "check:hover-actions": "bun scripts/check-hover-actions.ts"
   },
   "dependencies": {

@@ -42,10 +42,32 @@ import { cn } from "@/lib/utils";
 // second size — see the comment on it below.
 // ============================================================================
 
+// ── §5k, AND THIS WAS MISSING FROM STAGE 5 ONWARDS ─────────────────
+// "Never outline:none without an equivalent replacement." Stage 5
+// rewrote this cva and carried outline-none across WITHOUT shadcn's
+// focus-visible ring, so from that commit until stage 11 not one of
+// the 3,774 buttons in this app showed a keyboard user where they were.
+// Nothing failed and nothing looked wrong, because a mouse never reveals
+// it.
+//
+// The global :focus-visible rule added in globals.css cannot fix this
+// one: outline-none is a UTILITY and the global rule is in the base
+// layer, which utilities beat. A control that removes its own outline has
+// to put its own back.
+//
+// §5k pairs the 2px outline with a 3px rgba(22,104,227,.12) halo. That
+// halo is omitted HERE and only here: yy-cta owns this element's
+// box-shadow — it is the lift — and a focus shadow would overwrite it and
+// kill the animation §4 requires. outline-offset-2 gives the ring the
+// same separation from the fill that the halo would have.
 const buttonVariants = cva(
   `
     inline-flex shrink-0 items-center justify-center gap-2 rounded-full
     text-[14.5px] font-semibold whitespace-nowrap outline-none
+
+    focus-visible:outline-2 focus-visible:outline-offset-2
+    focus-visible:outline-primary
+
     disabled:pointer-events-none disabled:cursor-not-allowed
     [&_svg]:pointer-events-none [&_svg]:shrink-0
     [&_svg:not([class*='size-'])]:size-5

@@ -353,6 +353,21 @@ export function DataTable<T extends object>({
 
   return (
     <div className="space-y-4">
+      {/* ── ARIA-LIVE ON ASYNC COMPLETION. §5k, stage 11. ─────────────────
+          A sighted user sees the table shrink as they type; a screen-reader
+          user gets nothing at all, because the rows change without focus
+          moving and without anything being announced. This is the one place
+          in the product where that happens 87 times over, so it is the one
+          place worth the region.
+
+          `polite`, not `assertive`: the count changing is not an interruption,
+          and `assertive` would talk over the user mid-keystroke. Empty until
+          there is something to say, so nothing is announced on first paint. */}
+      <p aria-live="polite" className="sr-only">
+        {searchTerm.trim() || appliedFilters.length > 0
+          ? `${sortedData.length} of ${data.length} shown`
+          : ""}
+      </p>
       {/* ── The filter band. §5b pattern 03. ────────────────────────────────
           What this replaced was a bare `flex gap-2` row of controls with no
           surface of its own, so the search box, the filter button and the

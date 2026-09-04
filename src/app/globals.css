@@ -1582,3 +1582,220 @@ button {
     opacity: 0;
   }
 }
+
+/* ============================================================================
+ * PRINT. docs/design-system/design-system.md §5u, §6 rule 10.
+ *
+ * There was no `@media print` anywhere in this app before stage 11. Every
+ * screen printed as a screenshot of itself: the sidebar, the toasts, the
+ * buttons, the coloured chips, the truncations — onto paper, in ink somebody
+ * pays for.
+ *
+ * Rule 10 states the whole idea in one line: "On paper every colour drops out
+ * except the mark. A status becomes a bordered word, a table gets one hairline
+ * under its header and no zebra, and nothing depends on a fill to be
+ * understood."
+ *
+ * ── WHY THIS IS GLOBAL AND NOT PER-DOCUMENT ──────────────────────────────
+ *
+ * §5u specifies three documents — the invoice, the run card, the board sheet —
+ * and each needs its own page size and layout, which belongs with the screen
+ * that owns it. What belongs HERE is the part that is true of all three and of
+ * every other page somebody hits Ctrl+P on by accident: drop the chrome, drop
+ * the colour, expand the truncations. A facility printing a client list should
+ * get a readable client list, not a picture of an app.
+ * ========================================================================= */
+
+@media print {
+  /* §5u: "@page { size: letter; margin: 18mm }". */
+  @page {
+    size: letter;
+    margin: 18mm;
+  }
+
+  /* Everything in body ink on white. No exceptions below this line except the
+     mark, which is the one thing rule 10 lets keep its colour. */
+  html,
+  body {
+    background: #fff !important;
+    color: var(--body) !important;
+  }
+
+  /* §5u: "12pt floor for anything read standing up." */
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+
+  /* ── HIDE THE CHROME. "A printed button is a lie." ─────────────────────
+     Every one of these is an affordance that does nothing on paper, and each
+     is addressed by a role or a data-slot rather than a utility class so a
+     restyle cannot quietly reintroduce it. */
+  nav,
+  aside,
+  [data-slot="sidebar"],
+  [data-slot="sidebar-container"],
+  [data-slot="sidebar-gap"],
+  [data-slot="sidebar-trigger"],
+  [data-slot="filter-band"],
+  [data-slot="saved-views"],
+  [data-slot="pagination"],
+  [data-sonner-toaster],
+  [role="toolbar"],
+  button,
+  [role="button"],
+  [role="tablist"],
+  input[type="search"] {
+    display: none !important;
+  }
+
+  /* A link's href is not visible on paper and the underline is noise, but the
+     TEXT is content — so links print as plain text rather than being hidden
+     with the buttons above. */
+  a {
+    color: var(--body) !important;
+    text-decoration: none !important;
+  }
+
+  /* ── EXPAND EVERY TRUNCATION ───────────────────────────────────────────
+     §5u: "There is no hover on paper, so an ellipsis is information
+     destroyed." This is the rule most likely to be broken by accident,
+     because truncation is invisible until the thing you needed was in the
+     part that got cut. */
+  * {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+  }
+
+  .truncate,
+  .line-clamp-1,
+  .line-clamp-2,
+  .line-clamp-3 {
+    -webkit-line-clamp: unset !important;
+    display: block !important;
+  }
+
+  /* ── NO FILLS, NO SHADOWS, NO ROUNDED CARDS ────────────────────────────
+     A card on screen is a raised white panel on a tinted ground; on paper
+     the ground is already white, so the card is a rectangle of wasted ink. */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    background-image: none !important;
+  }
+
+  [data-slot="card"],
+  [data-slot="occupancy-meter"],
+  [data-tone] {
+    background: #fff !important;
+    border-color: var(--line-strong) !important;
+  }
+
+  /* ── A STATUS BECOMES A BORDERED WORD ──────────────────────────────────
+     Rule 10, and §3's chips already carry their word and their glyph — so on
+     paper they keep both and lose only the colour. A chip that meant
+     something by being green means nothing in greyscale. */
+  [data-slot="badge"],
+  [data-slot="status-badge"] {
+    background: #fff !important;
+    color: var(--body) !important;
+    border: 1px solid var(--body) !important;
+    border-radius: 3px !important;
+    padding: 1px 5px !important;
+  }
+
+  /* ── TABLES: ONE HAIRLINE UNDER THE HEADER, NO ZEBRA ───────────────────
+     Rule 10 and §5u both name the zebra specifically: "it prints as bands and
+     costs ink". */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  thead th {
+    border-bottom: 1px solid var(--body) !important;
+    background: #fff !important;
+    font-weight: 700;
+  }
+
+  tbody tr,
+  tbody td {
+    background: #fff !important;
+    border-color: var(--line) !important;
+  }
+
+  /* A table header repeats on every page, which is the whole reason `thead`
+     exists and is free. */
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  img,
+  [data-slot="pet-avatar"] {
+    break-inside: avoid;
+  }
+
+  /* ── THE ONE THING THAT KEEPS ITS COLOUR ───────────────────────────────
+     §5u: "print-color-adjust: exact on the mark only." Not on charts, not on
+     status chips, not on the orange ring — the mark, because a logo in
+     greyscale is a different logo. */
+  img[src$="yipyy-logo.svg"],
+  [data-slot="brand-mark"] {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Ambient motion has no meaning on paper and a half-way animation frame is
+     a rendering artefact. */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ============================================================================
+ * FOCUS. docs/design-system/design-system.md §5k.
+ *
+ *   Focus ring   2px solid #1668E3 + box-shadow: 0 0 0 3px rgba(22,104,227,.12)
+ *   Never        `outline: none` without an equivalent replacement
+ *
+ * Measured at stage 11: 13 elements across 7 files removed their outline and
+ * put nothing back — a text input in the feeding form, both message composers,
+ * the rich-text variable input, three modals. Each is invisible to a keyboard
+ * user and each looked fine to whoever wrote it, because a mouse never
+ * reveals the bug.
+ *
+ * ── WHAT THIS DOES AND DOES NOT COVER ────────────────────────────────────
+ *
+ * It covers anything that takes keyboard focus and has NOT removed its own
+ * outline: the browser default becomes 00a75k's ring instead of the platform's.
+ *
+ * It does NOT cover an element carrying `outline-none` or `outline-hidden`,
+ * because those are Tailwind UTILITIES and utilities beat `@layer base`. That
+ * is deliberate — a component with its own focus treatment must keep it — but
+ * it means the 13 bare elements above each still need their own, and a global
+ * rule is not the fix for them. Measured rather than assumed: tabbing through
+ * a real page found `Button` invisible and every sidebar item fine, because
+ * the sidebar uses a ring (a box-shadow) where Button used nothing at all.
+ *
+ * It is `:focus-visible`, not `:focus`, so a mouse click does not paint a ring
+ * on a button somebody just pressed — the distinction the pseudo-class exists
+ * for.
+ *
+ * `@layer base` matters: every component's own `focus-visible:` utility is a
+ * Tailwind utility and utilities beat base, so the components that already
+ * define a ring (Button, Input, the field family from stage 8b) keep theirs
+ * and this never doubles up on them.
+ * ========================================================================= */
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 0;
+    box-shadow: 0 0 0 3px rgba(22, 104, 227, 0.12);
+  }
+}
