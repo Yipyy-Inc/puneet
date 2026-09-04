@@ -37,8 +37,20 @@ export function FacilityOnboardingBanner() {
           subtitle/progress/buttons and ate ~150px of vertical space on phones.
           Now it's one ~56px strip — title with an inline step/% caption and a
           thin progress bar; the CTA collapses to an arrow on phones. */}
-      <div className="via-background to-background relative flex items-center gap-3 overflow-hidden rounded-xl border border-violet-200 bg-linear-to-r from-violet-50 p-2.5 sm:p-3 dark:border-violet-900/50 dark:from-violet-950/30">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-violet-500 to-indigo-600 text-white shadow-sm">
+      {/* ── VIOLET WAS A SECOND ACTION COLOUR, AND §1 ALLOWS NONE ─────────
+
+          The rail, the rocket chip, the progress fill and the CTA were all
+          violet-to-indigo, which put #4C3BB8 — a STATUS ink, and the darkest
+          one — on the most prominent button on the facility dashboard. §1:
+          "Every button, link, focus ring, active nav item... There is no
+          second action colour."
+
+          All four are --primary now, and the field is the primary wash fading
+          to card: the same mark treatment the maintenance banner uses, in the
+          tone that means "the software is asking you to do something" rather
+          than "something is wrong". */}
+      <div className="border-primary/20 from-wash-primary via-card to-card relative flex items-center gap-3 overflow-hidden rounded-xl border bg-linear-to-r p-2.5 sm:p-3">
+        <span className="bg-primary flex size-9 shrink-0 items-center justify-center rounded-lg text-white shadow-sm">
           <Rocket className="size-[18px]" />
         </span>
         <div className="min-w-0 flex-1">
@@ -48,7 +60,7 @@ export function FacilityOnboardingBanner() {
           <div className="mt-1.5 flex items-center gap-2">
             <Progress
               value={percent}
-              className="h-1 flex-1 [&>div]:bg-violet-500"
+              className="[&>div]:bg-primary h-1 flex-1"
             />
             <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
               {completed}/{total} · {percent}%
@@ -58,7 +70,9 @@ export function FacilityOnboardingBanner() {
         <Button
           asChild
           size="sm"
-          className="shrink-0 gap-1 bg-violet-600 text-white hover:bg-violet-700"
+          // No colour override: Button's default variant IS --primary, with
+          // §4's CTA lift. Overriding it was what made this the odd one out.
+          className="shrink-0 gap-1"
         >
           <Link href="/facility/onboarding" aria-label="Continue setup">
             <span className="hidden sm:inline">Continue setup</span>
