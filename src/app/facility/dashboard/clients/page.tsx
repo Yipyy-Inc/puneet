@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 
 function formatDayRangeFilter(
   label: string,
@@ -549,14 +550,10 @@ export default function FacilityClientsPage() {
             >
               Customer Management
             </Badge>
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-                Clients
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {facility.name} client directory and pet relationships
-              </p>
-            </div>
+            <PageHeader
+              title="Clients"
+              description={`${facility.name} client directory and pet relationships`}
+            />
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Badge variant="outline" className="text-xs">
                 {locationClients.length} total

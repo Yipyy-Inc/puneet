@@ -81,6 +81,7 @@ import {
 } from "@/lib/staff-audit";
 import { useFacilityRbac, usePermission } from "@/hooks/use-facility-rbac";
 import { runOnboardingNotificationSweep } from "@/lib/staff-notifications";
+import { PageHeader } from "@/components/ui/page-header";
 
 const ROLE_FILTERS: { value: FacilityStaffRole | "all"; label: string }[] = [
   { value: "all", label: "All roles" },
@@ -383,14 +384,11 @@ export default function FacilityStaffPage() {
             <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
               <Sparkles className="size-3" /> Team directory
             </div>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight">
-              Your staff, your access rules
-            </h2>
-            <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-              Role-based by default, override per permission. Every account sees
-              their schedule, documents, and tasks — service access unlocks the
-              rest.
-            </p>
+            <PageHeader
+              className="mt-1"
+              title="Your staff, your access rules"
+              description="Role-based by default, override per permission. Every account sees their schedule, documents, and tasks — service access unlocks the rest."
+            />
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setDepartmentsOpen(true)}>

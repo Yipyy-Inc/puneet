@@ -2,18 +2,15 @@ import { BusinessHealthTiles } from "./_components/business-health-tiles";
 import { NeedsAttention } from "./_components/needs-attention";
 import { ActivityFeed } from "./_components/activity-feed";
 import { QuickActions } from "./_components/quick-actions";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function PlatformDashboardPage() {
   return (
     <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Command Center
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Platform-wide health, priorities, and live activity at a glance.
-        </p>
-      </header>
+      <PageHeader
+        title="Command Center"
+        description="Platform-wide health, priorities, and live activity at a glance."
+      />
 
       {/* Zone 4 — Quick actions bar */}
       <QuickActions />

@@ -25,6 +25,7 @@ import { facilities } from "@/data/facilities";
 import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
 import { cn } from "@/lib/utils";
 import type { Evaluation } from "@/types/pet";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface EvalEntry {
   evaluation: Evaluation;
@@ -415,15 +416,10 @@ export default function EvaluationsPage() {
             >
               Evaluation Center
             </Badge>
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-                Evaluations
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {facility?.name ?? "Facility"} pet approvals, expirations, and
-                pending evaluation workflow
-              </p>
-            </div>
+            <PageHeader
+              title="Evaluations"
+              description={`${facility?.name ?? "Facility"} pet approvals, expirations, and pending evaluation workflow`}
+            />
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Badge variant="outline" className="text-xs">
                 {counts.all} total
