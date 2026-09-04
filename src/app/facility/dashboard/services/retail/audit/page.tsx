@@ -34,6 +34,7 @@ import {
   Search,
   Download,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function PaymentAuditPage() {
   const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d" | "custom">(
@@ -267,14 +268,10 @@ export default function PaymentAuditPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Payment Audit Logs
-          </h2>
-          <p className="text-muted-foreground">
-            Complete audit trail of all payment-related actions
-          </p>
-        </div>
+        <PageHeader
+          title="Payment Audit Logs"
+          description="Complete audit trail of all payment-related actions"
+        />
         <Button>
           <Download className="mr-2 size-4" />
           Export Logs

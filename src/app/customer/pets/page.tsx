@@ -22,6 +22,7 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { TagList } from "@/components/shared/TagList";
 import { PetAvatar } from "@/components/ui/pet-avatar";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function CustomerPetsPage() {
   const { selectedFacility } = useCustomerFacility();
@@ -91,12 +92,10 @@ export default function CustomerPetsPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">My Pets</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your pets&apos; profiles and information
-            </p>
-          </div>
+          <PageHeader
+            title="My Pets"
+            description="Manage your pets' profiles and information"
+          />
           <Button asChild>
             <Link href="/customer/pets/add">
               <Plus className="mr-2 size-4" />

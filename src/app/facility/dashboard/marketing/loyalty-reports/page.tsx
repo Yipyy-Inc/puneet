@@ -63,6 +63,7 @@ import { RewardTypeBreakdown } from "@/components/loyalty/RewardTypeBreakdown";
 import { PointsLiabilityReport } from "@/components/loyalty/PointsLiabilityReport";
 import { BadgeAchievementReport } from "@/components/loyalty/BadgeAchievementReport";
 import { RevenueReportLoyaltySection } from "@/components/loyalty/RevenueReportLoyaltySection";
+import { PageHeader } from "@/components/ui/page-header";
 
 // Mock facility ID - TODO: Get from context
 const MOCK_FACILITY_ID = 1;
@@ -357,13 +358,10 @@ export default function LoyaltyReportsPage() {
       <div className="container mx-auto space-y-6 p-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-bold">Loyalty & Referral Reports</h1>
-            <p className="text-muted-foreground mt-2">
-              Comprehensive analytics for your loyalty program and referral
-              system
-            </p>
-          </div>
+          <PageHeader
+            title="Loyalty & Referral Reports"
+            description="Comprehensive analytics for your loyalty program and referral system"
+          />
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="mr-2 size-4" />

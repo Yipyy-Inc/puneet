@@ -46,6 +46,7 @@ import {
   renderReferralTemplate,
   REFERRAL_TRIGGER_HINTS,
 } from "@/lib/loyalty/referral-program";
+import { PageHeader } from "@/components/ui/page-header";
 // QR Code will be generated using an external service or canvas
 
 type ReferralPillStatus = "pending" | "booked" | "reward_issued";
@@ -393,12 +394,10 @@ export default function CustomerReferPage() {
   return (
     <div className="container mx-auto space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Refer a Friend</h1>
-        <p className="text-muted-foreground mt-2">
-          Share your referral link and earn rewards when your friends book!
-        </p>
-      </div>
+      <PageHeader
+        title="Refer a Friend"
+        description="Share your referral link and earn rewards when your friends book!"
+      />
 
       {/* Reward Notification Banners */}
       {earnedRewardNotifications.map((notification) => (

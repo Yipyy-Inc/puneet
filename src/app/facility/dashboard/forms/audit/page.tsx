@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { AuditTrail } from "@/components/facility/AuditTrail";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function FormAuditPage() {
   return (
@@ -14,13 +15,10 @@ export default function FormAuditPage() {
             <ArrowLeft className="size-4" />
           </Link>
         </Button>
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Audit Trail</h2>
-          <p className="text-muted-foreground text-sm">
-            Staff and admin changes across all areas — forms, settings, clients,
-            and more.
-          </p>
-        </div>
+        <PageHeader
+          title="Audit Trail"
+          description="Staff and admin changes across all areas — forms, settings, clients, and more."
+        />
       </div>
       <AuditTrail facilityId={11} />
     </div>

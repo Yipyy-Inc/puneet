@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { Separator } from "@/components/ui/separator";
 import { Save, RotateCcw } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function VetSettingsPage() {
   const [settings, setSettings] = useState({
@@ -114,14 +115,10 @@ export default function VetSettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Veterinary Settings
-          </h2>
-          <p className="text-muted-foreground">
-            Configure veterinary service preferences and policies
-          </p>
-        </div>
+        <PageHeader
+          title="Veterinary Settings"
+          description="Configure veterinary service preferences and policies"
+        />
         <div className="flex gap-2">
           {isEditing ? (
             <>

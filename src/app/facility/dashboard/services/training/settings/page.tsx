@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { BookOpen, Settings as SettingsIcon } from "lucide-react";
 import Link from "next/link";
 import { useSettings } from "@/hooks/use-settings";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function TrainingSettingsPage() {
   const { training, updateTraining } = useSettings();
@@ -30,12 +31,10 @@ export default function TrainingSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Training Settings</h2>
-        <p className="text-muted-foreground">
-          Configure your training module settings and course catalog
-        </p>
-      </div>
+      <PageHeader
+        title="Training Settings"
+        description="Configure your training module settings and course catalog"
+      />
 
       {/* Module Status */}
       <Card>

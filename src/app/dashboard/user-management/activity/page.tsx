@@ -36,6 +36,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 
 import { ActivityFilterBar } from "./_components/activity-filter-bar";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ============================================================================
 // The audit trail. One tab, because there was only ever one real source.
@@ -225,13 +226,10 @@ export default function AuditTrailPage() {
 
   return (
     <div className="flex-1 space-y-6 p-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Audit trail</h2>
-        <p className="text-muted-foreground mt-1">
-          Every sensitive act recorded against the platform, written by the
-          database itself
-        </p>
-      </div>
+      <PageHeader
+        title="Audit trail"
+        description="Every sensitive act recorded against the platform, written by the database itself"
+      />
 
       {error && (
         <p

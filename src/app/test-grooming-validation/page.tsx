@@ -12,6 +12,7 @@ import {
   Users,
   Package,
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function TestGroomingValidationPage() {
   const isMounted = useHydrated();
@@ -29,15 +30,10 @@ export default function TestGroomingValidationPage() {
   return (
     <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">
-            Test: Grooming Pre-Booking Validation
-          </h1>
-          <p className="text-muted-foreground">
-            Phase 1: Validation invisible au client (avant affichage des
-            options)
-          </p>
-        </div>
+        <PageHeader
+          title="Test: Grooming Pre-Booking Validation"
+          description="Phase 1: Validation invisible au client (avant affichage des options)"
+        />
 
         {/* Availability Status */}
         <Card>

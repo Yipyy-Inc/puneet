@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { MobileGroomingSettings } from "@/components/facility/grooming/mobile-grooming-settings";
 import { GroomingCheckInForms } from "@/components/facility/grooming/grooming-check-in-forms";
+import { PageHeader } from "@/components/ui/page-header";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -179,15 +180,10 @@ export default function GroomingSettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Grooming Settings
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Configure how the grooming module runs — policies, capacity,
-            notifications.
-          </p>
-        </div>
+        <PageHeader
+          title="Grooming Settings"
+          description="Configure how the grooming module runs — policies, capacity, notifications."
+        />
         <div className="flex gap-2">
           {isEditing ? (
             <>

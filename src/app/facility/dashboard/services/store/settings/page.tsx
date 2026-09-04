@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Save, RotateCcw } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function StoreSettingsPage() {
   const [settings, setSettings] = useState({
@@ -92,12 +93,10 @@ export default function StoreSettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Store Settings</h2>
-          <p className="text-muted-foreground">
-            Configure store preferences and policies
-          </p>
-        </div>
+        <PageHeader
+          title="Store Settings"
+          description="Configure store preferences and policies"
+        />
         <div className="flex gap-2">
           {isEditing ? (
             <>

@@ -81,6 +81,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function RetailReportsPage() {
   const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d" | "custom">(
@@ -477,12 +478,10 @@ export default function RetailReportsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Retail Reports</h2>
-          <p className="text-muted-foreground">
-            Comprehensive sales, inventory, and performance analytics
-          </p>
-        </div>
+        <PageHeader
+          title="Retail Reports"
+          description="Comprehensive sales, inventory, and performance analytics"
+        />
         <Button onClick={handleExport}>
           <Download className="mr-2 size-4" />
           Export All Reports

@@ -7,6 +7,7 @@ import { SubscriptionTiersGrid } from "@/components/subscriptions/SubscriptionTi
 import { ModulesManagement } from "@/components/subscriptions/ModulesManagement";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, Building2, Layers, Puzzle } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 const tabs = [
   {
@@ -53,14 +54,10 @@ export default function SubscriptionsPage() {
     <div className="flex h-full flex-col">
       <div className="bg-muted/50 sticky top-0 z-10 border-b backdrop-blur-sm">
         <div className="px-6 py-4">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Subscription & Module Management
-            </h1>
-            <p className="text-muted-foreground">
-              Manage subscription tiers, modules, and facility subscriptions
-            </p>
-          </div>
+          <PageHeader
+            title="Subscription & Module Management"
+            description="Manage subscription tiers, modules, and facility subscriptions"
+          />
         </div>
 
         {/* Tabs Navigation */}

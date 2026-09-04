@@ -31,6 +31,7 @@ import {
 import { UpcomingBookingCard } from "./_components/UpcomingBookingCard";
 import { PastBookingCard } from "./_components/PastBookingCard";
 import { getPetForBooking, type Booking } from "./_components/booking-helpers";
+import { PageHeader } from "@/components/ui/page-header";
 
 // WHO THIS PAGE IS FOR comes from the session. It was MOCK_CUSTOMER_ID = 15
 // (Alice Johnson), so every signed-in pet owner saw her bookings.
@@ -164,12 +165,10 @@ export default function CustomerBookingsPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">My Bookings</h1>
-            <p className="text-muted-foreground mt-1">
-              View and manage your service bookings
-            </p>
-          </div>
+          <PageHeader
+            title="My Bookings"
+            description="View and manage your service bookings"
+          />
           <Button asChild variant="default" size="lg">
             <Link href="/customer/bookings/new">
               <Plus className="mr-2 size-4" />

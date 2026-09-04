@@ -13,6 +13,7 @@ import { NotificationPreferencesCard } from "./_components/NotificationPreferenc
 import { LoginSecurityCard } from "./_components/LoginSecurityCard";
 import { PasskeysCard } from "@/components/auth/PasskeysCard";
 import { PrivacyConsentCard } from "./_components/PrivacyConsentCard";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function CustomerSettingsPage() {
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
@@ -23,12 +24,10 @@ export default function CustomerSettingsPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Account Settings</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your profile and preferences
-            </p>
-          </div>
+          <PageHeader
+            title="Account Settings"
+            description="Manage your profile and preferences"
+          />
           {!form.isEditing ? (
             <Button onClick={() => form.setIsEditing(true)}>
               <Edit className="mr-2 size-4" />

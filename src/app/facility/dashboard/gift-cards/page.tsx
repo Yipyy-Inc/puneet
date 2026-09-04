@@ -120,6 +120,7 @@ import type {
   PhysicalCardBatch,
   PhysicalCard,
 } from "@/types/payments";
+import { PageHeader } from "@/components/ui/page-header";
 
 const FACILITY_ID = 11;
 
@@ -1008,12 +1009,10 @@ export default function FacilityGiftCardsPage() {
     <div className="flex-1 space-y-5 p-4 pt-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Gift Cards</h2>
-          <p className="text-muted-foreground text-sm">
-            Sell, redeem, and manage your gift card program
-          </p>
-        </div>
+        <PageHeader
+          title="Gift Cards"
+          description="Sell, redeem, and manage your gift card program"
+        />
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
