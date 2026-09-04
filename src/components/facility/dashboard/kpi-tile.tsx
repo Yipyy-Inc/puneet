@@ -69,19 +69,35 @@ interface ToneStyle {
   glyph: string;
 }
 
+// ── THE DISC IS A LIGHT WASH, NOT A DARK SOLID (2026-09-04) ──────────────
+//
+// Every badge here was the status ink at full strength with a white glyph on
+// it. That is why the tiles read heavy: a text-weight ink is DARK by
+// construction — the values exist so words clear 4.5:1, which forces
+// #8A5115 (a brown), #0F7A52 and #4C3BB8 — and a 40px solid of one is the
+// largest, darkest thing on an otherwise white screen.
+//
+// Inverted, the same pair reads luminous and measures better: the glyph needs
+// 3:1 and gets 4.54-7.09:1 on its own wash. See the note beside
+// --color-wash-* in globals.css for the five ratios.
+//
+// `brand` is the exception and stays solid, because §2b says so: orange is
+// ALWAYS a solid fill carrying body ink (6.90:1), never an ink on a tint.
+// It is also the one tile that was never dark.
 const TONE_STYLES: Record<KpiTone, ToneStyle> = {
-  indigo: { wash: "", badge: "bg-primary", glyph: "text-white" },
+  indigo: { wash: "", badge: "bg-wash-primary", glyph: "text-primary" },
   emerald: {
     wash: "",
-    badge: "bg-success",
-    glyph: "text-white",
+    badge: "bg-wash-success",
+    glyph: "text-success",
   },
-  rose: { wash: "", badge: "bg-bad", glyph: "text-white" },
-  amber: { wash: "", badge: "bg-warning", glyph: "text-white" },
-  violet: { wash: "", badge: "bg-violet", glyph: "text-white" },
-  // Five washes exist and neutral is not one of them, so this tile is plain
-  // white — which is rule 2's default answer anyway.
-  slate: { wash: "", badge: "bg-ink-secondary", glyph: "text-white" },
+  rose: { wash: "", badge: "bg-wash-error", glyph: "text-bad" },
+  amber: { wash: "", badge: "bg-wash-warning", glyph: "text-warning" },
+  violet: { wash: "", badge: "bg-wash-violet", glyph: "text-violet" },
+  // There is no neutral wash, and inventing one would be a sixth value for a
+  // tone that has no status. --inset is the neutral surface already, reached
+  // through `bg-muted` because Tailwind reserves the bare word "inset".
+  slate: { wash: "", badge: "bg-muted", glyph: "text-ink-secondary" },
   brand: {
     wash: "",
     badge: "bg-brand-orange",
