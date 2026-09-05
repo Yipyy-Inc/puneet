@@ -15,7 +15,7 @@ import {
   FeedingAutoPopulate,
   MedicationAutoPopulate,
 } from "@/components/booking/shared/PetCareAutoPopulate";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { getBoardingCategoryAvailability } from "@/lib/capacity-engine";
 import { bookings as allBookings } from "@/data/bookings";
 import { useRooms } from "@/hooks/use-rooms";
@@ -36,17 +36,6 @@ function getAddonPriceLabel(addon: ServiceAddOn): string {
     case "percentage_of_booking":
       return `${addon.price}% of booking`;
   }
-}
-
-function getStoredAddOns(): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const stored = localStorage.getItem("settings-service-addons");
-    if (stored) return JSON.parse(stored) as ServiceAddOn[];
-  } catch {
-    // ignore
-  }
-  return defaultServiceAddOns;
 }
 
 // Boarding categories are rendered dynamically inside the component
@@ -821,7 +810,12 @@ function BoardingAddOnsSubStep({
   // feature — a column on the class and a price effect — not a keyword match
   // against a rate name.
 
-  const boardingAddOns = getStoredAddOns().filter((a) => {
+  // The facility's own extras, from `facility_settings`. This file carried its
+  // own copy of a localStorage loader — one of thirteen — so what a booking
+  // could be upsold depended on the browser it was taken in.
+  const { addOns: facilityAddOns } = useServiceAddOns();
+
+  const boardingAddOns = facilityAddOns.filter((a) => {
     if (!a.isActive || !a.applicableServices.includes("boarding")) return false;
     if (a.petTypeFilter && selectedPets.length > 0) {
       const pf = a.petTypeFilter;

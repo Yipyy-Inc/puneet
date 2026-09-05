@@ -92,7 +92,6 @@ const BASELINE = new Set<string>([
   // available yet, which is true.
   "src/components/facility/FacilityRolesStudio.tsx",
   "src/components/facility/ImpersonationBanner.tsx",
-  "src/components/facility/operations/OperationsCalendarEventDrawer.tsx",
 
   // ── REVEALED BY MATCHING BOTH WORD ORDERS ──────────────────────────────
   //
@@ -162,13 +161,11 @@ const BASELINE = new Set<string>([
   "src/app/facility/account/payment-method/_components/payment-method-view.tsx",
   "src/app/facility/dashboard/inventory/InventoryClient.tsx",
   "src/app/facility/dashboard/online-booking/page.tsx",
-  "src/app/facility/dashboard/services/custom/[slug]/rates/page.tsx",
   "src/app/facility/dashboard/services/custom/[slug]/settings/_components/FacilitySettingsEditor.tsx",
   "src/app/facility/dashboard/services/custom/page.tsx",
   "src/app/facility/dashboard/services/grooming/settings/page.tsx",
   "src/app/facility/dashboard/services/retail/products/page.tsx",
   "src/app/facility/dashboard/services/retail/settings/page.tsx",
-  "src/app/facility/dashboard/services/training/rates/page.tsx",
   "src/app/facility/dashboard/services/training/report-cards/_components/facility-training-report-cards.tsx",
   "src/app/facility/dashboard/services/training/session/[sessionId]/_components/session-view-homework-prompt.tsx",
   "src/app/facility/dashboard/services/training/students/_components/homework-board.tsx",
@@ -213,7 +210,6 @@ const BASELINE = new Set<string>([
   "src/components/facility/RouteView.tsx",
   "src/components/facility/TrainingSection.tsx",
   "src/components/facility/add-ons/AddOnCategorySheet.tsx",
-  "src/components/facility/add-ons/AddOnsManager.tsx",
   "src/components/facility/boarding/feeding-round-settings.tsx",
   "src/components/facility/grooming/mobile-grooming-settings.tsx",
   "src/components/facility/grooming/zone-and-tax-settings-panel.tsx",

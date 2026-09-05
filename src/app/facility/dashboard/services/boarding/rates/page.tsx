@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,8 +30,8 @@ import Link from "next/link";
 import { useRooms } from "@/hooks/use-rooms";
 import type { RoomCategory, RoomCategoryColor } from "@/types/rooms";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
-import type { ServiceAddOn } from "@/types/facility";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { addOnsForService } from "@/lib/settings/addons";
 
 // ============================================================================
 // Boarding rates.
@@ -65,21 +65,6 @@ import { defaultServiceAddOns } from "@/data/service-addons";
 //
 // Add-ons themselves are untouched and still live on the second tab.
 // ============================================================================
-
-function loadBoardingAddOns(): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const raw = localStorage.getItem("settings-service-addons");
-    const all = raw
-      ? (JSON.parse(raw) as ServiceAddOn[])
-      : defaultServiceAddOns;
-    return all.filter((a) => a.applicableServices.includes("boarding"));
-  } catch {
-    return defaultServiceAddOns.filter((a) =>
-      a.applicableServices.includes("boarding"),
-    );
-  }
-}
 
 /** Swatches, matching the ones the Rooms page offers for the same field. */
 const COLOR_DOT: Record<RoomCategoryColor, string> = {
@@ -122,13 +107,20 @@ export default function BoardingRatesPage() {
     return counts;
   }, [rooms]);
 
-  const [boardingAddOns, setBoardingAddOns] = useState<ServiceAddOn[]>([]);
-  useEffect(() => {
-    const sync = () => setBoardingAddOns(loadBoardingAddOns());
-    sync();
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, []);
+  // The facility's own extras, from `facility_settings`. This page carried its
+  // own copy of a localStorage loader — one of thirteen — plus a `storage`
+  // event listener to keep TABS of the same browser in step, which was as far
+  // as the old storage could reach. A shared query makes both unnecessary.
+  //
+  // `addOnsForService` also treats an add-on marked "all" as applying here.
+  // The old `applicableServices.includes("<service>")` did not, so a
+  // universal add-on was invisible on this screen while the pricing layer
+  // applied it — the two disagreed.
+  const { addOns: allAddOns } = useServiceAddOns();
+  const boardingAddOns = useMemo(
+    () => addOnsForService(allAddOns, "boarding"),
+    [allAddOns],
+  );
 
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
   const [editingRate, setEditingRate] = useState<RoomCategory | null>(null);

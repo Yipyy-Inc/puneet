@@ -79,6 +79,11 @@ const ALLOW = /settings-write-ok:/;
  * Not one of these is new. Each has always discarded what it was given; the
  * gate is what is new.
  */
+// addons left too, and it was the largest of them: the storage key was
+// copy-pasted into THIRTEEN files, each with its own loader and its own
+// fixture fallback, one of them src/lib/pricing-rules.ts. Ten more read the
+// shipped list directly. See lib/settings/addons.ts.
+//
 // estimate-settings and incident-reporting followed. Both were localStorage:
 // the estimate NUMBERING and the magic-link lifetime in a customer's email, and
 // a facility's policy on who is told when an animal is hurt — including whether
@@ -100,7 +105,6 @@ const BASELINE = new Set<string>([
   // Four of these raise a success toast as well, and are in
   // check:success-claims' baseline for it. The other four say nothing at all,
   // which is the case that gate could never have caught.
-  "addons",
   "mobile-app",
   "tags-notes",
   "yipyygo",

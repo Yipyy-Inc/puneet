@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { usePricingRules } from "@/lib/api/facility-settings";
+import { usePricingRules, useServiceAddOns } from "@/lib/api/facility-settings";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -59,10 +59,7 @@ import {
   scheduleAppointmentReminders,
   type GroomingBookingData,
 } from "@/lib/grooming-post-booking";
-import {
-  applyDynamicPricingRules,
-  getStoredServiceAddOns,
-} from "@/lib/pricing-rules";
+import { applyDynamicPricingRules } from "@/lib/pricing-rules";
 import { toast } from "sonner";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
@@ -343,6 +340,8 @@ export function GroomingBookingFlow({
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
   const { rules: pricingRules } = usePricingRules();
+  // And the extras, from the same place, for the same reason.
+  const { addOns: serviceAddOns } = useServiceAddOns();
   const customerId = customer?.id;
 
   const router = useRouter();
@@ -813,7 +812,7 @@ export function GroomingBookingFlow({
   // Grooming add-ons sourced from the global service-addons store, scoped to
   // the grooming module via applicableServices.
   const groomingAddOns = useMemo<GroomingAddOn[]>(() => {
-    return getStoredServiceAddOns()
+    return serviceAddOns
       .filter((a) => a.isActive && a.applicableServices.includes("grooming"))
       .map((a) => ({
         id: a.id,
@@ -932,8 +931,8 @@ export function GroomingBookingFlow({
   }, [calculatedPrice, selectedAddOns, groomingAddOns]);
 
   const storedServiceAddOns = useMemo(
-    () => getStoredServiceAddOns().filter((addOn) => addOn.isActive),
-    [open],
+    () => serviceAddOns.filter((addOn) => addOn.isActive),
+    [serviceAddOns],
   );
 
   const groomingPricingComputation = useMemo(() => {

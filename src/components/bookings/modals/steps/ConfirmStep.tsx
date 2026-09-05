@@ -35,7 +35,7 @@ import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 import {
   facilityConfig,
   isApprovalRequired,
@@ -43,17 +43,6 @@ import {
 } from "@/data/facility-config";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { ServiceAddOn, TipConfig } from "@/types/facility";
-
-function getStoredAddOns(): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const stored = localStorage.getItem("settings-service-addons");
-    if (stored) return JSON.parse(stored) as ServiceAddOn[];
-  } catch {
-    /* ignore */
-  }
-  return defaultServiceAddOns;
-}
 
 function formatAddonUnit(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
@@ -292,11 +281,15 @@ export function ConfirmStep({
   const serviceInfo = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
   const ServiceIcon = serviceInfo?.icon ?? PawPrint;
   const hasAddons = extraServices.length > 0;
+  const { addOns: facilityAddOns } = useServiceAddOns();
   const hasRooms = roomAssignments.length > 0;
   const isEvaluation = selectedService === "evaluation";
   const isDaycareOrBoarding =
     selectedService === "daycare" || selectedService === "boarding";
-  const resolvedAddOns = addOnsCatalog ?? getStoredAddOns();
+  // The catalogue the parent passed, or the facility's own. The fallback used
+  // to be this browser's localStorage, so a confirmation screen could price an
+  // extra the booking screen had never offered.
+  const resolvedAddOns = addOnsCatalog ?? facilityAddOns;
 
   // Pending waivers for this service type
   const [signingWaiver, setSigningWaiver] = useState<

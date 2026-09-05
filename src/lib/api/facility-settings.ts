@@ -43,6 +43,11 @@ import type {
 import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import type { EstimateSettings } from "@/lib/settings/estimates";
 import type { IncidentReportingConfig } from "@/lib/settings/incidents";
+import type {
+  AddOnCategory,
+  ServiceAddOn,
+  ServiceAddOnsConfig,
+} from "@/lib/settings/addons";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
 import type { RebookConfig } from "@/lib/settings/rebook";
@@ -102,6 +107,8 @@ export interface FacilitySettings {
   estimate_settings: SettingState<EstimateSettings>;
   /** Who is told when an animal is hurt, and what a report must carry. */
   incident_reporting: SettingState<IncidentReportingConfig>;
+  /** The extras this facility sells on a booking, and their categories. */
+  service_addons: SettingState<ServiceAddOnsConfig>;
   /**
    * Expected visit frequency per service, and whether lapsed clients for it may
    * be messaged. `configured: false` means the Lapsed list is computed from the
@@ -349,6 +356,36 @@ export function useIncidentReporting(): {
   return {
     config: settings.incident_reporting.value,
     configured: settings.incident_reporting.configured,
+    isPending,
+  };
+}
+
+/**
+ * The extras this facility sells.
+ *
+ * A named hook because TWENTY-THREE files used to answer this question for
+ * themselves — thirteen with their own copy of a localStorage key, ten by
+ * reading the shipped fixture — and they did not agree with each other. The
+ * booking flow, the rates screen and the estimate wizard could each offer a
+ * different set of extras at different prices for the same service.
+ *
+ * `isPending` matters here for the same reason it does on deposits: an empty
+ * list because the facility sells no extras, and an empty list because the
+ * request has not landed, must not look the same to a screen deciding what to
+ * put in front of a customer.
+ */
+export function useServiceAddOns(): {
+  addOns: ServiceAddOn[];
+  categories: AddOnCategory[];
+  /** False means no row: this facility sells no extras, not "we cannot tell". */
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    addOns: settings.service_addons.value.addOns,
+    categories: settings.service_addons.value.categories,
+    configured: settings.service_addons.configured,
     isPending,
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -78,7 +78,8 @@ import {
   updateCapturedLead,
   useCapturedLeads,
 } from "@/lib/lead-capture";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import type { ServiceAddOn } from "@/types/facility";
 import type { FacilityTask } from "@/data/facility-tasks";
 import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
@@ -1297,20 +1298,35 @@ function MoveDateDialog({
    Sticky bottom action bar (Table 35)
    ═══════════════════════════════════════════════════ */
 
-const ADD_ON_OPTIONS = defaultServiceAddOns.map((addOn) => ({
-  id: addOn.id,
-  name: addOn.name,
-  category: addOn.category,
-  price: addOn.price,
-}));
+interface AddOnOption {
+  id: string;
+  name: string;
+  /** Optional on ServiceAddOn, and therefore optional here. */
+  category?: string;
+  price: number;
+}
 
-const ADD_ON_PRICE_BY_NAME = new Map(
-  defaultServiceAddOns.map((addOn) => [addOn.name.toLowerCase(), addOn.price]),
-);
+function toAddOnOptions(addOns: ServiceAddOn[]): AddOnOption[] {
+  return addOns.map((addOn) => ({
+    id: addOn.id,
+    name: addOn.name,
+    category: addOn.category,
+    price: addOn.price,
+  }));
+}
 
-/** Price for an add-on by name (from service-addons); 0 for unknown/custom. */
-function addOnPrice(name: string): number {
-  return ADD_ON_PRICE_BY_NAME.get(name.toLowerCase()) ?? 0;
+/**
+ * Price for an add-on by name; 0 for unknown or custom.
+ *
+ * This was a module-level Map built from the shipped fixture at import, so the
+ * revenue this drawer showed was priced off the seed file — and an add-on the
+ * facility had added itself counted as zero.
+ */
+function addOnPrice(addOns: ServiceAddOn[], name: string): number {
+  const match = addOns.find(
+    (addOn) => addOn.name.toLowerCase() === name.toLowerCase(),
+  );
+  return match?.price ?? 0;
 }
 
 /** Shared add-on selector popover — used by the Add-Ons tab and the A4 bar. */
@@ -1318,9 +1334,14 @@ function AddOnPicker({
   onSelect,
   trigger,
 }: {
-  onSelect: (option: (typeof ADD_ON_OPTIONS)[number]) => void;
+  onSelect: (option: AddOnOption) => void;
   trigger: React.ReactNode;
 }) {
+  const { addOns: facilityAddOns } = useServiceAddOns();
+  const options = useMemo(
+    () => toAddOnOptions(facilityAddOns),
+    [facilityAddOns],
+  );
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -1330,7 +1351,7 @@ function AddOnPicker({
           Add an add-on
         </div>
         <div className="max-h-64 overflow-y-auto py-1">
-          {ADD_ON_OPTIONS.map((option) => (
+          {options.map((option) => (
             <button
               key={option.id}
               type="button"
@@ -1423,7 +1444,7 @@ function DrawerActionBar({
     window.open(`/facility/dashboard/bookings?${params.toString()}`, "_blank");
   };
 
-  const addAddOn = (option: (typeof ADD_ON_OPTIONS)[number]) => {
+  const addAddOn = (option: AddOnOption) => {
     onAddBookingAddOn(eventNumericId, {
       id: `addon-${option.id}-${eventNumericId}`,
       name: option.name,
@@ -1913,9 +1934,13 @@ function AddOnsTab({
   canEdit: boolean;
   invoiceHref: string;
   onToggle: (addOnId: string, completed: boolean) => void;
-  onAdd: (option: (typeof ADD_ON_OPTIONS)[number]) => void;
+  onAdd: (option: AddOnOption) => void;
 }) {
-  const total = addOns.reduce((sum, addOn) => sum + addOnPrice(addOn.name), 0);
+  const { addOns: facilityAddOns } = useServiceAddOns();
+  const total = addOns.reduce(
+    (sum, addOn) => sum + addOnPrice(facilityAddOns, addOn.name),
+    0,
+  );
 
   return (
     <div className="space-y-3">
@@ -1986,7 +2011,7 @@ function AddOnsTab({
                   )}
                 </div>
                 <span className="shrink-0 text-sm font-semibold text-slate-700">
-                  +{formatCurrency(addOnPrice(addOn.name))}
+                  +{formatCurrency(addOnPrice(facilityAddOns, addOn.name))}
                 </span>
               </label>
             );

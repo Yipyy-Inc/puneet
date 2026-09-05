@@ -43,13 +43,18 @@ import { clients } from "@/data/clients";
 import { getNextEstimateId } from "@/data/estimates";
 import { trainingClasses } from "@/data/training";
 import { taxRates } from "@/data/settings";
-import { defaultServiceAddOns } from "@/data/service-addons";
+
 import {
   computeDepositAmount,
   findApplicableDepositRule,
 } from "@/lib/settings/deposits";
 import { useDepositRules } from "@/lib/api/facility-settings";
-import { useEstimateSettings } from "@/lib/api/facility-settings";
+import {
+  useEstimateSettings,
+  useServiceAddOns,
+} from "@/lib/api/facility-settings";
+import { addOnsForService } from "@/lib/settings/addons";
+import type { ServiceAddOn } from "@/types/facility";
 import { provisionAccountForEstimate } from "@/lib/estimates/account-provisioning";
 import {
   sendStandardEstimateEmail,
@@ -108,6 +113,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   // came from localStorage, so the expiry pre-filled on an estimate depended on
   // which machine wrote it.
   const { settings: estimateSettings } = useEstimateSettings();
+  const { addOns: facilityAddOns } = useServiceAddOns();
   const [step, setStep] = useState(0);
 
   // Client selection
@@ -384,14 +390,14 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     ? computeDepositAmount(depositRule, total)
     : 0;
 
-  // Add-ons offered for this service (fallback to all active).
-  const serviceAddOns = defaultServiceAddOns.filter(
-    (a) => a.isActive && a.applicableServices.includes(selectedService),
-  );
+  // Add-ons offered for this service (fallback to all active). The list is
+  // the FACILITY's now — this read the shipped fixture, so an estimate offered
+  // extras the business does not sell, at prices it never set.
+  const serviceAddOns = addOnsForService(facilityAddOns, selectedService);
   const activeAddOns =
     serviceAddOns.length > 0
       ? serviceAddOns
-      : defaultServiceAddOns.filter((a) => a.isActive);
+      : facilityAddOns.filter((a) => a.isActive);
   const filteredAddOns = addonSearch.trim()
     ? activeAddOns.filter((a) =>
         a.name.toLowerCase().includes(addonSearch.toLowerCase()),
@@ -592,7 +598,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     ]);
   };
 
-  const addAddOnLineItem = (addon: (typeof defaultServiceAddOns)[number]) => {
+  const addAddOnLineItem = (addon: ServiceAddOn) => {
     setLineItems([
       ...allLineItems,
       {

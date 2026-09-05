@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Gift, Plus, Trash2 } from "lucide-react";
 import { services } from "@/data/services-pricing";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 import type {
   MembershipIncludedItem,
   IncludedItemKind,
@@ -31,11 +31,15 @@ export function StepIncluded({ data, update }: Props) {
   const [kind, setKind] = useState<IncludedItemKind>("service");
   const [refId, setRefId] = useState<string>("");
 
+  // What this facility sells. A membership that includes an add-on has to
+  // offer the facility's own list, not the one Yipyy ships.
+  const { addOns: facilityAddOns } = useServiceAddOns();
+
   const catalog =
     kind === "service"
       ? services.filter((s) => !s.isAddOn)
       : kind === "addon"
-        ? defaultServiceAddOns.map((a) => ({ id: a.id, name: a.name }))
+        ? facilityAddOns.map((a) => ({ id: a.id, name: a.name }))
         : [];
 
   const addItem = () => {
@@ -44,7 +48,7 @@ export function StepIncluded({ data, update }: Props) {
       kind === "service"
         ? (services.find((s) => s.id === refId)?.name ?? refId)
         : kind === "addon"
-          ? (defaultServiceAddOns.find((a) => a.id === refId)?.name ?? refId)
+          ? (facilityAddOns.find((a) => a.id === refId)?.name ?? refId)
           : refId;
     const item: MembershipIncludedItem = {
       id: `ii-${Date.now()}`,

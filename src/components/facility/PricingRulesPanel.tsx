@@ -44,7 +44,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { getStoredServiceAddOns } from "@/lib/pricing-rules";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 import type { PricingRules } from "@/lib/settings/pricing";
 import type {
   MultiPetDiscountRule,
@@ -372,6 +372,9 @@ export function PricingRulesPanel({
 }: PricingRulesPanelProps) {
   const sections = showSections ?? ALL_SECTIONS;
   const { activeModules } = useCustomServices();
+  // The extras this facility sells. Read from localStorage until 2026-09-05,
+  // under a key thirteen files each carried their own copy of.
+  const { addOns: serviceAddOns } = useServiceAddOns();
 
   const serviceOptions: ServiceOption[] = [
     ...CORE_SERVICE_OPTIONS,
@@ -389,9 +392,7 @@ export function PricingRulesPanel({
   // the settings page hardcoded, so every facility on the platform read and
   // wrote the demo facility's key. Dropping a scope that was the same wrong
   // value for everyone loses nothing and removes one more hardcoded 11.
-  const addOnOptions = getStoredServiceAddOns().filter(
-    (addOn) => addOn.isActive,
-  );
+  const addOnOptions = serviceAddOns.filter((addOn) => addOn.isActive);
   const serviceScopeLabel =
     serviceType === "all"
       ? "all services"

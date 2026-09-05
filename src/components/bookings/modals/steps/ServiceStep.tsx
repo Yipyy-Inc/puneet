@@ -17,7 +17,8 @@ import { cn } from "@/lib/utils";
 import { SERVICE_CATEGORIES, SERVICE_ACCENTS } from "../constants";
 import { trainingQueries } from "@/lib/api/training";
 import type { TrainingCourseType } from "@/lib/training-config";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { addOnsForService } from "@/lib/settings/addons";
 import { getPetSize } from "@/lib/pet-size";
 import type { FacilityBookingFlowConfig } from "@/types/booking";
 import type { ModuleConfig } from "@/types/facility";
@@ -67,6 +68,10 @@ export function ServiceStep({
   // same evaluation, described the same way, at the same price, regardless
   // of what they had configured.
   const { evaluation: evaluationConfig } = useSettings();
+  // The extras this facility sells. This read the shipped fixture directly, so
+  // the card's detail pane advertised the seed list's services at the seed
+  // list's prices whatever the business had configured.
+  const { addOns: facilityAddOns } = useServiceAddOns();
   // Which card is currently expanded into its inline detail pane. Defaults to
   // whatever `selectedService` is so an already-picked service stays open.
   // Independent from `selectedService` to allow "preview without selecting"
@@ -332,9 +337,7 @@ export function ServiceStep({
           // Inline detail pane data (rendered only for the expanded card).
           const isExpanded = expandedServiceId === service.id && !isDisabled;
           const allIncludedItems = service.included;
-          const applicableAddOns = defaultServiceAddOns.filter(
-            (a) => a.isActive && a.applicableServices?.includes(service.id),
-          );
+          const applicableAddOns = addOnsForService(facilityAddOns, service.id);
 
           // #1 — when a card is expanded inline, take the full row.
           //      Otherwise keep the odd-row full-span rule.

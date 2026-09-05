@@ -1,32 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Check, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { addOnsForService } from "@/lib/settings/addons";
 import type { ServiceAddOn } from "@/types/facility";
-
-function loadServiceAddOns(serviceFilter: string): ServiceAddOn[] {
-  if (typeof window === "undefined")
-    return defaultServiceAddOns.filter((a) =>
-      a.applicableServices.includes(serviceFilter),
-    );
-  try {
-    const raw = localStorage.getItem("settings-service-addons");
-    const all = raw
-      ? (JSON.parse(raw) as ServiceAddOn[])
-      : defaultServiceAddOns;
-    return all.filter(
-      (a) => a.isActive && a.applicableServices.includes(serviceFilter),
-    );
-  } catch {
-    return defaultServiceAddOns.filter((a) =>
-      a.applicableServices.includes(serviceFilter),
-    );
-  }
-}
 
 function fmtPrice(addon: ServiceAddOn): string {
   switch (addon.pricingType) {
@@ -56,11 +37,14 @@ export function IncludedAddOnsPicker({
   selectedIds,
   onChange,
 }: Props) {
-  const [addOns, setAddOns] = useState<ServiceAddOn[]>([]);
-
-  useEffect(() => {
-    setAddOns(loadServiceAddOns(serviceFilter));
-  }, [serviceFilter]);
+  // The facility's own extras. One of thirteen localStorage loaders, and this
+  // one disagreed with the others: its SSR branch skipped the isActive check,
+  // so a retired add-on appeared on the server render and vanished on hydration.
+  const { addOns: allAddOns } = useServiceAddOns();
+  const addOns = useMemo(
+    () => addOnsForService(allAddOns, serviceFilter),
+    [allAddOns, serviceFilter],
+  );
 
   function toggle(id: string) {
     onChange(
