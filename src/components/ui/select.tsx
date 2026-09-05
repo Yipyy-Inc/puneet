@@ -44,8 +44,16 @@ function SelectTrigger({
         //
         // `size="sm"` is kept and resolves to the SAME height, exactly as
         // Button's `sm` does: §1 has one control height, and the alternative
-        // was editing every call site that passes it.
-        `border-line-strong bg-card text-body-ink data-placeholder:text-ink-tertiary [&_svg:not([class*='text-'])]:text-ink-disabled focus-visible:border-primary aria-invalid:border-error-dot disabled:bg-surface-inset disabled:text-ink-disabled flex min-h-10 w-fit items-center justify-between gap-2 rounded-full border px-4 text-[14.5px] whitespace-nowrap transition-[color,border-color,box-shadow] duration-120 ease-[ease] outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--primary),0_0_0_3px_rgba(22,104,227,0.12)] disabled:cursor-not-allowed aria-invalid:focus-visible:shadow-[inset_0_0_0_2px_var(--error-dot),0_0_0_3px_rgba(210,69,69,0.12)] data-[size=default]:min-h-10 data-[size=sm]:min-h-10 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 motion-reduce:transition-none max-lg:min-h-12 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+        // was editing every call site that passes it. It carries NO height
+        // class of its own, and that is load-bearing rather than tidy:
+        // `data-[size=default]:min-h-10 data-[size=sm]:min-h-10` used to sit
+        // here, restating the base height — and because both are one class of
+        // specificity, the one written LATER in the compiled sheet won. That
+        // was the data-attribute pair, not `max-lg:min-h-12`, so every select
+        // in the product measured 40px on a phone while the class meant to
+        // make it 48 sat in the same string doing nothing. Measured at 599px:
+        // 168 of them on the roles screen alone (§6 rule 7).
+        `border-line-strong bg-card text-body-ink data-placeholder:text-ink-tertiary [&_svg:not([class*='text-'])]:text-ink-disabled focus-visible:border-primary aria-invalid:border-error-dot disabled:bg-surface-inset disabled:text-ink-disabled flex min-h-10 w-fit items-center justify-between gap-2 rounded-full border px-4 text-[14.5px] whitespace-nowrap transition-[color,border-color,box-shadow] duration-120 ease-[ease] outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--primary),0_0_0_3px_rgba(22,104,227,0.12)] disabled:cursor-not-allowed aria-invalid:focus-visible:shadow-[inset_0_0_0_2px_var(--error-dot),0_0_0_3px_rgba(210,69,69,0.12)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 motion-reduce:transition-none max-lg:min-h-12 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className,
       )}
       {...props}

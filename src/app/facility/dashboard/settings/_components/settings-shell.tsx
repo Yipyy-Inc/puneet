@@ -130,7 +130,12 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
           {onSection && (
             <Link
               href={index}
-              className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm font-medium"
+              // 48px below 1024px (§6 rule 7). It measured 20px — the height of
+              // its own text — on every one of the 50 sections, which is the
+              // shape rule 7 exists to catch: a link that is fine under a mouse
+              // and a coin-toss under a thumb. `min-h` and padding rather than
+              // `h`, because §5g's French strings wrap.
+              className="text-muted-foreground hover:text-foreground flex w-fit items-center gap-1.5 text-sm font-medium max-lg:min-h-12 max-lg:py-3"
             >
               <ArrowLeft className="size-4" />
               {label.text("allSettings")}
