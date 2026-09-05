@@ -35,6 +35,11 @@ import type {
   NetworkPolicy,
 } from "@/types/facility";
 import type { PricingRules } from "@/lib/settings/pricing";
+import type {
+  DepositConfig,
+  DepositRefundPolicy,
+  DepositRuleSet,
+} from "@/lib/settings/deposits";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
 import type { RebookConfig } from "@/lib/settings/rebook";
@@ -86,6 +91,8 @@ export interface FacilitySettings {
    */
   loyalty_config: SettingState<LoyaltyProgramConfig>;
   pricing_rules: SettingState<PricingRules>;
+  /** What is asked for up front, and what happens to it on a cancellation. */
+  deposit_rules: SettingState<DepositConfig>;
   /**
    * Expected visit frequency per service, and whether lapsed clients for it may
    * be messaged. `configured: false` means the Lapsed list is computed from the
@@ -246,6 +253,39 @@ export function usePricingRules(): {
   return {
     rules: settings.pricing_rules.value,
     configured: settings.pricing_rules.configured,
+    isPending,
+  };
+}
+
+/**
+ * The facility's deposit terms.
+ *
+ * A named hook rather than four call sites reaching into
+ * `settings.deposit_rules.value` themselves, for the same reason
+ * `usePricingRules` is one: these decide what a customer is ASKED FOR, and
+ * `isPending` has to travel with them.
+ *
+ * That is not defensive. Until 2026-09-05 the readers called
+ * `loadDepositRules()`, which returned the SEED FILE's rules synchronously
+ * whenever localStorage was empty — so a booking opened before anything had
+ * loaded still quoted 30% on boarding, confidently, on a number no business
+ * had agreed to. A screen asking for no deposit because the facility
+ * configured none, and one asking for no deposit because the settings have not
+ * arrived, must not look the same to the code putting a figure in front of a
+ * customer.
+ */
+export function useDepositRules(): {
+  rules: DepositRuleSet;
+  refundPolicy: DepositRefundPolicy;
+  /** False means no row: this facility asks for nothing, not "we cannot tell". */
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    rules: settings.deposit_rules.value.rules,
+    refundPolicy: settings.deposit_rules.value.refundPolicy,
+    configured: settings.deposit_rules.configured,
     isPending,
   };
 }

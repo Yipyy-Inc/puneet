@@ -7,7 +7,7 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { usePricingRules } from "@/lib/api/facility-settings";
+import { useDepositRules, usePricingRules } from "@/lib/api/facility-settings";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -92,10 +92,9 @@ import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
 import { digitalWaivers, waiverSignatures } from "@/data/additional-features";
 import {
-  loadDepositRules,
   findApplicableDepositRule,
   computeDepositAmount,
-} from "@/data/deposit-rules";
+} from "@/lib/settings/deposits";
 import {
   BookingDepositPrompt,
   type DepositPromptValue,
@@ -288,6 +287,11 @@ export function BookingModal({
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
   const { rules: pricingRules } = usePricingRules();
+  // Same story, one screen along: the deposit came from localStorage until
+  // 2026-09-05, so two staff could ask the same customer for two different
+  // amounts on the same booking.
+  const { rules: depositRules, isPending: depositRulesPending } =
+    useDepositRules();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),
     [daycare, boarding, grooming, training],
@@ -1842,15 +1846,26 @@ export function BookingModal({
 
   // Resolve any deposit rule that applies to this booking. Customer-mode
   // now participates so the deposit + card picker can render on Confirm.
+  // The facility's rules, and NOT while they are still arriving. This called
+  // loadDepositRules(), which answered from localStorage — or, on any browser
+  // that had never opened the settings screen, from the seed file — so the
+  // deposit a customer was asked for depended on the machine the booking was
+  // taken on. `isPending` is what stops the replacement quoting a figure
+  // before the real terms have landed.
   const applicableDepositRule = useMemo(() => {
-    if (isEstimateMode || !selectedService) return null;
-    const rules = loadDepositRules();
+    if (isEstimateMode || !selectedService || depositRulesPending) return null;
     return findApplicableDepositRule(
       selectedService,
       calculatePrice.total,
-      rules,
+      depositRules,
     );
-  }, [isEstimateMode, selectedService, calculatePrice.total]);
+  }, [
+    isEstimateMode,
+    selectedService,
+    calculatePrice.total,
+    depositRules,
+    depositRulesPending,
+  ]);
 
   // Sync prompt defaults when the rule or total changes
   useEffect(() => {

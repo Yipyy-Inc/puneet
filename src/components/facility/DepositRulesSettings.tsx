@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DollarSign,
   Percent,
@@ -25,15 +25,13 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { facilityConfig } from "@/data/facility-config";
+import { ensureAllServiceRules } from "@/lib/settings/deposits";
 import {
-  defaultDepositRules,
-  defaultDepositRefundPolicy,
-  ensureAllServiceRules,
-  loadDepositRules,
-  saveDepositRules,
-  loadDepositRefundPolicy,
-  saveDepositRefundPolicy,
-} from "@/data/deposit-rules";
+  useDepositRules,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TriangleAlert } from "lucide-react";
 import type {
   DepositAmountType,
   DepositRule,
@@ -70,14 +68,55 @@ function formatRuleLabel(rule: DepositRule): string {
   return `Bookings over $${(rule.minBookingValue ?? 0).toFixed(0)} — ${amount} deposit`;
 }
 
+// ── NOTHING RENDERS UNTIL THE TERMS HAVE ARRIVED ──────────────────────────
+//
+// Same split, and the same reason, as PricingRulesSettings. The editor below
+// seeds `useState` from what it is handed, and a `useState` initialiser runs
+// ONCE — so mounting it against the fallback and letting the query land after
+// would show a facility no deposit rules whatever it had saved, and the first
+// keystroke would report that emptiness back as the new value. Opening this
+// page would erase the business's terms.
+//
+// The old version had the same shape with localStorage underneath and a
+// `hasMounted` flag to hide the flash. A flag hides the flash; it does not stop
+// the write.
 export function DepositRulesSettings() {
+  const { rules, refundPolicy, configured, isPending } = useDepositRules();
+
+  if (isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  return (
+    <DepositRulesEditor
+      key={configured ? "stored" : "default"}
+      initialRules={rules}
+      initialRefundPolicy={refundPolicy}
+      configured={configured}
+    />
+  );
+}
+
+function DepositRulesEditor({
+  initialRules,
+  initialRefundPolicy,
+  configured,
+}: {
+  initialRules: DepositRuleSet;
+  initialRefundPolicy: DepositRefundPolicy;
+  configured: boolean;
+}) {
+  const saveSetting = useSaveFacilitySetting();
   const [rules, setRules] = useState<DepositRuleSet>(() =>
-    ensureAllServiceRules(defaultDepositRules),
+    ensureAllServiceRules(initialRules),
   );
-  const [refundPolicy, setRefundPolicy] = useState<DepositRefundPolicy>(
-    () => defaultDepositRefundPolicy,
-  );
-  const [hasMounted, setHasMounted] = useState(false);
+  const [refundPolicy, setRefundPolicy] =
+    useState<DepositRefundPolicy>(initialRefundPolicy);
   const [dirty, setDirty] = useState(false);
 
   // Free-cancellation window from Business Settings — the deposit refund policy
@@ -85,11 +124,29 @@ export function DepositRulesSettings() {
   const freeCancellationHours =
     facilityConfig.bookingRules.cancellationPolicies.freeCancellationHours;
 
-  useEffect(() => {
-    setRules(loadDepositRules());
-    setRefundPolicy(loadDepositRefundPolicy());
-    setHasMounted(true);
-  }, []);
+  // One domain, written whole. The API stores `value jsonb` per
+  // (facility_id, domain), so a partial write is not a thing that exists here.
+  const persist = (
+    nextRules: DepositRuleSet,
+    nextPolicy: DepositRefundPolicy,
+    message: string,
+  ) => {
+    saveSetting.mutate(
+      {
+        domain: "deposit_rules",
+        value: { rules: nextRules, refundPolicy: nextPolicy },
+      },
+      {
+        onSuccess: () => toast.success(message),
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Those deposit rules were not saved.",
+          ),
+      },
+    );
+  };
 
   const updateRefundPolicy = (patch: Partial<DepositRefundPolicy>) => {
     setRefundPolicy((prev) => ({ ...prev, ...patch }));
@@ -140,24 +197,34 @@ export function DepositRulesSettings() {
       return updated;
     });
     setRules(next);
-    saveDepositRules(next);
-    toast.success(message);
+    persist(next, refundPolicy, message);
   };
 
   const handleSave = () => {
-    saveDepositRules(rules);
-    saveDepositRefundPolicy(refundPolicy);
+    persist(rules, refundPolicy, "Deposit rules saved");
     setDirty(false);
-    toast.success("Deposit rules saved");
   };
-
-  if (!hasMounted) return null;
 
   return (
     <div className="space-y-6">
+      {/* "No deposit" and "not set up yet" look identical on screen, and one of
+          them is a decision. Worth saying out loud here because the fallback is
+          empty on purpose: the fixture used to ship 30% on boarding and $25 on
+          grooming, and any browser that had never opened this screen collected
+          them — terms no business ever agreed to. §6 rule 2: a status is its
+          glyph, its word, its ink and a hairline of that same ink. */}
+      {!configured && (
+        <div className="border-warning/40 bg-card flex items-start gap-2 rounded-xl border p-3">
+          <TriangleAlert className="text-warning mt-0.5 size-4 shrink-0" />
+          <p className="text-warning text-[13.5px]">
+            No deposit terms are set up yet, so no deposit is asked for on any
+            booking. Turn on the services below that should require one.
+          </p>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">Deposit Rules</h2>
+          <h2 className="text-lg font-semibold">Deposit rules</h2>
           <p className="text-muted-foreground mt-1 text-sm">
             Set automatic deposit requirements per service type or by booking
             value. When a matching booking is created, staff are prompted to

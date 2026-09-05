@@ -44,7 +44,11 @@ import { getNextEstimateId } from "@/data/estimates";
 import { trainingClasses } from "@/data/training";
 import { taxRates } from "@/data/settings";
 import { defaultServiceAddOns } from "@/data/service-addons";
-import { defaultDepositRules } from "@/data/deposit-rules";
+import {
+  computeDepositAmount,
+  findApplicableDepositRule,
+} from "@/lib/settings/deposits";
+import { useDepositRules } from "@/lib/api/facility-settings";
 import { getEstimateSettings } from "@/data/estimate-settings";
 import { provisionAccountForEstimate } from "@/lib/estimates/account-provisioning";
 import {
@@ -97,6 +101,9 @@ function computeDefaultExpiry(): string {
 }
 
 export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
+  // The facility's deposit terms, so an estimate quotes what the booking would
+  // actually ask for.
+  const { rules: depositRules } = useDepositRules();
   const [step, setStep] = useState(0);
 
   // Client selection
@@ -357,15 +364,18 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   const taxAmount = taxable * taxRate;
   const total = taxable + taxAmount;
 
-  // Deposit — auto-populated from the facility's deposit rules, overridable.
-  const depositRule = defaultDepositRules.find(
-    (r) =>
-      r.enabled && r.scope === "service" && r.serviceType === selectedService,
+  // Deposit — the FACILITY's rules, through the same two functions the booking
+  // flow uses. This read `defaultDepositRules` (the seed file), inlined its own
+  // copy of the percentage maths, and matched only service rules — so an
+  // estimate could quote a figure the booking would never have asked for, and a
+  // booking-value rule was invisible to it.
+  const depositRule = findApplicableDepositRule(
+    selectedService,
+    total,
+    depositRules,
   );
   const depositAuto = depositRule
-    ? depositRule.amountType === "percentage"
-      ? Math.round(total * (depositRule.amount / 100) * 100) / 100
-      : depositRule.amount
+    ? computeDepositAmount(depositRule, total)
     : 0;
 
   // Add-ons offered for this service (fallback to all active).
