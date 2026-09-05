@@ -39,6 +39,8 @@ type Catalogue = {
   groups: Record<string, string>;
   leaves: Record<string, string>;
   index: Record<string, string>;
+  /** Per-section body copy, keyed by section id then by string id. */
+  sections: Record<string, Record<string, string>>;
 };
 
 const CATALOGUE: Record<AppLocale, Catalogue> = {
@@ -69,4 +71,27 @@ export function settingsText(
   key: keyof Catalogue["index"],
 ): string {
   return catalogue(locale).index[key] ?? catalogue("en").index[key] ?? key;
+}
+
+/**
+ * A string from one section's own body copy.
+ *
+ * Keyed by section and by id, never by the English words — the same reason
+ * the rail is. `translateUiText()` would answer this question by matching the
+ * English string and returning it unchanged on a miss, which is why the hours
+ * screen's chrome ("Save", "Cancel") was French while everything specific to
+ * it — "Blocked dates", "Add override", "Fully closed" — was not, with nothing
+ * anywhere reporting the difference.
+ *
+ * Falls back to English rather than to the key: a missing French string should
+ * read as English words, not as `blockReasonPlaceholder`.
+ */
+export function settingsSectionText(
+  locale: AppLocale,
+  section: string,
+  key: string,
+): string {
+  const sections = catalogue(locale).sections ?? {};
+  const english = (CATALOGUE.en.sections ?? {})[section] ?? {};
+  return sections[section]?.[key] ?? english[key] ?? key;
 }

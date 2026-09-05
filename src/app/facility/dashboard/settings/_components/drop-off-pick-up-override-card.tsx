@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSettings } from "@/hooks/use-settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 import type { DropOffPickUpOverride } from "@/types/facility";
 
@@ -17,6 +18,7 @@ import { SERVICE_BLOCK_OPTIONS } from "./service-block-options";
 
 // Drop-Off & Pick-Up Time Overrides
 export function DropOffPickUpOverrideCard() {
+  const t = useSettingsText().section("hours");
   const { dropOffPickUpOverrides, updateDropOffPickUpOverrides } =
     useSettings();
   const [newDate, setNewDate] = useState("");
@@ -63,20 +65,20 @@ export function DropOffPickUpOverrideCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Timer className="size-5" />
-          Drop-Off &amp; Pick-Up Time Overrides
+          {t("dropOffPickUp")}
         </CardTitle>
         <p className="text-muted-foreground text-sm">
-          Override drop-off and pick-up windows for specific dates (e.g. holiday
-          hours). Customers only see valid time options for each date. Apply
-          overrides per service.
+          {t("dropOffPickUpHelp")}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-4 rounded-lg border p-4">
-          <Label>Add override</Label>
+          <Label>{t("addOverride")}</Label>
           <div className="flex flex-wrap gap-4">
             <div className="space-y-1">
-              <Label className="text-muted-foreground text-xs">Date</Label>
+              <Label className="text-muted-foreground text-xs">
+                {t("date")}
+              </Label>
               <Input
                 type="date"
                 value={newDate}
@@ -85,7 +87,7 @@ export function DropOffPickUpOverrideCard() {
             </div>
             <div className="space-y-1">
               <Label className="text-muted-foreground text-xs">
-                Services (per service, multiple, or all)
+                {t("servicesPerServiceMultipleAll")}
               </Label>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -102,8 +104,8 @@ export function DropOffPickUpOverrideCard() {
                   }
                 >
                   {newServices.length === SERVICE_BLOCK_OPTIONS.length
-                    ? "Clear all"
-                    : "All services"}
+                    ? t("clearAll")
+                    : t("allServices")}
                 </Button>
                 {SERVICE_BLOCK_OPTIONS.map((opt) => (
                   <div key={opt.id} className="flex items-center gap-2">
@@ -125,44 +127,44 @@ export function DropOffPickUpOverrideCard() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="space-y-1">
                 <Label className="text-muted-foreground text-xs">
-                  Drop-off start
+                  {t("dropOffStart")}
                 </Label>
                 <Input
                   type="time"
-                  aria-label="Drop-off start"
+                  aria-label={t("dropOffStart")}
                   value={newDropOffStart}
                   onChange={(e) => setNewDropOffStart(e.target.value)}
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-muted-foreground text-xs">
-                  Drop-off end
+                  {t("dropOffEnd")}
                 </Label>
                 <Input
                   type="time"
-                  aria-label="Drop-off end"
+                  aria-label={t("dropOffEnd")}
                   value={newDropOffEnd}
                   onChange={(e) => setNewDropOffEnd(e.target.value)}
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-muted-foreground text-xs">
-                  Pick-up start
+                  {t("pickUpStart")}
                 </Label>
                 <Input
                   type="time"
-                  aria-label="Pick-up start"
+                  aria-label={t("pickUpStart")}
                   value={newPickUpStart}
                   onChange={(e) => setNewPickUpStart(e.target.value)}
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-muted-foreground text-xs">
-                  Pick-up end
+                  {t("pickUpEnd")}
                 </Label>
                 <Input
                   type="time"
-                  aria-label="Pick-up end"
+                  aria-label={t("pickUpEnd")}
                   value={newPickUpEnd}
                   onChange={(e) => setNewPickUpEnd(e.target.value)}
                 />
@@ -174,15 +176,15 @@ export function DropOffPickUpOverrideCard() {
               disabled={!newDate || newServices.length === 0}
             >
               <Plus className="mr-2 size-4" />
-              Add override
+              {t("addOverride")}
             </Button>
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Overrides</Label>
+          <Label>{t("overrides")}</Label>
           {dropOffPickUpOverrides.length === 0 ? (
             <p className="text-muted-foreground rounded-lg border py-4 text-center text-sm">
-              No drop-off/pick-up overrides. Add a date and service(s) above.
+              {t("noDropOffOverrides")}
             </p>
           ) : (
             <ul className="space-y-2">

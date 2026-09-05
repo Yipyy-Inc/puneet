@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSettings } from "@/hooks/use-settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 import type { ScheduleTimeOverride } from "@/types/facility";
 
@@ -17,6 +18,7 @@ import { SERVICE_BLOCK_OPTIONS } from "./service-block-options";
 
 // One-Day Schedule Time Override (Special Hours)
 export function OneDayScheduleOverrideCard() {
+  const t = useSettingsText().section("hours");
   const { scheduleTimeOverrides, updateScheduleTimeOverrides } = useSettings();
   const [newDate, setNewDate] = useState("");
   const [newServices, setNewScheduleServices] = useState<string[]>([]);
@@ -60,20 +62,20 @@ export function OneDayScheduleOverrideCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="size-5" />
-          One-Day Schedule Time Override (Special Hours)
+          {t("oneDaySchedule")}
         </CardTitle>
         <p className="text-muted-foreground text-sm">
-          Set custom opening and closing times for a specific date (e.g.
-          Halloween 10:00 AM – 3:00 PM) without changing the regular weekly
-          schedule. Choose per service, multiple services, or all services.
+          {t("oneDayScheduleHelp")}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-4 rounded-lg border p-4">
-          <Label>Add override</Label>
+          <Label>{t("addOverride")}</Label>
           <div className="flex flex-wrap gap-4">
             <div className="space-y-1">
-              <Label className="text-muted-foreground text-xs">Date</Label>
+              <Label className="text-muted-foreground text-xs">
+                {t("date")}
+              </Label>
               <Input
                 type="date"
                 value={newDate}
@@ -82,7 +84,7 @@ export function OneDayScheduleOverrideCard() {
             </div>
             <div className="space-y-1">
               <Label className="text-muted-foreground text-xs">
-                Services (optional — leave empty for all)
+                {t("servicesOptionalAll")}
               </Label>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -99,8 +101,8 @@ export function OneDayScheduleOverrideCard() {
                   }
                 >
                   {newServices.length === SERVICE_BLOCK_OPTIONS.length
-                    ? "Clear / All"
-                    : "All services"}
+                    ? t("clearOne")
+                    : t("allServices")}
                 </Button>
                 {SERVICE_BLOCK_OPTIONS.map((opt) => (
                   <div key={opt.id} className="flex items-center gap-2">
@@ -121,37 +123,37 @@ export function OneDayScheduleOverrideCard() {
             </div>
             <div className="space-y-1">
               <Label className="text-muted-foreground text-xs">
-                Opening time
+                {t("openingTime")}
               </Label>
               <Input
                 type="time"
-                aria-label="Opening time"
+                aria-label={t("openingTime")}
                 value={newOpenTime}
                 onChange={(e) => setNewOpenTime(e.target.value)}
               />
             </div>
             <div className="space-y-1">
               <Label className="text-muted-foreground text-xs">
-                Closing time
+                {t("closingTime")}
               </Label>
               <Input
                 type="time"
-                aria-label="Closing time"
+                aria-label={t("closingTime")}
                 value={newCloseTime}
                 onChange={(e) => setNewCloseTime(e.target.value)}
               />
             </div>
             <Button type="button" onClick={handleAdd} disabled={!newDate}>
               <Plus className="mr-2 size-4" />
-              Add override
+              {t("addOverride")}
             </Button>
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Special hours</Label>
+          <Label>{t("specialHours")}</Label>
           {scheduleTimeOverrides.length === 0 ? (
             <p className="text-muted-foreground rounded-lg border py-4 text-center text-sm">
-              No one-day overrides. Add a date and times above.
+              {t("noOneDayOverrides")}
             </p>
           ) : (
             <ul className="space-y-2">

@@ -9,6 +9,7 @@ import type { SettingsLeaf } from "@/lib/settings/nav";
 import {
   settingsGroupLabel,
   settingsLeafLabel,
+  settingsSectionText,
   settingsText,
 } from "@/lib/settings/text";
 
@@ -32,6 +33,9 @@ export function useSettingsText() {
         settingsLeafLabel(effective, leaf),
       group: (label: string) => settingsGroupLabel(effective, label),
       text: (key: string) => settingsText(effective, key),
+      /** A translator bound to one section's own copy. */
+      section: (section: string) => (key: string) =>
+        settingsSectionText(effective, section, key),
     }),
     [effective],
   );
