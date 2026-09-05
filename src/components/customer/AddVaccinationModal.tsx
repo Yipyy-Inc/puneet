@@ -16,7 +16,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Upload, Loader2, X, Syringe, FileImage, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { getVaccinationRules } from "@/data/vaccination-rules";
+import { useVaccinationRules } from "@/lib/api/facility-settings";
 import type { VaccinationRecord } from "@/data/pet-data";
 
 interface VaccineEntryInput {
@@ -65,6 +65,9 @@ export function AddVaccinationModal({
   submitLabel = "Upload for Review",
   onSave,
 }: AddVaccinationModalProps) {
+  // The facility's requirements, so the rows a customer is asked to fill in are
+  // the ones this business actually checks.
+  const { rules: vaccinationRules } = useVaccinationRules();
   const [isSaving, setIsSaving] = useState(false);
   const [vaccines, setVaccines] = useState<VaccineEntryInput[]>([]);
   const [proofs, setProofs] = useState<ProofFileEntry[]>([]);
@@ -73,7 +76,7 @@ export function AddVaccinationModal({
 
   useEffect(() => {
     if (!open) return;
-    const required = getVaccinationRules()
+    const required = vaccinationRules
       .filter((r) => r.species.toLowerCase() === petSpecies.toLowerCase())
       .map((r) => ({
         name: r.vaccineName,

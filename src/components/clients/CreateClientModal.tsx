@@ -50,7 +50,8 @@ import {
   getCustomerLanguageLabel,
   getEnabledCustomerLanguageOptions,
 } from "@/lib/language-settings";
-import { vaccinationRules } from "@/data/settings";
+import { useVaccinationRules } from "@/lib/api/facility-settings";
+import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
 import type { AdditionalContact } from "@/types/client";
 
@@ -193,7 +194,14 @@ function isValidPhoneNumber(value: string): boolean {
   return digits >= PHONE_MIN_DIGITS && digits <= PHONE_MAX_DIGITS;
 }
 
-function getRequiredVaccinesForSpecies(species: string): VaccineEntry[] {
+// The facility's rules are passed IN now. This function read
+// `vaccinationRules` from @/data/settings — the file Yipyy ships — so the
+// vaccine rows a new client was asked for had nothing to do with what this
+// business requires, however carefully somebody had configured it.
+function getRequiredVaccinesForSpecies(
+  species: string,
+  vaccinationRules: VaccinationRules,
+): VaccineEntry[] {
   return vaccinationRules
     .filter((rule) => rule.species.toLowerCase() === species.toLowerCase())
     .map((rule) => ({
@@ -203,9 +211,12 @@ function getRequiredVaccinesForSpecies(species: string): VaccineEntry[] {
     }));
 }
 
-function createEmptyPetVaccineRecord(species: string): PetVaccineRecord {
+function createEmptyPetVaccineRecord(
+  species: string,
+  vaccinationRules: VaccinationRules,
+): PetVaccineRecord {
   return {
-    vaccines: getRequiredVaccinesForSpecies(species),
+    vaccines: getRequiredVaccinesForSpecies(species, vaccinationRules),
     proofs: [],
   };
 }
@@ -524,6 +535,8 @@ function VaccineStep({
     updater: (prev: PetVaccineRecord) => PetVaccineRecord,
   ) => void;
 }) {
+  const { rules: vaccinationRules } = useVaccinationRules();
+
   return (
     <div className="animate-in fade-in space-y-4 py-2 duration-200">
       <p className="text-muted-foreground text-sm">
@@ -537,7 +550,10 @@ function VaccineStep({
           key={`${pet.name}-${i}`}
           pet={pet}
           petIndex={i}
-          record={petVaccines[i] ?? createEmptyPetVaccineRecord(pet.type)}
+          record={
+            petVaccines[i] ??
+            createEmptyPetVaccineRecord(pet.type, vaccinationRules)
+          }
           updateRecord={updatePetVaccineRecord}
         />
       ))}
@@ -639,6 +655,11 @@ export function CreateClientModal({
   facilityName,
 }: CreateClientModalProps) {
   const { languageSettings } = useSettings();
+  // The facility's vaccination requirements, for the empty record a pet starts
+  // with. This file used to read @/data/settings directly, so a new client was
+  // asked for the vaccines Yipyy ships rather than the ones this business
+  // requires.
+  const { rules: vaccinationRules } = useVaccinationRules();
   const customerLanguageOptions =
     getEnabledCustomerLanguageOptions(languageSettings);
   const showPreferredLanguageField = customerLanguageOptions.length > 0;
@@ -686,7 +707,10 @@ export function CreateClientModal({
       const next = [...prev];
       const current =
         next[petIndex] ??
-        createEmptyPetVaccineRecord(pets[petIndex]?.type ?? "Dog");
+        createEmptyPetVaccineRecord(
+          pets[petIndex]?.type ?? "Dog",
+          vaccinationRules,
+        );
       next[petIndex] = updater(current);
       return next;
     });

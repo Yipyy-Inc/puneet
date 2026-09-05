@@ -27,6 +27,10 @@ import {
 } from "@/lib/settings/gift-cards";
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
 import { depositConfigSchema, NO_DEPOSITS } from "@/lib/settings/deposits";
+import {
+  SHIPPED_VACCINATION_RULES,
+  vaccinationRulesSchema,
+} from "@/lib/settings/vaccinations";
 import { NO_REBOOK_CONFIG, rebookConfigSchema } from "@/lib/settings/rebook";
 import {
   messagingPolicySchema,
@@ -304,6 +308,20 @@ export const SETTING_DOMAINS = {
   // any browser that had never opened the settings screen was taking those off
   // real cards. See the banner in lib/settings/deposits.ts.
   deposit_rules: { schema: depositConfigSchema, fallback: NO_DEPOSITS },
+  // ── VACCINATION REQUIREMENTS ───────────────────────────────────────────
+  //
+  // Which vaccines are required, of which species, for which services. This
+  // was a module-level array spliced in place, so a facility's requirements
+  // lived until the tab reloaded — and three screens read the shipped fixture
+  // directly and never saw the facility's edits at all.
+  //
+  // The fallback KEEPS the shipped list, breaking the empty-fallback pattern
+  // of the three domains above it. Deliberately: an unset fee fails safe, an
+  // unset requirement fails open. See the banner in lib/settings/vaccinations.ts.
+  vaccination_rules: {
+    schema: vaccinationRulesSchema,
+    fallback: SHIPPED_VACCINATION_RULES,
+  },
   // ── YIPYY PAY ──────────────────────────────────────────────────────────
   //
   // The facility's payment preferences: which payout schedule their Clover

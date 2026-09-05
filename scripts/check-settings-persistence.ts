@@ -79,6 +79,13 @@ const ALLOW = /settings-write-ok:/;
  * Not one of these is new. Each has always discarded what it was given; the
  * gate is what is new.
  */
+// vaccination-requirements left the same day. Its rules live in the
+// `vaccination_rules` domain now, and the fixture module they used to be
+// spliced into is deleted. Three of its six readers had never seen a
+// facility's edits at all — they imported the shipped list from @/data/settings
+// directly — so this one moved a gate on a customer's booking, not just a
+// settings screen.
+//
 // deposit-rules left this list on 2026-09-05 — the first entry to. Its terms
 // now live in the `deposit_rules` settings domain instead of localStorage,
 // where they had been read not only by the editor but by BookingModal and by
@@ -92,7 +99,6 @@ const BASELINE = new Set<string>([
   "incident-reporting",
   "mobile-app",
   "tags-notes",
-  "vaccination-requirements",
   "yipyygo",
 ]);
 
