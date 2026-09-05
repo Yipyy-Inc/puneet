@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { vaccinationRecords } from "@/data/pet-data";
 import { useClientRecord } from "@/lib/api/client";
-import { getVaccinationRules } from "@/data/vaccination-rules";
+import { useVaccinationRules } from "@/lib/api/facility-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,9 +101,12 @@ export default function ClientVaccinationsPage({
     Record<string, ActiveReview | null>
   >({});
 
-  if (!client) return null;
+  // The facility's requirements. This read a module-level array that the
+  // settings screen spliced in place, so what a staff member was checking this
+  // client against depended on whether their own tab had been reloaded.
+  const { rules: vaccinationRules } = useVaccinationRules();
 
-  const vaccinationRules = getVaccinationRules();
+  if (!client) return null;
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("en-US", {
@@ -436,7 +439,7 @@ export default function ClientVaccinationsPage({
           </CardHeader>
           <CardContent className="space-y-2">
             {client.pets.map((pet) => {
-              const petRules = getVaccinationRules().filter(
+              const petRules = vaccinationRules.filter(
                 (r) =>
                   r.required &&
                   r.species.toLowerCase() === pet.type.toLowerCase(),
@@ -466,7 +469,7 @@ export default function ClientVaccinationsPage({
               );
             })}
             {client.pets.every((pet) => {
-              const petRules = getVaccinationRules().filter(
+              const petRules = vaccinationRules.filter(
                 (r) =>
                   r.required &&
                   r.species.toLowerCase() === pet.type.toLowerCase(),

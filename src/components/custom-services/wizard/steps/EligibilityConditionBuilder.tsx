@@ -15,7 +15,9 @@ import type {
   EligibilityCondition,
   EligibilityConditionType,
 } from "@/types/facility";
-import { facilitySpeciesConfig, vaccinationRules } from "@/data/settings";
+import { facilitySpeciesConfig } from "@/data/settings";
+import { useVaccinationRules } from "@/lib/api/facility-settings";
+import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import { cn } from "@/lib/utils";
 
 const CONDITION_TYPES: {
@@ -45,9 +47,13 @@ const ACCOUNT_STANDING_OPTIONS = [
   { value: "good_standing", label: "Account in good standing" },
 ];
 
-const VACCINE_NAMES = Array.from(
-  new Set(vaccinationRules.map((v) => v.vaccineName)),
-);
+// Derived per render from the FACILITY's requirements, not hoisted off the
+// shipped fixture. As a module constant this was evaluated once at import and
+// listed vaccines a business might not check at all — while omitting any it had
+// added itself.
+function vaccineNames(rules: VaccinationRules): string[] {
+  return Array.from(new Set(rules.map((v) => v.vaccineName)));
+}
 
 /** Sensible defaults when a condition's type changes. */
 function defaultsForType(
@@ -178,6 +184,10 @@ export function EligibilityConditionBuilder({
   conditions,
   onChange,
 }: EligibilityConditionBuilderProps) {
+  // The facility's own requirements. The vaccine list here was a module
+  // constant built from the shipped fixture at import time.
+  const { rules: vaccinationRules } = useVaccinationRules();
+
   const update = (idx: number, patch: Partial<EligibilityCondition>) => {
     const next = conditions.map((c, i) => (i === idx ? { ...c, ...patch } : c));
     // Refresh the derived label for the edited row.
@@ -269,7 +279,7 @@ export function EligibilityConditionBuilder({
                 Must have these vaccines on file
               </Label>
               <MultiToggle
-                options={VACCINE_NAMES}
+                options={vaccineNames(vaccinationRules)}
                 selected={Array.isArray(cond.value) ? cond.value : []}
                 onToggle={(v) => toggleInList(idx, v)}
               />

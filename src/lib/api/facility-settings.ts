@@ -40,6 +40,7 @@ import type {
   DepositRefundPolicy,
   DepositRuleSet,
 } from "@/lib/settings/deposits";
+import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
 import type { RebookConfig } from "@/lib/settings/rebook";
@@ -93,6 +94,8 @@ export interface FacilitySettings {
   pricing_rules: SettingState<PricingRules>;
   /** What is asked for up front, and what happens to it on a cancellation. */
   deposit_rules: SettingState<DepositConfig>;
+  /** Which vaccines are required, of which species, for which services. */
+  vaccination_rules: SettingState<VaccinationRules>;
   /**
    * Expected visit frequency per service, and whether lapsed clients for it may
    * be messaged. `configured: false` means the Lapsed list is computed from the
@@ -286,6 +289,32 @@ export function useDepositRules(): {
     rules: settings.deposit_rules.value.rules,
     refundPolicy: settings.deposit_rules.value.refundPolicy,
     configured: settings.deposit_rules.configured,
+    isPending,
+  };
+}
+
+/**
+ * The vaccines this facility requires.
+ *
+ * A named hook because six screens read these and three of them used to read
+ * the SHIPPED FIXTURE instead — so a facility could configure a requirement,
+ * see it on two screens, and have the customer's own booking flow check
+ * something else entirely.
+ *
+ * `configured` says whether anybody has reviewed the list. Unlike the money
+ * domains the fallback is not empty, so `configured: false` does NOT mean "no
+ * requirements" — it means "the standard list, unreviewed". A screen that wants
+ * to say so needs the flag; one that just enforces the rules does not.
+ */
+export function useVaccinationRules(): {
+  rules: VaccinationRules;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    rules: settings.vaccination_rules.value,
+    configured: settings.vaccination_rules.configured,
     isPending,
   };
 }

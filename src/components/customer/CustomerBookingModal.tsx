@@ -83,7 +83,7 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { bookings as historicalBookings } from "@/data/bookings";
 import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 import { clientDocuments } from "@/data/documents";
-import { vaccinationRules } from "@/data/settings";
+import { useVaccinationRules } from "@/lib/api/facility-settings";
 import { getFormById } from "@/data/forms";
 import { getSubmissionsForPet } from "@/data/form-submissions";
 import { Syringe } from "lucide-react";
@@ -188,6 +188,10 @@ export function CustomerBookingModal({
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
   const { rules: pricingRules } = usePricingRules();
+  // Same story: this gated a customer's booking on the vaccination list Yipyy
+  // ships, imported straight from @/data/settings, so a facility's own
+  // requirements never reached the screen the customer actually uses.
+  const { rules: vaccinationRules } = useVaccinationRules();
   const customerId = customer?.id;
 
   const { selectedFacility } = useCustomerFacility();
