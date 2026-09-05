@@ -18,7 +18,7 @@ import { AlertTriangle, CreditCard, Wallet } from "lucide-react";
 import type { Booking } from "@/types/booking";
 import { clients } from "@/data/clients";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { loadDepositRefundPolicy } from "@/data/deposit-rules";
+import { useDepositRules } from "@/lib/api/facility-settings";
 
 interface CancelBookingModalProps {
   booking: Booking;
@@ -41,11 +41,22 @@ export function CancelBookingModal({
   // Deposit refund policy (Settings → Deposit Rules) governs the deposit's
   // disposition on cancellation; default the method to Store Credit when the
   // policy issues the deposit as credit.
-  const [refundPolicy] = useState(loadDepositRefundPolicy);
+  // The facility's policy, not this browser's. It used to be seeded from
+  // localStorage, so a deposit issued as store credit on one machine came back
+  // to the card on another.
+  const { refundPolicy } = useDepositRules();
   const [cancellationReason, setCancellationReason] = useState("");
-  const [refundMethod, setRefundMethod] = useState<"card" | "store_credit">(
-    refundPolicy.type === "credit" ? "store_credit" : "card",
-  );
+  // Held as null until somebody chooses, and DERIVED below rather than seeded:
+  // the policy arrives over the network, so a useState default would capture
+  // whatever was assumed before it landed and never correct itself. That is the
+  // shape check:settings-seeding exists for.
+  const [chosenRefundMethod, setChosenRefundMethod] = useState<
+    "card" | "store_credit" | null
+  >(null);
+  const refundMethod: "card" | "store_credit" =
+    chosenRefundMethod ??
+    (refundPolicy.type === "credit" ? "store_credit" : "card");
+  const setRefundMethod = setChosenRefundMethod;
   const [refundAmount, setRefundAmount] = useState(booking.totalCost);
 
   const client = clients.find((c) => c.id === booking.clientId);

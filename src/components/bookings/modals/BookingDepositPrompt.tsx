@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import type { DepositRule } from "@/types/deposit-rules";
-import { computeDepositAmount } from "@/data/deposit-rules";
+import { computeDepositAmount } from "@/lib/settings/deposits";
 
 export interface DepositPromptValue {
   collectNow: boolean;

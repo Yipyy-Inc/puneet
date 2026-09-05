@@ -69,6 +69,10 @@ const ALLOW = /success-claim-ok:/;
  * Nothing here was newly written. Everything here was already claiming, and
  * already lying, before the regex learned to see it.
  */
+// EstimateWizard.tsx and DepositRulesSettings.tsx left on 2026-09-05, by being
+// wired rather than by being reworded. Deposit terms moved out of localStorage
+// into the `deposit_rules` settings domain; both of these now save through it,
+// so their toasts describe something that happened.
 const BASELINE = new Set<string>([
   "src/app/customer/estimates/[token]/setup/page.tsx",
   "src/app/dashboard/facilities/requests/_components/facility-requests-client.tsx",
@@ -78,7 +82,6 @@ const BASELINE = new Set<string>([
   "src/components/bookings/UnfinishedBookingsTable.tsx",
   "src/components/dashboard/facilities/AddStaffAccountModal.tsx",
   "src/components/dashboard/facilities/StaffTab.tsx",
-  "src/components/estimates/EstimateWizard.tsx",
   // CustomEmailDomainSettings.tsx left this list on 2026-09-05. It was the
   // clearest case the baseline held: a setTimeout that announced "Domain
   // Verified! Your custom email domain is now active" two seconds after a click
@@ -206,7 +209,6 @@ const BASELINE = new Set<string>([
   "src/components/facility/BookingStatusSettings.tsx",
   "src/components/facility/CareTaskSettings.tsx",
   "src/components/facility/DepartmentSettings.tsx",
-  "src/components/facility/DepositRulesSettings.tsx",
   "src/components/facility/IncidentReportingSettings.tsx",
   "src/components/facility/RouteView.tsx",
   "src/components/facility/TrainingSection.tsx",

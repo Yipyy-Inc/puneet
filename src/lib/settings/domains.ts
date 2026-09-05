@@ -26,6 +26,7 @@ import {
   NO_GIFT_CARD_CONFIG,
 } from "@/lib/settings/gift-cards";
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
+import { depositConfigSchema, NO_DEPOSITS } from "@/lib/settings/deposits";
 import { NO_REBOOK_CONFIG, rebookConfigSchema } from "@/lib/settings/rebook";
 import {
   messagingPolicySchema,
@@ -289,6 +290,20 @@ export const SETTING_DOMAINS = {
   // taking money from customers on a number a seed file invented. See the
   // banner in lib/settings/pricing.ts.
   pricing_rules: { schema: pricingRulesSchema, fallback: NO_PRICING_RULES },
+  // ── DEPOSITS ───────────────────────────────────────────────────────────
+  //
+  // What the facility asks for up front, and what happens to it if the booking
+  // is cancelled. The same localStorage fault as pricing_rules above and worse
+  // in one respect: `loadDepositRules()` was read by BookingModal and by the
+  // booking detail page, not only by the settings editor — so the deposit a
+  // customer was asked for depended on which browser took the booking, and a
+  // cache clear reset the business's terms without telling anybody.
+  //
+  // Empty fallback, for the third time and the same reason. The fixture shipped
+  // 30% on boarding, $25 on grooming, 50% on training and 25% over $200, and
+  // any browser that had never opened the settings screen was taking those off
+  // real cards. See the banner in lib/settings/deposits.ts.
+  deposit_rules: { schema: depositConfigSchema, fallback: NO_DEPOSITS },
   // ── YIPYY PAY ──────────────────────────────────────────────────────────
   //
   // The facility's payment preferences: which payout schedule their Clover

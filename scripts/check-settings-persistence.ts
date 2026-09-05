@@ -79,12 +79,15 @@ const ALLOW = /settings-write-ok:/;
  * Not one of these is new. Each has always discarded what it was given; the
  * gate is what is new.
  */
+// deposit-rules left this list on 2026-09-05 — the first entry to. Its terms
+// now live in the `deposit_rules` settings domain instead of localStorage,
+// where they had been read not only by the editor but by BookingModal and by
+// the checkout on the booking detail page. See lib/settings/deposits.ts.
 const BASELINE = new Set<string>([
   // Four of these raise a success toast as well, and are in
   // check:success-claims' baseline for it. The other four say nothing at all,
   // which is the case that gate could never have caught.
   "addons",
-  "deposit-rules",
   "estimate-settings",
   "incident-reporting",
   "mobile-app",

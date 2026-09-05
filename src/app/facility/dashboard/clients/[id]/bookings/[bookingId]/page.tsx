@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState, useEffect, useMemo } from "react";
-import { usePricingRules } from "@/lib/api/facility-settings";
+import { useDepositRules, usePricingRules } from "@/lib/api/facility-settings";
 import Link from "next/link";
 import {
   PawPrint,
@@ -87,10 +87,9 @@ import { CareCompletionGateDialog } from "@/components/bookings/CareCompletionWa
 import { getPendingCareItems, careSectionDomIds } from "@/lib/care-completion";
 import { buildInvoiceDocumentHtml } from "@/lib/invoice-document";
 import {
-  loadDepositRules,
   findApplicableDepositRule,
   computeDepositAmount,
-} from "@/data/deposit-rules";
+} from "@/lib/settings/deposits";
 import { SendEstimateModal } from "@/components/bookings/SendEstimateModal";
 import { RefundModal } from "@/components/bookings/RefundModal";
 import { AddRetailItemModal } from "@/components/bookings/AddRetailItemModal";
@@ -184,6 +183,11 @@ export default function ClientBookingDetailPage({
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
   const { rules: pricingRules, isPending: pricingPending } = usePricingRules();
+  // The facility's deposit terms. This page called loadDepositRules() at
+  // checkout — localStorage, falling back to the seed file — so what a customer
+  // was asked for at the desk depended on the browser in front of them.
+  const { rules: depositRules, isPending: depositRulesPending } =
+    useDepositRules();
   // Hide the booking dollar amount from staff without view_booking_financials
   // (Table 21). TODO: also strip server-side when a backend exists.
   const { maskAmount, canSee } = useFieldMask();
@@ -759,11 +763,13 @@ export default function ClientBookingDetailPage({
   };
 
   const bookingTotalForDeposit = invoice?.total ?? booking.totalCost;
-  const depositRule = findApplicableDepositRule(
-    booking.service,
-    bookingTotalForDeposit,
-    loadDepositRules(),
-  );
+  const depositRule = depositRulesPending
+    ? null
+    : findApplicableDepositRule(
+        booking.service,
+        bookingTotalForDeposit,
+        depositRules,
+      );
   const ruleDepositAmount = depositRule
     ? computeDepositAmount(depositRule, bookingTotalForDeposit)
     : Math.round(bookingTotalForDeposit * 0.5 * 100) / 100;
