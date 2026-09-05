@@ -29,7 +29,7 @@ export function NotificationsSection() {
       {/* Template Editor */}
       <Card>
         <CardHeader>
-          <CardTitle>Notification Template Editor</CardTitle>
+          <CardTitle>Notification template editor</CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
             Customize email and SMS templates (linked to Communications →
             Templates)

@@ -10,7 +10,7 @@ export function BoardingSection() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Boarding Settings</CardTitle>
+          <CardTitle>Boarding settings</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm">

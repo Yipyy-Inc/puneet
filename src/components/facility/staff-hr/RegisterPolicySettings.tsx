@@ -58,7 +58,7 @@ export function RegisterPolicySettings() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Vault className="text-muted-foreground size-5" />
-          <CardTitle>Daily Register Policy</CardTitle>
+          <CardTitle>Daily register policy</CardTitle>
         </div>
         <p className="text-muted-foreground mt-1 text-sm">
           When on, any staff member granted “Open / close cash register” access

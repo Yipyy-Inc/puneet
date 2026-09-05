@@ -58,7 +58,7 @@ export function StaffNotificationSettings() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Bell className="text-muted-foreground size-5" />
-          <CardTitle>Staff Notifications</CardTitle>
+          <CardTitle>Staff notifications</CardTitle>
         </div>
         <p className="text-muted-foreground mt-1 text-sm">
           Choose which onboarding &amp; offboarding events notify your team, and

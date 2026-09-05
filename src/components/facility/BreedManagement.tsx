@@ -194,7 +194,7 @@ export function BreedManagement() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-base">Pet Breeds</CardTitle>
+            <CardTitle className="text-base">Pet breeds</CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
               Manage the breed list used when creating and editing pets.{" "}
               {allBreeds.length} breeds total

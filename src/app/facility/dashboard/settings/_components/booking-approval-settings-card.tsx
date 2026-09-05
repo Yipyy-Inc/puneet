@@ -60,7 +60,7 @@ export function BookingApprovalSettingsCard() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Booking Approval by Service</CardTitle>
+          <CardTitle>Booking approval by service</CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
             Choose which services require approval before a booking is
             confirmed. When enabled, customer bookings go to a request queue for

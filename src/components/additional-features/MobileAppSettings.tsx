@@ -33,7 +33,7 @@ export function MobileAppSettings() {
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="appName">App Name</Label>
+              <Label htmlFor="appName">App name</Label>
               <Input
                 id="appName"
                 value={settings.appName}
@@ -44,7 +44,7 @@ export function MobileAppSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customDomain">Custom Domain</Label>
+              <Label htmlFor="customDomain">Custom domain</Label>
               <Input
                 id="customDomain"
                 value={settings.customDomain || ""}
@@ -58,7 +58,7 @@ export function MobileAppSettings() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>App Icon</Label>
+              <Label>App icon</Label>
               <div className="flex items-center gap-3">
                 <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 bg-slate-100">
                   <ImageIcon className="size-8 text-slate-400" />
@@ -79,7 +79,7 @@ export function MobileAppSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Splash Screen</Label>
+              <Label>Splash screen</Label>
               <div className="flex items-center gap-3">
                 <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 bg-slate-100">
                   <ImageIcon className="size-8 text-slate-400" />
@@ -113,7 +113,7 @@ export function MobileAppSettings() {
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="primaryColor">Primary Color</Label>
+              <Label htmlFor="primaryColor">Primary color</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="primaryColor"
@@ -135,7 +135,7 @@ export function MobileAppSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="secondaryColor">Secondary Color</Label>
+              <Label htmlFor="secondaryColor">Secondary color</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="secondaryColor"
@@ -157,7 +157,7 @@ export function MobileAppSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="accentColor">Accent Color</Label>
+              <Label htmlFor="accentColor">Accent color</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="accentColor"
@@ -203,7 +203,7 @@ export function MobileAppSettings() {
       {/* App Store Links */}
       <Card>
         <CardHeader>
-          <CardTitle>App Store Links</CardTitle>
+          <CardTitle>App store links</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -220,7 +220,7 @@ export function MobileAppSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="androidPackageName">Android Package Name</Label>
+              <Label htmlFor="androidPackageName">Android package name</Label>
               <Input
                 id="androidPackageName"
                 value={settings.androidPackageName || ""}
@@ -237,7 +237,7 @@ export function MobileAppSettings() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="appStoreUrl">App Store URL</Label>
+              <Label htmlFor="appStoreUrl">App store URL</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="appStoreUrl"
@@ -262,7 +262,7 @@ export function MobileAppSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="playStoreUrl">Play Store URL</Label>
+              <Label htmlFor="playStoreUrl">Play store URL</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="playStoreUrl"
@@ -292,7 +292,7 @@ export function MobileAppSettings() {
       {/* Feature Toggles */}
       <Card>
         <CardHeader>
-          <CardTitle>Feature Toggles</CardTitle>
+          <CardTitle>Feature toggles</CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
             Control which features are available in the mobile app
           </p>
@@ -380,12 +380,12 @@ export function MobileAppSettings() {
       {/* Legal Links */}
       <Card>
         <CardHeader>
-          <CardTitle>Legal & Compliance</CardTitle>
+          <CardTitle>Legal & compliance</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="termsUrl">Terms of Service URL</Label>
+              <Label htmlFor="termsUrl">Terms of service URL</Label>
               <Input
                 id="termsUrl"
                 value={settings.termsOfServiceUrl}
@@ -399,7 +399,7 @@ export function MobileAppSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="privacyUrl">Privacy Policy URL</Label>
+              <Label htmlFor="privacyUrl">Privacy policy URL</Label>
               <Input
                 id="privacyUrl"
                 value={settings.privacyPolicyUrl}

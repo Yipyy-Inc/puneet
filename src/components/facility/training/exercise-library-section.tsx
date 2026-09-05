@@ -25,7 +25,7 @@ export function ExerciseLibrarySection() {
               id="exercise-library-heading"
               className="text-lg/tight font-bold text-slate-900"
             >
-              Exercise Library
+              Exercise library
             </h3>
             <p className="text-muted-foreground mt-0.5 text-[12.5px]/relaxed">
               The foundation of all training data. Disciplines define the

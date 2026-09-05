@@ -305,7 +305,7 @@ export function CheckinRequirementsSettings() {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold">
-          Yipyy Express Check-in Requirements
+          Yipyy express check-in requirements
         </h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Configure what information customers must provide via Express Check-in

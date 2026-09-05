@@ -360,7 +360,7 @@ export function BookingStatusSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Booking Statuses</h2>
+        <h2 className="text-lg font-semibold">Booking statuses</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Configure the booking workflow statuses and automatic transitions.
           System statuses cannot be removed.
@@ -612,7 +612,7 @@ export function BookingStatusSettings() {
           <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
             <div className="flex items-center gap-2">
               <Zap className="size-3.5 text-sky-600" />
-              <h4 className="text-sm font-semibold">Default Fallback Rules</h4>
+              <h4 className="text-sm font-semibold">Default fallback rules</h4>
             </div>
             <p className="text-muted-foreground text-xs">
               These apply when no service-specific automatic status rule
@@ -664,7 +664,7 @@ export function BookingStatusSettings() {
                 <div className="flex items-center gap-2">
                   <WandSparkles className="size-3.5 text-violet-600" />
                   <h4 className="text-sm font-semibold">
-                    Automatic Status Rules
+                    Automatic status rules
                   </h4>
                 </div>
                 <p className="text-muted-foreground mt-1 text-xs">

@@ -10,7 +10,7 @@ export function DaycareSection() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Daycare Settings</CardTitle>
+          <CardTitle>Daycare settings</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm">

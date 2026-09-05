@@ -240,7 +240,7 @@ export function EvaluationSettings() {
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-tight text-slate-900">
-              Evaluation System
+              Evaluation system
             </h2>
             <p className="text-sm text-slate-500">
               Configure pet assessments, scheduling, pricing, and result
@@ -361,7 +361,7 @@ export function EvaluationSettings() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-xs">Internal Name (staff sees)</Label>
+                  <Label className="text-xs">Internal name (staff sees)</Label>
                   <Input
                     value={internalName}
                     onChange={(e) => setInternalName(e.target.value)}
@@ -370,7 +370,7 @@ export function EvaluationSettings() {
                 </div>
                 <div>
                   <Label className="text-xs">
-                    Customer Name (online booking)
+                    Customer name (online booking)
                   </Label>
                   <Input
                     value={customerName}
@@ -466,7 +466,7 @@ export function EvaluationSettings() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Calendar Color</Label>
+                  <Label className="text-xs">Calendar color</Label>
                   <div className="mt-1 flex items-center gap-2">
                     <input
                       type="color"

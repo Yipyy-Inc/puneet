@@ -51,7 +51,7 @@ export function EmploymentTypesSettings() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Briefcase className="text-muted-foreground size-5" />
-          <CardTitle>Employment Types</CardTitle>
+          <CardTitle>Employment types</CardTitle>
         </div>
         <p className="text-muted-foreground mt-1 text-sm">
           The employment types available when hiring or editing a staff member.

@@ -255,7 +255,7 @@ export function InvoiceTemplateSettings() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Invoice Template</h2>
+          <h2 className="text-lg font-semibold">Invoice template</h2>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
             Brand the invoice your clients receive. Logo, contact info, footer
             message, and signature line — all configurable. Live preview on the

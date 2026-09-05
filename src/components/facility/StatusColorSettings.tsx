@@ -150,7 +150,7 @@ export function StatusColorSettings() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Status Colors</CardTitle>
+            <CardTitle>Status colors</CardTitle>
             <CardDescription>
               Customize how booking statuses appear across the calendar and
               badges.

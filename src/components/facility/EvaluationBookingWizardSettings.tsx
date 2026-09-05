@@ -270,7 +270,7 @@ export function EvaluationBookingWizardSettings() {
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-tight text-violet-900">
-              Booking Wizard Configuration
+              Booking wizard configuration
             </h2>
             <p className="text-sm text-violet-700">
               Control which days, hours, and session lengths clients see when

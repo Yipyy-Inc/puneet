@@ -23,7 +23,7 @@ export function BookingRulesCard() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Minimum Advance Booking (hours)</Label>
+              <Label>Minimum advance booking (hours)</Label>
               <Input
                 type="number"
                 value={localRules.minimumAdvanceBooking}
@@ -38,7 +38,7 @@ export function BookingRulesCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Maximum Advance Booking (days)</Label>
+              <Label>Maximum advance booking (days)</Label>
               <Input
                 type="number"
                 value={localRules.maximumAdvanceBooking}
@@ -53,7 +53,7 @@ export function BookingRulesCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Cancellation Policy (hours before)</Label>
+              <Label>Cancellation policy (hours before)</Label>
               <Input
                 type="number"
                 value={localRules.cancelPolicyHours}
@@ -68,7 +68,7 @@ export function BookingRulesCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Cancellation Fee (%)</Label>
+              <Label>Cancellation fee (%)</Label>
               <Input
                 type="number"
                 value={localRules.cancelFeePercentage}
@@ -83,7 +83,7 @@ export function BookingRulesCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Deposit Percentage (%)</Label>
+              <Label>Deposit percentage (%)</Label>
               <Input
                 type="number"
                 value={localRules.depositPercentage}
@@ -98,7 +98,7 @@ export function BookingRulesCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Facility Capacity Limit</Label>
+              <Label>Facility capacity limit</Label>
               <Input
                 type="number"
                 value={localRules.capacityLimit}
@@ -115,7 +115,7 @@ export function BookingRulesCard() {
           </div>
 
           <div className="space-y-2">
-            <Label>Daily Capacity Limit</Label>
+            <Label>Daily capacity limit</Label>
             <Input
               type="number"
               value={localRules.dailyCapacityLimit}

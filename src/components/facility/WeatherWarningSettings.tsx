@@ -384,7 +384,7 @@ export function WeatherWarningSettings() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Rule Name</Label>
+              <Label>Rule name</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -480,7 +480,7 @@ export function WeatherWarningSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Alert Message</Label>
+              <Label>Alert message</Label>
               <Textarea
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
@@ -490,7 +490,7 @@ export function WeatherWarningSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Suggested Action (optional)</Label>
+              <Label>Suggested action (optional)</Label>
               <Input
                 value={form.autoAction}
                 onChange={(e) =>
@@ -501,7 +501,7 @@ export function WeatherWarningSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Affected Areas</Label>
+              <Label>Affected areas</Label>
               <div className="flex flex-wrap gap-2">
                 {AREA_OPTIONS.map((area) => {
                   const isCustom = customAreas.some(
