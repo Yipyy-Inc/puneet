@@ -79,6 +79,12 @@ const ALLOW = /settings-write-ok:/;
  * Not one of these is new. Each has always discarded what it was given; the
  * gate is what is new.
  */
+// estimate-settings and incident-reporting followed. Both were localStorage:
+// the estimate NUMBERING and the magic-link lifetime in a customer's email, and
+// a facility's policy on who is told when an animal is hurt — including whether
+// a critical report may be filed with no photo, which the front desk could do
+// because the requirement lived on the manager's laptop.
+//
 // vaccination-requirements left the same day. Its rules live in the
 // `vaccination_rules` domain now, and the fixture module they used to be
 // spliced into is deleted. Three of its six readers had never seen a
@@ -95,8 +101,6 @@ const BASELINE = new Set<string>([
   // check:success-claims' baseline for it. The other four say nothing at all,
   // which is the case that gate could never have caught.
   "addons",
-  "estimate-settings",
-  "incident-reporting",
   "mobile-app",
   "tags-notes",
   "yipyygo",

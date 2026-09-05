@@ -49,7 +49,7 @@ import {
   findApplicableDepositRule,
 } from "@/lib/settings/deposits";
 import { useDepositRules } from "@/lib/api/facility-settings";
-import { getEstimateSettings } from "@/data/estimate-settings";
+import { useEstimateSettings } from "@/lib/api/facility-settings";
 import { provisionAccountForEstimate } from "@/lib/estimates/account-provisioning";
 import {
   sendStandardEstimateEmail,
@@ -93,9 +93,9 @@ const DISCOUNT_TYPES = [
 ] as const;
 
 // Default estimate expiry: today + settings.defaultExpiryDays (F2), as YYYY-MM-DD.
-function computeDefaultExpiry(): string {
+function computeDefaultExpiry(defaultExpiryDays: number): string {
   const d = new Date();
-  d.setDate(d.getDate() + getEstimateSettings().defaultExpiryDays);
+  d.setDate(d.getDate() + defaultExpiryDays);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
@@ -104,6 +104,10 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   // The facility's deposit terms, so an estimate quotes what the booking would
   // actually ask for.
   const { rules: depositRules } = useDepositRules();
+  // The facility's estimate defaults — numbering, expiry, acceptance. These
+  // came from localStorage, so the expiry pre-filled on an estimate depended on
+  // which machine wrote it.
+  const { settings: estimateSettings } = useEstimateSettings();
   const [step, setStep] = useState(0);
 
   // Client selection
@@ -153,7 +157,9 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   const [lineItems, setLineItems] = useState<EstimateLineItem[]>([]);
   const [internalNote, setInternalNote] = useState("");
   // Notes & expiry (spec 4.5)
-  const [expiryDate, setExpiryDate] = useState(computeDefaultExpiry);
+  const [expiryDate, setExpiryDate] = useState(() =>
+    computeDefaultExpiry(estimateSettings.defaultExpiryDays),
+  );
   // Pricing (spec 4.4)
   const [addonSearch, setAddonSearch] = useState("");
   const [discountMode, setDiscountMode] = useState<"percent" | "fixed">(
@@ -459,7 +465,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     isGuest ? guestEmail : (selectedClient?.email ?? "")
   ).trim();
   const welcomeEmailSent =
-    accountProvisioned && getEstimateSettings().sendWelcomeEmail;
+    accountProvisioned && estimateSettings.sendWelcomeEmail;
 
   // Assemble the estimate object from wizard state (used on send).
   const buildEstimate = (id: string, now: Date): Estimate => ({
@@ -512,7 +518,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   // "Save as Draft" — persists the estimate without sending (spec 4.6). Never
   // triggers account provisioning.
   const handleSaveDraft = () => {
-    const id = generatedEstimateId ?? getNextEstimateId();
+    const id = generatedEstimateId ?? getNextEstimateId(estimateSettings);
     setGeneratedEstimateId(id);
     setCreated(true);
     toast.success(`Estimate ${id} saved as draft`);
@@ -522,10 +528,10 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   // 4) when the email isn't already in the CRM; the estimate email goes out
   // (Area 6). Reuses the id if saved as draft first.
   const handleSendEstimate = () => {
-    const id = generatedEstimateId ?? getNextEstimateId();
+    const id = generatedEstimateId ?? getNextEstimateId(estimateSettings);
     const now = new Date();
     const estimate = buildEstimate(id, now);
-    const outcome = provisionAccountForEstimate(estimate, {
+    const outcome = provisionAccountForEstimate(estimate, estimateSettings, {
       facilityName: "Example Pet Care Facility",
       now,
     });
@@ -575,7 +581,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     setGuestPetNames([""]);
     setPublicNote("");
     setInternalNote("");
-    setExpiryDate(computeDefaultExpiry());
+    setExpiryDate(computeDefaultExpiry(estimateSettings.defaultExpiryDays));
     onOpenChange(false);
   };
 
@@ -1892,8 +1898,8 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                     className="w-full"
                   />
                   <p className="text-muted-foreground text-[11px]">
-                    Pre-filled to {getEstimateSettings().defaultExpiryDays} days
-                    from today (from settings) — override as needed.
+                    Pre-filled to {estimateSettings.defaultExpiryDays} days from
+                    today (from settings) — override as needed.
                   </p>
                 </div>
 

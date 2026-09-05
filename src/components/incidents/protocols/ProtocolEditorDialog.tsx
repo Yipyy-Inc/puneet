@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   DialogHeader,
   DialogTitle,
@@ -44,7 +44,7 @@ import type {
   IncidentSeverity,
   IncidentType,
 } from "@/types/incidents";
-import { getIncidentReportingConfig } from "@/data/facility-config";
+import { useIncidentReporting } from "@/lib/api/facility-settings";
 
 interface ProtocolEditorDialogProps {
   protocol: FollowUpProtocol | null;
@@ -158,10 +158,8 @@ export function ProtocolEditorDialog({
 }: ProtocolEditorDialogProps) {
   const isNew = !protocol;
   // Facility default assignee role for new steps (Incident Reporting settings).
-  const defaultAssigneeRole = useMemo(
-    () => getIncidentReportingConfig().defaultFollowUpAssigneeRole,
-    [],
-  );
+  const { config: incidentConfig } = useIncidentReporting();
+  const defaultAssigneeRole = incidentConfig.defaultFollowUpAssigneeRole;
   const [name, setName] = useState(protocol?.name ?? "");
   const [description, setDescription] = useState(protocol?.description ?? "");
   const [severityScopes, setSeverityScopes] = useState<IncidentSeverity[]>(

@@ -31,6 +31,14 @@ import {
   SHIPPED_VACCINATION_RULES,
   vaccinationRulesSchema,
 } from "@/lib/settings/vaccinations";
+import {
+  DEFAULT_ESTIMATE_SETTINGS,
+  estimateSettingsSchema,
+} from "@/lib/settings/estimates";
+import {
+  DEFAULT_INCIDENT_REPORTING,
+  incidentReportingConfigSchema,
+} from "@/lib/settings/incidents";
 import { NO_REBOOK_CONFIG, rebookConfigSchema } from "@/lib/settings/rebook";
 import {
   messagingPolicySchema,
@@ -321,6 +329,28 @@ export const SETTING_DOMAINS = {
   vaccination_rules: {
     schema: vaccinationRulesSchema,
     fallback: SHIPPED_VACCINATION_RULES,
+  },
+  // ── ESTIMATE DEFAULTS ──────────────────────────────────────────────────
+  //
+  // Numbering, expiry, and whether a customer may accept an estimate
+  // themselves. localStorage until 2026-09-05, so two staff sending estimates
+  // from two machines produced two numbering schemes — and
+  // `magicLinkExpiryHours` gave the same customer a different window
+  // depending on who pressed send.
+  estimate_settings: {
+    schema: estimateSettingsSchema,
+    fallback: DEFAULT_ESTIMATE_SETTINGS,
+  },
+  // ── INCIDENT REPORTING ─────────────────────────────────────────────────
+  //
+  // Who is told when an animal is hurt, whether a photo is required on a
+  // critical report, and whether the medication given is charged for. A
+  // facility policy, stored per browser until 2026-09-05: the front desk could
+  // file a critical incident with no photo because the requirement lived on the
+  // manager's laptop.
+  incident_reporting: {
+    schema: incidentReportingConfigSchema,
+    fallback: DEFAULT_INCIDENT_REPORTING,
   },
   // ── YIPYY PAY ──────────────────────────────────────────────────────────
   //

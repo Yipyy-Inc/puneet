@@ -1,4 +1,4 @@
-import { getEstimateSettings } from "@/data/estimate-settings";
+import type { EstimateSettings } from "@/lib/settings/estimates";
 import type { Estimate } from "@/types/booking";
 
 export const estimates: Estimate[] = [
@@ -417,8 +417,10 @@ const ESTIMATE_ID_START = 10001;
 
 // Sequential estimate-number generator. The prefix + digit padding come from the
 // facility's Estimate Defaults (F2), so "E" → "E10008" or "DGV-E-" → "DGV-E-0001".
-export function getNextEstimateId(existing: Estimate[] = estimates): string {
-  const settings = getEstimateSettings();
+export function getNextEstimateId(
+  settings: EstimateSettings,
+  existing: Estimate[] = estimates,
+): string {
   const prefix = settings.estimateNumberPrefix || ESTIMATE_ID_PREFIX;
   const minDigits = settings.minDigits || ESTIMATE_ID_MIN_DIGITS;
   const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

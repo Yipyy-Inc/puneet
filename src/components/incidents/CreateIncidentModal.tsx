@@ -65,7 +65,7 @@ import {
 } from "@/data/follow-up-protocols";
 import { generateFollowUpTasks } from "@/lib/incidents/generate-follow-up-tasks";
 import { generateCareActionsFromProtocol } from "@/lib/incidents/generate-care-actions";
-import { getIncidentReportingConfig } from "@/data/facility-config";
+import { useIncidentReporting } from "@/lib/api/facility-settings";
 import { addFacilityNotification } from "@/data/facility-notifications";
 import { addIncident } from "@/data/incidents";
 import { toast } from "sonner";
@@ -870,7 +870,7 @@ export function CreateIncidentModal({
   const isCriticalOrHigh = severity === "critical" || severity === "high";
   // Facility Incident Reporting settings (2G.1): photo gate + per-severity
   // auto-notify rules.
-  const incidentConfig = useMemo(() => getIncidentReportingConfig(), []);
+  const { config: incidentConfig } = useIncidentReporting();
   const criticalPhotoMissing =
     incidentConfig.requirePhotoOnCritical &&
     severity === "critical" &&

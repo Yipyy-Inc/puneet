@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { Check, CreditCard, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
 import { clients } from "@/data/clients";
-import { getEstimateSettings } from "@/data/estimate-settings";
+import { useEstimateSettings } from "@/lib/api/facility-settings";
 import { acceptEstimate } from "@/lib/estimates/accept-estimate";
 import type { Estimate } from "@/types/booking";
 
@@ -41,6 +41,9 @@ export function AcceptEstimateDialog({
   onOpenChange,
   onAccepted,
 }: Props) {
+  // The facility's estimate policy, not the browser's: whether accepting an
+  // estimate requires the deposit up front.
+  const { settings: estimateSettings } = useEstimateSettings();
   const [step, setStep] = useState<"confirm" | "payment" | "success">(
     "confirm",
   );
@@ -48,7 +51,7 @@ export function AcceptEstimateDialog({
 
   const deposit = estimate.depositRequired ?? 0;
   const depositRequired =
-    deposit > 0 && getEstimateSettings().acceptanceRequiresDeposit;
+    deposit > 0 && estimateSettings.acceptanceRequiresDeposit;
 
   const savedCards =
     clients.find((c) => c.id === estimate.clientId)?.savedCards ?? [];
@@ -77,7 +80,7 @@ export function AcceptEstimateDialog({
   };
 
   const finalizeAccept = (depositPaid: boolean) => {
-    const result = acceptEstimate(estimate, {
+    const result = acceptEstimate(estimate, estimateSettings, {
       now: new Date(),
       depositPaid,
       acceptedBy: estimate.clientName,

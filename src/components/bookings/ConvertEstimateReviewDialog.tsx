@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { clients } from "@/data/clients";
-import { getEstimateSettings } from "@/data/estimate-settings";
+import { useEstimateSettings } from "@/lib/api/facility-settings";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import {
   convertEstimateToBooking,
@@ -72,13 +72,16 @@ export function ConvertEstimateReviewDialog({
   onOpenChange,
   onConverted,
 }: Props) {
+  // The facility's estimate policy, not the browser's: whether accepting an
+  // estimate requires the deposit up front.
+  const { settings: estimateSettings } = useEstimateSettings();
   const { openBookingModal } = useBookingModal();
 
   const deposit = estimate.depositRequired ?? 0;
   const depositPaid =
     !!estimate.acceptedAt &&
     deposit > 0 &&
-    getEstimateSettings().acceptanceRequiresDeposit;
+    estimateSettings.acceptanceRequiresDeposit;
   const dateRange = `${fmtDate(estimate.startDate)}${
     estimate.endDate && estimate.endDate !== estimate.startDate
       ? ` – ${fmtDate(estimate.endDate)}`

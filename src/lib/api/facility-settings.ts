@@ -41,6 +41,8 @@ import type {
   DepositRuleSet,
 } from "@/lib/settings/deposits";
 import type { VaccinationRules } from "@/lib/settings/vaccinations";
+import type { EstimateSettings } from "@/lib/settings/estimates";
+import type { IncidentReportingConfig } from "@/lib/settings/incidents";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
 import type { RebookConfig } from "@/lib/settings/rebook";
@@ -96,6 +98,10 @@ export interface FacilitySettings {
   deposit_rules: SettingState<DepositConfig>;
   /** Which vaccines are required, of which species, for which services. */
   vaccination_rules: SettingState<VaccinationRules>;
+  /** How estimates are numbered, when they expire, who may accept one. */
+  estimate_settings: SettingState<EstimateSettings>;
+  /** Who is told when an animal is hurt, and what a report must carry. */
+  incident_reporting: SettingState<IncidentReportingConfig>;
   /**
    * Expected visit frequency per service, and whether lapsed clients for it may
    * be messaged. `configured: false` means the Lapsed list is computed from the
@@ -315,6 +321,34 @@ export function useVaccinationRules(): {
   return {
     rules: settings.vaccination_rules.value,
     configured: settings.vaccination_rules.configured,
+    isPending,
+  };
+}
+
+/** How this facility numbers and expires its estimates. */
+export function useEstimateSettings(): {
+  settings: EstimateSettings;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    settings: settings.estimate_settings.value,
+    configured: settings.estimate_settings.configured,
+    isPending,
+  };
+}
+
+/** This facility's incident policy: who is told, what is required, what is charged. */
+export function useIncidentReporting(): {
+  config: IncidentReportingConfig;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    config: settings.incident_reporting.value,
+    configured: settings.incident_reporting.configured,
     isPending,
   };
 }
