@@ -25,10 +25,7 @@ import {
   resolveIcon,
   isBuiltinService,
 } from "@/lib/service-registry";
-import {
-  applyDynamicPricingRules,
-  getStoredServiceAddOns,
-} from "@/lib/pricing-rules";
+import { applyDynamicPricingRules } from "@/lib/pricing-rules";
 import { getCategoryMeta } from "@/data/custom-services";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,7 +80,10 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { bookings as historicalBookings } from "@/data/bookings";
 import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 import { clientDocuments } from "@/data/documents";
-import { useVaccinationRules } from "@/lib/api/facility-settings";
+import {
+  useServiceAddOns,
+  useVaccinationRules,
+} from "@/lib/api/facility-settings";
 import { getFormById } from "@/data/forms";
 import { getSubmissionsForPet } from "@/data/form-submissions";
 import { Syringe } from "lucide-react";
@@ -192,6 +192,8 @@ export function CustomerBookingModal({
   // ships, imported straight from @/data/settings, so a facility's own
   // requirements never reached the screen the customer actually uses.
   const { rules: vaccinationRules } = useVaccinationRules();
+  // What this facility actually sells, rather than what the seed file did.
+  const { addOns: serviceAddOns } = useServiceAddOns();
   const customerId = customer?.id;
 
   const { selectedFacility } = useCustomerFacility();
@@ -467,8 +469,8 @@ export function CustomerBookingModal({
   }, [selectedService, selectedCustomModule]);
 
   const storedServiceAddOns = useMemo(
-    () => getStoredServiceAddOns().filter((addOn) => addOn.isActive),
-    [open],
+    () => serviceAddOns.filter((addOn) => addOn.isActive),
+    [serviceAddOns],
   );
 
   // Add-ons from settings (dynamic, filtered by service + pet eligibility)

@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 import type { ServiceAddOn } from "@/types/facility";
 import type { Pet } from "@/types/pet";
 
@@ -81,17 +81,6 @@ const minutesToTime = (minutes: number) => {
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
-
-function getStoredAddOns(): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const stored = localStorage.getItem("settings-service-addons");
-    if (stored) return JSON.parse(stored) as ServiceAddOn[];
-  } catch {
-    /* ignore */
-  }
-  return defaultServiceAddOns;
-}
 
 function getAddonPriceLabel(addon: ServiceAddOn): string {
   const base = `$${addon.price.toFixed(2)}`;
@@ -577,7 +566,12 @@ function EvaluationAddOnsSubStep({
   selectedPets: Pet[];
 }) {
   // Show add-ons applicable to evaluation OR daycare (since eval is a daycare trial)
-  const addOns = getStoredAddOns().filter((a) => {
+  // The facility's own extras, from `facility_settings`. One of thirteen
+  // copies of a localStorage loader, so what a booking could be upsold
+  // depended on the browser it was taken in.
+  const { addOns: facilityAddOns } = useServiceAddOns();
+
+  const addOns = facilityAddOns.filter((a) => {
     if (!a.isActive) return false;
     if (
       !a.applicableServices.includes("evaluation") &&

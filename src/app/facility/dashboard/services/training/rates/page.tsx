@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,8 +26,8 @@ import {
 import { trainingQueries } from "@/lib/api/training";
 import type { TrainingPackage } from "@/types/training";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
-import type { ServiceAddOn } from "@/types/facility";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { addOnsForService } from "@/lib/settings/addons";
 import { toast } from "sonner";
 import {
   ProgramDialog,
@@ -36,34 +36,23 @@ import {
 import { ProgramCardGrid } from "./_components/program-card-grid";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
-function loadTrainingAddOns(): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const raw = localStorage.getItem("settings-service-addons");
-    const all = raw
-      ? (JSON.parse(raw) as ServiceAddOn[])
-      : defaultServiceAddOns;
-    return all.filter((a) => a.applicableServices.includes("training"));
-  } catch {
-    return defaultServiceAddOns.filter((a) =>
-      a.applicableServices.includes("training"),
-    );
-  }
-}
-
 export default function TrainingRatesPage() {
   const settingsPath = useSettingsHref();
   const queryClient = useQueryClient();
   const { data: programs = [] } = useQuery(trainingQueries.packages());
 
-  const [trainingAddOns, setTrainingAddOns] = useState<ServiceAddOn[]>([]);
-
-  useEffect(() => {
-    const sync = () => setTrainingAddOns(loadTrainingAddOns());
-    sync();
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, []);
+  // The facility's own extras. This page carried its own copy of a
+  // localStorage loader — one of thirteen — plus a `storage` listener to keep
+  // TABS of one browser in step, which was as far as the old storage reached.
+  //
+  // `addOnsForService` also treats an add-on marked "all" as applying here.
+  // `applicableServices.includes("training")` did not, so a universal add-on
+  // was invisible on this screen while the pricing layer applied it.
+  const { addOns: allAddOns } = useServiceAddOns();
+  const trainingAddOns = useMemo(
+    () => addOnsForService(allAddOns, "training"),
+    [allAddOns],
+  );
 
   const [programDialogOpen, setProgramDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<TrainingPackage | null>(

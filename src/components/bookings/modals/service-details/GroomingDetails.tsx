@@ -31,7 +31,7 @@ import { useGroomingStations } from "@/hooks/use-grooming-stations";
 // the customer one number while the booking recorded another.
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { GROOMING_ADD_ONS as ADD_ONS } from "@/data/grooming-add-ons";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { SERVICE_ACCENTS } from "../constants";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -1831,18 +1831,11 @@ function GroomingAddOns({
     const ao = groomingAddOnCatalog.find((a) => a.id === id);
     return sum + (ao?.price ?? 0);
   }, 0);
-  // Source the catalog from localStorage (facility may have customized) with
-  // fallback to the seed list — same pattern boarding/daycare use.
-  const catalog = React.useMemo<ServiceAddOn[]>(() => {
-    if (typeof window === "undefined") return defaultServiceAddOns;
-    try {
-      const stored = localStorage.getItem("settings-service-addons");
-      if (stored) return JSON.parse(stored) as ServiceAddOn[];
-    } catch {
-      /* ignore */
-    }
-    return defaultServiceAddOns;
-  }, []);
+  // The facility's own catalogue, from `facility_settings`. The comment this
+  // replaces said "the facility may have customized" it — which was true of
+  // THIS BROWSER only: boarding and daycare carried the same loader, and the
+  // pattern it named was the bug rather than the convention.
+  const catalog = useServiceAddOns().addOns;
   // Available add-ons for this service. Hidden when inactive or when the
   // pet-type filter excludes the only selected pet species.
   const available: ServiceAddOn[] = catalog.filter(

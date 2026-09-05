@@ -42,7 +42,8 @@ import {
   startCalendarDrag,
   useCalendarDrag,
 } from "@/lib/calendar-drag";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import type { ServiceAddOn } from "@/types/facility";
 import {
   type CalendarColorOverrides,
   type CalendarExternalProvider,
@@ -118,21 +119,19 @@ function getStatusBadgeStyle(status: string, type: string) {
 // blue = daycare perks, orange = custom-module add-ons (not in service-addons).
 type AddOnBucket = "grooming" | "daycare" | "custom";
 
-const ADD_ON_CATEGORY_BY_NAME = new Map(
-  defaultServiceAddOns.map((addOn) => [
-    addOn.name.toLowerCase(),
-    addOn.category,
-  ]),
-);
-
 const ADD_ON_PILL_CLASS: Record<AddOnBucket, string> = {
   grooming: "bg-emerald-500",
   daycare: "bg-sky-500",
   custom: "bg-orange-500",
 };
 
-function addOnBucket(name: string): AddOnBucket {
-  const category = ADD_ON_CATEGORY_BY_NAME.get(name.toLowerCase());
+// The category lookup was a module-level Map built from the shipped fixture
+// at import, so an add-on the facility had created itself never matched and
+// every chip for it fell through to "custom".
+function addOnBucket(addOns: ServiceAddOn[], name: string): AddOnBucket {
+  const category = addOns.find(
+    (addOn) => addOn.name.toLowerCase() === name.toLowerCase(),
+  )?.category;
   // Not a standard service add-on → treat as a custom-module add-on.
   if (!category) return "custom";
   if (category === "Grooming & Hygiene" || category === "Spa & Wellness") {
@@ -142,13 +141,16 @@ function addOnBucket(name: string): AddOnBucket {
 }
 
 // Dominant bucket across a booking's add-ons (ties favour grooming → daycare).
-function dominantAddOnBucket(names: string[]): AddOnBucket {
+function dominantAddOnBucket(
+  addOns: ServiceAddOn[],
+  names: string[],
+): AddOnBucket {
   const counts: Record<AddOnBucket, number> = {
     grooming: 0,
     daycare: 0,
     custom: 0,
   };
-  for (const name of names) counts[addOnBucket(name)] += 1;
+  for (const name of names) counts[addOnBucket(addOns, name)] += 1;
   const priority: AddOnBucket[] = ["grooming", "daycare", "custom"];
   return priority.reduce(
     (best, bucket) => (counts[bucket] > counts[best] ? bucket : best),
@@ -272,6 +274,10 @@ export function EventChip({
   onEventClick?: (event: OperationsCalendarEvent) => void;
   onMarkEventComplete?: (event: OperationsCalendarEvent) => void;
 }) {
+  // The facility's own extras, for grouping the add-on chip by category. The
+  // lookup was built from the shipped fixture, so a facility's own add-on
+  // never matched and always rendered as "custom".
+  const { addOns: facilityAddOns } = useServiceAddOns();
   const [open, setOpen] = useState(false);
   const petLabel = formatPetLabel(event.petNames) || event.title;
   // Group / multi-pet module events show the module name + capacity.
@@ -535,7 +541,9 @@ export function EventChip({
                   <span
                     className={cn(
                       "ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[9px] leading-none font-bold text-white",
-                      ADD_ON_PILL_CLASS[dominantAddOnBucket(addOnNames)],
+                      ADD_ON_PILL_CLASS[
+                        dominantAddOnBucket(facilityAddOns, addOnNames)
+                      ],
                     )}
                     title={`Add-ons: ${addOnNames.join(", ")}`}
                   >

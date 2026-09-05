@@ -11,6 +11,7 @@ import {
   useDepositRules,
   useEstimateSettings,
   usePricingRules,
+  useServiceAddOns,
 } from "@/lib/api/facility-settings";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -73,7 +74,6 @@ import { isBuiltinService } from "@/lib/service-registry";
 import {
   applyDynamicPricingRules,
   getServiceAddOnsStorageKey,
-  getStoredServiceAddOns,
 } from "@/lib/pricing-rules";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
@@ -300,6 +300,7 @@ export function BookingModal({
   // localStorage they belonged to the machine, so two staff generated two
   // numbering schemes for the same facility.
   const { settings: estimateSettings } = useEstimateSettings();
+  const { addOns: serviceAddOns } = useServiceAddOns();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),
     [daycare, boarding, grooming, training],
@@ -1346,9 +1347,12 @@ export function BookingModal({
     [bookingFlow, configs],
   );
 
+  // The facility's own extras. This read localStorage under a key that
+  // thirteen files carried a copy of, so what a booking could be upsold
+  // depended on the browser it was taken in.
   const storedAddOns = useMemo(
-    () => getStoredServiceAddOns(facilityId).filter((addOn) => addOn.isActive),
-    [open, facilityId, pricingStorageVersion],
+    () => serviceAddOns.filter((addOn) => addOn.isActive),
+    [serviceAddOns],
   );
 
   // Auto-seed extraServices with the facility's default + required add-ons

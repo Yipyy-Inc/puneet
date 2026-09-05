@@ -25,7 +25,7 @@ import {
 import type { BookingRequest, BookingRequestService } from "@/types/booking";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { facilityRooms } from "@/data/rooms";
 import { cn } from "@/lib/utils";
 
@@ -139,6 +139,10 @@ export function BookingRequestDetailDialog({
   onDecline,
   onWaitlist,
 }: BookingRequestDetailDialogProps) {
+  // The facility's own extras, for resolving a requested add-on's name. This
+  // looked the id up in the shipped fixture, so an add-on the business had
+  // added itself displayed as a raw id.
+  const { addOns: facilityAddOns } = useServiceAddOns();
   if (!request) return null;
 
   const initial = request.petName.charAt(0).toUpperCase();
@@ -149,7 +153,7 @@ export function BookingRequestDetailDialog({
     : null;
 
   const addOnLines = (request.extraServices ?? []).map((es) => {
-    const def = defaultServiceAddOns.find((a) => a.id === es.serviceId);
+    const def = facilityAddOns.find((a) => a.id === es.serviceId);
     return {
       ...es,
       name: def?.name ?? es.serviceId,

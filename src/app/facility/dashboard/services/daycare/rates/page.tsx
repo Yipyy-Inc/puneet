@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,22 +33,12 @@ import {
 } from "lucide-react";
 import { daycareRates, DaycareRate } from "@/data/daycare";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
-import type { ServiceAddOn } from "@/types/facility";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { addOnsForService } from "@/lib/settings/addons";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
 import { cn } from "@/lib/utils";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
-
-function loadServiceAddOns(): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const raw = localStorage.getItem("settings-service-addons");
-    return raw ? (JSON.parse(raw) as ServiceAddOn[]) : defaultServiceAddOns;
-  } catch {
-    return defaultServiceAddOns;
-  }
-}
 
 const EMPTY_RATE = {
   name: "",
@@ -66,23 +56,17 @@ const EMPTY_RATE = {
 export default function DaycareRatesPage() {
   const settingsPath = useSettingsHref();
   const [rates, setRates] = useState<DaycareRate[]>(daycareRates);
-  const [serviceAddOns, setServiceAddOns] = useState<ServiceAddOn[]>([]);
   const { areas, sections } = useDaycareAreas();
   const activeSections = sections.filter((s) => s.isActive);
 
-  // Reload service add-ons whenever localStorage changes (e.g., after AddOnsManager edits in another tab)
-  useEffect(() => {
-    const sync = () => {
-      setServiceAddOns(
-        loadServiceAddOns().filter((a) =>
-          a.applicableServices.includes("daycare"),
-        ),
-      );
-    };
-    sync();
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, []);
+  // The facility's own extras. The comment this replaces said it reloaded
+  // "after AddOnsManager edits in another tab" — which was the honest limit of
+  // localStorage: another TAB, never another machine.
+  const { addOns: allAddOns } = useServiceAddOns();
+  const serviceAddOns = useMemo(
+    () => addOnsForService(allAddOns, "daycare"),
+    [allAddOns],
+  );
 
   const activeServiceAddOns = serviceAddOns.filter((a) => a.isActive);
 

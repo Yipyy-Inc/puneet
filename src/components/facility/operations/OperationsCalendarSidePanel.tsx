@@ -25,11 +25,8 @@ import {
   getEventsForDay,
 } from "@/lib/operations-calendar";
 import { formatCurrency } from "@/components/facility/operations/OperationsCalendarDrawerHelpers";
-import { defaultServiceAddOns } from "@/data/service-addons";
-
-const ADD_ON_PRICE_BY_NAME = new Map(
-  defaultServiceAddOns.map((addOn) => [addOn.name.toLowerCase(), addOn.price]),
-);
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import type { ServiceAddOn } from "@/types/facility";
 
 // Booking statuses that drop out of the "Upcoming Today" active list.
 const FINISHED_STATUSES = new Set(["Checked-out", "Completed", "Cancelled"]);
@@ -47,8 +44,14 @@ function getStaffInitials(name: string): string {
 }
 
 /** Price for an add-on by name (from service-addons); 0 for unknown/custom. */
-function addOnPrice(name: string): number {
-  return ADD_ON_PRICE_BY_NAME.get(name.toLowerCase()) ?? 0;
+// Priced off the FACILITY's list. This was a Map built from the shipped
+// fixture at import, so the revenue this panel reported counted the seed
+// file's prices and scored a facility's own add-ons at zero.
+function addOnPrice(addOns: ServiceAddOn[], name: string): number {
+  const match = addOns.find(
+    (addOn) => addOn.name.toLowerCase() === name.toLowerCase(),
+  );
+  return match?.price ?? 0;
 }
 
 /** Today's Overview tile → calendar-filter target. */
@@ -84,6 +87,9 @@ export function OperationsCalendarSidePanel({
   onCompleteTask,
   onAddTask,
 }: OperationsCalendarSidePanelProps) {
+  // The facility's own extras, so the add-on revenue this panel reports is
+  // priced off what the business sells rather than off the seed file.
+  const { addOns: facilityAddOns } = useServiceAddOns();
   const [displayMonth, setDisplayMonth] = useState(
     () => new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1),
   );
@@ -196,14 +202,17 @@ export function OperationsCalendarSidePanel({
         if (seen.has(key)) continue;
         seen.add(key);
         counts.set(addOn.name, (counts.get(addOn.name) ?? 0) + 1);
-        revenue += addOnPrice(addOn.name);
+        revenue += addOnPrice(facilityAddOns, addOn.name);
       }
     }
     const rows = Array.from(counts.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
     return { rows, revenue };
-  }, [visibleEvents, selectedKey]);
+    // `facilityAddOns` belongs here: the prices arrive over the network, so a
+    // memo that does not depend on them keeps whatever revenue it computed
+    // before they landed. The React Compiler caught the omission.
+  }, [visibleEvents, selectedKey, facilityAddOns]);
 
   const monthLabel = displayMonth.toLocaleDateString("en-US", {
     month: "long",

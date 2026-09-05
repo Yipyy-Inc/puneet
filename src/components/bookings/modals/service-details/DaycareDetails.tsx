@@ -16,7 +16,7 @@ import {
   FeedingAutoPopulate,
   MedicationAutoPopulate,
 } from "@/components/booking/shared/PetCareAutoPopulate";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { getDaycareAvailabilitySummary } from "@/lib/capacity-engine";
 import { bookings as allBookings } from "@/data/bookings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
@@ -68,17 +68,6 @@ function getAddonPriceLabel(addon: ServiceAddOn): string {
     case "percentage_of_booking":
       return `${addon.price}% of booking`;
   }
-}
-
-function getStoredAddOns(): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const stored = localStorage.getItem("settings-service-addons");
-    if (stored) return JSON.parse(stored) as ServiceAddOn[];
-  } catch {
-    // ignore
-  }
-  return defaultServiceAddOns;
 }
 
 // Sections are loaded dynamically from daycare-areas.ts and the capacity engine
@@ -957,7 +946,12 @@ function DaycareAddOnsSubStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStepAccessible, selectedPets.length]);
 
-  const daycareAddOns = getStoredAddOns().filter((a) => {
+  // The facility's own extras, from `facility_settings`. This file carried its
+  // own copy of a localStorage loader — one of thirteen — so what a booking
+  // could be upsold depended on the browser it was taken in.
+  const { addOns: facilityAddOns } = useServiceAddOns();
+
+  const daycareAddOns = facilityAddOns.filter((a) => {
     if (!a.isActive || !a.applicableServices.includes("daycare")) return false;
     // Pet eligibility filter
     if (a.petTypeFilter && selectedPets.length > 0) {

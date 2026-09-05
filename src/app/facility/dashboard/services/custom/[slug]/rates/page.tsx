@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,9 +23,9 @@ import { useCustomServices } from "@/hooks/use-custom-services";
 import type {
   CustomServiceCheckIn,
   CustomServiceVariant,
-  ServiceAddOn,
 } from "@/types/facility";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { addOnsForService } from "@/lib/settings/addons";
 import { customServiceCheckIns as initialCustomServiceCheckIns } from "@/data/custom-service-checkins";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
 import {
@@ -47,21 +47,6 @@ import {
   Info,
 } from "lucide-react";
 import { toast } from "sonner";
-
-function loadCustomAddOns(slug: string): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const raw = localStorage.getItem("settings-service-addons");
-    const all = raw
-      ? (JSON.parse(raw) as ServiceAddOn[])
-      : defaultServiceAddOns;
-    return all.filter((a) => a.applicableServices.includes(slug));
-  } catch {
-    return defaultServiceAddOns.filter((a) =>
-      a.applicableServices.includes(slug),
-    );
-  }
-}
 
 interface VariantFormState {
   name: string;
@@ -277,8 +262,6 @@ export default function CustomServiceRatesPage() {
   const [deletingVariant, setDeletingVariant] =
     useState<CustomServiceVariant | null>(null);
 
-  const [customAddOns, setCustomAddOns] = useState<ServiceAddOn[]>([]);
-
   const [checkIns, setCheckIns] = useState<CustomServiceCheckIn[]>(
     initialCustomServiceCheckIns,
   );
@@ -289,13 +272,14 @@ export default function CustomServiceRatesPage() {
     changes: ApplyToUpcomingChange[];
   } | null>(null);
 
-  useEffect(() => {
-    if (!slug) return;
-    const sync = () => setCustomAddOns(loadCustomAddOns(slug));
-    sync();
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, [slug]);
+  // The facility's own extras for this custom service. One of thirteen
+  // localStorage loaders, with a `storage` listener that reached the other
+  // tabs of one browser and nothing else.
+  const { addOns: allAddOns } = useServiceAddOns();
+  const customAddOns = useMemo(
+    () => (slug ? addOnsForService(allAddOns, slug) : []),
+    [allAddOns, slug],
+  );
 
   if (!serviceModule) return null;
 

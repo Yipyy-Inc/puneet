@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useDeleteGroomingService,
   useGroomingServices,
@@ -53,8 +53,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { GroomingPackage } from "@/types/grooming";
-import type { ServiceAddOn } from "@/types/facility";
-import { defaultServiceAddOns } from "@/data/service-addons";
+import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { addOnsForService } from "@/lib/settings/addons";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
 import { ServiceDialog } from "./service-dialog";
 import { useLocationContext } from "@/hooks/use-location-context";
@@ -62,21 +62,6 @@ import { useLocationContext } from "@/hooks/use-location-context";
 /** No branch, as opposed to "not answered yet" -- Radix Select crashes on a
  *  `""` item value, so this stands in for the facility-wide scope. */
 const FACILITY_WIDE = "__facility_wide__";
-
-function loadGroomingAddOns(): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const raw = localStorage.getItem("settings-service-addons");
-    const all = raw
-      ? (JSON.parse(raw) as ServiceAddOn[])
-      : defaultServiceAddOns;
-    return all.filter((a) => a.applicableServices.includes("grooming"));
-  } catch {
-    return defaultServiceAddOns.filter((a) =>
-      a.applicableServices.includes("grooming"),
-    );
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Service charges
@@ -422,14 +407,12 @@ export function GroomingRates() {
   );
 
   // Add-ons (sourced from global service-addons store)
-  const [groomingAddOns, setGroomingAddOns] = useState<ServiceAddOn[]>([]);
-
-  useEffect(() => {
-    const sync = () => setGroomingAddOns(loadGroomingAddOns());
-    sync();
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, []);
+  // The facility's own extras. The last of thirteen localStorage loaders.
+  const { addOns: allAddOns } = useServiceAddOns();
+  const groomingAddOns = useMemo(
+    () => addOnsForService(allAddOns, "grooming"),
+    [allAddOns],
+  );
 
   // Service charges
   const [charges, setCharges] = useState<ServiceCharge[]>(

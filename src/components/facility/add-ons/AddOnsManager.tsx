@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import type { ServiceAddOn, AddOnCategory } from "@/types/facility";
-import { defaultServiceAddOns } from "@/data/service-addons";
 import {
-  defaultAddOnCategories,
-  ADDONS_CATEGORIES_STORAGE_KEY,
-} from "@/data/add-on-categories";
+  useSaveFacilitySetting,
+  useServiceAddOns,
+} from "@/lib/api/facility-settings";
+import { Skeleton } from "@/components/ui/skeleton";
+
+
 import { SERVICE_CATEGORIES } from "@/components/bookings/modals/constants";
 import { getAllServiceCategories } from "@/lib/service-registry";
 import { useCustomServices } from "@/hooks/use-custom-services";
@@ -48,28 +50,11 @@ import { AddOnCategorySheet } from "@/components/facility/add-ons/AddOnCategoryS
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 
 // ── Storage ────────────────────────────────────────────────────────────────────
-
-const ADDONS_STORAGE_KEY = "settings-service-addons";
-
-function loadAddOns(): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const raw = localStorage.getItem(ADDONS_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ServiceAddOn[]) : defaultServiceAddOns;
-  } catch {
-    return defaultServiceAddOns;
-  }
-}
-
-function loadCategories(): AddOnCategory[] {
-  if (typeof window === "undefined") return defaultAddOnCategories;
-  try {
-    const raw = localStorage.getItem(ADDONS_CATEGORIES_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as AddOnCategory[]) : defaultAddOnCategories;
-  } catch {
-    return defaultAddOnCategories;
-  }
-}
+//
+// There isn't any here any more. Add-ons and their categories live in the
+// `service_addons` settings domain, so this screen edits what the business
+// sells rather than what this browser remembers — see lib/settings/addons.ts
+// for what that was costing.
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -114,7 +99,40 @@ interface AddOnsManagerProps {
   serviceFilter?: string;
 }
 
+// Nothing renders until the extras have arrived. The editor below seeds
+// `useState` from what it is handed and a `useState` initialiser runs once, so
+// mounting against the empty fallback and letting the query land after would
+// show a facility no add-ons whatever it had saved — and the first edit would
+// report that emptiness back as the new catalogue.
 export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
+  const { addOns, categories, configured, isPending } = useServiceAddOns();
+
+  if (isPending) {
+    return <Skeleton className="h-96 w-full rounded-xl" />;
+  }
+
+  return (
+    <AddOnsEditor
+      key={configured ? "stored" : "empty"}
+      serviceFilter={serviceFilter}
+      initialAddOns={addOns}
+      initialCategories={categories}
+      configured={configured}
+    />
+  );
+}
+
+function AddOnsEditor({
+  serviceFilter,
+  initialAddOns,
+  initialCategories,
+  configured,
+}: {
+  serviceFilter?: string;
+  initialAddOns: ServiceAddOn[];
+  initialCategories: AddOnCategory[];
+  configured: boolean;
+}) {
   const { modules } = useCustomServices();
   const allServices = getAllServiceCategories(SERVICE_CATEGORIES, modules)
     .filter(
@@ -130,24 +148,47 @@ export function AddOnsManager({ serviceFilter }: AddOnsManagerProps = {}) {
     )
     .map((s) => ({ id: s.id, name: s.name }));
 
-  const [addOns, setAddOns] = useState<ServiceAddOn[]>(loadAddOns);
-  const [categories, setCategories] = useState<AddOnCategory[]>(loadCategories);
+  const saveSetting = useSaveFacilitySetting();
+  const [addOns, setAddOns] = useState<ServiceAddOn[]>(initialAddOns);
+  const [categories, setCategories] =
+    useState<AddOnCategory[]>(initialCategories);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAddon, setEditingAddon] = useState<ServiceAddOn | null>(null);
   const [catSheetOpen, setCatSheetOpen] = useState(false);
   const [filterCat, setFilterCat] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
+  // One domain holds both lists, so every write sends both. They are edited
+  // together on this screen and a category with no add-ons referencing it is
+  // not a state worth being able to save on its own.
+  function persist(
+    nextAddOns: ServiceAddOn[],
+    nextCategories: AddOnCategory[],
+  ) {
+    saveSetting.mutate(
+      {
+        domain: "service_addons",
+        value: { addOns: nextAddOns, categories: nextCategories },
+      },
+      {
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Those add-ons were not saved.",
+          ),
+      },
+    );
+  }
+
   function persistAddOns(next: ServiceAddOn[]) {
     setAddOns(next);
-    if (typeof window !== "undefined")
-      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(next));
+    persist(next, categories);
   }
 
   function persistCategories(next: AddOnCategory[]) {
     setCategories(next);
-    if (typeof window !== "undefined")
-      localStorage.setItem(ADDONS_CATEGORIES_STORAGE_KEY, JSON.stringify(next));
+    persist(addOns, next);
   }
 
   function openCreate() {
