@@ -52,7 +52,7 @@ export function ImportWizard({ onClose }: { onClose: () => void }) {
     >
       <header className="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="bg-wash-violet text-violet flex size-10 shrink-0 items-center justify-center rounded-2xl">
+          <span className="bg-violet flex size-10 shrink-0 items-center justify-center rounded-2xl text-white">
             <Database className="size-5" />
           </span>
           <div className="min-w-0">

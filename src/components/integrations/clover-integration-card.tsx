@@ -34,7 +34,7 @@ export function CloverIntegrationCard() {
     <Card className="border-emerald-500/20">
       <CardHeader className="border-b">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="bg-wash-success text-success flex size-11 shrink-0 items-center justify-center rounded-xl">
+          <span className="bg-success flex size-11 shrink-0 items-center justify-center rounded-xl text-white">
             <CreditCard className="size-5" />
           </span>
           <div className="min-w-0">

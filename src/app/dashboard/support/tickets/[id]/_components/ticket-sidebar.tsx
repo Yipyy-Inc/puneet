@@ -55,7 +55,7 @@ export function TicketSidebar({
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-3">
-            <span className="bg-wash-violet text-violet flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold">
+            <span className="bg-violet flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white">
               {(rf?.name ?? ticket.facility).slice(0, 2).toUpperCase()}
             </span>
             <div className="min-w-0">
