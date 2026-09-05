@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { useSettings } from "@/hooks/use-settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { useAppLocale } from "@/hooks/use-app-locale";
 
 import { SettingsBlock } from "@/components/ui/settings-block";
@@ -43,12 +44,13 @@ import { weekdayFormatter, weekdayName } from "@/lib/settings/weekday";
 export function BusinessHoursCard() {
   const { hours, updateHours } = useSettings();
   const locale = useAppLocale();
+  const t = useSettingsText().section("hours");
 
   const weekday = useMemo(() => weekdayFormatter(locale), [locale]);
   const dayName = (day: string) => weekdayName(weekday, day);
 
   return (
-    <SettingsBlock title="Business hours" data={hours} onSave={updateHours}>
+    <SettingsBlock title={t("businessHours")} data={hours} onSave={updateHours}>
       {(isEditing, localHours, setLocalHours) => (
         <div className="space-y-3">
           {Object.entries(localHours).map(
@@ -87,7 +89,7 @@ export function BusinessHoursCard() {
                   <div className="flex items-center gap-2">
                     <Input
                       type="time"
-                      aria-label={`${dayName(day)} — opening time`}
+                      aria-label={`${dayName(day)} — ${t("openingTime")}`}
                       value={schedule.openTime}
                       onChange={(e) =>
                         setLocalHours({
@@ -112,7 +114,7 @@ export function BusinessHoursCard() {
                     </span>
                     <Input
                       type="time"
-                      aria-label={`${dayName(day)} — closing time`}
+                      aria-label={`${dayName(day)} — ${t("closingTime")}`}
                       value={schedule.closeTime}
                       onChange={(e) =>
                         setLocalHours({
@@ -129,7 +131,7 @@ export function BusinessHoursCard() {
                     />
                   </div>
                 ) : (
-                  <Badge variant="secondary">Closed</Badge>
+                  <Badge variant="secondary">{t("closed")}</Badge>
                 )}
               </div>
             ),

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSettings } from "@/hooks/use-settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 import type { ServiceDateBlock } from "@/types/facility";
 
@@ -19,6 +20,7 @@ type BlockType = "full" | "check_in" | "check_out";
 
 // Service-Specific Day Blocking (override regular schedule)
 export function ServiceDayBlockingCard() {
+  const t = useSettingsText().section("hours");
   const { serviceDateBlocks, updateServiceDateBlocks } = useSettings();
   const [newDate, setNewDate] = useState("");
   const [newServices, setNewServices] = useState<string[]>([]);
@@ -62,21 +64,20 @@ export function ServiceDayBlockingCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarX className="size-5" />
-          Service-Specific Day Blocking
+          {t("serviceDayBlocking")}
         </CardTitle>
         <p className="text-muted-foreground text-sm">
-          Block specific calendar days for one or more services (e.g. daycare
-          closed on Christmas) without changing the regular weekly schedule. On
-          blocked dates, customers cannot book and staff cannot create bookings
-          unless overridden by admin/manager.
+          {t("serviceDayBlockingHelp")}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-4 rounded-lg border p-4">
-          <Label>Add block</Label>
+          <Label>{t("addBlock")}</Label>
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1">
-              <Label className="text-muted-foreground text-xs">Date</Label>
+              <Label className="text-muted-foreground text-xs">
+                {t("date")}
+              </Label>
               <Input
                 type="date"
                 value={newDate}
@@ -85,7 +86,7 @@ export function ServiceDayBlockingCard() {
             </div>
             <div className="space-y-1">
               <Label className="text-muted-foreground text-xs">
-                Services affected (per service, multiple, or all)
+                {t("servicesAffected")}
               </Label>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -102,8 +103,8 @@ export function ServiceDayBlockingCard() {
                   }
                 >
                   {newServices.length === SERVICE_BLOCK_OPTIONS.length
-                    ? "Clear all"
-                    : "All services"}
+                    ? t("clearAll")
+                    : t("allServices")}
                 </Button>
                 {SERVICE_BLOCK_OPTIONS.map((opt) => (
                   <div key={opt.id} className="flex items-center gap-2">
@@ -125,7 +126,7 @@ export function ServiceDayBlockingCard() {
             {includesBoarding && (
               <div className="space-y-1">
                 <Label className="text-muted-foreground text-xs">
-                  Boarding block type
+                  {t("boardingBlockType")}
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -135,7 +136,7 @@ export function ServiceDayBlockingCard() {
                     className="h-8 text-xs"
                     onClick={() => setNewBlockType("full")}
                   >
-                    Fully close
+                    {t("fullyClose")}
                   </Button>
                   <Button
                     type="button"
@@ -146,7 +147,7 @@ export function ServiceDayBlockingCard() {
                     className="h-8 text-xs"
                     onClick={() => setNewBlockType("check_in")}
                   >
-                    Block check-in only
+                    {t("blockCheckInOnly")}
                   </Button>
                   <Button
                     type="button"
@@ -157,7 +158,7 @@ export function ServiceDayBlockingCard() {
                     className="h-8 text-xs"
                     onClick={() => setNewBlockType("check_out")}
                   >
-                    Block check-out only
+                    {t("blockCheckOutOnly")}
                   </Button>
                 </div>
                 <p className="text-muted-foreground text-xs">
@@ -168,17 +169,16 @@ export function ServiceDayBlockingCard() {
             )}
             <div className="space-y-1">
               <Label className="text-muted-foreground text-xs">
-                Closure message (customer-facing)
+                {t("closureMessage")}
               </Label>
               <Input
                 value={newClosureMessage}
                 onChange={(e) => setNewClosureMessage(e.target.value)}
-                placeholder="e.g. Closed for Christmas, Closed for staff training"
+                placeholder={t("blockReasonPlaceholder")}
                 className="max-w-sm"
               />
               <p className="text-muted-foreground text-xs">
-                Shown when a customer hovers over or focuses the blocked date in
-                the booking calendar.
+                {t("closureMessageHelp")}
               </p>
             </div>
             <Button
@@ -187,15 +187,15 @@ export function ServiceDayBlockingCard() {
               disabled={!newDate || newServices.length === 0}
             >
               <Plus className="mr-2 size-4" />
-              Add block
+              {t("addBlock")}
             </Button>
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Blocked dates</Label>
+          <Label>{t("blockedDates")}</Label>
           {serviceDateBlocks.length === 0 ? (
             <p className="text-muted-foreground rounded-lg border py-4 text-center text-sm">
-              No service-specific blocks. Add a date and service(s) above.
+              {t("noBlocks")}
             </p>
           ) : (
             <ul className="space-y-2">
@@ -241,17 +241,17 @@ export function ServiceDayBlockingCard() {
                         {block.services.includes("boarding") ? (
                           <Badge variant="outline" className="text-xs">
                             {block.closed
-                              ? "Fully closed"
+                              ? t("fullyClosed")
                               : block.blockCheckIn && block.blockCheckOut
-                                ? "Check-in & check-out blocked"
+                                ? t("checkInOutBlocked")
                                 : block.blockCheckIn
-                                  ? "Check-in blocked"
+                                  ? t("checkInBlocked")
                                   : block.blockCheckOut
-                                    ? "Check-out blocked"
+                                    ? t("checkOutBlocked")
                                     : "Closed"}
                           </Badge>
                         ) : (
-                          <Badge variant="outline">Closed</Badge>
+                          <Badge variant="outline">{t("closed")}</Badge>
                         )}
                       </div>
                       {block.closureMessage && (
