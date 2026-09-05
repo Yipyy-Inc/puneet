@@ -58,39 +58,39 @@ There **is** a test runner: Playwright, 115 spec files under [tests/e2e/](tests/
 
 Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/unit/](tests/unit/), for pure logic worth being sure of and cheap to isolate. It exists because `DataTable`'s sort comparator ordered every numeric column on ~88 screens lexicographically — $125 ahead of $38 — for months, and neither tier that existed could have caught it: static analysis saw well-typed code, and an e2e spec would have had to seed rows of a particular digit-length shape into the shared production database to assert something three layers below the screen. Keep it to that shape. **RLS, permissions and payments stay in Playwright**, where they can actually be wrong.
 
-| Command                                | Purpose                                                                                                             |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `bun run dev`                          | Dev server (webpack); `bun run dev:turbo` for turbo                                                                 |
-| `bun run typecheck`                    | `tsc --noEmit` — the primary gate (also runs on pre-commit & pre-push)                                              |
-| `bun run lint`                         | ESLint (cached); `bun run lint:fix` to autofix                                                                      |
-| `bun run format:check`                 | Prettier check; `bun run format` to write                                                                           |
-| `bun run build`                        | `next build` — full production build (CI runs this)                                                                 |
-| `bun run prune`                        | Knip — dead-code / unused-export report                                                                             |
-| `bun run test:unit`                    | `bun test` over [tests/unit/](tests/unit/) — pure logic, no browser, no database. Under a second. Runs in CI        |
-| `bun run test:e2e`                     | The whole Playwright suite (115 files, ~45 min, one worker — see the debt map before trusting a run)                |
-| `bun run test:e2e:gate`                | The 27 specs CI runs on every push — the authorisation boundary, and money                                          |
-| `bun run test:e2e:ci`                  | The full suite CI runs NIGHTLY — auth & access, daily operations, scheduling, payroll, loyalty, report cards, tasks |
-| `bun run test:sql`                     | The 78 SQL files — RLS, grants, database invariants. Runs in CI. ~90s; needs `SUPABASE_DB_URL`                      |
-| `bun run check:pricing`                | Project-specific pricing-consistency script                                                                         |
-| `bun run check:settings-wiring`        | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                                          |
-| `bun run check:settings-seeding`       | Fails if a component seeds `useState` from facility settings AND saves them without handling `isPending`            |
-| `bun run check:rls-writes`             | Fails if an API update/delete cannot tell an RLS refusal from a no-op                                               |
-| `bun run check:grooming-menu`          | Fails if a screen reads the grooming menu from the fixture, not Postgres                                            |
-| `bun run check:facility-from-session`  | Fails if an API route takes the facility from the request rather than the session or a parent row                   |
-| `bun run check:success-claims`         | Fails if a screen claims an action succeeded with nothing that could perform it                                     |
-| `bun run check:settings-fixture`       | Fails if a screen reads a facility-owned value (name, hours, rules, tips) from `src/data/settings`                  |
-| `bun run check:passkey-email-verified` | Fails if the magic-auth bridge escapes its one file, or a passkey verify route drops its `emailVerified` check      |
-| `bun run check:migration-versions`     | Fails if two migrations share a version number, so `db push` cannot pick its own order                              |
-| `bun run check:no-review-gating`       | Fails if a control hides a public review link by rating — review gating, which the FTC and Google prohibit          |
-| `bun run check:derived-location`       | Fails if a fixture guess decides where a real row belongs, or to whom — a location, or an assignment                |
-| `bun run check:inert-permissions`      | Fails if a permission offered in the role editor is consulted by nothing — a switch that decides nothing            |
-| `bun run check:staging-sends`          | Fails if a file reaches Resend or Twilio without consulting the staging suppression guard                           |
-| `bun run check:badge-glyph`            | Fails if a colour-coded badge carries no glyph — §3's "colour is never the only channel". Ratcheted at 374          |
-| `bun run check:hover-actions`          | Fails if a control is revealed only on hover — §6 rule 11, and two of three contexts have none. **At zero**         |
-| `bun run check:edge-accents`           | Fails on an accent line pinned to one edge — §6 rule 1. A neutral 1px hairline is not that and stays. **At zero**   |
-| `bun run check:nav-icons`              | Fails if a nav glyph drifts from `icon-map.json`, or if any glyph lands on two areas — §5b1                         |
-| `bun run check:hardcoded-locale`       | Fails if a formatter is told a literal locale instead of the user's — §5q. Ratcheted at 534                         |
-| `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                   |
+| Command                                | Purpose                                                                                                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `bun run dev`                          | Dev server (webpack); `bun run dev:turbo` for turbo                                                                                  |
+| `bun run typecheck`                    | `tsc --noEmit` — the primary gate (also runs on pre-commit & pre-push)                                                               |
+| `bun run lint`                         | ESLint (cached); `bun run lint:fix` to autofix                                                                                       |
+| `bun run format:check`                 | Prettier check; `bun run format` to write                                                                                            |
+| `bun run build`                        | `next build` — full production build (CI runs this)                                                                                  |
+| `bun run prune`                        | Knip — dead-code / unused-export report                                                                                              |
+| `bun run test:unit`                    | `bun test` over [tests/unit/](tests/unit/) — pure logic, no browser, no database. Under a second. Runs in CI                         |
+| `bun run test:e2e`                     | The whole Playwright suite (115 files, ~45 min, one worker — see the debt map before trusting a run)                                 |
+| `bun run test:e2e:gate`                | The 27 specs CI runs on every push — the authorisation boundary, and money                                                           |
+| `bun run test:e2e:ci`                  | The full suite CI runs NIGHTLY — auth & access, daily operations, scheduling, payroll, loyalty, report cards, tasks                  |
+| `bun run test:sql`                     | The 78 SQL files — RLS, grants, database invariants. Runs in CI. ~90s; needs `SUPABASE_DB_URL`                                       |
+| `bun run check:pricing`                | Project-specific pricing-consistency script                                                                                          |
+| `bun run check:settings-wiring`        | Fails if a `*Settings.tsx` component is imported nowhere (dead-code guard)                                                           |
+| `bun run check:settings-seeding`       | Fails if a component seeds `useState` from facility settings AND saves them without handling `isPending`                             |
+| `bun run check:rls-writes`             | Fails if an API update/delete cannot tell an RLS refusal from a no-op                                                                |
+| `bun run check:grooming-menu`          | Fails if a screen reads the grooming menu from the fixture, not Postgres                                                             |
+| `bun run check:facility-from-session`  | Fails if an API route takes the facility from the request rather than the session or a parent row                                    |
+| `bun run check:success-claims`         | Fails if a screen claims an action succeeded with nothing — in the file or one import away — that could perform it. Ratcheted at 126 |
+| `bun run check:settings-fixture`       | Fails if a screen reads a facility-owned value (name, hours, rules, tips) from `src/data/settings`                                   |
+| `bun run check:passkey-email-verified` | Fails if the magic-auth bridge escapes its one file, or a passkey verify route drops its `emailVerified` check                       |
+| `bun run check:migration-versions`     | Fails if two migrations share a version number, so `db push` cannot pick its own order                                               |
+| `bun run check:no-review-gating`       | Fails if a control hides a public review link by rating — review gating, which the FTC and Google prohibit                           |
+| `bun run check:derived-location`       | Fails if a fixture guess decides where a real row belongs, or to whom — a location, or an assignment                                 |
+| `bun run check:inert-permissions`      | Fails if a permission offered in the role editor is consulted by nothing — a switch that decides nothing                             |
+| `bun run check:staging-sends`          | Fails if a file reaches Resend or Twilio without consulting the staging suppression guard                                            |
+| `bun run check:badge-glyph`            | Fails if a colour-coded badge carries no glyph — §3's "colour is never the only channel". Ratcheted at 374                           |
+| `bun run check:hover-actions`          | Fails if a control is revealed only on hover — §6 rule 11, and two of three contexts have none. **At zero**                          |
+| `bun run check:edge-accents`           | Fails on an accent line pinned to one edge — §6 rule 1. A neutral 1px hairline is not that and stays. **At zero**                    |
+| `bun run check:nav-icons`              | Fails if a nav glyph drifts from `icon-map.json`, or if any glyph lands on two areas — §5b1                                          |
+| `bun run check:hardcoded-locale`       | Fails if a formatter is told a literal locale instead of the user's — §5q. Ratcheted at 534                                          |
+| `bun run check:doc-counts`             | Fails if a spec or SQL-file count quoted in AGENTS.md or CLAUDE.md disagrees with what is on disk                                    |
 
 **The green sequence (run before claiming done):** `bun run typecheck && bun run lint && bun run format:check && bun run test:unit`, then for UI changes `bun run dev` and visually confirm the touched [critical user journey](docs/product/critical-user-journeys.md). Run `bun run build` for anything structural (routing, layouts, server/client boundaries). Use **bun** only — never npm/yarn/pnpm.
 
