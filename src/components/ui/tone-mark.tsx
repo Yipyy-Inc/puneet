@@ -22,21 +22,31 @@ import { cn } from "@/lib/utils";
 // nothing in the source says so — every class name still reads as a bright
 // gradient.
 //
-// ── THE SETTLED ANSWER, WHICH ALREADY EXISTED ─────────────────────────────
+// ── IT IS A SOLID DISC WITH A WHITE GLYPH, AND THAT WAS A CHOICE ──────────
 //
-// §6 rule 2, as settled 2026-09-04: "a MARK carrying [a status ink] — a chip, a
-// badge disc, a small tag — sits on that ink's own --wash-* rather than on
-// white; a SURFACE never does." That is exactly what `badge.tsx` does for the
-// six status chips, measured at 4.54–7.09:1. This is the same treatment for the
-// same kind of object, so a section's disc and a status chip finally agree.
+// The first version of this component used the wash: `bg-wash-violet` with the
+// saturated ink as the glyph, which is what `badge.tsx` does for the six status
+// chips and what §6 rule 2 describes for a mark. It measured well and it read
+// light — and the client looked at it on staging and preferred what was there
+// before.
 //
-// ── AND WHY THE KPI TILE'S DISC IS NOT THIS ───────────────────────────────
+// Worth recording WHAT they were comparing against, because it is not what it
+// looks like. `main` does not carry stage 1's @theme remap; only `redesign`
+// does. So production still renders `from-violet-500 to-fuchsia-500` as
+// Tailwind's real violet-to-magenta, while the identical line on staging
+// renders flat #4C3BB8. The bright row the client remembers is the PRE-redesign
+// palette, and no change to this branch can reproduce it — reverting the classes
+// here would have produced the dark row they complained about in the first
+// place, not the bright one they were pointing at.
 //
-// `kpi-tile.tsx` keeps a SOLID disc with a white glyph, and that is not an
-// inconsistency: its disc sits on the tile's own wash, where light-on-light
-// disappears. This one sits on a white card. Same two values, opposite roles,
-// decided by what is behind them — the note in kpi-tile.tsx says the same thing
-// from the other side.
+// So this is the closest thing the design system actually has to "vivid": the
+// SOLID status ink under a white glyph. The map below is `kpi-tile.tsx`'s badge
+// map, value for value, deliberately — a section's disc and a metric tile's
+// disc are the same object and now look it.
+//
+// The wash has not gone anywhere; it is still what a status CHIP wears
+// (badge.tsx), which is the small mark inside a white row that rule 2 was
+// written about. A 40px disc carrying a section is a different weight of thing.
 // ============================================================================
 
 export type MarkTone =
@@ -48,14 +58,12 @@ export type MarkTone =
   | "neutral";
 
 const TONE: Record<MarkTone, string> = {
-  info: "bg-wash-primary text-info",
-  success: "bg-wash-success text-success",
-  warning: "bg-wash-warning text-warning",
-  error: "bg-wash-error text-destructive",
-  violet: "bg-wash-violet text-violet",
-  // Five washes exist and neutral is not one of them (§1), so it takes the
-  // inset surface — which is what a neutral tile does elsewhere.
-  neutral: "bg-surface-inset text-ink-secondary",
+  info: "bg-primary text-white",
+  success: "bg-success text-white",
+  warning: "bg-warning text-white",
+  error: "bg-bad text-white",
+  violet: "bg-violet text-white",
+  neutral: "bg-ink-secondary text-white",
 };
 
 const SIZE = {

@@ -29,7 +29,7 @@ export function StaffHeader() {
             compiles to #0F58C6 → #4C3BB8 — a flat dark disc, not the bright
             two-tone the class name still reads as. Same treatment as every
             other mark in the platform now (§6 rule 2, tone-mark.tsx). */}
-        <div className="bg-wash-primary text-info flex size-10 items-center justify-center rounded-lg">
+        <div className="bg-primary flex size-10 items-center justify-center rounded-lg text-white">
           <Calendar className="size-5" />
         </div>
         <div>

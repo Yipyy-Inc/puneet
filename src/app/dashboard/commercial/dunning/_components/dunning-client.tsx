@@ -66,8 +66,8 @@ export function DunningClient() {
                   <span
                     className={
                       isLast
-                        ? "bg-wash-error text-destructive flex size-9 items-center justify-center rounded-full"
-                        : "bg-wash-warning text-warning flex size-9 items-center justify-center rounded-full"
+                        ? "bg-bad flex size-9 items-center justify-center rounded-full text-white"
+                        : "bg-warning flex size-9 items-center justify-center rounded-full text-white"
                     }
                   >
                     <Icon className="size-4" />
