@@ -48,6 +48,7 @@ import { ClockInOut } from "@/components/employee/ClockInOut";
 import { OnTheClockPill } from "@/components/employee/OnTheClockPill";
 import { HeaderNavIconButton } from "@/components/layout/HeaderNavIconButton";
 import { toEmployeeRoute } from "@/lib/nav/employee-nav";
+import { settingsIndexHref } from "@/lib/settings/nav";
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
 import { MobileSearch } from "@/components/search/MobileSearch";
 import { FacilityHeader } from "@/components/layout/FacilityHeader";
@@ -94,7 +95,7 @@ const MY_WORKSPACE_LINKS = [
   { href: "/employee/documents", label: "My Documents", icon: FolderOpen },
   { href: "/employee/performance", label: "My Performance", icon: TrendingUp },
   { href: "/employee/write-ups", label: "My Write-ups", icon: FileText },
-  { href: "/employee/settings", label: "Settings", icon: Settings },
+  { href: settingsIndexHref("employee"), label: "Settings", icon: Settings },
 ] as const;
 
 export function EmployeeHeader({ staffId }: { staffId: string }) {

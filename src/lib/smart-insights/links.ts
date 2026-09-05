@@ -6,6 +6,8 @@
  * it should wrap the reference in a `<Link>` whose href comes from here.
  */
 
+import { settingsHref } from "@/lib/settings/nav";
+
 export const insightLinks = {
   /** Client/customer detail page. Without an ID, falls back to the list. */
   client: (id?: string | number) =>
@@ -79,9 +81,13 @@ export const insightLinks = {
       ? `/facility/dashboard/services/grooming?tab=${tab}`
       : `/facility/dashboard/services/grooming`,
 
-  /** Cancellation & no-show policy settings. */
-  cancellationPolicy: () =>
-    `/facility/dashboard/settings?tab=cancellation-policy`,
+  /** Cancellation & no-show policy settings.
+   *
+   *  The free-cancellation window lives on the Business section's booking
+   *  rules card — DepositRulesSettings reads it from there rather than owning
+   *  it. This used `?tab=cancellation-policy`, a parameter the settings page
+   *  does not read and a section that does not exist, so it did nothing. */
+  cancellationPolicy: () => settingsHref("business"),
 
   /** Onboarding sub-view for a specific staff member. */
   onboarding: (staffId?: string) =>

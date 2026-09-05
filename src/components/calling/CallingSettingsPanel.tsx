@@ -52,6 +52,7 @@ import type {
 import { NumberPortingWizard } from "@/components/calling/NumberPortingWizard";
 import { CallAvailabilitySettings } from "@/components/calling/CallAvailabilitySettings";
 import { CallTagsSettings } from "@/components/calling/CallTagsSettings";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 const dispatchOptions: {
   value: DispatchMode;
@@ -263,6 +264,7 @@ const SECTIONS: {
 ];
 
 export function CallingSettingsPanel() {
+  const settingsPath = useSettingsHref();
   const { settings: facility, isPending } = useFacilitySettings();
   const saveSetting = useSaveFacilitySetting();
 
@@ -907,7 +909,7 @@ export function CallingSettingsPanel() {
             ))}
           </div>
           <Button variant="outline" size="sm" className="mt-3" asChild>
-            <Link href="/facility/dashboard/settings?section=roles-permissions">
+            <Link href={settingsPath("roles-permissions")}>
               Manage Role Permissions →
             </Link>
           </Button>

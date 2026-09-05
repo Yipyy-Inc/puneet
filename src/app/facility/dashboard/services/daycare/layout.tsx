@@ -26,6 +26,7 @@ import {
   Home,
   ClipboardList,
 } from "lucide-react";
+import { settingsHref } from "@/lib/settings/nav";
 
 const tabs = [
   {
@@ -60,7 +61,7 @@ const tabs = [
   },
   {
     name: "Settings",
-    href: "/facility/dashboard/settings?section=daycare",
+    href: settingsHref("daycare"),
     icon: Settings,
   },
 ];

@@ -57,6 +57,7 @@ import {
   locationOnboardingSteps,
   type OnboardingStaffMember,
 } from "@/lib/hq/location-onboarding";
+import { settingsHref } from "@/lib/settings/nav";
 
 // ============================================================================
 // One branch — the record, edited for real.
@@ -108,11 +109,25 @@ const ELSEWHERE = [
       "Hiring, job titles, permissions, and the location a member of staff works from.",
     href: "/facility/dashboard/staff",
   },
+  // One entry naming three unrelated things, because all three lived in the
+  // same 8.2-screen "Business" section and one link was the best that could be
+  // offered. They have their own addresses now, so this says three true things
+  // instead of one vague one.
   {
-    title: "Opening hours, tax and booking rules",
+    title: "Opening hours and closures",
+    detail: "Trading hours, days you are closed, and one-off overrides.",
+    href: settingsHref("hours"),
+  },
+  {
+    title: "Booking rules",
     detail:
-      "Trading hours, closures, tax rates and how far ahead customers may book.",
-    href: "/facility/dashboard/settings?section=business",
+      "How far ahead customers may book, daily limits, and whether bookings need approval.",
+    href: settingsHref("booking-rules"),
+  },
+  {
+    title: "Tax rates",
+    detail: "The rates applied to invoices, estimates and receipts.",
+    href: settingsHref("taxes"),
   },
 ];
 

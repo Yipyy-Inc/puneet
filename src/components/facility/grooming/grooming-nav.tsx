@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
+import { settingsHref } from "@/lib/settings/nav";
 
 type Tab = {
   name: string;
@@ -87,7 +88,7 @@ const tabs: Tab[] = [
   },
   {
     name: "Settings",
-    href: "/facility/dashboard/settings?section=grooming",
+    href: settingsHref("grooming"),
     icon: Settings,
   },
 ];

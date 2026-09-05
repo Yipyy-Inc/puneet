@@ -68,13 +68,49 @@ export const EMPLOYEE_ROUTE_BY_FACILITY_URL: Record<string, string> = {
 };
 
 /**
+ * Facility urls whose CHILDREN also live in the employee shell, so a deeper
+ * path maps rather than falling through to the facility portal.
+ *
+ * Deliberately a short explicit list rather than "every key above". Most of the
+ * shell is a single `page.tsx` re-exporting a single facility page —
+ * `/employee/grooming` has no child routes at all — so prefix-mapping
+ * `…/services/grooming/settings/booking-rules` would turn a wrong-portal
+ * redirect into a 404. A root earns its place here once the shell really does
+ * mirror that subtree.
+ */
+const EMPLOYEE_SUBTREE_ROOTS = ["/facility/dashboard/settings"] as const;
+
+/**
  * Resolve a NAV_SECTIONS (facility) url to its employee-shell route. Falls back
  * to the original url if unmapped — but every NAV_SECTIONS item is mapped above,
  * so a fallback in practice means a new nav item needs an entry here (and a
  * matching wrapper route under src/app/employee/(shell)/).
+ *
+ * A query string or hash is carried across rather than looked up. Without that
+ * `/facility/dashboard/settings?section=taxes` missed the map by the exact width
+ * of its own query and was handed straight back — so an employee following it
+ * left their portal, and guardPortal bounced them to /employee/schedule.
  */
 export function toEmployeeRoute(facilityUrl: string): string {
-  return EMPLOYEE_ROUTE_BY_FACILITY_URL[facilityUrl] ?? facilityUrl;
+  const cut = facilityUrl.search(/[?#]/);
+  const path = cut === -1 ? facilityUrl : facilityUrl.slice(0, cut);
+  const suffix = cut === -1 ? "" : facilityUrl.slice(cut);
+
+  const exact = EMPLOYEE_ROUTE_BY_FACILITY_URL[path];
+  if (exact) return exact + suffix;
+
+  // Longest wins, so a root nested inside another still resolves to the more
+  // specific of the two.
+  let root = "";
+  for (const candidate of EMPLOYEE_SUBTREE_ROOTS) {
+    if (candidate.length <= root.length) continue;
+    if (path.startsWith(candidate + "/")) root = candidate;
+  }
+  if (!root) return facilityUrl;
+
+  return (
+    EMPLOYEE_ROUTE_BY_FACILITY_URL[root] + path.slice(root.length) + suffix
+  );
 }
 
 /**

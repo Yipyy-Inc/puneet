@@ -20,6 +20,7 @@ import type {
   FacilityResource,
 } from "@/types/facility";
 import type { Transaction } from "@/types/retail";
+import { settingsHref } from "@/lib/settings/nav";
 
 export type OperationsCalendarEventType =
   | "booking"
@@ -1864,7 +1865,7 @@ function buildExternalEvents(anchorDate: Date): OperationsCalendarEvent[] {
       customerTags: [],
       bookingTags: [],
       addOns: [],
-      href: "/facility/dashboard/settings/integrations",
+      href: settingsHref("integrations"),
     },
     {
       id: "external-calendly-1",
@@ -1897,7 +1898,7 @@ function buildExternalEvents(anchorDate: Date): OperationsCalendarEvent[] {
       customerTags: [],
       bookingTags: [],
       addOns: [],
-      href: "/facility/dashboard/settings/integrations",
+      href: settingsHref("integrations"),
     },
   ];
 }

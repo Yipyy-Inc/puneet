@@ -12,6 +12,7 @@ import type {
   OnboardingStepDef,
   OnboardingStepStatus,
 } from "@/types/facility-onboarding";
+import { settingsHref } from "@/lib/settings/nav";
 
 export const ONBOARDING_FACILITY_ID = 11;
 
@@ -22,7 +23,7 @@ export const onboardingSteps: OnboardingStepDef[] = [
     title: "Complete business profile",
     description:
       "Add your logo, a short description, and your business address so clients recognize you.",
-    route: "/facility/dashboard/settings?section=business",
+    route: settingsHref("business"),
     cta: "Complete profile",
   },
   {
@@ -40,7 +41,7 @@ export const onboardingSteps: OnboardingStepDef[] = [
     title: "Configure operating hours",
     description:
       "Tell us when you're open so bookings only land in available time slots.",
-    route: "/facility/dashboard/settings?section=business",
+    route: settingsHref("hours"),
     cta: "Set hours",
   },
   {

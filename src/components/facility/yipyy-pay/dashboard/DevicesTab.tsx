@@ -47,6 +47,7 @@ import {
   type YipyyPayOverview,
 } from "@/lib/api/yipyy-pay";
 import { TerminalIllustration } from "../illustrations";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 // ============================================================================
 // The card readers, and the first screen that can actually name one.
@@ -100,6 +101,7 @@ const PROBE_COPY: Record<
 };
 
 export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
+  const settingsPath = useSettingsHref();
   const { data, isPending } = useAdminTerminals(overview.connection.connected);
   const [renaming, setRenaming] = useState<AdminTerminal | null>(null);
   const [probes, setProbes] = useState<Record<string, TerminalProbe>>({});
@@ -380,7 +382,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
-            <a href="/facility/dashboard/settings?section=tips">
+            <a href={settingsPath("tips")}>
               Tip settings
               <ArrowRight className="size-3.5" />
             </a>

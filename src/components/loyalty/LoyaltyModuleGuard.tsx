@@ -12,6 +12,9 @@ import {
 import { Settings, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+import { settingsIndexHref, settingsPortalFor } from "@/lib/settings/nav";
 
 interface LoyaltyModuleGuardProps {
   children: ReactNode;
@@ -35,6 +38,11 @@ export function LoyaltyModuleGuard({
   locationId,
   fallback,
 }: LoyaltyModuleGuardProps) {
+  // No settings section enables the loyalty module — the config comes from
+  // useLoyaltyConfig, and nothing in settings writes it. Pointing at the index
+  // is the honest version of "go and look"; it used to land on Business, which
+  // is 8.2 screens of things that are not this.
+  const pathname = usePathname() ?? "";
   const {
     isEnabled,
     isEnabledForLocation,
@@ -63,7 +71,7 @@ export function LoyaltyModuleGuard({
               Contact your facility administrator to enable the loyalty program.
             </p>
             <Button asChild variant="outline">
-              <Link href="/facility/dashboard/settings">
+              <Link href={settingsIndexHref(settingsPortalFor(pathname))}>
                 <Settings className="mr-2 size-4" />
                 Go to Settings
               </Link>

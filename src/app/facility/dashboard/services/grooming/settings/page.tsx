@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { MobileGroomingSettings } from "@/components/facility/grooming/mobile-grooming-settings";
 import { GroomingCheckInForms } from "@/components/facility/grooming/grooming-check-in-forms";
 import { PageHeader } from "@/components/ui/page-header";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -145,6 +146,7 @@ const REPORT_TEMPLATE_OPTIONS = [
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function GroomingSettingsPage() {
+  const settingsPath = useSettingsHref();
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -425,7 +427,7 @@ export default function GroomingSettingsPage() {
               other service in the global Express Check-in settings.
             </p>
             <Button asChild variant="outline" size="sm" className="mt-2">
-              <Link href="/facility/dashboard/settings?section=yipyygo">
+              <Link href={settingsPath("yipyygo")}>
                 Open Express Check-in settings
                 <ExternalLink className="ml-1.5 size-3.5" />
               </Link>

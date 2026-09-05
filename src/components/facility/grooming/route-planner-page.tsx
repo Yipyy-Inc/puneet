@@ -50,6 +50,7 @@ import {
 import { clients } from "@/data/clients";
 import { Switch } from "@/components/ui/switch";
 import { ServiceAreasMapDialog } from "./service-areas-map-dialog";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -316,6 +317,7 @@ function TimeChangeConfirm({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function RoutePlannerPage() {
+  const settingsPath = useSettingsHref();
   const { enabled, vans, serviceAreas, arrivalWindowMinutes } =
     useMobileGrooming();
   const { data: appointments = [] } = useQuery(groomingQueries.appointments());
@@ -445,7 +447,7 @@ export function RoutePlannerPage() {
             </p>
           </div>
           <Button asChild>
-            <Link href="/facility/dashboard/settings?section=grooming">
+            <Link href={settingsPath("grooming")}>
               Open Mobile Grooming Settings
             </Link>
           </Button>
@@ -547,9 +549,7 @@ export function RoutePlannerPage() {
               </p>
             </div>
             <Button asChild variant="outline">
-              <Link href="/facility/dashboard/settings?section=grooming">
-                Manage vans
-              </Link>
+              <Link href={settingsPath("grooming")}>Manage vans</Link>
             </Button>
           </CardContent>
         </Card>

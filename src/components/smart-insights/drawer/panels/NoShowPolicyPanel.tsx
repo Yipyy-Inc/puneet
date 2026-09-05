@@ -16,6 +16,7 @@ import { DrawerFooter } from "../shared/DrawerFooter";
 import { PreviewBeforeSend } from "../shared/PreviewBeforeSend";
 import { insightLinks } from "@/lib/smart-insights/links";
 import type { InsightPanelProps } from "../panel-types";
+import { settingsHref } from "@/lib/settings/nav";
 
 /**
  * Insight 4.5 Take Action — two paths:
@@ -199,7 +200,7 @@ function FeeFlow({
           repeat. You can override per service.
         </p>
         <Button asChild variant="outline" size="sm" className="w-full">
-          <a href="/facility/dashboard/settings?tab=cancellation-policy">
+          <a href={settingsHref("business")}>
             <ExternalLink className="mr-1.5 size-3.5" />
             Open cancellation policy settings
           </a>

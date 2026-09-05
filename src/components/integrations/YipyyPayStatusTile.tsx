@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 // ============================================================================
 // Yipyy Pay's footprint on the Integrations page: one line.
@@ -38,9 +39,10 @@ interface CloverStatus {
   configured: boolean;
 }
 
-const HREF = "/facility/dashboard/settings?section=yipyy-pay";
-
 export function YipyyPayStatusTile() {
+  // Not a module constant any more: this tile renders on the Integrations
+  // section, which the employee shell serves at /employee/settings too.
+  const settingsPath = useSettingsHref();
   const { data, isPending } = useQuery({
     queryKey: ["clover", "connection"],
     queryFn: async (): Promise<CloverStatus> => {
@@ -83,7 +85,7 @@ export function YipyyPayStatusTile() {
         </div>
 
         <Button asChild variant="outline" size="sm">
-          <Link href={HREF}>
+          <Link href={settingsPath("yipyy-pay")}>
             {data?.connected ? "Manage" : "Set up"}
             <ArrowRight className="size-3.5" />
           </Link>

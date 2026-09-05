@@ -38,6 +38,7 @@ import { defaultServiceAddOns } from "@/data/service-addons";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
 import { cn } from "@/lib/utils";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 function loadServiceAddOns(): ServiceAddOn[] {
   if (typeof window === "undefined") return defaultServiceAddOns;
@@ -63,6 +64,7 @@ const EMPTY_RATE = {
 };
 
 export default function DaycareRatesPage() {
+  const settingsPath = useSettingsHref();
   const [rates, setRates] = useState<DaycareRate[]>(daycareRates);
   const [serviceAddOns, setServiceAddOns] = useState<ServiceAddOn[]>([]);
   const { areas, sections } = useDaycareAreas();
@@ -533,7 +535,7 @@ export default function DaycareRatesPage() {
             </p>
           </div>
           <a
-            href="/facility/dashboard/settings?section=pricing-rules"
+            href={settingsPath("pricing-rules")}
             className="text-primary text-sm font-medium hover:underline"
           >
             Go to Pricing Rules →

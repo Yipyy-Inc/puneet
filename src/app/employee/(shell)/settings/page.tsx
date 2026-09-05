@@ -1,11 +1,14 @@
-import SettingsPage from "@/app/facility/dashboard/settings/page";
+import { settingsIndexRoute } from "@/app/facility/dashboard/settings/_components/settings-routes";
 
-// The SAME settings component the facility admin uses, filtered by the acting
-// viewer's permissions (SettingsSidebar + section guards). Personal sections
-// (My Profile, My Notifications) are always available, so this route carries NO
-// route-level gate — an employee always has SOME settings. Facility-admin
-// sections appear only when the viewer holds the key (e.g. manage_roles), so a
-// manager with facility settings granted sees the full surface here too.
-export default function EmployeeSettingsPage() {
-  return <SettingsPage />;
+// The same index the facility admin sees, filtered by the acting viewer's
+// permissions, and the same ?section= front door — an employee's bookmarks are
+// as old as anyone's. NO route-level gate, on purpose: personal sections (My
+// profile, My notifications) belong to every employee, so an employee always
+// has settings.
+export default async function EmployeeSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return settingsIndexRoute({ searchParams, portal: "employee" });
 }

@@ -34,6 +34,7 @@ import {
   type ProgramFormState,
 } from "./_components/program-dialog";
 import { ProgramCardGrid } from "./_components/program-card-grid";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 function loadTrainingAddOns(): ServiceAddOn[] {
   if (typeof window === "undefined") return defaultServiceAddOns;
@@ -51,6 +52,7 @@ function loadTrainingAddOns(): ServiceAddOn[] {
 }
 
 export default function TrainingRatesPage() {
+  const settingsPath = useSettingsHref();
   const queryClient = useQueryClient();
   const { data: programs = [] } = useQuery(trainingQueries.packages());
 
@@ -336,7 +338,7 @@ export default function TrainingRatesPage() {
           Pricing rules are now in Settings → Pricing Rules
         </p>
         <a
-          href="/facility/dashboard/settings?section=pricing-rules"
+          href={settingsPath("pricing-rules")}
           className="text-primary text-sm font-medium hover:underline"
         >
           Go to Pricing Rules →

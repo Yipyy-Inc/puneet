@@ -33,6 +33,7 @@ import type {
   EarlyCheckoutPolicyConfig,
   ModuleConfig,
 } from "@/types/facility";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 const DEFAULT_EARLY_CHECKOUT: EarlyCheckoutPolicyConfig = {
   enabled: false,
@@ -48,6 +49,7 @@ const POLICY_LABEL: Record<EarlyCheckoutPolicy, string> = {
 };
 
 export default function BoardingSettingsPage() {
+  const settingsPath = useSettingsHref();
   const { boarding, updateBoarding } = useSettings();
   const [formData, setFormData] = useState<ModuleConfig>(boarding);
   const [isEditingBasic, setIsEditingBasic] = useState(false);
@@ -403,12 +405,12 @@ export default function BoardingSettingsPage() {
                     Evaluation details (name, price, duration, etc.) are
                     configured globally in{" "}
                     <a
-                      href="/facility/dashboard/settings"
+                      href={settingsPath("evaluations")}
                       className="text-primary hover:underline"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Settings → Business → Evaluation Settings
+                      Settings → Evaluations
                     </a>
                   </p>
                 </div>

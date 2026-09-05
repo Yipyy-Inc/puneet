@@ -74,6 +74,7 @@ import {
   type ApplyToUpcomingChange,
 } from "@/components/facility/services/apply-to-upcoming-prompt";
 import { PageHeader } from "@/components/ui/page-header";
+import { settingsHref } from "@/lib/settings/nav";
 
 export default function TrainingCourseCatalogPage() {
   const [courseTypes, setCourseTypes] = useState<TrainingCourseType[]>(
@@ -631,7 +632,7 @@ export default function TrainingCourseCatalogPage() {
               <div className="flex items-center justify-between">
                 <Label htmlFor="discipline">Discipline</Label>
                 <a
-                  href="/facility/dashboard/settings?section=training-disciplines"
+                  href={settingsHref("training")}
                   className="text-primary text-xs hover:underline"
                 >
                   Manage in Settings →

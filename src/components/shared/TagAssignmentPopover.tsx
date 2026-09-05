@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { settingsHref } from "@/lib/settings/nav";
 
 interface TagAssignmentPopoverProps {
   entityType: TagType;
@@ -140,7 +141,7 @@ export function TagAssignmentPopover({
         {/* Create new tag link */}
         <div className="border-t p-2">
           <a
-            href="/facility/dashboard/settings?tab=tags-notes"
+            href={settingsHref("tags-notes")}
             className="text-primary hover:bg-accent flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors hover:underline"
             onClick={(e) => {
               e.stopPropagation();

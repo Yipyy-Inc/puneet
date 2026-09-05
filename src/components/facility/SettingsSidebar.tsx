@@ -1,150 +1,79 @@
 "use client";
 
+import Link from "next/link";
+
 import { cn } from "@/lib/utils";
-import {
-  Bed,
-  Bell,
-  Briefcase,
-  Building2,
-  ChevronDown,
-  CircleDot,
-  ClipboardList,
-  CloudSun,
-  CreditCard,
-  DollarSign,
-  FileText,
-  Globe,
-  GraduationCap,
-  History,
-  LogOut,
-  Package,
-  Palette,
-  PawPrint,
-  Plug,
-  Puzzle,
-  Receipt,
-  Scissors,
-  Shield,
-  Siren,
-  SlidersHorizontal,
-  Smartphone,
-  Sparkles,
-  Sun,
-  Tag,
-  Timer,
-  UserCog,
-  UserX,
-  UtensilsCrossed,
-  Wallet,
-} from "lucide-react";
-import { UserCircle } from "lucide-react";
+import { ChevronDown, Puzzle } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useUiText } from "@/hooks/use-ui-text";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
 import type { PermissionKey } from "@/types/facility-staff";
+import {
+  SETTINGS_LEAVES,
+  SETTINGS_NAV,
+  SETTINGS_PARENT_IDS,
+  settingsLeaf,
+  type SettingsLeaf,
+} from "@/lib/settings/nav";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
-export interface SettingsSection {
-  id: string;
-  label: string;
-  icon: React.ElementType;
-  /**
-   * Facility-admin sections carry the permission that gates them. Personal
-   * sections (My Account) omit it and always render. The facility admin holds
-   * every key, so it sees the full list; an employee sees only what's granted
-   * (personal always, admin sections per key) — "same component, filtered".
-   */
-  permKey?: PermissionKey;
-  /**
-   * A section that is a heading for others rather than a screen of its own.
-   *
-   * Added for Payments & Billing, which gathers the three screens that decide
-   * what a customer is charged — Yipyy Pay, tips and pricing rules. They were
-   * scattered across the Financial list beside estimate defaults and invoice
-   * templates, so "where do I change the card fee" had no obvious answer.
-   *
-   * A parent is NOT clickable: it has no `activeSection` of its own, so
-   * pressing it would either navigate nowhere or hijack one of its children.
-   * It expands. Every leaf still has its own id and its own deep link.
-   */
-  children?: SettingsSection[];
-}
+// ── THE RAIL IS DERIVED, NOT DECLARED ─────────────────────────────────────
+//
+// This file used to hold three things that had to agree: `STATIC_GROUPS` (the
+// rail), `SETTINGS_SECTION_KEYS` (the permission map the settings page reused
+// to guard deep links), and — by convention only — the ~45 render branches in
+// page.tsx. Nothing compared them, and they had drifted: the map's own comment
+// admits that an unmapped id is ALLOWED, so adding a rail entry and forgetting
+// the map entry hid the link from a groomer and still let them deep-link to it.
+//
+// All of it now comes from `src/lib/settings/nav.ts`, where `access` is a
+// REQUIRED field. That deletes the unmapped state rather than documenting it,
+// and `bun run check:settings-routes` walks the same list to prove every leaf
+// renders and every link in the product resolves to one.
 
-/** The controlling permission for each facility-admin settings section. The
- *  page reuses this to guard deep-links and pick a visible default. */
-export const SETTINGS_SECTION_KEYS: Record<string, PermissionKey> = {
-  business: "settings_general",
-  // Must agree with the sidebar entry's `permKey`. An unmapped section is
-  // ALLOWED by `canAccessSettingsSection` (`!key` is true), so leaving it out
-  // would hide the link from a groomer and still let them deep-link to it. The
-  // component refuses them either way, but a gate that disagrees with its own
-  // menu is a gate nobody can reason about.
-  "payroll-rules": "view_payroll",
-  branding: "settings_general",
-  notifications: "settings_manage_notifications",
-  "smart-insights": "manage_facility_settings",
-  "custom-email-domain": "manage_facility_settings",
-  weather: "settings_general",
-  integrations: "manage_integrations",
-  "mobile-app": "manage_facility_settings",
-  boarding: "manage_services",
-  daycare: "manage_services",
-  grooming: "manage_services",
-  training: "manage_services",
-  addons: "manage_services",
-  "form-requirements": "settings_manage_forms",
-  "form-notifications": "settings_manage_forms",
-  "roles-permissions": "manage_roles",
-  "pet-breeds": "manage_facility_settings",
-  "care-tasks": "manage_facility_settings",
-  evaluations: "manage_facility_settings",
-  "booking-statuses": "manage_facility_settings",
-  "checkin-requirements": "manage_facility_settings",
-  "incident-reporting": "manage_facility_settings",
-  retail: "manage_facility_settings",
-  "pricing-rules": "manage_rates",
-  "estimate-settings": "manage_rates",
-  "deposit-rules": "manage_rates",
-  "invoice-template": "manage_facility_settings",
-  // Payments & Billing. `yipyy-pay` decides where a business's revenue lands
-  // and whether a customer is charged a card fee; `tips` decides what they are
-  // asked to add.
-  //
-  // `financial` was the id both used to live behind. The settings page rewrites
-  // it to `yipyy-pay` before this map is consulted, so it should never be asked
-  // about — it stays listed so that if that alias is ever dropped, a stale
-  // bookmark meets a permission check rather than an unguarded section.
-  "yipyy-pay": "settings_billing",
-  tips: "settings_billing",
-  financial: "settings_billing",
-  taxes: "settings_manage_taxes",
-  subscription: "settings_subscription",
-  "tags-notes": "manage_facility_settings",
-  yipyygo: "manage_facility_settings",
-  audit: "settings_audit_log",
-  hq: "hq_manage_settings",
-  // Staff & HR — Manager/Owner only.
-  "onboarding-templates": "manage_onboarding",
-  "offboarding-templates": "manage_onboarding",
-  "employment-types": "manage_onboarding",
-  "termination-reasons": "manage_onboarding",
-  "staff-roles": "manage_onboarding",
-  "hr-config": "manage_onboarding",
-  "staff-notifications": "manage_onboarding",
-};
+/**
+ * A rail entry: a registry leaf, plus the children the rail nests under it.
+ * The registry stores that relation flat (`parent`) because a flat list is
+ * what the gate, the redirect map and the landing page all want; the nesting
+ * exists only here, where it is drawn.
+ */
+export type SettingsSection = SettingsLeaf & { children?: SettingsLeaf[] };
 
-/** True when the acting viewer may open a settings section. Personal sections
- *  (no key in the map) are always allowed. */
+/**
+ * The controlling permission for each facility-admin settings section, still
+ * exported under its old name because the settings page guards deep links with
+ * it. Personal sections are absent by construction — they have no key.
+ */
+export const SETTINGS_SECTION_KEYS: Record<string, PermissionKey> =
+  Object.fromEntries(
+    SETTINGS_LEAVES.filter((l) => l.access !== "personal").map((l) => [
+      l.id,
+      l.access as PermissionKey,
+    ]),
+  );
+
+/**
+ * True when the acting viewer may open a settings section.
+ *
+ * `!== false` rather than `=== true` on purpose, and it is not the same
+ * question the server asks. `myPermissions()` returns an EMPTY map on any RPC
+ * error, so "denied" and "we could not find out" are indistinguishable there;
+ * reading an absent key as denied here would blank the whole rail — including
+ * the owner's — on one transient failure. The client stays permissive about
+ * what it does not know and the server route is what actually refuses.
+ */
 export function canAccessSettingsSection(
   id: string,
   permissions: Record<string, unknown>,
 ): boolean {
-  const key = SETTINGS_SECTION_KEYS[id];
-  return !key || permissions[key] !== false;
+  const leaf = settingsLeaf(id);
+  if (!leaf) return false;
+  return leaf.access === "personal" || permissions[leaf.access] !== false;
 }
 
 interface SettingsGroup {
@@ -152,215 +81,43 @@ interface SettingsGroup {
   sections: SettingsSection[];
 }
 
-const STATIC_GROUPS: SettingsGroup[] = [
-  {
-    // Personal — always visible, no permission required (spec: employees keep
-    // the settings they DO have). Rendered first so it's the natural default.
-    label: "My Account",
-    sections: [
-      { id: "my-profile", label: "My Profile", icon: UserCircle },
-      { id: "my-notifications", label: "My Notifications", icon: Bell },
-    ],
-  },
-  {
-    label: "General",
-    sections: [
-      {
-        id: "business",
-        label: "Business",
-        icon: Building2,
-        permKey: "settings_general",
-      },
-      {
-        id: "branding",
-        label: "Branding",
-        icon: Palette,
-        // The same key the RLS policies check (facility_branding_insert /
-        // _update), so the nav and the database agree about who may do this
-        // rather than each deciding separately.
-        permKey: "settings_general",
-      },
-      { id: "notifications", label: "Notifications", icon: Bell },
-      { id: "smart-insights", label: "Smart Insights", icon: Sparkles },
-      { id: "custom-email-domain", label: "Custom Email Domain", icon: Bell },
-      { id: "weather", label: "Yipyy Forecast", icon: CloudSun },
-      { id: "integrations", label: "Integrations", icon: Plug },
-      { id: "mobile-app", label: "Mobile App", icon: Smartphone },
-    ],
-  },
-  {
-    label: "Services",
-    sections: [
-      { id: "boarding", label: "Boarding", icon: Bed },
-      { id: "daycare", label: "Daycare", icon: Sun },
-      { id: "grooming", label: "Grooming", icon: Scissors },
-      { id: "training", label: "Training", icon: GraduationCap },
-      { id: "addons", label: "Add-Ons", icon: Package },
-    ],
-  },
-  {
-    label: "Forms & Intake",
-    sections: [
-      { id: "form-requirements", label: "Form Requirements", icon: FileText },
-      { id: "form-notifications", label: "Form Notifications", icon: Bell },
-    ],
-  },
-  {
-    label: "Access Control",
-    sections: [
-      { id: "roles-permissions", label: "Roles & Permissions", icon: Shield },
-    ],
-  },
-  {
-    label: "Pets",
-    sections: [
-      { id: "pet-breeds", label: "Pet Breeds", icon: PawPrint },
-      { id: "care-tasks", label: "Care Tasks", icon: UtensilsCrossed },
-    ],
-  },
-  {
-    label: "Operations",
-    sections: [
-      { id: "evaluations", label: "Evaluations", icon: CircleDot },
-      { id: "booking-statuses", label: "Booking Statuses", icon: CircleDot },
-      {
-        id: "checkin-requirements",
-        label: "Express Check-in",
-        icon: CircleDot,
-      },
-      { id: "incident-reporting", label: "Incident Reporting", icon: Siren },
-      { id: "retail", label: "Retail / POS", icon: Puzzle },
-    ],
-  },
-  {
-    label: "Financial",
-    sections: [
-      // The three screens that decide what a customer is charged, gathered
-      // under one heading. `financial` used to be a leaf called "Payments &
-      // Billing" holding tip tiers next to four fixture cards that saved
-      // nowhere; it is now the heading, and the real screens are its children.
-      {
-        id: "payments-billing",
-        label: "Payments & Billing",
-        icon: CreditCard,
-        permKey: "settings_billing",
-        children: [
-          {
-            id: "yipyy-pay",
-            label: "Yipyy Pay",
-            icon: Wallet,
-            permKey: "settings_billing",
-          },
-          {
-            id: "tips",
-            label: "Tip Settings",
-            icon: Sparkles,
-            permKey: "settings_billing",
-          },
-          { id: "pricing-rules", label: "Pricing Rules", icon: Receipt },
-        ],
-      },
-      {
-        id: "estimate-settings",
-        label: "Estimate Settings",
-        icon: FileText,
-      },
-      { id: "deposit-rules", label: "Deposit Rules", icon: DollarSign },
-      { id: "invoice-template", label: "Invoice Template", icon: FileText },
-      { id: "taxes", label: "Taxes", icon: DollarSign },
-      // Gated on `view_payroll` rather than a settings key: the people who
-      // decide what overtime costs are the ones who see the wage bill, and the
-      // screen itself refuses anyone who is not an owner or a manager.
-      {
-        id: "payroll-rules",
-        label: "Payroll Rules",
-        icon: Timer,
-        permKey: "view_payroll",
-      },
-      { id: "subscription", label: "Subscription", icon: CreditCard },
-    ],
-  },
-  {
-    label: "Advanced",
-    sections: [
-      { id: "tags-notes", label: "Tags & Notes", icon: Tag },
-      { id: "yipyygo", label: "Yipyy Express Check-in", icon: FileText },
-      { id: "audit", label: "Audit Log", icon: History },
-    ],
-  },
-  {
-    // Staff & HR — Manager/Owner only (every section gated on manage_onboarding).
-    label: "Staff & HR",
-    sections: [
-      {
-        id: "onboarding-templates",
-        label: "Onboarding Templates",
-        icon: ClipboardList,
-        permKey: "manage_onboarding",
-      },
-      {
-        id: "offboarding-templates",
-        label: "Offboarding Templates",
-        icon: LogOut,
-        permKey: "manage_onboarding",
-      },
-      {
-        id: "employment-types",
-        label: "Employment Types",
-        icon: Briefcase,
-        permKey: "manage_onboarding",
-      },
-      {
-        id: "termination-reasons",
-        label: "Termination Reasons",
-        icon: UserX,
-        permKey: "manage_onboarding",
-      },
-      {
-        id: "staff-roles",
-        label: "Roles",
-        icon: UserCog,
-        permKey: "manage_onboarding",
-      },
-      {
-        id: "hr-config",
-        label: "Onboarding & HR",
-        icon: SlidersHorizontal,
-        permKey: "manage_onboarding",
-      },
-      {
-        id: "staff-notifications",
-        label: "Notifications",
-        icon: Bell,
-        permKey: "manage_onboarding",
-      },
-    ],
-  },
-  {
-    label: "Multi-Location",
-    sections: [{ id: "hq", label: "HQ", icon: Globe }],
-  },
-];
+/** The registry's flat leaves, re-nested under their parent for the rail. */
+const STATIC_GROUPS: SettingsGroup[] = SETTINGS_NAV.map((group) => ({
+  label: group.label,
+  // `: SettingsSection` is annotated, not inferred. Without it TypeScript
+  // widens the array to a union of the two literal shapes and `children` —
+  // which only the parent branch declares — stops existing on the whole. The
+  // hand-written version of this list carried the same note.
+  sections: group.leaves
+    .filter((l) => !l.parent)
+    .map(
+      (l): SettingsSection =>
+        SETTINGS_PARENT_IDS.has(l.id)
+          ? { ...l, children: group.leaves.filter((c) => c.parent === l.id) }
+          : l,
+    ),
+}));
 
 interface SettingsSidebarProps {
+  /** The leaf id currently open, or "" at the settings index. */
   activeSection: string;
-  onSectionChange: (section: string) => void;
 }
 
-export function SettingsSidebar({
-  activeSection,
-  onSectionChange,
-}: SettingsSidebarProps) {
-  const { t } = useUiText();
+export function SettingsSidebar({ activeSection }: SettingsSidebarProps) {
+  // Keyed on the leaf id, not matched on its English words — see
+  // src/lib/settings/text.ts for why the app-wide `useUiText` cannot do this.
+  const label = useSettingsText();
   const { modules } = useCustomServices();
   const permissions = useEffectivePermissions();
+  const settingsPath = useSettingsHref();
   const activeModules = modules.filter((m) => m.status === "active");
 
-  /** Both gates, because the map and the `permKey` are allowed to disagree
-   *  and the file's own comment says an unmapped id is permitted. */
+  /** One gate. There used to be two — this line also re-checked a `permKey`
+   *  on the section — because the rail and the permission map were separate
+   *  lists that "are allowed to disagree". They are one list now, so there is
+   *  one answer. */
   const visible = (section: SettingsSection) =>
-    canAccessSettingsSection(section.id, permissions) &&
-    (!section.permKey || permissions[section.permKey] !== false);
+    canAccessSettingsSection(section.id, permissions);
 
   // Build groups with dynamic custom modules, then filter each section by the
   // acting viewer's permissions: personal sections always show; facility-admin
@@ -378,9 +135,10 @@ export function SettingsSidebar({
               ...activeModules.map(
                 (m): SettingsSection => ({
                   id: `custom-${m.slug}`,
+                  segment: `custom-${m.slug}`,
                   label: m.name,
                   icon: Puzzle,
-                  permKey: "manage_services" as PermissionKey,
+                  access: "manage_services",
                 }),
               ),
             ],
@@ -406,7 +164,7 @@ export function SettingsSidebar({
       {groups.map((group) => (
         <Collapsible key={group.label} defaultOpen>
           <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold tracking-wider uppercase">
-            {t(group.label)}
+            {label.group(group.label)}
             <ChevronDown className="size-3" />
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -417,16 +175,16 @@ export function SettingsSidebar({
                     key={section.id}
                     section={section}
                     activeSection={activeSection}
-                    onSectionChange={onSectionChange}
-                    t={t}
+                    settingsPath={settingsPath}
+                    label={label}
                   />
                 ) : (
-                  <SectionButton
+                  <SectionLink
                     key={section.id}
+                    href={settingsPath(section)}
                     section={section}
                     isActive={activeSection === section.id}
-                    onSelect={() => onSectionChange(section.id)}
-                    label={t(section.label)}
+                    label={label.leaf(section)}
                   />
                 ),
               )}
@@ -438,35 +196,55 @@ export function SettingsSidebar({
   );
 }
 
-/** One leaf: an icon, a label, and the active treatment. */
-function SectionButton({
+/**
+ * One leaf: an icon, a label, and the active treatment.
+ *
+ * ── A LINK, NOT A BUTTON ──────────────────────────────────────────────────
+ *
+ * It was a `<button>` calling `onSectionChange`, because the section was
+ * component state and the URL was written afterwards. The section IS the URL
+ * now, so this is an anchor: it opens in a new tab on middle click, offers a
+ * copyable address on right click, and Next prefetches it on hover. None of
+ * which a button can do.
+ *
+ * ── AND THE SELECTED STATE IS NO LONGER A TINT ────────────────────────────
+ *
+ * It was `bg-primary/10 text-primary`, which §6 rule 2 bans outright: white,
+ * or a solid. The rule's own escape is what this takes — "where one must
+ * dominate, fill it solid with the ink at full strength" — so the open section
+ * is a solid `--primary` pill with white on it, 5.09:1, which is also what §1
+ * says an active nav item wears. A pill, because §1 lists nav items among the
+ * things that are pills.
+ */
+function SectionLink({
+  href,
   section,
   isActive,
-  onSelect,
   label,
   nested,
 }: {
+  href: string;
   section: SettingsSection;
   isActive: boolean;
-  onSelect: () => void;
   label: string;
   nested?: boolean;
 }) {
   const Icon = section.icon;
   return (
-    <button
-      onClick={onSelect}
+    <Link
+      href={href}
+      aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+        "flex w-full items-center gap-2 rounded-full px-3 py-2 text-sm transition-colors",
         nested && "pl-8",
         isActive
-          ? "bg-primary/10 text-primary font-medium"
+          ? "bg-primary font-medium text-white"
           : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
       )}
     >
       <Icon className="size-4" />
       {label}
-    </button>
+    </Link>
   );
 }
 
@@ -482,13 +260,13 @@ function SectionButton({
 function ParentSection({
   section,
   activeSection,
-  onSectionChange,
-  t,
+  settingsPath,
+  label,
 }: {
   section: SettingsSection;
   activeSection: string;
-  onSectionChange: (section: string) => void;
-  t: (key: string) => string;
+  settingsPath: (leaf: SettingsLeaf) => string;
+  label: ReturnType<typeof useSettingsText>;
 }) {
   const Icon = section.icon;
   const holdsActive = (section.children ?? []).some(
@@ -508,19 +286,19 @@ function ParentSection({
         )}
       >
         <Icon className="size-4" />
-        {t(section.label)}
+        {label.leaf(section)}
         <ChevronDown className="ml-auto size-3" />
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="space-y-0.5">
           {(section.children ?? []).map((child) => (
-            <SectionButton
+            <SectionLink
               key={child.id}
+              href={settingsPath(child)}
               section={child}
               nested
               isActive={activeSection === child.id}
-              onSelect={() => onSectionChange(child.id)}
-              label={t(child.label)}
+              label={label.leaf(child)}
             />
           ))}
         </div>

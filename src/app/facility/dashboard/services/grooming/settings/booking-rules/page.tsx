@@ -25,6 +25,7 @@ import {
   useGroomingScheduling,
   type SlotGranularityMin,
 } from "@/hooks/use-grooming-scheduling";
+import { settingsHref } from "@/lib/settings/nav";
 
 // ============================================================================
 // How grooming slots are offered.
@@ -73,12 +74,12 @@ const ELSEWHERE = [
     title: "Advance booking, capacity and overbooking",
     detail:
       "How far ahead customers may book, daily limits, and whether you allow overbooking.",
-    href: "/facility/dashboard/settings?section=business",
+    href: settingsHref("booking-rules"),
   },
   {
     title: "Blackout dates and closures",
     detail: "Days you are closed, or not taking a particular service.",
-    href: "/facility/dashboard/settings?section=business",
+    href: settingsHref("hours"),
   },
 ];
 
