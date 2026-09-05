@@ -1,5 +1,9 @@
 "use client";
 
+// settings-write-ok: this section is a set of links into /facility/hq,
+// which is a full area with its own routes and its own writes. There is no
+// field here to save, and duplicating the editors would be the mistake.
+
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 

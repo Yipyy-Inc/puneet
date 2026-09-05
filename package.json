@@ -25,6 +25,7 @@
     "check:settings-wiring": "bun scripts/check-settings-wiring.ts",
     "check:settings-fixture": "bun scripts/check-settings-fixture.ts",
     "check:settings-routes": "bun scripts/check-settings-routes.ts",
+    "check:settings-persistence": "bun scripts/check-settings-persistence.ts",
     "check:quickbooks": "bun scripts/check-quickbooks-money-rules.ts",
     "check:dialog-widths": "bun scripts/check-dialog-widths.ts",
     "check:nav-parity": "bun scripts/check-nav-parity.ts",
