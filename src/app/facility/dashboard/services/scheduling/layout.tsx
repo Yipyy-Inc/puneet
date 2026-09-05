@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import type { Permission } from "@/lib/rbac";
 import type { UserRole } from "@/types/scheduling";
+import { settingsHref } from "@/lib/settings/nav";
 
 type NavItem = {
   label: string;
@@ -129,7 +130,7 @@ const navItems: NavItem[] = [
     // had a real home in facility settings, so the two disagreed and only one
     // of them wrote anything. See the redirect in next.config.ts.
     label: "Company",
-    href: "/facility/dashboard/settings?section=business",
+    href: settingsHref("business"),
     icon: Building,
     requires: "company.manage",
   },

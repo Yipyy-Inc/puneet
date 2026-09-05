@@ -25,6 +25,7 @@ import { facilities } from "@/data/facilities";
 import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
 import { cn } from "@/lib/utils";
 import type { Evaluation } from "@/types/pet";
+import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 
 interface EvalEntry {
@@ -419,6 +420,18 @@ export default function EvaluationsPage() {
             <PageHeader
               title="Evaluations"
               description={`${facility?.name ?? "Facility"} pet approvals, expirations, and pending evaluation workflow`}
+              secondary={
+                // The form and the report card these results are scored and
+                // sent on. They used to live in Settings → Evaluations, which
+                // is not where anybody looking at an evaluation would think to
+                // go.
+                <Button asChild variant="outline">
+                  <Link href="/facility/dashboard/evaluations/templates">
+                    <ClipboardCheck className="mr-2 size-4" />
+                    Templates
+                  </Link>
+                </Button>
+              }
             />
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Badge variant="outline" className="text-xs">

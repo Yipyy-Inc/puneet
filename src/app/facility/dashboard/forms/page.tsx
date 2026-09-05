@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 type CategoryTab = FormType | "templates";
 
@@ -255,6 +256,7 @@ function FormCard({
   onArchive: (form: Form) => void;
   onDuplicate: (form: Form) => void;
 }) {
+  const settingsPath = useSettingsHref();
   const sharePath = `/forms/${form.slug}`;
   const [embedOpen, setEmbedOpen] = useState(false);
 
@@ -295,7 +297,7 @@ function FormCard({
               {statusBadge(form.status)}
               {form.internal && (
                 <Badge variant="secondary" className="text-xs">
-                  <Lock className="mr-0.5 h-2.5 w-2.5" />
+                  <Lock className="mr-0.5 size-2.5" />
                   Staff only
                 </Badge>
               )}
@@ -397,7 +399,7 @@ function FormCard({
         <span className="text-muted-foreground">
           Manage form permissions in{" "}
           <Link
-            href="/facility/dashboard/settings?section=roles-permissions"
+            href={settingsPath("roles-permissions")}
             className="text-primary hover:underline"
           >
             Settings → Roles &amp; Permissions

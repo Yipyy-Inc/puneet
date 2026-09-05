@@ -17,6 +17,7 @@ import {
   ClipboardList,
   LogIn,
 } from "lucide-react";
+import { settingsHref } from "@/lib/settings/nav";
 
 const tabs = [
   {
@@ -71,7 +72,7 @@ const tabs = [
   },
   {
     name: "Settings",
-    href: "/facility/dashboard/settings?section=training",
+    href: settingsHref("training"),
     icon: Settings,
   },
 ];

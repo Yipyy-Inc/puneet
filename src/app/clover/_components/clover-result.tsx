@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PoweredByClover } from "@/components/facility/yipyy-pay/YipyyPayBrand";
+import { settingsHref } from "@/lib/settings/nav";
 
 // ============================================================================
 // What the facility sees when they come back from the consent screen.
@@ -44,9 +45,9 @@ import { PoweredByClover } from "@/components/facility/yipyy-pay/YipyyPayBrand";
 // ============================================================================
 
 /** Back into the wizard, on the step that follows a successful connection. */
-const SETUP_HREF = "/facility/dashboard/settings?section=yipyy-pay&step=2";
+const SETUP_HREF = `${settingsHref("yipyy-pay")}&step=2`;
 /** Back to step 1, for somebody who has to try again. */
-const RETRY_HREF = "/facility/dashboard/settings?section=yipyy-pay&step=1";
+const RETRY_HREF = `${settingsHref("yipyy-pay")}&step=1`;
 
 export type CloverOutcome =
   | { kind: "connected"; merchantId: string; environment: string }

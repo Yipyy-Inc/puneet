@@ -26,6 +26,7 @@ import {
   formatFeeRate,
   type YipyyPayConfig,
 } from "@/lib/settings/yipyy-pay";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 // ============================================================================
 // The settings a facility comes back to change.
@@ -125,6 +126,7 @@ function Choice({
 }
 
 export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
+  const settingsPath = useSettingsHref();
   const save = useSaveYipyyPayConfig();
   const saved = overview.config;
   const businessName = overview.merchant?.name ?? overview.facility.name;
@@ -266,7 +268,7 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
-            <a href="/facility/dashboard/settings?section=tips">
+            <a href={settingsPath("tips")}>
               Tip settings
               <ArrowRight className="size-3.5" />
             </a>

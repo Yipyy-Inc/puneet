@@ -3,6 +3,8 @@
 import { useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
+
 // ============================================================================
 // Where inside Yipyy Pay a facility is, kept in the address bar.
 //
@@ -35,11 +37,21 @@ export interface YipyyPayNavPatch {
 export function useYipyyPayNav() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const settingsPath = useSettingsHref();
 
   const go = useCallback(
     (patch: YipyyPayNavPatch) => {
       const next = new URLSearchParams(searchParams.toString());
-      next.set("section", "yipyy-pay");
+      // `section` is no longer ours to write. It used to be set here on every
+      // step, alongside a hardcoded `/facility/dashboard/settings` — so a
+      // manager working through the connect wizard inside /employee/settings
+      // was thrown into a portal guardPortal does not admit them to, halfway
+      // through an application, on step two. `settingsPath` writes whichever
+      // portal is actually rendering and spells the section itself, which is
+      // also what carries this through the move to `/settings/yipyy-pay` —
+      // there `section` stops being a parameter at all, and a copied one would
+      // linger in the address bar meaning nothing.
+      next.delete("section");
       for (const [key, value] of Object.entries(patch)) {
         if (value === null || value === undefined) next.delete(key);
         else next.set(key, String(value));
@@ -47,11 +59,11 @@ export function useYipyyPayNav() {
       // `replace`, not `push`: the connect wizard advances by itself after a
       // redirect back from Clover, and a history entry per step means Back
       // walks a facility through screens they already completed.
-      router.replace(`/facility/dashboard/settings?${next.toString()}`, {
+      router.replace(settingsPath("yipyy-pay", Object.fromEntries(next)), {
         scroll: false,
       });
     },
-    [router, searchParams],
+    [router, searchParams, settingsPath],
   );
 
   const stepParam = Number(searchParams.get("step"));

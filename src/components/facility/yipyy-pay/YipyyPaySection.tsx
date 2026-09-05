@@ -13,6 +13,7 @@ import { SectionSkeleton } from "./SectionSkeleton";
 import { YipyyPayPreConnection } from "./PreConnection";
 import { useYipyyPayNav } from "./use-yipyy-pay-nav";
 import { facilityParentHost } from "@/lib/app-host";
+import { settingsHref } from "@/lib/settings/nav";
 
 // The connect wizard and the dashboard are never on screen together, and a
 // facility sees one of them for five minutes and the other for years. Split so
@@ -166,7 +167,7 @@ function FacilityChooser({
             // name is then stated without a link, which is honest rather than a
             // link that goes nowhere.
             const href = domain
-              ? `https://${choice.slug}.${domain}/facility/dashboard/settings?section=yipyy-pay`
+              ? `https://${choice.slug}.${domain}${settingsHref("yipyy-pay")}`
               : null;
             return (
               <li key={choice.id}>

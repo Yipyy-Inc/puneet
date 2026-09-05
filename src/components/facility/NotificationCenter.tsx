@@ -64,6 +64,7 @@ import {
 } from "@/lib/notification-retention-store";
 import { NotificationRowMenu } from "@/components/facility/NotificationRowMenu";
 import { useCustomServices } from "@/hooks/use-custom-services";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 // ========================================
 // Category config
@@ -245,6 +246,7 @@ export function NotificationCenter({
 }: {
   facilityId?: number;
 }) {
+  const settingsPath = useSettingsHref();
   const base = useFacilityNotifications();
   const schedule = useScheduleNotifications();
   const tasks = useTaskNotifications();
@@ -397,7 +399,7 @@ export function NotificationCenter({
             className="size-8"
             aria-label="Notification preferences"
           >
-            <Link href="/facility/dashboard/settings?section=notifications">
+            <Link href={settingsPath("notifications")}>
               <Settings className="size-4" />
             </Link>
           </Button>

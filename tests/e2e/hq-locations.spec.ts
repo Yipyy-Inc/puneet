@@ -284,8 +284,18 @@ test.describe("HQ locations", () => {
     await expect(
       page.getByRole("link", { name: /Services and prices/ }),
     ).toBeVisible({ timeout: 15_000 });
-    await expect(
-      page.getByRole("link", { name: /Opening hours, tax and booking rules/ }),
-    ).toBeVisible();
+
+    // Three links, not one. There used to be a single entry called "Opening
+    // hours, tax and booking rules" — one link naming three unrelated things,
+    // because all three lived in the same 8.2-screen "Business" section and one
+    // link was the best that could be offered. They have their own addresses
+    // now, so this asserts three true destinations instead of one vague one.
+    for (const name of [
+      /Opening hours and closures/,
+      /Booking rules/,
+      /Tax rates/,
+    ]) {
+      await expect(page.getByRole("link", { name })).toBeVisible();
+    }
   });
 });

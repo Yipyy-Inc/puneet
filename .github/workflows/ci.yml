@@ -126,7 +126,7 @@ jobs:
 
   # ── THE PROJECT'S OWN RULES ────────────────────────────────────────────────
   #
-  # 29 `check:*` scripts run here. Each one exists because a
+  # 30 `check:*` scripts run here. Each one exists because a
   # specific mistake was made and cost something: a route that took its facility
   # from the request body, an update that could not tell an RLS refusal from a
   # no-op, a screen that said "Saved" with nothing behind it, a dialog with a
@@ -175,6 +175,7 @@ jobs:
             settings-wiring \
             settings-seeding \
             settings-fixture \
+            settings-routes \
             quickbooks \
             dialog-widths \
             nav-parity \

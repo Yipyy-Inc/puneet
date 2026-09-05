@@ -54,6 +54,7 @@ import { RoleIcon, ServiceIcon } from "./staff-shared";
 import { AdditionalRolesGrid } from "./additional-roles-grid";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import { CustomRoleQuickCreateDialog } from "./custom-role-quick-create-dialog";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 /** The generic field-updater shared by every section. */
 export type SectionUpdate = <K extends keyof StaffProfile>(
@@ -281,6 +282,7 @@ export function RoleSection({
   update: SectionUpdate;
   onRoleChange: (r: FacilityStaffRole) => void;
 }) {
+  const settingsPath = useSettingsHref();
   const { customRoles } = useFacilityRbac();
   const customList = Object.values(customRoles);
   const assignedCustomIds = draft.customRoleIds ?? [];
@@ -445,7 +447,7 @@ export function RoleSection({
         <div className="text-muted-foreground mt-2 flex items-center gap-1.5 text-[11px]">
           <span>Need to edit permissions on an existing custom role?</span>
           <Link
-            href="/facility/dashboard/settings?section=roles-permissions"
+            href={settingsPath("roles-permissions")}
             className="text-primary inline-flex items-center gap-0.5 hover:underline"
           >
             Open Roles Studio <ExternalLink className="size-3" />

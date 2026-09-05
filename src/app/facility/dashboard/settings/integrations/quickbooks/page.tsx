@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 import { QuickBooksIntegrationView } from "@/components/integrations/quickbooks/QuickBooksIntegrationView";
+import { settingsHref } from "@/lib/settings/nav";
 
 // Server component — all interactivity lives in the client view below it.
 //
@@ -25,9 +26,7 @@ export default async function QuickBooksIntegrationPage({
     <div className="space-y-6 p-4 sm:p-6">
       <Link
         href={
-          location
-            ? "/facility/hq/integrations"
-            : "/facility/dashboard/settings?section=integrations"
+          location ? "/facility/hq/integrations" : settingsHref("integrations")
         }
         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
       >

@@ -48,6 +48,7 @@ import { useUiText } from "@/hooks/use-ui-text";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { openSupportDrawer } from "@/lib/support-drawer-store";
 import { cn } from "@/lib/utils";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 // Role → avatar tint for quick visual ID (spec Table 24).
 //
@@ -206,6 +207,7 @@ export function UserProfileSheet({
   showNotifications?: boolean;
   viewer: ProfileViewer;
 }) {
+  const settingsPath = useSettingsHref();
   const signOutEverywhere = useSignOutEverywhere();
   const { t } = useUiText();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -352,7 +354,7 @@ export function UserProfileSheet({
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link
-              href="/facility/dashboard/settings?section=notifications"
+              href={settingsPath("notifications")}
               className="flex items-center gap-2"
             >
               <Bell className="size-4" />
@@ -453,7 +455,7 @@ export function UserProfileSheet({
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link
-                  href="/facility/dashboard/settings"
+                  href={settingsPath("my-profile")}
                   className="flex items-center gap-2"
                 >
                   <Settings className="size-4" />

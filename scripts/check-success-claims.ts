@@ -81,7 +81,12 @@ const BASELINE = new Set<string>([
   "src/components/dashboard/facilities/AddStaffAccountModal.tsx",
   "src/components/dashboard/facilities/StaffTab.tsx",
   "src/components/estimates/EstimateWizard.tsx",
-  "src/components/facility/CustomEmailDomainSettings.tsx",
+  // CustomEmailDomainSettings.tsx left this list on 2026-09-05. It was the
+  // clearest case the baseline held: a setTimeout that announced "Domain
+  // Verified! Your custom email domain is now active" two seconds after a click
+  // that did nothing, over DNS records naming a competitor's mail
+  // infrastructure. The flow is gone and the screen now says it is not
+  // available yet, which is true.
   "src/components/facility/FacilityRolesStudio.tsx",
   "src/components/facility/GroomingSection.tsx",
   "src/components/facility/ImpersonationBanner.tsx",

@@ -21,8 +21,10 @@ import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
 import { MaxPetsPerStaffCard } from "@/components/smart-insights/MaxPetsPerStaffCard";
 import type { ModuleConfig } from "@/types/facility";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 export default function DaycareSettingsPage() {
+  const settingsPath = useSettingsHref();
   const { daycare, updateDaycare } = useSettings();
   const [formData, setFormData] = useState<ModuleConfig>(daycare);
   const [isEditingBasic, setIsEditingBasic] = useState(false);
@@ -368,12 +370,12 @@ export default function DaycareSettingsPage() {
                     Evaluation details (name, price, duration, etc.) are
                     configured globally in{" "}
                     <a
-                      href="/facility/dashboard/settings"
+                      href={settingsPath("evaluations")}
                       className="text-primary hover:underline"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Settings → Business → Evaluation Settings
+                      Settings → Evaluations
                     </a>
                   </p>
                 </div>

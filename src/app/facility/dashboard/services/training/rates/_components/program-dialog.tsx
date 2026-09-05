@@ -41,6 +41,7 @@ import {
   type TrainingPackage,
 } from "@/types/training";
 import { detectCircularPrerequisite } from "@/lib/training-program-prereqs";
+import { settingsHref } from "@/lib/settings/nav";
 
 export interface ProgramFormState {
   name: string;
@@ -266,7 +267,7 @@ export function ProgramDialog({ open, onOpenChange, editing, onSave }: Props) {
             <div className="flex items-center justify-between">
               <Label>Discipline</Label>
               <a
-                href="/facility/dashboard/settings?section=training-disciplines"
+                href={settingsHref("training")}
                 className="text-primary text-xs hover:underline"
               >
                 Manage in Settings →
