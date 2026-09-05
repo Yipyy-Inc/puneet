@@ -79,6 +79,7 @@ Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/u
 | `bun run check:facility-from-session`  | Fails if an API route takes the facility from the request rather than the session or a parent row                                    |
 | `bun run check:success-claims`         | Fails if a screen claims an action succeeded with nothing — in the file or one import away — that could perform it. Ratcheted at 126 |
 | `bun run check:settings-fixture`       | Fails if a screen reads a facility-owned value (name, hours, rules, tips) from `src/data/settings`                                   |
+| `bun run check:settings-persistence`   | Fails if a settings section's save path reaches nothing that can leave the browser — the WRITE side of the row above. Ratcheted at 8 |
 | `bun run check:passkey-email-verified` | Fails if the magic-auth bridge escapes its one file, or a passkey verify route drops its `emailVerified` check                       |
 | `bun run check:migration-versions`     | Fails if two migrations share a version number, so `db push` cannot pick its own order                                               |
 | `bun run check:no-review-gating`       | Fails if a control hides a public review link by rating — review gating, which the FTC and Google prohibit                           |
