@@ -8,7 +8,6 @@ import {
 } from "@/lib/api/facility-settings";
 import { Skeleton } from "@/components/ui/skeleton";
 
-
 import { SERVICE_CATEGORIES } from "@/components/bookings/modals/constants";
 import { getAllServiceCategories } from "@/lib/service-registry";
 import { useCustomServices } from "@/hooks/use-custom-services";
