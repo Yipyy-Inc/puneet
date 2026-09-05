@@ -242,7 +242,7 @@ export function FormRequirementsSettings() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Shield className="text-primary size-5" />
-            <CardTitle>Form Requirements per Service</CardTitle>
+            <CardTitle>Form requirements per service</CardTitle>
           </div>
           <p className="text-muted-foreground mt-1 text-sm">
             Configure which forms are required before customers can book, staff

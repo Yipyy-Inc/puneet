@@ -12,7 +12,7 @@ export function HqSection() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>HQ / Multi-Location</CardTitle>
+          <CardTitle>HQ / multi-location</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm">

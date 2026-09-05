@@ -94,7 +94,7 @@ export function BusinessProfileCard() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Business Profile</CardTitle>
+          <CardTitle>Business profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <Skeleton className="h-14 w-14 rounded-lg" />
@@ -115,7 +115,7 @@ export function BusinessProfileCard() {
         <div className="space-y-4">
           {/* Facility Logo */}
           <div className="space-y-2">
-            <Label>Facility Logo</Label>
+            <Label>Facility logo</Label>
             <FacilityLogoField
               businessName={localProfile.businessName}
               logo={localProfile.logo ?? ""}
@@ -128,7 +128,7 @@ export function BusinessProfileCard() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="businessName">Business Name *</Label>
+              <Label htmlFor="businessName">Business name *</Label>
               <Input
                 id="businessName"
                 value={localProfile.businessName}
@@ -182,7 +182,7 @@ export function BusinessProfileCard() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Business Description</Label>
+            <Label htmlFor="description">Business description</Label>
             <Textarea
               id="description"
               value={localProfile.description}
@@ -259,7 +259,7 @@ export function BusinessProfileCard() {
           </div>
 
           <div className="space-y-2">
-            <Label>Social Media</Label>
+            <Label>Social media</Label>
             <div className="grid grid-cols-3 gap-4">
               <Input
                 placeholder="Facebook URL"
@@ -310,10 +310,10 @@ export function BusinessProfileCard() {
           </div>
 
           <div className="space-y-2">
-            <Label>Business Preferences</Label>
+            <Label>Business preferences</Label>
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="clockFormat">Clock Format</Label>
+                <Label htmlFor="clockFormat">Clock format</Label>
                 <Select
                   value={localProfile.preferences.clockFormat}
                   onValueChange={(value) =>
@@ -338,7 +338,7 @@ export function BusinessProfileCard() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="weightUnit">Weight Unit</Label>
+                <Label htmlFor="weightUnit">Weight unit</Label>
                 <Select
                   value={localProfile.preferences.weightUnit}
                   onValueChange={(value) =>
@@ -363,7 +363,7 @@ export function BusinessProfileCard() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="temperatureUnit">Temperature Unit</Label>
+                <Label htmlFor="temperatureUnit">Temperature unit</Label>
                 <Select
                   value={localProfile.preferences.temperatureUnit}
                   onValueChange={(value) =>

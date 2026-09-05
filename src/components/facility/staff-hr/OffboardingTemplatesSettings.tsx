@@ -48,7 +48,7 @@ export function OffboardingTemplatesSettings() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <LogOut className="text-muted-foreground size-5" />
-            <CardTitle>Offboarding Templates</CardTitle>
+            <CardTitle>Offboarding templates</CardTitle>
           </div>
           <Button
             onClick={create}

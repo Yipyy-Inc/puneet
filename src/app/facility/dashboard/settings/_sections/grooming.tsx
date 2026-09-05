@@ -10,7 +10,7 @@ export function GroomingSection() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Grooming Settings</CardTitle>
+          <CardTitle>Grooming settings</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm">

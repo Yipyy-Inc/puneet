@@ -78,7 +78,7 @@ export function CareTaskSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Care Task Feedback</h2>
+        <h2 className="text-lg font-semibold">Care task feedback</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Customize the feedback options staff see when logging feeding and
           medication tasks. These appear as dropdown choices on the booking

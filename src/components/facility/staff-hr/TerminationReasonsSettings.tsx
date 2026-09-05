@@ -54,7 +54,7 @@ export function TerminationReasonsSettings() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <UserX className="text-muted-foreground size-5" />
-          <CardTitle>Termination Reasons</CardTitle>
+          <CardTitle>Termination reasons</CardTitle>
         </div>
         <p className="text-muted-foreground mt-1 text-sm">
           The reasons offered when terminating a staff member in the

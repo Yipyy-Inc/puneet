@@ -240,7 +240,7 @@ function TagBuilder() {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Tag Builder</CardTitle>
+          <CardTitle className="text-lg">Tag builder</CardTitle>
           <Button size="sm" className="gap-1" onClick={openCreate}>
             <Plus className="size-3.5" />
             Create Tag
@@ -473,7 +473,7 @@ function TagBuilder() {
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <Label className="text-sm font-medium">
-                Visible to Customers
+                Visible to customers
               </Label>
               <p className="text-muted-foreground text-xs">
                 {form.visibility === "internal"
@@ -577,7 +577,7 @@ function NotesConfig() {
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <Label className="text-sm font-medium">
-              Default Note Visibility
+              Default note visibility
             </Label>
             <p className="text-muted-foreground text-xs">
               {settings.noteSettings.defaultVisibility === "internal"
@@ -606,7 +606,7 @@ function NotesConfig() {
         {/* Role permissions matrix */}
         <div>
           <Label className="mb-3 block text-sm font-medium">
-            Role Permissions by Note Category
+            Role permissions by note category
           </Label>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">

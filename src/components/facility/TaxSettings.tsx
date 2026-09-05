@@ -268,7 +268,7 @@ export function TaxSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Tax Configuration</h2>
+        <h2 className="text-lg font-semibold">Tax configuration</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Configure tax rates for your facility. These rates apply to all
           invoices, estimates, and receipts.
@@ -301,7 +301,7 @@ export function TaxSettings() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Province / State / Region</Label>
+              <Label className="text-xs">Province / state / region</Label>
               <Select value={province} onValueChange={handleProvinceChange}>
                 <SelectTrigger className="mt-1 h-9 text-sm">
                   <SelectValue />
@@ -362,7 +362,7 @@ export function TaxSettings() {
                     <div className="min-w-0 flex-1">
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                         <div>
-                          <Label className="text-[11px]">Tax Name</Label>
+                          <Label className="text-[11px]">Tax name</Label>
                           <Input
                             value={tax.name}
                             onChange={(e) =>
@@ -400,7 +400,7 @@ export function TaxSettings() {
                           />
                         </div>
                         <div>
-                          <Label className="text-[11px]">Applies To</Label>
+                          <Label className="text-[11px]">Applies to</Label>
                           <Select
                             value={tax.appliesTo}
                             onValueChange={(v) =>

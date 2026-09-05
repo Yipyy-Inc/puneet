@@ -42,7 +42,7 @@ export function ClockConfirmationSettings() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <ShieldCheck className="text-muted-foreground size-5" />
-          <CardTitle>Time Clock Confirmation</CardTitle>
+          <CardTitle>Time clock confirmation</CardTitle>
         </div>
         <p className="text-muted-foreground mt-1 text-sm">
           Ask staff to confirm before clocking in or out, so an accidental tap

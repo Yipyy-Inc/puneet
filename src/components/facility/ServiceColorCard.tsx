@@ -56,7 +56,7 @@ export function ServiceColorCard({ service }: ServiceColorCardProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Calendar Color</CardTitle>
+            <CardTitle>Calendar color</CardTitle>
             <CardDescription>
               Used on the operations calendar and badges when color mode is set
               to &ldquo;Service Type&rdquo;.

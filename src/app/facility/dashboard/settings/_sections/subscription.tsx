@@ -17,7 +17,7 @@ export function SubscriptionSection() {
       {/* Current Plan */}
       <Card>
         <CardHeader>
-          <CardTitle>Current Subscription</CardTitle>
+          <CardTitle>Current subscription</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-start justify-between rounded-lg bg-linear-to-br from-blue-50 to-purple-50 p-6">
@@ -68,7 +68,7 @@ export function SubscriptionSection() {
       {/* Module Add-ons */}
       <Card>
         <CardHeader>
-          <CardTitle>Module Add-ons</CardTitle>
+          <CardTitle>Module add-ons</CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
             Enable additional modules to extend functionality
           </p>

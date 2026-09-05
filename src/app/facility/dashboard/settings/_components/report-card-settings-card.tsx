@@ -213,12 +213,12 @@ export function ReportCardSettingsCard() {
             {/* ── General Tab ─────────────────────────────── */}
             <TabsContent value="general" className="space-y-6">
               <div className="space-y-6">
-                <Label className="text-base font-semibold">Brand Styling</Label>
+                <Label className="text-base font-semibold">Brand styling</Label>
 
                 {/* Title + Color */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Report Title</Label>
+                    <Label>Report title</Label>
                     <Input
                       value={brand.reportTitle}
                       readOnly={!isEditing}
@@ -228,7 +228,7 @@ export function ReportCardSettingsCard() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Accent Color</Label>
+                    <Label>Accent color</Label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -253,7 +253,7 @@ export function ReportCardSettingsCard() {
 
                 {/* Header Style */}
                 <div className="space-y-2">
-                  <Label>Header Style</Label>
+                  <Label>Header style</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {(["minimal", "banner", "centered"] as const).map((s) => (
                       <button
@@ -284,11 +284,11 @@ export function ReportCardSettingsCard() {
                         updateBrand({ showFacilityLogo: checked })
                       }
                     />
-                    <Label htmlFor="rc-show-logo">Show Facility Logo</Label>
+                    <Label htmlFor="rc-show-logo">Show facility logo</Label>
                   </div>
                   {brand.showFacilityLogo && (
                     <div className="space-y-2">
-                      <Label>Logo Position</Label>
+                      <Label>Logo position</Label>
                       <Select
                         value={brand.logoPosition ?? "top_center"}
                         disabled={!isEditing}
@@ -316,7 +316,7 @@ export function ReportCardSettingsCard() {
 
                 {/* Contact Info */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Contact Info</Label>
+                  <Label className="text-sm font-semibold">Contact info</Label>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="flex items-center gap-2">
                       <Switch
@@ -327,7 +327,7 @@ export function ReportCardSettingsCard() {
                           updateBrand({ showFacilityName: c })
                         }
                       />
-                      <Label htmlFor="rc-name">Show Facility Name</Label>
+                      <Label htmlFor="rc-name">Show facility name</Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Switch
@@ -338,7 +338,7 @@ export function ReportCardSettingsCard() {
                           updateBrand({ showFacilityPhone: c })
                         }
                       />
-                      <Label htmlFor="rc-phone">Show Phone</Label>
+                      <Label htmlFor="rc-phone">Show phone</Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Switch
@@ -349,7 +349,7 @@ export function ReportCardSettingsCard() {
                           updateBrand({ showFacilityEmail: c })
                         }
                       />
-                      <Label htmlFor="rc-email">Show Email</Label>
+                      <Label htmlFor="rc-email">Show email</Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Switch
@@ -360,7 +360,7 @@ export function ReportCardSettingsCard() {
                           updateBrand({ showFacilityWebsite: c })
                         }
                       />
-                      <Label htmlFor="rc-website">Show Website</Label>
+                      <Label htmlFor="rc-website">Show website</Label>
                     </div>
                   </div>
                 </div>
@@ -380,12 +380,12 @@ export function ReportCardSettingsCard() {
                       htmlFor="rc-social"
                       className="text-sm font-semibold"
                     >
-                      Show Social Links
+                      Show social links
                     </Label>
                   </div>
                   {brand.showSocialLinks && (
                     <div className="space-y-2">
-                      <Label>Social Links Style</Label>
+                      <Label>Social links style</Label>
                       <Select
                         value={brand.socialLinksStyle ?? "icons"}
                         disabled={!isEditing}
@@ -423,13 +423,13 @@ export function ReportCardSettingsCard() {
                       }
                     />
                     <Label htmlFor="rc-cta" className="text-sm font-semibold">
-                      Booking Call-to-Action
+                      Booking call-to-action
                     </Label>
                   </div>
                   {brand.showBookingCta && (
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label>Button Text</Label>
+                        <Label>Button text</Label>
                         <Input
                           value={brand.bookingCtaText ?? "Book Your Next Visit"}
                           readOnly={!isEditing}
@@ -457,7 +457,7 @@ export function ReportCardSettingsCard() {
                 <div className="space-y-3">
                   <Label className="text-sm font-semibold">Footer</Label>
                   <div className="space-y-2">
-                    <Label>Custom Footer Text</Label>
+                    <Label>Custom footer text</Label>
                     <Textarea
                       value={brand.footerText ?? ""}
                       readOnly={!isEditing}
@@ -476,7 +476,7 @@ export function ReportCardSettingsCard() {
                       onCheckedChange={(c) => updateBrand({ showPoweredBy: c })}
                     />
                     <Label htmlFor="rc-powered">
-                      Show &quot;Powered by Yipyy&quot;
+                      Show &quot;powered by Yipyy&quot;
                     </Label>
                   </div>
                 </div>
@@ -484,7 +484,7 @@ export function ReportCardSettingsCard() {
                 {/* AI Tone */}
                 <div className="space-y-3">
                   <Label className="text-sm font-semibold">
-                    AI Summary Tone
+                    AI summary tone
                   </Label>
                   <p className="text-muted-foreground text-xs">
                     Choose how AI-generated summaries sound on report cards and
@@ -532,7 +532,7 @@ export function ReportCardSettingsCard() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-semibold">
-                      Live Preview
+                      Live preview
                     </Label>
                     {/* In-portal ↔ SMS switch */}
                     <div className="flex rounded-md border p-0.5 text-xs">
@@ -625,7 +625,7 @@ export function ReportCardSettingsCard() {
 
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Enabled Services
+                  Enabled services
                 </Label>
                 <p className="text-muted-foreground text-sm">
                   Choose which services can have report cards.
@@ -656,7 +656,7 @@ export function ReportCardSettingsCard() {
 
               <div className="space-y-2">
                 <Label className="text-base font-semibold">
-                  Enabled Themes
+                  Enabled themes
                 </Label>
                 <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
                   {themeOptions.map((theme) => (
@@ -776,10 +776,10 @@ export function ReportCardSettingsCard() {
             <TabsContent value="feedback" className="space-y-6">
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Overall Feedback
+                  Overall feedback
                 </Label>
                 <div className="space-y-2">
-                  <Label>Feedback Title</Label>
+                  <Label>Feedback title</Label>
                   <Input
                     value={overallFeedback.title}
                     readOnly={!isEditing}
@@ -795,7 +795,7 @@ export function ReportCardSettingsCard() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Response Options</Label>
+                  <Label>Response options</Label>
                   <div className="space-y-1">
                     {overallFeedback.responseOptions.map((opt, idx) => (
                       <div key={idx} className="flex items-center gap-2">
@@ -875,7 +875,7 @@ export function ReportCardSettingsCard() {
 
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Custom Questions
+                  Custom questions
                 </Label>
                 <p className="text-muted-foreground text-sm">
                   Create your own feedback questions that staff fill out per
@@ -931,7 +931,7 @@ export function ReportCardSettingsCard() {
                   <Card>
                     <CardContent className="space-y-3 p-4">
                       <Label className="text-sm font-medium">
-                        Add New Question
+                        Add new question
                       </Label>
                       <Input
                         placeholder="Question text..."
@@ -1011,7 +1011,7 @@ export function ReportCardSettingsCard() {
             <TabsContent value="condition" className="space-y-6">
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Pet Condition Categories
+                  Pet condition categories
                 </Label>
                 <p className="text-muted-foreground text-sm">
                   Document health, coat, skin, and other observations on each
@@ -1168,7 +1168,7 @@ export function ReportCardSettingsCard() {
             <TabsContent value="delivery" className="space-y-6">
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Auto-send Timing
+                  Auto-send timing
                 </Label>
                 <div className="grid grid-cols-2 gap-4">
                   <Select
@@ -1246,14 +1246,14 @@ export function ReportCardSettingsCard() {
 
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Review Booster
+                  Review booster
                 </Label>
                 <p className="text-muted-foreground text-sm">
                   Prompt happy customers to leave reviews on external platforms.
                 </p>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Min Rating to Show Prompt</Label>
+                    <Label>Min rating to show prompt</Label>
                     <Select
                       value={String(reviewBooster.ratingThreshold)}
                       disabled={!isEditing}
@@ -1280,7 +1280,7 @@ export function ReportCardSettingsCard() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Review Site URL</Label>
+                    <Label>Review site URL</Label>
                     <Input
                       placeholder="https://g.page/your-business/review"
                       value={reviewBooster.reviewUrl}
@@ -1298,7 +1298,7 @@ export function ReportCardSettingsCard() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Review Prompt Text</Label>
+                  <Label>Review prompt text</Label>
                   <Textarea
                     value={reviewBooster.reviewPromptText}
                     readOnly={!isEditing}
@@ -1346,7 +1346,7 @@ export function ReportCardSettingsCard() {
 
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Template Wording (by Theme)
+                  Template wording (by theme)
                 </Label>
                 <div className="space-y-4">
                   {themeOptions.map((theme) => (

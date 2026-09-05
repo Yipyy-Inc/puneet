@@ -388,7 +388,7 @@ export function RetailSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Retail / POS Settings</h2>
+        <h2 className="text-lg font-semibold">Retail / POS settings</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Configure product categories, suppliers, brands, tags, and units for
           your retail module.
@@ -519,7 +519,7 @@ export function RetailSettings() {
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-1.5">
-            <Label className="text-xs">Default Pricing Method</Label>
+            <Label className="text-xs">Default pricing method</Label>
             <Select
               value={defaultPricingMethod}
               onValueChange={(v) => setDefaultPricingMethod(v as PricingMethod)}
@@ -541,7 +541,7 @@ export function RetailSettings() {
           {defaultPricingMethod === "margin" && (
             <div className="space-y-1.5">
               <Label htmlFor="default-margin-percent" className="text-xs">
-                Default Margin %
+                Default margin %
               </Label>
               <div className="flex items-center gap-2">
                 <Input
@@ -564,7 +564,7 @@ export function RetailSettings() {
           )}
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Selling Price Rounding</Label>
+            <Label className="text-xs">Selling price rounding</Label>
             <Select
               value={rounding}
               onValueChange={(v) => setRounding(v as RoundingRule)}
@@ -612,7 +612,7 @@ export function RetailSettings() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="default-tax-rate" className="text-xs">
-                Default Tax Rate (%)
+                Default tax rate (%)
               </Label>
               <Input
                 id="default-tax-rate"
@@ -630,7 +630,7 @@ export function RetailSettings() {
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Tax Mode</Label>
+              <Label className="text-xs">Tax mode</Label>
               <Select
                 value={taxMode}
                 onValueChange={(v) => setTaxMode(v as RetailTaxMode)}
@@ -658,7 +658,7 @@ export function RetailSettings() {
           {/* Registration number */}
           <div className="space-y-1.5">
             <Label htmlFor="tax-registration" className="text-xs">
-              Tax Registration Number
+              Tax registration number
             </Label>
             <Input
               id="tax-registration"
@@ -828,10 +828,10 @@ export function RetailSettings() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Brand</DialogTitle>
+            <DialogTitle>Rename brand</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <Label>Brand Name</Label>
+            <Label>Brand name</Label>
             <Input
               autoFocus
               value={renameValue}
@@ -869,7 +869,7 @@ export function RetailSettings() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Merge Brand</DialogTitle>
+            <DialogTitle>Merge brand</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <p className="text-muted-foreground text-sm">
@@ -1616,7 +1616,7 @@ function SupplierSection({
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Payment Terms</Label>
+                  <Label className="text-xs">Payment terms</Label>
                   <Select
                     value={form.paymentTerms ?? ""}
                     onValueChange={(v) =>

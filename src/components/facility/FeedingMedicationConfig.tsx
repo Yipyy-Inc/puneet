@@ -358,7 +358,7 @@ export function FeedingMedicationConfig() {
         </div>
         <div>
           <h3 className="text-sm font-bold">
-            Feeding &amp; Medication Options
+            Feeding &amp; medication options
           </h3>
           <p className="text-muted-foreground text-xs">
             Configure the options staff and customers see when adding care

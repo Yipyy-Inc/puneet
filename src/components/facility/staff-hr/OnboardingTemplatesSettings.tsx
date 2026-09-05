@@ -67,7 +67,7 @@ export function OnboardingTemplatesSettings() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ClipboardList className="text-muted-foreground size-5" />
-            <CardTitle>Onboarding Templates</CardTitle>
+            <CardTitle>Onboarding templates</CardTitle>
           </div>
           <Button
             onClick={create}

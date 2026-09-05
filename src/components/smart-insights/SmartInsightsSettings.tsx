@@ -157,13 +157,13 @@ export function SmartInsightsSettings() {
       {/* Master toggle */}
       <Card>
         <CardHeader>
-          <CardTitle>Smart Insights</CardTitle>
+          <CardTitle>Smart insights</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label htmlFor="si-enabled" className="text-base">
-                Enable Smart Insights
+                Enable smart insights
               </Label>
               <p className="text-muted-foreground text-xs">
                 When off, the Smart Insights page, dashboard widget, and nav

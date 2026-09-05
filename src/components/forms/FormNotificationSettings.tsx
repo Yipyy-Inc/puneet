@@ -157,7 +157,7 @@ export function FormNotificationSettings() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell className="text-primary size-5" />
-              <CardTitle>Form Notifications</CardTitle>
+              <CardTitle>Form notifications</CardTitle>
             </div>
             <Button size="sm" onClick={handleSave}>
               Save changes

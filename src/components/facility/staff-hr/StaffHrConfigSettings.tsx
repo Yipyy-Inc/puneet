@@ -59,7 +59,7 @@ export function StaffHrConfigSettings() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="text-muted-foreground size-5" />
-          <CardTitle>Onboarding & HR Settings</CardTitle>
+          <CardTitle>Onboarding & HR settings</CardTitle>
         </div>
         <p className="text-muted-foreground mt-1 text-sm">
           Defaults for the self-serve onboarding invite, completion window, and

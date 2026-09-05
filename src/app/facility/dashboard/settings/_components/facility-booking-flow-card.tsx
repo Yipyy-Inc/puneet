@@ -101,7 +101,7 @@ export function FacilityBookingFlowCard() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Services Requiring Evaluation First</Label>
+                <Label>Services requiring evaluation first</Label>
                 <div className="space-y-2 rounded-lg border p-3">
                   {serviceOptions.map((service) => (
                     <div key={service.id} className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export function FacilityBookingFlowCard() {
               </div>
 
               <div className="space-y-2">
-                <Label>Hidden From Online Booking</Label>
+                <Label>Hidden from online booking</Label>
                 <div className="space-y-2 rounded-lg border p-3">
                   {serviceOptions.map((service) => (
                     <div key={service.id} className="flex items-center gap-2">
@@ -161,7 +161,7 @@ export function FacilityBookingFlowCard() {
           )}
 
           <div className="space-y-1.5">
-            <Label>Booking Request Confirmation Message</Label>
+            <Label>Booking request confirmation message</Label>
             <Textarea
               rows={4}
               disabled={!isEditing}

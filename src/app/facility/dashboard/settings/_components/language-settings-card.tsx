@@ -46,7 +46,7 @@ export function LanguageSettingsCard() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="primary-language">Primary Language</Label>
+              <Label htmlFor="primary-language">Primary language</Label>
               <Select
                 value={localLanguageSettings.primaryLocale}
                 onValueChange={(value) => {
@@ -77,7 +77,7 @@ export function LanguageSettingsCard() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="secondary-language">Secondary Language</Label>
+              <Label htmlFor="secondary-language">Secondary language</Label>
               <Select
                 value={localLanguageSettings.secondaryLocale}
                 onValueChange={(value) =>
