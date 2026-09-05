@@ -1,5 +1,5 @@
 import { bookings } from "@/data/bookings";
-import { getEstimateSettings } from "@/data/estimate-settings";
+import type { EstimateSettings } from "@/lib/settings/estimates";
 import type { Estimate } from "@/types/booking";
 import {
   sendBookingConfirmationEmail,
@@ -24,10 +24,10 @@ function nextBookingId(): number {
  */
 export function acceptEstimate(
   estimate: Estimate,
+  settings: EstimateSettings,
   opts?: { now?: Date; depositPaid?: boolean; acceptedBy?: string },
 ): AcceptResult {
   const now = opts?.now ?? new Date();
-  const settings = getEstimateSettings();
   const actor = opts?.acceptedBy ?? estimate.clientName;
 
   estimate.status = "accepted";

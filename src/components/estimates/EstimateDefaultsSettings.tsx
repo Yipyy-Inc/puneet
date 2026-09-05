@@ -9,22 +9,49 @@ import { Switch } from "@/components/ui/switch";
 import { FileText, Save } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getEstimateSettings,
-  saveEstimateSettings,
-} from "@/data/estimate-settings";
-import type { EstimateSettings } from "@/types/estimate-settings";
+  useEstimateSettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import type { EstimateSettings } from "@/lib/settings/estimates";
+import { Skeleton } from "@/components/ui/skeleton";
 
+// Wrapper gates on the load; editor seeds from props. A `useState`
+// initialiser runs once, so mounting before the facility's own defaults arrive
+// would show the shipped ones and write them back on the first Save.
 export function EstimateDefaultsSettings() {
-  const [settings, setSettings] = useState<EstimateSettings>(() =>
-    getEstimateSettings(),
-  );
+  const { settings, isPending } = useEstimateSettings();
+
+  if (isPending) {
+    return <Skeleton className="h-96 w-full rounded-xl" />;
+  }
+
+  return <EstimateDefaultsEditor initialSettings={settings} />;
+}
+
+function EstimateDefaultsEditor({
+  initialSettings,
+}: {
+  initialSettings: EstimateSettings;
+}) {
+  const saveSetting = useSaveFacilitySetting();
+  const [settings, setSettings] = useState<EstimateSettings>(initialSettings);
 
   const set = (patch: Partial<EstimateSettings>) =>
     setSettings((prev) => ({ ...prev, ...patch }));
 
   const handleSave = () => {
-    saveEstimateSettings(settings);
-    toast.success("Estimate defaults saved");
+    saveSetting.mutate(
+      { domain: "estimate_settings", value: settings },
+      {
+        onSuccess: () => toast.success("Estimate defaults saved"),
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Those defaults were not saved.",
+          ),
+      },
+    );
   };
 
   const numberPreview = `${settings.estimateNumberPrefix}${"1".padStart(

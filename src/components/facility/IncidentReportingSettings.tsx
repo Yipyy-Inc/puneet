@@ -15,12 +15,13 @@ import {
 } from "@/components/ui/select";
 import { Siren, DollarSign, Users, Camera, Bell } from "lucide-react";
 import { toast } from "sonner";
+import { type IncidentMedFeeMode } from "@/data/facility-config";
+import type { IncidentReportingConfig } from "@/lib/settings/incidents";
 import {
-  getIncidentReportingConfig,
-  saveIncidentReportingConfig,
-  type IncidentReportingConfig,
-  type IncidentMedFeeMode,
-} from "@/data/facility-config";
+  useIncidentReporting,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { AssigneeRole, IncidentSeverity } from "@/types/incidents";
 
 const ASSIGNEE_ROLE_OPTIONS: { value: AssigneeRole; label: string }[] = [
@@ -38,20 +39,47 @@ const SEVERITY_ROWS: { value: IncidentSeverity; label: string }[] = [
   { value: "low", label: "Low" },
 ];
 
+// The same wrapper/editor split as the deposit and vaccination screens: the
+// editor seeds `useState` once, so it must not mount before the facility's own
+// policy has arrived — the first Save would write the shipped defaults back
+// over it.
 export function IncidentReportingSettings() {
-  const [config, setConfig] = useState<IncidentReportingConfig>(() =>
-    getIncidentReportingConfig(),
-  );
-  const [saved, setSaved] = useState<IncidentReportingConfig>(() =>
-    getIncidentReportingConfig(),
-  );
+  const { config, isPending } = useIncidentReporting();
+
+  if (isPending) {
+    return <Skeleton className="h-96 w-full rounded-xl" />;
+  }
+
+  return <IncidentReportingEditor initialConfig={config} />;
+}
+
+function IncidentReportingEditor({
+  initialConfig,
+}: {
+  initialConfig: IncidentReportingConfig;
+}) {
+  const saveSetting = useSaveFacilitySetting();
+  const [config, setConfig] = useState<IncidentReportingConfig>(initialConfig);
+  const [saved, setSaved] = useState<IncidentReportingConfig>(initialConfig);
 
   const isDirty = JSON.stringify(config) !== JSON.stringify(saved);
 
   const handleSave = () => {
-    saveIncidentReportingConfig(config);
-    setSaved(config);
-    toast.success("Incident reporting settings saved");
+    saveSetting.mutate(
+      { domain: "incident_reporting", value: config },
+      {
+        onSuccess: () => {
+          setSaved(config);
+          toast.success("Incident reporting settings saved");
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Those settings were not saved.",
+          ),
+      },
+    );
   };
 
   const setAutoNotify = (

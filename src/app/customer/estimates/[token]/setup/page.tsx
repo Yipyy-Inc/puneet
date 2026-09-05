@@ -9,6 +9,7 @@ import { Lock, Mail, Clock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { estimates } from "@/data/estimates";
 import { businessProfile } from "@/data/settings";
+import { useEstimateSettings } from "@/lib/api/facility-settings";
 import {
   activateEstimateAccount,
   refreshEstimateMagicLink,
@@ -16,6 +17,10 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 
 export default function AccountSetupPage() {
+  // How long a re-issued magic link lives is the facility's setting, not the
+  // browser's — it used to come from localStorage, so the same customer got a
+  // different window depending on who sent it.
+  const { settings: estimateSettings } = useEstimateSettings();
   const params = useParams();
   const router = useRouter();
   const token = params.token as string;
@@ -70,7 +75,11 @@ export default function AccountSetupPage() {
   const handleRequestNewLink = () => {
     const email = requestEmail.trim();
     if (!email) return;
-    const newToken = refreshEstimateMagicLink(estimate, new Date());
+    const newToken = refreshEstimateMagicLink(
+      estimate,
+      estimateSettings,
+      new Date(),
+    );
     toast.success(`A new link has been sent to ${email}`);
     router.push(`/customer/estimates/${newToken}/setup`);
   };

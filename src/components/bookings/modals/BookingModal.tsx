@@ -7,7 +7,11 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { useDepositRules, usePricingRules } from "@/lib/api/facility-settings";
+import {
+  useDepositRules,
+  useEstimateSettings,
+  usePricingRules,
+} from "@/lib/api/facility-settings";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -292,6 +296,10 @@ export function BookingModal({
   // amounts on the same booking.
   const { rules: depositRules, isPending: depositRulesPending } =
     useDepositRules();
+  // The estimate number's prefix and width belong to the business. In
+  // localStorage they belonged to the machine, so two staff generated two
+  // numbering schemes for the same facility.
+  const { settings: estimateSettings } = useEstimateSettings();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),
     [daycare, boarding, grooming, training],
@@ -2214,7 +2222,7 @@ export function BookingModal({
   const handleComplete = () => {
     if (isEstimateMode && isGuestEstimate) {
       setEstimatePricingSnapshot(buildEstimatePricingSnapshot(calculatePrice));
-      setGeneratedEstimateId(getNextEstimateId());
+      setGeneratedEstimateId(getNextEstimateId(estimateSettings));
       setEstimateCreated(true);
       return;
     }
@@ -2426,7 +2434,7 @@ export function BookingModal({
     if (isEstimateMode) {
       // In estimate mode, show success state instead of creating a booking
       setEstimatePricingSnapshot(buildEstimatePricingSnapshot(calculatePrice));
-      setGeneratedEstimateId(getNextEstimateId());
+      setGeneratedEstimateId(getNextEstimateId(estimateSettings));
       setEstimateCreated(true);
       return;
     }

@@ -69,12 +69,14 @@ const ALLOW = /success-claim-ok:/;
  * Nothing here was newly written. Everything here was already claiming, and
  * already lying, before the regex learned to see it.
  */
+// IncidentReportingSettings.tsx left with them, same day, same reason: its
+// policy is in the `incident_reporting` domain now instead of localStorage.
+//
 // EstimateWizard.tsx and DepositRulesSettings.tsx left on 2026-09-05, by being
 // wired rather than by being reworded. Deposit terms moved out of localStorage
 // into the `deposit_rules` settings domain; both of these now save through it,
 // so their toasts describe something that happened.
 const BASELINE = new Set<string>([
-  "src/app/customer/estimates/[token]/setup/page.tsx",
   "src/app/dashboard/facilities/requests/_components/facility-requests-client.tsx",
   "src/app/dashboard/support/email-templates/_components/template-panel.tsx",
   "src/app/facility/dashboard/services/training/students/_components/training-profile-quick-actions.tsx",
@@ -202,14 +204,12 @@ const BASELINE = new Set<string>([
   "src/components/dashboard/facilities/AgreementsTab.tsx",
   "src/components/dashboard/facilities/BillingTab.tsx",
   "src/components/dashboard/facilities/LocationsTab.tsx",
-  "src/components/estimates/EstimateDefaultsSettings.tsx",
   "src/components/estimates/EstimateFollowUpSettings.tsx",
   "src/components/facility-config/TagNotesSettings.tsx",
   "src/components/facility/BookingRequestsPanel.tsx",
   "src/components/facility/BookingStatusSettings.tsx",
   "src/components/facility/CareTaskSettings.tsx",
   "src/components/facility/DepartmentSettings.tsx",
-  "src/components/facility/IncidentReportingSettings.tsx",
   "src/components/facility/RouteView.tsx",
   "src/components/facility/TrainingSection.tsx",
   "src/components/facility/add-ons/AddOnCategorySheet.tsx",

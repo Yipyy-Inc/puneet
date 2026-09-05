@@ -1,5 +1,5 @@
 import { clients } from "@/data/clients";
-import { getEstimateSettings } from "@/data/estimate-settings";
+import type { EstimateSettings } from "@/lib/settings/estimates";
 import type { Client } from "@/types/client";
 import type { Pet } from "@/types/pet";
 import type { Estimate } from "@/types/booking";
@@ -67,6 +67,7 @@ function makePet(
  */
 export function provisionAccountForEstimate(
   estimate: Estimate,
+  settings: EstimateSettings,
   opts?: { facilityName?: string; now?: Date },
 ): ProvisionOutcome {
   const facilityName = opts?.facilityName ?? DEFAULT_FACILITY;
@@ -95,7 +96,6 @@ export function provisionAccountForEstimate(
   }
 
   const now = opts?.now ?? new Date();
-  const settings = getEstimateSettings();
 
   // Pet records from the estimate's pets (guestPetInfo enriches the first).
   const petSource =
@@ -173,13 +173,14 @@ export function activateEstimateAccount(
  */
 export function refreshEstimateMagicLink(
   estimate: Estimate,
+  settings: EstimateSettings,
   now: Date = new Date(),
 ): string {
   const email = (estimate.guestEmail || estimate.clientEmail || "").trim();
   const token = tokenFor(`${estimate.estimateId}:${email}:${now.getTime()}`);
   estimate.estimateToken = token;
   estimate.magicLinkExpiresAt = new Date(
-    now.getTime() + getEstimateSettings().magicLinkExpiryHours * 3_600_000,
+    now.getTime() + settings.magicLinkExpiryHours * 3_600_000,
   ).toISOString();
   return token;
 }
