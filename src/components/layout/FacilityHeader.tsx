@@ -226,7 +226,8 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                     // from the picker with no way to tell.
                     clients,
                     facilityId: facilityId,
-                    facilityName: profile.businessName || "your facility",
+                    facilityName:
+                      profile.businessName || t("yourFacilityLower"),
                     onCreateBooking: handleCreateBooking,
                     preSelectedService: sectionService,
                     lockService: !!sectionService,
@@ -259,7 +260,8 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                     // from the picker with no way to tell.
                     clients,
                     facilityId: facilityId,
-                    facilityName: profile.businessName || "your facility",
+                    facilityName:
+                      profile.businessName || t("yourFacilityLower"),
                     onCreateBooking: handleCreateBooking,
                     isEstimateMode: true,
                     preSelectedService: sectionService,
@@ -287,7 +289,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
           open={isCreateClientModalOpen}
           onOpenChange={setIsCreateClientModalOpen}
           onSave={handleCreateClient}
-          facilityName={profile.businessName || "your facility"}
+          facilityName={profile.businessName || t("yourFacilityLower")}
         />
       )}
     </>

@@ -81,22 +81,22 @@ export function SupportCenter() {
           onValueChange={(v) => setSupportDrawerTab(v as SupportDrawerTab)}
           className="flex min-h-0 flex-1 flex-col gap-0"
         >
-          <TabsList className="shrink-0 border-b px-3">
+          <TabsList className="shrink-0 justify-start overflow-x-auto border-b px-3">
             <TabsTrigger
               value="chat"
-              className="flex-1 justify-center px-2 text-xs"
+              className="shrink-0 justify-center px-2 text-xs"
             >
               {t("chat")}
             </TabsTrigger>
             <TabsTrigger
               value="ticket"
-              className="flex-1 justify-center px-2 text-xs"
+              className="shrink-0 justify-center px-2 text-xs"
             >
               {t("ticket")}
             </TabsTrigger>
             <TabsTrigger
               value="faq"
-              className="flex-1 justify-center px-2 text-xs"
+              className="shrink-0 justify-center px-2 text-xs"
             >
               {t("faqs")}
             </TabsTrigger>

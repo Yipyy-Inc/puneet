@@ -39,6 +39,8 @@ const SAME_IN_BOTH = new Set([
   "search.actions", // Actions / Actions
   "primitives.pagination", // Pagination / Pagination
   "primitives.minute", // "Min" is the abbreviation in both
+  "primitives.actions", // Actions / Actions
+  "support.descriptionLabel", // Description / Description
 ]);
 
 describe("the shell namespace", () => {

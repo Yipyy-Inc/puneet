@@ -14,6 +14,7 @@ import { LocationContextSelector } from "@/components/hq/LocationContextSelector
 import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
 import { NAV_SECTIONS, type NavItem } from "@/lib/nav/facility-nav";
 import { useNavText } from "@/lib/nav/use-nav-text";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 /**
  * Up to two initials for a facility with no logo.
@@ -33,6 +34,7 @@ function initials(name: string): string {
 }
 
 export function FacilitySidebar() {
+  const t = useShellText("header");
   const signOutEverywhere = useSignOutEverywhere();
   const isMounted = useHydrated();
 
@@ -144,7 +146,7 @@ export function FacilitySidebar() {
               <Skeleton className="h-5 w-32" />
             ) : (
               <h2 className="truncate text-sm font-semibold md:text-base">
-                {profile.businessName || "Your facility"}
+                {profile.businessName || t("yourFacility")}
               </h2>
             )}
             <p className="text-muted-foreground text-xs">{dateLabel}</p>

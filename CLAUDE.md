@@ -283,7 +283,7 @@ bun run check:hover-actions                                      # a control rev
 bun run check:edge-accents                                       # an accent line on an edge (§6 rule 1)
 bun run check:nav-icons                                          # a nav glyph off the map, or on two areas (§5b1)
 bun run check:hardcoded-locale                                   # a formatter told a locale the user did not choose (§5q)
-bun run check:settings-french                                    # a settings section a French user reads in English (§5q)
+bun run check:ui-french                                          # a surface a French user reads in English (§5q)
 ```
 
 **The edge-accent grep became a gate on 2026-09-04, and why is worth knowing.**

@@ -13,8 +13,10 @@ import {
 import { helpQueries } from "@/lib/api/help";
 import { setSupportDrawerTab } from "@/lib/support-drawer-store";
 import { Input } from "@/components/ui/input";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 export function HelpFaqsTab() {
+  const t = useShellText("support");
   const { data: articles = [] } = useQuery(helpQueries.articles());
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function HelpFaqsTab() {
             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm font-medium transition-colors"
           >
             <ArrowLeft className="size-4" />
-            Back
+            {t("back")}
           </button>
         </div>
 
@@ -69,7 +71,7 @@ export function HelpFaqsTab() {
               rel="noopener noreferrer"
               className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline"
             >
-              Open in Help Center
+              {t("openInHelpCentre")}
               <ExternalLink className="size-3" />
             </a>
           </div>
@@ -87,9 +89,9 @@ export function HelpFaqsTab() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search help articles…"
+            placeholder={t("searchHelp")}
             className="pl-9"
-            aria-label="Search help articles"
+            aria-label={t("searchHelpLabel")}
           />
         </div>
       </div>
@@ -97,15 +99,13 @@ export function HelpFaqsTab() {
       <div className="animate-in fade-in slide-in-from-left-4 flex-1 overflow-y-auto p-3 duration-200">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
-            <p className="text-muted-foreground text-sm">
-              No articles found — try different keywords
-            </p>
+            <p className="text-muted-foreground text-sm">{t("noArticles")}</p>
             <button
               type="button"
               onClick={() => setSupportDrawerTab("chat")}
               className="text-primary text-sm font-medium hover:underline"
             >
-              Contact Support
+              {t("contactSupport")}
             </button>
           </div>
         ) : (
@@ -137,7 +137,7 @@ export function HelpFaqsTab() {
           rel="noopener noreferrer"
           className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline"
         >
-          Open the full Help Center
+          {t("openHelpCentre")}
           <ArrowRight className="size-3" />
         </a>
       </div>

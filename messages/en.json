@@ -908,7 +908,9 @@
       "createClientFailed": "Could not create that client",
       "createBookingFailed": "Could not create that booking",
       "quickCheckInSoon": "Quick daycare check-in is coming soon",
-      "tryAgain": "Try again."
+      "tryAgain": "Try again.",
+      "yourFacility": "Your facility",
+      "yourFacilityLower": "your facility"
     },
     "account": {
       "signedIn": "Signed in",
@@ -929,13 +931,20 @@
       "customerPortal": "Customer portal",
       "staffPortal": "Staff portal",
       "logOut": "Log out",
-      "accountMenu": "Account menu"
+      "accountMenu": "Account menu",
+      "locationContext": "Location context",
+      "crossLocationView": "Cross-location view",
+      "mainLocation": "Main",
+      "selectLocation": "Select location",
+      "noAddress": "No address yet"
     },
     "notifications": {
       "title": "Notifications",
       "new": "new",
       "markAllRead": "Mark all as read",
-      "none": "No notifications"
+      "none": "No notifications",
+      "actionRequired": "Action required",
+      "viewAll": "View all notifications"
     },
     "support": {
       "open": "Help & support",
@@ -944,7 +953,45 @@
       "close": "Close the support centre",
       "chat": "Chat with Yipyy",
       "ticket": "Submit a ticket",
-      "faqs": "Help & FAQs"
+      "faqs": "Help & FAQs",
+      "back": "Back",
+      "searchHelp": "Search help articles…",
+      "searchHelpLabel": "Search help articles",
+      "openInHelpCentre": "Open in the help centre",
+      "noArticles": "No articles found — try different keywords",
+      "contactSupport": "Contact support",
+      "openHelpCentre": "Open the full help centre",
+      "subjectPlaceholder": "What do you need help with?",
+      "descriptionPlaceholder": "Share as much detail as you can — steps, what you expected, and what happened.",
+      "ticketSubmitted": "Ticket submitted",
+      "ticketNumberIs": "Your ticket number is {number}.",
+      "willEmail": "We'll email you at {email} when we respond.",
+      "emailOnFile": "your email on file",
+      "viewMyTickets": "View my tickets",
+      "done": "Done",
+      "subject": "Subject",
+      "category": "Category",
+      "descriptionLabel": "Description",
+      "attachment": "Attachment (optional)",
+      "attachFile": "Attach a file",
+      "categoryTechnical": "Technical issue",
+      "categoryBilling": "Billing question",
+      "categoryFeature": "Feature request",
+      "categoryAccount": "Account help",
+      "categoryOther": "Other",
+      "closeConversation": "Close conversation",
+      "typeMessage": "Type a message…",
+      "messageSupport": "Message Yipyy support",
+      "conversationClosed": "Conversation closed. Start a new one any time.",
+      "yipyySupport": "Yipyy support",
+      "online": "Online",
+      "offline": "Offline",
+      "replyTime": "We typically reply in minutes",
+      "conversationOpen": "Support conversation · Open",
+      "startConversation": "Start a conversation",
+      "startBlurb": "Start a conversation and our support team will reply here in real time.",
+      "firstMessage": "Send your first message below — our team will reply here in real time.",
+      "submitTicket": "Submit ticket"
     },
     "banners": {
       "adminMode": "Yipyy admin mode",
@@ -1021,7 +1068,18 @@
       "sidebarMobileDescription": "Displays the mobile sidebar.",
       "noTimes": "No times",
       "removeFilter": "Remove the {label} filter",
-      "noDateSelected": "No date selected"
+      "noDateSelected": "No date selected",
+      "noDataYet": "No data yet",
+      "actions": "Actions",
+      "items": "Items",
+      "apply": "Apply",
+      "applyToAll": "Apply to all",
+      "clear": "Clear",
+      "now": "Now",
+      "done": "Done",
+      "dateFormatHint": "YYYY-MM-DD",
+      "dateFormatLabel": "Format: YYYY-MM-DD",
+      "dateFormatError": "Use YYYY-MM-DD, for example 2026-09-01"
     }
   }
 }

@@ -908,7 +908,9 @@
       "createClientFailed": "Impossible de créer ce client",
       "createBookingFailed": "Impossible de créer cette réservation",
       "quickCheckInSoon": "L'enregistrement rapide en garderie arrive bientôt",
-      "tryAgain": "Réessayez."
+      "tryAgain": "Réessayez.",
+      "yourFacility": "Votre établissement",
+      "yourFacilityLower": "votre établissement"
     },
     "account": {
       "signedIn": "Connecté",
@@ -929,13 +931,20 @@
       "customerPortal": "Portail client",
       "staffPortal": "Portail du personnel",
       "logOut": "Se déconnecter",
-      "accountMenu": "Menu du compte"
+      "accountMenu": "Menu du compte",
+      "locationContext": "Contexte d'emplacement",
+      "crossLocationView": "Vue multi-emplacements",
+      "mainLocation": "Principal",
+      "selectLocation": "Sélectionner un emplacement",
+      "noAddress": "Aucune adresse pour l'instant"
     },
     "notifications": {
       "title": "Notifications",
       "new": "nouvelles",
       "markAllRead": "Tout marquer comme lu",
-      "none": "Aucune notification"
+      "none": "Aucune notification",
+      "actionRequired": "Action requise",
+      "viewAll": "Voir toutes les notifications"
     },
     "support": {
       "open": "Aide et assistance",
@@ -944,7 +953,45 @@
       "close": "Fermer le centre d'assistance",
       "chat": "Clavarder avec Yipyy",
       "ticket": "Soumettre une demande",
-      "faqs": "Aide et FAQ"
+      "faqs": "Aide et FAQ",
+      "back": "Retour",
+      "searchHelp": "Rechercher dans l'aide…",
+      "searchHelpLabel": "Rechercher dans les articles d'aide",
+      "openInHelpCentre": "Ouvrir dans le centre d'aide",
+      "noArticles": "Aucun article trouvé — essayez d'autres mots-clés",
+      "contactSupport": "Contacter l'assistance",
+      "openHelpCentre": "Ouvrir le centre d'aide complet",
+      "subjectPlaceholder": "De quoi avez-vous besoin?",
+      "descriptionPlaceholder": "Donnez le plus de détails possible — les étapes, ce que vous attendiez et ce qui s'est produit.",
+      "ticketSubmitted": "Demande envoyée",
+      "ticketNumberIs": "Votre numéro de demande est {number}.",
+      "willEmail": "Nous vous répondrons par courriel à {email}.",
+      "emailOnFile": "votre adresse courriel au dossier",
+      "viewMyTickets": "Voir mes demandes",
+      "done": "Terminé",
+      "subject": "Objet",
+      "category": "Catégorie",
+      "descriptionLabel": "Description",
+      "attachment": "Pièce jointe (facultatif)",
+      "attachFile": "Joindre un fichier",
+      "categoryTechnical": "Problème technique",
+      "categoryBilling": "Question de facturation",
+      "categoryFeature": "Demande de fonctionnalité",
+      "categoryAccount": "Aide sur le compte",
+      "categoryOther": "Autre",
+      "closeConversation": "Fermer la conversation",
+      "typeMessage": "Écrivez un message…",
+      "messageSupport": "Écrire à l'assistance Yipyy",
+      "conversationClosed": "Conversation fermée. Vous pouvez en commencer une autre à tout moment.",
+      "yipyySupport": "Assistance Yipyy",
+      "online": "En ligne",
+      "offline": "Hors ligne",
+      "replyTime": "Nous répondons habituellement en quelques minutes",
+      "conversationOpen": "Conversation d'assistance · Ouverte",
+      "startConversation": "Commencer une conversation",
+      "startBlurb": "Commencez une conversation et notre équipe d'assistance vous répondra ici en temps réel.",
+      "firstMessage": "Envoyez votre premier message ci-dessous — notre équipe vous répondra ici en temps réel.",
+      "submitTicket": "Envoyer la demande"
     },
     "banners": {
       "adminMode": "Mode admin Yipyy",
@@ -1021,7 +1068,18 @@
       "sidebarMobileDescription": "Affiche la barre latérale mobile.",
       "noTimes": "Aucune heure",
       "removeFilter": "Retirer le filtre {label}",
-      "noDateSelected": "Aucune date sélectionnée"
+      "noDateSelected": "Aucune date sélectionnée",
+      "noDataYet": "Aucune donnée pour l'instant",
+      "actions": "Actions",
+      "items": "Éléments",
+      "apply": "Appliquer",
+      "applyToAll": "Appliquer à tous",
+      "clear": "Effacer",
+      "now": "Maintenant",
+      "done": "Terminé",
+      "dateFormatHint": "AAAA-MM-JJ",
+      "dateFormatLabel": "Format : AAAA-MM-JJ",
+      "dateFormatError": "Utilisez AAAA-MM-JJ, par exemple 2026-09-01"
     }
   }
 }

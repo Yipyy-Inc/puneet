@@ -587,7 +587,7 @@ export function DataTable<T extends object>({
                 <TableEmptyState
                   icon={emptyState?.icon ?? Inbox}
                   pose={emptyState?.pose}
-                  title={emptyState?.title ?? "No data yet"}
+                  title={emptyState?.title ?? t("noDataYet")}
                   description={emptyState?.description}
                   action={emptyState?.action}
                 />
@@ -786,7 +786,7 @@ export function DataTable<T extends object>({
                         stickyHeader && "bg-background sticky top-0 z-10",
                       )}
                     >
-                      Actions
+                      {t("actions")}
                     </TableHead>
                   )}
                 </TableRow>
@@ -817,7 +817,7 @@ export function DataTable<T extends object>({
                       <TableEmptyState
                         icon={emptyState?.icon ?? Inbox}
                         pose={emptyState?.pose}
-                        title={emptyState?.title ?? "No data yet"}
+                        title={emptyState?.title ?? t("noDataYet")}
                         description={emptyState?.description}
                         action={emptyState?.action}
                       />

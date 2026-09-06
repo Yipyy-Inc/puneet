@@ -177,7 +177,7 @@ jobs:
             settings-fixture \
             settings-routes \
             settings-persistence \
-            settings-french \
+            ui-french \
             quickbooks \
             dialog-widths \
             nav-parity \
