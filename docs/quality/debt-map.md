@@ -7807,6 +7807,108 @@ change; the three sites above plus `grooming-post-booking.ts:121`, which passes
 `// TODO: Get from bookingData or context`. That one is now inert for the
 config — the setup is passed in — but the id it sends is still the constant.
 
+## 2026-09-06 — the tag catalogue is still `useState`, and the gate that used to say so is now green
+
+**Severity: medium.** `tags-notes` is two features under one nav item, and only
+one of them was fixed on 2026-09-06.
+
+| Half                                                                                                   | Where it lives now                                                     |
+| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| The note **policy** — tag types enabled, default visibility, and the five-by-four note permission grid | `facility_settings.tag_note_settings`, and NotesList enforces the grid |
+| The tag **catalogue** — create / edit / delete a tag                                                   | `useState([...allTags])`, discarded on reload                          |
+
+**Why the catalogue was not moved with it.** A tag is a row that
+`tagAssignments` point at by id. Putting an unbounded, per-row-edited list into
+a single JSON settings blob is the wrong shape — and worse, the catalogue and
+its assignments have to move **together**: make the catalogue real while
+assignments stay a fixture and the ids stop matching, so every pet, client and
+booking renders no tags at all. That is a visible regression across 11 reader
+files, against 26 that read the catalogue.
+
+### The part that needs saying out loud
+
+**`bun run check:settings-persistence` now passes `tags-notes`, and the
+catalogue still discards.** The gate asks whether a _section_ reaches a write;
+the section does, through the policy half. `check:success-claims` passes the
+file for the same reason — it looks one import deep for something that could
+perform an action, and `useSaveFacilitySetting` is now in the file.
+
+Neither gate is wrong. Both are heuristics, and this is the shape that gets past
+them: a file where one half became real and the other did not. What stops a
+person being misled is the copy, not the gate — the three tag toasts carry
+`"The tag list is not stored yet, so it resets when this page reloads."`
+
+**If you delete that description, nothing else in the system will tell anybody.**
+
+### What to do instead of casually touching it
+
+- **Do not move the catalogue into a settings domain to make a gate greener.**
+  It needs `facility_tags` and `tag_assignments` as real tables with RLS, in one
+  change, then the 26 + 11 readers.
+- **Measured 2026-09-06:** 76 tag/assignment/note rows in
+  `src/data/tags-notes.ts`; `getTagsByType` / the `tags` export reach 26 files;
+  `getTagsForEntity` / `hasCriticalTags` / `hasWarningTags` / `tagAssignments`
+  reach 11.
+- The note **permissions** are done and enforced — do not re-open that half. It
+  is `canActOnNotes()` in `src/lib/settings/tag-notes.ts`, called by
+  `NotesList`, and `check:inert-permissions` covers the catalogue of keys but
+  not this grid, so the enforcement is what keeps it honest.
+
+## 2026-09-06 — notes were never filtered by visibility, and a customer surface renders them
+
+**Severity: medium, and it would have been high the day notes became real rows.**
+
+`Note.visibility` is `internal | shared_with_customer`. Measured on 2026-09-06,
+before the fix: **nothing filtered on it anywhere.**
+`useNotesForEntity(category, entityId)` returns every note on the entity;
+`NotesList` passed them all through; `NoteCard` reads `visibility` only to
+render a badge and to label a toggle. So `/customer/pets/[petId]` showed a pet's
+owner every internal note staff had written — each one correctly labelled
+"Internal".
+
+It was bounded only because `allNotes` is a fixture: the notes on that page are
+seed data, not a real facility's. The disclosure path was real; the data was
+not, yet.
+
+**Fixed by an explicit `audience` prop on `NotesList` / `NotesButton`**, default
+`"staff"`, with the one customer call site passing `"customer"` — which filters
+to `shared_with_customer` and skips the facility-role grid entirely.
+
+### The trap that made an explicit prop necessary
+
+The obvious implementation — infer the audience from whether there is a facility
+viewer — is wrong here, and silently:
+
+```
+// src/hooks/use-facility-rbac.tsx
+export function useFacilityRbac(): RbacContextValue {
+  const ctx = useContext(RbacContext);
+  if (!ctx) {
+    // Fallback — assume owner/all-access.
+```
+
+`FacilityRbacProvider` is mounted in `app/facility/layout.tsx` and
+`app/employee/(shell)/layout.tsx` and **nowhere in the customer portal**. So
+asking the RBAC context on a customer page returns the OWNER with all access,
+and every permission check passes. Any future "am I staff?" check written
+against that hook has the same bug.
+
+`readOnly` is not a substitute either: `clients/[id]/page.tsx` passes
+`readOnly={!canAddNoteForThisPet}` on a staff surface, so it means "cannot write
+here", not "is a customer".
+
+### What to do instead of casually touching it
+
+- **A new NotesList call site outside the facility portal must pass
+  `audience="customer"`.** There is no gate for this; the default is `"staff"`
+  because five of the six call sites are staff surfaces.
+- **Do not replace the prop with an RBAC lookup** without first fixing that
+  fallback — and note that changing the fallback to null would affect every
+  other consumer of `useFacilityRbac`, which is why it was left alone here.
+- When notes become real rows, the visibility filter belongs in the **query**,
+  not the component: a customer should not receive an internal note over the
+  wire at all, and RLS is where that belongs.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

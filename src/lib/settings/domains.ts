@@ -52,6 +52,10 @@ import {
 import { NO_TAX, taxConfigSchema } from "@/lib/settings/tax";
 import { NO_YIPYY_PAY, yipyyPayConfigSchema } from "@/lib/settings/yipyy-pay";
 import { YIPYY_GO_OFF, yipyyGoSettingsSchema } from "@/lib/settings/yipyy-go";
+import {
+  DEFAULT_TAG_NOTE_POLICY,
+  tagNoteSettingsSchema,
+} from "@/lib/settings/tag-notes";
 
 import {
   bookingRulesSchema,
@@ -384,6 +388,21 @@ export const SETTING_DOMAINS = {
   // because the shipped default is already inert — `enabled: false`, and all
   // four services off. See the banner in lib/settings/yipyy-go.ts.
   yipyy_go_config: { schema: yipyyGoSettingsSchema, fallback: YIPYY_GO_OFF },
+  // ── TAGS AND NOTES ─────────────────────────────────────────────────────
+  //
+  // Which tag types the facility uses, what a new tag or note defaults to, and
+  // who may read, write, edit and delete a note of each category. useState and
+  // nothing else until 2026-09-06.
+  //
+  // The permission grid is the reason this domain arrived WITH its enforcement
+  // rather than before it: `rolePermissions` was read by exactly one component,
+  // the editor itself, so a facility reserving deletion to management changed
+  // nothing. Persisting an inert permission is a more durable lie than
+  // discarding one. See the banner in lib/settings/tag-notes.ts.
+  tag_note_settings: {
+    schema: tagNoteSettingsSchema,
+    fallback: DEFAULT_TAG_NOTE_POLICY,
+  },
   // ── YIPYY PAY ──────────────────────────────────────────────────────────
   //
   // The facility's payment preferences: which payout schedule their Clover

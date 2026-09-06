@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, MessageSquare, StickyNote, Pin } from "lucide-react";
+import { Plus, MessageSquare, StickyNote, Pin, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NoteCard } from "@/components/shared/NoteCard";
 import { AddNoteModal } from "@/components/shared/AddNoteModal";
 import { NoteHistoryModal } from "@/components/shared/NoteHistoryModal";
 import { useNotesForEntity } from "@/hooks/use-tags-notes";
 import type { NoteCategory, PetNoteSubType, Note } from "@/data/tags-notes";
+import { useTagNotePolicy } from "@/lib/api/facility-settings";
+import { useFacilityViewer } from "@/hooks/use-facility-rbac";
+import { canActOnNotes, type NoteAction } from "@/lib/settings/tag-notes";
 import { cn } from "@/lib/utils";
 
 interface NotesListProps {
@@ -17,6 +20,28 @@ interface NotesListProps {
   compact?: boolean;
   readOnly?: boolean;
   className?: string;
+  /**
+   * Who is looking. STAFF by default, because every call site but one is inside
+   * the facility portal.
+   *
+   * ── WHY THIS IS A PROP AND NOT SOMETHING WE WORK OUT ─────────────────────
+   *
+   * The obvious version — "ask the RBAC context whether there is a facility
+   * viewer" — is a trap. `useFacilityRbac()` outside its provider does not
+   * return null; it FALLS BACK TO THE OWNER with all access (see the comment on
+   * that hook). The customer portal has no `FacilityRbacProvider`, so asking it
+   * on /customer/pets would confidently answer "you are the owner" and pass
+   * every permission check.
+   *
+   * `readOnly` is not a substitute either: a staff surface uses it too —
+   * clients/[id]/page.tsx passes `readOnly={!canAddNoteForThisPet}` — so it
+   * means "cannot write here", not "is a customer".
+   *
+   * A customer is not governed by a facility-role grid, so `audience="customer"`
+   * skips it entirely and applies the rule that actually protects them: a note
+   * marked `internal` is not theirs to read.
+   */
+  audience?: "staff" | "customer";
 }
 
 const PET_SUBTYPES: { value: PetNoteSubType | "all"; label: string }[] = [
@@ -34,6 +59,7 @@ export function NotesList({
   compact = false,
   readOnly = false,
   className,
+  audience = "staff",
 }: NotesListProps) {
   const {
     notes,
@@ -43,6 +69,40 @@ export function NotesList({
     togglePin,
     toggleVisibility,
   } = useNotesForEntity(category, entityId, facilityId);
+
+  const { policy, isPending: policyPending } = useTagNotePolicy();
+  const { viewer } = useFacilityViewer();
+
+  // ── THE PERMISSION GRID DECIDES SOMETHING NOW ────────────────────────────
+  //
+  // `noteSettings.rolePermissions` is a five-category grid of view / create /
+  // edit / delete against the six facility roles, and until 2026-09-06 the
+  // string `rolePermissions` appeared in exactly ONE component — the settings
+  // editor that writes it. This list, the card, the button and the modal all
+  // ignored it, so a facility reserving deletion to management changed nothing.
+  //
+  // `policyPending` is folded in deliberately: the fallback is permissive, so
+  // rendering through the pending state would show an edit and a delete button
+  // to somebody the facility has excluded and then take them away. A control
+  // that appears and vanishes is worse than one that arrives a moment late.
+  const isStaff = audience === "staff";
+  const role = isStaff ? viewer.primaryRole : null;
+  const allowed = (action: NoteAction) =>
+    isStaff && !policyPending && canActOnNotes(policy, category, action, role);
+
+  const canView = !isStaff || allowed("view");
+  const canCreate = !readOnly && allowed("create");
+  const canEdit = !readOnly && allowed("edit");
+  const canDelete = !readOnly && allowed("delete");
+
+  // A customer reads what was shared with them, and nothing else. NOTHING
+  // filtered on `visibility` before this: `useNotesForEntity` returns every
+  // note on the entity, and NoteCard uses the field only to render a badge that
+  // says "Internal" — so /customer/pets/[petId] showed a pet's owner every
+  // internal note staff had written about them, correctly labelled as internal.
+  const visibleNotes = isStaff
+    ? notes
+    : notes.filter((n) => n.visibility === "shared_with_customer");
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -56,8 +116,30 @@ export function NotesList({
 
   const filteredNotes =
     filterSubType === "all"
-      ? notes
-      : notes.filter((n) => n.subType === filterSubType);
+      ? visibleNotes
+      : visibleNotes.filter((n) => n.subType === filterSubType);
+
+  // A role the facility has not admitted to this category is told so, rather
+  // than shown an empty list. "No notes yet" and "not yours to read" are
+  // different facts, and conflating them is how somebody concludes a pet has no
+  // medical history. §5d2 gives this rung the `secure` pose; at this size it is
+  // a Tier 1 glyph and a sentence, because §5d1's floor is 96px of clear
+  // vertical room and a notes panel in a tab is often less.
+  if (!canView) {
+    return (
+      <div
+        className={cn(
+          "text-ink-tertiary flex flex-col items-center justify-center gap-2 py-8 text-center",
+          className,
+        )}
+      >
+        <Lock className="size-6" />
+        <p className="text-sm">
+          Your role does not have access to these notes.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -87,7 +169,7 @@ export function NotesList({
             </div>
           )}
         </div>
-        {!readOnly && (
+        {canCreate && (
           <Button
             size="sm"
             variant="outline"
@@ -109,7 +191,7 @@ export function NotesList({
             <StickyNote className="mb-2 size-8" />
           )}
           <p className="text-sm">No notes yet</p>
-          {!readOnly && (
+          {canCreate && (
             <p className="mt-1 text-xs">
               Click &quot;Add Note&quot; to create one
             </p>
@@ -128,8 +210,11 @@ export function NotesList({
                 key={note.id}
                 note={note}
                 readOnly={readOnly}
-                onEdit={() => setEditingNote(note)}
-                onDelete={() => deleteNote(note.id)}
+                // Withheld rather than disabled: NoteCard already renders
+                // nothing for an absent callback, and §6 rule 5 is that a
+                // control nobody can use should not be there to reach for.
+                onEdit={canEdit ? () => setEditingNote(note) : undefined}
+                onDelete={canDelete ? () => deleteNote(note.id) : undefined}
                 onTogglePin={() => togglePin(note.id)}
                 onToggleVisibility={() => toggleVisibility(note.id)}
                 onViewHistory={

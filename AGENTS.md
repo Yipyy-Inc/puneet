@@ -83,6 +83,7 @@ Since 2026-08-28 there is also a **small second tier**: `bun test` over [tests/u
 | `bun run check:ui-french`              | Fails if a surface a French user reads in English regresses — settings (49 of 50 baselined), all four portal shells and the shadcn primitives (**at zero**) |
 | `bun run check:passkey-email-verified` | Fails if the magic-auth bridge escapes its one file, or a passkey verify route drops its `emailVerified` check                                              |
 | `bun run check:migration-versions`     | Fails if two migrations share a version number, so `db push` cannot pick its own order                                                                      |
+| `bun run check:domain-server-safe`     | Fails if a settings domain reaches a `"use client"` module — the settings API route imports the registry, so it is server code                              |
 | `bun run check:no-review-gating`       | Fails if a control hides a public review link by rating — review gating, which the FTC and Google prohibit                                                  |
 | `bun run check:derived-location`       | Fails if a fixture guess decides where a real row belongs, or to whom — a location, or an assignment                                                        |
 | `bun run check:inert-permissions`      | Fails if a permission offered in the role editor is consulted by nothing — a switch that decides nothing                                                    |

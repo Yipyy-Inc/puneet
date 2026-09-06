@@ -111,11 +111,24 @@ const ALLOW = /settings-write-ok:/;
 // a form. The customer portal reads it through its own route and its own RLS
 // allowlist entry, because `getFacilityContext()` resolves a caller with no
 // membership to the DEMO facility. See lib/settings/yipyy-go.ts.
+//
+// tags-notes left on 2026-09-06, but only HALF of it did, and the difference
+// matters when reading this green. The note POLICY — including the five-by-four
+// permission grid — is the `tag_note_settings` domain now, and it landed with
+// its enforcement: `rolePermissions` had been read by exactly one component,
+// the editor that wrote it, so a facility reserving deletion to management
+// changed nothing on any screen. NotesList consults it now.
+//
+// The tag CATALOGUE still edits `useState`. It is not a settings blob: a tag is
+// a row that assignments point at, so it needs a table, and the catalogue and
+// its assignments have to move together or every pet shows no tags. This gate
+// asks whether a SECTION reaches a write, and this one now does, so it cannot
+// see the remaining half — the toasts there say plainly that the list is not
+// stored, and the debt map carries the rest.
 const BASELINE = new Set<string>([
-  // Both of these raise a success toast as well, and are in
-  // check:success-claims' baseline for it.
+  // Raises a success toast as well, and is in check:success-claims' baseline
+  // for it.
   "mobile-app",
-  "tags-notes",
 ]);
 
 const cache = new Map<string, string>();
