@@ -825,5 +825,61 @@
         "selectDate": "Select date"
       }
     }
+  },
+  "facilityNav": {
+    "sections": {
+      "calendars": "Calendars",
+      "communication": "Communication",
+      "intelligence": "Intelligence",
+      "operations": "Operations",
+      "financial": "Financial",
+      "reports": "Reports",
+      "marketing": "Marketing",
+      "management": "Management"
+    },
+    "items": {
+      "/facility/dashboard": "Dashboard",
+      "/facility/dashboard/calendar": "Facility Calendar",
+      "/facility/dashboard/kennel-view": "Occupancy Calendar",
+      "/facility/dashboard/calling": "Calling",
+      "/facility/dashboard/messaging": "Inbox",
+      "/facility/dashboard/services/grooming": "Grooming",
+      "/facility/dashboard/services/training": "Training",
+      "/facility/dashboard/services/retail": "Retail / POS",
+      "/facility/dashboard/automations": "Automations",
+      "/facility/dashboard/insights": "Smart Insights",
+      "/facility/dashboard/clients": "Customer",
+      "/facility/dashboard/services/scheduling": "Scheduling",
+      "/facility/dashboard/daily-care": "Daily Care",
+      "/facility/dashboard/bookings": "Bookings",
+      "/facility/dashboard/estimates": "Estimates",
+      "/facility/dashboard/tasks": "Tasks",
+      "/facility/dashboard/online-booking": "Booking Requests",
+      "/facility/dashboard/evaluations": "Evaluations",
+      "/facility/dashboard/staff": "Staff",
+      "/facility/dashboard/inventory": "Operational Inventory",
+      "/facility/services/memberships": "Memberships",
+      "/facility/dashboard/petcams": "Live Pet Cams",
+      "/facility/dashboard/payments": "Payments",
+      "/facility/dashboard/billing/cash-drawer": "Daily Register",
+      "/facility/dashboard/payroll": "Payroll",
+      "/facility/settings/billing": "Subscription & Billing",
+      "/facility/dashboard/gift-cards": "Gift Cards",
+      "/facility/dashboard/reports": "Reports & Analytics",
+      "/facility/dashboard/marketing": "Marketing",
+      "/facility/dashboard/loyalty": "Loyalty Program",
+      "/facility/dashboard/marketing/loyalty-reports": "Loyalty Reports",
+      "/facility/dashboard/marketing/reputation-booster": "Reputation Booster",
+      "/facility/dashboard/incidents": "Incidents",
+      "/facility/dashboard/waivers": "Digital Waivers",
+      "/facility/dashboard/forms": "Intake Forms",
+      "/facility/dashboard/settings": "Settings"
+    },
+    "bottomBar": {
+      "/facility/dashboard": "Dashboard",
+      "/facility/dashboard/kennel-view": "Occupancy",
+      "/facility/dashboard/calendar": "Calendar",
+      "/facility/dashboard/tasks": "Tasks"
+    }
   }
 }

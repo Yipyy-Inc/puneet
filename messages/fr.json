@@ -825,5 +825,61 @@
         "selectDate": "Choisir une date"
       }
     }
+  },
+  "facilityNav": {
+    "sections": {
+      "calendars": "Calendriers",
+      "communication": "Communication",
+      "intelligence": "Renseignements",
+      "operations": "Opérations",
+      "financial": "Finances",
+      "reports": "Rapports",
+      "marketing": "Marketing",
+      "management": "Gestion"
+    },
+    "items": {
+      "/facility/dashboard": "Tableau de bord",
+      "/facility/dashboard/calendar": "Calendrier de l'établissement",
+      "/facility/dashboard/kennel-view": "Calendrier d'occupation",
+      "/facility/dashboard/calling": "Appels",
+      "/facility/dashboard/messaging": "Boîte de réception",
+      "/facility/dashboard/services/grooming": "Toilettage",
+      "/facility/dashboard/services/training": "Dressage",
+      "/facility/dashboard/services/retail": "Vente au détail / PDV",
+      "/facility/dashboard/automations": "Automatisations",
+      "/facility/dashboard/insights": "Analyses intelligentes",
+      "/facility/dashboard/clients": "Clients",
+      "/facility/dashboard/services/scheduling": "Horaires",
+      "/facility/dashboard/daily-care": "Soins quotidiens",
+      "/facility/dashboard/bookings": "Réservations",
+      "/facility/dashboard/estimates": "Soumissions",
+      "/facility/dashboard/tasks": "Tâches",
+      "/facility/dashboard/online-booking": "Demandes de réservation",
+      "/facility/dashboard/evaluations": "Évaluations",
+      "/facility/dashboard/staff": "Personnel",
+      "/facility/dashboard/inventory": "Inventaire opérationnel",
+      "/facility/services/memberships": "Abonnements",
+      "/facility/dashboard/petcams": "Caméras en direct",
+      "/facility/dashboard/payments": "Paiements",
+      "/facility/dashboard/billing/cash-drawer": "Caisse du jour",
+      "/facility/dashboard/payroll": "Paie",
+      "/facility/settings/billing": "Abonnement et facturation",
+      "/facility/dashboard/gift-cards": "Cartes-cadeaux",
+      "/facility/dashboard/reports": "Rapports et analyses",
+      "/facility/dashboard/marketing": "Marketing",
+      "/facility/dashboard/loyalty": "Programme de fidélité",
+      "/facility/dashboard/marketing/loyalty-reports": "Rapports de fidélité",
+      "/facility/dashboard/marketing/reputation-booster": "Gestion de la réputation",
+      "/facility/dashboard/incidents": "Incidents",
+      "/facility/dashboard/waivers": "Décharges électroniques",
+      "/facility/dashboard/forms": "Formulaires d'accueil",
+      "/facility/dashboard/settings": "Paramètres"
+    },
+    "bottomBar": {
+      "/facility/dashboard": "Accueil",
+      "/facility/dashboard/kennel-view": "Occupation",
+      "/facility/dashboard/calendar": "Calendrier",
+      "/facility/dashboard/tasks": "Tâches"
+    }
   }
 }

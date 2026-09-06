@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LocationContextSelector } from "@/components/hq/LocationContextSelector";
 import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
 import { NAV_SECTIONS, type NavItem } from "@/lib/nav/facility-nav";
+import { useNavText } from "@/lib/nav/use-nav-text";
 
 /**
  * Up to two initials for a facility with no logo.
@@ -64,6 +65,8 @@ export function FacilitySidebar() {
   // the resolver — the sidebar makes no independent permission decisions; an
   // item shows only when the acting user holds its `permKey`. Sections left with
   // no visible items are dropped.
+  const navText = useNavText();
+
   const filteredMenuSections = useMemo((): MenuSection[] => {
     // Runtime badge counts, layered on by route.
     //
@@ -83,16 +86,25 @@ export function FacilitySidebar() {
     const isAllowed = (item: NavItem) => permissions[item.permKey] !== false;
 
     return NAV_SECTIONS.map((section) => ({
-      label: section.label,
+      // Translated here rather than in facility-nav.ts, which is a data file
+      // the permission editors also read and check:nav-icons parses. The
+      // labels stay English at rest and become the reader's language at
+      // render.
+      // A section with no label is headerless by design — the Dashboard group
+      // is one — so an absent label stays absent rather than gaining a
+      // translated heading it never had.
+      label: section.label
+        ? navText.section(section.id, section.label)
+        : undefined,
       items: section.items.filter(isAllowed).map((item) => ({
-        title: item.title,
+        title: navText.item(item.url, item.title),
         url: item.url,
         icon: item.icon,
         disabled: false,
         count: counts[item.url],
       })),
     })).filter((section) => section.items.length > 0);
-  }, [highPriorityCount, permissions]);
+  }, [highPriorityCount, permissions, navText]);
 
   const handleLogout = () => {
     void signOutEverywhere();
