@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarDays, ClipboardList, Grid3X3, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavText } from "@/lib/nav/use-nav-text";
 
 const NAV_ITEMS = [
   {
@@ -37,6 +38,7 @@ function isActive(pathname: string, href: string): boolean {
 
 export function FacilityMobileBottomNav() {
   const pathname = usePathname();
+  const navText = useNavText();
 
   return (
     <nav className="fixed right-0 bottom-0 left-0 z-45 border-t border-slate-200 bg-white/95 px-2 py-1.5 shadow-[0_-6px_20px_rgba(15,23,42,0.08)] backdrop-blur-sm md:hidden">
@@ -57,7 +59,7 @@ export function FacilityMobileBottomNav() {
                 )}
               >
                 <Icon className="size-4" />
-                <span>{item.label}</span>
+                <span>{navText.bottomBar(item.href, item.label)}</span>
               </Link>
             </li>
           );
