@@ -5,6 +5,7 @@ import { Search, Loader2, Plus, ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   Popover,
   PopoverAnchor,
@@ -67,6 +68,19 @@ function useDebouncedValue<T>(value: T, delayMs: number) {
   return debounced;
 }
 
+/**
+ * The group headings are the KEYS of the grouped-results object as well as the
+ * words on screen, so they stay English in the data and are translated at the
+ * point of render. Translating the key would make the shape of the results
+ * change with the viewer's language.
+ */
+const GROUP_KEY: Record<string, string> = {
+  "Pets / Customers": "groupPetsCustomers",
+  Bookings: "groupBookings",
+  Estimates: "groupEstimates",
+  Invoices: "groupInvoices",
+};
+
 function groupLabel(entityType: GlobalSearchEntityType) {
   if (entityType === "pet" || entityType === "customer")
     return "Pets / Customers";
@@ -103,12 +117,13 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
       onChangeValue,
       onFocus,
       onKeyDown,
-      placeholder = "Search pets, customers, bookings, estimates, invoices...",
+      placeholder,
       showShortcutHint = true,
       className,
     },
     ref,
   ) {
+    const t = useShellText("search");
     return (
       <div className={cn("relative w-full max-w-xl", className)}>
         <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -118,9 +133,9 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
           onChange={(e) => onChangeValue(e.target.value)}
           onFocus={onFocus}
           onKeyDown={onKeyDown}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t("placeholder")}
           className="pl-9"
-          aria-label="Global search"
+          aria-label={t("label")}
         />
         {showShortcutHint && (
           <kbd className="bg-background/60 text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 rounded-sm border px-1.5 py-0.5 text-[10px]">
@@ -175,6 +190,7 @@ export function ResultsDropdown({
   canCreateCustomer,
   onCreateCustomer,
 }: ResultsDropdownProps) {
+  const t = useShellText("search");
   const grouped = React.useMemo(() => {
     const groups: Record<string, GlobalSearchResultItem[]> = {
       "Pets / Customers": [],
@@ -218,7 +234,7 @@ export function ResultsDropdown({
           {loading && (
             <div className="text-muted-foreground flex items-center gap-2 px-3 py-3 text-sm">
               <Loader2 className="size-4 animate-spin" />
-              Searching…
+              {t("searching")}
             </div>
           )}
 
@@ -226,7 +242,7 @@ export function ResultsDropdown({
             <>
               {visibleGroups.map((group, index) => (
                 <React.Fragment key={group.heading}>
-                  <CommandGroup heading={group.heading}>
+                  <CommandGroup heading={t(GROUP_KEY[group.heading])}>
                     {group.items.map((r) => (
                       <ResultItem
                         key={`${r.entityType}:${r.id}`}
@@ -241,7 +257,7 @@ export function ResultsDropdown({
 
               {showEmpty && (
                 <>
-                  <CommandEmpty>No results found.</CommandEmpty>
+                  <CommandEmpty>{t("noResults")}</CommandEmpty>
                   {canCreateCustomer && (
                     <div className="border-t p-2">
                       <CommandItem
@@ -249,7 +265,7 @@ export function ResultsDropdown({
                         onSelect={() => onCreateCustomer?.()}
                       >
                         <Plus className="size-4" />
-                        Create customer
+                        {t("createCustomer")}
                       </CommandItem>
                     </div>
                   )}
@@ -259,13 +275,13 @@ export function ResultsDropdown({
               {!showEmpty && hasMore && (
                 <>
                   <CommandSeparator />
-                  <CommandGroup heading="Actions">
+                  <CommandGroup heading={t("actions")}>
                     <CommandItem
                       value="View all results"
                       onSelect={() => onNavigate(viewAllHref)}
                     >
                       <ArrowRight className="size-4" />
-                      View all results
+                      {t("viewAll")}
                     </CommandItem>
                   </CommandGroup>
                 </>
@@ -288,6 +304,7 @@ export function GlobalSearch({
   getViewAllHref,
   className,
 }: GlobalSearchProps) {
+  const t = useShellText("search");
   const nav = React.useCallback(
     (to: string) => {
       if (navigate) return navigate(to);

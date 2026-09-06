@@ -810,7 +810,7 @@
         "fullyClose": "Fully close",
         "blockCheckInOnly": "Block check-in only",
         "blockCheckOutOnly": "Block check-out only",
-        "blockTypeHelp": "Fully close = no check-in or check-out. Or block only check-in or only check-out.",
+        "blockTypeHelp": "Fully close = no check-in or check-out. Or block only check-in or only check-out dates.",
         "closureMessage": "Closure message (customer-facing)",
         "closureMessageHelp": "Shown when a customer hovers over or focuses the blocked date in the booking calendar.",
         "noBlocks": "No service-specific blocks. Add a date and service(s) above.",
@@ -821,8 +821,7 @@
         "dropOffPickUpHelp": "Override drop-off and pick-up windows for specific dates (e.g. holiday hours). Customers only see valid time options for each date.",
         "noDropOffOverrides": "No drop-off/pick-up overrides. Add a date and service(s) above.",
         "servicesPerServiceMultipleAll": "Services (per service, multiple, or all)",
-        "servicesOptionalAll": "Services (optional — leave empty for all)",
-        "selectDate": "Select date"
+        "servicesOptionalAll": "Services (optional — leave empty for all)"
       }
     }
   },
@@ -890,5 +889,84 @@
     "evaluation": "Evaluation",
     "retail": "Retail",
     "vet": "Vet"
+  },
+  "shell": {
+    "header": {
+      "search": "Search",
+      "messages": "Messages",
+      "create": "Create",
+      "new": "New",
+      "calling": "Calling",
+      "moreOptions": "More options",
+      "newClient": "New client",
+      "newBooking": "New booking",
+      "retailSale": "Retail sale",
+      "newEstimate": "New estimate",
+      "quickDaycareCheckIn": "Quick daycare check-in",
+      "clientAdded": "The new client has been added.",
+      "notAvailableYet": "This is not available yet.",
+      "createClientFailed": "Could not create that client",
+      "createBookingFailed": "Could not create that booking",
+      "quickCheckInSoon": "Quick daycare check-in is coming soon",
+      "tryAgain": "Try again."
+    },
+    "account": {
+      "signedIn": "Signed in",
+      "profileSettings": "Profile settings",
+      "notificationPreferences": "Notification preferences",
+      "switchLocation": "Switch location",
+      "allLocations": "All locations (HQ)",
+      "helpSupport": "Help & support",
+      "systemSettings": "System settings",
+      "ownerAccount": "Owner account",
+      "agreements": "Yipyy agreements",
+      "subscription": "My subscription",
+      "paymentMethod": "Payment method",
+      "exportData": "Export data",
+      "accountSettings": "Account settings",
+      "viewAs": "View as",
+      "facilityPortal": "Facility portal",
+      "customerPortal": "Customer portal",
+      "staffPortal": "Staff portal",
+      "logOut": "Log out",
+      "accountMenu": "Account menu"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "new": "new",
+      "markAllRead": "Mark all as read",
+      "none": "No notifications"
+    },
+    "support": {
+      "open": "Help & support",
+      "title": "Support centre",
+      "blurb": "Get help from the Yipyy support team without leaving this page.",
+      "close": "Close the support centre",
+      "chat": "Chat with Yipyy",
+      "ticket": "Submit a ticket",
+      "faqs": "Help & FAQs"
+    },
+    "banners": {
+      "adminMode": "Yipyy admin mode",
+      "exitImpersonation": "Exit",
+      "impersonationInvalid": "This impersonation link is invalid or has expired.",
+      "continueSetup": "Continue setup",
+      "dismissOnboarding": "Dismiss onboarding banner",
+      "dismiss": "Dismiss",
+      "onboardingTitle": "Finish setting up your facility"
+    },
+    "search": {
+      "placeholder": "Search pets, customers, bookings, estimates, invoices...",
+      "label": "Global search",
+      "actions": "Actions",
+      "noResults": "No results found.",
+      "createCustomer": "Create customer",
+      "viewAll": "View all results",
+      "searching": "Searching…",
+      "groupPetsCustomers": "Pets / customers",
+      "groupBookings": "Bookings",
+      "groupEstimates": "Estimates",
+      "groupInvoices": "Invoices"
+    }
   }
 }

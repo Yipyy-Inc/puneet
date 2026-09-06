@@ -17,6 +17,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 /**
  * Facility Support Center (FB-3) — a floating card anchored to the Support FAB
@@ -30,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  * the support-drawer store (FAB, Help Center, etc.).
  */
 export function SupportCenter() {
+  const t = useShellText("support");
   const { open, tab } = useSupportDrawer();
 
   return (
@@ -60,16 +62,14 @@ export function SupportCenter() {
               <span className="bg-violet flex size-7 items-center justify-center rounded-lg text-white">
                 <Headset className="size-4" />
               </span>
-              Support Center
+              {t("title")}
             </h2>
-            <p className="text-muted-foreground text-xs">
-              Get help from the Yipyy support team without leaving this page.
-            </p>
+            <p className="text-muted-foreground text-xs">{t("blurb")}</p>
           </div>
           <button
             type="button"
             onClick={() => setSupportDrawerOpen(false)}
-            aria-label="Close Support Center"
+            aria-label={t("close")}
             className="text-muted-foreground hover:bg-muted hover:text-foreground -mt-1 -mr-1 flex size-7 shrink-0 items-center justify-center rounded-md transition-colors"
           >
             <X className="size-4" />
@@ -86,19 +86,19 @@ export function SupportCenter() {
               value="chat"
               className="flex-1 justify-center px-2 text-xs"
             >
-              Chat with Yipyy
+              {t("chat")}
             </TabsTrigger>
             <TabsTrigger
               value="ticket"
               className="flex-1 justify-center px-2 text-xs"
             >
-              Submit a Ticket
+              {t("ticket")}
             </TabsTrigger>
             <TabsTrigger
               value="faq"
               className="flex-1 justify-center px-2 text-xs"
             >
-              Help &amp; FAQs
+              {t("faqs")}
             </TabsTrigger>
           </TabsList>
 

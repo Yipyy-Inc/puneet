@@ -8,6 +8,7 @@ import { ArrowRight, Rocket, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ONBOARDING_DISMISS_THRESHOLD } from "@/data/facility-onboarding";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   dismissOnboardingBanner,
   loadPersistedOnboarding,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/facility-onboarding-store";
 
 export function FacilityOnboardingBanner() {
+  const t = useShellText("banners");
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { completed, total, percent, allComplete, canDismiss, dismissed } =
@@ -67,7 +69,7 @@ export function FacilityOnboardingBanner() {
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">
-            Finish setting up your facility
+            {t("onboardingTitle")}
           </p>
           <div className="mt-1.5 flex items-center gap-2">
             <Progress
@@ -88,8 +90,8 @@ export function FacilityOnboardingBanner() {
           // a blue glow under a white button on a blue bar is invisible.
           className="text-primary hover:text-primary shrink-0 gap-1 bg-white shadow-none hover:bg-white/90"
         >
-          <Link href="/facility/onboarding" aria-label="Continue setup">
-            <span className="hidden sm:inline">Continue setup</span>
+          <Link href="/facility/onboarding" aria-label={t("continueSetup")}>
+            <span className="hidden sm:inline">{t("continueSetup")}</span>
             <ArrowRight className="size-4" />
           </Link>
         </Button>
@@ -115,7 +117,7 @@ export function FacilityOnboardingBanner() {
           // simply that value's equivalent on a solid field, where
           // --ink-disabled itself measures about 2:1 and disappears.
           className="shrink-0 text-white hover:bg-white/15 hover:text-white [&:disabled:not([data-loading])]:bg-white/10 [&:disabled:not([data-loading])]:text-white/55"
-          aria-label="Dismiss onboarding banner"
+          aria-label={t("dismissOnboarding")}
           title={
             canDismiss
               ? "Dismiss"

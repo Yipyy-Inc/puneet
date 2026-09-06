@@ -91,7 +91,7 @@ const TOAST = /toast(?:\.\w+)?\(\s*"([^"]{2,})"/g;
  * the text node "Promise", which put 25 phantom strings in the one section
  * that is actually finished.
  */
-const JSX_TEXT = /(?<![=\-!<])>([^<>{}]{2,400})</g;
+const JSX_TEXT = /(?<![=\-!<> \t])>([^<>{}]{2,400})</g;
 
 const FRENCH_OK = /french-ok:/;
 
@@ -206,7 +206,11 @@ function isProse(text: string): boolean {
   if (t.length < 2) return false;
   if (!/^[A-Za-z0-9]/.test(t)) return false; // ", VariantProps" — a generic
   if (!/[a-z]{2}/.test(t)) return false; // needs real lowercase letters
-  if (!/^[\x20-\x7E]+$/.test(t)) return false; // accented already reads as French
+  // Already French, so not a defect. The test is ACCENTED LETTERS, not
+  // "non-ASCII": requiring pure ASCII also threw away English carrying
+  // typographic punctuation, and "Searching…" sat unseen in the global search
+  // — on every screen — for exactly that reason.
+  if (/[À-ÿ]/.test(t)) return false;
   if (/^(?:https?:|\/|#|\.)/.test(t)) return false;
   if (/^[a-z0-9-]+$/.test(t) && !t.includes(" ") && t.includes("-"))
     return false;

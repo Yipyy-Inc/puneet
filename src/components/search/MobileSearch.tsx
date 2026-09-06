@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 /**
  * Mobile-only search affordance. The full-width header search bar is hidden on
@@ -20,6 +21,7 @@ export function MobileSearch({
   canCreateCustomer?: boolean;
   className?: string;
 }) {
+  const t = useShellText("header");
   const [open, setOpen] = useState(false);
 
   return (
@@ -27,7 +29,7 @@ export function MobileSearch({
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Search"
+        aria-label={t("search")}
         onClick={() => setOpen(true)}
         className={cn("hover:bg-muted size-9 rounded-xl", className)}
       >
@@ -38,7 +40,7 @@ export function MobileSearch({
           showCloseButton={false}
           className="top-20 max-w-[calc(100vw-1.5rem)] translate-y-0 gap-0 p-3"
         >
-          <DialogTitle className="sr-only">Search</DialogTitle>
+          <DialogTitle className="sr-only">{t("search")}</DialogTitle>
           <GlobalSearchNext
             canCreateCustomer={canCreateCustomer}
             className="w-full max-w-none"

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { LogOut, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   decodeImpersonationToken,
   endImpersonation,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/impersonation";
 
 export function ImpersonationBanner() {
+  const t = useShellText("banners");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -35,7 +37,7 @@ export function ImpersonationBanner() {
 
     const s = decodeImpersonationToken(token);
     if (!s) {
-      toast.error("This impersonation link is invalid or has expired.");
+      toast.error(t("impersonationInvalid"));
     } else {
       startImpersonation(s);
       logImpersonationAction(s, "Started impersonation session", {
@@ -50,7 +52,7 @@ export function ImpersonationBanner() {
     }
     // Drop the token from the URL so it can't be re-used or bookmarked.
     router.replace(pathname);
-  }, [searchParams, pathname, router]);
+  }, [searchParams, pathname, router, t]);
 
   // Log each page viewed during the session.
   useEffect(() => {
@@ -80,7 +82,7 @@ export function ImpersonationBanner() {
       <span className="flex items-center gap-2 text-sm">
         <ShieldAlert className="size-4 shrink-0" />
         <span>
-          <span className="font-semibold">Yipyy Admin Mode</span> — You are
+          <span className="font-semibold">{t("adminMode")}</span> — You are
           viewing <strong>{session.facilityName}</strong> as{" "}
           <strong>{session.adminName}</strong>.
         </span>
@@ -92,7 +94,7 @@ export function ImpersonationBanner() {
         onClick={handleExit}
       >
         <LogOut className="mr-1.5 size-3.5" />
-        Exit
+        {t("exitImpersonation")}
       </Button>
     </div>
   );
