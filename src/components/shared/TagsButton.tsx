@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { TagList } from "@/components/shared/TagList";
 import { useTagsForEntity } from "@/hooks/use-tags-notes";
-import type { TagType } from "@/data/tags-notes";
+import type { TagType } from "@/types/tags";
 import { cn } from "@/lib/utils";
 
 interface TagsButtonProps {

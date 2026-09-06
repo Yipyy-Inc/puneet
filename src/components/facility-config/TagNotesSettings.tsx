@@ -40,26 +40,33 @@ import { TagBadge } from "@/components/shared/TagBadge";
 import { TagIconPicker } from "@/components/shared/TagIconPicker";
 import { resolveIcon } from "@/lib/service-registry";
 import { getContrastTextColor } from "@/lib/color-utils";
+import type {
+  Tag,
+  TagType,
+  TagPriority,
+  TagVisibility,
+  TagScope,
+  NoteCategory,
+  NoteRolePermissions,
+} from "@/types/tags";
 import {
-  tags as allTags,
-  type Tag,
-  type TagType,
-  type TagPriority,
-  type TagVisibility,
-  type TagScope,
-  type NoteCategory,
-  type NoteRolePermissions,
-} from "@/data/tags-notes";
+  useCreateTag,
+  useRetireTag,
+  useTagCatalogue,
+  useUpdateTag,
+} from "@/lib/api/tags";
+import { DEFAULT_TAG_COLOR } from "@/lib/tag-colors";
 import {
   ALL_FACILITY_ROLES,
   FACILITY_ROLE_LABELS,
   type FacilityRole,
 } from "@/lib/role-utils";
-import {
-  logTagCreated,
-  logTagUpdated,
-  logTagDeleted,
-} from "@/lib/tag-note-audit";
+// The three `logTag*` calls that sat here are gone with the fixture. They
+// appended to a module-level array in src/lib/tag-note-audit.ts that NOTHING
+// reads — `getTagNoteAuditLog` has no caller — so keeping them beside a real
+// write would have been a compliance log that records nothing, next to a change
+// that is genuinely durable. `public.audit_log` is the real one, and no trigger
+// on `facility_tags` writes to it yet. Recorded in the debt map.
 import { cn } from "@/lib/utils";
 
 // ========================================
@@ -81,7 +88,7 @@ const EMPTY_TAG_FORM: TagFormState = {
   name: "",
   description: "",
   icon: "PawPrint",
-  color: "#3b82f6",
+  color: DEFAULT_TAG_COLOR,
   priority: "informational",
   visibility: "internal",
   scope: "global",
@@ -92,10 +99,10 @@ const TAG_TYPE_CONFIG: Record<
   TagType,
   { label: string; icon: React.ReactNode }
 > = {
-  pet: { label: "Pet Tags", icon: <PawPrint className="size-4" /> },
-  customer: { label: "Customer Tags", icon: <Users className="size-4" /> },
+  pet: { label: "Pet tags", icon: <PawPrint className="size-4" /> },
+  customer: { label: "Customer tags", icon: <Users className="size-4" /> },
   booking: {
-    label: "Booking Tags",
+    label: "Booking tags",
     icon: <CalendarCheck className="size-4" />,
   },
 };
@@ -110,7 +117,21 @@ const PRIORITY_BADGE_VARIANTS: Record<
 };
 
 function TagBuilder() {
-  const [tagList, setTagList] = useState<Tag[]>([...allTags]);
+  // ── THE CATALOGUE IS A TABLE NOW, NOT A useState ────────────────────────
+  //
+  // This held `useState<Tag[]>([...allTags])` — a copy of a 76-row fixture —
+  // and its own toast admitted the truth: "the tag list is not stored yet, so
+  // it resets when this page reloads." Every tag a facility created, renamed or
+  // retired here died with the tab.
+  //
+  // `public.facility_tags` had existed since 20260828134018 with RLS and a
+  // uniqueness index, carrying zero rows, because nothing was ever pointed at
+  // it. It is pointed at it now.
+  const { tags: tagList, pending, failed } = useTagCatalogue();
+  const createTag = useCreateTag();
+  const updateTag = useUpdateTag();
+  const retireTag = useRetireTag();
+
   const [activeType, setActiveType] = useState<TagType>("pet");
   const [formOpen, setFormOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
@@ -120,6 +141,8 @@ function TagBuilder() {
   const filteredTags = tagList.filter(
     (t) => t.type === activeType && t.isActive,
   );
+  const saving =
+    createTag.isPending || updateTag.isPending || retireTag.isPending;
 
   function openCreate() {
     setEditingTag(null);
@@ -143,14 +166,18 @@ function TagBuilder() {
   }
 
   function handleSave() {
-    if (!form.name.trim()) return;
+    const name = form.name.trim();
+    if (!name) return;
 
-    // Check for duplicate tag names within same type
+    // A local check so the common mistake gets a sentence rather than a 409.
+    // It is NOT the guarantee: `facility_tags_name_unique` is, and the route
+    // turns its 23505 into the same message for the case two people type the
+    // same tag at once.
     const duplicate = tagList.find(
       (t) =>
         t.type === activeType &&
         t.isActive &&
-        t.name.toLowerCase() === form.name.trim().toLowerCase() &&
+        t.name.toLowerCase() === name.toLowerCase() &&
         t.id !== editingTag?.id,
     );
     if (duplicate) {
@@ -160,99 +187,53 @@ function TagBuilder() {
       return;
     }
 
+    const fields = {
+      name,
+      description: form.description.trim() || undefined,
+      icon: form.icon,
+      color: form.color,
+      priority: form.priority,
+      visibility: form.visibility,
+      scope: form.scope,
+      locationIds: form.scope === "location_specific" ? form.locationIds : [],
+    };
+
+    const onError = (error: Error) => toast.error(error.message);
+
     if (editingTag) {
-      // Update
-      setTagList((prev) =>
-        prev.map((t) =>
-          t.id === editingTag.id
-            ? {
-                ...t,
-                name: form.name.trim(),
-                description: form.description.trim() || undefined,
-                icon: form.icon,
-                color: form.color,
-                priority: form.priority,
-                visibility: form.visibility,
-                scope: form.scope,
-                locationIds:
-                  form.scope === "location_specific"
-                    ? form.locationIds
-                    : undefined,
-                updatedAt: new Date().toISOString(),
-              }
-            : t,
-        ),
+      updateTag.mutate(
+        { id: editingTag.id, patch: fields },
+        {
+          onSuccess: () => {
+            toast.success(`${name} saved`);
+            setFormOpen(false);
+          },
+          onError,
+        },
       );
-      logTagUpdated({
-        facilityId: 1,
-        tagId: editingTag.id,
-        actorId: 1,
-        actorName: "Current User",
-        changes: [
-          { field: "name", oldValue: editingTag.name, newValue: form.name },
-        ],
-      });
-    } else {
-      // Create
-      const newTag: Tag = {
-        id: `tag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        type: activeType,
-        name: form.name.trim(),
-        description: form.description.trim() || undefined,
-        icon: form.icon,
-        color: form.color,
-        priority: form.priority,
-        visibility: form.visibility,
-        scope: form.scope,
-        locationIds:
-          form.scope === "location_specific" ? form.locationIds : undefined,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        createdBy: "Current User",
-        createdById: 1,
-      };
-      setTagList((prev) => [...prev, newTag]);
-      allTags.push(newTag);
-      logTagCreated({
-        facilityId: 1,
-        tagId: newTag.id,
-        tagName: newTag.name,
-        tagType: activeType,
-        actorId: 1,
-        actorName: "Current User",
-      });
+      return;
     }
-    // ── THIS HALF STILL DISCARDS, AND SAYS SO ────────────────────────────
-    //
-    // The note POLICY below moved to `facility_settings.tag_note_settings` on
-    // 2026-09-06. The tag CATALOGUE did not: a tag is a row that assignments
-    // point at, so it needs a table and a migration rather than a settings
-    // blob, and the catalogue and its assignments have to move together or
-    // every pet shows no tags. Until then this edits `useState` and the copy
-    // must not imply otherwise. Recorded in the debt map.
-    toast.success(editingTag ? "Tag updated" : "Tag created", {
-      description:
-        "The tag list is not stored yet, so it resets when this page reloads.",
-    });
-    setFormOpen(false);
+
+    createTag.mutate(
+      { type: activeType, ...fields },
+      {
+        onSuccess: () => {
+          toast.success(`${name} added`);
+          setFormOpen(false);
+        },
+        onError,
+      },
+    );
   }
 
   function handleDelete(tag: Tag) {
-    setTagList((prev) =>
-      prev.map((t) => (t.id === tag.id ? { ...t, isActive: false } : t)),
-    );
-    logTagDeleted({
-      facilityId: 1,
-      tagId: tag.id,
-      tagName: tag.name,
-      actorId: 1,
-      actorName: "Current User",
+    retireTag.mutate(tag.id, {
+      onSuccess: () => {
+        toast.success(`${tag.name} retired`);
+        setDeleteConfirm(null);
+      },
+      onError: (error: Error) => toast.error(error.message),
     });
-    toast.success(`Tag "${tag.name}" deleted`, {
-      description:
-        "The tag list is not stored yet, so it resets when this page reloads.",
-    });
-    setDeleteConfirm(null);
   }
 
   return (
@@ -262,7 +243,7 @@ function TagBuilder() {
           <CardTitle className="text-lg">Tag builder</CardTitle>
           <Button size="sm" className="gap-1" onClick={openCreate}>
             <Plus className="size-3.5" />
-            Create Tag
+            Create tag
           </Button>
         </div>
       </CardHeader>
@@ -283,10 +264,26 @@ function TagBuilder() {
 
           {(Object.keys(TAG_TYPE_CONFIG) as TagType[]).map((type) => (
             <TabsContent key={type} value={type}>
-              {filteredTags.length === 0 ? (
+              {/* §5s: loading, failed and empty are three different answers,
+                  and a list that shows "none yet" while it is still asking
+                  invites somebody to create a duplicate of a tag they have. */}
+              {pending ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map((row) => (
+                    <Skeleton
+                      key={row}
+                      className="h-[62px] w-full rounded-lg"
+                    />
+                  ))}
+                </div>
+              ) : failed ? (
+                <p className="text-muted-foreground py-8 text-center text-sm">
+                  These tags could not be loaded. Reload the page to try again.
+                </p>
+              ) : filteredTags.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
                   <p className="text-sm">
-                    No {TAG_TYPE_CONFIG[type].label.toLowerCase()} created yet
+                    No {TAG_TYPE_CONFIG[type].label.toLowerCase()} yet
                   </p>
                   <Button
                     variant="outline"
@@ -382,9 +379,9 @@ function TagBuilder() {
         <div className="mt-6 rounded-lg border border-dashed p-4 opacity-60">
           <div className="mb-1 flex items-center gap-2">
             <Zap className="size-4" />
-            <span className="text-sm font-medium">Tag Automations</span>
+            <span className="text-sm font-medium">Tag automations</span>
             <Badge variant="secondary" className="text-[10px]">
-              Coming Soon
+              Coming soon
             </Badge>
           </div>
           <p className="text-muted-foreground text-xs">
@@ -399,12 +396,17 @@ function TagBuilder() {
         open={formOpen}
         onOpenChange={setFormOpen}
         type="form"
-        title={editingTag ? "Edit Tag" : "Create Tag"}
+        title={editingTag ? "Edit tag" : "Create tag"}
         size="md"
         actions={{
           primary: {
-            label: editingTag ? "Save Changes" : "Create Tag",
+            label: editingTag ? "Save changes" : "Create tag",
             onClick: handleSave,
+            // §5s: a button with no loading state double-submits, and this one
+            // now writes a row with a uniqueness index behind it — the second
+            // press would come back as a 409 on the tag the first press just
+            // created.
+            loading: saving,
             disabled: !form.name.trim(),
           },
           secondary: {
@@ -518,12 +520,23 @@ function TagBuilder() {
         open={!!deleteConfirm}
         onOpenChange={() => setDeleteConfirm(null)}
         type="warning"
-        title="Delete Tag"
-        description={`Are you sure you want to delete "${deleteConfirm?.name}"? This will remove the tag from all assigned entities.`}
+        title="Retire this tag"
+        // The old copy said "this will remove the tag from all assigned
+        // entities", which was never what the handler did and is now
+        // measurably false: the route clears `is_active` precisely so the
+        // assignments survive. A confirmation dialog that misdescribes its own
+        // action is worse than none — this is the sentence somebody reads
+        // before deciding.
+        description={
+          deleteConfirm
+            ? `${deleteConfirm.name} will stop appearing in the tag picker. Records already carrying it keep it, and you can bring the tag back by creating it again with the same name.`
+            : ""
+        }
         actions={{
           primary: {
-            label: "Delete",
+            label: deleteConfirm ? `Retire ${deleteConfirm.name}` : "Retire",
             variant: "destructive",
+            loading: saving,
             onClick: () => deleteConfirm && handleDelete(deleteConfirm),
           },
           secondary: {

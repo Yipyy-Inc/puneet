@@ -4,8 +4,6 @@ import type {
   VaccinationRecord,
   CareInstructions,
   PetRelationship,
-  PetTag,
-  PetTagAssignment,
   BanRecord,
 } from "@/types/pet";
 
@@ -14,16 +12,8 @@ export type {
   VaccinationRecord,
   CareInstructions,
   PetRelationship,
-  PetTag,
-  PetTagAssignment,
   BanRecord,
 };
-
-// Re-export from new tag system for backward compatibility
-export {
-  getLegacyPetTags,
-  getLegacyPetTagAssignments,
-} from "@/data/tags-notes";
 
 export const petRelationships: PetRelationship[] = [
   {
@@ -338,130 +328,6 @@ export const vaccinationRecords: VaccinationRecord[] = [
     veterinaryClinic: "Happy Paws Veterinary Clinic",
     documentUrl: "/documents/vaccinations/rex-rabies-2024.pdf",
     reminderSent: false,
-  },
-];
-
-// Pet Tags - predefined tags that can be assigned to pets
-export const petTags: PetTag[] = [
-  {
-    id: "tag-001",
-    name: "Aggressive",
-    color: "bg-red-500",
-    description: "Requires extra supervision and careful handling",
-  },
-  {
-    id: "tag-002",
-    name: "Escape Artist",
-    color: "bg-orange-500",
-    description: "Known to attempt escapes, needs secure enclosure",
-  },
-  {
-    id: "tag-003",
-    name: "Anxious",
-    color: "bg-yellow-500",
-    description: "Gets nervous easily, needs calm environment",
-  },
-  {
-    id: "tag-004",
-    name: "Senior",
-    color: "bg-purple-500",
-    description: "Older pet requiring gentler care",
-  },
-  {
-    id: "tag-005",
-    name: "Puppy/Kitten",
-    color: "bg-pink-500",
-    description: "Young pet requiring extra attention",
-  },
-  {
-    id: "tag-006",
-    name: "Medical Needs",
-    color: "bg-blue-500",
-    description: "Has ongoing medical requirements",
-  },
-  {
-    id: "tag-007",
-    name: "VIP",
-    color: "bg-amber-500",
-    description: "High-value client, prioritize service",
-  },
-  {
-    id: "tag-008",
-    name: "First Time",
-    color: "bg-green-500",
-    description: "New to the facility",
-  },
-  {
-    id: "tag-009",
-    name: "Reactive",
-    color: "bg-rose-500",
-    description: "Reactive to other animals",
-  },
-  {
-    id: "tag-010",
-    name: "Special Diet",
-    color: "bg-cyan-500",
-    description: "Has dietary restrictions or special food",
-  },
-];
-
-// Pet Tag Assignments
-export const petTagAssignments: PetTagAssignment[] = [
-  {
-    id: "assign-001",
-    petId: 1, // Buddy
-    tagId: "tag-007", // VIP
-    assignedAt: "2024-01-15T09:00:00Z",
-    assignedBy: "Sarah Johnson",
-    assignedById: 1,
-  },
-  {
-    id: "assign-002",
-    petId: 3, // Max
-    tagId: "tag-006", // Medical Needs
-    assignedAt: "2024-01-20T10:00:00Z",
-    assignedBy: "Sarah Johnson",
-    assignedById: 1,
-  },
-  {
-    id: "assign-003",
-    petId: 3, // Max
-    tagId: "tag-004", // Senior
-    assignedAt: "2024-01-20T10:00:00Z",
-    assignedBy: "Sarah Johnson",
-    assignedById: 1,
-  },
-  {
-    id: "assign-004",
-    petId: 5, // Rocky
-    tagId: "tag-001", // Aggressive
-    assignedAt: "2024-01-16T11:00:00Z",
-    assignedBy: "Mike Davis",
-    assignedById: 2,
-  },
-  {
-    id: "assign-005",
-    petId: 5, // Rocky
-    tagId: "tag-009", // Reactive
-    assignedAt: "2024-01-16T11:00:00Z",
-    assignedBy: "Mike Davis",
-    assignedById: 2,
-  },
-  {
-    id: "assign-006",
-    petId: 2, // Whiskers
-    tagId: "tag-010", // Special Diet
-    assignedAt: "2024-01-10T09:00:00Z",
-    assignedBy: "Sarah Johnson",
-    assignedById: 1,
-  },
-  {
-    id: "assign-007",
-    petId: 14, // Fluffy
-    tagId: "tag-003", // Anxious
-    assignedAt: "2024-02-01T08:00:00Z",
-    assignedBy: "Mike Davis",
-    assignedById: 2,
   },
 ];
 

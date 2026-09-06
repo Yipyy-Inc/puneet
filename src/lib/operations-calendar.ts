@@ -2,7 +2,7 @@ import {
   COLOR_HEX_MAP,
   getModuleWorkflowQuestionnaire,
 } from "@/data/custom-services";
-import { getTagsByType, getTagsForEntity } from "@/data/tags-notes";
+import type { Tag, TagAssignment } from "@/types/tags";
 import { vaccinationRecords } from "@/data/pet-data";
 import { users } from "@/data/users";
 import { defaultServiceAddOns } from "@/data/service-addons";
@@ -392,6 +392,17 @@ interface BuildUnifiedEventsInput {
    * list costs a default chip colour, which is the pre-existing behaviour.
    */
   groomingMenu?: GroomingPackage[];
+  /**
+   * The facility's tag catalogue and its assignments.
+   *
+   * Same reason as the grooming menu directly above: these are rows in
+   * `public.facility_tags` since 2026-09-06, and this module cannot fetch. Both
+   * optional so the caller can supply them as they load — an empty catalogue
+   * costs a calendar with no tag chips, which is right, rather than the 76
+   * fixture tags that were never any facility's.
+   */
+  tags?: Tag[];
+  tagAssignments?: TagAssignment[];
 }
 
 function resourceTypeLabel(type: string): string {
@@ -1154,12 +1165,44 @@ function computeEventDecorations(
     : undefined;
 }
 
-function buildTagNames(
+/**
+ * The names of the tags on one pet, client or booking.
+ *
+ * ── WHY THIS IS A FACTORY AND NOT A FUNCTION ──────────────────────────────
+ *
+ * It used to call `getTagsForEntity(...)` straight out of src/data/tags-notes,
+ * scanning a 76-row fixture array once per entity per event. The tags are rows
+ * in `public.facility_tags` now, and this module is not a component: it cannot
+ * fetch. So the catalogue arrives on `BuildUnifiedEventsInput`, exactly as the
+ * grooming menu already does, and the closure is threaded to the six builders
+ * that need it.
+ *
+ * An empty catalogue yields empty tag lists, which is what a calendar rendered
+ * before its tags have loaded should show — not a stale name.
+ */
+export type TagNameLookup = (
   entityType: "pet" | "customer" | "booking",
   entityId?: number,
-): string[] {
-  if (!entityId) return [];
-  return getTagsForEntity(entityType, entityId).map((tag) => tag.name);
+) => string[];
+
+function makeTagNameLookup(
+  tags: Tag[],
+  assignments: TagAssignment[],
+): TagNameLookup {
+  const active = new Map(tags.filter((t) => t.isActive).map((t) => [t.id, t]));
+  const byEntity = new Map<string, string[]>();
+  for (const assignment of assignments) {
+    const tag = active.get(assignment.tagId);
+    if (!tag) continue;
+    const key = `${assignment.entityType}:${assignment.entityId}`;
+    const list = byEntity.get(key) ?? [];
+    list.push(tag.name);
+    byEntity.set(key, list);
+  }
+  return (entityType, entityId) =>
+    entityId === undefined
+      ? []
+      : (byEntity.get(`${entityType}:${entityId}`) ?? []);
 }
 
 function buildBookingEvents(
@@ -1168,6 +1211,7 @@ function buildBookingEvents(
   facilityId: number,
   decorationContext: DecorationContext,
   groomingMenu: GroomingPackage[],
+  buildTagNames: TagNameLookup,
 ): OperationsCalendarEvent[] {
   const { petLookup } = buildClientLookups(clients);
 
@@ -1253,6 +1297,7 @@ function buildEvaluationEvents(
   clients: Client[],
   facilityId: number,
   decorationContext: DecorationContext,
+  buildTagNames: TagNameLookup,
 ): OperationsCalendarEvent[] {
   const { petLookup } = buildClientLookups(clients);
 
@@ -1325,6 +1370,7 @@ function buildEvaluationEvents(
 function buildCustomServiceEvents(
   checkIns: CustomServiceCheckIn[],
   customModules: CustomServiceModule[],
+  buildTagNames: TagNameLookup,
 ): OperationsCalendarEvent[] {
   const moduleById = new Map(
     customModules.map((customModule) => [customModule.id, customModule]),
@@ -1420,6 +1466,7 @@ function buildCustomServiceEvents(
 function buildTaskEvents(
   tasks: FacilityTask[],
   bookings: Booking[],
+  buildTagNames: TagNameLookup,
 ): OperationsCalendarEvent[] {
   const bookingClientLookup = new Map(bookings.map((b) => [b.id, b.clientId]));
 
@@ -1597,6 +1644,7 @@ function buildFacilityEvents(
 
 function buildRetailPosEvents(
   transactions: Transaction[],
+  buildTagNames: TagNameLookup,
 ): OperationsCalendarEvent[] {
   return transactions
     .filter(
@@ -1728,6 +1776,7 @@ function buildStayAddOnCalendarEvents(
   stayBookings: Booking[],
   clients: Client[],
   facilityId: number,
+  buildTagNames: TagNameLookup,
   completedAddOns?: CompletedAddOnEntry[],
 ): OperationsCalendarEvent[] {
   const completedLookup = new Map(
@@ -2079,6 +2128,13 @@ export function buildUnifiedEvents(
     input.bookings,
   );
 
+  // Built once per call rather than per event: the previous version scanned a
+  // 76-row array three times for every booking on the calendar.
+  const buildTagNames = makeTagNameLookup(
+    input.tags ?? [],
+    input.tagAssignments ?? [],
+  );
+
   const bookingEvents = [
     ...buildBookingEvents(
       schedulableBookings,
@@ -2086,6 +2142,7 @@ export function buildUnifiedEvents(
       input.facilityId,
       decorationContext,
       input.groomingMenu ?? [],
+      buildTagNames,
     ),
     // Evaluations still surface for ALL bookings (including boarding/daycare)
     ...buildEvaluationEvents(
@@ -2093,10 +2150,12 @@ export function buildUnifiedEvents(
       input.clients,
       input.facilityId,
       decorationContext,
+      buildTagNames,
     ),
     ...buildCustomServiceEvents(
       input.customServiceCheckIns,
       input.customModules,
+      buildTagNames,
     ),
   ];
 
@@ -2113,16 +2172,21 @@ export function buildUnifiedEvents(
     stayBookings,
     input.clients,
     input.facilityId,
+    buildTagNames,
     input.completedAddOns,
   );
 
-  const taskEvents = buildTaskEvents(input.tasks, input.bookings);
+  const taskEvents = buildTaskEvents(
+    input.tasks,
+    input.bookings,
+    buildTagNames,
+  );
   const facilityEvents = buildFacilityEvents(
     new Date(),
     input.manualFacilityEvents ?? [],
     input.viewerKey,
   );
-  const retailEvents = buildRetailPosEvents(input.transactions);
+  const retailEvents = buildRetailPosEvents(input.transactions, buildTagNames);
   const externalEvents = buildExternalEvents(new Date());
   const groupEvents = buildGroupModuleEvents(new Date(), input.customModules);
 
@@ -2498,6 +2562,15 @@ function mapOptions(values: string[]): FilterOption[] {
 export function deriveFilterOptions(
   events: OperationsCalendarEvent[],
   customModules: CustomServiceModule[] = [],
+  /**
+   * The tag catalogue, for the two tag filters.
+   *
+   * These read `getTagsByType(...)` out of the fixture until 2026-09-06, which
+   * is why they are a PARAMETER and not derived from `events` like everything
+   * else here: a filter should offer every tag a facility has defined, not only
+   * the ones that happen to be on something in the current window.
+   */
+  tags: Tag[] = [],
 ): OperationsCalendarFilterOptions {
   const types = Array.from(new Set(events.map((event) => event.type))).sort();
   const modulesFromEvents = Array.from(
@@ -2544,8 +2617,13 @@ export function deriveFilterOptions(
     new Set(events.flatMap((event) => event.addOns.map((addOn) => addOn.name))),
   );
 
-  const petTags = getTagsByType("pet").map((tag) => tag.name);
-  const customerTags = getTagsByType("customer").map((tag) => tag.name);
+  const activeTags = tags.filter((tag) => tag.isActive);
+  const petTags = activeTags
+    .filter((tag) => tag.type === "pet")
+    .map((tag) => tag.name);
+  const customerTags = activeTags
+    .filter((tag) => tag.type === "customer")
+    .map((tag) => tag.name);
 
   return {
     types: types.map((type) => ({ value: type, label: titleCase(type) })),

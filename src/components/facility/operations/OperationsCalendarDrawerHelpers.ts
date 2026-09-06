@@ -1,7 +1,7 @@
 import { clientDocuments } from "@/data/documents";
 import { vaccinationRecords } from "@/data/pet-data";
 import { vaccinationRules } from "@/data/settings";
-import { getNotesForEntity, getTagsForEntity } from "@/data/tags-notes";
+import { getNotesForEntity } from "@/data/tags-notes";
 import type { Booking } from "@/types/booking";
 import type { ManualFacilityEvent } from "@/lib/operations-calendar";
 
@@ -152,16 +152,6 @@ export function getLastVisitDate(
     );
 
   return history[0]?.startDate ?? null;
-}
-
-export function getPetTagDetails(petId: number | undefined) {
-  if (!petId) return [];
-  return getTagsForEntity("pet", petId);
-}
-
-export function getCustomerTagDetails(clientId: number | undefined) {
-  if (!clientId) return [];
-  return getTagsForEntity("customer", clientId);
 }
 
 export function getBookingNotes(bookingId: number | undefined): string {

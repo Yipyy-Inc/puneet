@@ -3,7 +3,7 @@
 import { createElement } from "react";
 import { resolveIcon } from "@/lib/service-registry";
 import { getContrastTextColor } from "@/lib/color-utils";
-import type { Tag } from "@/data/tags-notes";
+import type { Tag } from "@/types/tags";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 

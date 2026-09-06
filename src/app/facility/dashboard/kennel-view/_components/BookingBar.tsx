@@ -2,7 +2,7 @@
 
 import { PetAvatar } from "@/components/ui/pet-avatar";
 import { cn } from "@/lib/utils";
-import { getTagsForEntity } from "@/data/tags-notes";
+import { useTagsByEntity } from "@/hooks/use-tags-notes";
 import {
   getBookingSurfaceClasses,
   getBookingTextClass,
@@ -57,7 +57,8 @@ export function BookingBar({
   onResizeStart,
   onMoveStart,
 }: BookingBarProps) {
-  const petTags = booking.petId ? getTagsForEntity("pet", booking.petId) : [];
+  const { tagsFor } = useTagsByEntity();
+  const petTags = tagsFor("pet", booking.petId);
   const isCritical = petTags.some((t) => t.priority === "critical");
 
   const barClasses = isCritical

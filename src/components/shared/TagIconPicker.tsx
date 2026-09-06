@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { resolveIcon, AVAILABLE_ICONS } from "@/lib/service-registry";
 import { getContrastTextColor } from "@/lib/color-utils";
-import { TAG_COLOR_PRESETS } from "@/data/tags-notes";
+import { TAG_COLOR_PRESETS } from "@/lib/tag-colors";
 import { cn } from "@/lib/utils";
 
 interface TagIconPickerProps {

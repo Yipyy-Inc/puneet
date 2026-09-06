@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { TagBadge } from "@/components/shared/TagBadge";
 import { TagAssignmentPopover } from "@/components/shared/TagAssignmentPopover";
 import { useTagsForEntity } from "@/hooks/use-tags-notes";
-import type { TagType } from "@/data/tags-notes";
+import type { TagType } from "@/types/tags";
 import {
   Popover,
   PopoverContent,
@@ -38,7 +38,10 @@ export function TagList({
   );
   const [overflowOpen, setOverflowOpen] = useState(false);
 
-  // Filter for customer view
+  // A second filter, not the boundary. Since 20260906221303 RLS refuses a
+  // customer both the internal tag and the assignment that points at it, so a
+  // call site that forgets `isCustomerView` no longer leaks anything — this
+  // keeps the prop honest for a staff surface that wants the client's view.
   const visibleTags = isCustomerView
     ? tags.filter((t) => t.visibility === "client_visible")
     : tags;

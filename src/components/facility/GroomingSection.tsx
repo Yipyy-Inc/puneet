@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Modal } from "@/components/ui/modal";
 import { TagList } from "@/components/shared/TagList";
-import { hasCriticalTags, hasWarningTags } from "@/data/tags-notes";
+import { useTagsByEntity } from "@/hooks/use-tags-notes";
 import { cn } from "@/lib/utils";
 
 import {
@@ -80,6 +80,7 @@ const findClientForPet = (petId: number) => {
 
 export function GroomingSection() {
   const router = useRouter();
+  const { tagsFor } = useTagsByEntity();
   // Needed for the product deduction on completion: the menu says which
   // products a service consumes, and it is the facility's to edit.
   const { data: groomingMenu = [] } = useQuery(
@@ -646,13 +647,13 @@ export function GroomingSection() {
                       ) : (
                         filtered.map((appointment) => {
                           const client = findClientForPet(appointment.petId);
-                          const isCritical = hasCriticalTags(
-                            "pet",
-                            appointment.petId,
+                          const petTags = tagsFor("pet", appointment.petId);
+                          const isCritical = petTags.some(
+                            (t) => t.priority === "critical",
                           );
                           const isWarning =
                             !isCritical &&
-                            hasWarningTags("pet", appointment.petId);
+                            petTags.some((t) => t.priority === "warning");
                           return (
                             <div
                               key={appointment.id}
@@ -799,13 +800,13 @@ export function GroomingSection() {
                       ) : (
                         filtered.map((appointment) => {
                           const client = findClientForPet(appointment.petId);
-                          const isCritical = hasCriticalTags(
-                            "pet",
-                            appointment.petId,
+                          const petTags = tagsFor("pet", appointment.petId);
+                          const isCritical = petTags.some(
+                            (t) => t.priority === "critical",
                           );
                           const isWarning =
                             !isCritical &&
-                            hasWarningTags("pet", appointment.petId);
+                            petTags.some((t) => t.priority === "warning");
                           return (
                             <div
                               key={appointment.id}
