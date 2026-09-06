@@ -881,5 +881,14 @@
       "/facility/dashboard/calendar": "Calendar",
       "/facility/dashboard/tasks": "Tasks"
     }
+  },
+  "serviceTypes": {
+    "daycare": "Daycare",
+    "boarding": "Boarding",
+    "grooming": "Grooming",
+    "training": "Training",
+    "evaluation": "Evaluation",
+    "retail": "Retail",
+    "vet": "Vet"
   }
 }
