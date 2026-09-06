@@ -569,7 +569,7 @@ function NotesConfig() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <StickyNote className="size-5" />
-          Notes Configuration
+          Notes configuration
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

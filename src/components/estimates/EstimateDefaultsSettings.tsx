@@ -64,7 +64,7 @@ function EstimateDefaultsEditor({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <FileText className="size-4" />
-          Estimate Defaults
+          Estimate defaults
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

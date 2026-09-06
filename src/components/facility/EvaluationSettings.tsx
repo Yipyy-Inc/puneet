@@ -276,7 +276,7 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Lock className="size-4" />
-                Services Requiring Evaluation
+                Services requiring Evaluation
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -355,7 +355,7 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <FileText className="size-4" />
-                Evaluation Service Details
+                Evaluation service details
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -486,7 +486,7 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Clock className="size-4" />
-                Validity & Expiration
+                Validity & expiration
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -555,7 +555,7 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Users className="size-4" />
-                Staff Assignment
+                Staff assignment
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -590,7 +590,7 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <FileText className="size-4" />
-                Eligible Lodging Types
+                Eligible lodging types
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -627,7 +627,7 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Calendar className="size-4" />
-                Online Booking Availability
+                Online booking availability
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -749,7 +749,7 @@ export function EvaluationSettings() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Send className="size-4" />
-                  Result Report Card
+                  Result report card
                 </CardTitle>
                 <Switch
                   checked={reportEnabled}
@@ -859,7 +859,7 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <AlertCircle className="size-4" />
-                Advanced Result Options
+                Advanced result options
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -913,7 +913,7 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <BarChart3 className="size-4" />
-                Evaluation Analytics
+                Evaluation analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -997,7 +997,7 @@ export function EvaluationSettings() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="size-5" />
-              Customer Preview
+              Customer preview
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">

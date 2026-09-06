@@ -27,7 +27,7 @@ export function MobileAppSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Smartphone className="size-5" />
-            App Identity
+            App identity
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -107,7 +107,7 @@ export function MobileAppSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Palette className="size-5" />
-            Branding Colors
+            Branding colors
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

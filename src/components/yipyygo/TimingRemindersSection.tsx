@@ -104,7 +104,7 @@ export function TimingRemindersSection({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="size-5" />
-            Send Timing & Deadline
+            Send timing & deadline
           </CardTitle>
           <CardDescription>
             Configure when forms are sent and when they must be completed.
@@ -147,7 +147,7 @@ export function TimingRemindersSection({
       {/* Delivery Channels */}
       <Card>
         <CardHeader>
-          <CardTitle>Delivery Channels</CardTitle>
+          <CardTitle>Delivery channels</CardTitle>
           <CardDescription>
             Select which channels to use for sending forms and reminders.
           </CardDescription>
@@ -187,7 +187,7 @@ export function TimingRemindersSection({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Reminder Rules</CardTitle>
+              <CardTitle>Reminder rules</CardTitle>
               <CardDescription>
                 Configure automatic reminders if forms are not submitted.
               </CardDescription>

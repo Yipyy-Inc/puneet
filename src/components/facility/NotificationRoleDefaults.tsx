@@ -54,7 +54,7 @@ export function NotificationRoleDefaults() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users2 className="size-5" />
-          Notification Role Defaults
+          Notification role defaults
         </CardTitle>
         <CardDescription>
           What each role&rsquo;s notifications start with. New staff accounts

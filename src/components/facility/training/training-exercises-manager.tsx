@@ -324,7 +324,7 @@ export function TrainingExercisesManager() {
         <div>
           <CardTitle className="flex items-center gap-2">
             <Dumbbell className="text-muted-foreground size-4" />
-            Training Exercises
+            Training exercises
           </CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
             The exercise library powers the Session Completion picker. Exercises

@@ -692,7 +692,7 @@ export function PricingRulesPanel({
       {!hideSectionHeader && (
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
           <h3 className="text-sm font-bold tracking-tight text-slate-800">
-            Pricing Rules
+            Pricing rules
           </h3>
           <p className="text-muted-foreground mt-0.5 text-xs">
             Set up discounts and extra fees for {serviceScopeLabel} bookings
@@ -1934,7 +1934,7 @@ export function PricingRulesPanel({
       <Dialog open={e24Modal} onOpenChange={setE24Modal}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Exceed 24-Hour Fee</DialogTitle>
+            <DialogTitle>Exceed 24-hour fee</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">

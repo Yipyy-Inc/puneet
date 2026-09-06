@@ -139,7 +139,7 @@ export function EnablementScopeSection({
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Service Scope</CardTitle>
+          <CardTitle>Service scope</CardTitle>
           <CardDescription>
             Select which services require Yipyy Express Check-in forms and
             whether they are mandatory or optional.

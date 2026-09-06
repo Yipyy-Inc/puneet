@@ -177,7 +177,7 @@ export function EstimateFollowUpSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <CalendarClock className="size-4" />
-            Estimate Expiry
+            Estimate expiry
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -241,7 +241,7 @@ export function EstimateFollowUpSettings() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Bell className="size-4" />
-              Auto Follow-Up Reminders
+              Auto follow-up reminders
             </CardTitle>
             <Switch
               checked={config.enabled}

@@ -201,7 +201,7 @@ function StudioInner() {
               <span className="bg-background flex size-7 items-center justify-center rounded-lg border shadow-sm">
                 <Shield className="size-4" />
               </span>
-              Roles & Permissions
+              Roles & permissions
             </CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
               Define what each role can do. Create custom roles for your

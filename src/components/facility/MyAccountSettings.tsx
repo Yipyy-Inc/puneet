@@ -50,7 +50,7 @@ export function MyAccountSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <User className="size-4" /> My Profile
+            <User className="size-4" /> My profile
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">

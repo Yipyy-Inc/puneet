@@ -280,7 +280,7 @@ export function TaxSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Globe className="size-4" />
-            Facility Location
+            Facility location
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -329,7 +329,7 @@ export function TaxSettings() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Percent className="size-4" />
-              Tax Rates
+              Tax rates
             </CardTitle>
             <Button
               variant="outline"
@@ -517,7 +517,7 @@ export function TaxSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Receipt className="size-4" />
-            Tax Behavior &amp; Display
+            Tax behaviour &amp; display
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -573,7 +573,7 @@ export function TaxSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Shield className="size-4" />
-            Tax Exemptions
+            Tax exemptions
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
