@@ -14,11 +14,8 @@ import { Info, RotateCcw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { FormTemplateSection } from "./FormTemplateSection";
-import type {
-  YipyyGoConfig,
-  ServiceType,
-  FormTemplateConfig,
-} from "@/data/yipyygo-config";
+import type { ServiceType, FormTemplateConfig } from "@/data/yipyygo-config";
+import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 import {
   SERVICE_TYPE_LABELS,
   getServiceTemplateKey,
@@ -36,8 +33,8 @@ interface ServiceTab {
 }
 
 interface PerServiceFormTemplateSectionProps {
-  config: YipyyGoConfig;
-  onConfigChange: (updates: Partial<YipyyGoConfig>) => void;
+  config: YipyyGoSettings;
+  onConfigChange: (updates: Partial<YipyyGoSettings>) => void;
 }
 
 /**
@@ -87,10 +84,12 @@ export function PerServiceFormTemplateSection({
     const seen = new Set(result.map((t) => t.key));
     for (const m of defaultCustomServiceModules) {
       if (m.status !== "active") continue;
-      const appliesToFacility = (m.facilityIds ?? [m.facilityId]).includes(
-        config.facilityId,
-      );
-      if (!appliesToFacility) continue;
+      // No facility filter here any more, for the reason spelled out in
+      // EnablementScopeSection: the id it used to check came from a hardcoded
+      // `11` in the settings wrapper, so it narrowed this list to the demo
+      // facility's custom services for everybody. Custom services are still a
+      // fixture with no facility of their own; filtering by a constant is not
+      // scoping, and this is fixed when they become real rows.
       if (!isExpressCheckInEnabled(m)) continue;
       const key = getServiceTemplateKey("custom", m.name);
       if (seen.has(key)) continue;
@@ -99,7 +98,7 @@ export function PerServiceFormTemplateSection({
     }
 
     return result;
-  }, [config.serviceConfigs, config.facilityId]);
+  }, [config.serviceConfigs]);
 
   const [activeKey, setActiveKey] = useState<string>(DEFAULT_KEY);
 
@@ -113,12 +112,12 @@ export function PerServiceFormTemplateSection({
 
   // Virtual config so FormTemplateSection — which reads `config.formTemplate` —
   // sees the currently selected service's template without any changes to it.
-  const virtualConfig = useMemo<YipyyGoConfig>(
+  const virtualConfig = useMemo<YipyyGoSettings>(
     () => ({ ...config, formTemplate: effectiveTemplate }),
     [config, effectiveTemplate],
   );
 
-  const handleVirtualChange = (updates: Partial<YipyyGoConfig>) => {
+  const handleVirtualChange = (updates: Partial<YipyyGoSettings>) => {
     // Re-route any change to .formTemplate into either the global default or
     // the per-service override map, depending on which tab is active. Other
     // top-level changes pass through unchanged.

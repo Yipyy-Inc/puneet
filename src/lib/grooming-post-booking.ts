@@ -19,6 +19,7 @@ import type {
   GroomerNotification,
   ClientConfirmation,
 } from "@/types/grooming";
+import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 
 /**
  * Booking-change customer notification (spec Table 76). Builds the SMS/email
@@ -98,6 +99,10 @@ export function buildGroomerBookingMessage(input: {
  */
 export async function handleImmediatePostBookingActions(
   bookingData: GroomingBookingData,
+  // The facility Yipyy Go setup, passed in. This module has no React in it, and
+  // the setup now lives in facility_settings rather than in a fixture array the
+  // trigger could reach on its own.
+  yipyyGo: YipyyGoSettings,
 ): Promise<{
   clientConfirmation: ClientConfirmation;
   groomerNotifications: GroomerNotification[];
@@ -119,18 +124,21 @@ export async function handleImmediatePostBookingActions(
   try {
     const { processBookingConfirmationForYipyyGo } =
       await import("@/lib/yipyygo-trigger");
-    const result = await processBookingConfirmationForYipyyGo({
-      id: bookingData.id,
-      clientId: bookingData.clientId,
-      petId: bookingData.petId,
-      petName: bookingData.petName,
-      facilityId: 11, // TODO: Get from bookingData or context
-      service: "grooming",
-      startDate: bookingData.appointmentDate.toISOString().split("T")[0],
-      checkInTime: bookingData.appointmentTime,
-      status: "confirmed",
-      createdAt: new Date().toISOString(),
-    });
+    const result = await processBookingConfirmationForYipyyGo(
+      {
+        id: bookingData.id,
+        clientId: bookingData.clientId,
+        petId: bookingData.petId,
+        petName: bookingData.petName,
+        facilityId: 11, // TODO: Get from bookingData or context
+        service: "grooming",
+        startDate: bookingData.appointmentDate.toISOString().split("T")[0],
+        checkInTime: bookingData.appointmentTime,
+        status: "confirmed",
+        createdAt: new Date().toISOString(),
+      },
+      yipyyGo,
+    );
     yipyyGoTriggered = result.triggered;
   } catch (error) {
     console.error("Error triggering YipyyGo for grooming booking:", error);

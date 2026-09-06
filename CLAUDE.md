@@ -369,8 +369,8 @@ still absolute for **new** code: white, or a solid.
   - Touching auth, a portal gate, a permission or an identity — or bookings,
     boarding, daycare, rooms, the care log, the calendar or the roster? Run
     `bun run test:e2e:ci` locally too — the whole suite, by hand, before you
-    push. CI itself runs only the 27-spec gate on a push (the authorisation
-    boundary and money) and the full suite nightly, because 84 specs is ~45
+    push. CI itself runs only the 28-spec gate on a push (the authorisation
+    boundary and money) and the full suite nightly, because 85 specs is ~45
     minutes and GitHub holds one pending run per branch: with two people
     pushing, every queued run was cancelled by the next push and nothing
     finished. `bun run check:doc-counts` derives both numbers from package.json

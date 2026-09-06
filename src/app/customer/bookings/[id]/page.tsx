@@ -26,7 +26,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { GroomingCheckInButton } from "@/components/grooming/GroomingCheckInButton";
-import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { useCustomerYipyyGo } from "@/lib/api/customer-yipyy-go";
+import { yipyyGoRequirementFor } from "@/lib/settings/yipyy-go";
 import { getYipyyGoForm } from "@/data/yipyygo-forms";
 import { CheckInQRCode } from "@/components/yipyygo/CheckInQRCode";
 import Link from "next/link";
@@ -112,24 +113,21 @@ export default function BookingDetailPage({
     return customer.pets.find((p) => p.id === pid) ?? null;
   }, [booking, customer]);
 
-  // YipyyGo
-  const yipyyGoConfig = useMemo(() => {
-    if (!booking) return null;
-    return getYipyyGoConfig(booking.facilityId);
-  }, [booking]);
+  // Their facility's Yipyy Go setup, read through their client row. It used to
+  // be `getYipyyGoConfig(booking.facilityId)` — a fixture array in the bundle,
+  // so this page told a customer about a form a seed file had written.
+  const { config: yipyyGoConfig, isPending: yipyyGoPending } =
+    useCustomerYipyyGo();
 
   const isYipyyGoEnabled = useMemo(() => {
-    if (!booking || !yipyyGoConfig || !yipyyGoConfig.enabled) return false;
-    const svc = booking.service.toLowerCase() as
-      | "daycare"
-      | "boarding"
-      | "grooming"
-      | "training";
-    return (
-      yipyyGoConfig.serviceConfigs.find((s) => s.serviceType === svc)
-        ?.enabled || false
+    // Not while it is loading. The fallback is switched off, so rendering
+    // through the pending state hides a form the customer is actually expected
+    // to complete before they arrive.
+    if (yipyyGoPending || !booking) return false;
+    return Boolean(
+      yipyyGoRequirementFor(yipyyGoConfig, booking.service.toLowerCase()),
     );
-  }, [yipyyGoConfig, booking]);
+  }, [yipyyGoConfig, yipyyGoPending, booking]);
 
   const yipyyGoForm = useMemo(
     () => (booking ? getYipyyGoForm(booking.id) : null),

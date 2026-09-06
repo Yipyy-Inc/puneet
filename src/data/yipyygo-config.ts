@@ -197,199 +197,26 @@ export const defaultYipyyGoConfig: Omit<
 };
 
 // ============================================================================
-// Mock Data & Utilities
+// THE CONFIG STORE THAT USED TO BE HERE IS GONE (2026-09-06).
+//
+// `mockYipyyGoConfigs`, `getYipyyGoConfig()` and `saveYipyyGoConfig()` lived
+// under this heading. The save was a splice into a module-level array —
+//
+//   // In production, this would save to database
+//   mockYipyyGoConfigs[index] = updatedConfig;
+//
+// — under a settings screen that then said "Express Check-in settings saved
+// successfully". Twelve call sites read the array, including the customer's own
+// booking page and the trigger that decides whether to ask for a form at all.
+//
+// The setup now lives in `facility_settings.yipyy_go_config`. Read it with
+// `useYipyyGoConfig()` inside the facility portal, or `useCustomerYipyyGo()` in
+// the customer portal — they are separate on purpose, and the banner on
+// src/lib/api/customer-yipyy-go.ts says why crossing them is a real bug.
+//
+// What is left in this file is what it should always have been: the shipped
+// DEFAULTS, two pure helpers, and the label maps. No state.
 // ============================================================================
-
-const mockYipyyGoConfigs: YipyyGoConfig[] = [
-  {
-    ...defaultYipyyGoConfig,
-    facilityId: 1,
-    addOnsApproval: "staff_approval",
-    notifyStaffEmailOnSubmit: false,
-    enabled: true,
-    serviceConfigs: [
-      {
-        serviceType: "daycare",
-        enabled: true,
-        requirement: "mandatory",
-      },
-      {
-        serviceType: "boarding",
-        enabled: true,
-        requirement: "mandatory",
-      },
-      {
-        serviceType: "grooming",
-        enabled: true,
-        requirement: "optional",
-      },
-      {
-        serviceType: "training",
-        enabled: false,
-        requirement: "optional",
-      },
-    ],
-    timing: {
-      ...defaultTimingConfig,
-      initialSendTime: 72,
-      deadline: 24,
-      reminderRules: [
-        {
-          id: "reminder-1",
-          sendTime: 48,
-          channel: "email",
-        },
-        {
-          id: "reminder-2",
-          sendTime: 24,
-          channel: "email",
-        },
-        {
-          id: "reminder-3",
-          sendTime: 6,
-          channel: "sms",
-        },
-      ],
-    },
-    createdAt: "2024-01-15T10:00:00Z",
-    updatedAt: "2024-01-20T14:30:00Z",
-    updatedBy: 1,
-  },
-  // Facility 11 (main app facility) – YipyyGo enabled for daycare, boarding, grooming
-  {
-    ...defaultYipyyGoConfig,
-    facilityId: 11,
-    enabled: true,
-    addOnsApproval: "staff_approval",
-    notifyStaffEmailOnSubmit: false,
-    medicationFee: {
-      enabled: true,
-      amount: 5,
-      billing: "per_day",
-      label: "Medication administration fee",
-      description:
-        "Applied daily when our team administers medication during the stay.",
-    },
-    tipPopup: {
-      ...defaultTipPopupConfig,
-      message:
-        "Our team at Yipyy truly loves caring for your pup. If you'd like to leave a tip to show appreciation, it goes 100% to the staff.",
-    },
-    confirmationEmail: {
-      ...defaultConfirmationEmailConfig,
-      message:
-        "Thank you for completing your Express Check-in! We're excited to meet {petName} on {date}. If anything changes, just reply to this email.",
-    },
-    serviceConfigs: [
-      { serviceType: "daycare", enabled: true, requirement: "optional" },
-      { serviceType: "boarding", enabled: true, requirement: "optional" },
-      { serviceType: "grooming", enabled: true, requirement: "optional" },
-      { serviceType: "training", enabled: false, requirement: "optional" },
-    ],
-    // Per-service form overrides. Grooming was historically built with its own
-    // form-builder that lived on facility.groomingCheckinConfig; that legacy
-    // surface was retired in favor of a unified per-service Express Check-in
-    // form. The questions below are the migrated grooming pre-visit questions
-    // and keep the same ids so existing appointment-level
-    // expressCheckinSubmission.answers continue to resolve to the right field.
-    formTemplates: {
-      grooming: {
-        ...defaultFormTemplate,
-        globalCustomQuestions: [
-          {
-            id: "q-coat",
-            type: "long_text",
-            label: "How has your dog's coat been since the last visit?",
-            required: true,
-            helpText:
-              "Tell us if there's matting or tangles we should plan for.",
-            order: 0,
-          },
-          {
-            id: "q-mood",
-            type: "long_text",
-            label: "Any new behavior changes we should know about?",
-            required: false,
-            order: 1,
-          },
-          {
-            id: "q-meds",
-            type: "yes_no",
-            label: "Is your pet on any new medication?",
-            required: true,
-            order: 2,
-          },
-          {
-            id: "q-style",
-            type: "dropdown",
-            label: "Preferred finish",
-            required: true,
-            options: [
-              { value: "option-0", label: "Same as last time" },
-              { value: "option-1", label: "Slightly shorter" },
-              { value: "option-2", label: "Summer cut" },
-              { value: "option-3", label: "Other (note in next question)" },
-            ],
-            order: 3,
-          },
-          {
-            id: "q-style-notes",
-            type: "short_text",
-            label: "Any specific styling notes for the groomer?",
-            required: false,
-            order: 4,
-          },
-          {
-            id: "q-coat-photo",
-            type: "file_upload",
-            label: "Upload a current photo of the coat",
-            required: false,
-            helpText: "Helps the groomer plan before you arrive.",
-            order: 5,
-          },
-        ],
-      },
-    },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    updatedBy: 0,
-  },
-];
-
-export function getYipyyGoConfig(facilityId: number): YipyyGoConfig | null {
-  const config = mockYipyyGoConfigs.find((c) => c.facilityId === facilityId);
-  if (config) {
-    return { ...config };
-  }
-
-  // Return default config if not found
-  return {
-    ...defaultYipyyGoConfig,
-    facilityId,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    updatedBy: 0,
-  };
-}
-
-export function saveYipyyGoConfig(config: YipyyGoConfig): YipyyGoConfig {
-  // In production, this would save to database
-  const index = mockYipyyGoConfigs.findIndex(
-    (c) => c.facilityId === config.facilityId,
-  );
-  const updatedConfig = {
-    ...config,
-    updatedAt: new Date().toISOString(),
-  };
-
-  if (index >= 0) {
-    mockYipyyGoConfigs[index] = updatedConfig;
-  } else {
-    mockYipyyGoConfigs.push(updatedConfig);
-  }
-
-  return updatedConfig;
-}
 
 /**
  * Builds the per-service override key used in `YipyyGoConfig.formTemplates`.
@@ -414,7 +241,10 @@ export function getServiceTemplateKey(
  * Express Check-in form so it picks up per-service customization.
  */
 export function getFormTemplateForService(
-  config: YipyyGoConfig,
+  // The two template fields, not the whole row. Callers now hand it a
+  // `YipyyGoSettings` off `facility_settings`, which has no facilityId or
+  // timestamps — and this function never wanted them.
+  config: Pick<YipyyGoConfig, "formTemplate" | "formTemplates">,
   serviceType: string,
   customServiceName?: string,
 ): FormTemplateConfig {

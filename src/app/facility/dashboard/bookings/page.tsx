@@ -31,7 +31,8 @@ import {
   Hourglass,
 } from "lucide-react";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
-import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { useYipyyGoConfig } from "@/lib/api/facility-settings";
+import { yipyyGoRequirementFor } from "@/lib/settings/yipyy-go";
 import { getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 import { TagList } from "@/components/shared/TagList";
@@ -190,6 +191,12 @@ export default function FacilityBookingsPage() {
   // that silently reclassified its rows because the clock ticked past midnight
   // mid-session would be harder to trust than one that is stale until reload.
   const now = useMemo(() => new Date(), []);
+
+  // Hoisted out of the column definitions below, which used to call
+  // `getYipyyGoConfig(booking.facilityId)` once per row per render against a
+  // module-level array. It is one facility's setting — this facility's, from
+  // the session — not a property of each row.
+  const { config: yipyyGoConfig } = useYipyyGoConfig();
 
   const { data: clientList = [] } = useQuery(clientQueries.all());
   const clientById = useMemo(
@@ -628,37 +635,36 @@ export default function FacilityBookingsPage() {
       icon: FileText,
       defaultVisible: true,
       sortValue: (booking) => {
-        const config = getYipyyGoConfig(booking.facilityId);
-        const st = booking.service?.toLowerCase() as
-          | "daycare"
-          | "boarding"
-          | "grooming"
-          | "training";
-        const enabled = config?.serviceConfigs?.find(
-          (s) => s.serviceType === st,
-        )?.enabled;
-        if (!enabled) return "—";
+        // `sortValue` used to check only the SERVICE switch and not the
+        // feature's own, so a facility with Yipyy Go switched off still sorted
+        // by a status the column then rendered as "—". One helper now answers
+        // both questions for both callbacks.
+        if (
+          !yipyyGoRequirementFor(
+            yipyyGoConfig,
+            booking.service?.toLowerCase() ?? "",
+          )
+        ) {
+          return "—";
+        }
         return getYipyyGoDisplayStatusForBooking(booking.id, {
-          facilityId: booking.facilityId,
+          yipyyGo: yipyyGoConfig,
           service: booking.service,
         });
       },
       render: (booking) => {
-        const config = getYipyyGoConfig(booking.facilityId);
-        const st = booking.service?.toLowerCase() as
-          | "daycare"
-          | "boarding"
-          | "grooming"
-          | "training";
-        const enabled =
-          config?.enabled &&
-          config?.serviceConfigs?.find((s) => s.serviceType === st)?.enabled;
-        if (!enabled)
+        if (
+          !yipyyGoRequirementFor(
+            yipyyGoConfig,
+            booking.service?.toLowerCase() ?? "",
+          )
+        ) {
           return <span className="text-muted-foreground text-xs">—</span>;
+        }
         return (
           <YipyyGoStatusBadge
             status={getYipyyGoDisplayStatusForBooking(booking.id, {
-              facilityId: booking.facilityId,
+              yipyyGo: yipyyGoConfig,
               service: booking.service,
             })}
             showIcon

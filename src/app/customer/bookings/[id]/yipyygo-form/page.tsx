@@ -11,10 +11,8 @@ import {
   getCheckinConfig,
   isSectionEnabledForService,
 } from "@/data/checkin-requirements";
-import {
-  getYipyyGoConfig,
-  getFormTemplateForService,
-} from "@/data/yipyygo-config";
+import { getFormTemplateForService } from "@/data/yipyygo-config";
+import { useCustomerYipyyGo } from "@/lib/api/customer-yipyy-go";
 import {
   getYipyyGoForm,
   getLastStayFormForPet,
@@ -104,11 +102,18 @@ export default function YipyyGoFormPage({
     return customer.pets?.find((p) => p.id === petId);
   }, [customer, booking]);
 
-  // Get YipyyGo config
-  const yipyyGoConfig = useMemo(() => {
-    if (!booking) return null;
-    return getYipyyGoConfig(booking.facilityId);
-  }, [booking]);
+  // The facility setup this form is built from, read through this customer's
+  // own client row. It used to be `getYipyyGoConfig(booking.facilityId)` — a
+  // fixture array in the bundle — so the questions, the deadline, the tip
+  // prompt and the medication fee all came from a seed file rather than from
+  // the business the customer is actually visiting.
+  //
+  // Null while it loads, deliberately: every branch below already treats null
+  // as "we do not know yet", and the alternative is rendering the OFF fallback
+  // as though the facility had chosen it.
+  const { config: loadedYipyyGo, isPending: yipyyGoPending } =
+    useCustomerYipyyGo();
+  const yipyyGoConfig = yipyyGoPending ? null : loadedYipyyGo;
 
   // Per-service check-in requirements (Settings → Check-in Requirements).
   // initialData gives a synchronous value so section visibility is stable.

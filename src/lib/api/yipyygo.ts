@@ -4,8 +4,7 @@ import {
   setYipyyGoManuallyCompleted as _setManuallyCompleted,
   createStubYipyyGoFormManuallyCompleted as _createStub,
 } from "@/data/yipyygo-forms";
-import { saveYipyyGoConfig as _saveConfig } from "@/data/yipyygo-config";
-import type { YipyyGoFormData, YipyyGoConfig } from "@/types/yipyygo";
+import type { YipyyGoFormData } from "@/types/yipyygo";
 
 export const yipyyGoMutations = {
   saveForm: (formData: YipyyGoFormData) => ({
@@ -34,8 +33,5 @@ export const yipyyGoMutations = {
     petName?: string;
   }) => ({
     mutationFn: async () => _createStub(params),
-  }),
-  saveConfig: (config: YipyyGoConfig) => ({
-    mutationFn: async () => _saveConfig(config),
   }),
 };

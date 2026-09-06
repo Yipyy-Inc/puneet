@@ -12,6 +12,7 @@ import {
   useEstimateSettings,
   usePricingRules,
   useServiceAddOns,
+  useYipyyGoConfig,
 } from "@/lib/api/facility-settings";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -287,6 +288,9 @@ export function BookingModal({
     evaluation: evaluationConfig,
     notifications: notificationToggles,
   } = useSettings();
+  // The facility's Yipyy Go setup — read here for the lead time quoted in the
+  // "form sent" toast further down.
+  const { config: yipyyGoConfig } = useYipyyGoConfig();
   // The facility's own surcharges and discounts, from `facility_settings`.
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
@@ -2630,13 +2634,12 @@ export function BookingModal({
             : selectedClient?.phone
               ? "SMS"
               : "the client's contact on file";
-      // Lead time is now configured globally per facility (Yipyy → Timing &
-      // Reminders → "Initial send time"). Resolve it lazily to avoid pulling
-      // the yipyygo-config module into the BookingModal's module graph.
-      const { getYipyyGoConfig } =
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require("@/data/yipyygo-config") as typeof import("@/data/yipyygo-config");
-      const sendBefore = getYipyyGoConfig(facilityId)?.timing.initialSendTime;
+      // Lead time is configured per facility (Yipyy Go → Timing & Reminders →
+      // "Initial send time") and comes from `facility_settings` with the rest
+      // of the setup. It used to be a lazy `require` of the fixture, resolved
+      // against a module-level array no save had ever reached — so this toast
+      // quoted a seed file's lead time back at whoever sent the form.
+      const sendBefore = yipyyGoConfig.timing.initialSendTime;
       toast.success("Express Check-In form sent", {
         description: `Heading to ${channel}${
           sendBefore ? ` · ${sendBefore}h before the appointment` : ""

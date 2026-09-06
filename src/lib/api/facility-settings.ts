@@ -48,6 +48,7 @@ import type {
   ServiceAddOn,
   ServiceAddOnsConfig,
 } from "@/lib/settings/addons";
+import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
 import type { RebookConfig } from "@/lib/settings/rebook";
@@ -109,6 +110,15 @@ export interface FacilitySettings {
   incident_reporting: SettingState<IncidentReportingConfig>;
   /** The extras this facility sells on a booking, and their categories. */
   service_addons: SettingState<ServiceAddOnsConfig>;
+  /**
+   * The pre-arrival check-in form: which services ask for one, whether it is
+   * mandatory, when it is sent and what it asks.
+   *
+   * `configured: false` means nobody has set Yipyy Go up, and the fallback is
+   * already switched off — so unlike the money domains there is no gap between
+   * "unset" and "asks nothing".
+   */
+  yipyy_go_config: SettingState<YipyyGoSettings>;
   /**
    * Expected visit frequency per service, and whether lapsed clients for it may
    * be messaged. `configured: false` means the Lapsed list is computed from the
@@ -386,6 +396,30 @@ export function useServiceAddOns(): {
     addOns: settings.service_addons.value.addOns,
     categories: settings.service_addons.value.categories,
     configured: settings.service_addons.configured,
+    isPending,
+  };
+}
+
+/**
+ * This facility's Yipyy Go setup: which services ask a customer for a
+ * pre-arrival form, whether it is mandatory, when it is sent, what it asks.
+ *
+ * `isPending` is load-bearing here, more than on most of these. Every reader
+ * uses this to decide whether to ASK a customer for something, and "not
+ * enabled" and "not loaded yet" produce the same `enabled: false` — so a screen
+ * that renders through the pending state tells a customer they are done when
+ * nobody has looked yet. Wait for it before concluding a form is not needed.
+ */
+export function useYipyyGoConfig(): {
+  config: YipyyGoSettings;
+  /** False means no row: nobody has set Yipyy Go up for this facility. */
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    config: settings.yipyy_go_config.value,
+    configured: settings.yipyy_go_config.configured,
     isPending,
   };
 }

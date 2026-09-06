@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, ChevronRight } from "lucide-react";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
-import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { useYipyyGoConfig } from "@/lib/api/facility-settings";
+import { yipyyGoRequirementFor } from "@/lib/settings/yipyy-go";
 import { getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 
@@ -20,22 +21,22 @@ export function YipyyGoPendingWidget({
   facilityId,
   maxItems = 5,
 }: YipyyGoPendingWidgetProps) {
-  const config = getYipyyGoConfig(facilityId);
-  if (!config?.enabled) return null;
+  // This facility's setup, from the session, not `getYipyyGoConfig(facilityId)`
+  // against a module-level array. `facilityId` stays for the fixture booking
+  // filter below, which is a separate thing to fix.
+  const { config, isPending } = useYipyyGoConfig();
+  // Nothing while the settings are in flight: the fallback is switched off, so
+  // rendering through the pending state would show "no forms outstanding" to a
+  // facility that has several.
+  if (isPending || !config.enabled) return null;
 
   const pendingBookings = bookings.filter((b) => {
     if (b.facilityId !== facilityId) return false;
-    const st = b.service?.toLowerCase() as
-      | "daycare"
-      | "boarding"
-      | "grooming"
-      | "training";
-    const enabled = config.serviceConfigs?.find(
-      (s) => s.serviceType === st,
-    )?.enabled;
-    if (!enabled) return false;
+    if (!yipyyGoRequirementFor(config, b.service?.toLowerCase() ?? "")) {
+      return false;
+    }
     const status = getYipyyGoDisplayStatusForBooking(b.id, {
-      facilityId,
+      yipyyGo: config,
       service: b.service,
     });
     return (
@@ -66,7 +67,7 @@ export function YipyyGoPendingWidget({
           const petId = Array.isArray(b.petId) ? b.petId[0] : b.petId;
           const pet = client?.pets?.find((p) => p.id === petId);
           const status = getYipyyGoDisplayStatusForBooking(b.id, {
-            facilityId,
+            yipyyGo: config,
             service: b.service,
           });
           return (

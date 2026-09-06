@@ -18,54 +18,61 @@ import { EnablementScopeSection } from "./EnablementScopeSection";
 import { TimingRemindersSection } from "./TimingRemindersSection";
 import { PerServiceFormTemplateSection } from "./PerServiceFormTemplateSection";
 import { FeesAndMessagingSection } from "./FeesAndMessagingSection";
-import type {
-  YipyyGoConfig,
-  YipyyGoAddOnsApproval,
-} from "@/data/yipyygo-config";
-import { saveYipyyGoConfig } from "@/data/yipyygo-config";
+import type { YipyyGoAddOnsApproval } from "@/data/yipyygo-config";
+import type { YipyyGoSettings as YipyyGoSettingsValue } from "@/lib/settings/yipyy-go";
+import { useSaveFacilitySetting } from "@/lib/api/facility-settings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 
 interface YipyyGoSettingsProps {
-  config: YipyyGoConfig;
-  onConfigChange: (config: YipyyGoConfig) => void;
-  facilityId: number;
+  /**
+   * The facility's stored setup, or the inert default if they have none.
+   *
+   * Seeded into state ONCE, which is why the caller must not mount this until
+   * the query has landed — see the wrapper. `configured` is not needed here:
+   * the fallback is already switched off, so an unconfigured facility and one
+   * that chose to switch Yipyy Go off render the same screen, correctly.
+   */
+  initialConfig: YipyyGoSettingsValue;
 }
 
-export function YipyyGoSettings({
-  config,
-  onConfigChange,
-  facilityId: _facilityId,
-}: YipyyGoSettingsProps) {
-  const [localConfig, setLocalConfig] = useState<YipyyGoConfig>(config);
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
+export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
+  const saveSetting = useSaveFacilitySetting();
+  const [localConfig, setLocalConfig] =
+    useState<YipyyGoSettingsValue>(initialConfig);
+  const [savedConfig, setSavedConfig] =
+    useState<YipyyGoSettingsValue>(initialConfig);
+
+  const hasChanges =
+    JSON.stringify(localConfig) !== JSON.stringify(savedConfig);
+  const isSaving = saveSetting.isPending;
 
   const handleEnableToggle = (enabled: boolean) => {
-    const updated = { ...localConfig, enabled };
-    setLocalConfig(updated);
-    setHasChanges(true);
+    setLocalConfig((prev) => ({ ...prev, enabled }));
   };
 
-  const handleConfigUpdate = (updates: Partial<YipyyGoConfig>) => {
-    const updated = { ...localConfig, ...updates };
-    setLocalConfig(updated);
-    setHasChanges(true);
+  const handleConfigUpdate = (updates: Partial<YipyyGoSettingsValue>) => {
+    setLocalConfig((prev) => ({ ...prev, ...updates }));
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const saved = saveYipyyGoConfig(localConfig);
-      onConfigChange(saved);
-      setHasChanges(false);
-      toast.success("Express Check-in settings saved successfully");
-    } catch (error) {
-      toast.error("Failed to save Express Check-in settings");
-      console.error("Error saving YipyyGo config:", error);
-    } finally {
-      setIsSaving(false);
-    }
+  const handleSave = () => {
+    saveSetting.mutate(
+      { domain: "yipyy_go_config", value: localConfig },
+      {
+        onSuccess: () => {
+          // The BASELINE moves, not the draft — so a field edited while the
+          // request was in flight stays edited instead of being reverted.
+          setSavedConfig(localConfig);
+          toast.success("Yipyy Go settings saved");
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Those Yipyy Go settings were not saved.",
+          ),
+      },
+    );
   };
 
   return (
@@ -98,7 +105,7 @@ export function YipyyGoSettings({
               {hasChanges && (
                 <Button onClick={handleSave} disabled={isSaving}>
                   <Save className="mr-2 size-4" />
-                  {isSaving ? "Saving..." : "Save Changes"}
+                  {isSaving ? "Saving…" : "Save Yipyy Go settings"}
                 </Button>
               )}
             </div>
@@ -109,8 +116,8 @@ export function YipyyGoSettings({
             <Alert>
               <AlertCircle className="size-4" />
               <AlertDescription>
-                YipyyGo is currently disabled. Enable it to configure
-                pre-check-in forms for your services.
+                Yipyy Go is off. Turn it on to ask customers for a pre-arrival
+                form on the services you choose.
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -244,7 +251,7 @@ export function YipyyGoSettings({
                   </p>
                   <Button onClick={handleSave} disabled={isSaving} size="lg">
                     <Save className="mr-2 size-4" />
-                    {isSaving ? "Saving..." : "Save All Changes"}
+                    {isSaving ? "Saving…" : "Save Yipyy Go settings"}
                   </Button>
                 </div>
               </CardContent>

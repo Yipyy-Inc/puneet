@@ -51,6 +51,7 @@ import {
 } from "@/lib/settings/reputation";
 import { NO_TAX, taxConfigSchema } from "@/lib/settings/tax";
 import { NO_YIPYY_PAY, yipyyPayConfigSchema } from "@/lib/settings/yipyy-pay";
+import { YIPYY_GO_OFF, yipyyGoSettingsSchema } from "@/lib/settings/yipyy-go";
 
 import {
   bookingRulesSchema,
@@ -366,6 +367,23 @@ export const SETTING_DOMAINS = {
   // business quietly selling services at prices nobody there set. See the
   // banner in lib/settings/addons.ts.
   service_addons: { schema: serviceAddOnsConfigSchema, fallback: NO_ADDONS },
+  // ── YIPYY GO ───────────────────────────────────────────────────────────
+  //
+  // The pre-arrival check-in form: which services ask for one, whether it is
+  // mandatory, when it is sent and what it asks. A module-level array mutated
+  // in place until 2026-09-06, under a screen that said "Express Check-in
+  // settings saved successfully" — so a facility configured a customer-facing
+  // requirement, was told it had saved, and lost it on reload.
+  //
+  // TWELVE call sites read the fixture directly, including the customer's own
+  // booking page and the trigger that decides whether to ask at all. That is
+  // the vaccination_rules shape: the readers would not have seen the edits even
+  // if the edits had survived.
+  //
+  // The fallback needs neither the empty-money argument nor the fails-open one,
+  // because the shipped default is already inert — `enabled: false`, and all
+  // four services off. See the banner in lib/settings/yipyy-go.ts.
+  yipyy_go_config: { schema: yipyyGoSettingsSchema, fallback: YIPYY_GO_OFF },
   // ── YIPYY PAY ──────────────────────────────────────────────────────────
   //
   // The facility's payment preferences: which payout schedule their Clover

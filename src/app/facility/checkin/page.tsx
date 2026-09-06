@@ -23,7 +23,8 @@ import {
   getYipyyGoForm,
   getYipyyGoDisplayStatusForBooking,
 } from "@/data/yipyygo-forms";
-import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { useYipyyGoConfig } from "@/lib/api/facility-settings";
+import { yipyyGoRequirementFor } from "@/lib/settings/yipyy-go";
 import {
   CheckCircle2,
   Package,
@@ -75,20 +76,17 @@ function CheckInContent() {
     return client.pets?.find((p) => p.id === pid);
   }, [client, booking]);
 
-  const config = useMemo(
-    () => (booking ? getYipyyGoConfig(booking.facilityId) : null),
-    [booking],
-  );
+  // The facility's own Yipyy Go setup, from `facility_settings`. It used to be
+  // `getYipyyGoConfig(booking.facilityId)` — a lookup in a module-level array
+  // that no save had ever reached, so this screen enforced a seed file.
+  const { config, isPending: configPending } = useYipyyGoConfig();
 
   const isMandatoryPreCheck = useMemo(() => {
-    if (!config?.enabled || !booking?.service) return false;
-    const svc = booking.service.toLowerCase() as
-      | "daycare"
-      | "boarding"
-      | "grooming"
-      | "training";
-    const sc = config.serviceConfigs.find((s) => s.serviceType === svc);
-    return Boolean(sc?.enabled && sc?.requirement === "mandatory");
+    if (!booking?.service) return false;
+    return (
+      yipyyGoRequirementFor(config, booking.service.toLowerCase()) ===
+      "mandatory"
+    );
   }, [config, booking]);
 
   const hasRequiredFields = Boolean(
@@ -111,8 +109,15 @@ function CheckInContent() {
     requiredAck && (hasMeds ? medsAck : true) && belongingsAck;
   const overrideComplete =
     !isPreCheckMissing || overrideReason.trim().length > 0;
+  // `configPending` is in here deliberately. Until the facility's settings land,
+  // `isMandatoryPreCheck` is false because the fallback is switched off — which
+  // is indistinguishable from a facility that requires nothing. Checking in on
+  // that reading would waive a MANDATORY pre-arrival form and skip the override
+  // the facility asked for, silently. So the button waits.
   const canCheckIn =
-    (checklistComplete || isPreCheckMissing) && overrideComplete;
+    !configPending &&
+    (checklistComplete || isPreCheckMissing) &&
+    overrideComplete;
 
   const handleCheckIn = useCallback(() => {
     if (!payload || !booking || !canCheckIn) return;
@@ -252,7 +257,7 @@ function CheckInContent() {
                       const petName =
                         c?.pets?.find((p) => p.id === pid)?.name ?? "—";
                       const status = getYipyyGoDisplayStatusForBooking(b.id, {
-                        facilityId: b.facilityId,
+                        yipyyGo: config,
                         service: b.service,
                       });
                       return (
@@ -575,11 +580,17 @@ function CheckInContent() {
               onClick={handleCheckIn}
             >
               <LogIn className="size-5" />
+              {/* `configPending` gets its own label rather than sitting behind a
+                  silently disabled "Check in". §5s: a state a component does not
+                  implement is a bug, and a button that will not press with no
+                  reason given reads as broken rather than as busy. */}
               {checkingIn
                 ? "Checking in…"
-                : isPreCheckMissing
-                  ? "Override and check in"
-                  : "Check in"}
+                : configPending
+                  ? "Checking requirements…"
+                  : isPreCheckMissing
+                    ? "Override and check in"
+                    : "Check in"}
             </Button>
           </CardContent>
         </Card>

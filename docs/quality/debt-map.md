@@ -7749,6 +7749,64 @@ existing code alone unless the task is about it.
   everything under `.dark`, and that gate cares about the `@custom-variant`
   line and the `dark:` utility count, not this selector specifically.
 
+## 2026-09-06 — custom service modules have no facility of their own
+
+**Severity: medium.** Moving Yipyy Go's setup into the `yipyy_go_config`
+settings domain removed the last thing that was pretending to scope custom
+service modules to a facility, and it is worth writing down what was actually
+there, because it looked like scoping and was not.
+
+Two components filtered the module list by facility:
+
+```
+// EnablementScopeSection.tsx, PerServiceFormTemplateSection.tsx
+(m.facilityIds ?? [m.facilityId]).includes(config.facilityId)
+```
+
+`config` came from `getYipyyGoConfig(facilityId)`, and `facilityId` came from
+the settings wrapper, which read:
+
+```
+const facilityId = 11; // TODO: Get from auth context
+```
+
+**So the comparison was against the literal 11 for every facility on the
+platform.** Not "wrong for some tenants" — the same constant for all of them.
+Every business opening Settings → Yipyy Go saw the demo facility's custom
+services in the enablement list and in the per-service form-template tabs.
+
+The filter is gone rather than reconnected, and that is deliberate: the setting
+it used to read now comes from the session, but **the modules do not**.
+`useCustomServices()` is a localStorage-backed context over
+`src/data/custom-services.ts`, and `PerServiceFormTemplateSection` reads
+`defaultCustomServiceModules` — the fixture array — directly. There is no
+facility on either side to compare against, so any filter written today is
+another constant wearing a tenancy costume, which is the exact shape
+`check:derived-location` exists to refuse.
+
+### What to do instead of casually touching it
+
+- **Do not re-add a facility filter here while custom services are a fixture.**
+  There is nothing honest to filter on. Removing the filter widens what is
+  listed; re-adding one against a guessed id narrows it _incorrectly_, which is
+  worse, because a narrowed list looks authoritative.
+- **The fix is upstream.** When custom service modules become real rows —
+  facility-scoped, behind RLS like every other tenant table — the filter becomes
+  unnecessary rather than correct: the query will only return this facility's,
+  the same way `useYipyyGoConfig()` only returns this facility's setup.
+- **`facilityId` props that reach a fixture lookup are the tell.** The Yipyy Go
+  work removed three of them (`const FACILITY_ID = 11` in
+  `pre-visit-briefing.tsx`, the wrapper's `facilityId = 11`, and
+  `config.facilityId` in the two sections above). `YipyyGoPendingWidget` still
+  takes one, and it is still used — to filter the `bookings` fixture. Same
+  class, not yet the same fix.
+
+**Measured 2026-09-06:** `rg "facilityId = 11|facilityId: 11" src` before this
+change; the three sites above plus `grooming-post-booking.ts:121`, which passes
+`facilityId: 11` into `processBookingConfirmationForYipyyGo` with its own
+`// TODO: Get from bookingData or context`. That one is now inert for the
+config — the setup is passed in — but the id it sends is still the constant.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

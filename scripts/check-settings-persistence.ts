@@ -101,13 +101,21 @@ const ALLOW = /settings-write-ok:/;
 // now live in the `deposit_rules` settings domain instead of localStorage,
 // where they had been read not only by the editor but by BookingModal and by
 // the checkout on the booking detail page. See lib/settings/deposits.ts.
+//
+// yipyygo left on 2026-09-06, and it was the widest of them. Its setup now
+// lives in the `yipyy_go_config` domain; the fixture's `saveYipyyGoConfig()`
+// (a splice into a module-level array, under a screen that said "saved
+// successfully") and `getYipyyGoConfig()` are both deleted, so nothing can
+// drift back. The read side moved with it — TWELVE call sites, including the
+// customer's own booking page and the trigger that decides whether to ask for
+// a form. The customer portal reads it through its own route and its own RLS
+// allowlist entry, because `getFacilityContext()` resolves a caller with no
+// membership to the DEMO facility. See lib/settings/yipyy-go.ts.
 const BASELINE = new Set<string>([
-  // Four of these raise a success toast as well, and are in
-  // check:success-claims' baseline for it. The other four say nothing at all,
-  // which is the case that gate could never have caught.
+  // Both of these raise a success toast as well, and are in
+  // check:success-claims' baseline for it.
   "mobile-app",
   "tags-notes",
-  "yipyygo",
 ]);
 
 const cache = new Map<string, string>();
