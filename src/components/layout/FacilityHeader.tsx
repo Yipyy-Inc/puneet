@@ -135,11 +135,14 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
         if (failedPets.length > 0) {
           // A pet that failed does NOT roll the client back (see useCreateClient),
           // so saying only "created" would hide animals that are not there.
-          toast.warning(`${client.name} was created without every pet`, {
-            description: `${failedPets.join(", ")} could not be saved. Add them from the client's file.`,
+          toast.warning(t("clientPartial").replace("{name}", client.name), {
+            description: t("petsFailed").replace(
+              "{pets}",
+              failedPets.join(", "),
+            ),
           });
         } else {
-          toast.success(`Client ${client.name} created`, {
+          toast.success(t("clientCreated").replace("{name}", client.name), {
             description: t("clientAdded"),
           });
         }
@@ -169,8 +172,11 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
       // Against the database there is no undo to offer: bookings have no DELETE
       // policy on purpose — a booking is cancelled, not erased — so the button
       // is gone rather than made to look like it worked.
-      toast.success(`Booking #${created.id} created`, {
-        description: `${bookingData.service} booking has been created successfully.`,
+      toast.success(t("bookingCreated").replace("{id}", String(created.id)), {
+        description: t("bookingCreatedBody").replace(
+          "{service}",
+          bookingData.service,
+        ),
       });
     } catch (error) {
       toast.error(t("createBookingFailed"), {

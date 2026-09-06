@@ -27,6 +27,7 @@ import {
 import { useFacilityRbac, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { NAV_SECTIONS } from "@/lib/nav/facility-nav";
 import { toEmployeeRoute } from "@/lib/nav/employee-nav";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   fullNameOf,
   RolePill,
@@ -53,6 +54,7 @@ const ACCOUNT_LINKS: NavSlot[] = [
 ];
 
 export function EmployeeBottomNav({ staffId }: { staffId: string }) {
+  const t = useShellText("employee");
   const pathname = usePathname();
   const { resolvePermissions } = useFacilityRbac();
   // Same fix as the sidebar: the mobile profile sheet names the acting viewer,
@@ -116,10 +118,10 @@ export function EmployeeBottomNav({ staffId }: { staffId: string }) {
       <Sheet>
         <SheetTrigger
           className="text-muted-foreground hover:text-foreground flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 pt-1.5 text-[10px] font-medium transition-colors"
-          aria-label="Profile and account"
+          aria-label={t("profileAndAccount")}
         >
           <User className="size-5" />
-          <span>Profile</span>
+          <span>{t("profile")}</span>
         </SheetTrigger>
         <SheetContent side="bottom" className="rounded-t-2xl">
           <SheetHeader className="text-left">
@@ -151,7 +153,7 @@ export function EmployeeBottomNav({ staffId }: { staffId: string }) {
                 className="hover:bg-muted text-muted-foreground flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors"
               >
                 <RefreshCw className="size-5" />
-                Switch employee
+                {t("switchEmployee")}
               </Link>
             </SheetClose>
           </div>

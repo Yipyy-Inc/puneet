@@ -17,6 +17,7 @@ import {
 } from "@/lib/cash-register-store";
 import { useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { resolveRegisterContext } from "@/lib/employee/register-context";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // End-of-day close reminder (spec: remind staff to count & close on the way
@@ -27,6 +28,7 @@ import { resolveRegisterContext } from "@/lib/employee/register-context";
 // ============================================================================
 
 export function RegisterCloseReminder({ staffId }: { staffId: string }) {
+  const t = useShellText("employee");
   const pendingId = usePendingRegisterCloseSessionId();
   const sessions = useRegisterSessions();
   const { viewer, viewerResolved } = useFacilityViewer();
@@ -43,7 +45,7 @@ export function RegisterCloseReminder({ staffId }: { staffId: string }) {
 
   const handleClose = (closing: ClosingCount, managerNote: string) => {
     closeRegister(session.id, closing, managerNote);
-    toast.success("Register closed — drawer reconciled. See you next shift!");
+    toast.success(t("registerClosed"));
   };
 
   return (

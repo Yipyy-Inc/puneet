@@ -120,8 +120,11 @@ export function FacilityOnboardingBanner() {
           aria-label={t("dismissOnboarding")}
           title={
             canDismiss
-              ? "Dismiss"
-              : `Complete at least ${ONBOARDING_DISMISS_THRESHOLD} steps to dismiss`
+              ? t("dismiss")
+              : t("dismissLocked").replace(
+                  "{count}",
+                  String(ONBOARDING_DISMISS_THRESHOLD),
+                )
           }
           disabled={!canDismiss}
           onClick={dismissOnboardingBanner}

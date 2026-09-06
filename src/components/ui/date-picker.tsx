@@ -194,14 +194,14 @@ export function DatePicker({
     if (!withinLimits(typedDate)) {
       if (minDate && typedDate < startOfDay(minDate)) {
         setManualInputError(
-          `Date must be on or after ${toISODateString(minDate)}`,
+          t("dateOnOrAfter").replace("{date}", toISODateString(minDate)),
         );
         return;
       }
 
       if (maxDate && typedDate > startOfDay(maxDate)) {
         setManualInputError(
-          `Date must be on or before ${toISODateString(maxDate)}`,
+          t("dateOnOrBefore").replace("{date}", toISODateString(maxDate)),
         );
         return;
       }

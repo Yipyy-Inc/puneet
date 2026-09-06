@@ -13,6 +13,7 @@ import {
 } from "@/lib/cash-register-store";
 import { resolveRegisterContext } from "@/lib/employee/register-context";
 import { isPastCloseTime, todayCloseTime } from "@/lib/register-hours";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // Closing-time reminder banner (spec: shift handover — a different person opens
@@ -23,6 +24,7 @@ import { isPastCloseTime, todayCloseTime } from "@/lib/register-hours";
 // ============================================================================
 
 export function RegisterCloseWatcher({ staffId }: { staffId: string }) {
+  const t = useShellText("employee");
   const canOpenRegister = usePermission("open_close_register");
   const { registerCloseReminder } = useStaffHrConfig();
   const { viewer, viewerResolved } = useFacilityViewer();
@@ -65,11 +67,11 @@ export function RegisterCloseWatcher({ staffId }: { staffId: string }) {
         onClick={() => requestRegisterClose(session.id)}
       >
         <Vault className="size-3.5" />
-        Count &amp; close
+        {t("countAndClose")}
       </Button>
       <button
         type="button"
-        aria-label="Dismiss"
+        aria-label={t("dismiss")}
         onClick={() => setDismissed(true)}
         className="shrink-0 rounded-md p-1 transition-colors hover:bg-amber-200"
       >

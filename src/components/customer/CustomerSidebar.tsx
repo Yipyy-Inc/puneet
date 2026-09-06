@@ -37,6 +37,7 @@ import {
   petCamAccessConfigs,
 } from "@/data/camera-integration";
 import { memberships } from "@/data/services-pricing";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import type {
   CameraRuleSet,
   CameraServiceType,
@@ -59,6 +60,7 @@ import type {
 // ============================================================================
 
 export function CustomerSidebar() {
+  const t = useShellText("customer");
   const signOutEverywhere = useSignOutEverywhere();
   const { selectedFacility } = useCustomerFacility();
   const isMounted = useHydrated();
@@ -341,9 +343,10 @@ export function CustomerSidebar() {
   const header = (
     <div className="flex flex-col gap-0.5">
       <Link href="/customer/dashboard" className="text-sm font-semibold">
+        {/* french-ok: the product's name */}
         {isMounted && selectedFacility ? selectedFacility.name : "Yipyy"}
       </Link>
-      <span className="text-muted-foreground text-xs">Customer Portal</span>
+      <span className="text-muted-foreground text-xs">{t("portalLabel")}</span>
     </div>
   );
 

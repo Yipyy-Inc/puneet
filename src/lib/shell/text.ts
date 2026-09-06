@@ -48,9 +48,12 @@ type ShellCatalogue = {
   banners: Record<string, string>;
   search: Record<string, string>;
   primitives: Record<string, string>;
+  customer: Record<string, string>;
+  employee: Record<string, string>;
+  admin: Record<string, string>;
 };
 
-/** The five groups, which are the five surfaces of the shell. */
+/** The groups, one per surface of the app chrome. */
 export type ShellGroup = keyof ShellCatalogue;
 
 const CATALOGUE: Record<AppLocale, ShellCatalogue> = {

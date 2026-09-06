@@ -2,6 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import type { Denomination } from "@/data/cash-drawer";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface Props {
   denominations: Denomination[];
@@ -20,14 +21,15 @@ export function DenominationInput({
   onChange,
   currencySymbol,
 }: Props) {
+  const t = useShellText("employee");
   const sorted = [...denominations].sort((a, b) => a.value - b.value);
 
   return (
     <div className="bg-background rounded-md border">
       <div className="bg-muted/40 text-muted-foreground grid grid-cols-[1fr_5rem_5.5rem] gap-2 border-b px-3 py-2 text-[11px] font-medium tracking-wide uppercase">
-        <span>Denomination</span>
-        <span className="text-center">Count</span>
-        <span className="text-right">Subtotal</span>
+        <span>{t("denomination")}</span>
+        <span className="text-center">{t("count")}</span>
+        <span className="text-right">{t("subtotal")}</span>
       </div>
       <ul className="divide-y">
         {sorted.map((d) => {

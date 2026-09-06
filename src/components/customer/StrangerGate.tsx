@@ -10,6 +10,7 @@ import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   Card,
   CardContent,
@@ -47,6 +48,7 @@ import {
 // ============================================================================
 
 export function StrangerGate({ children }: { children: React.ReactNode }) {
+  const t = useShellText("customer");
   const { resolved, unlinked, facilitySlug } = useCurrentCustomer();
   const queryClient = useQueryClient();
   // The canonical sign-out, not a raw provider call: it also clears the legacy
@@ -66,7 +68,7 @@ export function StrangerGate({ children }: { children: React.ReactNode }) {
         error?: string;
       } | null;
       if (!response.ok) {
-        throw new Error(body?.error ?? "Could not register you here.");
+        throw new Error(body?.error ?? t("registerFailed"));
       }
       return body;
     },
@@ -106,12 +108,8 @@ export function StrangerGate({ children }: { children: React.ReactNode }) {
             <div className="mb-2 flex justify-center">
               <YipyyPose name="welcome" size={320} float priority />
             </div>
-            <CardTitle>No bookings yet</CardTitle>
-            <CardDescription>
-              Your account is not linked to a pet care facility. Open the web
-              address your facility gave you to register, or ask them to add you
-              — either way your access follows this email address.
-            </CardDescription>
+            <CardTitle>{t("noBookings")}</CardTitle>
+            <CardDescription>{t("notLinkedBody")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button
@@ -120,7 +118,7 @@ export function StrangerGate({ children }: { children: React.ReactNode }) {
               onClick={() => void signOutEverywhere()}
             >
               <LogOut className="mr-2 size-4" />
-              Sign in as someone else
+              {t("signInAsSomeoneElse")}
             </Button>
           </CardContent>
         </Card>
@@ -138,19 +136,17 @@ export function StrangerGate({ children }: { children: React.ReactNode }) {
           <div className="mb-2 flex justify-center">
             <YipyyPose name="welcome" size={320} float priority />
           </div>
-          <CardTitle>You are not registered here yet</CardTitle>
-          <CardDescription>
-            You are signed in, but this facility does not have an account for
-            you. Your pets and bookings at other facilities are unaffected.
-          </CardDescription>
+          <CardTitle>{t("notRegistered")}</CardTitle>
+          <CardDescription>{t("notRegisteredBody")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="stranger-name">Your name</Label>
+            <Label htmlFor="stranger-name">{t("yourName")}</Label>
             <Input
               id="stranger-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              // french-ok: an example name, not copy
               placeholder="Sam Rivera"
             />
           </div>
@@ -166,7 +162,7 @@ export function StrangerGate({ children }: { children: React.ReactNode }) {
             disabled={!name.trim() || register.isPending}
             onClick={() => register.mutate()}
           >
-            {register.isPending ? "Registering…" : "Register at this facility"}
+            {register.isPending ? t("registering") : t("registerHere")}
           </Button>
 
           {/* The other real way forward: this is somebody else's facility and
@@ -177,7 +173,7 @@ export function StrangerGate({ children }: { children: React.ReactNode }) {
             onClick={() => void signOutEverywhere()}
           >
             <LogOut className="mr-2 size-4" />
-            Sign in as someone else
+            {t("signInAsSomeoneElse")}
           </Button>
         </CardContent>
       </Card>
