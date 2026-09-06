@@ -428,7 +428,7 @@ export function RetailSettings() {
                   setCategories(next);
                 }}
               >
-                <SelectTrigger className="h-6 w-20 text-[10px]">
+                <SelectTrigger className="min-w-24 text-[11px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -524,15 +524,15 @@ export function RetailSettings() {
               onValueChange={(v) => setDefaultPricingMethod(v as PricingMethod)}
             >
               <SelectTrigger
-                aria-label="Default Pricing Method"
+                aria-label="Default pricing method"
                 className="h-9 max-w-[240px] text-sm"
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="manual">Manual Price</SelectItem>
-                <SelectItem value="margin">Product Margin %</SelectItem>
-                <SelectItem value="brand_rule">Brand Rule</SelectItem>
+                <SelectItem value="manual">Manual price</SelectItem>
+                <SelectItem value="margin">Product margin %</SelectItem>
+                <SelectItem value="brand_rule">Brand rule</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -569,7 +569,7 @@ export function RetailSettings() {
               onValueChange={(v) => setRounding(v as RoundingRule)}
             >
               <SelectTrigger
-                aria-label="Selling Price Rounding"
+                aria-label="Selling price rounding"
                 className="h-9 max-w-[240px] text-sm"
               >
                 <SelectValue />
