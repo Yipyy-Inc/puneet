@@ -810,7 +810,7 @@
         "fullyClose": "Fermer complètement",
         "blockCheckInOnly": "Bloquer les arrivées seulement",
         "blockCheckOutOnly": "Bloquer les départs seulement",
-        "blockTypeHelp": "Fermer complètement = aucune arrivée ni départ. Ou bloquez seulement les arrivées, ou seulement les départs.",
+        "blockTypeHelp": "Fermer complètement = aucune arrivée ni départ. Ou bloquez seulement les dates d’arrivée, ou seulement les dates de départ.",
         "closureMessage": "Message de fermeture (visible par le client)",
         "closureMessageHelp": "Affiché lorsqu'un client survole ou sélectionne la date bloquée dans le calendrier de réservation.",
         "noBlocks": "Aucun blocage par service. Ajoutez une date et un ou des services ci-dessus.",
@@ -821,8 +821,7 @@
         "dropOffPickUpHelp": "Modifiez les plages d'arrivée et de départ pour des dates précises (p. ex. les heures d'un jour férié). Les clients ne voient que les heures valides pour chaque date.",
         "noDropOffOverrides": "Aucune exception d'arrivée ou de départ. Ajoutez une date et un ou des services ci-dessus.",
         "servicesPerServiceMultipleAll": "Services (par service, plusieurs ou tous)",
-        "servicesOptionalAll": "Services (facultatif — laisser vide pour tous)",
-        "selectDate": "Choisir une date"
+        "servicesOptionalAll": "Services (facultatif — laisser vide pour tous)"
       }
     }
   },
@@ -890,5 +889,84 @@
     "evaluation": "Évaluation",
     "retail": "Vente au détail",
     "vet": "Vétérinaire"
+  },
+  "shell": {
+    "header": {
+      "search": "Rechercher",
+      "messages": "Messages",
+      "create": "Créer",
+      "new": "Nouveau",
+      "calling": "Appels",
+      "moreOptions": "Plus d'options",
+      "newClient": "Nouveau client",
+      "newBooking": "Nouvelle réservation",
+      "retailSale": "Vente au détail",
+      "newEstimate": "Nouveau devis",
+      "quickDaycareCheckIn": "Enregistrement rapide en garderie",
+      "clientAdded": "Le nouveau client a été ajouté.",
+      "notAvailableYet": "Ce n'est pas encore disponible.",
+      "createClientFailed": "Impossible de créer ce client",
+      "createBookingFailed": "Impossible de créer cette réservation",
+      "quickCheckInSoon": "L'enregistrement rapide en garderie arrive bientôt",
+      "tryAgain": "Réessayez."
+    },
+    "account": {
+      "signedIn": "Connecté",
+      "profileSettings": "Paramètres du profil",
+      "notificationPreferences": "Préférences de notification",
+      "switchLocation": "Changer d'emplacement",
+      "allLocations": "Tous les emplacements (siège)",
+      "helpSupport": "Aide et assistance",
+      "systemSettings": "Paramètres système",
+      "ownerAccount": "Compte du propriétaire",
+      "agreements": "Ententes Yipyy",
+      "subscription": "Mon abonnement",
+      "paymentMethod": "Mode de paiement",
+      "exportData": "Exporter les données",
+      "accountSettings": "Paramètres du compte",
+      "viewAs": "Afficher en tant que",
+      "facilityPortal": "Portail de l'établissement",
+      "customerPortal": "Portail client",
+      "staffPortal": "Portail du personnel",
+      "logOut": "Se déconnecter",
+      "accountMenu": "Menu du compte"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "new": "nouvelles",
+      "markAllRead": "Tout marquer comme lu",
+      "none": "Aucune notification"
+    },
+    "support": {
+      "open": "Aide et assistance",
+      "title": "Centre d'assistance",
+      "blurb": "Obtenez l'aide de l'équipe Yipyy sans quitter cette page.",
+      "close": "Fermer le centre d'assistance",
+      "chat": "Clavarder avec Yipyy",
+      "ticket": "Soumettre une demande",
+      "faqs": "Aide et FAQ"
+    },
+    "banners": {
+      "adminMode": "Mode admin Yipyy",
+      "exitImpersonation": "Quitter",
+      "impersonationInvalid": "Ce lien d'emprunt d'identité est invalide ou a expiré.",
+      "continueSetup": "Poursuivre la configuration",
+      "dismissOnboarding": "Masquer la bannière de configuration",
+      "dismiss": "Masquer",
+      "onboardingTitle": "Terminez la configuration"
+    },
+    "search": {
+      "placeholder": "Rechercher animaux, clients, réservations, estimations, factures...",
+      "label": "Recherche globale",
+      "actions": "Actions",
+      "noResults": "Aucun résultat trouvé.",
+      "createCustomer": "Créer un client",
+      "viewAll": "Voir tous les résultats",
+      "searching": "Recherche…",
+      "groupPetsCustomers": "Animaux / clients",
+      "groupBookings": "Réservations",
+      "groupEstimates": "Estimations",
+      "groupInvoices": "Factures"
+    }
   }
 }

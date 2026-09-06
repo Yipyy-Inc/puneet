@@ -31,7 +31,7 @@ import type { NewBooking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
-import { useUiText } from "@/hooks/use-ui-text";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface FacilityHeaderProps {
   facilityId?: number;
@@ -47,9 +47,9 @@ const SERVICE_SECTION_SLUGS: Record<string, string> = {
 };
 
 export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
+  const t = useShellText("header");
   const { openBookingModal } = useBookingModal();
   const { currentLocationId } = useLocationContext();
-  const { t } = useUiText();
   const pathname = usePathname();
 
   // When staff hit "+ New Booking" from inside a service section, pre-select
@@ -140,16 +140,15 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
           });
         } else {
           toast.success(`Client ${client.name} created`, {
-            description: t("New client has been added successfully."),
+            description: t("clientAdded"),
           });
         }
       },
       // The modal stays OPEN on failure, holding what was typed. Closing it and
       // reporting an error would throw the form away along with the record.
       onError: (error) =>
-        toast.error("Could not create that client", {
-          description:
-            error instanceof Error ? error.message : "Please try again.",
+        toast.error(t("createClientFailed"), {
+          description: error instanceof Error ? error.message : t("tryAgain"),
         }),
     });
   };
@@ -174,16 +173,15 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
         description: `${bookingData.service} booking has been created successfully.`,
       });
     } catch (error) {
-      toast.error("Could not create that booking", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
+      toast.error(t("createBookingFailed"), {
+        description: error instanceof Error ? error.message : t("tryAgain"),
       });
     }
   };
 
   const handleQuickDaycareCheckIn = () => {
-    toast.info("Quick daycare check-in feature coming soon", {
-      description: t("This feature is not yet implemented."),
+    toast.info(t("quickCheckInSoon"), {
+      description: t("notAvailableYet"),
     });
   };
 
@@ -197,15 +195,15 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                 <Button
                   id="facility-create-new-trigger"
                   className="h-10 gap-1.5 rounded-xl bg-indigo-600 px-3 text-white hover:bg-indigo-700"
-                  aria-label={t("Create")}
+                  aria-label={t("create")}
                 >
                   <Plus className="size-4" />
-                  <span className="text-sm font-medium">{t("New")}</span>
+                  <span className="text-sm font-medium">{t("new")}</span>
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <TooltipContent side="bottom" align="center">
-              {t("Create")}
+              {t("create")}
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-56">
@@ -214,7 +212,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                 onClick={() => setIsCreateClientModalOpen(true)}
               >
                 <User className="mr-2 size-4" />
-                {t("New Client")}
+                {t("newClient")}
               </DropdownMenuItem>
             )}
             {canNewBooking && (
@@ -236,7 +234,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                 }
               >
                 <Calendar className="mr-2 size-4" />
-                {t("New Booking")}
+                {t("newBooking")}
               </DropdownMenuItem>
             )}
             {canRetailSale && (
@@ -247,7 +245,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                 }}
               >
                 <ShoppingBag className="mr-2 size-4" />
-                {t("Retail Sale")}
+                {t("retailSale")}
               </DropdownMenuItem>
             )}
             {canNewEstimate && (
@@ -270,13 +268,13 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                 }}
               >
                 <FileText className="mr-2 size-4" />
-                {t("New Estimate")}
+                {t("newEstimate")}
               </DropdownMenuItem>
             )}
             {canDaycareCheckin && (
               <DropdownMenuItem onClick={handleQuickDaycareCheckIn}>
                 <Zap className="mr-2 size-4" />
-                {t("Quick Daycare Check-in")}
+                {t("quickDaycareCheckIn")}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

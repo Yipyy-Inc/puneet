@@ -1,6 +1,7 @@
 "use client";
 
 import { HelpCircle } from "lucide-react";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 import {
   setSupportDrawerOpen,
@@ -15,6 +16,7 @@ import {
  * the facility layout so it persists across navigation.
  */
 export function SupportFab() {
+  const t = useShellText("support");
   const { open } = useSupportDrawer();
 
   return (
@@ -22,7 +24,7 @@ export function SupportFab() {
       type="button"
       data-support-fab
       onClick={() => setSupportDrawerOpen(!open)}
-      aria-label="Help & Support"
+      aria-label={t("open")}
       aria-expanded={open}
       className="group fixed right-6 bottom-6 z-50 flex h-12 items-center gap-0 rounded-full bg-violet-600 px-3 text-white shadow-lg shadow-violet-600/30 transition-all duration-200 hover:bg-violet-700 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:outline-none lg:hover:gap-2 lg:focus-visible:gap-2"
     >
@@ -39,7 +41,7 @@ export function SupportFab() {
           in every context, and `aria-label` gives it a complete name with or
           without this span. A decorative label is not an affordance. */}
       <span className="hidden max-w-0 overflow-hidden text-sm font-medium whitespace-nowrap transition-all duration-200 lg:inline-block lg:opacity-0 lg:group-hover:max-w-[140px] lg:group-hover:opacity-100 lg:group-focus-visible:max-w-[140px] lg:group-focus-visible:opacity-100">
-        Help &amp; Support
+        {t("open")}
       </span>
     </button>
   );

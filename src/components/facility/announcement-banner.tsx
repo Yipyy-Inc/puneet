@@ -5,6 +5,7 @@ import { Megaphone, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   dismissAnnouncement,
   loadPersistedAnnouncements,
@@ -23,6 +24,7 @@ function stripHtml(html: string): string {
  *  page until the facility dismisses it (persisted in localStorage). Injected in
  *  the facility layout next to ImpersonationBanner. */
 export function AnnouncementBanner({ facilityId }: { facilityId: number }) {
+  const t = useShellText("banners");
   const { delivered, dismissed } = useAnnouncementDelivery();
   const hydrated = useHydrated();
 
@@ -111,7 +113,7 @@ export function AnnouncementBanner({ facilityId }: { facilityId: number }) {
           onClick={() => dismissAnnouncement(urgent.id)}
         >
           <X className="mr-1.5 size-3.5" />
-          Dismiss
+          {t("dismiss")}
         </Button>
       </div>
     </div>

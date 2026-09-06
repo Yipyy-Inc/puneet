@@ -45,6 +45,7 @@ import {
   Check,
 } from "lucide-react";
 import { useUiText } from "@/hooks/use-ui-text";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { openSupportDrawer } from "@/lib/support-drawer-store";
 import { cn } from "@/lib/utils";
@@ -209,6 +210,13 @@ export function UserProfileSheet({
 }) {
   const settingsPath = useSettingsHref();
   const signOutEverywhere = useSignOutEverywhere();
+  // The chrome — keyed, so a missing French string is visible. See
+  // lib/shell/text.ts for why t() below is not enough on its own.
+  const tAccount = useShellText("account");
+  const tNotify = useShellText("notifications");
+  // Still here for t(notification.title | message | timestamp): those are
+  // fixture data, not chrome, and translating a pre-formatted "2 min ago"
+  // through a lookup table is a §5q defect in the SOURCE of that string.
   const { t } = useUiText();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -311,7 +319,7 @@ export function UserProfileSheet({
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Account menu"
+            aria-label={tAccount("accountMenu")}
             className="size-9 rounded-full"
           >
             <Avatar className="size-8">
@@ -324,7 +332,7 @@ export function UserProfileSheet({
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="min-w-56">
           <DropdownMenuLabel className="flex items-center gap-2">
             <Avatar className="size-8">
               <AvatarImage src="" alt="User" />
@@ -336,7 +344,7 @@ export function UserProfileSheet({
             </Avatar>
             <div className="flex min-w-0 flex-col">
               <span className="truncate font-medium">
-                {viewer.name ?? viewer.email ?? t("Signed in")}
+                {viewer.name ?? viewer.email ?? tAccount("signedIn")}
               </span>
               {viewer.email && (
                 <span className="text-muted-foreground truncate text-xs">
@@ -349,7 +357,7 @@ export function UserProfileSheet({
           <DropdownMenuItem asChild>
             <Link href="/profile" className="flex items-center gap-2">
               <User className="size-4" />
-              {t("Profile Settings")}
+              {tAccount("profileSettings")}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
@@ -358,22 +366,22 @@ export function UserProfileSheet({
               className="flex items-center gap-2"
             >
               <Bell className="size-4" />
-              {t("Notification Preferences")}
+              {tAccount("notificationPreferences")}
             </Link>
           </DropdownMenuItem>
           {isMultiLocation && (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="flex items-center gap-2">
                 <MapPin className="size-4" />
-                {t("Switch Location")}
+                {tAccount("switchLocation")}
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-56">
+              <DropdownMenuSubContent className="min-w-56">
                 <DropdownMenuItem
                   onClick={setHQView}
                   className="flex items-center gap-2"
                 >
                   <Globe className="size-4 text-sky-500" />
-                  {t("All Locations (HQ)")}
+                  {tAccount("allLocations")}
                   {isHQView && (
                     <Check className="text-primary ml-auto size-3.5" />
                   )}
@@ -400,7 +408,7 @@ export function UserProfileSheet({
             className="flex items-center gap-2"
           >
             <LifeBuoy className="size-4" />
-            {t("Help & Support")}
+            {tAccount("helpSupport")}
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link
@@ -408,14 +416,14 @@ export function UserProfileSheet({
               className="flex items-center gap-2"
             >
               <Settings className="size-4" />
-              {t("System Settings")}
+              {tAccount("systemSettings")}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {viewer.canManageAccount && (
             <>
               <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
-                {t("Owner Account")}
+                {tAccount("ownerAccount")}
               </DropdownMenuLabel>
               <DropdownMenuItem asChild>
                 <Link
@@ -423,7 +431,7 @@ export function UserProfileSheet({
                   className="flex items-center gap-2"
                 >
                   <FileSignature className="size-4" />
-                  {t("Yipyy Agreements")}
+                  {tAccount("agreements")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -432,7 +440,7 @@ export function UserProfileSheet({
                   className="flex items-center gap-2"
                 >
                   <Receipt className="size-4" />
-                  {t("My Subscription")}
+                  {tAccount("subscription")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -441,7 +449,7 @@ export function UserProfileSheet({
                   className="flex items-center gap-2"
                 >
                   <CreditCard className="size-4" />
-                  {t("Payment Method")}
+                  {tAccount("paymentMethod")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -450,7 +458,7 @@ export function UserProfileSheet({
                   className="flex items-center gap-2"
                 >
                   <Download className="size-4" />
-                  {t("Export Data")}
+                  {tAccount("exportData")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -459,7 +467,7 @@ export function UserProfileSheet({
                   className="flex items-center gap-2"
                 >
                   <Settings className="size-4" />
-                  {t("Account Settings")}
+                  {tAccount("accountSettings")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -486,7 +494,7 @@ export function UserProfileSheet({
           {isSuperAdmin && (
             <>
               <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
-                {t("View as")}
+                {tAccount("viewAs")}
               </DropdownMenuLabel>
               <DropdownMenuItem asChild>
                 <Link
@@ -494,7 +502,7 @@ export function UserProfileSheet({
                   className="flex items-center gap-2"
                 >
                   <Building2 className="size-4" />
-                  {t("Facility portal")}
+                  {tAccount("facilityPortal")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -503,13 +511,13 @@ export function UserProfileSheet({
                   className="flex items-center gap-2"
                 >
                   <User className="size-4" />
-                  {t("Customer portal")}
+                  {tAccount("customerPortal")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/employee" className="flex items-center gap-2">
                   <Shield className="size-4" />
-                  {t("Staff portal")}
+                  {tAccount("staffPortal")}
                 </Link>
               </DropdownMenuItem>
             </>
@@ -520,7 +528,7 @@ export function UserProfileSheet({
             className="text-destructive focus:text-destructive"
           >
             <LogOut className="mr-2 size-4" />
-            {t("Logout")}
+            {tAccount("logOut")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -534,10 +542,10 @@ export function UserProfileSheet({
               <SheetHeader className="p-6 pb-4">
                 <SheetTitle className="flex items-center gap-2">
                   <Bell className="size-5" />
-                  {t("Notifications")}
+                  {tNotify("title")}
                   {unreadCount > 0 && (
                     <Badge variant="secondary" className="text-xs">
-                      {unreadCount} {t("new")}
+                      {unreadCount} {tNotify("new")}
                     </Badge>
                   )}
                 </SheetTitle>
@@ -554,7 +562,7 @@ export function UserProfileSheet({
                         className="text-muted-foreground hover:text-foreground text-xs"
                         onClick={markAllAsRead}
                       >
-                        {t("Mark all as read")}
+                        {tNotify("markAllRead")}
                       </Button>
                     </div>
                   )}
@@ -562,7 +570,7 @@ export function UserProfileSheet({
                   <div className="space-y-2">
                     {notifications.length === 0 ? (
                       <div className="text-muted-foreground p-8 text-center text-sm">
-                        {t("No notifications")}
+                        {tNotify("none")}
                       </div>
                     ) : (
                       notifications.map((notification) => (

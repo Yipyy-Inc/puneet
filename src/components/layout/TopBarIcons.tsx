@@ -5,6 +5,7 @@ import { MessageSquare, Plus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   Tooltip,
   TooltipContent,
@@ -164,6 +165,7 @@ export function TopBarIcons({
   getCounts,
   className,
 }: TopBarIconsProps) {
+  const t = useShellText("header");
   const nav = React.useCallback(
     (to: string) => {
       if (navigate) return navigate(to);
@@ -191,7 +193,7 @@ export function TopBarIcons({
     <TooltipProvider delayDuration={150}>
       <div className={cn("flex items-center gap-1", className)}>
         <IconButton
-          label="Messages"
+          label={t("messages")}
           badge={msgBadge}
           onClick={() => nav(messagesHref)}
         >
@@ -199,7 +201,7 @@ export function TopBarIcons({
         </IconButton>
 
         {showQuickCreate && (
-          <IconButton label="Create" onClick={handleQuickCreate}>
+          <IconButton label={t("create")} onClick={handleQuickCreate}>
             <Plus className="text-muted-foreground size-5" />
           </IconButton>
         )}

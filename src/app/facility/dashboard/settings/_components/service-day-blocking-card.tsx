@@ -166,8 +166,7 @@ export function ServiceDayBlockingCard() {
                   </Button>
                 </div>
                 <p className="text-muted-foreground text-xs">
-                  Fully close = no check-in or check-out. Or block only check-in
-                  or only check-out dates.
+                  {t("blockTypeHelp")}
                 </p>
               </div>
             )}

@@ -19,6 +19,7 @@ import {
   type ProfileViewer,
 } from "@/components/layout/UserProfileSheet";
 import { CallingButton } from "@/components/layout/CallingButton";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 /**
  * Facility top-nav action cluster. Trimmed per spec Part 3 + Table 52: the task,
@@ -49,6 +50,7 @@ export function FacilityHeaderActions({
   /** Resolved by the facility layout from the session — never from a cookie. */
   viewer: ProfileViewer;
 }) {
+  const t = useShellText("header");
   const isWide = useMediaQuery("(min-width: 1280px)", true);
 
   // Rendered inline on desktop, or inside the overflow popover on tablet —
@@ -78,7 +80,7 @@ export function FacilityHeaderActions({
             <Button
               variant="ghost"
               size="icon"
-              aria-label="More options"
+              aria-label={t("moreOptions")}
               className="hover:bg-muted size-9 rounded-xl"
             >
               <MoreHorizontal className="size-5" />
