@@ -37,6 +37,8 @@ const SAME_IN_BOTH = new Set([
   "header.messages", // Messages / Messages
   "notifications.title", // Notifications / Notifications
   "search.actions", // Actions / Actions
+  "primitives.pagination", // Pagination / Pagination
+  "primitives.minute", // "Min" is the abbreviation in both
 ]);
 
 describe("the shell namespace", () => {

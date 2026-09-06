@@ -4,6 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CheckIcon } from "lucide-react";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface Step {
   id: string;
@@ -44,6 +45,7 @@ function Stepper({
   onStepChange,
   className,
 }: StepperProps) {
+  const t = useShellText("primitives");
   return (
     <div className={cn("space-y-4", className)}>
       {/* Step circles row - aligned horizontally */}
@@ -116,7 +118,7 @@ function Stepper({
             </div>
             {step.disabled ? (
               <div className="text-muted-foreground/40 mt-1 max-w-24 text-xs italic">
-                Skipped
+                {t("skipped")}
               </div>
             ) : (
               step.description && (

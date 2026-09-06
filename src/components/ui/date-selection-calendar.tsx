@@ -19,6 +19,9 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
+import { useAppLocale } from "@/hooks/use-app-locale";
+import { monthNames, weekdayNames } from "@/lib/dates/calendar-names";
 
 // Types
 export type SelectionMode = "single" | "multi" | "range" | "recurring";
@@ -130,30 +133,20 @@ export interface DateSelectionCalendarProps {
   initialMonth?: Date;
 }
 
-const DAYS_OF_WEEK = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const DAYS_OF_WEEK_FULL = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
-
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+/**
+ * The stored keys of the facility-hours object, by weekday index. These are
+ * the settings' SHAPE and never reach the screen, so they are not translated —
+ * only the names rendered beside them are. Same split as
+ * lib/settings/weekday.ts.
+ */
+const DAY_KEYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
 ];
 
 // Helper to format date without timezone issues
@@ -224,6 +217,12 @@ export function DateSelectionCalendar({
   className,
   initialMonth,
 }: DateSelectionCalendarProps) {
+  const t = useShellText("primitives");
+  const locale = useAppLocale();
+  // §5q: names come from Intl, never from an array typed in English.
+  const daysOfWeek = weekdayNames(locale, "narrow");
+  const daysOfWeekFull = weekdayNames(locale, "long");
+  const monthLabels = monthNames(locale);
   const [currentMonth, setCurrentMonth] = useState(
     () => initialMonth ?? new Date(),
   );
@@ -825,18 +824,10 @@ export function DateSelectionCalendar({
       {/* Recurring Pattern Selector */}
       {mode === "recurring" && (
         <div className="bg-muted/30 space-y-2.5 rounded-lg border p-3">
-          <Label className="text-sm font-medium">Select Days of Week</Label>
+          <Label className="text-sm font-medium">{t("selectDaysOfWeek")}</Label>
           <div className="grid grid-cols-7 gap-2">
-            {DAYS_OF_WEEK_FULL.map((day, index) => {
-              const dayName = [
-                "sunday",
-                "monday",
-                "tuesday",
-                "wednesday",
-                "thursday",
-                "friday",
-                "saturday",
-              ][index];
+            {daysOfWeekFull.map((day, index) => {
+              const dayName = DAY_KEYS[index];
               const isClosed = facilityHours && !facilityHours[dayName]?.isOpen;
               return (
                 <button
@@ -859,7 +850,7 @@ export function DateSelectionCalendar({
             })}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="recurringEndDate">Repeat Until (Optional)</Label>
+            <Label htmlFor="recurringEndDate">{t("repeatUntil")}</Label>
             <Input
               id="recurringEndDate"
               type="date"
@@ -919,9 +910,9 @@ export function DateSelectionCalendar({
                     <SelectTrigger
                       size="sm"
                       className="bg-background h-7 w-[4.8rem] border-slate-200 px-2 text-[11px] font-medium"
-                      aria-label="Select year"
+                      aria-label={t("selectYear")}
                     >
-                      <SelectValue placeholder="Year" />
+                      <SelectValue placeholder={t("year")} />
                     </SelectTrigger>
                     <SelectContent
                       align="start"
@@ -945,15 +936,15 @@ export function DateSelectionCalendar({
                     <SelectTrigger
                       size="sm"
                       className="bg-background h-7 w-[6.8rem] border-slate-200 px-2 text-[11px] font-medium"
-                      aria-label="Select month"
+                      aria-label={t("selectMonth")}
                     >
-                      <SelectValue placeholder="Month" />
+                      <SelectValue placeholder={t("month")} />
                     </SelectTrigger>
                     <SelectContent
                       align="start"
                       className="z-90 max-h-52 min-w-[6.8rem]"
                     >
-                      {MONTH_NAMES.map((monthLabel, monthIndex) => (
+                      {monthLabels.map((monthLabel, monthIndex) => (
                         <SelectItem
                           key={monthLabel}
                           value={String(monthIndex)}
@@ -985,7 +976,7 @@ export function DateSelectionCalendar({
               <div className="rounded-lg border p-2 pt-10">
                 {/* Days of week header */}
                 <div className="mb-0.5 grid grid-cols-7 gap-0.5">
-                  {DAYS_OF_WEEK.map((day) => (
+                  {daysOfWeek.map((day) => (
                     <div
                       key={day}
                       className="text-muted-foreground py-0.5 text-center text-[10px] font-medium"
@@ -1057,7 +1048,7 @@ export function DateSelectionCalendar({
             (mode === "range" && rangeStart && rangeEnd) ? (
               <div className="space-y-2">
                 <Label className="text-xs font-medium">
-                  Check-in/out Times
+                  {t("checkInOutTimes")}
                 </Label>
 
                 {mode === "range" &&
@@ -1127,7 +1118,7 @@ export function DateSelectionCalendar({
                         step={5}
                       />
                       <p className="text-muted-foreground text-[10px]">
-                        Same times for all days in range
+                        {t("sameTimesForAll")}
                       </p>
                     </div>
                   )}
@@ -1287,9 +1278,7 @@ export function DateSelectionCalendar({
             ) : (
               <div className="text-muted-foreground text-center">
                 <Clock className="mx-auto mb-2 size-8 opacity-50" />
-                <p className="text-sm">
-                  Select dates to set check-in/out times
-                </p>
+                <p className="text-sm">{t("selectDatesForTimes")}</p>
               </div>
             )}
           </div>

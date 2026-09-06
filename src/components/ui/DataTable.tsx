@@ -66,6 +66,7 @@ import {
   type TableEmptyStateAction,
 } from "@/components/ui/table-empty-state";
 import type { YipyyPoseProps } from "@/components/ui/yipyy-pose";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 export interface ColumnDef<T> {
   key: string;
@@ -202,6 +203,7 @@ export function DataTable<T extends object>({
   stickyHeader = false,
   zebra = false,
 }: DataTableProps<T>) {
+  const t = useShellText("primitives");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterValues, setFilterValues] = useState<Record<string, string>>(
     filters.reduce((acc, filter) => ({ ...acc, [filter.key]: "all" }), {}),
@@ -438,7 +440,7 @@ export function DataTable<T extends object>({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Row height</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("rowHeight")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {(
                   [
@@ -473,13 +475,13 @@ export function DataTable<T extends object>({
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label="Choose columns"
+                  aria-label={t("chooseColumns")}
                 >
                   <Columns className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="space-y-1">
-                <DropdownMenuLabel>Columns</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("columns")}</DropdownMenuLabel>
                 {/* Rule 6 moves the overflow into "a choice someone makes
                     once", and a choice nobody is told about is not one. This
                     says what the budget did, in the place that can undo it. */}
@@ -578,8 +580,8 @@ export function DataTable<T extends object>({
                 <TableEmptyState
                   icon={SearchX}
                   pose="searching"
-                  title="No matching results"
-                  description="Try adjusting your search or filters."
+                  title={t("noMatchingResults")}
+                  description={t("adjustFilters")}
                 />
               ) : (
                 <TableEmptyState
@@ -606,7 +608,7 @@ export function DataTable<T extends object>({
                 <div className="flex items-start gap-3">
                   {selectable && getItemId && (
                     <Checkbox
-                      aria-label="Select row"
+                      aria-label={t("selectRow")}
                       checked={(externalSelectedIds ?? new Set()).has(
                         getItemId(item),
                       )}
@@ -687,7 +689,7 @@ export function DataTable<T extends object>({
                     <div className="flex flex-wrap items-center gap-3.5">
                       <button
                         type="button"
-                        aria-label="Clear the selection"
+                        aria-label={t("clearSelection")}
                         onClick={() => onSelectionChange?.(new Set())}
                         className="text-primary relative flex size-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[5px] bg-white outline-none before:absolute before:content-[''] focus-visible:ring-2 focus-visible:ring-white max-lg:before:-inset-[15px]"
                       >
@@ -715,7 +717,7 @@ export function DataTable<T extends object>({
                       )}
                     >
                       <Checkbox
-                        aria-label="Select all rows"
+                        aria-label={t("selectAllRows")}
                         checked={
                           filteredData.length > 0 &&
                           filteredData.every((item) =>
@@ -808,8 +810,8 @@ export function DataTable<T extends object>({
                       <TableEmptyState
                         icon={SearchX}
                         pose="searching"
-                        title="No matching results"
-                        description="Try adjusting your search or filters."
+                        title={t("noMatchingResults")}
+                        description={t("adjustFilters")}
                       />
                     ) : (
                       <TableEmptyState
@@ -858,7 +860,7 @@ export function DataTable<T extends object>({
                     {selectable && getItemId && (
                       <TableCell className={cn(rowStyle.cell, "w-10")}>
                         <Checkbox
-                          aria-label="Select row"
+                          aria-label={t("selectRow")}
                           checked={(externalSelectedIds ?? new Set()).has(
                             getItemId(item),
                           )}

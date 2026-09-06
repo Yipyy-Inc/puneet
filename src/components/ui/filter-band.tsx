@@ -6,6 +6,7 @@ import { Filter, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // Filter band. docs/design-system/design-system.md §5b pattern 03, §6 rule 2.
@@ -70,10 +71,12 @@ interface FilterBandSearchProps extends Omit<
 }
 
 export function FilterBandSearch({
-  placeholder = "Search",
+  placeholder,
   className,
   ...props
 }: FilterBandSearchProps) {
+  const t = useShellText("primitives");
+  const placeholderText = placeholder ?? t("search");
   return (
     <div className={cn("relative min-w-0 flex-[1_1_260px]", className)}>
       <Search
@@ -82,7 +85,7 @@ export function FilterBandSearch({
       />
       <Input
         type="search"
-        placeholder={placeholder}
+        placeholder={placeholderText}
         className={cn(
           "border-line-strong bg-card h-10 rounded-full pr-4 pl-[46px] shadow-none max-lg:h-12",
           // `md:text-sm` sits in Input's own base string and wins at >=768px
@@ -108,12 +111,14 @@ interface AllFiltersButtonProps {
 export function AllFiltersButton({
   onClick,
   count,
-  label = "All filters",
+  label,
 }: AllFiltersButtonProps) {
+  const t = useShellText("primitives");
+  const labelText = label ?? t("allFilters");
   return (
     <Button variant="outline" onClick={onClick} className="shrink-0">
       <Filter aria-hidden />
-      {label}
+      {labelText}
       {!!count && (
         <span className="text-primary text-[13.5px] font-bold tabular-nums">
           {count}
@@ -135,12 +140,13 @@ interface FilterPillProps {
 }
 
 export function FilterPill({ label, onRemove, removeLabel }: FilterPillProps) {
+  const t = useShellText("primitives");
   return (
     <span className="bg-primary inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-[15px] text-[13.5px] font-semibold whitespace-nowrap text-white max-lg:h-12">
       {label}
       <button
         type="button"
-        aria-label={removeLabel ?? `Remove the ${label} filter`}
+        aria-label={removeLabel ?? t("removeFilter").replace("{label}", label)}
         onClick={onRemove}
         className={cn(
           `relative flex size-[18px] cursor-pointer items-center justify-center rounded-full bg-white/24 text-white outline-none`,
@@ -161,10 +167,9 @@ interface AddFilterChipProps {
   label?: string;
 }
 
-export function AddFilterChip({
-  onClick,
-  label = "Add filter",
-}: AddFilterChipProps) {
+export function AddFilterChip({ onClick, label }: AddFilterChipProps) {
+  const t = useShellText("primitives");
+  const labelText = label ?? t("addFilter");
   return (
     <button
       type="button"
@@ -177,7 +182,7 @@ export function AddFilterChip({
       )}
     >
       <Plus className="size-[17px]" aria-hidden />
-      {label}
+      {labelText}
     </button>
   );
 }
