@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -197,27 +198,28 @@ function StudioInner() {
       <CardHeader className="bg-card relative space-y-4 border-b pb-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="max-w-3xl">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <span className="bg-background flex size-7 items-center justify-center rounded-lg border shadow-sm">
-                <Shield className="size-4" />
-              </span>
-              Roles & permissions
-            </CardTitle>
-            <p className="text-muted-foreground mt-1 text-sm">
+            {/* The h1 names this section (§5b2), so the title that used to sit
+                here has gone with its icon. */}
+            <p className="text-muted-foreground text-sm">
               Define what each role can do. Create custom roles for your
               facility, or override the built-in presets. Assign these roles to
-              individual staff from Staff Management.
+              individual staff from staff management.
             </p>
-            <Button asChild size="sm" className="mt-3 gap-1.5">
+          </div>
+
+          {/* Every action in one group. "Go to staff management" used to sit
+              under the description as a second PRIMARY button; at this column
+              width the right-hand group wrapped beneath it, so the header was
+              two blue CTAs stacked down the left. §5b2: one prominent action,
+              and it is "New role". */}
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
               <Link href="/facility/dashboard/staff">
                 <Users className="size-3.5" />
-                Go to Staff Management
+                Go to staff management
                 <ArrowRight className="size-3.5" />
               </Link>
             </Button>
-          </div>
-
-          <div className="flex gap-2">
             {totalPresetOverrides > 0 && (
               <Button
                 variant="outline"
@@ -236,15 +238,38 @@ function StudioInner() {
           </div>
         </div>
 
+        {/* ── THE TILES ARE THE SYSTEM'S TILES NOW (§tiles, §6 rule 2) ──────
+            `StudioStat` was a bespoke reimplementation sitting beside
+            `ui/StatCard`, which already implements §tiles exactly: the
+            measured wash, a 40px SOLID carrier with a white glyph, the
+            12/700/.07em label with two lines reserved so a wrapping French
+            string cannot push its own figure down, and a 30px tabular value.
+            None of that was in the local copy. */}
         <div className="grid gap-2 sm:grid-cols-4">
-          <StudioStat label="Preset roles" value={presetRoles.length} />
-          <StudioStat label="Custom roles" value={customList.length} />
-          <StudioStat
-            label="Preset overrides"
-            value={totalPresetOverrides}
-            tone={totalPresetOverrides > 0 ? "warning" : "default"}
+          <StatCard
+            title="Preset roles"
+            value={presetRoles.length}
+            icon={Shield}
+            variant="primary"
           />
-          <StudioStat label="Staff assigned" value={facilityStaff.length} />
+          <StatCard
+            title="Custom roles"
+            value={customList.length}
+            icon={Sparkles}
+            variant="secondary"
+          />
+          <StatCard
+            title="Preset overrides"
+            value={totalPresetOverrides}
+            icon={RotateCcw}
+            variant={totalPresetOverrides > 0 ? "warning" : "default"}
+          />
+          <StatCard
+            title="Staff assigned"
+            value={facilityStaff.length}
+            icon={Users}
+            variant="info"
+          />
         </div>
 
         <div className="relative w-full max-w-md">
@@ -376,29 +401,6 @@ function StudioInner() {
 // ============================================================================
 // Stats pill
 // ============================================================================
-
-function StudioStat({
-  label,
-  value,
-  tone = "default",
-}: {
-  label: string;
-  value: number;
-  tone?: "default" | "warning";
-}) {
-  return (
-    <div
-      className={cn(
-        "border-border/60 bg-card/80 rounded-xl border p-3",
-        tone === "warning" &&
-          "border-amber-300 bg-amber-50 dark:border-amber-600/40 dark:bg-amber-950/20",
-      )}
-    >
-      <p className="text-muted-foreground text-[11px] font-medium">{label}</p>
-      <p className="mt-0.5 text-xl font-semibold">{value}</p>
-    </div>
-  );
-}
 
 // ============================================================================
 // Role list buttons
@@ -562,9 +564,16 @@ function PresetRoleEditor({
   return (
     <div className="space-y-4">
       <div
+        // ── §6 RULE 2: THE ROLE PANEL IS WHITE, RINGED, NOT TINTED ──────
+        //
+        // This was `bg-violet-500/10` — the role accent used as a fill across
+        // the whole surface. Rule 2: "No tint fills. White, or a solid," and
+        // it names what to signal with instead — "a full 2px ring". The accent
+        // already ships one beside every fill in ACCENT_CHOICES; it had simply
+        // never been used. The role keeps its colour, the surface does not.
         className={cn(
-          "border-border/60 relative overflow-hidden rounded-2xl border p-4",
-          meta.accent,
+          "relative overflow-hidden rounded-2xl p-4 ring-2",
+          meta.ring,
         )}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -806,9 +815,10 @@ function CustomRoleEditor({
   return (
     <div className="space-y-4">
       <div
+        // Same as the preset panel above: ringed, not tinted (§6 rule 2).
         className={cn(
-          "border-border/60 relative overflow-hidden rounded-2xl border p-4",
-          role.accent,
+          "relative overflow-hidden rounded-2xl p-4 ring-2",
+          role.ring,
         )}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -980,8 +990,21 @@ export function PermissionsGrid({
   onRevokeAll?: (keys: PermissionKey[]) => void;
   showPresetOption?: boolean;
 }) {
-  // Categories are accordions — collapse state per group id.
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // ── CATEGORIES ARE ACCORDIONS, AND THEY START CLOSED ──────────────────
+  //
+  // They always were accordions. The set started EMPTY, so nothing was
+  // collapsed and every group rendered open, one under another: measured at
+  // 1440px the editor column alone was 11,784px and the page 12,669px — 12.7
+  // screens, worse than the 8,992px "Business" panel whose size is the reason
+  // this whole area was restructured.
+  //
+  // Closed is not less information. The header already carries the group's
+  // name, its description and a `7/12` granted badge, which is the overview
+  // twelve screens of open rows do not give: you cannot see "what can a
+  // Manager do" by scrolling past it. Open the one you are changing.
+  const [collapsed, setCollapsed] = useState<Set<string>>(
+    () => new Set(POSITION_EDITOR_GROUPS.map((group) => group.id)),
+  );
   const toggleCollapse = (id: string) =>
     setCollapsed((prev) => {
       const next = new Set(prev);
