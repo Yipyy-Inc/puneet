@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Eye, X } from "lucide-react";
 import { FacilityRbacProvider } from "@/hooks/use-facility-rbac";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   readRolePreview,
   endRolePreview,
@@ -29,6 +30,7 @@ export function EmployeeRbacBoundary({
   staffId: string;
   children: ReactNode;
 }) {
+  const t = useShellText("employee");
   const [preview, setPreview] = useState<RolePreviewPayload | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -66,7 +68,7 @@ export function EmployeeRbacBoundary({
             className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-400 px-2 py-1 text-xs font-semibold transition-colors hover:bg-amber-200 dark:border-amber-700 dark:hover:bg-amber-900"
           >
             <X className="size-3.5" />
-            Exit preview
+            {t("exitPreview")}
           </button>
         </div>
       )}

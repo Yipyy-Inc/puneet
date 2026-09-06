@@ -44,8 +44,10 @@ import {
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
 import Image from "next/image";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 function SidebarLogo() {
+  const t = useShellText("admin");
   return (
     <div className="flex items-center gap-3">
       <div className="flex size-10 items-center justify-center">
@@ -57,11 +59,12 @@ function SidebarLogo() {
         />
       </div>
       <div className="flex flex-col">
+        {/* french-ok: the platform account name */}
         <span className="text-foreground text-base font-bold tracking-tight">
           Puneet
         </span>
         <span className="text-muted-foreground -mt-0.5 text-[11px] font-medium">
-          Platform Admin
+          {t("platformAdmin")}
         </span>
       </div>
     </div>

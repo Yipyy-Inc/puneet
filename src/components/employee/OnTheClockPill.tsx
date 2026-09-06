@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useOwnClock } from "@/lib/api/scheduling";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 function elapsed(iso: string, nowMs: number): string {
   const mins = Math.max(
@@ -18,6 +19,7 @@ function elapsed(iso: string, nowMs: number): string {
 // deliberately loud (green pulsing dot + live elapsed time driven off
 // clockedInAt); clocked-out is a subtle, quiet label.
 export function OnTheClockPill() {
+  const t = useShellText("employee");
   // No `staffId` prop any more: who is asking comes from the session, and a
   // component that takes an id is a component that can be pointed at somebody
   // else's clock.
@@ -45,7 +47,7 @@ export function OnTheClockPill() {
     return (
       <span className="text-muted-foreground hidden items-center gap-1.5 text-xs sm:inline-flex">
         <span className="bg-muted-foreground/20 size-1.5 animate-pulse rounded-full" />
-        Checking…
+        {t("checking")}
       </span>
     );
   }
@@ -54,7 +56,7 @@ export function OnTheClockPill() {
     return (
       <span className="text-muted-foreground hidden items-center gap-1.5 text-xs sm:inline-flex">
         <span className="bg-muted-foreground/40 size-1.5 rounded-full" />
-        Off the clock
+        {t("offTheClock")}
       </span>
     );
   }
@@ -72,7 +74,7 @@ export function OnTheClockPill() {
       <span>
         {/* Full label on ≥sm; compact (dot + elapsed only) on phones so the
             top bar isn't crowded. */}
-        <span className="hidden sm:inline">On the clock</span>
+        <span className="hidden sm:inline">{t("onTheClock")}</span>
         {clockedInAt && (
           <>
             <span className="hidden sm:inline"> · </span>

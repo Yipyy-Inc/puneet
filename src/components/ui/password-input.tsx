@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // A password field you can look at.
@@ -43,6 +44,7 @@ export function PasswordInput({
   className,
   ...props
 }: React.ComponentProps<typeof Input>) {
+  const t = useShellText("primitives");
   const [visible, setVisible] = useState(false);
   const fallbackId = useId();
   const id = props.id ?? fallbackId;
@@ -73,7 +75,7 @@ export function PasswordInput({
         type="button"
         tabIndex={-1}
         onClick={() => setVisible((shown) => !shown)}
-        aria-label={visible ? "Hide password" : "Show password"}
+        aria-label={visible ? t("hidePassword") : t("showPassword")}
         aria-controls={id}
         className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-3 -translate-y-1/2 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
       >

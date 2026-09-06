@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Lock, Moon, ScaleIcon, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DenominationInput } from "./DenominationInput";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   classifyVariance,
   computeTrackedTotal,
@@ -55,6 +56,7 @@ export function CloseDayDialog({
   staffName,
   onSubmit,
 }: Props) {
+  const t = useShellText("employee");
   const symbol = currency === "CAD" ? "CA$" : "$";
   const [step, setStep] = useState<Step>("count");
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -114,20 +116,10 @@ export function CloseDayDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Moon className="size-5 text-indigo-500" />
-            Close Out Today&apos;s Register
+            {t("closeRegisterTitle")}
           </DialogTitle>
           <DialogDescription>
-            {step === "count" ? (
-              <>
-                Count every coin and bill in the drawer right now. We&apos;ll
-                compare your count to what the system tracked through the day.
-              </>
-            ) : (
-              <>
-                Review the breakdown. Locking confirms today&apos;s session is
-                done — only the manager note can change after.
-              </>
-            )}
+            {step === "count" ? t("countStep") : t("reviewStep")}
           </DialogDescription>
         </DialogHeader>
 
@@ -142,7 +134,7 @@ export function CloseDayDialog({
             <div className="flex items-center justify-between rounded-md border bg-indigo-50/60 px-3 py-2.5">
               <span className="flex items-center gap-2 text-sm font-medium">
                 <Coins className="size-4 text-indigo-500" />
-                Drawer count
+                {t("drawerCount")}
               </span>
               <span className="text-lg font-bold text-indigo-700 tabular-nums">
                 {symbol}
@@ -152,13 +144,13 @@ export function CloseDayDialog({
 
             <div className="space-y-1.5">
               <Label htmlFor="close-note" className="text-xs">
-                Closing note (optional)
+                {t("closingNote")}
               </Label>
               <Textarea
                 id="close-note"
                 value={closingNote}
                 onChange={(e) => setClosingNote(e.target.value)}
-                placeholder="Anything the next staff should know."
+                placeholder={t("closingNotePlaceholder")}
                 className="min-h-[60px] resize-none"
               />
             </div>
@@ -187,7 +179,7 @@ export function CloseDayDialog({
                 />
                 <div>
                   <p className="text-muted-foreground text-xs tracking-wide uppercase">
-                    Variance
+                    {t("variance")}
                   </p>
                   <p
                     className={cn(
@@ -210,10 +202,10 @@ export function CloseDayDialog({
                 )}
               >
                 {status === "balanced"
-                  ? "Balanced"
+                  ? t("balanced")
                   : status === "over"
-                    ? "Surplus"
-                    : "Shortfall"}
+                    ? t("surplus")
+                    : t("shortfall")}
               </Badge>
             </div>
 
@@ -221,54 +213,59 @@ export function CloseDayDialog({
             <div className="rounded-md border">
               <div className="grid grid-cols-1 divide-y sm:grid-cols-5 sm:divide-x sm:divide-y-0">
                 <BreakdownCell
-                  label="Opening float"
+                  label={t("openingFloat")}
                   value={fmtAbs(session.opening.floatTotal)}
                 />
                 <BreakdownCell
-                  label="Cash captured"
+                  label={t("cashCaptured")}
                   value={fmtAbs(liveCashCaptured)}
-                  hint={`${liveTxns.length} txn${liveTxns.length === 1 ? "" : "s"}`}
+                  hint={(liveTxns.length === 1
+                    ? t("txnOne")
+                    : t("txnMany")
+                  ).replace("{count}", String(liveTxns.length))}
                 />
                 <BreakdownCell
-                  label="Movements net"
+                  label={t("movementsNet")}
                   value={fmtSigned(moveNet)}
-                  hint={`${session.movements.length} entr${session.movements.length === 1 ? "y" : "ies"}`}
+                  hint={(session.movements.length === 1
+                    ? t("entryOne")
+                    : t("entryMany")
+                  ).replace("{count}", String(session.movements.length))}
                 />
                 <BreakdownCell
-                  label="Drawer count"
+                  label={t("drawerCount")}
                   value={fmtAbs(drawerTotal)}
                   highlight
                 />
                 <BreakdownCell
-                  label="Tracked total"
+                  label={t("trackedTotal")}
                   value={fmtAbs(trackedTotal)}
                 />
               </div>
             </div>
 
             <p className="text-muted-foreground text-xs">
-              Drawer count − Tracked total = Variance · {fmtAbs(drawerTotal)} −{" "}
+              {t("varianceFormula")} · {fmtAbs(drawerTotal)} −{" "}
               {fmtAbs(trackedTotal)} = {fmtSigned(variance)}
             </p>
 
             {status !== "balanced" && (
               <div className="space-y-1.5">
                 <Label htmlFor="manager-note" className="text-xs">
-                  Manager note (recommended for non-zero variance)
+                  {t("managerNote")}
                 </Label>
                 <Textarea
                   id="manager-note"
                   value={managerNote}
                   onChange={(e) => setManagerNote(e.target.value)}
-                  placeholder="Why is the drawer off? What should be checked?"
+                  placeholder={t("managerNotePlaceholder")}
                   className="min-h-[70px] resize-none"
                 />
               </div>
             )}
 
             <p className="bg-muted/50 text-muted-foreground rounded-md px-3 py-2 text-xs">
-              Locking this session prevents further changes — only the manager
-              note can be edited later.
+              {t("lockWarning")}
             </p>
           </div>
         )}
@@ -277,24 +274,24 @@ export function CloseDayDialog({
           {step === "count" && (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 onClick={() => setStep("review")}
                 disabled={drawerTotal <= 0}
               >
-                Review variance
+                {t("reviewVariance")}
               </Button>
             </>
           )}
           {step === "review" && (
             <>
               <Button variant="outline" onClick={() => setStep("count")}>
-                Back to count
+                {t("backToCount")}
               </Button>
               <Button onClick={submit}>
                 <Lock className="mr-2 size-4" />
-                Close Out &amp; Lock
+                {t("closeAndLock")}
               </Button>
             </>
           )}

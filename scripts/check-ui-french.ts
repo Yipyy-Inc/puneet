@@ -51,15 +51,30 @@
  * it is invisible here by construction. That is the whole design: converting a
  * surface is exactly what makes it stop being counted.
  *
- * ── WHAT IT STILL CANNOT SEE ─────────────────────────────────────────────
+ * ── THE TWO IT USED TO MISS, AND WHY THEY ARE IN NOW ─────────────────────
  *
- * A ternary's branches (`{n === 0 ? "No times" : x}`) and a template literal
- * (`` `Remove the ${label} filter` ``). Both were found by hand while wiring
- * components, not by this. They are excluded because the obvious pattern for
- * them also matches every `cn(cond ? "bg-red-500" : "bg-blue-500")` in the
- * repo, and a gate that cries wolf is a gate people stop reading. Do not treat
- * a green run as proof a surface is finished — treat it as proof it has not
- * gone backwards.
+ * A ternary's branches (`{online ? "Online" : "Offline"}`) and a template
+ * literal (`` `Clocked in at ${time}` ``) were left out of the first version,
+ * on the reasoning that the obvious pattern for either also matches every
+ * `cn(cond ? "bg-red-500" : "bg-blue-500")` in the repo. That reasoning was
+ * never measured, and it was wrong. Measured across the five surfaces that
+ * must be empty: SIX ternary hits and a manageable set of template ones, of
+ * which the real ones included **Clock in / Clock out** — the control an
+ * employee touches most — and the whole register-open gate that blocks the
+ * portal at the start of every shift.
+ *
+ * Each has a cheap discriminator, and the discriminators are the whole trick:
+ *
+ *   ternary   copy has a capital or a space; `"default"` / `"outline"` has
+ *             neither
+ *   template  copy has an UPPERCASE LETTER; a Tailwind class list does not.
+ *             Enumerating the character set of a Tailwind token was tried
+ *             first and let `data-[state=open]:animate-in` straight through
+ *
+ * It still cannot see everything — a string assembled at runtime, or one
+ * living in a `src/data` fixture, will not appear. Treat a green run as proof
+ * a surface has not gone backwards, not as proof it is finished. Looking at
+ * the rendered page in French is what found the last three.
  *
  * ── THREE LEVELS, AND NOT INTO `components/ui` FROM ELSEWHERE ────────────
  *
@@ -97,7 +112,20 @@ const ANSI = {
 
 const SETTINGS = "src/app/facility/dashboard/settings/";
 const SECTIONS = SETTINGS + "_sections";
-const SHELL_ROOT = "src/app/facility/layout.tsx";
+/**
+ * Every portal's chrome, by the layout that renders it.
+ *
+ * One root was the facility's, and the shell surface it defined was measured
+ * clean while three other portals had never been looked at — 61 strings,
+ * including a cash-drawer close dialog floor staff use every evening. A
+ * surface list is only as honest as its roots.
+ */
+const SHELL_ROOTS: [string, string][] = [
+  ["facility", "src/app/facility/layout.tsx"],
+  ["customer", "src/app/customer/layout.tsx"],
+  ["employee", "src/app/employee/(shell)/layout.tsx"],
+  ["super-admin", "src/app/dashboard/layout.tsx"],
+];
 const PRIMITIVES = "src/components/ui";
 
 /** Static `from "…"` and dynamic `import("…")` alike. */
@@ -115,6 +143,28 @@ const FALLBACK = /(?:\?\?|\|\|)\s*"([^"]{2,})"/g;
 
 /** A JSX text node — what sits between a tag's `>` and the next `<`. */
 const JSX_TEXT = />([^<>{}]{2,400})</g;
+
+/**
+ * Both branches of a ternary: `{online ? "Online" : "Offline"}`.
+ *
+ * Left out of the first version for fear of matching every
+ * `cn(cond ? "bg-red-500" : "bg-blue-500")`. Measured across the five
+ * zero-baseline surfaces afterwards: SIX hits, of which "Hide password" /
+ * "Show password" and "Half Day" / "Full Day" were real. The fear was worth
+ * checking rather than deferring to.
+ */
+const TERNARY = /\?\s*"([^"]{2,})"\s*:\s*"([^"]{2,})"/g;
+
+/**
+ * A template literal — `` `Remove the ${label} filter` ``.
+ *
+ * The discriminator against a Tailwind class list in backticks (there are ~50
+ * in components/ui alone) is simply an UPPERCASE LETTER: copy has one, a class
+ * list does not. Cheaper and far more robust than enumerating the character
+ * set of a Tailwind token, which was tried and let `data-[state=open]:…`
+ * through.
+ */
+const TEMPLATE = /`([^`]{4,300})`/g;
 
 const FRENCH_OK = /french-ok:/;
 
@@ -212,7 +262,10 @@ function isProse(text: string): boolean {
   const tokens = t.split(/\s+/);
   if (
     tokens.length > 1 &&
-    tokens.every((token) => /^[a-z0-9:[\]/.!-]+$/.test(token)) &&
+    // The charset is wide because a Tailwind v4 token is: `shadow-(--sh-cta)`,
+    // `data-[state=open]:animate-in`, `*:[[role=checkbox]]:translate-y-[2px]`.
+    // Narrower versions let every one of those through as prose.
+    tokens.every((token) => /^[a-z0-9:[\]()/.!,*&%+_#~>=-]+$/.test(token)) &&
     tokens.some((token) => token.includes("-"))
   ) {
     return false;
@@ -250,6 +303,23 @@ function hits(file: string): Hit[] {
     // that is the cheaper mistake.
     if (!/^[A-Z]/.test(m[1]) && !m[1].includes(" ")) continue;
     record(m[1], m.index ?? 0);
+  }
+  for (const m of stripped.matchAll(TERNARY)) {
+    // Same guard as FALLBACK, and for the same reason: `variant === "x" ?
+    // "default" : "outline"` is a pair of enum values, not a pair of labels.
+    // Copy has a capital or a space; an enum value has neither.
+    for (const branch of [m[1], m[2]]) {
+      if (!/^[A-Z]/.test(branch) && !branch.includes(" ")) continue;
+      record(branch, m.index ?? 0);
+    }
+  }
+  for (const m of stripped.matchAll(TEMPLATE)) {
+    // An uppercase letter is what separates copy from a class list. The
+    // interpolations are blanked first so `${foo}` cannot supply the capital.
+    const words = m[1].replace(/\$\{[^}]*\}/g, " ");
+    if (!/[A-Z]/.test(words)) continue;
+    if (!words.includes(" ")) continue;
+    record(words, m.index ?? 0);
   }
   // A JSX text node cannot exist in a file with no JSX.
   if (file.endsWith(".tsx")) {
@@ -311,15 +381,15 @@ function settingsSurface(): Offender[] {
   return out;
 }
 
-/** shell — derived from the facility layout, one entry per file. */
-function shellSurface(): Offender[] {
+/** One portal's chrome, derived from its layout. One entry per file. */
+function shellSurface(root: string): Offender[] {
   const seen = new Set<string>();
-  walk(SHELL_ROOT, 2, seen, true);
+  walk(root, 2, seen, true);
   return [...seen]
     .filter(
       (file) =>
         file.endsWith(".tsx") &&
-        (file.startsWith("src/components/") || file === SHELL_ROOT),
+        (file.startsWith("src/components/") || file === root),
     )
     .sort()
     .map((file) => ({ id: file, hits: hits(file) }))
@@ -349,10 +419,10 @@ function primitivesSurface(): Offender[] {
  * `useSettingsText().section("hours")`, with the day names coming from `Intl`
  * rather than from a hand-written array.
  *
- * The shell and the primitives have NO baseline. They were finished before
- * this gate covered them, so their only permitted state is empty — which is
- * the strongest form of this check and the one worth having on chrome that is
- * on screen for all 266 routes.
+ * The four portal shells and the primitives have NO baseline. They were
+ * finished before this gate covered them, so their only permitted state is
+ * empty — which is the strongest form of this check and the one worth having
+ * on chrome that is on screen for every route in the product.
  */
 const BASELINE: Record<string, Set<string>> = {
   settings: new Set([
@@ -406,7 +476,10 @@ const BASELINE: Record<string, Set<string>> = {
     "yipyy-pay",
     "yipyygo",
   ]),
-  shell: new Set<string>(),
+  "shell:facility": new Set<string>(),
+  "shell:customer": new Set<string>(),
+  "shell:employee": new Set<string>(),
+  "shell:super-admin": new Set<string>(),
   primitives: new Set<string>(),
 };
 
@@ -422,12 +495,12 @@ const SURFACES: {
     run: settingsSurface,
     advice: 'Route it through useSettingsText().section("<id>")',
   },
-  {
-    name: "shell",
-    label: "shell files (derived from the facility layout)",
-    run: shellSurface,
+  ...SHELL_ROOTS.map(([portal, root]) => ({
+    name: `shell:${portal}`,
+    label: `${portal} shell (derived from its layout)`,
+    run: () => shellSurface(root),
     advice: 'Route it through useShellText("<group>") — see lib/shell/text.ts',
-  },
+  })),
   {
     name: "primitives",
     label: "shadcn primitives",

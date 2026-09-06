@@ -46,9 +46,12 @@ export function ImpersonationBanner() {
       });
       // Notify the facility's primary admin (simulated email on session start).
       logImpersonationAction(s, "Impersonation Notice email sent", {
+        // french-ok: an audit-log record, not interface
         description: `Impersonation Notice emailed to ${s.primaryAdminEmail}.`,
       });
-      toast.info(`Impersonation Notice emailed to ${s.primaryAdminEmail}.`);
+      toast.info(
+        t("impersonationNotice").replace("{email}", s.primaryAdminEmail),
+      );
     }
     // Drop the token from the URL so it can't be re-used or bookmarked.
     router.replace(pathname);
@@ -59,6 +62,7 @@ export function ImpersonationBanner() {
     if (!session) return;
     if (lastLoggedPath.current === pathname) return;
     lastLoggedPath.current = pathname;
+    // french-ok: an audit-log record, not interface
     logImpersonationAction(session, `Viewed ${pathname}`, {
       category: "System",
       description: `${session.adminName} viewed ${pathname} while impersonating ${session.facilityName}.`,

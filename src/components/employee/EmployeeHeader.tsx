@@ -56,6 +56,7 @@ import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNotificationsDropdown";
 import { getUnreadMessagesCount } from "@/lib/messaging-unread";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // Employee top bar — the SAME header the facility admin sees (search, "+ New",
@@ -99,6 +100,7 @@ const MY_WORKSPACE_LINKS = [
 ] as const;
 
 export function EmployeeHeader({ staffId }: { staffId: string }) {
+  const t = useShellText("employee");
   const signOutEverywhere = useSignOutEverywhere();
   // The acting person comes from the shell's RBAC boundary — the same viewer
   // every permission decision in this tree resolves against.
@@ -138,7 +140,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
         )
       ) {
         requestRegisterClose(session.id);
-        toast.warning("Count & close the register before logging out.");
+        toast.warning(t("closeRegisterFirst"));
         return;
       }
     }
@@ -157,14 +159,14 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
       {canCall && (
         <HeaderNavIconButton
           href={toEmployeeRoute("/facility/dashboard/calling")}
-          label="Calling"
+          label={t("calling")}
           icon={Phone}
         />
       )}
       {canBookingRequests && (
         <HeaderNavIconButton
           href={toEmployeeRoute("/facility/dashboard/online-booking")}
-          label="Booking Requests"
+          label={t("bookingRequests")}
           icon={CalendarClock}
         />
       )}
@@ -218,7 +220,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="More options"
+                aria-label={t("moreOptions")}
                 className="hover:bg-muted size-9 rounded-xl"
               >
                 <MoreHorizontal className="size-5" />
@@ -281,7 +283,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
 
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-normal">
-              My Workspace
+              {t("myWorkspace")}
             </DropdownMenuLabel>
             {MY_WORKSPACE_LINKS.map((link) => (
               <DropdownMenuItem
@@ -300,7 +302,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
             <DropdownMenuItem asChild className="cursor-pointer gap-2">
               <Link href="/profile">
                 <User className="size-4" />
-                Profile Settings
+                {t("profileSettings")}
               </Link>
             </DropdownMenuItem>
 
@@ -326,7 +328,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
               className="text-destructive focus:text-destructive cursor-pointer gap-2"
             >
               <LogOut className="size-4" />
-              Log Out
+              {t("logOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

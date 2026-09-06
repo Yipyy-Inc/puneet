@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { CircleAlert, ArrowRight } from "lucide-react";
 import { useWriteUps } from "@/data/staff-writeups";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // Portal-wide banner shown at the top of the staff shell until every HR record
 // requiring acknowledgement has been acknowledged (spec 8.2).
 export function WriteUpAckBanner({ staffId }: { staffId: string }) {
+  const t = useShellText("employee");
   const records = useWriteUps(staffId);
   const pending = records.filter(
     (w) =>
@@ -22,11 +24,13 @@ export function WriteUpAckBanner({ staffId }: { staffId: string }) {
     >
       <span className="flex items-center gap-2 font-medium">
         <CircleAlert className="size-4 shrink-0" />
-        You have {pending} HR record{pending === 1 ? "" : "s"} to review and
-        acknowledge.
+        {(pending === 1 ? t("hrRecordsOne") : t("hrRecordsMany")).replace(
+          "{count}",
+          String(pending),
+        )}
       </span>
       <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold">
-        Review <ArrowRight className="size-3.5" />
+        {t("review")} <ArrowRight className="size-3.5" />
       </span>
     </Link>
   );

@@ -5,6 +5,7 @@ import { Bell } from "lucide-react";
 
 import { lastMessage, useSupportInbox } from "@/hooks/use-support-inbox";
 import { Button } from "@/components/ui/button";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,7 @@ function timeAgo(iso: string): string {
  * BroadcastChannel) increments the badge and lists the conversation here.
  */
 export function SupportNotificationBell() {
+  const t = useShellText("admin");
   const conversations = useSupportInbox();
   const unread = conversations
     .filter((c) => c.unreadCount > 0)
@@ -44,7 +46,7 @@ export function SupportNotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Support notifications"
+          aria-label={t("supportNotifications")}
           className="relative size-10 rounded-xl"
         >
           <Bell className="text-muted-foreground size-5" />
@@ -67,7 +69,7 @@ export function SupportNotificationBell() {
         <DropdownMenuSeparator />
         {unread.length === 0 ? (
           <p className="text-muted-foreground px-2 py-6 text-center text-sm">
-            No new messages
+            {t("noNewMessages")}
           </p>
         ) : (
           unread.map((c) => {

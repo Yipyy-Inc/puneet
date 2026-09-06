@@ -406,7 +406,7 @@ export function DataTable<T extends object>({
               <FilterPill
                 key={filter.key}
                 label={label}
-                removeLabel={`Remove the ${label} filter`}
+                removeLabel={t("removeFilter").replace("{label}", label)}
                 onRemove={() => {
                   setFilterValues((prev) => ({ ...prev, [filter.key]: "all" }));
                   setCurrentPage(1);
@@ -418,7 +418,7 @@ export function DataTable<T extends object>({
           {!onFilterClick && filters.length > 0 && (
             <AddFilterChip
               onClick={() => setShowFilters(!showFilters)}
-              label={showFilters ? "Hide filters" : "Add filter"}
+              label={showFilters ? t("hideFilters") : t("addFilter")}
             />
           )}
 
@@ -434,7 +434,7 @@ export function DataTable<T extends object>({
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label={`Row height: ${preference}`}
+                  aria-label={t("rowHeightIs").replace("{value}", preference)}
                 >
                   <Rows3 className="size-4" />
                 </Button>

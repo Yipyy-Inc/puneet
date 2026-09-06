@@ -354,7 +354,7 @@ export function DateSelectionCalendar({
     if (userMsg) return userMsg;
     // Holiday
     const holiday = enableAvailabilityRules ? getHolidayName(date) : null;
-    if (holiday) return `Closed — ${holiday}`;
+    if (holiday) return t("closedFor").replace("{reason}", holiday);
     // Facility closed
     if (
       enableAvailabilityRules &&
@@ -766,7 +766,9 @@ export function DateSelectionCalendar({
         title={
           disabledReason ??
           (hasModifiedHours && dateHours
-            ? `Hours: ${dateHours.openTime} – ${dateHours.closeTime}`
+            ? t("hoursRange")
+                .replace("{open}", dateHours.openTime)
+                .replace("{close}", dateHours.closeTime)
             : undefined)
         }
         className={cn(

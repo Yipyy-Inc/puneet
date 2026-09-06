@@ -24,6 +24,7 @@ import {
 } from "@/lib/cash-register-store";
 import { resolveRegisterContext } from "@/lib/employee/register-context";
 import { shouldPromptCloseOnExit } from "@/lib/register-hours";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // Core staff action — works on all viewports (large tap target). The button
 // NEVER toggles on the first click: it opens the shared ClockConfirm step, and
@@ -31,6 +32,7 @@ import { shouldPromptCloseOnExit } from "@/lib/register-hours";
 // safeguards live here (surface-specific): a post-action cooldown and an Undo
 // on the clock-out toast.
 export function ClockInOut() {
+  const t = useShellText("employee");
   // The register context is resolved from the acting viewer, not a bare id —
   // see src/lib/employee/register-context.ts.
   const { viewer, viewerResolved } = useFacilityViewer();
@@ -81,7 +83,12 @@ export function ClockInOut() {
       {},
       {
         onSuccess: (entry) => {
-          toast.success(`Clocked in at ${formatClockTime(entry.clockedInAt)}`);
+          toast.success(
+            t("clockedInAt").replace(
+              "{time}",
+              formatClockTime(entry.clockedInAt),
+            ),
+          );
         },
         // "You are already clocked in" arrives from the exclusion constraint,
         // which is the only thing that can hold it across two devices.
@@ -125,19 +132,21 @@ export function ClockInOut() {
               : "";
 
           toast.success(
-            `Clocked out at ${formatClockTime(entry.clockedOutAt)}${worked}`,
+            t("clockedOutAt").replace(
+              "{time}",
+              formatClockTime(entry.clockedOutAt),
+            ) + worked,
             {
               duration: 10_000,
               action: {
-                label: "Undo",
+                label: t("undo"),
                 onClick: () => {
                   // Reopens THE SAME session rather than starting a second one
                   // — two rows would record a break that never happened. RLS
                   // allows it for two minutes, which is what a mis-tap is; past
                   // that the toast is gone anyway and the API says so plainly.
                   undoClockOut.mutate(entry.id, {
-                    onSuccess: () =>
-                      toast.success("Clock-out undone — back on the clock"),
+                    onSuccess: () => toast.success(t("clockOutUndone")),
                     onError: (error: Error) => toast.error(error.message),
                   });
                 },
@@ -173,7 +182,7 @@ export function ClockInOut() {
       >
         <Clock className="size-4" />
         <span className="text-xs font-medium">
-          {clockedIn ? "Clock out" : "Clock in"}
+          {clockedIn ? t("clockOut") : t("clockIn")}
         </span>
       </Button>
 

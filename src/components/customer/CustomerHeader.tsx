@@ -144,6 +144,7 @@ export function CustomerHeader() {
           )}
           <div className="hidden xl:block" suppressHydrationWarning>
             <div className="text-sm font-semibold" suppressHydrationWarning>
+              {/* french-ok: the product's name */}
               {selectedFacility?.name ?? "Yipyy"}
             </div>
             <div className="text-muted-foreground text-xs">

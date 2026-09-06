@@ -21,6 +21,7 @@ import {
   useIsRegisterOpenToday,
 } from "@/lib/cash-register-store";
 import { resolveRegisterContext } from "@/lib/employee/register-context";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // Login open-gate (spec: force the cash count before the day starts). For staff
@@ -37,6 +38,7 @@ export function RegisterOpenGate({
   staffId: string;
   children: ReactNode;
 }) {
+  const t = useShellText("employee");
   const canOpenRegister = usePermission("open_close_register");
   const { requireRegisterOpenOnLogin } = useStaffHrConfig();
   const { viewer, viewerResolved } = useFacilityViewer();
@@ -77,7 +79,7 @@ export function RegisterOpenGate({
       floatTotal,
       note: note.trim(),
     });
-    toast.success("Register opened — have a great shift!");
+    toast.success(t("registerOpened"));
   };
 
   return (
@@ -109,20 +111,18 @@ export function RegisterOpenGate({
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-lg font-bold tracking-tight text-slate-900">
-                Start your day — count the drawer
+                {t("startYourDay")}
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">
-                Count the opening float and open the register for{" "}
+                {t("openGateBody").split("{location}")[0]}
                 <span className="font-medium text-slate-700">
                   {ctx.locationName}
-                </span>{" "}
-                before serving the first customer — it reconciles the cash from
-                the first sale.
+                </span>
+                {t("openGateBody").split("{location}")[1]}
               </p>
               <p className="text-muted-foreground mt-2 flex items-center gap-1.5 text-xs">
                 <Lock className="size-3 shrink-0" />
-                Signed in as {ctx.staffName}. The portal unlocks once the
-                register is open.
+                {t("signedInAs").replace("{name}", ctx.staffName)}
               </p>
             </div>
           </div>
@@ -132,15 +132,14 @@ export function RegisterOpenGate({
             {typeof priorClosing === "number" && (
               <div className="bg-muted/30 rounded-md border border-dashed px-3 py-2 text-sm">
                 <span className="text-muted-foreground">
-                  Yesterday&apos;s drawer ended at{" "}
+                  {t("priorDrawerBefore")}
                 </span>
                 <span className="font-semibold tabular-nums">
                   {symbol}
                   {priorClosing.toFixed(2)}
                 </span>
                 <span className="text-muted-foreground">
-                  {" "}
-                  — start fresh, don&apos;t copy that number blindly.
+                  {t("priorDrawerAfter")}
                 </span>
               </div>
             )}
@@ -154,13 +153,13 @@ export function RegisterOpenGate({
 
             <div className="space-y-1.5">
               <Label htmlFor="gate-open-note" className="text-xs">
-                Note (optional)
+                {t("noteOptional")}
               </Label>
               <Textarea
                 id="gate-open-note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Anything worth flagging at open — e.g. low on quarters."
+                placeholder={t("openNotePlaceholder")}
                 className="min-h-[56px] resize-none"
               />
             </div>
@@ -170,7 +169,7 @@ export function RegisterOpenGate({
           <div className="flex flex-col gap-3 border-t bg-amber-50/40 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div className="flex items-baseline gap-2">
               <span className="text-sm font-medium text-slate-600">
-                Opening float
+                {t("openingFloat")}
               </span>
               <span className="text-2xl font-bold text-amber-700 tabular-nums">
                 {symbol}
@@ -193,7 +192,7 @@ export function RegisterOpenGate({
               onClick={handleOpen}
             >
               <Sun className="size-4" />
-              Open register · {symbol}
+              {t("openRegister")} · {symbol}
               {floatTotal.toFixed(2)}
             </Button>
           </div>

@@ -364,6 +364,7 @@ export function GlobalSearch({
         url.searchParams.set("limit", String(limit));
 
         const res = await fetch(url.toString(), { signal: controller.signal });
+        // french-ok: a developer-facing throw; the UI shows its own empty state
         if (!res.ok) throw new Error(`Search failed: ${res.status}`);
         const json = (await res.json()) as GlobalSearchResponse;
         setData({

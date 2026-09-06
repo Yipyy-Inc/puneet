@@ -92,8 +92,13 @@ export function TimeRangeSlider({
   const durationMinutes = endMinutes - startMinutes;
   const hours = Math.floor(Math.abs(durationMinutes) / 60);
   const minutes = Math.abs(durationMinutes) % 60;
-  const durationText = minutes > 0 ? `${hours}h ${minutes}m` : `${hours} hours`;
-  const daycareType = durationMinutes / 60 <= 5 ? "Half Day" : "Full Day";
+  const durationText =
+    minutes > 0
+      ? tr("durationHoursMinutes")
+          .replace("{hours}", String(hours))
+          .replace("{minutes}", String(minutes))
+      : tr("durationHours").replace("{hours}", String(hours));
+  const daycareType = durationMinutes / 60 <= 5 ? tr("halfDay") : tr("fullDay");
 
   // #6 — start can't be so late that the minimum slot exceeds closing
   const effectiveStartMax = Math.min(startMaxMinutes, endMaxMinutes - step);

@@ -27,6 +27,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { SearchInput } from "@/components/search/GlobalSearch";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   ADMIN_SEARCH_MIN_CHARS,
   adminSearchQueries,
@@ -62,6 +63,7 @@ function isEditableElement(target: EventTarget | null) {
 }
 
 export function AdminGlobalSearch({ className }: { className?: string }) {
+  const t = useShellText("admin");
   const router = useRouter();
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = React.useState(false);
@@ -121,7 +123,7 @@ export function AdminGlobalSearch({ className }: { className?: string }) {
           ref={inputRef}
           value={query}
           className={className}
-          placeholder="Search facilities, invoices, tickets, team, announcements…"
+          placeholder={t("searchPlaceholder")}
           onFocus={() => setOpen(true)}
           onKeyDown={onInputKeyDown}
           onChangeValue={(next) => {
@@ -142,7 +144,7 @@ export function AdminGlobalSearch({ className }: { className?: string }) {
             {isFetching && results.length === 0 && (
               <div className="text-muted-foreground flex items-center gap-2 px-3 py-3 text-sm">
                 <Loader2 className="size-4 animate-spin" />
-                Searching…
+                {t("searching")}
               </div>
             )}
 
