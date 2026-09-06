@@ -12,13 +12,84 @@ import {
   Image as ImageIcon,
   ExternalLink,
   Download,
-  Upload,
 } from "lucide-react";
-import { mobileAppSettings } from "@/data/additional-features";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import {
+  useMobileAppConfig,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import type { MobileAppConfig } from "@/lib/settings/mobile-app";
 
+// ── NOTHING RENDERS UNTIL THE FACILITY'S OWN CONFIG HAS ARRIVED ────────────
+//
+// The editor seeds useState from what it is handed and a useState initialiser
+// runs ONCE, so mounting against the empty fallback and letting the query land
+// afterwards would show a blank app identity whatever the facility had saved,
+// and the first Save would write that emptiness back over it. This is the shape
+// check:settings-seeding exists to catch.
 export function MobileAppSettings() {
-  const [settings, setSettings] = useState(mobileAppSettings);
+  const { config, configured, isPending } = useMobileAppConfig();
+
+  if (isPending) {
+    return <Skeleton className="h-96 w-full rounded-2xl" />;
+  }
+
+  return (
+    <MobileAppEditor
+      key={configured ? "stored" : "empty"}
+      initialConfig={config}
+    />
+  );
+}
+
+function MobileAppEditor({
+  initialConfig,
+}: {
+  initialConfig: MobileAppConfig;
+}) {
+  const saveSetting = useSaveFacilitySetting();
+  const [settings, setSettings] = useState<MobileAppConfig>(initialConfig);
+  const [savedSettings, setSavedSettings] =
+    useState<MobileAppConfig>(initialConfig);
+
+  const isDirty = JSON.stringify(settings) !== JSON.stringify(savedSettings);
+
+  // What is on screen, as a file. No request and nothing to persist — it reads
+  // the draft the person is looking at, which is what "export what I have
+  // configured" means.
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(settings, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${settings.appName.trim() || "mobile-app"}-config.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSave = () => {
+    saveSetting.mutate(
+      { domain: "mobile_app_config", value: settings },
+      {
+        onSuccess: () => {
+          setSavedSettings(settings);
+          toast.success("Mobile app settings saved");
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Those mobile app settings were not saved.",
+          ),
+      },
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -58,43 +129,47 @@ export function MobileAppSettings() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>App icon</Label>
+              <Label htmlFor="app-icon-url">App icon</Label>
+              {/* Was a read-only line of text under an Upload button with no
+                  onClick and no file input. There is no image store to upload
+                  to yet, and a button that does nothing is worse than a field
+                  that works: the value is a URL, so this edits the URL and the
+                  save persists it. The upload replaces this when there is
+                  somewhere to put a file. */}
               <div className="flex items-center gap-3">
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 bg-slate-100">
-                  <ImageIcon className="size-8 text-slate-400" />
+                <div className="border-line bg-surface-inset flex size-16 items-center justify-center rounded-lg border">
+                  <ImageIcon className="text-ink-disabled size-8" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-muted-foreground mb-2 text-sm">
-                    {settings.appIcon}
-                  </p>
-                  <Button size="sm" variant="outline">
-                    <Upload className="mr-2 size-3" />
-                    Upload Icon
-                  </Button>
-                </div>
+                <Input
+                  id="app-icon-url"
+                  value={settings.appIcon}
+                  placeholder="https://…/app-icon.png"
+                  onChange={(e) =>
+                    setSettings({ ...settings, appIcon: e.target.value })
+                  }
+                />
               </div>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-ink-tertiary text-xs">
                 Recommended: 1024x1024px PNG
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label>Splash screen</Label>
+              <Label htmlFor="splash-url">Splash screen</Label>
               <div className="flex items-center gap-3">
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 bg-slate-100">
-                  <ImageIcon className="size-8 text-slate-400" />
+                <div className="border-line bg-surface-inset flex size-16 items-center justify-center rounded-lg border">
+                  <ImageIcon className="text-ink-disabled size-8" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-muted-foreground mb-2 text-sm">
-                    {settings.splashScreen}
-                  </p>
-                  <Button size="sm" variant="outline">
-                    <Upload className="mr-2 size-3" />
-                    Upload Image
-                  </Button>
-                </div>
+                <Input
+                  id="splash-url"
+                  value={settings.splashScreen}
+                  placeholder="https://…/splash.png"
+                  onChange={(e) =>
+                    setSettings({ ...settings, splashScreen: e.target.value })
+                  }
+                />
               </div>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-ink-tertiary text-xs">
                 Recommended: 2048x2732px PNG
               </p>
             </div>
@@ -419,11 +494,25 @@ export function MobileAppSettings() {
           <Badge variant="outline">iOS & Android</Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
+          {isDirty && (
+            <p className="text-ink-tertiary text-sm">
+              You have unsaved changes
+            </p>
+          )}
+          {/* Both of these had NO onClick — not a stub, not a toast, nothing.
+              "Export Config" is a pure function of what is on screen, so it is
+              wired here rather than left as a button that lies about being one.
+              §5q: a button is a verb plus its object. */}
+          <Button variant="outline" onClick={handleExport}>
             <Download className="mr-2 size-4" />
-            Export Config
+            Download app config
           </Button>
-          <Button>Save Changes</Button>
+          <Button
+            onClick={handleSave}
+            disabled={!isDirty || saveSetting.isPending}
+          >
+            {saveSetting.isPending ? "Saving…" : "Save mobile app settings"}
+          </Button>
         </div>
       </div>
     </div>

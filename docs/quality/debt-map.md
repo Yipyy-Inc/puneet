@@ -7909,6 +7909,92 @@ here", not "is a customer".
   not the component: a customer should not receive an internal note over the
   wire at all, and RLS is where that belongs.
 
+## 2026-09-06 — the settings-persistence ratchet is empty, and what that does and does not mean
+
+**Severity: informational, and worth reading before the next settings change.**
+`bun run check:settings-persistence` reports **50 sections, 0 reaching no
+write, 0 baselined**. The list it was created to shrink is gone.
+
+The last one out was `mobile-app`, and it was the case the gate existed for. Its
+"Save Changes" button had **no `onClick` at all** — not a stub, not a toast, not
+a `console.log`. `check:success-claims` could never have found it, because
+nothing claimed anything; the button simply did nothing, silently, for as long
+as the screen had existed.
+
+### What an empty ratchet does not mean
+
+**It does not mean every settings screen is honest.** The gate asks one
+structural question — does this section's save path reach anything that could
+leave the browser — and answers it three imports deep. Two known limits:
+
+- **A section with two halves passes on one of them.** `tags-notes` is the live
+  example: its note policy is a real domain and its tag catalogue is still
+  `useState`. See the entry above.
+- **It says nothing about whether the write is CORRECT** — only that one exists.
+  A section that saves to the wrong domain, or saves a draft it seeded from the
+  fallback, passes. `check:settings-seeding` covers the second of those; nothing
+  covers the first.
+
+### Keep it at zero
+
+A stale baseline entry fails too, so the set cannot quietly re-permit a section
+that was fixed. **There is nothing left to add to** — an entry here would be the
+first regression this list has recorded, and should be treated as one rather
+than as bookkeeping.
+
+## 2026-09-06 — a fixture shipped another company's app identity to every facility
+
+**Severity: medium, now fixed — recorded because the class recurs.**
+
+`src/data/additional-features.ts` held:
+
+```
+export const mobileAppSettings: MobileAppSettings = {
+  appName: "PawCare",
+  iosAppId: "com.pawcare.facility",
+  androidPackageName: "com.pawcare.facility",
+  customDomain: "app.pawcare.com",
+  termsOfServiceUrl: "https://pawcare.com/terms",
+  privacyPolicyUrl: "https://pawcare.com/privacy",
+  enableLiveCamera: true,
+  ...
+```
+
+Every facility that opened Settings → Mobile app was shown that as **their own
+configuration**, with a Save button that did nothing to correct it. It is the
+same defect `CustomEmailDomainSettings` had, where the DNS records a facility
+was told to add named a competitor's mail infrastructure.
+
+**The half that reached a customer.** `enableLiveCamera` is read in two places
+in the CUSTOMER portal — `app/customer/cameras/page.tsx` and
+`components/customer/CustomerSidebar.tsx` — to decide whether a pet owner is
+offered a live feed. Shipped `true`, so every facility advertised a camera
+nobody there had switched on, and a facility that turned it off changed nothing
+a customer saw.
+
+Fixed: `mobile_app_config` domain with an **empty** fallback (no app name, no
+bundle id, every feature off), `mobile_app_config` added to
+`private.customer_visible_setting_domains()` in 20260906213414, and the two
+customer readers moved to `/api/customer/mobile-app`.
+
+### What to do instead of casually touching it
+
+- **A fixture default that names a real external identity is a bug, not seed
+  data.** App ids, domains, policy URLs, mail hosts, phone numbers: an
+  unconfigured facility should have NONE of them, not somebody else's. The
+  empty-fallback argument that `NO_TAX` and `NO_DEPOSITS` make about money
+  applies here for a different reason — not "do not charge on a number nobody
+  chose" but "do not publish an identity nobody owns".
+- **A feature flag read by the customer portal is not a preference, it is a
+  capability gate.** Default it OFF. `enableBookingFlow`, `enableLoyaltyProgram`
+  and `enablePushNotifications` are in the same domain and were given the same
+  treatment.
+- **Grep for the shape before adding a fixture default:**
+  `rg -i "pawcare|example\.com|yourcompany|acme" src/data` — the camera streams
+  in the same file still point at `https://demo.petcam.example/stream/cam1`,
+  which is honest (it is plainly a placeholder) in a way `pawcare.com/terms` was
+  not.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

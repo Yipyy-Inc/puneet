@@ -1,15 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useCustomerMobileApp } from "@/lib/api/customer-mobile-app";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { groomingQueries } from "@/lib/api/grooming";
 import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import {
-  petCams,
-  type PetCam,
-  mobileAppSettings,
-} from "@/data/additional-features";
+import { petCams, type PetCam } from "@/data/additional-features";
 import {
   cameraIntegrationConfig,
   petCamAccessConfigs,
@@ -182,6 +179,8 @@ function AccessReasonBadge({ reason }: { reason: AccessReason }) {
 
 export default function CustomerCamerasPage() {
   const { client: customer } = useCurrentCustomer();
+  const { config: mobileApp, isPending: mobileAppPending } =
+    useCustomerMobileApp();
   const customerId = customer?.id;
 
   const { selectedFacility } = useCustomerFacility();
@@ -287,11 +286,15 @@ export default function CustomerCamerasPage() {
 
   // ─── Filter Accessible Cameras ────────────────────────────────
   const accessibleCameras = useMemo(() => {
-    if (
-      !cameraIntegrationConfig.isEnabled ||
-      !mobileAppSettings.enableLiveCamera
-    )
+    // The facility's own switch, read through this customer's client row rather
+    // than from a bundled fixture that shipped it true for everybody. Nothing
+    // while it loads: the fallback has every feature off, so rendering through
+    // the pending state would say "no cameras" to somebody whose facility runs
+    // them.
+    if (mobileAppPending) return [];
+    if (!cameraIntegrationConfig.isEnabled || !mobileApp.enableLiveCamera) {
       return [];
+    }
 
     return petCams
       .filter((cam) => {
@@ -314,12 +317,16 @@ export default function CustomerCamerasPage() {
         const { reasons } = evaluateRuleSet(ruleSet, ruleContext);
         return { cam, reasons };
       });
-  }, [ruleContext]);
+  }, [ruleContext, mobileApp.enableLiveCamera, mobileAppPending]);
 
   // ─── Feature disabled guard ────────────────────────────────────
+  //
+  // Not while the facility's own configuration is still in flight — the fallback
+  // has every feature off, so this would flash "cameras are not available" at
+  // somebody whose facility offers them.
   if (
-    !cameraIntegrationConfig.isEnabled ||
-    !mobileAppSettings.enableLiveCamera
+    !mobileAppPending &&
+    (!cameraIntegrationConfig.isEnabled || !mobileApp.enableLiveCamera)
   ) {
     return (
       <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">

@@ -167,6 +167,41 @@ end $$;
 
 reset role;
 
+-- ── 5. The SECOND domain added the same day ──────────────────────────────
+--
+-- mobile_app_config joined the allowlist in 20260906213414. It is asserted
+-- separately from yipyy_go_config rather than assumed to follow from it: the
+-- function is one array literal and a migration that rewrites it can drop an
+-- entry as easily as add one. That is the failure this file exists to catch.
+
+reset role;
+
+insert into public.facility_settings (facility_id, domain, value)
+select id, 'mobile_app_config',
+       jsonb_build_object('appName', 'Gamma App', 'enableLiveCamera', true)
+  from public.facilities where slug in ('gamma-pets-cvs', 'delta-pets-cvs')
+on conflict (facility_id, domain) do update set value = excluded.value;
+
+select set_config('request.jwt.claims',
+  json_build_object('sub','user_cvsWren0000000000000000000000','role','authenticated')::text, true);
+set local role authenticated;
+
+do $$
+declare own int; other int;
+begin
+  select count(*) into own from public.facility_settings fs
+    join public.facilities f on f.id = fs.facility_id
+   where f.slug = 'gamma-pets-cvs' and fs.domain = 'mobile_app_config';
+  select count(*) into other from public.facility_settings fs
+    join public.facilities f on f.id = fs.facility_id
+   where f.slug = 'delta-pets-cvs' and fs.domain = 'mobile_app_config';
+  perform pg_temp.t(7,
+    'a client reads mobile_app_config at their own facility and not at another',
+    own = 1 and other = 0, 'own ' || own || ', other ' || other);
+end $$;
+
+reset role;
+
 -- ── The list itself ───────────────────────────────────────────────────────
 --
 -- Asserted separately from the policy so a failure says WHICH of the two moved:
@@ -182,6 +217,9 @@ begin
   perform pg_temp.t(6,
     'payroll_config is NOT on the customer allowlist',
     not ('payroll_config' = any(domains)), array_to_string(domains, ', '));
+  perform pg_temp.t(8,
+    'mobile_app_config is on the customer allowlist',
+    'mobile_app_config' = any(domains), array_length(domains, 1) || ' domains');
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

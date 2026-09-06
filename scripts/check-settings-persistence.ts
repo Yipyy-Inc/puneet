@@ -125,11 +125,28 @@ const ALLOW = /settings-write-ok:/;
 // asks whether a SECTION reaches a write, and this one now does, so it cannot
 // see the remaining half — the toasts there say plainly that the list is not
 // stored, and the debt map carries the rest.
-const BASELINE = new Set<string>([
-  // Raises a success toast as well, and is in check:success-claims' baseline
-  // for it.
-  "mobile-app",
-]);
+//
+// mobile-app left on 2026-09-06 and emptied this list. It was the one the gate
+// was written for: a "Save Changes" button with NO `onClick` at all — not a
+// stub, not a toast, not a console.log — which is why check:success-claims
+// could never have found it. Nothing claimed anything; the button simply did
+// nothing.
+//
+// Two things beyond the save. The fixture was another company's identity
+// (appName "PawCare", com.pawcare.facility, pawcare.com/terms), shown to every
+// facility as their own. And `enableLiveCamera` is read by the CUSTOMER portal
+// to decide whether to offer a live feed of somebody's pet — it shipped `true`,
+// so every facility advertised a camera nobody there had switched on, and
+// turning it off changed nothing a customer saw. The fallback is empty and the
+// customer portal reads the facility's real choice through its own route now.
+//
+// ── THE LIST IS EMPTY, AND THAT IS THE POINT OF THE SHAPE ────────────────
+//
+// Fifty sections, none reaching no write. Keep it that way: this gate fails on
+// a NEW offender, and a stale entry fails too, so the set cannot quietly
+// re-permit a section that was fixed. There is nothing left to add to — a new
+// entry here would be the first regression the list has ever recorded.
+const BASELINE = new Set<string>([]);
 
 const cache = new Map<string, string>();
 function read(file: string): string {

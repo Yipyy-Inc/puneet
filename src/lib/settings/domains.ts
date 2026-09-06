@@ -56,6 +56,10 @@ import {
   DEFAULT_TAG_NOTE_POLICY,
   tagNoteSettingsSchema,
 } from "@/lib/settings/tag-notes";
+import {
+  NO_MOBILE_APP,
+  mobileAppConfigSchema,
+} from "@/lib/settings/mobile-app";
 
 import {
   bookingRulesSchema,
@@ -403,6 +407,19 @@ export const SETTING_DOMAINS = {
     schema: tagNoteSettingsSchema,
     fallback: DEFAULT_TAG_NOTE_POLICY,
   },
+  // ── THE WHITE-LABEL MOBILE APP ─────────────────────────────────────────
+  //
+  // What the app is called, what it looks like, where it is published, and
+  // which features it offers a customer. useState under a Save button with no
+  // onClick at all until 2026-09-06.
+  //
+  // Empty fallback, for two reasons rather than the usual one. The fixture was
+  // another company entirely — appName PawCare, com.pawcare.facility,
+  // pawcare.com/terms — shown to every facility as their own configuration.
+  // And the feature flags are read by the CUSTOMER portal, so a shipped
+  // enableLiveCamera advertised a live feed of somebody pet that nobody at
+  // that business had switched on. See the banner in lib/settings/mobile-app.ts.
+  mobile_app_config: { schema: mobileAppConfigSchema, fallback: NO_MOBILE_APP },
   // ── YIPYY PAY ──────────────────────────────────────────────────────────
   //
   // The facility's payment preferences: which payout schedule their Clover
