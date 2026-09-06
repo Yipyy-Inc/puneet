@@ -294,7 +294,7 @@ export function FormNotificationSettings() {
                               setReminderUnit(v as "hours" | "days")
                             }
                           >
-                            <SelectTrigger className="h-7 w-[92px] text-xs">
+                            <SelectTrigger className="min-w-[92px]">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -309,7 +309,7 @@ export function FormNotificationSettings() {
                               setReminderAnchor(v as "appointment" | "check_in")
                             }
                           >
-                            <SelectTrigger className="h-7 w-[150px] text-xs">
+                            <SelectTrigger className="min-w-[150px]">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>

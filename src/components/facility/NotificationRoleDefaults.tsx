@@ -68,7 +68,7 @@ export function NotificationRoleDefaults() {
             value={role}
             onValueChange={(v) => setRole(v as NotificationRoleKey)}
           >
-            <SelectTrigger className="w-[240px]" aria-label="Role">
+            <SelectTrigger className="min-w-[240px]" aria-label="Role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

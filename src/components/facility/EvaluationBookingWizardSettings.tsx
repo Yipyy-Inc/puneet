@@ -416,7 +416,7 @@ export function EvaluationBookingWizardSettings() {
                   value={String(customMins)}
                   onValueChange={(v) => setCustomMins(Number(v))}
                 >
-                  <SelectTrigger className="mt-1 h-9 w-24 text-sm">
+                  <SelectTrigger className="mt-1 min-w-24">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -455,7 +455,7 @@ export function EvaluationBookingWizardSettings() {
                   value={String(defaultDuration)}
                   onValueChange={(v) => setDefaultDuration(Number(v))}
                 >
-                  <SelectTrigger className="mt-1 h-9 w-44 text-sm">
+                  <SelectTrigger className="mt-1 min-w-44">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

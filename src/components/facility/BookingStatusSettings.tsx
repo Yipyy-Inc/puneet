@@ -509,9 +509,15 @@ export function BookingStatusSettings() {
             customStatuses.map((status) => (
               <div
                 key={status.id}
-                className="grid grid-cols-12 items-end gap-3 rounded-xl border p-3"
+                // Twelve columns only once there is room for twelve. Below `sm`
+                // this row is three fields and a delete in ~570px, where 4/3/4/1
+                // tracks truncate "After In Progress" to "After In Progr" — so
+                // it stacks instead. minmax(0,1fr) above that, because a
+                // SelectTrigger is `w-fit whitespace-nowrap` and an `auto` floor
+                // lets a long status name widen its own column.
+                className="grid items-end gap-3 rounded-xl border p-3 sm:grid-cols-[repeat(12,minmax(0,1fr))]"
               >
-                <div className="col-span-4">
+                <div className="sm:col-span-4">
                   <Label className="text-[11px]">Name</Label>
                   <Input
                     value={status.name}
@@ -522,7 +528,7 @@ export function BookingStatusSettings() {
                     className="mt-1 h-8 text-sm"
                   />
                 </div>
-                <div className="col-span-3">
+                <div className="sm:col-span-3">
                   <Label className="text-[11px]">Color</Label>
                   <Select
                     value={status.color}
@@ -530,7 +536,7 @@ export function BookingStatusSettings() {
                       handleUpdateCustom(status.id, { color: v })
                     }
                   >
-                    <SelectTrigger className="mt-1 h-8 text-xs">
+                    <SelectTrigger className="mt-1 w-full">
                       <div className="flex items-center gap-2">
                         <div
                           className={cn(
@@ -556,7 +562,7 @@ export function BookingStatusSettings() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-4">
+                <div className="sm:col-span-4">
                   <Label className="text-[11px]">Position (after)</Label>
                   <Select
                     value={String(status.position)}
@@ -566,7 +572,7 @@ export function BookingStatusSettings() {
                       })
                     }
                   >
-                    <SelectTrigger className="mt-1 h-8 text-xs">
+                    <SelectTrigger className="mt-1 w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -578,7 +584,7 @@ export function BookingStatusSettings() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-1 flex justify-end">
+                <div className="flex justify-end sm:col-span-1">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -739,7 +745,7 @@ function TransitionRule({
         <span className="text-sm">{label}</span>
       </div>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-8 w-[180px] text-xs">
+        <SelectTrigger className="min-w-[180px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -770,14 +776,27 @@ function IftttRuleRow({
 }) {
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      {/* Two things were wrong here and they hid each other.
+
+          `grid-cols-5` is five `minmax(auto, 1fr)` tracks, and a SelectTrigger
+          is `w-fit whitespace-nowrap` — so "Checkout completes" widened its own
+          track and pushed its own chevron out of the control. CLAUDE.md states
+          the rule: every fr column needs `minmax(0, …)`.
+
+          But the floor alone only turned an overflow into "Pet is check". The
+          five columns were the real fault: `xl:` measures the VIEWPORT, and
+          this row never sees viewport width — it sits inside the settings pane,
+          past a nav rail and a section rail, which is ~530px at 1440. Five
+          tracks in 530px is ~90px a field. Two is what fits, at every width
+          this pane actually has. */}
+      <div className="grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
         <div>
           <Label className="text-[11px]">IF service is</Label>
           <Select
             value={rule.service}
             onValueChange={(value) => onUpdate({ service: value })}
           >
-            <SelectTrigger className="mt-1 h-8 text-xs">
+            <SelectTrigger className="mt-1 w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -798,7 +817,7 @@ function IftttRuleRow({
               onUpdate({ action: value as AutoTransitionAction })
             }
           >
-            <SelectTrigger className="mt-1 h-8 text-xs">
+            <SelectTrigger className="mt-1 w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -817,7 +836,7 @@ function IftttRuleRow({
             value={rule.currentStatus}
             onValueChange={(value) => onUpdate({ currentStatus: value })}
           >
-            <SelectTrigger className="mt-1 h-8 text-xs">
+            <SelectTrigger className="mt-1 w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -837,7 +856,7 @@ function IftttRuleRow({
             value={rule.targetStatus}
             onValueChange={(value) => onUpdate({ targetStatus: value })}
           >
-            <SelectTrigger className="mt-1 h-8 text-xs">
+            <SelectTrigger className="mt-1 w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -851,7 +870,10 @@ function IftttRuleRow({
           </Select>
         </div>
 
-        <div className="flex items-end justify-between gap-3 xl:justify-end">
+        {/* The switch and the delete are not a fifth field — with two columns
+            they take the full row under them, so the pair reads as the rule's
+            controls rather than as another thing to set. */}
+        <div className="flex items-end justify-between gap-3 sm:col-span-2">
           <div className="mb-1.5 flex items-center gap-2">
             <Switch
               checked={rule.enabled}
