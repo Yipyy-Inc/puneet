@@ -360,7 +360,6 @@ export function BookingStatusSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Booking statuses</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Configure the booking workflow statuses and automatic transitions.
           System statuses cannot be removed.

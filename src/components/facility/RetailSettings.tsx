@@ -388,7 +388,6 @@ export function RetailSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Retail / POS settings</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Configure product categories, suppliers, brands, tags, and units for
           your retail module.

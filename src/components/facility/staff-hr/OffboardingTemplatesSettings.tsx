@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, Plus, Trash2, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
   useOffboardingTemplatesQuery,
@@ -45,24 +45,19 @@ export function OffboardingTemplatesSettings() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <LogOut className="text-muted-foreground size-5" />
-            <CardTitle>Offboarding templates</CardTitle>
-          </div>
-          <Button
-            onClick={create}
-            className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-          >
+        {/* Description first, then its one action — see the note in
+            OnboardingTemplatesSettings. §1: no second action colour. */}
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-muted-foreground text-sm">
+            Task checklists run when a staff member leaves. The template
+            matching the departure reason is applied; a universal template
+            covers all reasons.
+          </p>
+          <Button onClick={create} className="shrink-0 gap-1.5">
             <Plus className="size-4" />
             New template
           </Button>
         </div>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Task checklists run when a staff member leaves. The template matching
-          the departure reason is applied; a universal template covers all
-          reasons.
-        </p>
       </CardHeader>
       <CardContent className="space-y-3">
         {templates.length === 0 ? (

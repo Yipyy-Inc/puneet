@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserX, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useStaffHrConfig,
@@ -52,10 +52,6 @@ export function TerminationReasonsSettings() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <UserX className="text-muted-foreground size-5" />
-          <CardTitle>Termination reasons</CardTitle>
-        </div>
         <p className="text-muted-foreground mt-1 text-sm">
           The reasons offered when terminating a staff member in the
           status-change dialog. Edit, add or remove any.

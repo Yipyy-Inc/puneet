@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
 
@@ -9,9 +9,6 @@ export function GroomingSection() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Grooming settings</CardTitle>
-        </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm">
             Grooming module configuration — scheduling, pricing, add-ons,

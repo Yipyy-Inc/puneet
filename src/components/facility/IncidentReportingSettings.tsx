@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Siren, DollarSign, Users, Camera, Bell } from "lucide-react";
+import { DollarSign, Users, Camera, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { type IncidentMedFeeMode } from "@/data/facility-config";
 import type { IncidentReportingConfig } from "@/lib/settings/incidents";
@@ -103,10 +103,6 @@ function IncidentReportingEditor({
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Siren className="size-5" />
-              Incident reporting
-            </CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
               Defaults and safeguards for how staff report and follow up on
               incidents.

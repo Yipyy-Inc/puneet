@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFacilityLocations } from "@/lib/api/locations";
 import {
@@ -56,12 +55,6 @@ export function LocationsSection() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="size-5" />
-          Locations
-        </CardTitle>
-      </CardHeader>
       <CardContent className="space-y-3">
         {isPending ? (
           <>

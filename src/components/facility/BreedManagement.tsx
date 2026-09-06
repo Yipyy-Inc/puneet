@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -194,7 +194,6 @@ export function BreedManagement() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-base">Pet breeds</CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
               Manage the breed list used when creating and editing pets.{" "}
               {allBreeds.length} breeds total

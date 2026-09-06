@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Bell } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -56,10 +55,6 @@ export function StaffNotificationSettings() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Bell className="text-muted-foreground size-5" />
-          <CardTitle>Staff notifications</CardTitle>
-        </div>
         <p className="text-muted-foreground mt-1 text-sm">
           Choose which onboarding &amp; offboarding events notify your team, and
           on which channels. Turn any trigger off to stop it entirely.

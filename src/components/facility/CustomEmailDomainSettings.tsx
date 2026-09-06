@@ -1,14 +1,11 @@
 "use client";
 
-import { Mail } from "lucide-react";
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 
 // ============================================================================
@@ -59,10 +56,6 @@ export function CustomEmailDomainSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Mail className="size-5" />
-          Custom email domain
-        </CardTitle>
         <CardDescription>
           Send booking confirmations, reminders and receipts from your own
           domain instead of ours.

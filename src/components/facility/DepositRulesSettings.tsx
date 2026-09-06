@@ -224,7 +224,6 @@ function DepositRulesEditor({
       )}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">Deposit rules</h2>
           <p className="text-muted-foreground mt-1 text-sm">
             Set automatic deposit requirements per service type or by booking
             value. When a matching booking is created, staff are prompted to
