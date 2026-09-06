@@ -216,7 +216,7 @@ export function DropOffPickUpOverrideCard() {
                           {override.services.length ===
                           SERVICE_BLOCK_OPTIONS.length ? (
                             <Badge variant="secondary" className="text-xs">
-                              All services
+                              {t("allServices")}
                             </Badge>
                           ) : (
                             override.services.map((s) => (
