@@ -124,7 +124,7 @@ export function TaskConfigEditor({
                     value={task.assignedTo}
                     onValueChange={(v) => patch(task.id, { assignedTo: v })}
                   >
-                    <SelectTrigger size="sm" className="h-8 w-[160px]">
+                    <SelectTrigger size="sm" className="min-w-[160px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -142,7 +142,7 @@ export function TaskConfigEditor({
                     value={task.schedule}
                     onValueChange={(v) => patch(task.id, { schedule: v })}
                   >
-                    <SelectTrigger size="sm" className="h-8 w-[160px]">
+                    <SelectTrigger size="sm" className="min-w-[160px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

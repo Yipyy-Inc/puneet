@@ -179,7 +179,7 @@ export function EnablementScopeSection({
                               handleRequirementChange(serviceType, value)
                             }
                           >
-                            <SelectTrigger className="w-40">
+                            <SelectTrigger className="min-w-40">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -259,7 +259,7 @@ export function EnablementScopeSection({
                           onConfigChange({ serviceConfigs: updated });
                         }}
                       >
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger className="min-w-40">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

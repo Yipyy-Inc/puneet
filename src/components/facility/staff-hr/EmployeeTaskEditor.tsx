@@ -208,7 +208,7 @@ export function EmployeeTaskEditor({
                           })
                         }
                       >
-                        <SelectTrigger size="sm" className="h-8 w-[160px]">
+                        <SelectTrigger size="sm" className="min-w-[160px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

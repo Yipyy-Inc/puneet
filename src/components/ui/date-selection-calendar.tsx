@@ -911,7 +911,7 @@ export function DateSelectionCalendar({
                   >
                     <SelectTrigger
                       size="sm"
-                      className="bg-background h-7 w-[4.8rem] border-slate-200 px-2 text-[11px] font-medium"
+                      className="min-w-[4.8rem] px-2 font-medium"
                       aria-label={t("selectYear")}
                     >
                       <SelectValue placeholder={t("year")} />
@@ -937,7 +937,7 @@ export function DateSelectionCalendar({
                   >
                     <SelectTrigger
                       size="sm"
-                      className="bg-background h-7 w-[6.8rem] border-slate-200 px-2 text-[11px] font-medium"
+                      className="min-w-[6.8rem] px-2 font-medium"
                       aria-label={t("selectMonth")}
                     >
                       <SelectValue placeholder={t("month")} />

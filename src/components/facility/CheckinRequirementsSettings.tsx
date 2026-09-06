@@ -344,7 +344,7 @@ export function CheckinRequirementsSettings() {
                     )
                   }
                 >
-                  <SelectTrigger className="h-8 w-[120px] text-xs">
+                  <SelectTrigger className="min-w-[120px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -393,7 +393,7 @@ export function CheckinRequirementsSettings() {
                     updateCustomRequirement(idx, v as Requirement)
                   }
                 >
-                  <SelectTrigger className="h-8 w-[120px] text-xs">
+                  <SelectTrigger className="min-w-[120px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -461,7 +461,7 @@ export function CheckinRequirementsSettings() {
               Configuring
             </span>
             <Select value={selectedService} onValueChange={setSelectedService}>
-              <SelectTrigger className="h-8 w-[160px] text-xs">
+              <SelectTrigger className="min-w-[160px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -522,7 +522,7 @@ export function CheckinRequirementsSettings() {
                       )
                     }
                   >
-                    <SelectTrigger className="h-8 w-[130px] text-xs">
+                    <SelectTrigger className="min-w-[130px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -567,7 +567,7 @@ export function CheckinRequirementsSettings() {
               value={String(sendBefore)}
               onValueChange={(v) => updateSendBefore(parseInt(v, 10))}
             >
-              <SelectTrigger className="h-8 w-[140px] text-xs">
+              <SelectTrigger className="min-w-[140px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -589,7 +589,7 @@ export function CheckinRequirementsSettings() {
               value={String(reminderHours)}
               onValueChange={(v) => updateReminderHours(parseInt(v, 10))}
             >
-              <SelectTrigger className="h-8 w-[140px] text-xs">
+              <SelectTrigger className="min-w-[140px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

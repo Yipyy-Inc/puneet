@@ -428,7 +428,7 @@ export function RetailSettings() {
                   setCategories(next);
                 }}
               >
-                <SelectTrigger className="min-w-24 text-[11px]">
+                <SelectTrigger className="min-w-24">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -525,7 +525,7 @@ export function RetailSettings() {
             >
               <SelectTrigger
                 aria-label="Default pricing method"
-                className="h-9 max-w-[240px] text-sm"
+                className="max-w-[240px]"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -570,7 +570,7 @@ export function RetailSettings() {
             >
               <SelectTrigger
                 aria-label="Selling price rounding"
-                className="h-9 max-w-[240px] text-sm"
+                className="max-w-[240px]"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -634,7 +634,7 @@ export function RetailSettings() {
                 value={taxMode}
                 onValueChange={(v) => setTaxMode(v as RetailTaxMode)}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -956,7 +956,7 @@ export function RetailSettings() {
               className="h-8 flex-1 text-sm"
             />
             <Select value={newTagColor} onValueChange={setNewTagColor}>
-              <SelectTrigger className="h-8 w-24 text-xs">
+              <SelectTrigger className="min-w-24">
                 <div className="flex items-center gap-1.5">
                   <div
                     className={cn(
@@ -1158,7 +1158,7 @@ export function RetailSettings() {
                   setReceiptFormat(v as RetailReceiptFormat)
                 }
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

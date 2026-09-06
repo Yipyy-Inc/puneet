@@ -692,7 +692,7 @@ export function ReportCardSettingsCard() {
                   value={sectionServiceId}
                   onValueChange={setSectionServiceId}
                 >
-                  <SelectTrigger className="w-60">
+                  <SelectTrigger className="min-w-60">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
