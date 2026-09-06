@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { cn } from "@/lib/utils";
+import { parseTypedDate } from "@/lib/dates/parse-typed-date";
 
 type ISODateString = string; // YYYY-MM-DD
 
@@ -34,25 +35,6 @@ function parseISODateString(value: string | undefined | null): Date | null {
     return null;
   }
   return dt;
-}
-
-function parseTypedDateInput(value: string): Date | null {
-  const trimmed = value.trim();
-  if (trimmed.length === 0) return null;
-
-  const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (isoMatch) {
-    const [, y, m, d] = isoMatch;
-    return parseISODateString(`${y}-${pad2(Number(m))}-${pad2(Number(d))}`);
-  }
-
-  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (slashMatch) {
-    const [, m, d, y] = slashMatch;
-    return parseISODateString(`${y}-${pad2(Number(m))}-${pad2(Number(d))}`);
-  }
-
-  return null;
 }
 
 function startOfDay(date: Date): Date {
@@ -201,9 +183,9 @@ export function DatePicker({
   };
 
   const applyManualDate = () => {
-    const typedDate = parseTypedDateInput(manualDateInput);
+    const typedDate = parseTypedDate(manualDateInput);
     if (!typedDate) {
-      setManualInputError("Use YYYY-MM-DD or MM/DD/YYYY");
+      setManualInputError("Use YYYY-MM-DD, for example 2026-09-01");
       return;
     }
 
@@ -297,7 +279,7 @@ export function DatePicker({
                     applyManualDate();
                   }
                 }}
-                placeholder="YYYY-MM-DD or MM/DD/YYYY"
+                placeholder="YYYY-MM-DD"
                 className={cn(
                   "h-8 flex-1 rounded-md border bg-white px-2.5 text-xs outline-none",
                   "focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-200",
@@ -325,7 +307,7 @@ export function DatePicker({
                   : "text-slate-500",
               )}
             >
-              {manualInputError || "Format: YYYY-MM-DD or MM/DD/YYYY"}
+              {manualInputError || "Format: YYYY-MM-DD"}
             </p>
           </div>
         )}

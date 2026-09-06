@@ -4,6 +4,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { parseTypedDate } from "@/lib/dates/parse-typed-date";
 
 export type CalendarMode = "single" | "multiple" | "range";
 
@@ -21,47 +22,6 @@ function pad2(n: number) {
 
 function toISODateString(date: Date) {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-}
-
-function parseTypedDateInput(value: string): Date | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (isoMatch) {
-    const [, y, m, d] = isoMatch;
-    const year = Number(y);
-    const month = Number(m);
-    const day = Number(d);
-    const dt = new Date(year, month - 1, day);
-    if (
-      dt.getFullYear() === year &&
-      dt.getMonth() === month - 1 &&
-      dt.getDate() === day
-    ) {
-      return dt;
-    }
-    return null;
-  }
-
-  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (slashMatch) {
-    const [, m, d, y] = slashMatch;
-    const year = Number(y);
-    const month = Number(m);
-    const day = Number(d);
-    const dt = new Date(year, month - 1, day);
-    if (
-      dt.getFullYear() === year &&
-      dt.getMonth() === month - 1 &&
-      dt.getDate() === day
-    ) {
-      return dt;
-    }
-    return null;
-  }
-
-  return null;
 }
 
 export function Calendar({
@@ -150,9 +110,9 @@ export function Calendar({
   };
 
   const handleManualApply = () => {
-    const parsed = parseTypedDateInput(manualDateInput);
+    const parsed = parseTypedDate(manualDateInput);
     if (!parsed) {
-      setManualInputError("Use YYYY-MM-DD or MM/DD/YYYY");
+      setManualInputError("Use YYYY-MM-DD, for example 2026-09-01");
       return;
     }
     setManualInputError("");
@@ -273,7 +233,7 @@ export function Calendar({
                 handleManualApply();
               }
             }}
-            placeholder="YYYY-MM-DD or MM/DD/YYYY"
+            placeholder="YYYY-MM-DD"
             className={cn(
               "h-8 flex-1 rounded-md border px-2 text-xs outline-none",
               "focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-200",
