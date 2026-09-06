@@ -450,7 +450,15 @@ export interface YipyyGoFormSectionProps {
   booking: YipyyGoFormSectionBooking;
   pet: import("@/types/pet").Pet;
   customer: import("@/types/client").Client;
-  config: YipyyGoConfig | null;
+  /**
+   * The facility's Yipyy Go setup as STORED — no facilityId, no row timestamps.
+   * A form section reads the template, the fees and the tip prompt out of it
+   * and has never wanted the row metadata. Null means "not known yet".
+   */
+  config: Omit<
+    YipyyGoConfig,
+    "facilityId" | "createdAt" | "updatedAt" | "updatedBy"
+  > | null;
   onNext: () => void;
   onBack: () => void;
   onSubmit: () => void;

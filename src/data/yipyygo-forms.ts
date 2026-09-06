@@ -4,7 +4,10 @@
  * Defines the data structures for YipyyGo pre-check-in forms
  */
 
-import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import {
+  yipyyGoRequirementFor,
+  type YipyyGoSettings,
+} from "@/lib/settings/yipyy-go";
 import { bookings } from "@/data/bookings";
 import type {
   BelongingItem,
@@ -320,23 +323,16 @@ export function getYipyyGoDisplayStatus(
  */
 export function getYipyyGoDisplayStatusForBooking(
   bookingId: number | string,
-  options: { facilityId: number; service?: string },
+  options: { yipyyGo: YipyyGoSettings; service?: string },
 ): YipyyGoDisplayStatus {
   const base = getYipyyGoDisplayStatus(bookingId);
   if (base === "approved") return base;
-  const config = getYipyyGoConfig(options.facilityId);
-  if (!config?.enabled || !options.service) return base;
-  const svc = options.service.toLowerCase() as
-    | "daycare"
-    | "boarding"
-    | "grooming"
-    | "training";
-  const serviceConfig = config.serviceConfigs.find(
-    (s) => s.serviceType === svc,
+  if (!options.service) return base;
+  const requirement = yipyyGoRequirementFor(
+    options.yipyyGo,
+    options.service.toLowerCase(),
   );
-  const isMandatory =
-    serviceConfig?.enabled && serviceConfig?.requirement === "mandatory";
-  if (isMandatory) return "precheck_missing";
+  if (requirement === "mandatory") return "precheck_missing";
   return base;
 }
 

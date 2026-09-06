@@ -23,11 +23,8 @@ import { Separator } from "@/components/ui/separator";
 import { Info, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type {
-  YipyyGoConfig,
-  ServiceYipyyGoConfig,
-  ServiceType,
-} from "@/data/yipyygo-config";
+import type { ServiceYipyyGoConfig, ServiceType } from "@/data/yipyygo-config";
+import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 import {
   SERVICE_TYPE_LABELS,
   REQUIREMENT_LABELS,
@@ -37,8 +34,8 @@ import { useCustomServices } from "@/hooks/use-custom-services";
 import { isExpressCheckInEnabled } from "@/data/custom-services";
 
 interface EnablementScopeSectionProps {
-  config: YipyyGoConfig;
-  onConfigChange: (updates: Partial<YipyyGoConfig>) => void;
+  config: YipyyGoSettings;
+  onConfigChange: (updates: Partial<YipyyGoSettings>) => void;
 }
 
 export function EnablementScopeSection({
@@ -90,14 +87,24 @@ export function EnablementScopeSection({
   // Modules whose Step 9 "Require YipyyGo" (Express Check-in) toggle is on —
   // not the StaffAssignment "YipyyGo App Required" integration flag. Scoped to
   // this facility, matching the per-service form-template tab.
+  // ── THE FACILITY FILTER IS GONE, AND IT WAS NEVER DOING ITS JOB ─────────
+  //
+  // This used to also require `(m.facilityIds ?? [m.facilityId]).includes(
+  // config.facilityId)`. That id came from the settings wrapper, which read
+  // `const facilityId = 11; // TODO: Get from auth context` — so the list was
+  // narrowed to the DEMO facility's custom services for every real facility
+  // that opened this screen. Filtering by a constant is not scoping.
+  //
+  // Yipyy Go's own settings moved to `facility_settings.yipyy_go_config` on
+  // 2026-09-06 and come from the session. Custom services did NOT: they are
+  // still a fixture behind a localStorage context, with no facility of their
+  // own to check against. So there is nothing honest left to filter on, and
+  // pretending otherwise with a constant is the shape `check:derived-location`
+  // was written to stop. Recorded in the debt map; it is fixed when custom
+  // services become real rows.
   const activeCustomModules = useMemo(
-    () =>
-      activeModules.filter(
-        (m) =>
-          isExpressCheckInEnabled(m) &&
-          (m.facilityIds ?? [m.facilityId]).includes(config.facilityId),
-      ),
-    [activeModules, config.facilityId],
+    () => activeModules.filter((m) => isExpressCheckInEnabled(m)),
+    [activeModules],
   );
 
   const standardServices: ServiceType[] = [

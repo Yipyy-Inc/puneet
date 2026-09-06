@@ -21,13 +21,13 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import type {
-  YipyyGoConfig,
   MedicationFeeConfig,
   MedicationFeeBilling,
   TipPopupConfig,
   TipPopupPreset,
   ConfirmationEmailConfig,
 } from "@/types/yipyygo";
+import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 import {
   defaultMedicationFeeConfig,
   defaultTipPopupConfig,
@@ -35,8 +35,8 @@ import {
 } from "@/data/yipyygo-config";
 
 interface FeesAndMessagingSectionProps {
-  config: YipyyGoConfig;
-  onConfigChange: (updates: Partial<YipyyGoConfig>) => void;
+  config: YipyyGoSettings;
+  onConfigChange: (updates: Partial<YipyyGoSettings>) => void;
 }
 
 const BILLING_LABELS: Record<MedicationFeeBilling, string> = {

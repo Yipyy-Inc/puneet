@@ -44,13 +44,10 @@ import type {
   SessionIssueKind,
   SurchargeApproval,
 } from "@/types/grooming";
-import {
-  getYipyyGoConfig,
-  getFormTemplateForService,
-} from "@/data/yipyygo-config";
+import { getFormTemplateForService } from "@/data/yipyygo-config";
+import { useYipyyGoConfig } from "@/lib/api/facility-settings";
+import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 import type { CustomQuestion } from "@/types/yipyygo";
-
-const FACILITY_ID = 11;
 
 const ISSUE_LABELS: Record<SessionIssueKind, string> = {
   "matting-found": "Matting found",
@@ -92,9 +89,11 @@ function formatAnswer(_q: CustomQuestion | undefined, value: unknown): string {
  * place alongside daycare/boarding/training. Falls back to the global default
  * template if no grooming override is configured yet.
  */
-function readQuestions(): CustomQuestion[] {
-  const config = getYipyyGoConfig(FACILITY_ID);
-  if (!config) return [];
+// Takes the facility's settings rather than looking them up. It used to call
+// `getYipyyGoConfig(FACILITY_ID)` with a module constant of 11, so every
+// facility read the demo's grooming questions — and no facility read its own,
+// because nothing had ever been saved to that array.
+function readQuestions(config: YipyyGoSettings): CustomQuestion[] {
   return getFormTemplateForService(config, "grooming").globalCustomQuestions;
 }
 
@@ -119,7 +118,8 @@ export function PreVisitBriefing({
     [allAppointments, appointment.petId, appointment.id],
   );
 
-  const questions = readQuestions();
+  const { config: yipyyGoConfig } = useYipyyGoConfig();
+  const questions = readQuestions(yipyyGoConfig);
   const submission = appointment.expressCheckinSubmission;
   const isNarrow = layout === "narrow";
 

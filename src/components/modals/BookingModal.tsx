@@ -30,7 +30,8 @@ import { clients } from "@/data/clients";
 import { useState } from "react";
 import Link from "next/link";
 import type { Evaluation } from "@/types/pet";
-import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { useYipyyGoConfig } from "@/lib/api/facility-settings";
+import { yipyyGoRequirementFor } from "@/lib/settings/yipyy-go";
 import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 
@@ -54,6 +55,10 @@ export function BookingModal({ booking }: BookingModalProps) {
   const duration = calculateDuration(booking.startDate, booking.endDate);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const { daycare, boarding } = useSettings();
+  // Hoisted out of the JSX below, where it was a `getYipyyGoConfig(
+  // booking.facilityId)` lookup into a module-level array — and a hook cannot
+  // live inside a render callback anyway.
+  const { config: yipyyGoConfig } = useYipyyGoConfig();
 
   const requiresEvaluationForService =
     (booking.service === "daycare" &&
@@ -257,17 +262,12 @@ export function BookingModal({ booking }: BookingModalProps) {
 
           {/* Yipyy Express Check-in (when enabled for this service) */}
           {(() => {
-            const yipyyGoConfig = getYipyyGoConfig(booking.facilityId);
-            const serviceType = booking.service?.toLowerCase() as
-              | "daycare"
-              | "boarding"
-              | "grooming"
-              | "training";
-            const enabled =
-              yipyyGoConfig?.enabled &&
-              yipyyGoConfig?.serviceConfigs?.find(
-                (s) => s.serviceType === serviceType,
-              )?.enabled;
+            const enabled = Boolean(
+              yipyyGoRequirementFor(
+                yipyyGoConfig,
+                booking.service?.toLowerCase() ?? "",
+              ),
+            );
             if (!enabled) return null;
             const yipyyGoStatus = getYipyyGoDisplayStatus(booking.id);
             const canReview =

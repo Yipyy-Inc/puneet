@@ -105,7 +105,10 @@ const BASELINE = new Set<string>([
   "src/app/facility/dashboard/services/retail/inventory/page.tsx",
   "src/app/facility/dashboard/services/training/courses/page.tsx",
   "src/components/grooming/GroomingIntakeForm.tsx",
-  "src/components/yipyygo/YipyyGoSettings.tsx",
+  // YipyyGoSettings.tsx left on 2026-09-06, by being fixed. Its "Express
+  // Check-in settings saved successfully" sat over `saveYipyyGoConfig()`,
+  // which spliced a module-level array. The setup is a `facility_settings`
+  // domain now and the toast follows a real mutation's onSuccess.
 
   // ── TEN LEFT ON 2026-09-05, AND NOT BY BEING FIXED ─────────────────────
   //

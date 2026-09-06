@@ -31,20 +31,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type {
-  YipyyGoConfig,
   FormSection,
   CustomQuestion,
   CustomQuestionType,
   MultiPetBehavior,
 } from "@/data/yipyygo-config";
+import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 import {
   QUESTION_TYPE_LABELS,
   MULTI_PET_BEHAVIOR_LABELS,
 } from "@/data/yipyygo-config";
 
 interface FormTemplateSectionProps {
-  config: YipyyGoConfig;
-  onConfigChange: (updates: Partial<YipyyGoConfig>) => void;
+  config: YipyyGoSettings;
+  onConfigChange: (updates: Partial<YipyyGoSettings>) => void;
 }
 
 export function FormTemplateSection({

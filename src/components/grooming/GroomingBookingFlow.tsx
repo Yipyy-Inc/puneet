@@ -59,6 +59,7 @@ import {
   scheduleAppointmentReminders,
   type GroomingBookingData,
 } from "@/lib/grooming-post-booking";
+import { useCustomerYipyyGo } from "@/lib/api/customer-yipyy-go";
 import { applyDynamicPricingRules } from "@/lib/pricing-rules";
 import { toast } from "sonner";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
@@ -351,6 +352,7 @@ export function GroomingBookingFlow({
     config,
   } = useGroomingValidation();
   const { selectedFacility } = useCustomerFacility();
+  const { config: yipyyGoConfig } = useCustomerYipyyGo();
   const { vans, serviceAreas } = useMobileGrooming();
   const { stations: groomingStations } = useGroomingStations();
   const [currentStep, setCurrentStep] = useState<
@@ -2304,8 +2306,14 @@ export function GroomingBookingFlow({
         petNotes: petBehaviorUpdate || undefined,
       };
 
-      // Execute immediate post-booking actions
-      await handleImmediatePostBookingActions(bookingData);
+      // The facility's Yipyy Go setup, read through THIS customer's client row.
+      //
+      // Not `useYipyyGoConfig()`: this is a customer flow, that hook goes to
+      // /api/facility/settings, and `getFacilityContext()` resolves a caller
+      // with no membership to the DEMO facility — so it would decide a real
+      // customer's pre-arrival form from a different business's settings.
+      // /api/customer/facility documents the same trap for invoices.
+      await handleImmediatePostBookingActions(bookingData, yipyyGoConfig);
 
       // Queue confirmation + the 48h / 24h / 2h reminder cadence (Table 95).
       await scheduleAppointmentReminders(bookingData);

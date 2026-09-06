@@ -21,16 +21,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import type {
-  YipyyGoConfig,
-  ReminderRule,
-  DeliveryChannel,
-} from "@/data/yipyygo-config";
+import type { ReminderRule, DeliveryChannel } from "@/data/yipyygo-config";
+import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 import { DELIVERY_CHANNEL_LABELS } from "@/data/yipyygo-config";
 
 interface TimingRemindersSectionProps {
-  config: YipyyGoConfig;
-  onConfigChange: (updates: Partial<YipyyGoConfig>) => void;
+  config: YipyyGoSettings;
+  onConfigChange: (updates: Partial<YipyyGoSettings>) => void;
 }
 
 export function TimingRemindersSection({

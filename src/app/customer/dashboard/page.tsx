@@ -44,7 +44,8 @@ import { businessProfile } from "@/data/settings";
 import { vaccinationRecords } from "@/data/pet-data";
 import { payments, invoices } from "@/data/payments";
 import { facilityConfig } from "@/data/facility-config";
-import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import { useCustomerYipyyGo } from "@/lib/api/customer-yipyy-go";
+import { yipyyGoRequirementFor } from "@/lib/settings/yipyy-go";
 import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
 import { clientCommunications } from "@/data/communications";
 import { useQuery } from "@tanstack/react-query";
@@ -88,6 +89,8 @@ const MOOD_TONE: Record<string, string> = {
 
 export default function CustomerDashboardPage() {
   const { selectedFacility } = useCustomerFacility();
+  const { config: yipyyGoConfig, isPending: yipyyGoPending } =
+    useCustomerYipyyGo();
   const isMounted = useHydrated();
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [nowMs] = useState(() => Date.now());
@@ -319,21 +322,21 @@ export default function CustomerDashboardPage() {
 
     if (!customer) return actions;
 
-    // Check for Express Check-in forms needed (upcoming bookings with form not submitted/approved)
-    const yipyyGoConfig = selectedFacility
-      ? getYipyyGoConfig(selectedFacility.id)
-      : null;
-    if (yipyyGoConfig?.enabled) {
+    // Express Check-in forms still outstanding on an upcoming booking. The
+    // setup comes through this customer's own client row rather than
+    // `getYipyyGoConfig(selectedFacility.id)`, which read a fixture array in
+    // the bundle and so raised this prompt off a seed file.
+    //
+    // Nothing is prompted while it loads: the fallback is switched off, and
+    // telling somebody there is nothing to do is worse than telling them a
+    // moment late.
+    if (!yipyyGoPending && yipyyGoConfig.enabled) {
       const upcomingNeedingForm = upcomingBookings.filter((b) => {
-        const svc = b.service?.toLowerCase() as
-          | "daycare"
-          | "boarding"
-          | "grooming"
-          | "training";
-        const serviceConfig = yipyyGoConfig.serviceConfigs.find(
-          (s) => s.serviceType === svc,
-        );
-        if (!serviceConfig?.enabled) return false;
+        if (
+          !yipyyGoRequirementFor(yipyyGoConfig, b.service?.toLowerCase() ?? "")
+        ) {
+          return false;
+        }
         const status = getYipyyGoDisplayStatus(b.id);
         return status !== "approved" && status !== "submitted";
       });
@@ -476,6 +479,8 @@ export default function CustomerDashboardPage() {
     customerBookings,
     upcomingBookings,
     selectedFacility,
+    yipyyGoConfig,
+    yipyyGoPending,
   ]);
 
   // Format date/time helper

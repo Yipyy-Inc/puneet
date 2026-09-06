@@ -6,13 +6,12 @@
  */
 
 import type {
-  YipyyGoConfig,
   YipyyGoServiceType as ServiceType,
   YipyyGoTriggerResult,
   YipyyGoMessage,
   BookingForYipyyGo,
 } from "@/types/yipyygo";
-import { getYipyyGoConfig } from "@/data/yipyygo-config";
+import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 
 export type { YipyyGoTriggerResult, YipyyGoMessage, BookingForYipyyGo };
 
@@ -26,13 +25,14 @@ export type { YipyyGoTriggerResult, YipyyGoMessage, BookingForYipyyGo };
  */
 export function shouldTriggerYipyyGo(
   booking: BookingForYipyyGo,
-  facilityId: number,
+  config: YipyyGoSettings,
 ): YipyyGoTriggerResult {
-  // Get facility YipyyGo configuration
-  const config = getYipyyGoConfig(facilityId);
-
-  // Check if YipyyGo is enabled
-  if (!config || !config.enabled) {
+  // The facility Yipyy Go setup is PASSED IN, not looked up. It used to be
+  // `getYipyyGoConfig(facilityId)` against a module-level array that no save
+  // had ever reached, so this decided whether to ask a customer for a form
+  // using a seed file. It now comes from `facility_settings`, and this module
+  // has no React in it to read that with — so the caller supplies it.
+  if (!config.enabled) {
     return {
       shouldTrigger: false,
       reason: "YipyyGo is not enabled for this facility",
@@ -124,7 +124,7 @@ export function shouldTriggerYipyyGo(
  */
 function generateYipyyGoMessage(
   booking: BookingForYipyyGo,
-  config: YipyyGoConfig,
+  config: YipyyGoSettings,
   requirement: "mandatory" | "optional",
 ): YipyyGoMessage {
   const checkInDate = new Date(booking.startDate);
@@ -259,13 +259,14 @@ export function isLastMinuteBooking(
  */
 export async function processBookingConfirmationForYipyyGo(
   booking: BookingForYipyyGo,
+  config: YipyyGoSettings,
 ): Promise<{
   triggered: boolean;
   sent: boolean;
   scheduled: boolean;
   message?: YipyyGoMessage;
 }> {
-  const triggerResult = shouldTriggerYipyyGo(booking, booking.facilityId);
+  const triggerResult = shouldTriggerYipyyGo(booking, config);
 
   if (!triggerResult.shouldTrigger) {
     return {
