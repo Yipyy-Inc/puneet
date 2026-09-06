@@ -14,6 +14,7 @@ import {
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { cn } from "@/lib/utils";
 import { parseTypedDate } from "@/lib/dates/parse-typed-date";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 type ISODateString = string; // YYYY-MM-DD
 
@@ -75,7 +76,7 @@ export function DatePicker({
   autoFocus,
   value,
   onValueChange,
-  placeholder = "Select date",
+  placeholder,
   min,
   max,
   disabled,
@@ -92,6 +93,7 @@ export function DatePicker({
   displayMode = "popover",
   desktopFixedAnchorClassName,
 }: DatePickerProps) {
+  const t = useShellText("primitives");
   const [open, setOpen] = React.useState(false);
   const [manualDateInput, setManualDateInput] = React.useState(value ?? "");
   const [manualInputError, setManualInputError] = React.useState("");
@@ -241,7 +243,9 @@ export function DatePicker({
         className,
       )}
     >
-      <span className="truncate">{displayValue || placeholder}</span>
+      <span className="truncate">
+        {displayValue || (placeholder ?? t("selectDate"))}
+      </span>
       <CalendarIcon className="ml-2 size-4 text-sky-600" />
     </Button>
   );
@@ -250,10 +254,10 @@ export function DatePicker({
     <>
       <div className="border-b border-slate-200 bg-linear-to-r from-sky-50 via-white to-indigo-50 px-3 py-2.5">
         <p className="text-[11px] font-semibold tracking-wider text-sky-700 uppercase">
-          Choose Date
+          {t("chooseDate")}
         </p>
         <p className="mt-0.5 text-sm font-medium text-slate-700">
-          {displayValue || "No date selected"}
+          {displayValue || t("noDateSelected")}
         </p>
       </div>
 
@@ -261,7 +265,7 @@ export function DatePicker({
         {showManualInput && (
           <div className="rounded-md border border-slate-200 bg-slate-50/60 p-2.5">
             <p className="text-[11px] font-semibold tracking-wide text-slate-600 uppercase">
-              Type Date
+              {t("typeDate")}
             </p>
             <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-center">
               <input
@@ -287,7 +291,7 @@ export function DatePicker({
                     ? "border-rose-300 text-rose-700"
                     : "border-slate-200 text-slate-700",
                 )}
-                aria-label="Type date manually"
+                aria-label={t("typeDateManually")}
               />
               <Button
                 type="button"
@@ -403,10 +407,10 @@ export function DatePicker({
             )}
           >
             <DialogPrimitive.Title className="sr-only">
-              Select date
+              {t("selectDate")}
             </DialogPrimitive.Title>
             <DialogPrimitive.Description className="sr-only">
-              Choose a date from the calendar.
+              {t("chooseFromCalendar")}
             </DialogPrimitive.Description>
 
             {calendarPanel}

@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 function isValidTime(value: string) {
   return /^\d{2}:\d{2}$/.test(value);
@@ -46,9 +47,10 @@ export function TimePicker({
   min = "00:00",
   max = "23:59",
   disabled,
-  placeholder = "Select time",
+  placeholder,
   className,
 }: TimePickerProps) {
+  const t = useShellText("primitives");
   const options = React.useMemo(() => {
     const minM = timeToMinutes(min) ?? 0;
     const maxM = timeToMinutes(max) ?? 24 * 60 - 1;
@@ -95,7 +97,11 @@ export function TimePicker({
     >
       <SelectTrigger className={cn("w-full", className)}>
         <SelectValue
-          placeholder={options.length === 0 ? "No times" : placeholder}
+          placeholder={
+            options.length === 0
+              ? t("noTimes")
+              : (placeholder ?? t("selectTime"))
+          }
         />
       </SelectTrigger>
       <SelectContent className="max-h-72">

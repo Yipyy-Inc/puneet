@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 type CalendarView = "day" | "week" | "month" | "list";
 
@@ -96,6 +97,7 @@ export function GenericCalendar<T extends CalendarItem>({
   view = "month",
   initialDate = new Date(),
 }: GenericCalendarProps<T>) {
+  const t = useShellText("primitives");
   const [currentDate, setCurrentDate] = useState(initialDate);
   const currentView = view;
 
@@ -505,7 +507,7 @@ export function GenericCalendar<T extends CalendarItem>({
     if (!config.listColumns) {
       return (
         <div className="text-muted-foreground py-8 text-center">
-          List view configuration not provided
+          {t("listViewMissing")}
         </div>
       );
     }
@@ -554,7 +556,7 @@ export function GenericCalendar<T extends CalendarItem>({
                 <ChevronLeft className="size-4" />
               </Button>
               <Button variant="outline" size="sm" onClick={handleToday}>
-                Today
+                {t("today")}
               </Button>
               <Button variant="outline" size="sm" onClick={handleNext}>
                 <ChevronRight className="size-4" />

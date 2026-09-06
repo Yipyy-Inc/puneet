@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { parseTypedDate } from "@/lib/dates/parse-typed-date";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 export type CalendarMode = "single" | "multiple" | "range";
 
@@ -30,6 +31,7 @@ export function Calendar({
   onSelect,
   className,
 }: CalendarProps) {
+  const t = useShellText("primitives");
   const selectedDate = selected instanceof Date ? selected : null;
   const [currentMonth, setCurrentMonth] = React.useState(
     selectedDate
@@ -187,7 +189,7 @@ export function Calendar({
             value={currentMonth.getFullYear()}
             onChange={handleYearChange}
             className="h-7 rounded-md border border-slate-200 bg-white px-1.5 text-xs font-medium text-slate-700"
-            aria-label="Select year"
+            aria-label={t("selectYear")}
           >
             {yearOptions.map((year) => (
               <option key={year} value={year}>
@@ -199,7 +201,7 @@ export function Calendar({
             value={currentMonth.getMonth()}
             onChange={handleMonthChange}
             className="h-7 rounded-md border border-slate-200 bg-white px-1.5 text-xs font-medium text-slate-700"
-            aria-label="Select month"
+            aria-label={t("selectMonth")}
           >
             {monthNames.map((monthName, monthIndex) => (
               <option key={monthName} value={monthIndex}>
@@ -241,7 +243,7 @@ export function Calendar({
                 ? "border-rose-300 text-rose-700"
                 : "border-slate-200 text-slate-700",
             )}
-            aria-label="Type date manually"
+            aria-label={t("typeDateManually")}
           />
           <Button
             type="button"

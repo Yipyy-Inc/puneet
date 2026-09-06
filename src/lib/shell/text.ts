@@ -47,6 +47,7 @@ type ShellCatalogue = {
   support: Record<string, string>;
   banners: Record<string, string>;
   search: Record<string, string>;
+  primitives: Record<string, string>;
 };
 
 /** The five groups, which are the five surfaces of the shell. */

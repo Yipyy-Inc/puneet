@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 type HH_MM = string; // "HH:mm"
 
@@ -73,7 +74,7 @@ export function TimePickerLux({
   onValueChange,
   onOpenChange: onOpenChangeProp,
   disabled,
-  placeholder = "Select time",
+  placeholder,
   className,
   stepMinutes = 5,
   min,
@@ -81,6 +82,7 @@ export function TimePickerLux({
   displayMode = "dialog",
   defaultOpen = false,
 }: TimePickerLuxProps) {
+  const t = useShellText("primitives");
   const [open, setOpen] = React.useState(defaultOpen);
 
   const handleOpenChange = (next: boolean) => {
@@ -206,7 +208,7 @@ export function TimePickerLux({
     <>
       <div className="border-b border-slate-200 bg-linear-to-r from-sky-50 via-white to-indigo-50 px-3 py-2.5">
         <p className="text-[11px] font-semibold tracking-wider text-sky-700 uppercase">
-          Select Time
+          {t("selectTime")}
         </p>
         <p className="mt-0.5 text-sm font-semibold text-slate-800 tabular-nums">
           {display || "--:-- --"}
@@ -215,7 +217,7 @@ export function TimePickerLux({
 
       <div className="grid grid-cols-3 gap-1 p-2">
         <TimeColumn
-          label="Hour"
+          label={t("hour")}
           items={hours.map((h) => ({
             value: h,
             label: String(h),
@@ -225,7 +227,7 @@ export function TimePickerLux({
           onSelect={handleHour}
         />
         <TimeColumn
-          label="Min"
+          label={t("minute")}
           items={minutes.map((m) => ({
             value: m,
             label: pad2(m),
@@ -236,7 +238,7 @@ export function TimePickerLux({
         />
         <div className="flex flex-col">
           <p className="px-1 pb-1 text-center text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-            Period
+            {t("period")}
           </p>
           <div className="flex flex-col gap-1 rounded-lg border border-slate-100 bg-slate-50/60 p-1">
             {(["AM", "PM"] as const).map((p) => {
@@ -328,10 +330,10 @@ export function TimePickerLux({
             )}
           >
             <DialogPrimitive.Title className="sr-only">
-              Select time
+              {t("selectTime")}
             </DialogPrimitive.Title>
             <DialogPrimitive.Description className="sr-only">
-              Choose an hour, minute, and period.
+              {t("chooseHourMinutePeriod")}
             </DialogPrimitive.Description>
 
             {panel}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 export interface TimeRangeSliderProps {
   minTime?: string; // HH:mm format, default "06:00"
@@ -38,6 +39,7 @@ export function TimeRangeSlider({
   className,
   defaultExpanded = true,
 }: TimeRangeSliderProps) {
+  const tr = useShellText("primitives");
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<"start" | "end" | null>(null);
@@ -244,7 +246,7 @@ export function TimeRangeSlider({
         <div>
           <div className="text-lg font-bold">{startTime}</div>
           <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-            Check-in Time
+            {tr("checkInTime")}
           </div>
         </div>
         <div className="text-center">
@@ -256,7 +258,7 @@ export function TimeRangeSlider({
         <div className="text-right">
           <div className="text-lg font-bold">{endTime}</div>
           <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
-            Check-out Time
+            {tr("checkOutTime")}
           </div>
         </div>
       </div>
@@ -319,7 +321,9 @@ export function TimeRangeSlider({
       {/* Manual time inputs */}
       <div className="grid grid-cols-2 gap-3 pt-1">
         <div className="space-y-1">
-          <Label className="text-muted-foreground text-xs">Check-in</Label>
+          <Label className="text-muted-foreground text-xs">
+            {tr("checkIn")}
+          </Label>
           <TimePickerLux
             value={startTime}
             min={minutesToTime(startMinMinutes)}
@@ -332,7 +336,9 @@ export function TimeRangeSlider({
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-muted-foreground text-xs">Check-out</Label>
+          <Label className="text-muted-foreground text-xs">
+            {tr("checkOut")}
+          </Label>
           <TimePickerLux
             value={endTime}
             min={minutesToTime(endMinMinutes)}
