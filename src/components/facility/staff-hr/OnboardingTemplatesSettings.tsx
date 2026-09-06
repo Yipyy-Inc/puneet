@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { ClipboardList, Plus, Trash2, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
   useOnboardingTemplatesQuery,
@@ -64,23 +64,20 @@ export function OnboardingTemplatesSettings() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ClipboardList className="text-muted-foreground size-5" />
-            <CardTitle>Onboarding templates</CardTitle>
-          </div>
-          <Button
-            onClick={create}
-            className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-          >
+        {/* The h1 names the section, so this row is the description and its
+            one action — the description first, because an action above the
+            sentence explaining it reads backwards. §1: there is no second
+            action colour, so the emerald is gone with it. */}
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-muted-foreground text-sm">
+            Role-appropriate onboarding flows. The active template matching a
+            new hire’s role drives their self-serve checklist.
+          </p>
+          <Button onClick={create} className="shrink-0 gap-1.5">
             <Plus className="size-4" />
             New template
           </Button>
         </div>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Role-appropriate onboarding flows. The active template matching a new
-          hire’s role drives their self-serve checklist.
-        </p>
       </CardHeader>
       <CardContent className="space-y-3">
         {templates.length === 0 ? (

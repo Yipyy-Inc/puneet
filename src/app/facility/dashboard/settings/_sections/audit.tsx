@@ -5,7 +5,7 @@ import { Download } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DataTable, type ColumnDef } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppLocale } from "@/hooks/use-app-locale";
@@ -109,7 +109,6 @@ export function AuditSection() {
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle>Audit log</CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
               Every change to this facility&rsquo;s records, and who made it.
             </p>

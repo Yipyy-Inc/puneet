@@ -4,7 +4,7 @@ import { useSettings } from "@/hooks/use-settings";
 
 import { SettingsBlock } from "@/components/ui/settings-block";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useFacilityProfile,
@@ -93,9 +93,6 @@ export function BusinessProfileCard() {
   if (isPending) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Business profile</CardTitle>
-        </CardHeader>
         <CardContent className="space-y-3">
           <Skeleton className="h-14 w-14 rounded-lg" />
           <Skeleton className="h-9 w-full" />

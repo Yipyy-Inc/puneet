@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -154,18 +154,18 @@ export function FormNotificationSettings() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bell className="text-primary size-5" />
-              <CardTitle>Form notifications</CardTitle>
-            </div>
-            <Button size="sm" onClick={handleSave}>
+          {/* The h1 names the section, so this row is the description and its
+              one action — description first, because an action above the
+              sentence explaining it reads backwards. */}
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-muted-foreground text-sm">
+              Configure when staff and customers are notified about form
+              activity.
+            </p>
+            <Button size="sm" className="shrink-0" onClick={handleSave}>
               Save changes
             </Button>
           </div>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Configure when staff and customers are notified about form activity.
-          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Staff notifications */}

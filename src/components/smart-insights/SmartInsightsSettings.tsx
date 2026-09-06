@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -144,10 +143,6 @@ export function SmartInsightsSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <Sparkles className="size-6 text-amber-500" />
-          Smart insights settings
-        </h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Control which insights run, how you&#39;re notified, and override the
           thresholds that decide when an insight fires.

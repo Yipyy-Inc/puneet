@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Briefcase, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useStaffHrConfig,
@@ -49,10 +49,6 @@ export function EmploymentTypesSettings() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Briefcase className="text-muted-foreground size-5" />
-          <CardTitle>Employment types</CardTitle>
-        </div>
         <p className="text-muted-foreground mt-1 text-sm">
           The employment types available when hiring or editing a staff member.
         </p>

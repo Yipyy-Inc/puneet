@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -142,7 +142,6 @@ function VaccinationRequirementsEditor({
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle>Vaccination requirements</CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
               Configure which vaccines are required for each animal type.
               Customers will be asked to provide these vaccines and staff will
