@@ -146,7 +146,7 @@ export function SmartInsightsSettings() {
       <div>
         <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
           <Sparkles className="size-6 text-amber-500" />
-          Smart Insights Settings
+          Smart insights settings
         </h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Control which insights run, how you&#39;re notified, and override the

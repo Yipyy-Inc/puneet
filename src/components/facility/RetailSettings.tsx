@@ -400,7 +400,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Package className="size-4" />
-            Product Categories
+            Product categories
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -510,7 +510,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Tag className="size-4" />
-            Default Pricing
+            Default pricing
           </CardTitle>
           <p className="text-muted-foreground text-xs">
             How new products are priced by default. Individual products can
@@ -600,7 +600,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Receipt className="size-4" />
-            Tax Configuration
+            Tax configuration
           </CardTitle>
           <p className="text-muted-foreground text-xs">
             Single source of truth for POS and invoice tax. Replaces the
@@ -733,7 +733,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Sparkles className="size-4" />
-            Manage Brands
+            Manage brands
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -923,7 +923,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Tag className="size-4" />
-            Product Tags
+            Product tags
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -1007,7 +1007,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Ruler className="size-4" />
-            Units of Measure
+            Units of measure
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -1067,7 +1067,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Package className="size-4" />
-            Low Stock Alerts
+            Low stock alerts
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -1115,7 +1115,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Receipt className="size-4" />
-            Receipt Settings
+            Receipt settings
           </CardTitle>
           <p className="text-muted-foreground text-xs">
             Customize how POS receipts look and how they reach customers.

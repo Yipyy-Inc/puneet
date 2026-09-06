@@ -285,7 +285,7 @@ export function EvaluationBookingWizardSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <CalendarDays className="size-4" />
-            Available Days
+            Available days
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -326,7 +326,7 @@ export function EvaluationBookingWizardSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Clock className="size-4" />
-            Session Lengths
+            Session lengths
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -480,7 +480,7 @@ export function EvaluationBookingWizardSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Clock className="size-4" />
-            Availability Windows
+            Availability windows
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -551,7 +551,7 @@ export function EvaluationBookingWizardSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <LayoutGrid className="size-4" />
-            Slot Configuration
+            Slot configuration
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -700,7 +700,7 @@ export function EvaluationBookingWizardSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Eye className="size-4" />
-            Booking Wizard Preview
+            Booking wizard preview
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -73,7 +73,7 @@ export function IntegrationsSection() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="size-5" />
-            Accounting Integration
+            Accounting integration
           </CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
             Post every sale, payment and refund to your books.

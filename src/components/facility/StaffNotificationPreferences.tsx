@@ -192,7 +192,7 @@ export function StaffNotificationPreferences({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="size-5" />
-            Delivery Channels
+            Delivery channels
           </CardTitle>
           <CardDescription>
             Enabling a channel means every category you&rsquo;ve opted into
@@ -248,7 +248,7 @@ export function StaffNotificationPreferences({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ListChecks className="size-5" />
-            Notification Categories
+            Notification categories
           </CardTitle>
           <CardDescription>
             Choose how you receive each category. Email and SMS are only
@@ -321,7 +321,7 @@ export function StaffNotificationPreferences({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="size-5 text-red-600" />
-            Urgent Overrides
+            Urgent overrides
           </CardTitle>
           <CardDescription>
             Safety-critical alerts you&rsquo;ll always receive, even if

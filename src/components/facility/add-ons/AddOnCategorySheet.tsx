@@ -98,7 +98,7 @@ export function AddOnCategorySheet({
             <div className="flex size-8 items-center justify-center rounded-lg bg-violet-50 ring-1 ring-violet-200">
               <FolderOpen className="size-4 text-violet-600" />
             </div>
-            Add-On Categories
+            Add-on categories
           </SheetTitle>
           <SheetDescription>
             Organize your add-ons into categories that appear in the booking

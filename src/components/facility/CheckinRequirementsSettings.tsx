@@ -319,7 +319,7 @@ export function CheckinRequirementsSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <ClipboardCheck className="size-4" />
-            Check-in Sections
+            Check-in sections
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -371,7 +371,7 @@ export function CheckinRequirementsSettings() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Plus className="size-4" />
-              Custom Sections
+              Custom sections
             </CardTitle>
           </div>
         </CardHeader>

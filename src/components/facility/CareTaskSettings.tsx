@@ -91,7 +91,7 @@ export function CareTaskSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <UtensilsCrossed className="size-4" />
-            Feeding Feedback Options
+            Feeding feedback options
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -172,7 +172,7 @@ export function CareTaskSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Pill className="size-4" />
-            Medication Feedback Options
+            Medication feedback options
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">

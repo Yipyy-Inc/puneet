@@ -76,7 +76,7 @@ export function YipyyGoSettings({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                Yipyy Express Check-in Forms
+                Yipyy Express check-in forms
               </CardTitle>
               <CardDescription>
                 Configure pre-check-in forms that customers complete before

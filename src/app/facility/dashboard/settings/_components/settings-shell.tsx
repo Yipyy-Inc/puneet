@@ -100,9 +100,19 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="space-y-6 p-6">
+      {/* ── THE HEADER NAMES THE SECTION, NOT THE AREA (§5b2) ────────────
+          §5b2 gives a screen one 32px title, and the screen here IS the
+          section — fifty addresses that all printed the same `h1`, "Settings",
+          with the section's own name demoted into a card below it.
+
+          That is the client's "hard to use" in one line. Roles & permissions
+          is 12,697px tall; scroll past the first card and nothing on screen
+          says which of the fifty you are in. The index keeps "Settings",
+          because there the page really is the area, and `← All settings`
+          above the body carries the parent either way. */}
       <PageHeader
-        title={label.text("title")}
-        description={label.text("description")}
+        title={onSection && leaf ? label.leaf(leaf) : label.text("title")}
+        description={onSection ? undefined : label.text("description")}
       />
 
       <div className="flex flex-col gap-6 lg:flex-row">

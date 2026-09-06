@@ -183,7 +183,7 @@ export function TrainingDisciplinesManager() {
         <div>
           <CardTitle className="flex items-center gap-2">
             <Layers className="text-muted-foreground size-4" />
-            Training Disciplines
+            Training disciplines
           </CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
             Disciplines tag every course, exercise, and report card so the

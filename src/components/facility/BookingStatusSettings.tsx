@@ -378,7 +378,7 @@ export function BookingStatusSettings() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Workflow className="size-4" />
-                Status Flow Preview
+                Status flow preview
                 <span className="text-muted-foreground rounded-full border px-1.5 py-0.5 text-[10px] font-normal">
                   Read-only
                 </span>
@@ -452,7 +452,7 @@ export function BookingStatusSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Lock className="size-4" />
-            System Statuses
+            System statuses
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -488,7 +488,7 @@ export function BookingStatusSettings() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Palette className="size-4" />
-              Custom Statuses
+              Custom statuses
             </CardTitle>
             <Button
               variant="outline"
@@ -600,7 +600,7 @@ export function BookingStatusSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Zap className="size-4" />
-            Auto-Transition Rules
+            Auto-transition rules
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

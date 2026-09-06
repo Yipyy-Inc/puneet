@@ -283,7 +283,7 @@ function DepositRulesEditor({
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <RotateCcw className="size-4 text-sky-600" />
-            Deposit Refund Policy
+            Deposit refund policy
           </CardTitle>
           <p className="text-muted-foreground mt-1 text-xs">
             Your{" "}

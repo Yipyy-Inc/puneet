@@ -105,7 +105,7 @@ function IncidentReportingEditor({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Siren className="size-5" />
-              Incident Reporting
+              Incident reporting
             </CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
               Defaults and safeguards for how staff report and follow up on
