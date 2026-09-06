@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSettings } from "@/hooks/use-settings";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useServiceTypeLabel } from "@/lib/settings/use-service-types";
 
 import type { DropOffPickUpOverride } from "@/types/facility";
 
@@ -19,6 +20,9 @@ import { SERVICE_BLOCK_OPTIONS } from "./service-block-options";
 // Drop-Off & Pick-Up Time Overrides
 export function DropOffPickUpOverrideCard() {
   const t = useSettingsText().section("hours");
+  // The five built-in service names, from the same catalogue the settings
+  // rail uses — it said "Toilettage" while these chips said "Grooming".
+  const serviceLabel = useServiceTypeLabel();
   const { dropOffPickUpOverrides, updateDropOffPickUpOverrides } =
     useSettings();
   const [newDate, setNewDate] = useState("");
@@ -118,7 +122,7 @@ export function DropOffPickUpOverrideCard() {
                       htmlFor={`dopo-svc-${opt.id}`}
                       className="cursor-pointer text-sm font-normal"
                     >
-                      {opt.label}
+                      {serviceLabel(opt.id, opt.label)}
                     </Label>
                   </div>
                 ))}

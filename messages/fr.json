@@ -881,5 +881,14 @@
       "/facility/dashboard/calendar": "Calendrier",
       "/facility/dashboard/tasks": "Tâches"
     }
+  },
+  "serviceTypes": {
+    "daycare": "Garderie",
+    "boarding": "Pension",
+    "grooming": "Toilettage",
+    "training": "Dressage",
+    "evaluation": "Évaluation",
+    "retail": "Vente au détail",
+    "vet": "Vétérinaire"
   }
 }

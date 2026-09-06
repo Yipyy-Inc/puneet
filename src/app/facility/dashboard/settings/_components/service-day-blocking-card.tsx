@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSettings } from "@/hooks/use-settings";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useServiceTypeLabel } from "@/lib/settings/use-service-types";
 
 import type { ServiceDateBlock } from "@/types/facility";
 
@@ -21,6 +22,9 @@ type BlockType = "full" | "check_in" | "check_out";
 // Service-Specific Day Blocking (override regular schedule)
 export function ServiceDayBlockingCard() {
   const t = useSettingsText().section("hours");
+  // The five built-in service names, from the same catalogue the settings
+  // rail uses — it said "Toilettage" while these chips said "Grooming".
+  const serviceLabel = useServiceTypeLabel();
   const { serviceDateBlocks, updateServiceDateBlocks } = useSettings();
   const [newDate, setNewDate] = useState("");
   const [newServices, setNewServices] = useState<string[]>([]);
@@ -117,7 +121,7 @@ export function ServiceDayBlockingCard() {
                       htmlFor={`block-svc-${opt.id}`}
                       className="cursor-pointer text-sm font-normal"
                     >
-                      {opt.label}
+                      {serviceLabel(opt.id, opt.label)}
                     </Label>
                   </div>
                 ))}
@@ -232,8 +236,11 @@ export function ServiceDayBlockingCard() {
                                 variant="secondary"
                                 className="text-xs"
                               >
-                                {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
-                                  ?.label ?? s}
+                                {serviceLabel(
+                                  s,
+                                  SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
+                                    ?.label ?? s,
+                                )}
                               </Badge>
                             ))
                           )}
