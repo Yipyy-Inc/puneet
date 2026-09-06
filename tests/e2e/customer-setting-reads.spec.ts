@@ -39,6 +39,7 @@ import { ACCOUNTS, signIn } from "./_auth";
 // ============================================================================
 
 const ROUTE = "/api/customer/yipyy-go";
+const APP_ROUTE = "/api/customer/mobile-app";
 
 test.describe("a customer reads the form they are asked for", () => {
   test("signed out gets 401, not a facility's settings", async ({
@@ -110,5 +111,59 @@ test.describe("a customer reads the form they are asked for", () => {
       [200, 404],
       `owner read of ${ROUTE} answered ${response.status()}`,
     ).toContain(response.status());
+  });
+});
+
+// ── AND THE SECOND CUSTOMER-VISIBLE DOMAIN ADDED THE SAME DAY ────────────
+//
+// /api/customer/mobile-app, for `mobile_app_config`. Same resolution — through
+// the client row, not `getFacilityContext()` — and the same reason it matters:
+// `enableLiveCamera` decides whether a pet owner is offered a live feed of
+// their own dog, so a route that answered from the DEMO facility would offer
+// somebody a camera their facility does not run.
+test.describe("a customer reads which app features they are offered", () => {
+  test("signed out gets 401, not a facility's app config", async ({
+    request,
+  }) => {
+    const response = await request.get(APP_ROUTE, { failOnStatusCode: false });
+    expect(
+      response.status(),
+      "an unauthenticated caller reached a facility's mobile app config",
+    ).toBe(401);
+  });
+
+  test("a customer gets a boolean for every feature flag a screen reads", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+
+    const response = await page.request.get(APP_ROUTE, {
+      failOnStatusCode: false,
+    });
+    expect(
+      [200, 404],
+      `customer read of ${APP_ROUTE} answered ${response.status()}`,
+    ).toContain(response.status());
+
+    if (response.status() === 404) {
+      test.skip(true, "this environment's customer has no client record");
+      return;
+    }
+
+    const body = (await response.json()) as {
+      config?: Record<string, unknown>;
+      configured?: unknown;
+    };
+
+    // `enableLiveCamera` is the one with consequence — the camera page and the
+    // nav item both branch on it, and `undefined` is falsy, so a missing field
+    // would silently HIDE the feature rather than fail loudly.
+    expect(
+      typeof body.config?.enableLiveCamera,
+      "enableLiveCamera gates the customer camera page and its nav item",
+    ).toBe("boolean");
+    expect(typeof body.config?.enableBookingFlow).toBe("boolean");
+    expect(typeof body.config?.enableLoyaltyProgram).toBe("boolean");
+    expect(typeof body.configured).toBe("boolean");
   });
 });

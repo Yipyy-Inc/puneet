@@ -178,28 +178,21 @@ export interface MobileAppSettings {
   privacyPolicyUrl: string;
 }
 
-export const mobileAppSettings: MobileAppSettings = {
-  appName: "PawCare",
-  appIcon: "/app-icon.png",
-  splashScreen: "/splash-screen.png",
-  primaryColor: "#3B82F6",
-  secondaryColor: "#8B5CF6",
-  accentColor: "#10B981",
-  logoUrl: "/colored-logo.png",
-  iosAppId: "com.pawcare.facility",
-  androidPackageName: "com.pawcare.facility",
-  appStoreUrl: "https://apps.apple.com/app/pawcare",
-  playStoreUrl:
-    "https://play.google.com/store/apps/details?id=com.pawcare.facility",
-  enablePushNotifications: true,
-  enableInAppMessaging: true,
-  enableLiveCamera: true,
-  enableBookingFlow: true,
-  enableLoyaltyProgram: true,
-  customDomain: "app.pawcare.com",
-  termsOfServiceUrl: "https://pawcare.com/terms",
-  privacyPolicyUrl: "https://pawcare.com/privacy",
-};
+// ── THE SHIPPED MOBILE APP CONFIG IS GONE (2026-09-06) ───────────────────
+//
+// It was another company entirely — appName "PawCare", iosAppId
+// "com.pawcare.facility", customDomain "app.pawcare.com", and terms and privacy
+// URLs on pawcare.com — and every facility opening the mobile app settings
+// screen was shown it as though it were their own configuration.
+//
+// Worse, `enableLiveCamera: true` was read by the CUSTOMER portal in two
+// places to decide whether to offer a live feed of somebody's pet, so every
+// facility advertised a capability nobody there had switched on.
+//
+// It lives in `facility_settings.mobile_app_config` now, and the fallback is
+// EMPTY: no app name, no bundle id, no feature enabled. Read it with
+// `useMobileAppConfig()` inside the facility portal or `useCustomerMobileApp()`
+// in the customer portal — see lib/settings/mobile-app.ts.
 
 // Digital Waivers & E-Signatures
 export type WaiverServiceTag =

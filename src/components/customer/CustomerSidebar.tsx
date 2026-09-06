@@ -29,7 +29,8 @@ import {
   GenericSidebar,
   type MenuSection,
 } from "@/components/ui/generic-sidebar";
-import { petCams, mobileAppSettings } from "@/data/additional-features";
+import { petCams } from "@/data/additional-features";
+import { useCustomerMobileApp } from "@/lib/api/customer-mobile-app";
 import { estimates } from "@/data/estimates";
 import { reportCardQueries } from "@/lib/api/report-cards";
 import {
@@ -63,6 +64,8 @@ export function CustomerSidebar() {
   const t = useShellText("customer");
   const signOutEverywhere = useSignOutEverywhere();
   const { selectedFacility } = useCustomerFacility();
+  const { config: mobileApp, isPending: mobileAppPending } =
+    useCustomerMobileApp();
   const isMounted = useHydrated();
 
   const { client: customer } = useCurrentCustomer();
@@ -203,7 +206,11 @@ export function CustomerSidebar() {
   // Check if cameras are enabled for customers (only on client)
   const camerasEnabled = useMemo(() => {
     if (!isMounted || !accessContext) return false;
-    if (!mobileAppSettings.enableLiveCamera) return false;
+    // The facility's own switch, from their client row. It was a bundled fixture
+    // that shipped true, so this nav item appeared for every customer whether
+    // or not their facility offered a feed.
+    if (mobileAppPending) return false;
+    if (!mobileApp.enableLiveCamera) return false;
     if (!cameraIntegrationConfig.isEnabled) return false;
 
     return petCams.some((cam) => {
@@ -215,7 +222,7 @@ export function CustomerSidebar() {
       return ruleSet ? passesRuleSet(ruleSet) : false;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted, accessContext]);
+  }, [isMounted, accessContext, mobileApp.enableLiveCamera, mobileAppPending]);
 
   const menuSections: MenuSection[] = useMemo(() => {
     const sections: MenuSection[] = [

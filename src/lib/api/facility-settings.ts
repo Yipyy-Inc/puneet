@@ -50,6 +50,7 @@ import type {
 } from "@/lib/settings/addons";
 import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
 import type { TagNotePolicy } from "@/lib/settings/tag-notes";
+import type { MobileAppConfig } from "@/lib/settings/mobile-app";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
 import type { RebookConfig } from "@/lib/settings/rebook";
@@ -125,6 +126,15 @@ export interface FacilitySettings {
    * and who may read, write, edit and delete a note of each category.
    */
   tag_note_settings: SettingState<TagNotePolicy>;
+  /**
+   * The white-label mobile app: name, branding, store links, and which
+   * features it offers a customer.
+   *
+   * The fallback is EMPTY, so configured:false and "no app set up" are the
+   * same thing here — which is the honest reading, and not what the fixture
+   * said.
+   */
+  mobile_app_config: SettingState<MobileAppConfig>;
   /**
    * Expected visit frequency per service, and whether lapsed clients for it may
    * be messaged. `configured: false` means the Lapsed list is computed from the
@@ -449,6 +459,21 @@ export function useTagNotePolicy(): {
   return {
     policy: settings.tag_note_settings.value,
     configured: settings.tag_note_settings.configured,
+    isPending,
+  };
+}
+
+/** This facility's white-label mobile app, or the empty config if none is set up. */
+export function useMobileAppConfig(): {
+  config: MobileAppConfig;
+  /** False means no row: this facility has not set up a mobile app. */
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    config: settings.mobile_app_config.value,
+    configured: settings.mobile_app_config.configured,
     isPending,
   };
 }
