@@ -234,15 +234,27 @@ test.describe("role editor writes", () => {
     // the name, the description and a `7/12` badge, and you open the one you
     // are changing. This spec reaches for a row INSIDE one, so it has to do
     // the same thing first.
-    const groups = page.locator('[data-slot="permission-group-toggle"]');
-    for (let i = 0; i < (await groups.count()); i += 1) {
-      const toggle = groups.nth(i);
-      if ((await toggle.getAttribute("aria-expanded")) === "false") {
-        await toggle.click();
-      }
+    // ── OPEN THE ONE GROUP THAT HOLDS THIS PERMISSION ────────────────────
+    //
+    // The permission groups start closed (the editor column was 11,784px with
+    // every one open), so a row inside one has to be revealed first — which is
+    // what a person does too.
+    //
+    // ONE group, not all of them, and that is the second attempt. The first
+    // clicked every toggle in turn and timed out at 120s: each click
+    // re-renders the whole editor, so twenty of them spent the test's entire
+    // budget before it ever reached the row. `manage_staff` lives under "Staff
+    // management" (src/types/facility-staff.ts) — open that and stop.
+    const staffGroup = page
+      .locator('[data-slot="permission-group-toggle"]')
+      .filter({ hasText: "Staff management" })
+      .first();
+    if ((await staffGroup.getAttribute("aria-expanded")) === "false") {
+      await staffGroup.click();
     }
 
     const label = page.getByText("Manage staff", { exact: true }).first();
+
     await label.scrollIntoViewIfNeeded();
     const control = label
       .locator(
