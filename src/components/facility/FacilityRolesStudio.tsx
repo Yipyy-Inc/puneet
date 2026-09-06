@@ -1037,7 +1037,20 @@ export function PermissionsGrid({
             key={group.id}
             className="border-border/60 overflow-hidden rounded-xl border"
           >
-            <div className="bg-muted/40 flex items-center justify-between gap-2 border-b px-3 py-2">
+            {/* ── THE TOGGLE MUST NOT BE CRUSHED BY ITS OWN ACTIONS ────────
+
+                Measured: the button below was 181px wide at 1440, 21px at
+                1280 and ZERO at 1100 and under. It is `flex-1 min-w-0` beside
+                a `shrink-0` group holding "Grant all in section", "Revoke all
+                in section" and a badge — so the only thing that could give was
+                the control that OPENS the group, and below 1100px a person
+                could not click it at all.
+
+                Found by CI, which resolved this exact button and then retried
+                223 times on "element is not visible". Wrapping the row, and
+                giving the toggle a basis, drops the actions onto their own
+                line instead of taking the toggle's width to nothing. */}
+            <div className="bg-muted/40 flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
               <button
                 type="button"
                 // Named so a spec can open a group the way a person does.
@@ -1046,7 +1059,7 @@ export function PermissionsGrid({
                 // aria-expanded, which every Select on the page also carries.
                 data-slot="permission-group-toggle"
                 onClick={() => toggleCollapse(group.id)}
-                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                className="flex min-w-0 flex-1 basis-48 items-center gap-2 text-left"
                 aria-expanded={!isCollapsed}
               >
                 <ChevronDown
