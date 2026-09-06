@@ -187,7 +187,7 @@ export function DatePicker({
   const applyManualDate = () => {
     const typedDate = parseTypedDate(manualDateInput);
     if (!typedDate) {
-      setManualInputError("Use YYYY-MM-DD, for example 2026-09-01");
+      setManualInputError(t("dateFormatError"));
       return;
     }
 
@@ -283,7 +283,7 @@ export function DatePicker({
                     applyManualDate();
                   }
                 }}
-                placeholder="YYYY-MM-DD"
+                placeholder={t("dateFormatHint")}
                 className={cn(
                   "h-8 flex-1 rounded-md border bg-white px-2.5 text-xs outline-none",
                   "focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-200",
@@ -300,7 +300,7 @@ export function DatePicker({
                 className="h-8 border-slate-200 bg-white px-3 text-xs"
                 onClick={applyManualDate}
               >
-                Apply
+                {t("apply")}
               </Button>
             </div>
             <p
@@ -311,7 +311,7 @@ export function DatePicker({
                   : "text-slate-500",
               )}
             >
-              {manualInputError || "Format: YYYY-MM-DD"}
+              {manualInputError || t("dateFormatLabel")}
             </p>
           </div>
         )}
@@ -357,7 +357,7 @@ export function DatePicker({
             className="h-7 text-xs"
             onClick={() => setOpen(false)}
           >
-            Close
+            {t("close")}
           </Button>
           {(value ?? "").length > 0 && (
             <Button
@@ -367,7 +367,7 @@ export function DatePicker({
               className="h-7 border-slate-200 bg-white text-xs"
               onClick={handleClear}
             >
-              Clear
+              {t("clear")}
             </Button>
           )}
         </div>

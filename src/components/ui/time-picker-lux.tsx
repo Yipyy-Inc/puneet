@@ -286,7 +286,7 @@ export function TimePickerLux({
             });
           }}
         >
-          Now
+          {t("now")}
         </Button>
         <Button
           type="button"
@@ -295,7 +295,7 @@ export function TimePickerLux({
           className="h-7 border-slate-200 bg-white text-xs"
           onClick={() => handleOpenChange(false)}
         >
-          Done
+          {t("done")}
         </Button>
       </div>
     </>

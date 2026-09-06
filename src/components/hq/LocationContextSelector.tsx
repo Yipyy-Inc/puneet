@@ -14,8 +14,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSidebar } from "@/components/ui/sidebar";
 import { locationStyles } from "@/lib/hq/location-styles";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 export function LocationContextSelector() {
+  const t = useShellText("account");
   const { state } = useSidebar();
   const isExpanded = state === "expanded";
   const {
@@ -33,7 +35,7 @@ export function LocationContextSelector() {
 
   const label = isHQView
     ? "All Locations"
-    : (currentLocation?.name ?? "Select Location");
+    : (currentLocation?.name ?? t("selectLocation"));
 
   const shortLabel = isHQView ? "HQ" : (currentLocation?.shortCode ?? "??");
 
@@ -53,7 +55,7 @@ export function LocationContextSelector() {
             "focus-visible:ring-primary focus-visible:ring-1 focus-visible:outline-none",
             isExpanded ? "gap-2.5 px-3 py-2" : "justify-center p-2",
           )}
-          aria-label="Switch location"
+          aria-label={t("switchLocation")}
         >
           <div className="relative shrink-0">
             <div
@@ -94,7 +96,7 @@ export function LocationContextSelector() {
 
       <DropdownMenuContent align="start" sideOffset={6} className="w-56">
         <DropdownMenuLabel className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-          Location Context
+          {t("locationContext")}
         </DropdownMenuLabel>
 
         <DropdownMenuItem
@@ -108,9 +110,9 @@ export function LocationContextSelector() {
             <Globe className="size-3.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium">All Locations (HQ)</p>
+            <p className="text-xs font-medium">{t("allLocations")}</p>
             <p className="text-muted-foreground text-[10px]">
-              Cross-location view
+              {t("crossLocationView")}
             </p>
           </div>
           {isHQView && <Check className="text-primary size-3.5 shrink-0" />}
@@ -143,13 +145,13 @@ export function LocationContextSelector() {
                   <p className="truncate text-xs font-medium">{loc.name}</p>
                   {loc.isPrimary && (
                     <span className="rounded-sm bg-sky-50 px-1 py-px text-[9px] font-semibold text-sky-600 dark:bg-sky-950 dark:text-sky-400">
-                      Main
+                      {t("mainLocation")}
                     </span>
                   )}
                 </div>
                 <p className="text-muted-foreground flex items-center gap-1 text-[10px]">
                   <MapPin className="size-2.5" />
-                  {loc.address?.city ?? "No address yet"}
+                  {loc.address?.city ?? t("noAddress")}
                   {loc.status !== "active" && (
                     <span className="ml-1 text-rose-400">· Inactive</span>
                   )}

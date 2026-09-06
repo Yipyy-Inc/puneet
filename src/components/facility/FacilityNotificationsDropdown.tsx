@@ -41,6 +41,7 @@ import {
 } from "@/lib/express-checkin-reminder";
 import { NotificationRowMenu } from "@/components/facility/NotificationRowMenu";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface FacilityNotificationsDropdownProps {
   facilityId?: number;
@@ -170,6 +171,7 @@ export function FacilityNotificationsDropdown({
   facilityId = 11,
   viewAllHref = "/facility/notifications",
 }: FacilityNotificationsDropdownProps) {
+  const tn = useShellText("notifications");
   const base = useFacilityNotifications();
   const schedule = useScheduleNotifications();
   const tasks = useTaskNotifications();
@@ -247,7 +249,7 @@ export function FacilityNotificationsDropdown({
                 variant="ghost"
                 size="icon"
                 className="group relative size-10 rounded-xl"
-                aria-label="Notifications"
+                aria-label={tn("title")}
               >
                 <Bell className="text-muted-foreground group-hover:text-foreground size-5 transition-colors" />
                 {unreadCount > 0 && (
@@ -263,7 +265,7 @@ export function FacilityNotificationsDropdown({
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent side="bottom" align="center">
-            Notifications
+            {tn("title")}
           </TooltipContent>
         </Tooltip>
         <DropdownMenuContent
@@ -276,7 +278,7 @@ export function FacilityNotificationsDropdown({
 
           {/* Zone 1 — header */}
           <div className="flex items-center justify-between border-b px-4 py-2.5">
-            <span className="text-sm font-semibold">Notifications</span>
+            <span className="text-sm font-semibold">{tn("title")}</span>
             {unreadCount > 0 && (
               <Button
                 variant="ghost"
@@ -284,7 +286,7 @@ export function FacilityNotificationsDropdown({
                 className="text-muted-foreground h-auto p-0 text-xs"
                 onClick={markAllRead}
               >
-                Mark all read
+                {tn("markAllRead")}
               </Button>
             )}
           </div>
@@ -293,13 +295,13 @@ export function FacilityNotificationsDropdown({
           <div className="max-h-[440px] overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="text-muted-foreground py-10 text-center text-sm">
-                No notifications
+                {tn("none")}
               </div>
             ) : (
               <div className="py-1">
                 {urgentRows.length > 0 && (
                   <p className="px-4 pt-1.5 pb-1 text-[10px] font-semibold tracking-wider text-red-600 uppercase dark:text-red-400">
-                    Action Required
+                    {tn("actionRequired")}
                   </p>
                 )}
                 {urgentRows.map((n) => (
@@ -336,7 +338,7 @@ export function FacilityNotificationsDropdown({
               className="text-primary shrink-0 text-xs font-medium hover:underline"
               onClick={() => setOpen(false)}
             >
-              View all notifications →
+              {tn("viewAll")} →
             </Link>
           </div>
         </DropdownMenuContent>

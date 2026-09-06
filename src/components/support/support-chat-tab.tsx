@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { AdminSupportMessage } from "@/types/support-chat";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 const INPUT_ID = "facility-support-input";
 
@@ -25,6 +26,7 @@ function formatTime(at: string): string {
 }
 
 export function SupportChatTab() {
+  const t = useShellText("support");
   // The facility's ACTIVE (open/pending) conversation, or null after resolving.
   const conversation = useCurrentFacilityConversation();
   const hasConversation = conversation !== null;
@@ -68,7 +70,7 @@ export function SupportChatTab() {
     setConversationStatus(conversation.id, "resolved");
     setComposerOpen(false);
     setDraft("");
-    toast.success("Conversation closed. Start a new one any time.");
+    toast.success(t("conversationClosed"));
   }
 
   return (
@@ -80,7 +82,7 @@ export function SupportChatTab() {
         </span>
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-semibold">Yipyy Support</span>
+            <span className="text-sm font-semibold">{t("yipyySupport")}</span>
             <span
               aria-hidden
               className={cn(
@@ -89,12 +91,10 @@ export function SupportChatTab() {
               )}
             />
             <span className="text-muted-foreground text-[11px] font-medium">
-              {supportOnline ? "Online" : "Offline"}
+              {supportOnline ? t("online") : t("offline")}
             </span>
           </div>
-          <p className="text-muted-foreground text-[11px]">
-            We typically reply in minutes
-          </p>
+          <p className="text-muted-foreground text-[11px]">{t("replyTime")}</p>
         </div>
       </div>
 
@@ -103,16 +103,16 @@ export function SupportChatTab() {
         <div className="bg-muted/30 flex items-center justify-between border-b px-4 py-1.5">
           <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
             <span className="size-1.5 rounded-full bg-emerald-500" />
-            Support conversation · Open
+            {t("conversationOpen")}
           </span>
           <button
             type="button"
             onClick={closeConversation}
-            aria-label="Close conversation"
+            aria-label={t("closeConversation")}
             className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium transition-colors hover:text-rose-600"
           >
             <X className="size-3" />
-            Close conversation
+            {t("closeConversation")}
           </button>
         </div>
       )}
@@ -125,14 +125,13 @@ export function SupportChatTab() {
               <MessagesSquare className="size-6" />
             </span>
             <div className="space-y-1">
-              <h3 className="font-semibold tracking-tight">Chat with Yipyy</h3>
+              <h3 className="font-semibold tracking-tight">{t("chat")}</h3>
               <p className="text-muted-foreground mx-auto max-w-xs text-sm">
-                👋 Start a conversation and our support team will reply here in
-                real time.
+                👋 {t("startBlurb")}
               </p>
             </div>
             <Button onClick={() => setComposerOpen(true)}>
-              Start a conversation
+              {t("startConversation")}
             </Button>
           </div>
         ) : hasThread ? (
@@ -147,8 +146,7 @@ export function SupportChatTab() {
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
             <span className="text-2xl">👋</span>
             <p className="text-muted-foreground max-w-xs text-sm">
-              Send your first message below — our team will reply here in real
-              time.
+              {t("firstMessage")}
             </p>
           </div>
         )}
@@ -168,8 +166,8 @@ export function SupportChatTab() {
               id={INPUT_ID}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="Type a message…"
-              aria-label="Message Yipyy support"
+              placeholder={t("typeMessage")}
+              aria-label={t("messageSupport")}
             />
             <Button type="submit" size="icon" disabled={!draft.trim()}>
               <Send className="size-4" />

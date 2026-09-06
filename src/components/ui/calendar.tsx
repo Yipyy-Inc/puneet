@@ -114,7 +114,7 @@ export function Calendar({
   const handleManualApply = () => {
     const parsed = parseTypedDate(manualDateInput);
     if (!parsed) {
-      setManualInputError("Use YYYY-MM-DD, for example 2026-09-01");
+      setManualInputError(t("dateFormatError"));
       return;
     }
     setManualInputError("");
@@ -235,7 +235,7 @@ export function Calendar({
                 handleManualApply();
               }
             }}
-            placeholder="YYYY-MM-DD"
+            placeholder={t("dateFormatHint")}
             className={cn(
               "h-8 flex-1 rounded-md border px-2 text-xs outline-none",
               "focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-200",

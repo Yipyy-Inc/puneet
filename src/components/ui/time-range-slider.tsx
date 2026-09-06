@@ -363,7 +363,7 @@ export function TimeRangeSlider({
             setIsExpanded(false);
           }}
         >
-          Done
+          {tr("done")}
         </Button>
         {onApplyToAll && (
           <Button
@@ -375,7 +375,7 @@ export function TimeRangeSlider({
               setIsExpanded(false);
             }}
           >
-            Apply to All
+            {tr("applyToAll")}
           </Button>
         )}
       </div>

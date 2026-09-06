@@ -970,7 +970,7 @@ export function DateSelectionCalendar({
                   className="h-6 px-2 text-[10px]"
                   onClick={handleToday}
                 >
-                  Today
+                  {t("today")}
                 </Button>
               </div>
               <div className="rounded-lg border p-2 pt-10">

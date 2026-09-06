@@ -348,7 +348,7 @@ export function GenericCalendar<T extends CalendarItem>({
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[150px]">
-                  {config.title || "Items"}
+                  {config.title || t("items")}
                 </TableHead>
                 {weekDates.map((date) => {
                   const isTodayDate = isToday(date);
