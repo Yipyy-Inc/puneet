@@ -227,7 +227,7 @@ export function ServiceDayBlockingCard() {
                           {block.services.length ===
                           SERVICE_BLOCK_OPTIONS.length ? (
                             <Badge variant="secondary" className="text-xs">
-                              All services
+                              {t("allServices")}
                             </Badge>
                           ) : (
                             block.services.map((s) => (

@@ -91,7 +91,7 @@ const TOAST = /toast(?:\.\w+)?\(\s*"([^"]{2,})"/g;
  * the text node "Promise", which put 25 phantom strings in the one section
  * that is actually finished.
  */
-const JSX_TEXT = /(?<![=\-!<])>([^<>{}\n][^<>{}]*)</g;
+const JSX_TEXT = /(?<![=\-!<])>([^<>{}]{2,400})</g;
 
 const FRENCH_OK = /french-ok:/;
 

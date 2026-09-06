@@ -185,7 +185,7 @@ export function OneDayScheduleOverrideCard() {
                         override.services.length ===
                           SERVICE_BLOCK_OPTIONS.length ? (
                           <Badge variant="secondary" className="text-xs">
-                            All services
+                            {t("allServices")}
                           </Badge>
                         ) : override.services &&
                           override.services.length > 0 ? (
@@ -204,7 +204,7 @@ export function OneDayScheduleOverrideCard() {
                           ))
                         ) : (
                           <Badge variant="secondary" className="text-xs">
-                            All services
+                            {t("allServices")}
                           </Badge>
                         )}
                       </div>
