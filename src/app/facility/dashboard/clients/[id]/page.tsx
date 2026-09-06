@@ -18,7 +18,7 @@ import { reportCardQueries } from "@/lib/api/report-cards";
 import { sectionsOf } from "@/lib/report-cards/sections";
 import { usablePhotos } from "@/lib/report-cards/photos";
 import type { ReportCard } from "@/types/report-card";
-import { getTagsForEntity } from "@/data/tags-notes";
+import { useTagsByEntity } from "@/hooks/use-tags-notes";
 import { TagList } from "@/components/shared/TagList";
 import { NotesList } from "@/components/shared/NotesList";
 import { NotesButton } from "@/components/shared/NotesButton";
@@ -200,6 +200,7 @@ export default function ClientDetailPage({
   // `src/data/clients.ts`, so every client created since the migration was
   // told they did not exist on their own file.
   const { client, pending: clientPending } = useClientRecord(id);
+  const { tagsFor } = useTagsByEntity();
   // ── THE TWO "NEW BOOKING" BUTTONS ON THIS PAGE DID NOTHING ───────────────
   //
   // This was `facilities.find((f) => f.name === client.facility)` — the
@@ -481,8 +482,10 @@ export default function ClientDetailPage({
         new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
     );
 
-    // Get pet tags (via new tag system)
-    const tags = getTagsForEntity("pet", pet.id);
+    // `pet.id` here is the pet's numeric ref; `tagsFor` matches it against the
+    // assignments /api/tags has already translated from uuids. See
+    // src/lib/api/mappers/tag.ts for why the translation lives in the route.
+    const tags = tagsFor("pet", pet.id);
 
     // Get ban record
     const banRecord = banRecords.find(

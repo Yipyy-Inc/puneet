@@ -3,22 +3,17 @@
 import { useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import type {
+  Tag,
   TagType,
-  TagAssignment,
   Note,
   NoteCategory,
   NoteVisibility,
   PetNoteSubType,
   NoteEdit,
-} from "@/data/tags-notes";
+} from "@/types/tags";
+import { notes as allNotes } from "@/data/tags-notes";
+import { useAssignTag, useTagCatalogue, useUnassignTag } from "@/lib/api/tags";
 import {
-  tags as allTags,
-  tagAssignments as allAssignments,
-  notes as allNotes,
-} from "@/data/tags-notes";
-import {
-  logTagAssigned,
-  logTagUnassigned,
   logNoteCreated,
   logNoteUpdated,
   logNoteDeleted,
@@ -45,19 +40,40 @@ function sortNotes(a: Note, b: Note): number {
 // useTagsForEntity
 // ========================================
 
+/**
+ * The tags on one pet, client or booking.
+ *
+ * ── WHAT CHANGED ON 2026-09-06 ───────────────────────────────────────────
+ *
+ * This used to `useState` a slice of a module-level fixture array and then
+ * `push`/`splice` that array on every assign and unassign. Two consequences,
+ * neither of them visible on screen: a tag applied on one page appeared on
+ * another until the tab was closed, and then vanished. And the toast said
+ * "assigned" either way.
+ *
+ * Now `/api/tags` answers, the mutations write to
+ * `public.facility_tag_assignments`, and a failure shows the reason the route
+ * gave rather than a success message. The RETURN SHAPE is unchanged so the
+ * nineteen call sites did not have to be — `pending` is added, and every
+ * consumer that wants a skeleton can now have one.
+ */
 export function useTagsForEntity(entityType: TagType, entityId: number) {
-  const [assignments, setAssignments] = useState<TagAssignment[]>(() =>
-    allAssignments.filter(
-      (a) => a.entityType === entityType && a.entityId === entityId,
-    ),
+  const { tags: catalogue, assignments: all, pending } = useTagCatalogue();
+  const assignTag = useAssignTag();
+  const unassignTag = useUnassignTag();
+
+  const assignments = useMemo(
+    () =>
+      all.filter((a) => a.entityType === entityType && a.entityId === entityId),
+    [all, entityType, entityId],
   );
 
   const tags = useMemo(() => {
     const assignedTagIds = new Set(assignments.map((a) => a.tagId));
-    return allTags
+    return catalogue
       .filter((t) => assignedTagIds.has(t.id) && t.isActive)
       .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
-  }, [assignments]);
+  }, [assignments, catalogue]);
 
   const hasCritical = useMemo(
     () => tags.some((t) => t.priority === "critical"),
@@ -71,57 +87,89 @@ export function useTagsForEntity(entityType: TagType, entityId: number) {
 
   const assign = useCallback(
     (tagId: string) => {
-      const newAssignment: TagAssignment = {
-        id: `assign-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        tagId,
-        entityType,
-        entityId,
-        assignedAt: new Date().toISOString(),
-        assignedBy: "Current User",
-        assignedById: 1,
-      };
-      setAssignments((prev) => [...prev, newAssignment]);
-      // Also push to global mock array
-      allAssignments.push(newAssignment);
-      logTagAssigned({
-        facilityId: 1,
-        tagId,
-        targetType: entityType,
-        targetId: entityId,
-        actorId: 1,
-        actorName: "Current User",
-      });
-      const tagDef = allTags.find((t) => t.id === tagId);
-      toast.success(`Tag "${tagDef?.name ?? "Tag"}" assigned`);
+      const tagDef = catalogue.find((t) => t.id === tagId);
+      const name = tagDef?.name ?? "That tag";
+      assignTag.mutate(
+        { tagId, entityType, entityRef: entityId },
+        {
+          onSuccess: () => toast.success(`${name} added`),
+          onError: (error: Error) => toast.error(error.message),
+        },
+      );
     },
-    [entityType, entityId],
+    [assignTag, catalogue, entityType, entityId],
   );
 
   const unassign = useCallback(
     (assignmentId: string) => {
       const removed = assignments.find((a) => a.id === assignmentId);
-      setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
-      // Also remove from global mock array
-      const idx = allAssignments.findIndex((a) => a.id === assignmentId);
-      if (idx >= 0) allAssignments.splice(idx, 1);
-      if (removed) {
-        const tagDef = allTags.find((t) => t.id === removed.tagId);
-        logTagUnassigned({
-          facilityId: 1,
-          tagId: removed.tagId,
-          targetType: entityType,
-          targetId: entityId,
-          actorId: 1,
-          actorName: "Current User",
-        });
-        toast.success(`Tag "${tagDef?.name ?? "Tag"}" removed`);
-      }
+      const tagDef = catalogue.find((t) => t.id === removed?.tagId);
+      const name = tagDef?.name ?? "That tag";
+      unassignTag.mutate(assignmentId, {
+        onSuccess: () => toast.success(`${name} removed`),
+        onError: (error: Error) => toast.error(error.message),
+      });
     },
-    [assignments, entityType, entityId],
+    [assignments, catalogue, unassignTag],
   );
 
-  return { tags, assignments, hasCritical, hasWarning, assign, unassign };
+  return {
+    tags,
+    assignments,
+    hasCritical,
+    hasWarning,
+    assign,
+    unassign,
+    pending,
+    saving: assignTag.isPending || unassignTag.isPending,
+  };
 }
+
+/**
+ * Tags for MANY entities, for a screen that renders a row per pet.
+ *
+ * `useTagsForEntity` is a hook, so it cannot be called inside a `.map()` — and
+ * the fixture era hid that, because `getTagsForEntity(...)` was a plain
+ * function a render loop could call forty times. This is the honest version:
+ * one query, and a lookup the loop calls.
+ */
+export function useTagsByEntity() {
+  const { tags: catalogue, assignments, pending } = useTagCatalogue();
+
+  const byEntity = useMemo(() => {
+    const active = new Map(
+      catalogue.filter((t) => t.isActive).map((t) => [t.id, t]),
+    );
+    const map = new Map<string, Tag[]>();
+    for (const assignment of assignments) {
+      const tag = active.get(assignment.tagId);
+      if (!tag) continue;
+      const key = `${assignment.entityType}:${assignment.entityId}`;
+      const list = map.get(key) ?? [];
+      list.push(tag);
+      map.set(key, list);
+    }
+    for (const list of map.values()) {
+      list.sort(
+        (a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority],
+      );
+    }
+    return map;
+  }, [catalogue, assignments]);
+
+  const tagsFor = useCallback(
+    (entityType: TagType, entityId: number | undefined): Tag[] =>
+      entityId === undefined
+        ? EMPTY_TAGS
+        : (byEntity.get(`${entityType}:${entityId}`) ?? EMPTY_TAGS),
+    [byEntity],
+  );
+
+  return { tagsFor, catalogue, pending };
+}
+
+/** A stable empty array, so a consumer's `useMemo` does not re-run every render. */
+const EMPTY_TAGS: Tag[] = [];
 
 // ========================================
 // useNotesForEntity

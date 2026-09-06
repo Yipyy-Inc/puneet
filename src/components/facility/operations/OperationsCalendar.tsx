@@ -11,6 +11,7 @@ import { bookingMutations, bookingQueries } from "@/lib/api/booking";
 import { clientQueries } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
+import { useTagCatalogue } from "@/lib/api/tags";
 import { getModuleWorkflowQuestionnaire } from "@/data/custom-services";
 import { customServiceCheckIns } from "@/data/custom-service-checkins";
 import { facilityTasks, type FacilityTask } from "@/data/facility-tasks";
@@ -886,6 +887,11 @@ export function OperationsCalendar() {
   const { data: groomingMenu = [] } = useQuery(
     groomingCatalogueQueries.services(),
   );
+  // The tag catalogue and its assignments, for the chips and the two tag
+  // filters. operations-calendar.ts is not a component and cannot fetch them
+  // itself -- the same reason the grooming menu is passed in above.
+  const { tags: tagCatalogue, assignments: tagAssignmentList } =
+    useTagCatalogue();
 
   const allEvents = useMemo(() => {
     const merged = buildUnifiedEvents({
@@ -903,6 +909,8 @@ export function OperationsCalendar() {
       viewerKey: userId,
       resources,
       groomingMenu,
+      tags: tagCatalogue,
+      tagAssignments: tagAssignmentList,
     });
 
     // Flip converted leads: hide the source external event, add its booking.
@@ -941,8 +949,8 @@ export function OperationsCalendar() {
   }, [allEvents]);
 
   const filterOptions = useMemo(
-    () => deriveFilterOptions(allEvents, activeModules),
-    [allEvents, activeModules],
+    () => deriveFilterOptions(allEvents, activeModules, tagCatalogue),
+    [allEvents, activeModules, tagCatalogue],
   );
 
   const staffOptions = useMemo(() => {

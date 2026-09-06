@@ -36,7 +36,9 @@ import { yipyyGoRequirementFor } from "@/lib/settings/yipyy-go";
 import { getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 import { TagList } from "@/components/shared/TagList";
-import { getTagsByType, getNoteCount } from "@/data/tags-notes";
+import { getNoteCount } from "@/data/tags-notes";
+import { useTagCatalogue } from "@/lib/api/tags";
+import { useTagsByEntity } from "@/hooks/use-tags-notes";
 import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFilter";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { usePermission } from "@/hooks/use-facility-rbac";
@@ -710,6 +712,9 @@ export default function FacilityBookingsPage() {
       : []),
   ];
 
+  const { tags: tagCatalogue } = useTagCatalogue();
+  const { tagsFor } = useTagsByEntity();
+
   const filters: FilterDef[] = [
     {
       key: "status",
@@ -748,12 +753,19 @@ export default function FacilityBookingsPage() {
       key: "tag",
       label: "Tag",
       options: [
-        { value: "all", label: "All Tags" },
-        ...getTagsByType("booking").map((t) => ({
-          value: t.id,
-          label: t.name,
-        })),
+        { value: "all", label: "All tags" },
+        ...tagCatalogue
+          .filter((t) => t.type === "booking" && t.isActive)
+          .map((t) => ({ value: t.id, label: t.name })),
       ],
+      // Without a `filterFn`, DataTable compares `item.tag` to the chosen
+      // value — and a booking row has no `tag` field, so picking any tag
+      // emptied the table. It was unreachable while the options came from a
+      // fixture nobody's bookings carried; the moment they became real tags it
+      // would have been a filter that hides everything. A tag lives on an
+      // assignment, not on the booking, so the lookup is the right comparison.
+      filterFn: (item: { id?: unknown }, value: string) =>
+        tagsFor("booking", Number(item.id)).some((t) => t.id === value),
     },
   ];
 

@@ -7807,7 +7807,15 @@ change; the three sites above plus `grooming-post-booking.ts:121`, which passes
 `// TODO: Get from bookingData or context`. That one is now inert for the
 config — the setup is passed in — but the id it sends is still the constant.
 
-## 2026-09-06 — the tag catalogue is still `useState`, and the gate that used to say so is now green
+## ~~2026-09-06 — the tag catalogue is still `useState`, and the gate that used to say so is now green~~
+
+**RESOLVED 2026-09-07.** The catalogue and its assignments moved together, as
+this entry said they would have to: `public.facility_tags` and
+`public.facility_tag_assignments` via `/api/tags`, the fixture arrays deleted,
+and `useTagsForEntity` / `useTagsByEntity` reading the route. The NOTES half is
+still a fixture — see the 2026-09-06 entry near the end of this file. The
+original entry is kept below because its reasoning about why the two halves
+could not be split is the reason the conversion was shaped the way it was.
 
 **Severity: medium.** `tags-notes` is two features under one nav item, and only
 one of them was fixed on 2026-09-06.
@@ -7994,6 +8002,188 @@ customer readers moved to `/api/customer/mobile-app`.
   in the same file still point at `https://demo.petcam.example/stream/cam1`,
   which is honest (it is plainly a placeholder) in a way `pawcare.com/terms` was
   not.
+
+## 2026-09-06 — a table can exist for nine days and still be a fixture
+
+**Severity: 🟡 medium, and the pattern matters more than the instance.**
+
+`public.facility_tags` and `public.facility_tag_assignments` were created on
+2026-08-28 by 20260828134018, whose header says of the ten shared tag
+components: **"This makes THAT real."** It did not. Measured immediately before
+the conversion, nine days later:
+
+```
+facility_tags             0 rows
+facility_tag_assignments  0 rows
+```
+
+Every screen went on reading the 76 tags in `src/data/tags-notes.ts`, and the
+settings builder's own toast said so: _"the tag list is not stored yet, so it
+resets when this page reloads."_
+
+**A migration that lands a table is half a change.** The table, its RLS and its
+trigger were all correct — nothing was wrong with them, and nothing used them.
+`check:grooming-menu` exists because the same thing happened to the grooming
+menu; there is no equivalent gate for tags, because a gate would have to know
+which fixture a screen is allowed to read.
+
+**Do instead:** when a migration says it makes an existing component real, the
+route and the repoint go in the same change or the header does not get to say
+it. If they genuinely cannot, the migration header should say the table is
+UNUSED and name what would use it — which is a sentence the next person can act
+on, unlike a promise.
+
+**One thing the conversion found that the schema could not express.**
+`facility_tags.visibility` has had two values since day one, `internal` and
+`client_visible`, and both read policies admitted only
+`private.member_facility_ids()` — staff. So a client_visible tag was visible to
+exactly the same people as an internal one and the column decided nothing.
+Three customer-portal surfaces filtered it in the BROWSER instead, through an
+`isCustomerView` prop each call site had to remember. 20260906221303 moved that
+into RLS; `supabase/tests/client-visible-tags.sql` reads it back in ten
+directions.
+
+## 2026-09-06 — the notes half is still a fixture, and the hook still mutates it
+
+**Severity: 🟡 medium.**
+
+The tags moved out of `src/data/tags-notes.ts`. The NOTES did not, and
+`useNotesForEntity` still `push`es and `splice`s the module-level `notes` array.
+So a note added on a pet's page appears on the client's page in the same tab and
+is gone on reload, and the toast says "Note added" either way.
+
+That is now more misleading than it was, in one specific way: **the permission
+grid above it is real.** `facility_settings.tag_note_settings` persists since
+2026-09-06 and `NotesList` genuinely enforces it — so a facility can carefully
+decide who may delete a note, and the note itself still dies with the tab.
+
+**Why it was not converted in the same change:** a note carries edit history, a
+pin, a customer-facing visibility and a per-role permission grid. It is its own
+table, its own migration and its own set of call sites. Tags and notes in one
+diff would have been two migrations and forty files.
+
+**Do instead:** do not extend the fixture. When notes are converted, the shape
+to copy is `/api/tags` — one route answering both staff and customer, RLS
+deciding which rows, no fixture fallback on 401.
+
+## 2026-09-06 — `tag-note-audit.ts` is a compliance log nothing reads
+
+**Severity: 🟢 low, but it looked like coverage.**
+
+The file's own header says _"Every tag/note operation is logged for
+compliance"_. It appends to `const auditLog: TagNoteAuditEntry[] = []` — a
+module-level array — and `getTagNoteAuditLog`, the only reader, **has no
+caller**. Measured:
+
+```
+rg "getTagNoteAuditLog" src --glob '!src/lib/tag-note-audit.ts'   # 0 hits
+```
+
+The six `logTag*` functions were deleted with the fixture, because keeping them
+beside a genuinely durable write would have been worse than not having them: a
+reviewer reading `logTagCreated(...)` next to a real INSERT would reasonably
+conclude the change was audited. The note loggers remain and are equally inert.
+
+**The real audit trail is `public.audit_log`**, written by
+`private.record_audit()` from triggers, read by `/api/audit-log`. **No trigger
+on `facility_tags` writes to it**, so a facility cannot answer "who retired the
+Aggressive tag". That is a real gap and a small one — an audit trigger on
+`facility_tags` is ~25 lines modelled on the existing ones — deliberately not
+bundled into the conversion.
+
+## 2026-09-06 — `authenticated` holds TRUNCATE on every table, and RLS does not apply to TRUNCATE
+
+**Severity: 🟡 medium, bounded — not reachable through PostgREST.**
+
+Supabase's default privileges grant the full set on every new table in `public`,
+and migrations that do not explicitly revoke leave it. Measured:
+
+```sql
+select table_name, string_agg(privilege_type, ',' order by privilege_type)
+  from information_schema.role_table_grants
+ where table_schema='public' and grantee='authenticated'
+   and table_name in ('incidents','clients','pets','facility_tags')
+ group by table_name;
+
+clients        DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE
+facility_tags  DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE
+incidents      INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE
+pets           DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE
+```
+
+**`TRUNCATE` is not subject to row-level security.** A holder of it can empty a
+table regardless of every policy on it. What keeps this bounded is that
+PostgREST cannot issue `TRUNCATE` — there is no HTTP verb that reaches it — so
+it is exploitable only by something holding a direct Postgres connection as
+`authenticated`, which nothing in this product does.
+
+Note that `incidents` shows the pattern working where it was applied: its
+migration explicitly revoked DELETE, and DELETE is duly absent. TRUNCATE was
+simply not on anyone's list.
+
+**Do instead:** this is a repo-wide grant sweep, not a drive-by — one migration
+revoking `truncate, references, trigger` from `authenticated` across
+`public`, with a `has_table_privilege` assertion per table, and
+`supabase/tests/` reading it back. Deliberately NOT bundled into the tag
+conversion, which would have made a reviewable diff unreviewable.
+
+## 2026-09-06 — `boarding-kennel-board` books the first kennel it finds, not a free one
+
+**Severity: 🟡 medium — the spec is RED today and self-heals on 2026-09-09.**
+
+`tests/e2e/boarding-kennel-board.spec.ts:124` picks its room with:
+
+```ts
+const free = (await rooms(page)).rooms.find(
+  (r) => r.active && !r.id.includes("e2e"),
+);
+```
+
+`free` is a name, not a fact: it is the first ACTIVE kennel, and occupancy is
+never consulted. `bookingBody` then books yesterday → +2 days. Measured
+2026-09-06, the booking POST returned **409 "That room is already booked for
+those dates"**, because seeded booking `ref 18` is `confirmed` from
+`2026-09-04` to `2026-09-09` in that kennel:
+
+```sql
+select ref, status, start_at, end_at from public.bookings
+ where service='boarding' and status <> 'cancelled'
+   and start_at < '2026-09-09' and end_at > '2026-09-04';
+-- ref 18 | confirmed | 2026-09-04 14:00+00 | 2026-09-09 15:00+00
+```
+
+So the spec fails on every day whose ±1-day window overlaps a seeded stay, and
+passes the rest of the time — which is why it has looked stable.
+
+**It is not caused by orphaned e2e rows.** Every booking created in the previous
+48 hours was `cancelled`; the specs did clean up after themselves.
+
+This is the same family as the `freeRoom()` note below — that helper checks
+occupancy TODAY and then books a RANGE — but worse: this one does not check at
+all.
+
+**Do instead:** the fix for both is one idea — pick a room with no
+non-cancelled booking overlapping the window the spec is about to book, and skip
+the test if none exists. Do not "fix" it by widening the assertion to accept
+409, which is how a real capacity regression would become invisible.
+
+## 2026-09-06 — two DataTable files whose names differ only in case
+
+**Severity: 🟢 low, and a genuine trap on Windows.**
+
+`src/components/ui/data-table.tsx` and `src/components/ui/DataTable.tsx` both
+export `DataTable`. The live one is `DataTable.tsx` (525+ lines, `filters`,
+`searchKey`, `tableId`, column budget, density); `data-table.tsx` is a
+~90-line ancestor whose props interface has no `filters` at all.
+
+Reading the wrong one wastes real time — it did on 2026-09-06, when the
+bookings page's tag filter was traced against the props of the dead file and
+appeared not to exist. On a case-insensitive filesystem the two are one
+`git mv` away from colliding.
+
+**Do instead:** read `DataTable.tsx` — capital D. Deleting `data-table.tsx` is
+its own change: `bun run prune` will say whether anything still imports it, and
+the rename has to be done in two commits on a case-insensitive checkout.
 
 ## How to add to this map
 

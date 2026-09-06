@@ -48,7 +48,8 @@ import { trainingQueries } from "@/lib/api/training";
 import { clients } from "@/data/clients";
 import { trainers } from "@/data/training";
 import { vaccinationRecords } from "@/data/pet-data";
-import { notes as petNotesData, tagAssignments, tags } from "@/data/tags-notes";
+import { notes as petNotesData } from "@/data/tags-notes";
+import { useTagCatalogue } from "@/lib/api/tags";
 import {
   aggregateHomeworkSummary,
   aggregateStudentBriefing,
@@ -159,6 +160,8 @@ export function PreSessionBriefingPanel({
   const { data: attendances = [] } = useQuery(trainingQueries.allAttendances());
   const { data: homework = [] } = useQuery(trainingQueries.allHomework());
   const { data: sessions = [] } = useQuery(trainingQueries.sessions());
+  const { tags: tagCatalogue, assignments: tagAssignmentList } =
+    useTagCatalogue();
 
   const sessionRecord = useMemo(
     () => (task ? sessions.find((s) => s.id === task.sessionId) : undefined),
@@ -184,8 +187,8 @@ export function PreSessionBriefingPanel({
       attendances,
       homework,
       pets,
-      petTags: tags,
-      petTagAssignments: tagAssignments,
+      petTags: tagCatalogue,
+      petTagAssignments: tagAssignmentList,
       petNotes: petNotesData,
       ownerLookup: (petId) => ownerByPetId.get(petId) ?? "Unknown",
       todayISO,
@@ -198,6 +201,8 @@ export function PreSessionBriefingPanel({
     attendances,
     homework,
     pets,
+    tagCatalogue,
+    tagAssignmentList,
     ownerByPetId,
     todayISO,
   ]);

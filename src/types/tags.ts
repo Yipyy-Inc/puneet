@@ -35,8 +35,15 @@ export const tagSchema = z.object({
   facilityId: z.string().optional(),
   isActive: z.boolean(),
   createdAt: z.string(),
-  createdBy: z.string(),
-  createdById: z.number(),
+  /**
+   * Who made it — a profile id, and only when the row records one.
+   *
+   * Optional since the tag catalogue became `public.facility_tags` on
+   * 2026-09-06: the column is nullable, and the numeric `createdById` that used
+   * to sit beside it named a fixture user (`createdById: 1`, always) that no
+   * table has ever had. Nothing read either field.
+   */
+  createdBy: z.string().optional(),
   updatedAt: z.string().optional(),
 });
 export type Tag = z.infer<typeof tagSchema>;
@@ -45,10 +52,13 @@ export const tagAssignmentSchema = z.object({
   id: z.string(),
   tagId: z.string(),
   entityType: tagTypeEnum,
+  /**
+   * The target's numeric `ref`, not its uuid — see src/lib/api/mappers/tag.ts.
+   * A label the route resolves, never a scope.
+   */
   entityId: z.number(),
   assignedAt: z.string(),
-  assignedBy: z.string(),
-  assignedById: z.number(),
+  assignedBy: z.string().optional(),
   expiresAt: z.string().optional(),
   notes: z.string().optional(),
 });

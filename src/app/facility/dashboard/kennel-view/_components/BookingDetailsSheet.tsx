@@ -29,7 +29,8 @@ import {
 } from "../_lib/calendar-helpers";
 import { roomCategories } from "@/data/rooms";
 import type { OccupancyKennel } from "../_lib/calendar-types";
-import { getTagsForEntity, getNoteCount } from "@/data/tags-notes";
+import { getNoteCount } from "@/data/tags-notes";
+import { useTagsByEntity } from "@/hooks/use-tags-notes";
 
 interface BookingDetailsSheetProps {
   booking: OccupancyKennel | null;
@@ -52,7 +53,8 @@ export function BookingDetailsSheet({
   const category = booking
     ? roomCategories.find((c) => c.id === booking.categoryId)
     : undefined;
-  const petTags = booking?.petId ? getTagsForEntity("pet", booking.petId) : [];
+  const { tagsFor } = useTagsByEntity();
+  const petTags = tagsFor("pet", booking?.petId);
   const noteCount = booking?.petId ? getNoteCount("pet", booking.petId) : 0;
   const isCritical = petTags.some((t) => t.priority === "critical");
 

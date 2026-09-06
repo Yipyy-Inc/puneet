@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Search, Check, Plus } from "lucide-react";
 import { resolveIcon } from "@/lib/service-registry";
 import { getContrastTextColor } from "@/lib/color-utils";
-import { getTagsByType } from "@/data/tags-notes";
-import type { TagType } from "@/data/tags-notes";
+import { useTagCatalogue } from "@/lib/api/tags";
+import type { TagType } from "@/types/tags";
 import {
   Popover,
   PopoverContent,
@@ -39,7 +39,8 @@ export function TagAssignmentPopover({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const allTags = getTagsByType(entityType);
+  const { tags } = useTagCatalogue();
+  const allTags = tags.filter((t) => t.type === entityType && t.isActive);
   const filtered = allTags.filter(
     (t) =>
       t.name.toLowerCase().includes(search.toLowerCase()) ||
