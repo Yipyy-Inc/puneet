@@ -74,8 +74,12 @@ export interface RouteStateProps {
    * centred column on the ground, pose above the words.
    *
    * `card` is the reference page's "In place" panel, for a state standing
-   * where a SECTION used to be. Nothing uses it yet; it exists because the
-   * reference drew it and a section-level state will want it.
+   * where a SECTION used to be — inside a layout that keeps its own chrome.
+   * The settings area's error and not-found boundaries are that: the rail and
+   * the header naming the section survive, and only the body is replaced.
+   *
+   * It also decides the heading level and the wrapper element, because both
+   * follow from which case this is rather than from a caller remembering.
    */
   surface?: "bare" | "card";
   /** The centring box. Full-height at the root, shorter inside a layout. */
@@ -94,9 +98,13 @@ export function RouteState({
   className,
 }: RouteStateProps) {
   const carded = surface === "card";
+  const Heading = carded ? "h2" : "h1";
+  // `bare` IS the page, so it is the page's <main>. `card` stands inside a
+  // layout that already has one, and <main> inside <main> is not valid.
+  const Root = carded ? "section" : "main";
 
   return (
-    <main
+    <Root
       className={cn(
         "flex min-h-[60vh] items-center justify-center p-6",
         className,
@@ -160,7 +168,14 @@ export function RouteState({
                 spin && "animate-spin motion-reduce:animate-none",
               )}
             />
-            <h1 className="text-heading text-state-title">{title}</h1>
+            {/* ── THE HEADING LEVEL FOLLOWS THE SURFACE (§5b2) ────────────
+                `bare` owns the whole viewport, so its title IS the page's h1.
+                `card` is the "in place" panel — a state standing where a
+                SECTION used to be, inside a layout that already has an h1 of
+                its own. Two h1s on one page is the thing §5b2 rules out, and
+                it is not a choice a caller should have to remember: the
+                surface already says which case this is. */}
+            <Heading className="text-heading text-state-title">{title}</Heading>
           </div>
           <p className="text-ink-secondary text-body max-w-[38ch] text-pretty">
             {description}
@@ -200,6 +215,6 @@ export function RouteState({
           ) : null}
         </div>
       </div>
-    </main>
+    </Root>
   );
 }
