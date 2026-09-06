@@ -226,6 +226,22 @@ test.describe("role editor writes", () => {
       .first()
       .click();
 
+    // ── THE PERMISSION GROUPS START CLOSED, SO OPEN THEM ─────────────────
+    //
+    // They were always accordions; the collapse set simply started empty, so
+    // every group rendered open and the editor column measured 11,784px. It
+    // starts full now, which is what a person meets: the group headers carry
+    // the name, the description and a `7/12` badge, and you open the one you
+    // are changing. This spec reaches for a row INSIDE one, so it has to do
+    // the same thing first.
+    const groups = page.locator('[data-slot="permission-group-toggle"]');
+    for (let i = 0; i < (await groups.count()); i += 1) {
+      const toggle = groups.nth(i);
+      if ((await toggle.getAttribute("aria-expanded")) === "false") {
+        await toggle.click();
+      }
+    }
+
     const label = page.getByText("Manage staff", { exact: true }).first();
     await label.scrollIntoViewIfNeeded();
     const control = label

@@ -179,8 +179,16 @@ test.describe("old settings addresses still resolve", () => {
     // not-found instruction in the RSC payload and the client router shows it.
     // src/lib/auth/portal-gate.ts records the same thing about `redirect()`
     // from these layouts, measured with curl.
-    await expect(page.getByText("That page has moved")).toBeVisible({
-      timeout: 30_000,
-    });
+    // Settings has its OWN not-found boundary now, so this is the settings
+    // wording rather than the root's "That page has moved". The difference is
+    // the point of having one: the root state owns the whole viewport, so a
+    // mistyped settings address used to take the rail and the header with it.
+    // This one stands where the section would, and the rail survives.
+    await expect(page.getByText("That settings section has moved")).toBeVisible(
+      { timeout: 30_000 },
+    );
+    await expect(
+      page.getByRole("link", { name: /go to all settings/i }),
+    ).toBeVisible();
   });
 });
