@@ -205,7 +205,17 @@ const BASELINE = new Set<string>([
   "src/components/dashboard/facilities/BillingTab.tsx",
   "src/components/dashboard/facilities/LocationsTab.tsx",
   "src/components/estimates/EstimateFollowUpSettings.tsx",
-  "src/components/facility-config/TagNotesSettings.tsx",
+  // TagNotesSettings.tsx left on 2026-09-06, and it is the clearest example of
+  // this gate being a HEURISTIC rather than a proof. Its note policy moved to
+  // the `tag_note_settings` domain, so the file now imports
+  // `useSaveFacilitySetting` — and a `useMutation` one import away is all this
+  // check looks for. The tag builder in the same file still edits `useState`.
+  //
+  // It is not left in the baseline because a stale entry fails too, and the
+  // file genuinely does perform a save now. What stops the green from hiding
+  // the rest is the copy: those toasts carry "the tag list is not stored yet,
+  // so it resets when this page reloads", which is true and is the thing a
+  // person actually reads.
   "src/components/facility/BookingRequestsPanel.tsx",
   "src/components/facility/BookingStatusSettings.tsx",
   "src/components/facility/CareTaskSettings.tsx",

@@ -49,6 +49,7 @@ import type {
   ServiceAddOnsConfig,
 } from "@/lib/settings/addons";
 import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
+import type { TagNotePolicy } from "@/lib/settings/tag-notes";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
 import type { RebookConfig } from "@/lib/settings/rebook";
@@ -119,6 +120,11 @@ export interface FacilitySettings {
    * "unset" and "asks nothing".
    */
   yipyy_go_config: SettingState<YipyyGoSettings>;
+  /**
+   * Which tag types this facility uses, what a new tag or note defaults to,
+   * and who may read, write, edit and delete a note of each category.
+   */
+  tag_note_settings: SettingState<TagNotePolicy>;
   /**
    * Expected visit frequency per service, and whether lapsed clients for it may
    * be messaged. `configured: false` means the Lapsed list is computed from the
@@ -420,6 +426,29 @@ export function useYipyyGoConfig(): {
   return {
     config: settings.yipyy_go_config.value,
     configured: settings.yipyy_go_config.configured,
+    isPending,
+  };
+}
+
+/**
+ * This facility's tag and note policy, including the note permission grid.
+ *
+ * `isPending` is returned because the grid GATES CONTROLS. The fallback is
+ * permissive, so rendering through the pending state shows an edit and a delete
+ * button to somebody the facility may have excluded, and then takes them away
+ * once the settings land. A control that appears and vanishes is worse than one
+ * that arrives a moment late.
+ */
+export function useTagNotePolicy(): {
+  policy: TagNotePolicy;
+  /** False means no row: nobody has reviewed this facility's tag and note policy. */
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    policy: settings.tag_note_settings.value,
+    configured: settings.tag_note_settings.configured,
     isPending,
   };
 }

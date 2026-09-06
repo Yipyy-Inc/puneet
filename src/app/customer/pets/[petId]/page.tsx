@@ -1697,7 +1697,12 @@ export default function CustomerPetDetailPage({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <NotesList category="pet" entityId={pet.id} readOnly />
+                <NotesList
+                  category="pet"
+                  entityId={pet.id}
+                  readOnly
+                  audience="customer"
+                />
               </CardContent>
             </Card>
           </TabsContent>

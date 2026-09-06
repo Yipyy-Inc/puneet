@@ -46,6 +46,7 @@
     "check:redirect-origin": "bun scripts/check-redirect-origin.ts",
     "check:success-claims": "bun scripts/check-success-claims.ts",
     "check:passkey-email-verified": "bun scripts/check-passkey-email-verified.ts",
+    "check:domain-server-safe": "bun scripts/check-domain-server-safe.ts",
     "check:migration-versions": "bun scripts/check-migration-versions.ts",
     "check:automation-triggers": "bun scripts/check-automation-triggers.ts",
     "check:no-review-gating": "bun scripts/check-review-gating.ts",

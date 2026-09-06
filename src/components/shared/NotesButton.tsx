@@ -18,6 +18,8 @@ interface NotesButtonProps {
   entityId: number;
   facilityId?: number;
   className?: string;
+  /** Forwarded to NotesList — see the note on its own prop. Staff by default. */
+  audience?: "staff" | "customer";
 }
 
 export function NotesButton({
@@ -25,6 +27,7 @@ export function NotesButton({
   entityId,
   facilityId = 11,
   className,
+  audience = "staff",
 }: NotesButtonProps) {
   const [open, setOpen] = useState(false);
   const { noteCount, pinnedNotes } = useNotesForEntity(
@@ -77,6 +80,7 @@ export function NotesButton({
             category={entityType}
             entityId={entityId}
             facilityId={facilityId}
+            audience={audience}
             compact
           />
         </div>

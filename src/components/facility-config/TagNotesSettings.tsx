@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Modal } from "@/components/ui/modal";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -28,14 +29,19 @@ import {
   CalendarCheck,
   Zap,
   StickyNote,
+  Save,
 } from "lucide-react";
+import {
+  useSaveFacilitySetting,
+  useTagNotePolicy,
+} from "@/lib/api/facility-settings";
+import type { TagNotePolicy } from "@/lib/settings/tag-notes";
 import { TagBadge } from "@/components/shared/TagBadge";
 import { TagIconPicker } from "@/components/shared/TagIconPicker";
 import { resolveIcon } from "@/lib/service-registry";
 import { getContrastTextColor } from "@/lib/color-utils";
 import {
   tags as allTags,
-  defaultTagNoteSettings,
   type Tag,
   type TagType,
   type TagPriority,
@@ -43,7 +49,6 @@ import {
   type TagScope,
   type NoteCategory,
   type NoteRolePermissions,
-  type TagNoteSettings,
 } from "@/data/tags-notes";
 import {
   ALL_FACILITY_ROLES,
@@ -217,7 +222,18 @@ function TagBuilder() {
         actorName: "Current User",
       });
     }
-    toast.success(editingTag ? "Tag updated" : "Tag created");
+    // ── THIS HALF STILL DISCARDS, AND SAYS SO ────────────────────────────
+    //
+    // The note POLICY below moved to `facility_settings.tag_note_settings` on
+    // 2026-09-06. The tag CATALOGUE did not: a tag is a row that assignments
+    // point at, so it needs a table and a migration rather than a settings
+    // blob, and the catalogue and its assignments have to move together or
+    // every pet shows no tags. Until then this edits `useState` and the copy
+    // must not imply otherwise. Recorded in the debt map.
+    toast.success(editingTag ? "Tag updated" : "Tag created", {
+      description:
+        "The tag list is not stored yet, so it resets when this page reloads.",
+    });
     setFormOpen(false);
   }
 
@@ -232,7 +248,10 @@ function TagBuilder() {
       actorId: 1,
       actorName: "Current User",
     });
-    toast.success(`Tag "${tag.name}" deleted`);
+    toast.success(`Tag "${tag.name}" deleted`, {
+      description:
+        "The tag list is not stored yet, so it resets when this page reloads.",
+    });
     setDeleteConfirm(null);
   }
 
@@ -533,10 +552,59 @@ const NOTE_CATEGORY_LABELS: Record<NoteCategory, string> = {
 
 const PERMISSION_ACTIONS = ["view", "create", "edit", "delete"] as const;
 
+// ── NOTHING RENDERS UNTIL THE FACILITY'S OWN POLICY HAS ARRIVED ──────────
+//
+// The editor below seeds `useState` from what it is handed and a `useState`
+// initialiser runs ONCE, so mounting it against the fallback and letting the
+// query land afterwards would show the SHIPPED permission grid whatever the
+// facility had saved — and the first Save would write that back over their own.
+// This is the shape `check:settings-seeding` exists to catch.
 function NotesConfig() {
-  const [settings, setSettings] = useState<TagNoteSettings>(
-    defaultTagNoteSettings,
+  const { policy, configured, isPending } = useTagNotePolicy();
+
+  if (isPending) {
+    return <Skeleton className="h-96 w-full rounded-2xl" />;
+  }
+
+  return (
+    <NotesConfigEditor
+      key={configured ? "stored" : "shipped"}
+      initialPolicy={policy}
+    />
   );
+}
+
+function NotesConfigEditor({
+  initialPolicy,
+}: {
+  initialPolicy: TagNotePolicy;
+}) {
+  const saveSetting = useSaveFacilitySetting();
+  const [settings, setSettings] = useState<TagNotePolicy>(initialPolicy);
+  const [savedSettings, setSavedSettings] =
+    useState<TagNotePolicy>(initialPolicy);
+
+  const isDirty = JSON.stringify(settings) !== JSON.stringify(savedSettings);
+
+  const handleSave = () => {
+    saveSetting.mutate(
+      { domain: "tag_note_settings", value: settings },
+      {
+        onSuccess: () => {
+          // The BASELINE moves, not the draft — a switch flipped while the
+          // request was in flight stays flipped.
+          setSavedSettings(settings);
+          toast.success("Note settings saved");
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Those note settings were not saved.",
+          ),
+      },
+    );
+  };
 
   function toggleRolePermission(
     category: NoteCategory,
@@ -679,6 +747,25 @@ function NotesConfig() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* The grid above decides who sees an edit and a delete button on a
+            note, so it needs somewhere to be saved. There was no save control
+            on this card at all — the switches and the whole permission table
+            lived in `useState` and were discarded on reload. */}
+        <div className="flex items-center justify-end gap-3 border-t pt-4">
+          {isDirty && (
+            <p className="text-ink-tertiary text-sm">
+              You have unsaved changes
+            </p>
+          )}
+          <Button
+            onClick={handleSave}
+            disabled={!isDirty || saveSetting.isPending}
+          >
+            <Save className="mr-2 size-4" />
+            {saveSetting.isPending ? "Saving…" : "Save note settings"}
+          </Button>
         </div>
       </CardContent>
     </Card>

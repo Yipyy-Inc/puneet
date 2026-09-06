@@ -515,7 +515,7 @@ export function BookingStatusSettings() {
                 // it stacks instead. minmax(0,1fr) above that, because a
                 // SelectTrigger is `w-fit whitespace-nowrap` and an `auto` floor
                 // lets a long status name widen its own column.
-                className="grid items-end gap-3 rounded-xl border p-3 sm:grid-cols-[repeat(12,minmax(0,1fr))]"
+                className="grid items-end gap-3 rounded-xl border p-3 sm:grid-cols-12"
               >
                 <div className="sm:col-span-4">
                   <Label className="text-[11px]">Name</Label>
@@ -789,7 +789,7 @@ function IftttRuleRow({
           past a nav rail and a section rail, which is ~530px at 1440. Five
           tracks in 530px is ~90px a field. Two is what fits, at every width
           this pane actually has. */}
-      <div className="grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label className="text-[11px]">IF service is</Label>
           <Select
