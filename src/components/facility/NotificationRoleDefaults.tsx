@@ -100,7 +100,11 @@ export function NotificationRoleDefaults() {
           {NOTIFICATION_CATEGORY_KEYS.map((cat) => (
             <div
               key={cat}
-              className="flex items-center justify-between px-4 py-2.5"
+              // §5m / §5n: rows are 48 at balanced density and roomy wins below
+              // 1024px. Measured at 599px these were 41px, which cannot
+              // contain the 48px tap target §6 rule 7 requires of the switch
+              // inside them — the overlay had to bleed into the row above.
+              className="flex min-h-12 items-center justify-between px-4 py-2.5 max-lg:min-h-14"
             >
               <span className="text-sm">
                 {NOTIFICATION_CATEGORY_LABELS[cat]}
