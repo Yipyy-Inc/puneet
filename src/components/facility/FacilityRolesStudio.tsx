@@ -1040,6 +1040,11 @@ export function PermissionsGrid({
             <div className="bg-muted/40 flex items-center justify-between gap-2 border-b px-3 py-2">
               <button
                 type="button"
+                // Named so a spec can open a group the way a person does.
+                // These start closed now, and role-editor-writes reaches for a
+                // row INSIDE one — without a handle it had to guess at
+                // aria-expanded, which every Select on the page also carries.
+                data-slot="permission-group-toggle"
                 onClick={() => toggleCollapse(group.id)}
                 className="flex min-w-0 flex-1 items-center gap-2 text-left"
                 aria-expanded={!isCollapsed}
