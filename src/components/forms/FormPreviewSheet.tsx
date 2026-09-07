@@ -13,23 +13,26 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileQuestion, Lock } from "lucide-react";
 import { formQueries } from "@/lib/api/forms";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import type { FormQuestion, QuestionType } from "@/types/forms";
 
-const TYPE_LABELS: Record<QuestionType, string> = {
-  text: "Short text",
-  textarea: "Long text",
-  select: "Dropdown",
-  multiselect: "Multi-select",
-  checkbox: "Checkbox",
-  date: "Date",
-  number: "Number",
-  file: "File upload",
-  signature: "Signature",
-  yes_no: "Yes / No",
-  radio: "Single choice",
-  phone: "Phone",
-  email: "Email",
-  address: "Address",
+// KEYS, not words. A field type is chrome the person reading the preview
+// needs, not data, so it belongs in the catalogue like everything else.
+const TYPE_KEYS: Record<QuestionType, string> = {
+  text: "fieldShortText",
+  textarea: "fieldLongText",
+  select: "fieldDropdown",
+  multiselect: "fieldMultiSelect",
+  checkbox: "fieldCheckbox",
+  date: "fieldDate",
+  number: "fieldNumber",
+  file: "fieldFile",
+  signature: "fieldSignature",
+  yes_no: "fieldYesNo",
+  radio: "fieldRadio",
+  phone: "fieldPhone",
+  email: "fieldEmail",
+  address: "fieldAddress",
 };
 
 interface FormPreviewSheetProps {
@@ -45,6 +48,7 @@ export function FormPreviewSheet({
   open,
   onOpenChange,
 }: FormPreviewSheetProps) {
+  const t = useSettingsText().section("form-requirements");
   const {
     data: form,
     isLoading,
@@ -77,8 +81,8 @@ export function FormPreviewSheet({
             ) : isError || !form ? (
               <EmptyState />
             ) : questions.length === 0 ? (
-              <p className="text-muted-foreground py-8 text-center text-sm">
-                This form has no fields yet.
+              <p className="text-ink-tertiary py-8 text-center text-[14.5px]">
+                {t("previewNoFields")}
               </p>
             ) : (
               questions.map((q, idx) => (
@@ -99,6 +103,7 @@ function QuestionRow({
   question: FormQuestion;
   index: number;
 }) {
+  const t = useSettingsText().section("form-requirements");
   const options = question.options ?? [];
   return (
     <div className="rounded-md border p-3">
@@ -114,8 +119,10 @@ function QuestionRow({
             )}
           </span>
         </div>
-        <Badge variant="outline" className="shrink-0 text-[10px]">
-          {TYPE_LABELS[question.type] ?? question.type}
+        <Badge variant="outline" className="shrink-0 text-[12px]">
+          {TYPE_KEYS[question.type]
+            ? t(TYPE_KEYS[question.type])
+            : question.type}
         </Badge>
       </div>
       {question.helpText && (
@@ -154,14 +161,15 @@ function PreviewSkeleton() {
 }
 
 function EmptyState() {
+  const t = useSettingsText().section("form-requirements");
   return (
     <div className="flex flex-col items-center gap-2 py-12 text-center">
       <FileQuestion className="text-muted-foreground/40 size-8" />
-      <p className="text-muted-foreground text-sm">
-        This form&apos;s fields aren&apos;t available to preview.
+      <p className="text-ink-tertiary text-[14.5px]">
+        {t("previewUnavailable")}
       </p>
-      <p className="text-muted-foreground text-xs">
-        It may not be published in this facility yet.
+      <p className="text-ink-tertiary text-[13.5px]">
+        {t("previewUnpublished")}
       </p>
     </div>
   );

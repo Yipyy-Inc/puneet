@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useServiceTypeLabel } from "@/lib/settings/use-service-types";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -50,40 +52,47 @@ const FormPreviewSheet = dynamic(
   { ssr: false },
 );
 
+// KEYS, not words. Each stage also carries a LOWERCASE key, because the
+// summary line below drops the label mid-sentence — and `toLowerCase()` on a
+// translated string is a guess: German capitalises nouns, and French does not
+// lowercase the same words English does.
 const STAGE_CONFIG: Record<
   string,
-  { label: string; description: string; icon: React.ReactNode }
+  { key: string; lowerKey: string; helpKey: string; icon: React.ReactNode }
 > = {
   before_booking: {
-    label: "Before booking",
-    description: "Customer must complete before requesting a booking",
+    key: "stageBeforeBooking",
+    lowerKey: "stageBeforeBookingLower",
+    helpKey: "stageBeforeBookingHelp",
     icon: <CalendarCheck className="size-3.5" />,
   },
   before_approval: {
-    label: "Before approval",
-    description: "Staff cannot approve booking until this form is submitted",
+    key: "stageBeforeApproval",
+    lowerKey: "stageBeforeApprovalLower",
+    helpKey: "stageBeforeApprovalHelp",
     icon: <ClipboardCheck className="size-3.5" />,
   },
   before_checkin: {
-    label: "Before check-in",
-    description: "Required before pet can be checked in",
+    key: "stageBeforeCheckin",
+    lowerKey: "stageBeforeCheckinLower",
+    helpKey: "stageBeforeCheckinHelp",
     icon: <DoorOpen className="size-3.5" />,
   },
 };
 
 const ENFORCEMENT_STYLES: Record<
   FormRequirementGate["enforcement"],
-  { label: string; icon: React.ReactNode; trigger: string; itemText: string }
+  { key: string; icon: React.ReactNode; trigger: string; itemText: string }
 > = {
   block: {
-    label: "Blocks this stage",
+    key: "enforcementBlock",
     icon: <Ban className="size-4" />,
     // Dominant, high-contrast red pill.
     trigger: "border-red-300 bg-red-100 text-red-800 hover:bg-red-100",
     itemText: "text-red-700",
   },
   warn: {
-    label: "Warns only",
+    key: "enforcementWarn",
     icon: <AlertTriangle className="size-4" />,
     // Dominant amber pill.
     trigger: "border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100",
@@ -108,6 +117,13 @@ const AVAILABLE_FORMS = [
 ];
 
 export function FormRequirementsSettings() {
+  const t = useSettingsText().section("form-requirements");
+  const serviceLabel = useServiceTypeLabel();
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
   const [configs, setConfigs] = useState<ServiceFormRequirementsConfig[]>(() =>
     JSON.parse(JSON.stringify(formRequirements)),
   );
@@ -200,7 +216,7 @@ export function FormRequirementsSettings() {
         (f) => !existingIds.includes(f.id),
       );
       if (!available) {
-        toast.error("All available forms are already added");
+        toast.error(t("allFormsAdded"));
         return prev;
       }
       next[serviceIdx].requirements.push({
@@ -228,7 +244,7 @@ export function FormRequirementsSettings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forms", "requirements"] });
       setDirty(false);
-      toast.success("Form requirements saved");
+      toast.success(t("saved"));
     },
   });
 
@@ -242,14 +258,12 @@ export function FormRequirementsSettings() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Shield className="text-primary size-5" />
-            <CardTitle>Form requirements per service</CardTitle>
+            <CardTitle>{t("title")}</CardTitle>
           </div>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Configure which forms are required before customers can book, staff
-            can approve, or pets can be checked in. Choose to{" "}
-            <strong>block</strong> the step entirely or{" "}
-            <strong>allow with a warning banner</strong>.
-          </p>
+          {/* One sentence, not five fragments woven around two <strong>s.
+              The emphasis fell on "block" and "allow with a warning banner",
+              which are different words in different places in French. */}
+          <p className="text-ink-tertiary mt-1 text-[14.5px]">{t("intro")}</p>
         </CardHeader>
         <CardContent className="space-y-6">
           {configs.map((serviceConfig, sIdx) => {
@@ -267,15 +281,19 @@ export function FormRequirementsSettings() {
                 ).length,
               }))
               .filter((s) => s.count > 0);
+            // English pluralisation by appending "s", and a label lowercased
+            // with `toLowerCase()`. Neither travels: French agrees the
+            // participle too ("exigé" / "exigés"), so each count gets its own
+            // whole sentence from the catalogue.
             const summaryLine =
               stageSummary.length === 0
-                ? "No forms required — customers can book freely"
+                ? t("summaryNone")
                 : stageSummary
-                    .map(
-                      (s) =>
-                        `${s.count} form${s.count === 1 ? "" : "s"} required ${STAGE_CONFIG[
-                          s.stage
-                        ].label.toLowerCase()}`,
+                    .map((s) =>
+                      fill(s.count === 1 ? "summaryOne" : "summaryMany", {
+                        count: String(s.count),
+                        stage: t(STAGE_CONFIG[s.stage].lowerKey),
+                      }),
                     )
                     .join(" · ");
 
@@ -291,8 +309,15 @@ export function FormRequirementsSettings() {
                       <FileText className="text-primary size-4" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold">
-                        {serviceConfig.serviceLabel}
+                      <h3 className="text-[14.5px] font-semibold">
+                        {/* The label on the requirements row is the fixture's
+                            English ("Daycare"). Through the service-type
+                            catalogue, like every other place a service is
+                            named. */}
+                        {serviceLabel(
+                          serviceConfig.serviceType,
+                          serviceConfig.serviceLabel,
+                        )}
                       </h3>
                       <p className="text-muted-foreground text-xs">
                         {summaryLine}
@@ -305,21 +330,25 @@ export function FormRequirementsSettings() {
                     onClick={() => addRequirement(sIdx)}
                   >
                     <Plus className="mr-1 size-3.5" />
-                    Add form
+                    {t("addForm")}
                   </Button>
                 </div>
 
                 {/* Requirements list */}
                 <div className="space-y-3 p-4">
                   {serviceConfig.requirements.length === 0 ? (
-                    <p className="text-muted-foreground py-4 text-center text-sm">
-                      No form requirements. Customers can book freely.
+                    <p className="text-ink-tertiary py-4 text-center text-[14.5px]">
+                      {t("noneForService")}
                     </p>
                   ) : (
                     serviceConfig.requirements.map((req, rIdx) => (
                       <div
                         key={req.formId}
-                        className={`rounded-md border p-3 transition-colors ${req.enabled ? "bg-white" : "bg-muted/20 opacity-60"} `}
+                        // §6 rule 4: opacity is never a de-emphasis tool —
+                        // it rewrites every ratio in the subtree, and this one
+                        // holds a form name somebody has to read to re-enable
+                        // it. The inset ground says "off" on its own.
+                        className={`rounded-md border p-3 transition-colors ${req.enabled ? "bg-card" : "bg-surface-inset"} `}
                       >
                         {/* Requirement header row */}
                         <div className="mb-2 flex items-center justify-between">
@@ -364,8 +393,8 @@ export function FormRequirementsSettings() {
                                   name: req.formName,
                                 })
                               }
-                              aria-label={`Preview ${req.formName}`}
-                              title="Preview form fields"
+                              aria-label={t("previewFields")}
+                              title={t("previewFields")}
                             >
                               <Eye className="size-3.5" />
                             </Button>
@@ -373,6 +402,7 @@ export function FormRequirementsSettings() {
                               variant="ghost"
                               size="icon"
                               className="text-destructive size-7 shrink-0"
+                              aria-label={t("removeRequirement")}
                               onClick={() => removeRequirement(sIdx, rIdx)}
                             >
                               <Trash2 className="size-3.5" />
@@ -400,7 +430,7 @@ export function FormRequirementsSettings() {
                                 >
                                   <SelectTrigger
                                     className={cn(
-                                      "h-9 w-[184px] gap-2 rounded-full border-2 px-3.5 text-sm font-semibold shadow-sm focus:ring-2",
+                                      "min-w-[184px] gap-2 rounded-full border-2 px-3.5 font-semibold shadow-sm focus:ring-2",
                                       ENFORCEMENT_STYLES[gate.enforcement]
                                         .trigger,
                                     )}
@@ -416,7 +446,7 @@ export function FormRequirementsSettings() {
                                         )}
                                       >
                                         {ENFORCEMENT_STYLES.block.icon}
-                                        {ENFORCEMENT_STYLES.block.label}
+                                        {t(ENFORCEMENT_STYLES.block.key)}
                                       </span>
                                     </SelectItem>
                                     <SelectItem value="warn">
@@ -427,14 +457,19 @@ export function FormRequirementsSettings() {
                                         )}
                                       >
                                         {ENFORCEMENT_STYLES.warn.icon}
-                                        {ENFORCEMENT_STYLES.warn.label}
+                                        {t(ENFORCEMENT_STYLES.warn.key)}
                                       </span>
                                     </SelectItem>
                                   </SelectContent>
                                 </Select>
 
-                                <span className="text-muted-foreground text-xs font-medium">
-                                  at
+                                {/* A bare English preposition between two
+                                    chips, which the gate could not see because
+                                    a two-character text node is under its
+                                    minimum. It reads "at" in French too, which
+                                    is nothing at all. */}
+                                <span className="text-ink-tertiary text-[13.5px] font-medium">
+                                  {t("gateJoiner")}
                                 </span>
 
                                 {/* Timing — clear secondary chip */}
@@ -446,28 +481,20 @@ export function FormRequirementsSettings() {
                                     })
                                   }
                                 >
-                                  <SelectTrigger className="bg-muted/40 h-9 w-[178px] gap-1.5 border-2 text-sm font-medium [&>svg]:opacity-70">
+                                  <SelectTrigger className="bg-muted/40 min-w-[178px] gap-1.5 border-2 font-medium [&>svg]:opacity-70">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="before_booking">
-                                      <span className="flex items-center gap-2">
-                                        <CalendarCheck className="size-4" />
-                                        Before booking
-                                      </span>
-                                    </SelectItem>
-                                    <SelectItem value="before_approval">
-                                      <span className="flex items-center gap-2">
-                                        <ClipboardCheck className="size-4" />
-                                        Before approval
-                                      </span>
-                                    </SelectItem>
-                                    <SelectItem value="before_checkin">
-                                      <span className="flex items-center gap-2">
-                                        <DoorOpen className="size-4" />
-                                        Before check-in
-                                      </span>
-                                    </SelectItem>
+                                    {Object.entries(STAGE_CONFIG).map(
+                                      ([stage, info]) => (
+                                        <SelectItem key={stage} value={stage}>
+                                          <span className="flex items-center gap-2">
+                                            {info.icon}
+                                            {t(info.key)}
+                                          </span>
+                                        </SelectItem>
+                                      ),
+                                    )}
                                   </SelectContent>
                                 </Select>
                                 {req.gates.length > 1 && (
@@ -475,6 +502,7 @@ export function FormRequirementsSettings() {
                                     variant="ghost"
                                     size="icon"
                                     className="size-8 shrink-0"
+                                    aria-label={t("removeGate")}
                                     onClick={() => removeGate(sIdx, rIdx, gIdx)}
                                   >
                                     <Trash2 className="size-3.5" />
@@ -486,11 +514,11 @@ export function FormRequirementsSettings() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-muted-foreground h-6 text-xs"
+                                className="text-ink-tertiary text-[13.5px]"
                                 onClick={() => addGate(sIdx, rIdx)}
                               >
                                 <Plus className="mr-1 size-3" />
-                                Add stage gate
+                                {t("addStageGate")}
                               </Button>
                             )}
                           </div>
@@ -510,11 +538,11 @@ export function FormRequirementsSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <ShieldCheck className="size-4" />
-            Requirements overview
+            {t("overview")}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))]">
             {(
               ["before_booking", "before_approval", "before_checkin"] as const
             ).map((stage) => {
@@ -526,7 +554,7 @@ export function FormRequirementsSettings() {
                     r.gates
                       .filter((g) => g.stage === stage)
                       .map((g) => ({
-                        service: c.serviceLabel,
+                        service: serviceLabel(c.serviceType, c.serviceLabel),
                         form: r.formName,
                         enforcement: g.enforcement,
                       })),
@@ -537,16 +565,16 @@ export function FormRequirementsSettings() {
                 <div key={stage} className="rounded-lg border p-3">
                   <div className="mb-2 flex items-center gap-2">
                     {stageInfo.icon}
-                    <span className="text-sm font-semibold">
-                      {stageInfo.label}
+                    <span className="text-[14.5px] font-semibold">
+                      {t(stageInfo.key)}
                     </span>
                     <Badge variant="secondary" className="ml-auto text-xs">
                       {allAtStage.length}
                     </Badge>
                   </div>
                   {allAtStage.length === 0 ? (
-                    <p className="text-muted-foreground text-xs">
-                      No requirements at this stage
+                    <p className="text-ink-tertiary text-[13.5px]">
+                      {t("noneAtStage")}
                     </p>
                   ) : (
                     <div className="space-y-1">
@@ -590,8 +618,8 @@ export function FormRequirementsSettings() {
       {/* Sticky save bar — makes explicit that changes require an explicit save */}
       <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky bottom-0 z-10 flex items-center justify-end gap-3 border-t py-3 backdrop-blur-sm">
         {dirty && (
-          <span className="text-muted-foreground mr-auto text-sm">
-            You have unsaved changes
+          <span className="text-ink-tertiary mr-auto text-[14.5px]">
+            {t("unsaved")}
           </span>
         )}
         <Button
@@ -600,7 +628,7 @@ export function FormRequirementsSettings() {
           className="gap-1.5"
         >
           <Save className="size-4" />
-          {saveRequirements.isPending ? "Saving…" : "Save Changes"}
+          {saveRequirements.isPending ? t("saving") : t("save")}
         </Button>
       </div>
     </div>
