@@ -1,5 +1,7 @@
 "use client";
 
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+
 import { useState } from "react";
 import { Users2, RotateCcw } from "lucide-react";
 
@@ -43,6 +45,7 @@ const ROLE_KEYS = Object.keys(
  * the defaults per-user.
  */
 export function NotificationRoleDefaults() {
+  const t = useSettingsText().section("notifications");
   const [role, setRole] = useState<NotificationRoleKey>("front_desk");
   const overrides = useRoleDefaultOverrides();
   const enabled = useEffectiveRoleCategories(role);
@@ -54,13 +57,9 @@ export function NotificationRoleDefaults() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users2 className="size-5" />
-          Notification role defaults
+          {t("roleDefaults")}
         </CardTitle>
-        <CardDescription>
-          What each role&rsquo;s notifications start with. New staff accounts
-          are seeded from these; individuals can customize their own preferences
-          afterwards.
-        </CardDescription>
+        <CardDescription>{t("roleDefaultsHelp")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -68,7 +67,7 @@ export function NotificationRoleDefaults() {
             value={role}
             onValueChange={(v) => setRole(v as NotificationRoleKey)}
           >
-            <SelectTrigger className="min-w-[240px]" aria-label="Role">
+            <SelectTrigger className="min-w-[240px]" aria-label={t("role")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -83,11 +82,11 @@ export function NotificationRoleDefaults() {
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1.5 text-xs"
+              className="gap-1.5 text-[13.5px]"
               onClick={() => resetRoleDefault(role)}
             >
               <RotateCcw className="size-3.5" />
-              Reset to default
+              {t("resetToDefault")}
             </Button>
           )}
         </div>

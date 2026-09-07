@@ -8,8 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { useSettings } from "@/hooks/use-settings";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type { ServiceNotificationDefault } from "@/types/facility";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useServiceTypeLabel } from "@/lib/settings/use-service-types";
 
 export function ServiceNotificationSettings() {
+  const t = useSettingsText().section("notifications");
+  const serviceLabel = useServiceTypeLabel();
   const { serviceNotifDefaults, updateServiceNotifDefaults } = useSettings();
   const { modules } = useCustomServices();
   const activeModules = modules.filter((m) => m.status === "active");
@@ -59,12 +63,11 @@ export function ServiceNotificationSettings() {
         <div className="flex items-center gap-2">
           <Bell className="text-muted-foreground size-4" />
           <div>
-            <p className="text-sm font-semibold">
-              Booking Confirmation Defaults
+            <p className="text-[14.5px] font-semibold">
+              {t("bookingDefaults")}
             </p>
-            <p className="text-muted-foreground text-xs">
-              Pre-selected notification channels when confirming each service
-              type. Staff can still override per booking.
+            <p className="text-ink-tertiary text-[13.5px]">
+              {t("bookingDefaultsHelp")}
             </p>
           </div>
         </div>
@@ -74,15 +77,15 @@ export function ServiceNotificationSettings() {
             size="sm"
             onClick={() => setIsEditing(true)}
           >
-            Edit
+            {t("edit")}
           </Button>
         ) : (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleCancel}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button size="sm" onClick={handleSave}>
-              Save
+              {t("save")}
             </Button>
           </div>
         )}
@@ -90,11 +93,11 @@ export function ServiceNotificationSettings() {
 
       {/* Column headers */}
       <div className="grid grid-cols-[1fr_80px_80px] gap-2 border-b px-4 py-2">
-        <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          Service
+        <span className="text-ink-tertiary text-[12px] font-bold tracking-[0.06em] uppercase">
+          {t("service")}
         </span>
-        <span className="text-muted-foreground flex items-center justify-center gap-1 text-xs font-semibold tracking-wide uppercase">
-          <Mail className="size-3" /> Email
+        <span className="text-ink-tertiary flex items-center justify-center gap-1 text-[12px] font-bold tracking-[0.06em] uppercase">
+          <Mail className="size-3" /> {t("email")}
         </span>
         <span className="text-muted-foreground flex items-center justify-center gap-1 text-xs font-semibold tracking-wide uppercase">
           <Smartphone className="size-3" /> SMS
@@ -109,12 +112,14 @@ export function ServiceNotificationSettings() {
             className="grid grid-cols-[1fr_80px_80px] items-center gap-2 px-4 py-3"
           >
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{def.serviceLabel}</span>
+              <span className="text-[14.5px] font-medium">
+                {serviceLabel(def.serviceId, def.serviceLabel)}
+              </span>
               {!isEditing && (
                 <div className="flex gap-1">
                   {def.email && (
-                    <Badge variant="secondary" className="text-[10px]">
-                      Email
+                    <Badge variant="secondary" className="text-[12px]">
+                      {t("email")}
                     </Badge>
                   )}
                   {def.sms && (
@@ -125,9 +130,9 @@ export function ServiceNotificationSettings() {
                   {!def.email && !def.sms && (
                     <Badge
                       variant="outline"
-                      className="text-muted-foreground text-[10px]"
+                      className="text-ink-tertiary text-[12px]"
                     >
-                      None
+                      {t("none")}
                     </Badge>
                   )}
                 </div>

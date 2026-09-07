@@ -6,15 +6,17 @@ import { SettingsBlock } from "@/components/ui/settings-block";
 
 import { Bell, Mail, Phone } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // Notification Settings Component
 export function NotificationSettingsCard() {
+  const t = useSettingsText().section("notifications");
   const { notifications, updateNotifications } = useSettings();
 
   return (
     <SettingsBlock
-      title="Notification Settings"
-      description="Configure which notifications are sent and through which channels"
+      title={t("settingsTitle")}
+      description={t("settingsHelp")}
       data={notifications}
       onSave={updateNotifications}
     >
@@ -42,7 +44,7 @@ export function NotificationSettingsCard() {
                       <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
                           <Mail className="text-muted-foreground size-4" />
-                          <span className="text-sm">Email</span>
+                          <span className="text-[14.5px]">{t("email")}</span>
                           <Switch
                             checked={notif.email}
                             disabled={!isEditing}
@@ -76,7 +78,7 @@ export function NotificationSettingsCard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Bell className="text-muted-foreground size-4" />
-                          <span className="text-sm">Push</span>
+                          <span className="text-[14.5px]">{t("push")}</span>
                           <Switch
                             checked={notif.push}
                             disabled={!isEditing}

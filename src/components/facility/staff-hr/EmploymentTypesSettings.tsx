@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import {
   useStaffHrConfig,
   useSaveStaffHrConfig,
@@ -17,6 +18,7 @@ const humanize = (v: string) =>
 /** Facility employment types (full-time, part-time, contractor…), persisted to
  *  the Phase 0 staff-onboarding store (StaffHrConfig.employmentTypes). */
 export function EmploymentTypesSettings() {
+  const tx = useSettingsText().section("employment-types");
   const config = useStaffHrConfig();
   // The displayed value comes from the REFETCH this mutation triggers, not
   // from the input — see the note in src/lib/api/staff.ts.
@@ -31,7 +33,7 @@ export function EmploymentTypesSettings() {
     const value = draft.trim().toLowerCase().replace(/\s+/g, "_");
     if (!value) return;
     if (types.includes(value)) {
-      toast.error("That employment type already exists");
+      toast.error(tx("duplicate"));
       return;
     }
     setTypes((prev) => [...prev, value]);
@@ -43,22 +45,18 @@ export function EmploymentTypesSettings() {
 
   const save = () => {
     saveStaffHrConfig({ employmentTypes: types });
-    toast.success("Employment types saved");
+    toast.success(tx("saved"));
   };
 
   return (
     <Card>
       <CardHeader>
-        <p className="text-muted-foreground mt-1 text-sm">
-          The employment types available when hiring or editing a staff member.
-        </p>
+        <p className="text-ink-tertiary mt-1 text-[14.5px]">{tx("intro")}</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           {types.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No employment types yet — add one below.
-            </p>
+            <p className="text-ink-tertiary text-[14.5px]">{tx("none")}</p>
           ) : (
             types.map((t) => (
               <div
@@ -83,23 +81,19 @@ export function EmploymentTypesSettings() {
         <div className="flex gap-2">
           <Input
             value={draft}
-            placeholder="e.g. Per diem"
+            placeholder={tx("placeholder")}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && add()}
           />
           <Button variant="outline" onClick={add} className="gap-1.5">
             <Plus className="size-4" />
-            Add
+            {tx("add")}
           </Button>
         </div>
 
         <div className="flex justify-end">
-          <Button
-            onClick={save}
-            disabled={!dirty}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-          >
-            Save changes
+          <Button onClick={save} disabled={!dirty}>
+            {tx("save")}
           </Button>
         </div>
       </CardContent>

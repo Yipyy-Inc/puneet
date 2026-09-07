@@ -16,8 +16,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
 import { DollarSign, Phone } from "lucide-react";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 export function IntegrationsSection() {
+  const t = useSettingsText().section("integrations");
   return (
     <div className="space-y-6">
       {/* Payments, as a signpost rather than a screen. The whole
@@ -52,17 +54,16 @@ export function IntegrationsSection() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Phone className="size-5" />
-            Phone and messaging have moved
+            {t("callingMoved")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-muted-foreground text-sm">
-            Your number, call routing, voicemail and missed-call replies now
-            live under Communication → Calling.
+          <p className="text-ink-tertiary text-[14.5px]">
+            {t("callingMovedHelp")}
           </p>
           <Button asChild variant="outline" size="sm">
             <Link href="/facility/dashboard/calling?tab=settings">
-              Open calling settings
+              {t("openCalling")}
             </Link>
           </Button>
         </CardContent>
@@ -73,10 +74,10 @@ export function IntegrationsSection() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="size-5" />
-            Accounting integration
+            {t("accounting")}
           </CardTitle>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Post every sale, payment and refund to your books.
+          <p className="text-ink-tertiary mt-1 text-[14.5px]">
+            {t("accountingHelp")}
           </p>
         </CardHeader>
         <CardContent>

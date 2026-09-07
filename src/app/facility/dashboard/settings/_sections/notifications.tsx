@@ -7,8 +7,10 @@ import { ServiceNotificationSettings } from "@/components/facility/ServiceNotifi
 
 import { Button } from "@/components/ui/button";
 import { NotificationSettingsCard } from "../_components/notification-settings-card";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 export function NotificationsSection() {
+  const t = useSettingsText().section("notifications");
   return (
     <div className="space-y-6">
       {/* `StaffNotificationPreferences` used to open this screen, and it
@@ -29,15 +31,14 @@ export function NotificationsSection() {
       {/* Template Editor */}
       <Card>
         <CardHeader>
-          <CardTitle>Notification template editor</CardTitle>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Customize email and SMS templates (linked to Communications →
-            Templates)
+          <CardTitle>{t("templateEditor")}</CardTitle>
+          <p className="text-ink-tertiary mt-1 text-[14.5px]">
+            {t("templateEditorHelp")}
           </p>
         </CardHeader>
         <CardContent>
           <Link href="/facility/dashboard/communications">
-            <Button variant="outline">Open Template Editor</Button>
+            <Button variant="outline">{t("openTemplateEditor")}</Button>
           </Link>
         </CardContent>
       </Card>

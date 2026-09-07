@@ -4,21 +4,20 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 export function BoardingSection() {
+  const t = useSettingsText().section("boarding");
   return (
     <div className="space-y-6">
       <Card>
         <CardContent>
-          <p className="text-muted-foreground text-sm">
-            Boarding module configuration — pricing, evaluation, media, and
-            basic info.
-          </p>
+          <p className="text-ink-tertiary text-[14.5px]">{t("intro")}</p>
           <Link
             href="/facility/dashboard/services/boarding/settings"
-            className="text-primary mt-2 inline-block text-sm hover:underline"
+            className="text-primary mt-2 inline-flex min-h-10 items-center text-[14.5px] hover:underline max-lg:min-h-12"
           >
-            Go to Boarding Settings →
+            {t("goTo")} →
           </Link>
         </CardContent>
       </Card>

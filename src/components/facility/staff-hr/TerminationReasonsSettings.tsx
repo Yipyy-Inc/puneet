@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import {
   useStaffHrConfig,
   useSaveStaffHrConfig,
@@ -15,6 +16,7 @@ import {
  *  the Phase 0 store (StaffHrConfig.terminationReasons). Feeds the reason
  *  dropdown in the staff status-change dialog. */
 export function TerminationReasonsSettings() {
+  const tx = useSettingsText().section("termination-reasons");
   const config = useStaffHrConfig();
   // The displayed value comes from the REFETCH this mutation triggers, not
   // from the input — see the note in src/lib/api/staff.ts.
@@ -29,7 +31,7 @@ export function TerminationReasonsSettings() {
     const value = draft.trim();
     if (!value) return;
     if (reasons.some((r) => r.toLowerCase() === value.toLowerCase())) {
-      toast.error("That reason already exists");
+      toast.error(tx("duplicate"));
       return;
     }
     setReasons((prev) => [...prev, value]);
@@ -46,23 +48,18 @@ export function TerminationReasonsSettings() {
     const cleaned = reasons.map((r) => r.trim()).filter(Boolean);
     saveStaffHrConfig({ terminationReasons: cleaned });
     setReasons(cleaned);
-    toast.success("Termination reasons saved");
+    toast.success(tx("saved"));
   };
 
   return (
     <Card>
       <CardHeader>
-        <p className="text-muted-foreground mt-1 text-sm">
-          The reasons offered when terminating a staff member in the
-          status-change dialog. Edit, add or remove any.
-        </p>
+        <p className="text-ink-tertiary mt-1 text-[14.5px]">{tx("intro")}</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           {reasons.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No reasons yet — add one below.
-            </p>
+            <p className="text-ink-tertiary text-[14.5px]">{tx("none")}</p>
           ) : (
             reasons.map((reason, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -88,23 +85,19 @@ export function TerminationReasonsSettings() {
         <div className="flex gap-2">
           <Input
             value={draft}
-            placeholder="e.g. Position eliminated"
+            placeholder={tx("placeholder")}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && add()}
           />
           <Button variant="outline" onClick={add} className="gap-1.5">
             <Plus className="size-4" />
-            Add
+            {tx("add")}
           </Button>
         </div>
 
         <div className="flex justify-end">
-          <Button
-            onClick={save}
-            disabled={!dirty}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-          >
-            Save changes
+          <Button onClick={save} disabled={!dirty}>
+            {tx("save")}
           </Button>
         </div>
       </CardContent>
