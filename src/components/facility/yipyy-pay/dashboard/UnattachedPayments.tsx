@@ -31,6 +31,7 @@ import {
   useUnattachedPayments,
   type UnattachedPayment,
 } from "@/lib/api/unattached-payments";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // The card payments Clover has and Yipyy cannot place.
@@ -224,6 +225,7 @@ function AttachDialog({
   payment: UnattachedPayment | null;
   onClose: () => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const [bookingRef, setBookingRef] = useState("");
   const [note, setNote] = useState("");
   const [dismissing, setDismissing] = useState(false);
@@ -353,7 +355,7 @@ function AttachDialog({
           </Button>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={close} disabled={busy}>
-              Cancel
+              {t("cancel")}
             </Button>
             {!dismissing && (
               <Button

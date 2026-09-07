@@ -34,6 +34,7 @@ import {
   YipyyPayWordmark,
 } from "./YipyyPayBrand";
 import { useYipyyPayNav } from "./use-yipyy-pay-nav";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // The screen a facility sees before they have set anything up.
@@ -68,53 +69,52 @@ import { useYipyyPayNav } from "./use-yipyy-pay-nav";
 // screens which collect them — not afterwards.
 // ============================================================================
 
+// The strings below are KEYS, not copy. Each render site wraps them in
+// `t(…)`; the property names and the shape are unchanged, so nothing that
+// reads these arrays had to learn anything.
 const VALUE_PROPS = [
   {
     icon: CreditCard,
-    title: "One checkout, everywhere",
-    body: "Terminal, online invoice and payment link all settle to the same account and land on the same booking.",
+    title: "sellingOneCheckout",
+    body: "sellingOneCheckoutBody",
   },
   {
     icon: Sparkles,
-    title: "Tips that reach the team",
-    body: "On-screen tipping at the terminal, tied to the booking and the staff who did the work.",
+    title: "sellingTips",
+    body: "sellingTipsBody",
   },
   {
     icon: TrendingUp,
-    title: "Money you can follow",
-    body: "Every card payment and refund is on the booking it belongs to, so the day reconciles itself.",
+    title: "sellingFollow",
+    body: "sellingFollowBody",
   },
   {
     icon: ShieldCheck,
-    title: "Your account, your money",
-    body: "The merchant account is in your business name and payouts go straight to your own bank. Yipyy never holds your funds and never sees a card number.",
+    title: "sellingOwn",
+    body: "sellingOwnBody",
   },
 ] as const;
 
 const CHECKLIST = [
   {
     icon: ClipboardList,
-    label: "Your legal business name and tax number",
-    detail:
-      "Exactly as your tax records show them — capitalisation, punctuation and any Inc., Ltd. or LLC included.",
+    label: "needLegalName",
+    detail: "needLegalNameDetail",
   },
   {
     icon: IdCard,
-    label: "Photo ID for everyone who owns 25% or more",
-    detail:
-      "Passport, driving licence or national ID card, plus their date of birth, home address and identity number.",
+    label: "needPhotoId",
+    detail: "needPhotoIdDetail",
   },
   {
     icon: Landmark,
-    label: "The bank account your payouts should reach",
-    detail:
-      "In the business name, not a personal account, with a void cheque or bank letter to prove it.",
+    label: "needBank",
+    detail: "needBankDetail",
   },
   {
     icon: CreditCard,
-    label: "Your card terminal, if you have one",
-    detail:
-      "A Clover Flex, Mini or Compact. You can apply without one and add it later.",
+    label: "needTerminal",
+    detail: "needTerminalDetail",
   },
 ] as const;
 
@@ -126,6 +126,7 @@ export function YipyyPayLanding({
   /** A started-but-unsubmitted application, if there is one. */
   application: MerchantApplication | null;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const nav = useYipyyPayNav();
   const start = useStartApplication();
 
@@ -146,10 +147,10 @@ export function YipyyPayLanding({
   }
 
   const primaryLabel = resumingSetup
-    ? "Continue setup"
+    ? t("continueSetup")
     : resumingApplication
-      ? "Continue my application"
-      : "Get started";
+      ? t("continueApplication")
+      : t("getStarted");
 
   const primaryAction = resumingSetup
     ? () => nav.go({ step: overview.config.setupStep })
@@ -162,12 +163,10 @@ export function YipyyPayLanding({
           <YipyyPayWordmark size="lg" />
           <div className="space-y-3">
             <h2 className="text-2xl font-bold text-balance text-white sm:text-3xl">
-              Take payments, tips and deposits without leaving Yipyy.
+              {t("landingTitle")}
             </h2>
             <p className="text-base/relaxed text-white/85">
-              Card on the terminal, a link by text, an invoice by email — all of
-              it lands on the booking it belongs to, and all of it pays out to
-              your own bank account.
+              {t("landingBody")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -194,7 +193,7 @@ export function YipyyPayLanding({
                 target="_blank"
                 rel="noreferrer noopener"
               >
-                Buy a card reader
+                {t("buyReader")}
                 <ExternalLink className="size-3.5 opacity-80" />
               </a>
             </Button>
@@ -228,8 +227,10 @@ export function YipyyPayLanding({
               <span className="flex size-10 items-center justify-center rounded-full bg-sky-500/10 text-sky-600 ring-1 ring-sky-500/20 dark:text-sky-400">
                 <Icon className="size-5" />
               </span>
-              <p className="leading-tight font-semibold">{title}</p>
-              <p className="text-muted-foreground text-sm/relaxed">{body}</p>
+              <p className="leading-tight font-semibold">{t(title)}</p>
+              <p className="text-ink-tertiary text-[14.5px]/relaxed">
+                {t(body)}
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -247,13 +248,14 @@ export function YipyyPayLanding({
 }
 
 function SetupResumeNotice({ step }: { step: number }) {
+  const t = useSettingsText().section("yipyy-pay");
   return (
     <Card className="border-sky-200 bg-sky-50/60 dark:border-sky-900/50 dark:bg-sky-950/20">
       <CardContent className="flex flex-wrap items-center gap-3 p-4">
         <CircleDashed className="size-5 shrink-0 text-sky-600 dark:text-sky-400" />
         <p className="min-w-0 flex-1 text-sm/relaxed">
-          <span className="font-semibold">Setup in progress</span> — you are on
-          step {step} of 3. Nothing you have done is lost.
+          <span className="font-semibold">{t("setupInProgress")}</span> — you
+          are on step {step} of 3. Nothing you have done is lost.
         </p>
       </CardContent>
     </Card>
@@ -267,18 +269,19 @@ function ApplicationResumeNotice({
   application: MerchantApplication;
   onResume: () => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const completed = completedStepCount(application);
   return (
     <Card className="border-sky-200 bg-sky-50/60 dark:border-sky-900/50 dark:bg-sky-950/20">
       <CardContent className="flex flex-wrap items-center gap-3 p-4">
         <CircleDashed className="size-5 shrink-0 text-sky-600 dark:text-sky-400" />
         <p className="min-w-0 flex-1 text-sm/relaxed">
-          <span className="font-semibold">Application in progress</span> —{" "}
+          <span className="font-semibold">{t("applicationInProgress")}</span> —{" "}
           {completed} of {APPLY_STEP_COUNT - 1} sections finished. Nothing you
           have entered is lost.
         </p>
         <Button size="sm" onClick={onResume}>
-          Continue
+          {t("continue")}
           <ArrowRight className="size-4" />
         </Button>
       </CardContent>
@@ -295,14 +298,14 @@ function BeforeYouStart({
   starting: boolean;
   label: string;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   return (
     <Card>
       <CardContent className="space-y-5 p-6">
         <div className="space-y-1">
-          <p className="text-lg font-semibold">Before you start</p>
+          <p className="text-lg font-semibold">{t("beforeYouStart")}</p>
           <p className="text-muted-foreground text-sm/relaxed">
-            Applying takes about fifteen minutes if you have these to hand. You
-            can save and come back at any point.
+            {t("beforeYouStartHelp")}
           </p>
         </div>
 
@@ -313,9 +316,11 @@ function BeforeYouStart({
                 <Icon className="size-3.5" />
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-medium">{item}</span>
+                <span className="block text-[14.5px] font-medium">
+                  {t(item)}
+                </span>
                 <span className="text-muted-foreground block text-sm/relaxed">
-                  {detail}
+                  {t(detail)}
                 </span>
               </span>
             </li>
@@ -327,9 +332,7 @@ function BeforeYouStart({
         <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <p className="leading-relaxed">
-            <span className="font-semibold">
-              Your legal business name must match your tax records exactly.
-            </span>{" "}
+            <span className="font-semibold">{t("legalNameWarning")}</span>{" "}
             Capitalisation, punctuation and any Inc., Ltd. or LLC included. A
             mismatch is the most common reason a payment account sits waiting,
             and it is the easiest one to avoid.
@@ -376,6 +379,7 @@ function BeforeYouStart({
  * a fifteen-minute application.
  */
 function AlreadyHaveOne({ onConnect }: { onConnect: () => void }) {
+  const t = useSettingsText().section("yipyy-pay");
   return (
     <p className="text-muted-foreground text-center text-sm">
       Already take card payments through a Clover merchant account?{" "}
@@ -384,7 +388,7 @@ function AlreadyHaveOne({ onConnect }: { onConnect: () => void }) {
         onClick={onConnect}
         className="text-foreground font-medium underline underline-offset-4"
       >
-        Link the one you have instead
+        {t("linkExisting")}
       </button>
       .
     </p>

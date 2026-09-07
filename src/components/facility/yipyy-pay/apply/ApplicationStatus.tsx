@@ -19,6 +19,7 @@ import type {
 } from "@/lib/merchant-application/application";
 import { PoweredByClover, YipyyPayWordmark } from "../YipyyPayBrand";
 import { useYipyyPayNav } from "../use-yipyy-pay-nav";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // What a facility sees once they have submitted, and until the account is open.
@@ -47,53 +48,53 @@ const PRESENTATION: Record<
   }
 > = {
   draft: {
-    label: "Draft",
+    label: "statusDraft",
     tone: "sky",
-    headline: "Your application is still a draft",
+    headline: "draftHeadline",
     // The opposite of a claim, and keyed off the status the server returned:
     // `draft` means nothing has been submitted, and this screen reports that
     // word rather than asserting an outcome of its own.
     // success-claim-ok: reports a status the route returned; asserts nothing.
-    body: "Nothing has been sent yet.",
+    body: "draftBody",
   },
   submitted: {
-    label: "Submitted",
+    label: "statusSubmitted",
     tone: "sky",
-    headline: "Your application is with us",
-    body: "We check it over, then pass it to the provider who opens your merchant account. You do not need to do anything.",
+    headline: "submittedHeadline",
+    body: "submittedBody",
   },
   under_review: {
-    label: "Under review",
+    label: "statusUnderReview",
     tone: "sky",
-    headline: "Underwriting is reviewing it",
-    body: "This is the part that takes the longest and it is out of our hands. If anything more is needed, it will appear here.",
+    headline: "reviewHeadline",
+    body: "reviewBody",
   },
   more_info_needed: {
-    label: "More information needed",
+    label: "statusMoreInfo",
     tone: "amber",
-    headline: "Something needs your attention",
-    body: "Underwriting has come back with a question. Answer it and your application carries on from where it was.",
+    headline: "moreInfoHeadline",
+    body: "moreInfoBody",
   },
   approved: {
-    label: "Approved",
+    label: "statusApproved",
     tone: "emerald",
-    headline: "Your merchant account is open",
-    body: "One step left: link it to Yipyy so payments can start reaching your bookings.",
+    headline: "approvedHeadline",
+    body: "approvedBody",
   },
   rejected: {
-    label: "Not approved",
+    label: "statusNotApproved",
     tone: "amber",
-    headline: "This application was not approved",
-    body: "The reason is below. You can start a new application once whatever it names has been dealt with.",
+    headline: "rejectedHeadline",
+    body: "rejectedBody",
   },
   withdrawn: {
-    label: "Withdrawn",
+    label: "statusWithdrawn",
     tone: "sky",
-    headline: "This application was withdrawn",
+    headline: "withdrawnHeadline",
     // Same shape as `draft` above, and equally negative. Withdrawing an
     // application happens in the platform portal, not here.
     // success-claim-ok: reports a status the route returned; asserts nothing.
-    body: "Nothing was sent to underwriting.",
+    body: "withdrawnBody",
   },
 };
 
@@ -131,6 +132,7 @@ export function ApplicationStatus({
   application: MerchantApplication;
   overview: YipyyPayOverview;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const nav = useYipyyPayNav();
   const presentation = PRESENTATION[application.status];
   const submittedOn = formatWhen(application.submittedAt);
@@ -143,7 +145,7 @@ export function ApplicationStatus({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <YipyyPayWordmark size="md" tone="ink" />
           <Badge className={BADGE_CLASS[presentation.tone]}>
-            {presentation.label}
+            {t(presentation.label)}
           </Badge>
         </div>
         <PoweredByClover />
@@ -152,8 +154,10 @@ export function ApplicationStatus({
       <Card className={TONE_CLASS[presentation.tone]}>
         <CardContent className="space-y-4 p-6">
           <div className="space-y-1.5">
-            <h3 className="text-xl font-semibold">{presentation.headline}</h3>
-            <p className="text-sm/relaxed">{presentation.body}</p>
+            <h3 className="text-xl font-semibold">
+              {t(presentation.headline)}
+            </h3>
+            <p className="text-[14.5px]/relaxed">{t(presentation.body)}</p>
           </div>
 
           {application.statusDetail && (
@@ -166,13 +170,13 @@ export function ApplicationStatus({
           <dl className="text-muted-foreground grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
             {submittedOn && (
               <div className="flex gap-2">
-                <dt>Submitted</dt>
+                <dt>{t("statusSubmitted")}</dt>
                 <dd className="text-foreground font-medium">{submittedOn}</dd>
               </div>
             )}
             {application.signedName && (
               <div className="flex gap-2">
-                <dt>Signed by</dt>
+                <dt>{t("signedBy")}</dt>
                 <dd className="text-foreground font-medium">
                   {application.signedName}
                 </dd>
@@ -180,14 +184,14 @@ export function ApplicationStatus({
             )}
             {application.externalReference && (
               <div className="flex gap-2">
-                <dt>Reference</dt>
+                <dt>{t("reference")}</dt>
                 <dd className="text-foreground font-[tabular-nums] font-medium">
                   {application.externalReference}
                 </dd>
               </div>
             )}
             <div className="flex gap-2">
-              <dt>Business</dt>
+              <dt>{t("business")}</dt>
               <dd className="text-foreground font-medium">
                 {application.business.legalName ?? overview.facility.name}
               </dd>
@@ -196,7 +200,7 @@ export function ApplicationStatus({
 
           {needsAnswer && (
             <Button size="lg" onClick={() => nav.go({ apply: 1 })}>
-              Update my application
+              {t("updateApplication")}
               <ArrowRight className="size-4" />
             </Button>
           )}
@@ -207,7 +211,7 @@ export function ApplicationStatus({
               className="bg-emerald-600 text-white hover:bg-emerald-700"
               onClick={() => nav.go({ step: 1 })}
             >
-              Link my account
+              {t("linkMyAccount")}
               <ArrowRight className="size-4" />
             </Button>
           )}
@@ -221,7 +225,7 @@ export function ApplicationStatus({
           <ShieldCheck className="text-muted-foreground mt-0.5 size-4 shrink-0" />
           <p className="text-muted-foreground leading-relaxed">
             <span className="text-foreground font-medium">
-              What we are holding, and for how long.
+              {t("holdingHelp")}
             </span>{" "}
             Your identity documents and the identity and account numbers you
             gave are encrypted, readable only by you and the Yipyy administrator
@@ -238,29 +242,28 @@ export function ApplicationStatus({
 const TIMELINE: { key: string; label: string; detail: string }[] = [
   {
     key: "submitted",
-    label: "You submit",
-    detail: "Your application is locked so it cannot change under review.",
+    label: "stepYouSubmit",
+    detail: "stepYouSubmitDetail",
   },
   {
     key: "under_review",
-    label: "Underwriting reviews it",
-    detail:
-      "They check the business, the owners and the documents. They may come back with a question.",
+    label: "stepUnderwriting",
+    detail: "stepUnderwritingDetail",
   },
   {
     key: "approved",
-    label: "Your merchant account is opened",
-    detail: "In your business name, with payouts to the account you gave.",
+    label: "stepAccountOpened",
+    detail: "stepAccountOpenedDetail",
   },
   {
     key: "connected",
-    label: "It is linked to Yipyy",
-    detail:
-      "Then terminal, link and invoice payments all land on the booking they belong to.",
+    label: "stepLinked",
+    detail: "stepLinkedDetail",
   },
 ];
 
 function WhatHappensNext({ status }: { status: Status }) {
+  const t = useSettingsText().section("yipyy-pay");
   // How far along the timeline we are. Derived from the status word rather
   // than a stored step, so it cannot claim more progress than there is.
   const reached =
@@ -275,7 +278,7 @@ function WhatHappensNext({ status }: { status: Status }) {
   return (
     <Card>
       <CardContent className="space-y-4 p-6">
-        <p className="font-semibold">What happens next</p>
+        <p className="font-semibold">{t("whatHappensNext")}</p>
         <ol className="space-y-4">
           {TIMELINE.map((entry, index) => {
             const done = index < reached;
@@ -293,10 +296,10 @@ function WhatHappensNext({ status }: { status: Status }) {
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-medium">
-                    {entry.label}
+                    {t(entry.label)}
                   </span>
                   <span className="text-muted-foreground block text-sm/relaxed">
-                    {entry.detail}
+                    {t(entry.detail)}
                   </span>
                 </span>
               </li>

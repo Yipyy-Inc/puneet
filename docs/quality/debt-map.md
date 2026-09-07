@@ -8312,6 +8312,72 @@ screen needs when it moves to Postgres.
 `src/data` singleton will do the same thing on the day it is translated. The
 list is `rg "^\s*\w+Config\.\w+ = " src/components src/app`.
 
+## 2026-09-07 — `check:ui-french` walks three imports deep, and a fourth-level file is invisible
+
+**Severity: 🟡 medium.** Found while converting `yipyy-pay`.
+
+The settings surface is built by `walk(sectionFile, 3, …)`. That is enough for
+the shape the gate was written against — a section wrapper, its screen, and the
+screen's cards — but Yipyy Pay is deeper:
+
+```
+_sections/yipyy-pay.tsx        depth 0
+  YipyyPaySection.tsx          1
+    YipyyPayDashboard.tsx      2
+      TransactionsTab.tsx      3   ← the walk stops here
+        TransactionsTable.tsx  4   ← never scanned
+```
+
+`TransactionsTable.tsx` holds the whole transactions grid — five column
+headings ("When", "Amount", "Card", "Taken", "For") and a three-way channel map
+("In person", "Online", "Other"). None of it was ever counted, and the section
+would have reported CLEAN with that table entirely in English.
+
+It was caught only because the conversion script walked the directory rather
+than the gate's surface, and the extra file turned up in the diff.
+
+**Do instead:** before believing a converted section, list what it actually
+reaches and compare against what the gate reported:
+
+```
+rg -o 'from "\./[^"]+"' src/components/facility/<area> | sort -u
+```
+
+**Raising the depth is not obviously right**, which is why this is a debt entry
+and not a fix. Depth 3 is also what keeps a section from being blamed for a
+shared lib six hops away — the gate's own header explains that a boundary drawn
+too wide "would make one fix look like fifty". A depth of 4 was not measured
+here. Measuring it is the first step, not raising it.
+
+**Related, and the reason this matters more than it looks:** the same walk
+feeds the four shell surfaces at depth 2. Nothing has checked what sits at
+depth 3 in a portal shell.
+
+## 2026-09-07 — a module-level constant cannot call a hook, and the conversion pattern has to know that
+
+**Severity: 🟢 low — a technique note, recorded because it cost an hour.**
+
+Settings screens carry a lot of copy in module-level constant arrays:
+`STATUS_VIEW`, `TIMELINE`, `VALUE_PROPS`, `CHECKLIST`, `DEVICE_STATUS`,
+`RANGES`, `TABS`, `CHANNEL`. Translating them has exactly two shapes and
+choosing the wrong one does not fail until typecheck:
+
+1. **The constant holds a KEY, the render site calls `t`.** Minimal diff, the
+   property names and types are unchanged, and it works for anything rendered
+   through a `.map()`. This is the default.
+2. **The constant becomes a function of `t`.** Needed when the array itself is
+   handed to something that reads its fields — `DataTable`'s `columns`, where
+   `label` is displayed by the table, not by our JSX. Wrap the call in
+   `useMemo(() => buildColumns(t), [t])`, because the table takes `columns` by
+   identity and a fresh array on every render resets its sort and column state
+   on each keystroke.
+
+**The trap that actually bit:** a scripted pass matching `[?:]\s*"…"` to catch
+ternary branches also matches an object property's colon. It rewrote
+`label: "Online"` to `label: t("deviceOnline")` inside module-level constants
+in eight files, none of which compile. If you script this, match a ternary as
+`\?\s*"…"\s*:` rather than on either punctuation mark alone.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

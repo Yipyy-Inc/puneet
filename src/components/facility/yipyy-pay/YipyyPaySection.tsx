@@ -14,6 +14,7 @@ import { YipyyPayPreConnection } from "./PreConnection";
 import { useYipyyPayNav } from "./use-yipyy-pay-nav";
 import { facilityParentHost } from "@/lib/app-host";
 import { settingsHref } from "@/lib/settings/nav";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // The connect wizard and the dashboard are never on screen together, and a
 // facility sees one of them for five minutes and the other for years. Split so
@@ -55,6 +56,7 @@ const YipyyPayDashboard = dynamic(
 // ============================================================================
 
 export function YipyyPaySection() {
+  const t = useSettingsText().section("yipyy-pay");
   const nav = useYipyyPayNav();
   const { data, isPending, error } = useYipyyPayOverview();
 
@@ -67,9 +69,7 @@ export function YipyyPaySection() {
     return (
       <Card>
         <CardContent className="text-muted-foreground p-6 text-sm">
-          {error instanceof Error
-            ? error.message
-            : "Yipyy Pay could not be loaded."}
+          {error instanceof Error ? error.message : t("loadFailed")}
         </CardContent>
       </Card>
     );
@@ -84,11 +84,9 @@ export function YipyyPaySection() {
         <CardContent className="flex items-start gap-3 p-6">
           <TriangleAlert className="mt-0.5 size-5 shrink-0 text-amber-600" />
           <div className="space-y-1">
-            <p className="font-semibold">Yipyy Pay is not available yet</p>
+            <p className="font-semibold">{t("notAvailable")}</p>
             <p className="text-muted-foreground text-sm/relaxed">
-              Card payments have not been switched on for this Yipyy
-              installation. Nothing is wrong with your business — contact Yipyy
-              support and we will enable it.
+              {t("notAvailableHelp")}
             </p>
           </div>
         </CardContent>
@@ -144,6 +142,7 @@ function FacilityChooser({
 }: {
   choices: { id: string; name: string; slug: string }[];
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   // `<slug>.app.yipyy.com` — the address a facility actually opens.
   const domain = facilityParentHost(process.env.NEXT_PUBLIC_APP_DOMAIN);
 
@@ -153,11 +152,9 @@ function FacilityChooser({
         <div className="flex items-start gap-3">
           <TriangleAlert className="mt-0.5 size-5 shrink-0 text-amber-600" />
           <div className="space-y-1">
-            <p className="font-semibold">Which business is this for?</p>
+            <p className="font-semibold">{t("whichBusiness")}</p>
             <p className="text-muted-foreground text-sm/relaxed">
-              You administer more than one facility and this address does not
-              say which. Open the one you want at its own address — a payment
-              account belongs to a business, not to an account.
+              {t("whichBusinessHelp")}
             </p>
           </div>
         </div>

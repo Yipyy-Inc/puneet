@@ -12,6 +12,7 @@ import { Step1Account } from "./Step1Account";
 import { Step2Business } from "./Step2Business";
 import { Step3Preferences } from "./Step3Preferences";
 import { SetupSuccess } from "./SetupSuccess";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Setting up Yipyy Pay, in three steps.
@@ -53,6 +54,7 @@ export function YipyyPaySetupWizard({
 }: {
   overview: YipyyPayOverview;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const nav = useYipyyPayNav();
   const [celebrating, setCelebrating] = useState(false);
 
@@ -78,20 +80,20 @@ export function YipyyPaySetupWizard({
   const steps: StepState[] = [
     {
       n: 1,
-      title: "Your account",
-      hint: "Connect and authorise",
+      title: t("stepAccount"),
+      hint: t("stepAccountHelp"),
       done: step1Done,
     },
     {
       n: 2,
-      title: "Your business",
-      hint: "Check the details",
+      title: t("stepBusiness"),
+      hint: t("stepBusinessHelp"),
       done: step2Done,
     },
     {
       n: 3,
-      title: "Your preferences",
-      hint: "Payouts and fees",
+      title: t("stepPreferences"),
+      hint: t("stepPreferencesHelp"),
       done: Boolean(config.setupCompletedAt),
     },
   ];
@@ -114,13 +116,15 @@ export function YipyyPaySetupWizard({
         className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm font-medium"
       >
         <ArrowLeft className="size-4" />
-        Back to Yipyy Pay
+        {t("backToPay")}
       </button>
 
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <YipyyPayWordmark size="md" tone="ink" />
-          <span className="text-muted-foreground text-lg">setup</span>
+          <span className="text-muted-foreground text-lg">
+            {t("wordSetup")}
+          </span>
         </div>
         <p className="text-muted-foreground text-sm/relaxed">
           Three steps to start taking card payments at{" "}

@@ -22,6 +22,7 @@ import {
   type YipyyPayConfig,
 } from "@/lib/settings/yipyy-pay";
 import { PreferencesIllustration } from "../illustrations";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Step 3 — the part that is genuinely Yipyy's.
@@ -124,6 +125,7 @@ export function Step3Preferences({
   overview: YipyyPayOverview;
   onComplete: () => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const save = useSaveYipyyPayConfig();
   const saved = overview.config;
   const businessName = overview.merchant?.name ?? overview.facility.name;
@@ -148,7 +150,7 @@ export function Step3Preferences({
 
   const complete = async () => {
     if (descriptorTooLong) {
-      toast.error("Shorten the receipt name before finishing.");
+      toast.error(t("receiptNameTooLong"));
       return;
     }
     try {
@@ -166,9 +168,7 @@ export function Step3Preferences({
       onComplete();
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Your preferences were not saved.",
+        error instanceof Error ? error.message : t("preferencesSaveFailed"),
       );
     }
   };
@@ -178,10 +178,9 @@ export function Step3Preferences({
       <div className="space-y-4">
         <PreferencesIllustration />
         <div className="space-y-2 text-center">
-          <h3 className="text-xl font-semibold">Set your preferences</h3>
+          <h3 className="text-xl font-semibold">{t("preferencesTitle")}</h3>
           <p className="text-muted-foreground mx-auto max-w-md text-sm/relaxed">
-            The last step, and all of it stays in Yipyy. You can change any of
-            this later.
+            {t("preferencesHelp")}
           </p>
         </div>
       </div>
@@ -191,10 +190,9 @@ export function Step3Preferences({
       {/* ── Payouts ────────────────────────────────────────────────────── */}
       <section className="space-y-3">
         <div>
-          <p className="font-semibold">When you get paid</p>
+          <p className="font-semibold">{t("whenPaid")}</p>
           <p className="text-muted-foreground text-sm/relaxed">
-            Your payout schedule is set on your merchant account. Tell us which
-            one you are on and we will show you when money should land.
+            {t("whenPaidHelp")}
           </p>
         </div>
         <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
@@ -202,13 +200,13 @@ export function Step3Preferences({
             [
               {
                 value: "standard" as PayoutSchedule,
-                title: "Standard",
-                body: "Money reaches your bank two to three business days after you take it.",
+                title: t("payoutStandard"),
+                body: t("payoutStandardHelp"),
               },
               {
                 value: "next_day" as PayoutSchedule,
-                title: "Next business day",
-                body: "Available on some accounts once you have been trading a while. Check your Clover account.",
+                title: t("payoutNextDay"),
+                body: t("payoutNextDayHelp"),
                 badge: "If enabled",
               },
             ] as const
@@ -224,9 +222,7 @@ export function Step3Preferences({
           ))}
         </div>
         <p className="text-muted-foreground text-xs/relaxed">
-          This changes the dates Yipyy estimates — it does not change your
-          schedule. To change the schedule itself, do it on your merchant
-          account.
+          {t("payoutEstimateNote")}
         </p>
       </section>
 
@@ -235,15 +231,14 @@ export function Step3Preferences({
       {/* ── What the customer sees ─────────────────────────────────────── */}
       <section className="space-y-3">
         <div>
-          <p className="font-semibold">What your customers see</p>
+          <p className="font-semibold">{t("customerSees")}</p>
           <p className="text-muted-foreground text-sm/relaxed">
-            The name printed on receipts, invoices and payment emails from
-            Yipyy.
+            {t("customerSeesHelp")}
           </p>
         </div>
         <div className="max-w-md space-y-2">
           <Label htmlFor="yipyy-pay-descriptor" className="text-sm font-medium">
-            Name on receipts
+            {t("receiptName")}
           </Label>
           <Input
             id="yipyy-pay-descriptor"
@@ -268,8 +263,7 @@ export function Step3Preferences({
             </p>
           </div>
           <p className="text-muted-foreground text-xs/relaxed">
-            The line on your customer&rsquo;s bank statement is separate and is
-            set on your merchant account, not here.
+            {t("statementNote")}
           </p>
         </div>
       </section>
@@ -279,7 +273,7 @@ export function Step3Preferences({
       {/* ── The fee ────────────────────────────────────────────────────── */}
       <section className="space-y-3">
         <div>
-          <p className="font-semibold">Who pays the card fee</p>
+          <p className="font-semibold">{t("whoPaysFee")}</p>
           <p className="text-muted-foreground text-sm/relaxed">
             Card payments cost {formatFeeRate(form.feeCardPresent)} on your
             terminal and {formatFeeRate(form.feeCardNotPresent)} online.
@@ -289,7 +283,7 @@ export function Step3Preferences({
           <Choice
             selected={form.feePayer === "business"}
             onSelect={() => patch({ feePayer: "business" })}
-            title="We absorb it"
+            title={t("feeAbsorb")}
             body="Your customer pays the price on the invoice and nothing more. The fee comes out of your takings."
           />
           {/* Disabled, not hidden. A facility comparing Yipyy against a
@@ -299,16 +293,13 @@ export function Step3Preferences({
             selected={false}
             disabled
             onSelect={() => undefined}
-            title="Add it to the invoice"
+            title={t("feeAddToInvoice")}
             body="Not available yet — see below."
             badge="Coming"
           />
         </div>
         <p className="text-muted-foreground text-xs/relaxed">
-          Passing the fee on to customers is not switched on yet. It changes
-          what a customer is charged, so it needs the invoice, the receipt and
-          the refund to agree about it — and the rules differ by country and by
-          state. For now Yipyy Pay absorbs it into your takings.
+          {t("passOnNotReady")}
         </p>
       </section>
 
@@ -317,7 +308,7 @@ export function Step3Preferences({
           <Separator />
           <section className="space-y-3">
             <div>
-              <p className="font-semibold">Which locations use Yipyy Pay</p>
+              <p className="font-semibold">{t("whichLocations")}</p>
               <p className="text-muted-foreground text-sm/relaxed">
                 You have {overview.locations.length} locations on this account.
               </p>
@@ -328,13 +319,13 @@ export function Step3Preferences({
                 onSelect={() =>
                   patch({ locationScope: "all", locationIds: [] })
                 }
-                title="All locations"
+                title={t("allLocationsOption")}
                 body="Every site takes card payments through this account."
               />
               <Choice
                 selected={form.locationScope === "selected"}
                 onSelect={() => patch({ locationScope: "selected" })}
-                title="Only some"
+                title={t("someLocations")}
                 body="Choose the sites below."
               />
             </div>
@@ -363,7 +354,7 @@ export function Step3Preferences({
                       {location.name}
                       {location.isPrimary && (
                         <span className="text-muted-foreground text-xs">
-                          Main
+                          {t("mainLocation")}
                         </span>
                       )}
                     </label>
@@ -382,7 +373,7 @@ export function Step3Preferences({
             target="_blank"
             rel="noreferrer noopener"
           >
-            Open your merchant account
+            {t("openMerchantAccount")}
             <ExternalLink className="size-3.5 opacity-70" />
           </a>
         </Button>
@@ -393,7 +384,7 @@ export function Step3Preferences({
           className="bg-emerald-600 hover:bg-emerald-700"
         >
           {save.isPending && <Loader2 className="size-4 animate-spin" />}
-          {save.isPending ? "Finishing…" : "Finish setup"}
+          {save.isPending ? t("finishing") : t("finishSetup")}
           <ArrowRight className="size-4" />
         </Button>
       </div>

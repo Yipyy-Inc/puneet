@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // The Yipyy Pay brand furniture.
@@ -56,6 +57,7 @@ export function PoweredByClover({
   tone?: "on-brand" | "muted";
   className?: string;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   return (
     <span
       className={cn(
@@ -65,7 +67,7 @@ export function PoweredByClover({
       )}
     >
       <CloverMark className="size-3.5 opacity-80" />
-      Powered by Clover
+      {t("poweredByClover")}
     </span>
   );
 }
@@ -101,6 +103,7 @@ export function YipyyPayWordmark({
         className,
       )}
     >
+      {/* french-ok: the product name, in every language */}
       <span className="font-extrabold">Yipyy</span>
       <span
         className={cn(
@@ -108,6 +111,7 @@ export function YipyyPayWordmark({
           tone === "on-brand" ? "text-white/75" : "text-muted-foreground",
         )}
       >
+        {/* french-ok: the product name */}
         Pay
       </span>
     </span>

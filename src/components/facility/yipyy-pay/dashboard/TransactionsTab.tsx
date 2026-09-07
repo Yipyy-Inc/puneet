@@ -22,6 +22,7 @@ import {
   type TakingsBreakdown,
 } from "@/lib/api/yipyy-pay-transactions";
 import { TransactionsTable } from "./TransactionsTable";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // What the facility took, and every transaction behind it.
@@ -48,10 +49,10 @@ import { TransactionsTable } from "./TransactionsTable";
 type RangeKey = "today" | "7d" | "30d" | "mtd";
 
 const RANGES: { key: RangeKey; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "7d", label: "7 days" },
-  { key: "30d", label: "30 days" },
-  { key: "mtd", label: "This month" },
+  { key: "today", label: "rangeToday" },
+  { key: "7d", label: "range7" },
+  { key: "30d", label: "range30" },
+  { key: "mtd", label: "rangeMonth" },
 ];
 
 /**
@@ -93,7 +94,7 @@ const SERVICE_LABELS: Record<string, string> = {
 
 const CHANNEL_LABELS: Record<string, string> = {
   in_person: "In person",
-  online: "Online",
+  online: "deviceOnline",
   other: "Cash & other",
 };
 
@@ -117,6 +118,7 @@ function label(map: Record<string, string>, key: string | null | undefined) {
 }
 
 export function TransactionsTab() {
+  const t = useSettingsText().section("yipyy-pay");
   const [range, setRange] = useState<RangeKey>("30d");
   const [kind, setKind] = useState<"sales" | "refunds" | "clover" | null>(null);
   const [offset, setOffset] = useState(0);
@@ -146,7 +148,7 @@ export function TransactionsTab() {
         <CardContent className="flex items-center gap-3 p-6">
           <TriangleAlert className="size-5 shrink-0 text-amber-600" />
           <div>
-            <p className="font-medium">The payments could not be read.</p>
+            <p className="font-medium">{t("paymentsFailed")}</p>
             <p className="text-muted-foreground text-sm">{error.message}</p>
           </div>
         </CardContent>
@@ -172,7 +174,7 @@ export function TransactionsTab() {
               )}
               onClick={() => pick(entry.key)}
             >
-              {entry.label}
+              {t(entry.label)}
             </Button>
           ))}
         </div>
@@ -181,7 +183,7 @@ export function TransactionsTab() {
         {isFetching && !isPending && (
           <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <Loader2 className="size-3.5 animate-spin" />
-            Updating
+            {t("updating")}
           </span>
         )}
       </div>
@@ -191,14 +193,14 @@ export function TransactionsTab() {
       {takings && (
         <div className="grid gap-4 lg:grid-cols-2">
           <Breakdown
-            title="By service"
+            title={t("byService")}
             hint="What the money was for. Clover cannot answer this — the booking can."
             rows={takings.byService}
             nameOf={(row) => label(SERVICE_LABELS, row.service)}
             total={takings.net}
           />
           <Breakdown
-            title="How it was taken"
+            title={t("howTaken")}
             hint="Card present, online, or neither."
             rows={takings.byChannel}
             nameOf={(row) => label(CHANNEL_LABELS, row.channel)}
@@ -210,12 +212,12 @@ export function TransactionsTab() {
       {/* ── The transactions ───────────────────────────────────────────── */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground text-sm">Show</span>
+          <span className="text-muted-foreground text-sm">{t("show")}</span>
           {(
             [
-              { key: "sales", label: "Sales" },
-              { key: "refunds", label: "Refunds" },
-              { key: "clover", label: "Clover only" },
+              { key: "sales", label: t("sales") },
+              { key: "refunds", label: t("refunds") },
+              { key: "clover", label: t("cloverOnly") },
             ] as const
           ).map((entry) => (
             <Badge
@@ -224,7 +226,7 @@ export function TransactionsTab() {
               className="cursor-pointer select-none"
               onClick={() => filter(entry.key)}
             >
-              {entry.label}
+              {t(entry.label)}
             </Badge>
           ))}
           {kind && (
@@ -235,7 +237,7 @@ export function TransactionsTab() {
               onClick={() => filter(kind)}
             >
               <RotateCcw className="size-3" />
-              Clear
+              {t("clear")}
             </Button>
           )}
           {/* The filters narrow the LIST, never the totals above. A day's
@@ -265,6 +267,7 @@ function TakingsRow({
   takings: Takings | null;
   loading: boolean;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   if (loading || !takings) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
@@ -288,7 +291,7 @@ function TakingsRow({
     // this screen that must never be half-shown.
     <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
       <KpiTile
-        label="Processed"
+        label={t("processed")}
         value={formatCurrency(takings.gross)}
         hint={`${takings.sales} sale${takings.sales === 1 ? "" : "s"}`}
         icon={Banknote}
@@ -296,25 +299,25 @@ function TakingsRow({
         // Net is the trail rather than the headline: a refunded day and a quiet
         // day share a net and share nothing else.
         trail={[
-          { label: "Net of refunds", value: formatCurrency(takings.net) },
+          { label: t("netOfRefunds"), value: formatCurrency(takings.net) },
         ]}
       />
       <KpiTile
-        label="Tips"
+        label={t("tips")}
         value={formatCurrency(takings.tips)}
         hint="After refunds"
         icon={Coins}
         tone="indigo"
       />
       <KpiTile
-        label="Refunded"
+        label={t("refunded")}
         value={formatCurrency(takings.refunded)}
         hint={`${takings.refunds} refund${takings.refunds === 1 ? "" : "s"}`}
         icon={RotateCcw}
         tone={refunded ? "amber" : "slate"}
       />
       <KpiTile
-        label="Through Clover"
+        label={t("throughClover")}
         value={formatCurrency(takings.cloverGross)}
         hint={`${takings.cloverSales} card payment${takings.cloverSales === 1 ? "" : "s"}`}
         icon={CreditCard}
@@ -348,6 +351,7 @@ function Breakdown({
   nameOf: (row: TakingsBreakdown) => string;
   total: number;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   // Bars are drawn against the largest ROW, not the total: at four services the
   // biggest would otherwise fill a third of its track and every other line
   // would be a stub.
@@ -364,7 +368,7 @@ function Breakdown({
 
         {meaningful.length === 0 ? (
           <p className="text-muted-foreground py-4 text-center text-sm">
-            Nothing taken in this period.
+            {t("nothingInPeriod")}
           </p>
         ) : (
           <ul className="space-y-2.5">

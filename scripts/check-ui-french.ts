@@ -215,7 +215,7 @@ const TEMPLATE = /`([^`]{4,300})`/g;
  * argument.
  */
 const OBJECT_COPY =
-  /\b(?:label|title|description|placeholder|heading|subtitle|helpText|helper|hint|message|summary|caption|emptyText)\s*:\s*"([^"]{2,})"/g;
+  /\b(?:label|title|description|placeholder|heading|subtitle|helpText|helper|hint|headline|body|blurb|detail|message|summary|caption|emptyText)\s*:\s*"([^"]{2,})"/g;
 
 const FRENCH_OK = /french-ok:/;
 
@@ -509,7 +509,6 @@ const BASELINE: Record<string, Set<string>> = {
     "taxes",
     "tips",
     "training",
-    "yipyy-pay",
     "yipyygo",
   ]),
   "shell:facility": new Set<string>(),

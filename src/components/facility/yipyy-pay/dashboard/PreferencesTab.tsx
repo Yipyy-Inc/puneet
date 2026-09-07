@@ -27,6 +27,7 @@ import {
   type YipyyPayConfig,
 } from "@/lib/settings/yipyy-pay";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // The settings a facility comes back to change.
@@ -126,6 +127,12 @@ function Choice({
 }
 
 export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
+  const t = useSettingsText().section("yipyy-pay");
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
   const settingsPath = useSettingsHref();
   const save = useSaveYipyyPayConfig();
   const saved = overview.config;
@@ -150,9 +157,7 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
       toast.success(message);
       return true;
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "That could not be saved.",
-      );
+      toast.error(error instanceof Error ? error.message : t("saveFailed"));
       return false;
     }
   };
@@ -161,8 +166,8 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
     <div className="space-y-4">
       {/* ── Receipt name: auto-saves on blur ──────────────────────────── */}
       <Section
-        title="What your customers see"
-        description="The name Yipyy prints on receipts, invoices and payment emails."
+        title={t("customerSees")}
+        description={t("customerSeesShortHelp")}
       >
         <DescriptorField
           value={form.receiptDescriptor}
@@ -182,28 +187,30 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
           }}
         />
         <p className="text-muted-foreground text-xs/relaxed">
-          The line on your customer&rsquo;s bank statement is separate. It
-          belongs to your merchant account and is changed there.
+          {t("statementNoteShort")}
         </p>
       </Section>
 
       {/* ── The fee ───────────────────────────────────────────────────── */}
       <Section
-        title="Who pays the card fee"
-        description={`Card payments cost ${formatFeeRate(form.feeCardPresent)} on your reader and ${formatFeeRate(form.feeCardNotPresent)} online.`}
+        title={t("whoPaysFee")}
+        description={fill("feeCost", {
+          reader: formatFeeRate(form.feeCardPresent),
+          online: formatFeeRate(form.feeCardNotPresent),
+        })}
       >
         <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
           <Choice
             selected
             onSelect={() => undefined}
-            title="We absorb it"
+            title={t("feeAbsorb")}
             body="Your customer pays the invoice and nothing more."
           />
           <Choice
             selected={false}
             disabled
             onSelect={() => undefined}
-            title="Add it to the invoice"
+            title={t("feeAddToInvoice")}
             body="Not available yet."
           />
         </div>
@@ -211,7 +218,7 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
           <ShieldOff className="mt-0.5 size-3.5 shrink-0" />
           <p>
             <span className="text-foreground font-medium">
-              Passing the fee on is not switched on yet.
+              {t("passOnNotReadyShort")}
             </span>{" "}
             It changes what a customer is charged, so the invoice, the receipt
             and the refund all have to agree about it — and whether it is
@@ -222,21 +229,18 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
       </Section>
 
       {/* ── Payouts ───────────────────────────────────────────────────── */}
-      <Section
-        title="When you get paid"
-        description="Set on your merchant account. Tell us which one you are on and we will estimate arrival dates."
-      >
+      <Section title={t("whenPaid")} description={t("whenPaidShortHelp")}>
         <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
           <Choice
             selected={form.payoutSchedule === "standard"}
             onSelect={() => patch({ payoutSchedule: "standard" })}
-            title="Standard"
+            title={t("payoutStandard")}
             body="Two to three business days after you take the payment."
           />
           <Choice
             selected={form.payoutSchedule === "next_day"}
             onSelect={() => patch({ payoutSchedule: "next_day" })}
-            title="Next business day"
+            title={t("payoutNextDay")}
             body="Available on some accounts once you have been trading a while."
           />
         </div>
@@ -247,12 +251,12 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
               target="_blank"
               rel="noreferrer noopener"
             >
-              Change it on your account
+              {t("changeOnAccount")}
               <ExternalLink className="size-3.5 opacity-70" />
             </a>
           </Button>
           <p className="text-muted-foreground text-xs/relaxed">
-            This setting changes the dates Yipyy estimates, not your schedule.
+            {t("estimateNoteShort")}
           </p>
         </div>
       </Section>
@@ -261,15 +265,14 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
           <div className="min-w-0">
-            <p className="text-sm font-medium">Tipping</p>
+            <p className="text-sm font-medium">{t("tipping")}</p>
             <p className="text-muted-foreground text-sm/relaxed">
-              Tip tiers, prompts and reminders live in their own screen so there
-              is only one place to change them.
+              {t("tippingHelp")}
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
             <a href={settingsPath("tips")}>
-              Tip settings
+              {t("tipSettings")}
               <ArrowRight className="size-3.5" />
             </a>
           </Button>
@@ -281,19 +284,18 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
         <CardContent className="space-y-3 p-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="font-semibold">Pre-authorise saved cards</p>
+              <p className="font-semibold">{t("preauthTitle")}</p>
               <p className="text-muted-foreground text-sm/relaxed">
-                Place a small temporary hold to check a card is good before the
-                appointment.
+                {t("preauthHelp")}
               </p>
             </div>
-            <Switch checked={false} disabled aria-label="Pre-authorise cards" />
+            <Switch checked={false} disabled aria-label={t("preauth")} />
           </div>
           <div className="text-muted-foreground flex items-start gap-2.5 rounded-lg border border-dashed p-3 text-xs/relaxed">
             <ShieldOff className="mt-0.5 size-3.5 shrink-0" />
             <p>
               <span className="text-foreground font-medium">
-                Not available on your account.
+                {t("preauthUnavailable")}
               </span>{" "}
               A pre-authorisation is a card charge that is deliberately not
               final, and Canadian card processing refuses those. Yipyy also has
@@ -308,12 +310,14 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
           <div className="min-w-0">
-            <p className="text-sm font-medium">Payment account</p>
+            <p className="text-sm font-medium">{t("paymentAccount")}</p>
             <p className="text-muted-foreground text-sm/relaxed">
               {overview.connection.merchantId
-                ? `Connected to ${overview.connection.merchantId}${
+                ? `${fill("connectedTo", {
+                    name: overview.connection.merchantId,
+                  })}${
                     overview.connection.environment === "sandbox"
-                      ? " (test account)"
+                      ? ` ${t("testAccountSuffix")}`
                       : ""
                   }.`
                 : "No account connected."}{" "}
@@ -323,7 +327,7 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
           </div>
           <Button asChild variant="outline" size="sm">
             <a href="/api/payments/clover/connect">
-              Use a different account
+              {t("useDifferentAccount")}
               <ExternalLink className="size-3.5 opacity-70" />
             </a>
           </Button>
@@ -333,10 +337,10 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
       {dirty && (
         <div className="bg-background/95 sticky bottom-4 flex flex-wrap items-center justify-end gap-2 rounded-xl border p-3 shadow-lg backdrop-blur-sm">
           <p className="text-muted-foreground mr-auto text-sm">
-            You have unsaved changes.
+            {t("unsavedChanges")}
           </p>
           <Button variant="ghost" onClick={() => setDraft(null)}>
-            Discard
+            {t("discard")}
           </Button>
           <Button
             className="bg-emerald-600 hover:bg-emerald-700"
@@ -372,6 +376,7 @@ function DescriptorField({
   onChange: (value: string) => void;
   onCommit: (value: string) => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const latest = useRef(value);
   useEffect(() => {
     latest.current = value;
@@ -380,7 +385,7 @@ function DescriptorField({
   return (
     <div className="max-w-md space-y-2">
       <Label htmlFor="receipt-descriptor" className="text-sm font-medium">
-        Name on receipts
+        {t("receiptName")}
       </Label>
       <div className="relative">
         <Input
@@ -393,7 +398,7 @@ function DescriptorField({
         {savedFlash && (
           <span className="absolute inset-y-0 right-3 flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
             <Check className="size-3.5" />
-            Saved
+            {t("savedShort")}
           </span>
         )}
       </div>

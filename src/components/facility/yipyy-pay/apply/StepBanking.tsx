@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { ArrowLeft, ArrowRight, Info, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -72,6 +73,7 @@ export function StepBanking({
   onBack: () => void;
   onSaved: () => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const [draft, setDraft] = useState<BankingForm | null>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [replacingAccount, setReplacingAccount] = useState(false);
@@ -116,9 +118,7 @@ export function StepBanking({
     try {
       await save.mutateAsync({ step: "banking", values: parsed.data });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "That could not be saved.",
-      );
+      toast.error(error instanceof Error ? error.message : t("saveFailed"));
       return;
     }
 
