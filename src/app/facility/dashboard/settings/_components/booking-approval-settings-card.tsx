@@ -14,14 +14,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { Switch } from "@/components/ui/switch";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // Booking Approval Settings Component
 export function BookingApprovalSettingsCard() {
+  const t = useSettingsText().section("booking-rules");
   const BUILT_IN_SERVICES = [
-    { key: "boarding", label: "Boarding" },
-    { key: "daycare", label: "Daycare" },
-    { key: "grooming", label: "Grooming" },
-    { key: "training", label: "Training" },
+    { key: "boarding", label: t("svcBoarding") },
+    { key: "daycare", label: t("svcDaycare") },
+    { key: "grooming", label: t("svcGrooming") },
+    { key: "training", label: t("svcTraining") },
   ];
 
   const [config, setConfig] = useState(() => getApprovalConfig());
@@ -60,20 +62,18 @@ export function BookingApprovalSettingsCard() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Booking approval by service</CardTitle>
+          <CardTitle>{t("approvalTitle")}</CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
-            Choose which services require approval before a booking is
-            confirmed. When enabled, customer bookings go to a request queue for
-            staff review.
+            {t("approvalHelp")}
           </p>
         </div>
         {isEditing ? (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleCancel}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button size="sm" onClick={handleSave}>
-              Save
+              {t("save")}
             </Button>
           </div>
         ) : (
@@ -82,7 +82,7 @@ export function BookingApprovalSettingsCard() {
             size="sm"
             onClick={() => setIsEditing(true)}
           >
-            Edit
+            {t("edit")}
           </Button>
         )}
       </CardHeader>
@@ -99,9 +99,7 @@ export function BookingApprovalSettingsCard() {
                 <div>
                   <div className="font-medium">{label}</div>
                   <div className="text-muted-foreground text-sm">
-                    {svc.enabled
-                      ? "Requires approval — bookings go to request queue"
-                      : "Direct booking — customers are confirmed instantly"}
+                    {svc.enabled ? t("requiresApproval") : t("directBooking")}
                   </div>
                 </div>
                 <Switch
@@ -115,9 +113,7 @@ export function BookingApprovalSettingsCard() {
               {svc.enabled && (
                 <div className="mt-3 grid grid-cols-2 gap-4 border-t pt-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">
-                      Estimated response time (hours)
-                    </Label>
+                    <Label className="text-xs">{t("responseTime")}</Label>
                     <Input
                       type="number"
                       min={1}
@@ -134,13 +130,11 @@ export function BookingApprovalSettingsCard() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">
-                      Auto-confirm after (hours)
-                    </Label>
+                    <Label className="text-xs">{t("autoConfirmAfter")}</Label>
                     <Input
                       type="number"
                       min={0}
-                      placeholder="Never"
+                      placeholder={t("never")}
                       value={svc.autoConfirmAfterHours ?? ""}
                       onChange={(e) =>
                         updateService(key, {
@@ -155,7 +149,7 @@ export function BookingApprovalSettingsCard() {
                       }
                     />
                     <p className="text-muted-foreground text-xs">
-                      Leave empty to require manual approval
+                      {t("leaveEmptyManual")}
                     </p>
                   </div>
                 </div>

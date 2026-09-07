@@ -56,11 +56,7 @@ import {
   useUpdateTag,
 } from "@/lib/api/tags";
 import { DEFAULT_TAG_COLOR } from "@/lib/tag-colors";
-import {
-  ALL_FACILITY_ROLES,
-  FACILITY_ROLE_LABELS,
-  type FacilityRole,
-} from "@/lib/role-utils";
+import { ALL_FACILITY_ROLES, type FacilityRole } from "@/lib/role-utils";
 // The three `logTag*` calls that sat here are gone with the fixture. They
 // appended to a module-level array in src/lib/tag-note-audit.ts that NOTHING
 // reads — `getTagNoteAuditLog` has no caller — so keeping them beside a real
@@ -68,6 +64,8 @@ import {
 // that is genuinely durable. `public.audit_log` is the real one, and no trigger
 // on `facility_tags` writes to it yet. Recorded in the debt map.
 import { cn } from "@/lib/utils";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useFacilityRoleLabel } from "@/lib/settings/use-staff-role-label";
 
 // ========================================
 // TAG BUILDER SECTION
@@ -95,16 +93,44 @@ const EMPTY_TAG_FORM: TagFormState = {
   locationIds: [],
 };
 
+// A module constant cannot know a locale, so it carries the catalogue keys
+// for its label, its empty sentence and its duplicate-name message. Each of
+// the three is a WHOLE sentence per type rather than a frame with the type
+// dropped in: "No {type} tags yet" works in English by accident and in French
+// not at all, because the article changes with the noun.
 const TAG_TYPE_CONFIG: Record<
   TagType,
-  { label: string; icon: React.ReactNode }
+  {
+    labelKey: string;
+    emptyKey: string;
+    duplicateKey: string;
+    icon: React.ReactNode;
+  }
 > = {
-  pet: { label: "Pet tags", icon: <PawPrint className="size-4" /> },
-  customer: { label: "Customer tags", icon: <Users className="size-4" /> },
+  pet: {
+    labelKey: "typePet",
+    emptyKey: "emptyPet",
+    duplicateKey: "duplicatePet",
+    icon: <PawPrint className="size-4" />,
+  },
+  customer: {
+    labelKey: "typeCustomer",
+    emptyKey: "emptyCustomer",
+    duplicateKey: "duplicateCustomer",
+    icon: <Users className="size-4" />,
+  },
   booking: {
-    label: "Booking tags",
+    labelKey: "typeBooking",
+    emptyKey: "emptyBooking",
+    duplicateKey: "duplicateBooking",
     icon: <CalendarCheck className="size-4" />,
   },
+};
+
+const PRIORITY_KEYS: Record<TagPriority, string> = {
+  informational: "priorityInformational",
+  warning: "priorityWarning",
+  critical: "priorityCritical",
 };
 
 const PRIORITY_BADGE_VARIANTS: Record<
@@ -117,6 +143,7 @@ const PRIORITY_BADGE_VARIANTS: Record<
 };
 
 function TagBuilder() {
+  const t = useSettingsText().section("tags-notes");
   // ── THE CATALOGUE IS A TABLE NOW, NOT A useState ────────────────────────
   //
   // This held `useState<Tag[]>([...allTags])` — a copy of a 76-row fixture —
@@ -182,7 +209,10 @@ function TagBuilder() {
     );
     if (duplicate) {
       toast.error(
-        `A ${activeType} tag named "${duplicate.name}" already exists`,
+        t(TAG_TYPE_CONFIG[activeType].duplicateKey).replace(
+          "{name}",
+          duplicate.name,
+        ),
       );
       return;
     }
@@ -205,7 +235,7 @@ function TagBuilder() {
         { id: editingTag.id, patch: fields },
         {
           onSuccess: () => {
-            toast.success(`${name} saved`);
+            toast.success(t("tagSaved").replace("{name}", name));
             setFormOpen(false);
           },
           onError,
@@ -218,7 +248,7 @@ function TagBuilder() {
       { type: activeType, ...fields },
       {
         onSuccess: () => {
-          toast.success(`${name} added`);
+          toast.success(t("tagAdded").replace("{name}", name));
           setFormOpen(false);
         },
         onError,
@@ -229,7 +259,7 @@ function TagBuilder() {
   function handleDelete(tag: Tag) {
     retireTag.mutate(tag.id, {
       onSuccess: () => {
-        toast.success(`${tag.name} retired`);
+        toast.success(t("tagRetired").replace("{name}", tag.name));
         setDeleteConfirm(null);
       },
       onError: (error: Error) => toast.error(error.message),
@@ -240,10 +270,10 @@ function TagBuilder() {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Tag builder</CardTitle>
+          <CardTitle className="text-lg">{t("builderTitle")}</CardTitle>
           <Button size="sm" className="gap-1" onClick={openCreate}>
             <Plus className="size-3.5" />
-            Create tag
+            {t("createTag")}
           </Button>
         </div>
       </CardHeader>
@@ -253,11 +283,14 @@ function TagBuilder() {
           value={activeType}
           onValueChange={(v) => setActiveType(v as TagType)}
         >
-          <TabsList className="mb-4">
+          {/* §5g at 599px: "Étiquettes de réservation" is half again the
+              width of "Booking tags", and the third tab was cut off with no
+              way to reach it. Tabs holding translated labels scroll. */}
+          <TabsList className="mb-4 max-w-full justify-start overflow-x-auto">
             {(Object.keys(TAG_TYPE_CONFIG) as TagType[]).map((type) => (
               <TabsTrigger key={type} value={type} className="gap-1.5">
                 {TAG_TYPE_CONFIG[type].icon}
-                {TAG_TYPE_CONFIG[type].label}
+                {t(TAG_TYPE_CONFIG[type].labelKey)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -278,20 +311,18 @@ function TagBuilder() {
                 </div>
               ) : failed ? (
                 <p className="text-muted-foreground py-8 text-center text-sm">
-                  These tags could not be loaded. Reload the page to try again.
+                  {t("loadFailed")}
                 </p>
               ) : filteredTags.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
-                  <p className="text-sm">
-                    No {TAG_TYPE_CONFIG[type].label.toLowerCase()} yet
-                  </p>
+                  <p className="text-sm">{t(TAG_TYPE_CONFIG[type].emptyKey)}</p>
                   <Button
                     variant="outline"
                     size="sm"
                     className="mt-2"
                     onClick={openCreate}
                   >
-                    Create your first tag
+                    {t("createFirstTag")}
                   </Button>
                 </div>
               ) : (
@@ -324,17 +355,21 @@ function TagBuilder() {
                               variant={PRIORITY_BADGE_VARIANTS[tag.priority]}
                               className="text-[10px]"
                             >
-                              {tag.priority}
+                              {t(PRIORITY_KEYS[tag.priority])}
                             </Badge>
                             <Badge variant="outline" className="text-[10px]">
-                              {tag.visibility === "internal"
-                                ? "Internal"
-                                : "Visible"}
+                              {t(
+                                tag.visibility === "internal"
+                                  ? "visibilityInternal"
+                                  : "visibilityVisible",
+                              )}
                             </Badge>
                             <Badge variant="outline" className="text-[10px]">
-                              {tag.scope === "global"
-                                ? "Global"
-                                : "Location-specific"}
+                              {t(
+                                tag.scope === "global"
+                                  ? "scopeGlobalShort"
+                                  : "scopeLocationShort",
+                              )}
                             </Badge>
                           </div>
                           {tag.description && (
@@ -379,14 +414,13 @@ function TagBuilder() {
         <div className="mt-6 rounded-lg border border-dashed p-4 opacity-60">
           <div className="mb-1 flex items-center gap-2">
             <Zap className="size-4" />
-            <span className="text-sm font-medium">Tag automations</span>
+            <span className="text-sm font-medium">{t("automationsTitle")}</span>
             <Badge variant="secondary" className="text-[10px]">
-              Coming soon
+              {t("comingSoon")}
             </Badge>
           </div>
           <p className="text-muted-foreground text-xs">
-            Automatically trigger actions when tags are assigned — add tasks,
-            send notifications, and more.
+            {t("automationsHelp")}
           </p>
         </div>
       </CardContent>
@@ -396,11 +430,11 @@ function TagBuilder() {
         open={formOpen}
         onOpenChange={setFormOpen}
         type="form"
-        title={editingTag ? "Edit tag" : "Create tag"}
+        title={t(editingTag ? "editTag" : "createTag")}
         size="md"
         actions={{
           primary: {
-            label: editingTag ? "Save changes" : "Create tag",
+            label: t(editingTag ? "saveChanges" : "createTag"),
             onClick: handleSave,
             // §5s: a button with no loading state double-submits, and this one
             // now writes a row with a uniqueness index behind it — the second
@@ -410,34 +444,34 @@ function TagBuilder() {
             disabled: !form.name.trim(),
           },
           secondary: {
-            label: "Cancel",
+            label: t("cancel"),
             onClick: () => setFormOpen(false),
           },
         }}
       >
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="tag-name">Name *</Label>
+            <Label htmlFor="tag-name">{t("nameLabel")}</Label>
             <Input
               id="tag-name"
               value={form.name}
               onChange={(e) =>
                 setForm((f) => ({ ...f, name: e.target.value.slice(0, 50) }))
               }
-              placeholder="Enter tag name"
+              placeholder={t("namePlaceholder")}
               maxLength={50}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="tag-description">Description</Label>
+            <Label htmlFor="tag-description">{t("descriptionLabel")}</Label>
             <Textarea
               id="tag-description"
               value={form.description}
               onChange={(e) =>
                 setForm((f) => ({ ...f, description: e.target.value }))
               }
-              placeholder="Optional description"
+              placeholder={t("descriptionPlaceholder")}
               rows={2}
               className="resize-none"
             />
@@ -452,7 +486,7 @@ function TagBuilder() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Priority</Label>
+              <Label>{t("priority")}</Label>
               <Select
                 value={form.priority}
                 onValueChange={(v) =>
@@ -463,15 +497,19 @@ function TagBuilder() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="informational">Informational</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
+                  {(Object.keys(PRIORITY_KEYS) as TagPriority[]).map(
+                    (value) => (
+                      <SelectItem key={value} value={value}>
+                        {t(PRIORITY_KEYS[value])}
+                      </SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Scope</Label>
+              <Label>{t("scope")}</Label>
               <Select
                 value={form.scope}
                 onValueChange={(v) =>
@@ -482,9 +520,9 @@ function TagBuilder() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="global">Global (all locations)</SelectItem>
+                  <SelectItem value="global">{t("scopeGlobal")}</SelectItem>
                   <SelectItem value="location_specific">
-                    Location-specific
+                    {t("scopeLocation")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -494,12 +532,14 @@ function TagBuilder() {
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <Label className="text-sm font-medium">
-                Visible to customers
+                {t("visibleToCustomers")}
               </Label>
               <p className="text-muted-foreground text-xs">
-                {form.visibility === "internal"
-                  ? "Only staff can see this tag"
-                  : "Customers can see this tag on their portal"}
+                {t(
+                  form.visibility === "internal"
+                    ? "visibleInternalHelp"
+                    : "visibleCustomerHelp",
+                )}
               </p>
             </div>
             <Switch
@@ -520,7 +560,7 @@ function TagBuilder() {
         open={!!deleteConfirm}
         onOpenChange={() => setDeleteConfirm(null)}
         type="warning"
-        title="Retire this tag"
+        title={t("retireTitle")}
         // The old copy said "this will remove the tag from all assigned
         // entities", which was never what the handler did and is now
         // measurably false: the route clears `is_active` precisely so the
@@ -529,18 +569,20 @@ function TagBuilder() {
         // before deciding.
         description={
           deleteConfirm
-            ? `${deleteConfirm.name} will stop appearing in the tag picker. Records already carrying it keep it, and you can bring the tag back by creating it again with the same name.`
+            ? t("retireBody").replace("{name}", deleteConfirm.name)
             : ""
         }
         actions={{
           primary: {
-            label: deleteConfirm ? `Retire ${deleteConfirm.name}` : "Retire",
+            label: deleteConfirm
+              ? t("retireNamed").replace("{name}", deleteConfirm.name)
+              : t("retire"),
             variant: "destructive",
             loading: saving,
             onClick: () => deleteConfirm && handleDelete(deleteConfirm),
           },
           secondary: {
-            label: "Cancel",
+            label: t("cancel"),
             onClick: () => setDeleteConfirm(null),
           },
         }}
@@ -555,15 +597,27 @@ function TagBuilder() {
 // NOTES CONFIG SECTION
 // ========================================
 
-const NOTE_CATEGORY_LABELS: Record<NoteCategory, string> = {
-  pet: "Pet Notes",
-  customer: "Customer Notes",
-  booking: "Booking Notes",
-  incident: "Incident Notes",
-  internal_staff: "Internal Staff Notes",
+const NOTE_CATEGORY_KEYS: Record<NoteCategory, string> = {
+  pet: "catPet",
+  customer: "catCustomer",
+  booking: "catBooking",
+  incident: "catIncident",
+  internal_staff: "catInternalStaff",
 };
 
 const PERMISSION_ACTIONS = ["view", "create", "edit", "delete"] as const;
+
+// The action was printed raw under CSS `capitalize` — "view", "create". That
+// renders the enum, not a word, and capitalising it does not translate it.
+const PERMISSION_ACTION_KEYS: Record<
+  (typeof PERMISSION_ACTIONS)[number],
+  string
+> = {
+  view: "actView",
+  create: "actCreate",
+  edit: "actEdit",
+  delete: "actDelete",
+};
 
 // ── NOTHING RENDERS UNTIL THE FACILITY'S OWN POLICY HAS ARRIVED ──────────
 //
@@ -592,6 +646,8 @@ function NotesConfigEditor({
 }: {
   initialPolicy: TagNotePolicy;
 }) {
+  const t = useSettingsText().section("tags-notes");
+  const roleLabel = useFacilityRoleLabel();
   const saveSetting = useSaveFacilitySetting();
   const [settings, setSettings] = useState<TagNotePolicy>(initialPolicy);
   const [savedSettings, setSavedSettings] =
@@ -607,13 +663,11 @@ function NotesConfigEditor({
           // The BASELINE moves, not the draft — a switch flipped while the
           // request was in flight stays flipped.
           setSavedSettings(settings);
-          toast.success("Note settings saved");
+          toast.success(t("noteSettingsSaved"));
         },
         onError: (error) =>
           toast.error(
-            error instanceof Error
-              ? error.message
-              : "Those note settings were not saved.",
+            error instanceof Error ? error.message : t("noteSettingsFailed"),
           ),
       },
     );
@@ -650,7 +704,7 @@ function NotesConfigEditor({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <StickyNote className="size-5" />
-          Notes configuration
+          {t("notesTitle")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -658,12 +712,14 @@ function NotesConfigEditor({
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <Label className="text-sm font-medium">
-              Default note visibility
+              {t("defaultVisibility")}
             </Label>
             <p className="text-muted-foreground text-xs">
-              {settings.noteSettings.defaultVisibility === "internal"
-                ? "New notes are internal by default"
-                : "New notes are shared with customers by default"}
+              {t(
+                settings.noteSettings.defaultVisibility === "internal"
+                  ? "defaultInternalHelp"
+                  : "defaultSharedHelp",
+              )}
             </p>
           </div>
           <Switch
@@ -687,7 +743,7 @@ function NotesConfigEditor({
         {/* Role permissions matrix */}
         <div>
           <Label className="mb-3 block text-sm font-medium">
-            Role permissions by note category
+            {t("rolePermissions")}
           </Label>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
@@ -697,7 +753,7 @@ function NotesConfigEditor({
                     scope="col"
                     className="text-muted-foreground py-2 pr-4 text-left font-medium"
                   >
-                    Category / Action
+                    {t("categoryAction")}
                   </th>
                   {ALL_FACILITY_ROLES.map((role) => (
                     <th
@@ -705,13 +761,13 @@ function NotesConfigEditor({
                       key={role}
                       className="text-muted-foreground px-2 py-2 text-center text-xs font-medium"
                     >
-                      {FACILITY_ROLE_LABELS[role]}
+                      {roleLabel(role)}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {(Object.keys(NOTE_CATEGORY_LABELS) as NoteCategory[]).map(
+                {(Object.keys(NOTE_CATEGORY_KEYS) as NoteCategory[]).map(
                   (category) => (
                     <Fragment key={category}>
                       {PERMISSION_ACTIONS.map((action, actionIdx) => (
@@ -725,11 +781,11 @@ function NotesConfigEditor({
                           <td className="py-1.5 pr-4">
                             {actionIdx === 0 ? (
                               <span className="text-xs font-medium">
-                                {NOTE_CATEGORY_LABELS[category]}
+                                {t(NOTE_CATEGORY_KEYS[category])}
                               </span>
                             ) : null}
-                            <span className="text-muted-foreground block pl-2 text-xs capitalize">
-                              {action}
+                            <span className="text-muted-foreground block pl-2 text-xs">
+                              {t(PERMISSION_ACTION_KEYS[action])}
                             </span>
                           </td>
                           {ALL_FACILITY_ROLES.map((role) => {
@@ -744,7 +800,18 @@ function NotesConfigEditor({
                               >
                                 <Checkbox
                                   checked={hasPermission}
-                                  aria-label={`${FACILITY_ROLE_LABELS[role]} can ${action} ${NOTE_CATEGORY_LABELS[category]}`}
+                                  aria-label={t("permissionCheckbox")
+                                    .replace("{role}", roleLabel(role))
+                                    .replace(
+                                      "{action}",
+                                      t(
+                                        PERMISSION_ACTION_KEYS[action],
+                                      ).toLocaleLowerCase(),
+                                    )
+                                    .replace(
+                                      "{category}",
+                                      t(NOTE_CATEGORY_KEYS[category]),
+                                    )}
                                   onCheckedChange={() =>
                                     toggleRolePermission(category, action, role)
                                   }
@@ -768,16 +835,14 @@ function NotesConfigEditor({
             lived in `useState` and were discarded on reload. */}
         <div className="flex items-center justify-end gap-3 border-t pt-4">
           {isDirty && (
-            <p className="text-ink-tertiary text-sm">
-              You have unsaved changes
-            </p>
+            <p className="text-ink-tertiary text-sm">{t("unsavedChanges")}</p>
           )}
           <Button
             onClick={handleSave}
             disabled={!isDirty || saveSetting.isPending}
           >
             <Save className="mr-2 size-4" />
-            {saveSetting.isPending ? "Saving…" : "Save note settings"}
+            {t(saveSetting.isPending ? "saving" : "saveNoteSettings")}
           </Button>
         </div>
       </CardContent>

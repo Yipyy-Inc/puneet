@@ -26,3 +26,17 @@ export function useShellText(group: ShellGroup) {
     [effective, group],
   );
 }
+
+/**
+ * The locale the shell is rendering in — for `Intl`, not for a lookup.
+ *
+ * A shell surface that FORMATS rather than translates needs the same effective
+ * locale `useShellText` resolves, and the `hydrated ? locale : "en"` rule has
+ * to be identical or the two disagree for one paint. Kept beside it so there
+ * is one definition per module rather than a copy at each call site.
+ */
+export function useShellLocale(): AppLocale {
+  const hydrated = useHydrated();
+  const locale = useAppLocale();
+  return hydrated ? locale : "en";
+}

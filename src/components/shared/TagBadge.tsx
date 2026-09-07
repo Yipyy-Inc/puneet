@@ -6,6 +6,7 @@ import { getContrastTextColor } from "@/lib/color-utils";
 import type { Tag } from "@/types/tags";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface TagBadgeProps {
   tag: Tag;
@@ -36,6 +37,7 @@ export function TagBadge({
   onRemove,
   className,
 }: TagBadgeProps) {
+  const t = useShellText("primitives");
   const textColor = getContrastTextColor(tag.color);
 
   return (
@@ -75,7 +77,7 @@ export function TagBadge({
             onRemove();
           }}
           className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
-          aria-label={`Remove ${tag.name} tag`}
+          aria-label={t("removeNamedTag").replace("{name}", tag.name)}
         >
           <X className={size === "sm" ? "size-2" : "h-2.5 w-2.5"} />
         </button>

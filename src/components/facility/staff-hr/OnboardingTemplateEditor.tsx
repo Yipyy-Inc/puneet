@@ -26,6 +26,8 @@ import {
   type ScheduleOption,
 } from "./TaskConfigEditor";
 import { EmployeeTaskEditor } from "./EmployeeTaskEditor";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 
 const ROLE_OPTIONS: FacilityStaffRole[] = [
   "owner",
@@ -41,22 +43,6 @@ const ROLE_OPTIONS: FacilityStaffRole[] = [
   "retail",
   "accountant",
   "sanitation",
-];
-
-const humanizeRole = (r: string) =>
-  r.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-
-// Manager task (Table 0): assigned to Manager / Owner / a position; due on-hire
-// / within-N-days / by-first-shift.
-const MANAGER_ASSIGNEES: Option[] = [
-  { value: "manager", label: "Manager" },
-  { value: "owner", label: "Owner" },
-  ...ROLE_OPTIONS.map((r) => ({ value: r, label: humanizeRole(r) })),
-];
-const MANAGER_SCHEDULE: ScheduleOption[] = [
-  { value: "on_hire", label: "On hire" },
-  { value: "within_days", label: "Within N days", needsDays: true },
-  { value: "by_first_shift", label: "By first shift" },
 ];
 
 const managerToValue = (t: OnboardingTask): TaskConfigValue => ({
@@ -76,8 +62,24 @@ export function OnboardingTemplateEditor({
   template: OnboardingTemplate;
   onBack: () => void;
 }) {
+  const t = useSettingsText().section("onboarding-templates");
+  const roleLabel = useStaffRoleLabel();
   const { mutate: saveTemplate, isPending: saving } =
     useSaveOnboardingTemplate();
+
+  // Manager task (Table 0): assigned to Manager / Owner / a position; due
+  // on-hire / within-N-days / by-first-shift. Built here rather than at module
+  // scope so the labels follow the viewer's language.
+  const managerAssignees: Option[] = [
+    { value: "manager", label: roleLabel("manager") },
+    { value: "owner", label: roleLabel("owner") },
+    ...ROLE_OPTIONS.map((r) => ({ value: r, label: roleLabel(r) })),
+  ];
+  const managerSchedule: ScheduleOption[] = [
+    { value: "on_hire", label: t("schedOnHire") },
+    { value: "within_days", label: t("schedWithinDays"), needsDays: true },
+    { value: "by_first_shift", label: t("schedByFirstShift") },
+  ];
   const [draft, setDraft] = useState<OnboardingTemplate>(template);
   const dirty = JSON.stringify(draft) !== JSON.stringify(template);
 
@@ -119,13 +121,11 @@ export function OnboardingTemplateEditor({
   const save = () => {
     saveTemplate(draft, {
       onSuccess: () => {
-        toast.success("Template saved");
+        toast.success(t("savedToast"));
         onBack();
       },
       onError: (error) =>
-        toast.error(
-          error instanceof Error ? error.message : "Could not save template.",
-        ),
+        toast.error(error instanceof Error ? error.message : t("saveFailed")),
     });
   };
 
@@ -134,26 +134,25 @@ export function OnboardingTemplateEditor({
       <div className="flex items-center justify-between gap-3">
         <Button variant="ghost" size="sm" className="gap-1.5" onClick={onBack}>
           <ArrowLeft className="size-4" />
-          Templates
+          {t("backToTemplates")}
         </Button>
-        <Button
-          onClick={save}
-          disabled={!dirty || saving}
-          className="bg-emerald-600 text-white hover:bg-emerald-700"
-        >
-          Save template
+        {/* §1: there is no second action colour. This was bg-emerald-600,
+            which renders --success — a status ink standing in for the one
+            primary. */}
+        <Button onClick={save} disabled={!dirty || saving}>
+          {t("saveTemplate")}
         </Button>
       </div>
 
       {/* Template settings (3D) */}
       <Card>
         <CardHeader>
-          <CardTitle>Template settings</CardTitle>
+          <CardTitle>{t("settingsTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Name</Label>
+              <Label>{t("name")}</Label>
               <Input
                 value={draft.name}
                 onChange={(e) => patch({ name: e.target.value })}
@@ -166,10 +165,12 @@ export function OnboardingTemplateEditor({
                   patch({ status: v ? "active" : "draft" })
                 }
               />
-              <Label>{draft.status === "active" ? "Active" : "Draft"}</Label>
+              <Label>
+                {t(draft.status === "active" ? "statusActive" : "statusDraft")}
+              </Label>
             </div>
             <div className="space-y-1.5">
-              <Label>Completion deadline (days)</Label>
+              <Label>{t("completionDeadline")}</Label>
               <Input
                 type="number"
                 min={1}
@@ -180,7 +181,7 @@ export function OnboardingTemplateEditor({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Invite expiry (days)</Label>
+              <Label>{t("inviteExpiry")}</Label>
               <Input
                 type="number"
                 min={3}
@@ -194,7 +195,7 @@ export function OnboardingTemplateEditor({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Welcome message</Label>
+            <Label>{t("welcomeMessage")}</Label>
             <Textarea
               rows={2}
               value={draft.welcomeMessage}
@@ -203,9 +204,9 @@ export function OnboardingTemplateEditor({
           </div>
 
           <div className="space-y-2">
-            <Label>Applies to roles</Label>
+            <Label>{t("appliesToRoles")}</Label>
             <p className="text-muted-foreground text-xs">
-              None selected = applies to all roles.
+              {t("appliesToRolesHelp")}
             </p>
             <div className="flex flex-wrap gap-2">
               {ROLE_OPTIONS.map((role) => (
@@ -217,7 +218,7 @@ export function OnboardingTemplateEditor({
                     checked={draft.appliesToRoles.includes(role)}
                     onCheckedChange={(v) => toggleRole(role, v === true)}
                   />
-                  {humanizeRole(role)}
+                  {roleLabel(role)}
                 </label>
               ))}
             </div>
@@ -228,30 +229,27 @@ export function OnboardingTemplateEditor({
       {/* Manager tasks (Table 0) — shared task-config editor */}
       <Card>
         <CardHeader>
-          <CardTitle>Manager tasks</CardTitle>
+          <CardTitle>{t("managerTasks")}</CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
-            Steps the facility completes for the new hire.
+            {t("managerTasksHelp")}
           </p>
         </CardHeader>
         <CardContent>
           <TaskConfigEditor
             tasks={draft.managerTasks.map(managerToValue)}
             onChange={applyManagerTasks}
-            assigneeOptions={MANAGER_ASSIGNEES}
-            scheduleOptions={MANAGER_SCHEDULE}
-            // french-ok: onboarding-templates is not converted yet — these
-            // moved out of TaskConfigEditor's defaults so the shared component
-            // carries no copy of its own
+            assigneeOptions={managerAssignees}
+            scheduleOptions={managerSchedule}
             text={{
-              scheduleLabel: "When due",
-              addLabel: "Add manager task",
-              emptyText: "No manager tasks yet.",
-              taskName: "Task name",
-              removeTask: "Remove task",
-              descriptionOptional: "Description (optional)",
-              assignedTo: "Assigned to",
-              days: "Days",
-              required: "Required",
+              scheduleLabel: t("whenDue"),
+              addLabel: t("addManagerTask"),
+              emptyText: t("noManagerTasks"),
+              taskName: t("taskName"),
+              removeTask: t("removeTask"),
+              descriptionOptional: t("descriptionOptional"),
+              assignedTo: t("assignedTo"),
+              days: t("days"),
+              required: t("required"),
             }}
           />
         </CardContent>
@@ -260,9 +258,9 @@ export function OnboardingTemplateEditor({
       {/* Employee self-complete tasks (Table 1) */}
       <Card>
         <CardHeader>
-          <CardTitle>Employee self-complete tasks</CardTitle>
+          <CardTitle>{t("employeeTasks")}</CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
-            What the new hire fills in from their onboarding link.
+            {t("employeeTasksHelp")}
           </p>
         </CardHeader>
         <CardContent>
@@ -274,12 +272,8 @@ export function OnboardingTemplateEditor({
       </Card>
 
       <div className="flex justify-end">
-        <Button
-          onClick={save}
-          disabled={!dirty || saving}
-          className="bg-emerald-600 text-white hover:bg-emerald-700"
-        >
-          Save template
+        <Button onClick={save} disabled={!dirty || saving}>
+          {t("saveTemplate")}
         </Button>
       </div>
     </div>

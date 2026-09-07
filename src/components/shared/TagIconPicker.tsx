@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { resolveIcon, AVAILABLE_ICONS } from "@/lib/service-registry";
 import { getContrastTextColor } from "@/lib/color-utils";
 import { TAG_COLOR_PRESETS } from "@/lib/tag-colors";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { cn } from "@/lib/utils";
 
 interface TagIconPickerProps {
@@ -22,6 +23,7 @@ export function TagIconPicker({
   onIconChange,
   onColorChange,
 }: TagIconPickerProps) {
+  const t = useShellText("primitives");
   const [search, setSearch] = useState("");
   const [customColor, setCustomColor] = useState("");
   const [hexError, setHexError] = useState(false);
@@ -31,6 +33,17 @@ export function TagIconPicker({
   );
 
   const textColor = getContrastTextColor(selectedColor);
+
+  // TAG_COLOR_PRESETS is a module constant, so its labels are English. Six
+  // fixed names, resolved by key; anything the catalogue does not know keeps
+  // the constant's own word rather than showing a raw key.
+  const presetLabel = (label: string | undefined) => {
+    if (!label) return undefined;
+    // french-ok: a catalogue key built from the constant's own word, never read
+    const key = `tagColour${label}`;
+    const translated = t(key);
+    return translated === key ? label : translated;
+  };
 
   return (
     <div className="space-y-4">
@@ -47,8 +60,9 @@ export function TagIconPicker({
         <div>
           <p className="text-sm font-medium">{selectedIcon}</p>
           <p className="text-muted-foreground text-xs">
-            {TAG_COLOR_PRESETS.find((c) => c.hex === selectedColor)?.label ??
-              selectedColor}
+            {presetLabel(
+              TAG_COLOR_PRESETS.find((c) => c.hex === selectedColor)?.label,
+            ) ?? selectedColor}
           </p>
         </div>
       </div>
@@ -56,7 +70,7 @@ export function TagIconPicker({
       {/* Color selector */}
       <div>
         <Label className="text-muted-foreground mb-2 block text-xs font-medium tracking-wider uppercase">
-          Color
+          {t("colour")}
         </Label>
         <div className="flex flex-wrap gap-2">
           {TAG_COLOR_PRESETS.map((opt) => {
@@ -66,8 +80,8 @@ export function TagIconPicker({
                 key={opt.hex}
                 type="button"
                 onClick={() => onColorChange(opt.hex)}
-                title={opt.label}
-                aria-label={opt.label}
+                title={presetLabel(opt.label)}
+                aria-label={presetLabel(opt.label)}
                 className={cn(
                   `focus:ring-ring relative size-9 rounded-lg shadow-sm transition-transform hover:scale-110 focus:ring-2 focus:ring-offset-1 focus:outline-none`,
                   isSelected && "ring-ring ring-2 ring-offset-1",
@@ -87,7 +101,7 @@ export function TagIconPicker({
         {/* Custom hex input */}
         <div className="mt-2 flex items-center gap-2">
           <Input
-            aria-label="Custom hex color"
+            aria-label={t("customHexColour")}
             placeholder="#RRGGBB"
             value={customColor}
             onChange={(e) => {
@@ -109,10 +123,12 @@ export function TagIconPicker({
             }}
             className="text-primary text-xs hover:underline"
           >
-            Apply
+            {t("applyColour")}
           </button>
           {hexError && (
-            <span className="text-destructive text-[10px]">Invalid hex</span>
+            <span className="text-destructive text-[10px]">
+              {t("invalidHex")}
+            </span>
           )}
         </div>
       </div>
@@ -120,12 +136,12 @@ export function TagIconPicker({
       {/* Icon search */}
       <div>
         <Label className="text-muted-foreground mb-2 block text-xs font-medium tracking-wider uppercase">
-          Icon
+          {t("icon")}
         </Label>
         <div className="relative mb-3">
           <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
           <Input
-            placeholder="Search icons..."
+            placeholder={t("searchIcons")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 pl-8 text-sm"
@@ -156,7 +172,7 @@ export function TagIconPicker({
           })}
           {filteredIcons.length === 0 && (
             <div className="text-muted-foreground col-span-6 py-4 text-center text-sm sm:col-span-8">
-              No icons match &quot;{search}&quot;
+              {t("noIconsMatch").replace("{query}", search)}
             </div>
           )}
         </div>

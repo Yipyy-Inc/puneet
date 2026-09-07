@@ -41,6 +41,11 @@ const SAME_IN_BOTH = new Set([
   "primitives.minute", // "Min" is the abbreviation in both
   "primitives.actions", // Actions / Actions
   "support.descriptionLabel", // Description / Description
+  // Two of the six tag-colour names are the same word in French. Both are
+  // spelled identically and mean the same thing; changing either to make this
+  // list shorter would make the French wrong.
+  "primitives.tagColourInformation", // Information / Information
+  "primitives.tagColourProgramme", // Programme / Programme
 ]);
 
 describe("the shell namespace", () => {

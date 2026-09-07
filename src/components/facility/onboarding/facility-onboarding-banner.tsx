@@ -8,7 +8,8 @@ import { ArrowRight, Rocket, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ONBOARDING_DISMISS_THRESHOLD } from "@/data/facility-onboarding";
-import { useShellText } from "@/lib/shell/use-shell-text";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatPercent } from "@/lib/i18n/format";
 import {
   dismissOnboardingBanner,
   loadPersistedOnboarding,
@@ -17,6 +18,7 @@ import {
 
 export function FacilityOnboardingBanner() {
   const t = useShellText("banners");
+  const locale = useShellLocale();
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { completed, total, percent, allComplete, canDismiss, dismissed } =
@@ -77,7 +79,7 @@ export function FacilityOnboardingBanner() {
               className="h-1 flex-1 bg-white/25 [&>div]:bg-white"
             />
             <span className="shrink-0 text-[11px] tabular-nums">
-              {completed}/{total} · {percent}%
+              {completed}/{total} · {formatPercent(percent, locale)}
             </span>
           </div>
         </div>

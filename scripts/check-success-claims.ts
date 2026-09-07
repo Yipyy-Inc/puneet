@@ -326,6 +326,62 @@ const PERFORMS =
  * screen write" but "does anything downstream write at all" — a question that
  * is true almost everywhere and therefore worth nothing.
  */
+/**
+ * ── AND SINCE 2026-09-07, IT RESOLVES A TRANSLATION KEY ───────────────────
+ *
+ * The French conversion moved every settings toast from a literal to a
+ * catalogue lookup:
+ *
+ *   toast.success("Care task feedback options saved");   // seen
+ *   toast.success(t("feedbackSaved"));                   // the same claim
+ *
+ * The second one matches neither regex above. `CLAIM_BARE` wants `saved` at a
+ * word boundary and `feedbackSaved` has none, so the claim went invisible the
+ * moment its words moved into messages/en.json — and this gate reported the
+ * file as FIXED. It was not fixed. It was translated.
+ *
+ * That is not one file. Every settings section converted so far took its
+ * toasts through `t()`, and the ones still counted are counted by accident,
+ * because their key happens to BE a bare verb (`t("saved")` contains `saved`).
+ * Left alone this gate would have quietly emptied itself as the conversion
+ * finished, and read as an improvement while doing it.
+ *
+ * So a `t("key")` argument is replaced with the ENGLISH string it resolves to
+ * before the line is tested. The key is looked up across every settings section
+ * and every shell group rather than against the one section this file belongs
+ * to: a file's section is not knowable from the file alone, and a key that
+ * names a claim in ANY catalogue is worth reading as one here.
+ */
+const CATALOGUE_STRINGS: Map<string, string> = (() => {
+  const out = new Map<string, string>();
+  const en = JSON.parse(readFileSync("messages/en.json", "utf8")) as {
+    settings?: { sections?: Record<string, Record<string, string>> };
+    shell?: Record<string, Record<string, string>>;
+  };
+  const add = (key: string, value: unknown) => {
+    if (typeof value !== "string") return;
+    // Two catalogues can hold the same key. First-writer-wins would be the
+    // wrong tie-break: a key that is a claim ANYWHERE should read as one, so
+    // the longer string is kept — the sentence rather than the label.
+    const seen = out.get(key);
+    if (seen === undefined || value.length > seen.length) out.set(key, value);
+  };
+  for (const section of Object.values(en.settings?.sections ?? {}))
+    for (const [key, value] of Object.entries(section)) add(key, value);
+  for (const group of Object.values(en.shell ?? {}))
+    for (const [key, value] of Object.entries(group)) add(key, value);
+  return out;
+})();
+
+/** `t("someKey")` → `"the English sentence"`, so the regexes can read it. */
+const TRANSLATE_CALL = /\b(?:t|text|tr)\s*\(\s*"([A-Za-z][\w.]*)"\s*\)/g;
+function resolveKeys(line: string): string {
+  return line.replace(TRANSLATE_CALL, (whole, key: string) => {
+    const english = CATALOGUE_STRINGS.get(key);
+    return english === undefined ? whole : JSON.stringify(english);
+  });
+}
+
 const SOURCE_CACHE = new Map<string, string>();
 function sourceOf(file: string): string {
   const hit = SOURCE_CACHE.get(file);
@@ -413,7 +469,10 @@ for (const file of walk("src")) {
     if (trimmed.startsWith("//") || trimmed.startsWith("*")) return;
     if (ALLOW.test(line)) return;
     if (index > 0 && ALLOW.test(source.split("\n")[index - 1] ?? "")) return;
-    if (CLAIM.test(line) || CLAIM_BARE.test(line)) {
+    // The line as a READER sees it: a translation key resolved to its
+    // English words, so a claim does not escape by being translated.
+    const readable = resolveKeys(line);
+    if (CLAIM.test(readable) || CLAIM_BARE.test(readable)) {
       offences.push({ file, line: index + 1, text: trimmed.slice(0, 110) });
     }
   });
