@@ -69,6 +69,7 @@ const CONVERTED = [
   "roles-permissions",
   "report-card-template",
   "evaluations",
+  "addons",
 ] as const;
 
 test("a converted settings section renders no English, no key and no hole", async ({

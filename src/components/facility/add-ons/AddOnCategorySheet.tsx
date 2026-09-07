@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { AddOnCategory } from "@/types/facility";
 import { cn } from "@/lib/utils";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, GripVertical, FolderOpen } from "lucide-react";
 import {
@@ -39,6 +40,7 @@ export function AddOnCategorySheet({
   categories,
   onSave,
 }: Props) {
+  const t = useSettingsText().section("addons");
   const [editing, setEditing] = useState<AddOnCategory | null>(null);
   const [form, setForm] = useState(blankCategory());
 
@@ -54,7 +56,7 @@ export function AddOnCategorySheet({
 
   function handleSubmit() {
     if (!form.name.trim()) {
-      toast.error("Category name is required");
+      toast.error(t("sheetNameRequired"));
       return;
     }
     const now = new Date().toISOString();
@@ -63,7 +65,7 @@ export function AddOnCategorySheet({
         c.id === editing.id ? { ...c, ...form, updatedAt: now } : c,
       );
       onSave(next);
-      toast.success(`"${form.name}" updated`);
+      toast.success(t("sheetUpdated").replace("{name}", form.name));
     } else {
       const newCat: AddOnCategory = {
         id: `cat-${Date.now()}`,
@@ -73,7 +75,7 @@ export function AddOnCategorySheet({
         updatedAt: now,
       };
       onSave([...categories, newCat]);
-      toast.success(`"${form.name}" category created`);
+      toast.success(t("sheetCreated").replace("{name}", form.name));
     }
     setEditing(null);
     setForm(blankCategory());
@@ -81,7 +83,7 @@ export function AddOnCategorySheet({
 
   function handleDelete(cat: AddOnCategory) {
     onSave(categories.filter((c) => c.id !== cat.id));
-    toast.success(`"${cat.name}" deleted`);
+    toast.success(t("sheetDeleted").replace("{name}", cat.name));
     if (editing?.id === cat.id) {
       setEditing(null);
       setForm(blankCategory());
@@ -92,27 +94,25 @@ export function AddOnCategorySheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-[420px] flex-col gap-0 p-0">
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:w-[420px]">
         <SheetHeader className="border-b px-6 pt-6 pb-4">
           <SheetTitle className="flex items-center gap-2.5 text-lg">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-violet-50 ring-1 ring-violet-200">
-              <FolderOpen className="size-4 text-violet-600" />
+            {/* A SOLID disc with a white glyph, not a violet wash behind a violet
+                icon: §6 rule 2 tints a metric tile and a status chip, and nothing
+                else. Light-on-light is also what disappears against a wash. */}
+            <div className="bg-violet flex size-8 items-center justify-center rounded-lg">
+              <FolderOpen className="text-violet-foreground size-4" />
             </div>
-            Add-on categories
+            {t("sheetTitle")}
           </SheetTitle>
-          <SheetDescription>
-            Organize your add-ons into categories that appear in the booking
-            flow.
-          </SheetDescription>
+          <SheetDescription>{t("sheetIntro")}</SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
           {sorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FolderOpen className="text-muted-foreground/30 mb-3 size-10" />
-              <p className="text-muted-foreground text-sm">
-                No categories yet.
-              </p>
+              <p className="text-muted-foreground text-sm">{t("sheetEmpty")}</p>
             </div>
           ) : (
             sorted.map((cat) => (
@@ -142,6 +142,10 @@ export function AddOnCategorySheet({
                     size="sm"
                     variant="ghost"
                     className="size-7 p-0"
+                    aria-label={t("sheetEditAction").replace(
+                      "{name}",
+                      cat.name,
+                    )}
                     onClick={() => startEdit(cat)}
                   >
                     <Pencil className="size-3.5" />
@@ -149,7 +153,11 @@ export function AddOnCategorySheet({
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-destructive/60 hover:text-destructive size-7 p-0"
+                    className="text-destructive hover:text-destructive size-7 p-0"
+                    aria-label={t("sheetDeleteAction").replace(
+                      "{name}",
+                      cat.name,
+                    )}
                     onClick={() => handleDelete(cat)}
                   >
                     <Trash2 className="size-3.5" />
@@ -165,27 +173,27 @@ export function AddOnCategorySheet({
         {/* Inline form */}
         <div className="bg-muted/20 space-y-3 px-6 py-4">
           <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            {editing ? "Edit Category" : "New Category"}
+            {editing ? t("sheetEditCategory") : t("sheetNewCategory")}
           </p>
           <div className="space-y-1.5">
             <Label className="text-xs">
-              Name <span className="text-destructive">*</span>
+              {t("fieldName")} <span className="text-destructive">*</span>
             </Label>
             <Input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Spa & Wellness"
-              className="h-8 text-sm"
+              placeholder={t("sheetNamePlaceholder")}
+              className="text-sm"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Description</Label>
+            <Label className="text-xs">{t("fieldDescription")}</Label>
             <Textarea
               value={form.description ?? ""}
               onChange={(e) =>
                 setForm((p) => ({ ...p, description: e.target.value }))
               }
-              placeholder="Short description…"
+              placeholder={t("sheetDescriptionPlaceholder")}
               rows={2}
               className="resize-none text-sm"
             />
@@ -202,11 +210,11 @@ export function AddOnCategorySheet({
               className="flex-1"
             >
               {editing ? (
-                "Save Changes"
+                t("saveChanges")
               ) : (
                 <>
                   <Plus className="mr-1 size-3.5" />
-                  Add Category
+                  {t("sheetAddCategory")}
                 </>
               )}
             </Button>
@@ -219,7 +227,7 @@ export function AddOnCategorySheet({
                   setForm(blankCategory());
                 }}
               >
-                Cancel
+                {t("cancel")}
               </Button>
             )}
           </div>
