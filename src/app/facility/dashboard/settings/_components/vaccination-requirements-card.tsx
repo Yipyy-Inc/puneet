@@ -19,9 +19,18 @@ import {
 import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useServiceTypeLabel } from "@/lib/settings/use-service-types";
 
 // Vaccination Requirements Component
+// The VALUES are stored on each rule and compared against `r.species`, so
+// they stay as they are. Only the tab label is translated.
 const VACCINE_SPECIES_OPTIONS = ["Dog", "Cat", "Other"] as const;
+const SPECIES_KEY: Record<string, string> = {
+  Dog: "speciesDog",
+  Cat: "speciesCat",
+  Other: "speciesOther",
+};
 const VACCINE_SERVICE_OPTIONS = [
   "boarding",
   "daycare",
@@ -61,6 +70,13 @@ function VaccinationRequirementsEditor({
 }) {
   const saveSetting = useSaveFacilitySetting();
   const [species, setSpecies] = useState<string>("Dog");
+  const t = useSettingsText().section("vaccination-requirements");
+  const serviceLabel = useServiceTypeLabel();
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
   const [rules, setRules] = useState<VaccinationRules>(initialRules);
   const [savedRules, setSavedRules] = useState<VaccinationRules>(initialRules);
   const [newName, setNewName] = useState("");
@@ -74,14 +90,10 @@ function VaccinationRequirementsEditor({
       {
         onSuccess: () => {
           setSavedRules([...rules]);
-          toast.success("Vaccination requirements saved");
+          toast.success(t("saved"));
         },
         onError: (error) =>
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Those requirements were not saved.",
-          ),
+          toast.error(error instanceof Error ? error.message : t("saveFailed")),
       },
     );
   };
@@ -142,11 +154,7 @@ function VaccinationRequirementsEditor({
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Configure which vaccines are required for each animal type.
-              Customers will be asked to provide these vaccines and staff will
-              verify them before booking.
-            </p>
+            <p className="text-ink-tertiary mt-1 text-[14.5px]">{t("intro")}</p>
             {/* Unlike the money settings, an unreviewed list is not an empty
                 one — an unset requirement fails OPEN, so the standard list
                 keeps being checked until somebody says otherwise. Saying which
@@ -154,9 +162,7 @@ function VaccinationRequirementsEditor({
                 `configured`. */}
             {!configured && (
               <p className="text-ink-tertiary mt-1 text-[13.5px]">
-                This is the standard list Yipyy ships. Nobody at this facility
-                has reviewed it yet — it is still being checked on every
-                booking.
+                {t("unreviewed")}
               </p>
             )}
           </div>
@@ -166,7 +172,7 @@ function VaccinationRequirementsEditor({
               onClick={handleSave}
               disabled={saveSetting.isPending}
             >
-              {saveSetting.isPending ? "Saving…" : "Save changes"}
+              {saveSetting.isPending ? t("saving") : t("save")}
             </Button>
           )}
         </div>
@@ -176,7 +182,7 @@ function VaccinationRequirementsEditor({
           <TabsList>
             {VACCINE_SPECIES_OPTIONS.map((s) => (
               <TabsTrigger key={s} value={s}>
-                {s}
+                {t(SPECIES_KEY[s])}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -184,8 +190,8 @@ function VaccinationRequirementsEditor({
           {VACCINE_SPECIES_OPTIONS.map((s) => (
             <TabsContent key={s} value={s} className="space-y-3">
               {filtered.length === 0 && species === s ? (
-                <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">
-                  No vaccines configured for {s}. Add one below.
+                <p className="text-ink-tertiary rounded-lg border border-dashed p-4 text-center text-[14.5px]">
+                  {fill("noneForSpecies", { species: t(SPECIES_KEY[s]) })}
                 </p>
               ) : null}
 
@@ -208,20 +214,20 @@ function VaccinationRequirementsEditor({
                             }
                             className="max-w-xs font-semibold"
                           />
-                          <label className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                          <label className="text-ink-tertiary flex min-h-10 items-center gap-1.5 text-[13.5px] max-lg:min-h-12">
                             <Checkbox
                               checked={vax.required}
                               onCheckedChange={(v) =>
                                 updateRequired(vax.id, Boolean(v))
                               }
                             />
-                            Required
+                            {t("required")}
                           </label>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <Label className="text-xs">
-                            Expiry warning (days)
+                          <Label className="text-[13.5px]">
+                            {t("expiryWarning")}
                           </Label>
                           <Input
                             type="number"
@@ -238,8 +244,8 @@ function VaccinationRequirementsEditor({
                         </div>
 
                         <div>
-                          <Label className="text-muted-foreground mb-1.5 block text-xs">
-                            Applicable services
+                          <Label className="text-ink-tertiary mb-1.5 block text-[13.5px]">
+                            {t("applicableServices")}
                           </Label>
                           <div className="flex flex-wrap gap-2">
                             {VACCINE_SERVICE_OPTIONS.map((service) => {
@@ -252,11 +258,11 @@ function VaccinationRequirementsEditor({
                                   onClick={() => toggleService(vax.id, service)}
                                   className={
                                     active
-                                      ? "bg-primary text-primary-foreground rounded-full px-3 py-1 text-xs capitalize"
-                                      : "text-muted-foreground hover:bg-muted rounded-full border px-3 py-1 text-xs capitalize"
+                                      ? "bg-primary text-primary-foreground min-h-10 rounded-full px-3 text-[13.5px] max-lg:min-h-12"
+                                      : "text-ink-secondary hover:bg-muted min-h-10 rounded-full border px-3 text-[13.5px] max-lg:min-h-12"
                                   }
                                 >
-                                  {service}
+                                  {serviceLabel(service, service)}
                                 </button>
                               );
                             })}
@@ -267,6 +273,7 @@ function VaccinationRequirementsEditor({
                         variant="ghost"
                         size="sm"
                         onClick={() => removeVaccine(vax.id)}
+                        aria-label={t("removeVaccine")}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="size-4" />
@@ -278,17 +285,22 @@ function VaccinationRequirementsEditor({
               {species === s && (
                 <div className="bg-muted/30 flex items-end gap-2 rounded-lg border border-dashed p-3">
                   <div className="flex-1">
-                    <Label className="mb-1 block text-xs">Vaccine name</Label>
+                    <Label className="mb-1 block text-[13.5px]">
+                      {t("vaccineName")}
+                    </Label>
                     <Input
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
-                      placeholder={`e.g. ${s === "Cat" ? "FeLV" : "Leptospirosis"}`}
-                      className="h-9"
+                      placeholder={fill("vaccineNamePlaceholder", {
+                        // A vaccine is a proper noun; only the "e.g." is copy.
+                        // french-ok: proper noun
+                        example: s === "Cat" ? "FeLV" : "Leptospirosis",
+                      })}
                     />
                   </div>
                   <div className="w-32">
-                    <Label className="mb-1 block text-xs">
-                      Expiry warn (days)
+                    <Label className="mb-1 block text-[13.5px]">
+                      {t("expiryWarningShort")}
                     </Label>
                     <Input
                       type="number"
@@ -306,7 +318,7 @@ function VaccinationRequirementsEditor({
                     disabled={!newName.trim()}
                   >
                     <Plus className="mr-1 size-3.5" />
-                    Add vaccine
+                    {t("addVaccine")}
                   </Button>
                 </div>
               )}
