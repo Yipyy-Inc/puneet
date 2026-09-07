@@ -9238,3 +9238,216 @@ e2e spec had — a check whose every assertion is about an absence cannot tell
 
 **Run it as** `node verify-replace.mjs $(rg -l 'section\("' src)` and **read
 the count**, not the tick. 115 files, 220 fills, is the current shape.
+
+## The training settings screen read four label tables the gate cannot see
+
+`check:ui-french` looks for English WORDS IN JSX. `{MILESTONE_LABELS[kind]}` is
+an expression, so it is invisible by construction — which is the first of the
+three blind spots recorded under 2026-09-07, and the training screen had four
+instances of it at once:
+
+| Table                                    | Where it lives                     | What it renders                         |
+| ---------------------------------------- | ---------------------------------- | --------------------------------------- |
+| `DIFFICULTY_LABELS`                      | `src/data/training-exercises`      | the four exercise tiers                 |
+| `MILESTONE_LABELS`                       | `src/lib/pet-milestones`           | ten milestone names                     |
+| `REPORT_CARD_SEND_MODE_LABELS` / `_HELP` | `src/lib/training-module-settings` | three radio options and their help text |
+| `defaultTrainingWaivers`                 | `src/data/training-waivers`        | three waiver titles and summaries       |
+
+All four rendered English on a French screen with every gate green. They are
+behind `useTrainingLabels()` now — one hook, six resolvers, each falling back to
+the fixture's own English so a value added to a fixture later reads as words
+rather than as a raw key.
+
+**One thing was deliberately NOT translated, and it is the important part of
+this entry.** A waiver's `title` and `summary` are interface copy and moved. Its
+`fullText` did not: it is a liability release, a vaccine attestation and a media
+consent — **legal wording the business is bound by**, which is the facility's own
+lawyer's to write in French, not a translator's to invent. The settings screen
+does not render `fullText`, so this cost nothing here.
+
+**It costs something in the enrolment dialog, which does render it.** A French
+customer signing an English liability release is a real exposure, and no gate in
+this repo can see it, because the string never appears in JSX. **Whoever does
+the customer-portal pass has to route this past the client, not past a
+translator.** `rg "fullText" src` finds the two call sites.
+
+## `MILESTONE_VISUAL` was in the same file as the customer's trophy shelf
+
+The training settings screen imports one thing from
+`src/components/training/milestone-visuals.tsx`: `MILESTONE_VISUAL`, a table of
+icons and colour classes. The rest of that file is `MilestoneCard` and
+`MilestoneTrophyShelf`, which the **customer portal** renders.
+
+The gate walks a settings section three imports deep and attributes every string
+it finds to that section, so the trophy shelf's copy counted as training-settings
+debt — and fixing it under a settings commit would have put customer-portal copy
+into `settings.sections.training`.
+
+Split into `milestone-visual-table.ts` (data, no JSX, so a `.ts`), re-exported
+from the original so no existing consumer changed. **This is the second time in
+two days that a settings screen's translation surface was inflated by a file it
+used for one export** — the first was `AddOnsManager` importing
+`SERVICE_CATEGORIES`. The shape to watch for: _a settings screen importing from
+a `components/<other-portal>/` path._
+
+**Two real defects are still in the trophy shelf**, now visible where they
+belong rather than hidden in a settings count:
+
+- `{milestones.length} unlocked` — a hand-built count with no plural handling
+- `{petName}&apos;s trophy shelf` — an **English possessive**, which French
+  cannot form at all; it needs a different sentence, not a different word
+- `formatMilestoneDate` hardcodes `"en-US"`, and prints `Sep 7, 2026`
+
+## The graduation help text was a sentence built out of five JSX children
+
+```tsx
+Use{" "}
+<code>{`{petName}`}</code>{" "}
+and{" "}
+<code>{`{programName}`}</code>{" "}
+— substituted at send time.
+```
+
+§5q's "never build a sentence from fragments", in its purest form. There is no
+way to translate this: French does not join a two-item list in the same shape,
+and a translator handed the strings `"Use"`, `"and"` and `"— substituted at send
+time."` cannot produce a sentence from them. It is one catalogue string with one
+`{tags}` hole now, split at the hole so the `<code>` element survives.
+
+**Six more of the same shape were in this screen**, all of them a number input
+followed by a bare noun: `hours · reminder fires at {n}h`, `days after the
+graduation card sends`, `hours before each session`, `{n} step{s}`, `{n}
+program{s} in sequence`, `max {capacity}`. Each is now one string, and the
+counted ones go through `Intl.PluralRules` — **French counts 0 as singular**, so
+`0 étape` and `0 steps` disagree about the plural, which `n === 1` cannot
+express.
+
+Two of them also carried a formatting defect underneath the grammar: `{n}h` and
+`{mins} min` are English duration shapes, and French wants `1 h 30`. Both go
+through `formatDuration` now.
+
+## Nine §6 violations in one screen, and what they have in common
+
+Not one of these is a French problem. All nine were found while reading the
+training screen closely enough to translate it — which is the standing argument
+for doing the two jobs in one pass.
+
+**Rule 4 — opacity as de-emphasis (four instances).** `opacity-70` on a hidden
+discipline, a hidden location and a hidden pathway; `opacity-60` on a hidden
+exercise row. Each took the name, the description and the metadata below the
+text floor together. Every one of the four already had a "Hidden" chip beside
+the name saying the same thing in a word — which is also the only version a
+colour-blind reader and a printout get.
+
+**Rule 2 — tint fills (four instances).** A rose wash behind a required waiver
+card, a blue-50 panel around the scheduling fields, an indigo/emerald wash behind
+a location's type icon, and an indigo gradient on the exercise-library header.
+The two icon discs became SOLID `--violet` / `--success` with a white glyph,
+because light-on-light is exactly what disappears against a wash.
+
+**Rule 1/2 — a selected state as a tint (three instances).** `bg-primary/6`,
+`bg-primary/8`, `bg-primary/10` on option cards and service pills; `border-slate-900
+bg-slate-50` on the send-mode radio; a per-tone tint on the indoor/outdoor pill.
+All are 2px rings now. The indoor/outdoor pair is worth a line of its own: it
+used a _different hue for each value_, which made two values of one control read
+as two different kinds of selection.
+
+**§1 — a second action colour.** The session-duration filter's selected state
+was `bg-slate-900` — near-black as an action. There is one action colour and it
+is `--primary`.
+
+**A hover state that painted the colour it already was.** Four
+`bg-red-600 hover:bg-red-700` confirm buttons. Both steps compile to
+`--error` and so does `--destructive`, so the rest-and-hover pair was one
+colour twice — see the entry below, which is also about how nearly writing
+that up as an off-palette fix went wrong.
+
+## `bg-red-600` renders `--destructive` exactly, and I nearly wrote the opposite
+
+Four `bg-red-600 hover:bg-red-700` confirm buttons were changed to
+`bg-destructive hover:bg-destructive/90` in the training screen, and the first
+draft of this entry called that an off-palette fix and put the scale of the
+problem at "23 files". **Both halves were wrong, and the way they were wrong is
+the useful part.**
+
+Measured, in order:
+
+```
+rg "bg-red-[0-9]{3}" src -l | wc -l          # 186 files, not 23
+rg -o "bg-red-[0-9]{3}" src | wc -l          # 422 occurrences
+grep -n "color-red-" src/app/globals.css     # -50/-100 → --card, -200..950 → --error
+grep -n "^  --error:" src/app/globals.css    # #b23b3b
+grep -n "^  --destructive:" src/app/globals.css   # var(--bad) → var(--error)
+```
+
+So `bg-red-600` compiles to `--error`, `--destructive` resolves to `--error`,
+and the two are **the same colour**. The change was source tidiness, not a
+visual fix. This is the third guardrail grep in CLAUDE.md whose meaning stage 1
+changed by remapping Tailwind's own palette in `@theme` rather than rewriting
+900 files — the tint-fill grep and the orange grep already carry that note, and
+`red-*` belongs beside them.
+
+**One thing did actually change.** `hover:bg-red-700` also compiles to
+`--error`, so those four buttons had a hover declaration that painted the
+colour they already were — **no hover state at all**. `hover:bg-destructive/90`
+is a real one.
+
+**The lesson, which is why this entry exists at all:** the first draft asserted
+a file count I had not run and a rendering claim I had not checked, in a
+document whose own "How to add to this map" section says an entry resting on a
+claim about system behaviour must carry the measurement. A number that sounds
+plausible is exactly what ages into folklore here — two entries in this file
+were acted on for the first time on 2026-08-22 and both turned out to be sound-
+looking inferences nobody had executed. Run the grep before quoting it, even
+when the shape of the answer seems obvious.
+
+## Two English sentences a French facility would SEND to a customer
+
+The training settings screen is fully French now, and two of the values it
+edits are not:
+
+```ts
+// src/lib/training-module-settings.ts
+defaultEnrollmentMessage:
+  "Welcome! We can't wait to meet your dog. Please arrive 10 minutes early…",
+graduationFollowUpTemplate:
+  "{petName} has graduated — have you seen the upcoming {programName} classes?…",
+```
+
+Both are **stored defaults, not labels.** They seed an editable field, the
+facility can rewrite them, and what is stored is what goes out — the first in
+the enrolment confirmation email and the customer-portal confirmation, the
+second in an automated nudge with an enrolment link. So a French facility that
+never opens this screen sends English to its customers, and `check:ui-french`
+cannot see either: they are values, not JSX.
+
+**They are deliberately NOT translated at render.** A label can be swapped per
+viewer; a stored message cannot, because doing so would silently overwrite what
+a facility typed the moment the reader's locale changed. The same rule keeps a
+facility's own service name, a pet's name and a facility's `unitLabel` out of
+the locale layer.
+
+**What it actually needs** is a locale-aware SEED — the default chosen once,
+when the settings row is first created, from the facility's own language rather
+than from a module constant. That is a small change and it belongs with
+whatever finally persists this domain (this screen still writes only to the
+query cache). Until then the field is English on first run in both languages.
+
+**Where else to look:** `rg "^\s+default[A-Z]\w*Message|Template:" src/lib
+src/data` finds the same shape in other modules. Any default that is COPY
+rather than a number has this problem.
+
+## `check:doc-counts` does not know about the settings spec's section list
+
+`tests/e2e/settings-french.spec.ts` carries a `CONVERTED` array that must match
+the sections NOT in `check:ui-french`'s baseline. Nothing derives one from the
+other, so the two can disagree in the direction that matters: a section removed
+from the baseline but not added to `CONVERTED` is unbaselined and unwatched, and
+both gates stay green.
+
+It has not gone wrong yet — 35 entries, checked by hand each time — but it is
+the same shape as the four count drifts `check:doc-counts` was written for, and
+the fix is the same: derive the list. The spec can import the gate's baseline,
+or a check can compare the two files. Left undone here because it wants the
+gate to export its baseline, which is a change to a gate and belongs in its own
+commit rather than in a translation one.

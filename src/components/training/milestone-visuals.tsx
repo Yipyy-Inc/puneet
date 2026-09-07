@@ -1,105 +1,19 @@
 "use client";
 
 /**
- * Shared milestone visuals — single source of truth for icon, gradient, and
- * accent color per `MilestoneKind`. Consumed by:
+ * The milestone CARD and the trophy shelf. Consumed by:
  *   - the facility student-profile Overview "Milestones" section
  *   - the customer My Pets trophy shelf
  *   - the existing Progress sub-tab grid in pet-progress-charts
  *
- * Pulling these into one place means renaming or restyling a milestone
- * propagates everywhere without drift.
+ * The icon/colour TABLE these read now lives in
+ * `milestone-visual-table.ts` — see its header for why the data and the
+ * components had to be separated.
  */
-import {
-  type LucideIcon,
-  BookOpen,
-  CalendarCheck,
-  Crown,
-  Flame,
-  Footprints,
-  GraduationCap,
-  Medal,
-  PartyPopper,
-  Sparkles,
-  Trophy,
-} from "lucide-react";
+import { Sparkles, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Milestone, MilestoneKind } from "@/lib/pet-milestones";
-
-interface MilestoneVisual {
-  icon: LucideIcon;
-  /** Card background gradient — `from-X via-Y to-Z` tokens. */
-  gradient: string;
-  /** Chip background — solid color on the icon plaque. */
-  chip: string;
-  /** Subtle ring/border tone — pairs with the gradient. */
-  ring: string;
-}
-
-export const MILESTONE_VISUAL: Record<MilestoneKind, MilestoneVisual> = {
-  "first-session": {
-    icon: Footprints,
-    gradient: "from-sky-100 via-white to-sky-50",
-    chip: "bg-sky-500",
-    ring: "ring-sky-200",
-  },
-  "first-mastered": {
-    icon: Crown,
-    gradient: "from-violet-100 via-white to-violet-50",
-    chip: "bg-violet-500",
-    ring: "ring-violet-200",
-  },
-  "first-series": {
-    icon: GraduationCap,
-    gradient: "from-amber-100 via-white to-amber-50",
-    chip: "bg-amber-500",
-    ring: "ring-amber-200",
-  },
-  "five-sessions": {
-    icon: Medal,
-    gradient: "from-teal-100 via-white to-teal-50",
-    chip: "bg-teal-500",
-    ring: "ring-teal-200",
-  },
-  "ten-sessions": {
-    icon: Medal,
-    gradient: "from-emerald-100 via-white to-emerald-50",
-    chip: "bg-emerald-500",
-    ring: "ring-emerald-200",
-  },
-  "twenty-five-sessions": {
-    icon: Trophy,
-    gradient: "from-fuchsia-100 via-white to-fuchsia-50",
-    chip: "bg-fuchsia-500",
-    ring: "ring-fuchsia-200",
-  },
-  "first-homework": {
-    icon: BookOpen,
-    gradient: "from-rose-100 via-white to-rose-50",
-    chip: "bg-rose-500",
-    ring: "ring-rose-200",
-  },
-  "seven-day-homework-streak": {
-    icon: Flame,
-    gradient: "from-orange-100 via-white to-orange-50",
-    chip: "bg-orange-500",
-    ring: "ring-orange-200",
-  },
-  "thirty-day-homework-streak": {
-    icon: PartyPopper,
-    gradient: "from-pink-100 via-white to-pink-50",
-    chip: "bg-pink-500",
-    ring: "ring-pink-200",
-  },
-  // Legacy — keeps existing derivations rendering until that compute path
-  // is removed from the codebase.
-  "four-week-streak": {
-    icon: CalendarCheck,
-    gradient: "from-sky-100 via-white to-sky-50",
-    chip: "bg-sky-500",
-    ring: "ring-sky-200",
-  },
-};
+import type { Milestone } from "@/lib/pet-milestones";
+import { MILESTONE_VISUAL } from "@/components/training/milestone-visual-table";
 
 function formatMilestoneDate(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {

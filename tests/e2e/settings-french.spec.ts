@@ -70,6 +70,7 @@ const CONVERTED = [
   "report-card-template",
   "evaluations",
   "addons",
+  "training",
 ] as const;
 
 test("a converted settings section renders no English, no key and no hole", async ({
@@ -174,7 +175,49 @@ test("a converted settings section renders no English, no key and no hole", asyn
     // Read AFTER both polls. Reading it first meant every assertion below ran
     // against whatever was on screen 1.2s in, which on a section still
     // fetching is a skeleton — and a skeleton passes all three.
-    const body = (await page.locator("body").innerText()) ?? "";
+    //
+    // ── WHY THIS IS NOT `innerText`, AND WHAT THAT COST TO LEARN ─────────
+    //
+    // `innerText` is LAYOUT-AWARE: it inserts a line break where the box tree
+    // says there is one, so a `<span className="block">` only reads as its
+    // own line once the stylesheet has applied. Without it the spans are
+    // inline and their text runs together.
+    //
+    // On 2026-09-07 that produced twenty-five reported "raw catalogue keys"
+    // on pages that had none — `entrepriseHeures`, `marqueYipyy`,
+    // `personnelNotifications`, every one of them two adjacent labels with
+    // the gap missing. French made it worse: `é` is not a `\w`, so
+    // `\b[a-z]+[A-Z]` can start mid-word and `Intégrations Analyses` became
+    // `grationsAnalyses`.
+    //
+    // **The cause was not the page.** A `next start` from an earlier build
+    // was still holding the port, the new one had died on EADDRINUSE
+    // unnoticed, and the old server was answering 500 for CSS chunks that
+    // had been overwritten underneath it. So the run really was reading an
+    // unstyled page — which is not a state CI can reach, and diagnosing it
+    // as one cost three runs. **Check the server log for EADDRINUSE before
+    // believing a shape like this**; `bun run start` prints it and exits 1,
+    // and nothing else says the port did not change hands.
+    //
+    // The read below stays anyway, because it is simply the right one: a
+    // check hunting for raw identifiers wants text, not typography, and
+    // walking the text nodes has no layout dependency to race against.
+    // Scoped to the section for its own reason — the rail was never this
+    // spec's subject, and half the noise above came from it.
+    const body = await page
+      .locator("[data-slot='settings-section']")
+      .first()
+      .evaluate((root) => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        const out: string[] = [];
+        let node = walker.nextNode();
+        while (node) {
+          const text = (node.nodeValue ?? "").trim();
+          if (text) out.push(text);
+          node = walker.nextNode();
+        }
+        return out.join("\n");
+      });
 
     // 2. No raw catalogue key on screen — the failure mode when a constant is
     //    converted to keys and its render site is not. Two shapes: camelCase
@@ -202,14 +245,43 @@ test("a converted settings section renders no English, no key and no hole", asyn
     ).toEqual([]);
 
     // 3. No unfilled placeholder — a `.replace("{count}", …)` that named a
-    //    token the French string spells differently leaves `{count}` visible.
+    //    token the French string spells differently leaves `{count}`
+    //    visible.
     //
-    //    A DOUBLE brace is not that. `{{customer_name}}` is a merge tag, and
-    //    estimate-settings draws its five of them as badges on purpose, next
-    //    to the message templates that use them — so the tag being on screen
-    //    is the feature. Only a single-braced token is an unfilled hole.
+    //    ── TELLING A HOLE FROM A MERGE TAG ─────────────────────────────
+    //
+    //    This used to key off the BRACE COUNT: `{{customer_name}}` is a
+    //    merge tag, and estimate-settings draws five of them as badges on
+    //    purpose, so a double brace was exempt and a single brace was a
+    //    hole. That rule was written from one screen and it is not true of
+    //    the product. Measured 2026-09-07: the waiver editors write
+    //    `{{petName}}`, while report cards, Yipyy Go and training all write
+    //    SINGLE-braced `{petName}`. Both conventions ship, and the training
+    //    screen renders its two tags on purpose — which this spec called a
+    //    failure, correctly by its own rule and wrongly about the page.
+    //
+    //    Deriving the token list from the catalogue does not separate them
+    //    either: `petName` and `customer_name` are BOTH placeholder names
+    //    inside `messages/*.json` and BOTH are also rendered deliberately.
+    //
+    //    So the test is structural, which is the thing that actually
+    //    differs. A merge tag shown on purpose is the ENTIRE text of its
+    //    own element — a `<code>` chip, a badge. An unfilled hole sits
+    //    inside a sentence. Ask the DOM which one it is.
+    const shownOnPurpose = new Set(
+      await page.evaluate(() =>
+        // A `<code>` chip and a shadcn Badge, and nothing looser. `span`
+        // was in this list for one draft and is exactly wrong: a hole
+        // rendered alone inside a span would exempt itself.
+        Array.from(document.querySelectorAll('code, [data-slot="badge"]'))
+          .map((el) => (el.textContent ?? "").trim())
+          .filter((text) => /^\{+[a-z]\w*\}+$/i.test(text)),
+      ),
+    );
     expect(
-      [...body.matchAll(/(?<!\{)\{[a-z]\w*\}(?!\})/gi)].map((m) => m[0]),
+      [...body.matchAll(/\{+[a-z]\w*\}+/gi)]
+        .map((m) => m[0])
+        .filter((token) => !shownOnPurpose.has(token)),
       `unfilled placeholders on ${section}`,
     ).toEqual([]);
   }
