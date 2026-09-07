@@ -48,6 +48,7 @@ import {
   Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { toast } from "sonner";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import {
@@ -61,21 +62,108 @@ import { retailMutations } from "@/lib/api/retail";
 import { products, type PricingMethod } from "@/data/retail";
 import type { RoundingRule } from "@/lib/retail-pricing";
 
-const TAX_MODES: { value: RetailTaxMode; label: string; hint: string }[] = [
-  { value: "HST", label: "HST", hint: "Harmonized Sales Tax" },
-  { value: "GST", label: "GST", hint: "Goods & Services Tax" },
-  { value: "PST", label: "PST", hint: "Provincial Sales Tax" },
-  { value: "QST", label: "QST", hint: "Quebec Sales Tax" },
+// The `label` is the CODE — HST, GST, PST, QST are the same four letters in
+// both languages, and they are what a facility writes on a receipt. Only the
+// expansion is translated, and it is a key.
+const TAX_MODES: { value: RetailTaxMode; label: string; hintKey: string }[] = [
+  { value: "HST", label: "HST", hintKey: "taxHst" },
+  { value: "GST", label: "GST", hintKey: "taxGst" },
+  { value: "PST", label: "PST", hintKey: "taxPst" },
+  { value: "QST", label: "QST", hintKey: "taxQst" },
 ];
 
+/**
+ * Fill a translated template.
+ *
+ * Module level, not a closure in the component. The two brand handlers below
+ * mutate `retailConfig` and the products fixture in place, and the React
+ * Compiler will not memoise a scope that does that — closing over a
+ * component-scope helper drags those statements into a scope it then refuses,
+ * with twelve "This value cannot be modified" errors. The fixture mutation is
+ * the real defect; this keeps the translation from making it a build failure.
+ */
+/**
+ * THE FIXTURE WRITES, MOVED OUT OF THE COMPONENT.
+ *
+ * `retailConfig`, `products` and `retailConfig.brandMarginRules` are imported
+ * module objects, and these handlers assign into them in place. That is the
+ * real defect — this screen's brands, categories and suppliers live in a
+ * module singleton, exactly the pattern the tag catalogue was moved off on
+ * 2026-09-06 — and it is recorded rather than fixed here.
+ *
+ * It became visible when the section learned French: the React Compiler only
+ * analyses a scope it might memoise, and a handler that closes over no
+ * reactive value is not one. Adding `t` made these handlers reactive, and the
+ * compiler produced twelve "This value cannot be modified" errors that had
+ * been true all along.
+ *
+ * Hoisting the writes to module scope is not a workaround for the rule. It is
+ * where a module-singleton write belongs: the component decides WHAT to save,
+ * these functions know WHERE the fixture keeps it, and the seam is the one
+ * that has to exist anyway when this moves to Postgres.
+ */
+// Same normalization resolveBrandRule uses, so counts and moves match rule
+// lookups. Module level because the writers above need it too.
+function normalizeBrand(s: string): string {
+  return s.trim().toLowerCase().replace(/s+/g, "");
+}
+
+function persistBrands(next: RetailBrand[]): void {
+  retailConfig.brands = next;
+}
+
+function persistBrandRules(next: typeof retailConfig.brandMarginRules): void {
+  retailConfig.brandMarginRules = next;
+}
+
+/** Reassign every product on `fromKey` to `toName`. Returns how many moved. */
+function reassignProducts(fromKey: string, toName: string): number {
+  let moved = 0;
+  for (const p of products) {
+    if (normalizeBrand(p.brand) === fromKey) {
+      p.brand = toName;
+      moved += 1;
+    }
+  }
+  return moved;
+}
+
+/** Rename the brand on any margin rule that referenced it. */
+function renameBrandRules(fromKey: string, toName: string): void {
+  for (const rule of retailConfig.brandMarginRules) {
+    if (normalizeBrand(rule.brandName) === fromKey) rule.brandName = toName;
+  }
+}
+
+function persistLists(next: {
+  categories: typeof retailConfig.categories;
+  suppliers: typeof retailConfig.suppliers;
+  brands: typeof retailConfig.brands;
+  productTags: typeof retailConfig.productTags;
+  unitsOfMeasure: typeof retailConfig.unitsOfMeasure;
+}): void {
+  retailConfig.categories = next.categories;
+  retailConfig.suppliers = next.suppliers;
+  retailConfig.brands = next.brands;
+  retailConfig.productTags = next.productTags;
+  retailConfig.unitsOfMeasure = next.unitsOfMeasure;
+}
+
+function fill(template: string, values: Record<string, string>): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, value),
+    template,
+  );
+}
+
 const COLOR_OPTIONS = [
-  { value: "red", label: "Red", dot: "bg-red-500" },
-  { value: "amber", label: "Amber", dot: "bg-amber-500" },
-  { value: "emerald", label: "Green", dot: "bg-emerald-500" },
-  { value: "blue", label: "Blue", dot: "bg-blue-500" },
-  { value: "purple", label: "Purple", dot: "bg-purple-500" },
-  { value: "pink", label: "Pink", dot: "bg-pink-500" },
-  { value: "slate", label: "Gray", dot: "bg-slate-500" },
+  { value: "red", key: "colourRed", dot: "bg-red-500" },
+  { value: "amber", key: "colourAmber", dot: "bg-amber-500" },
+  { value: "emerald", key: "colourGreen", dot: "bg-emerald-500" },
+  { value: "blue", key: "colourBlue", dot: "bg-blue-500" },
+  { value: "purple", key: "colourPurple", dot: "bg-purple-500" },
+  { value: "pink", key: "colourPink", dot: "bg-pink-500" },
+  { value: "slate", key: "colourGrey", dot: "bg-slate-500" },
 ];
 
 let _id = 800;
@@ -85,6 +173,7 @@ function nextId(prefix: string) {
 }
 
 export function RetailSettings() {
+  const t = useSettingsText().section("retail");
   const { role } = useFacilityRole();
   const queryClient = useQueryClient();
   const [categories, setCategories] = useState(retailConfig.categories);
@@ -192,7 +281,7 @@ export function RetailSettings() {
         b.id === renameBrand.id ? { ...b, name: newName } : b,
       );
       setBrands(relabeled);
-      retailConfig.brands = relabeled;
+      persistBrands(relabeled);
       setRenameBrand(null);
       return;
     }
@@ -213,24 +302,23 @@ export function RetailSettings() {
       b.id === renameBrand.id ? { ...b, name: newName } : b,
     );
     setBrands(updatedBrands);
-    retailConfig.brands = updatedBrands;
+    persistBrands(updatedBrands);
 
     // Reassign products and any margin rule that referenced the old name so the
     // rename is the canonical, permanent fix (resolveBrandRule stays tolerant
     // as a safety net, but this removes the ambiguity at the source).
     const key = normalizeBrand(oldName);
-    let moved = 0;
-    for (const p of products) {
-      if (normalizeBrand(p.brand) === key) {
-        p.brand = newName;
-        moved += 1;
-      }
-    }
-    for (const rule of retailConfig.brandMarginRules) {
-      if (normalizeBrand(rule.brandName) === key) rule.brandName = newName;
-    }
+    const moved = reassignProducts(key, newName);
+    renameBrandRules(key, newName);
+    // Was a template with English pluralisation ("product" + "s") spliced
+    // into the middle of the sentence. French agrees the participle as well,
+    // so each count owns a whole sentence.
     toast.success(
-      `Renamed to "${newName}"${moved ? ` — updated ${moved} product${moved === 1 ? "" : "s"}` : ""}.`,
+      moved === 0
+        ? fill(t("renamedNoProducts"), { name: newName })
+        : moved === 1
+          ? fill(t("renamedOne"), { name: newName })
+          : fill(t("renamedMany"), { name: newName, count: String(moved) }),
     );
     setRenameBrand(null);
   };
@@ -245,13 +333,7 @@ export function RetailSettings() {
     const targetName = target.name;
 
     // Reassign every product from the source brand to the target brand.
-    let moved = 0;
-    for (const p of products) {
-      if (normalizeBrand(p.brand) === sourceKey) {
-        p.brand = targetName;
-        moved += 1;
-      }
-    }
+    const moved = reassignProducts(sourceKey, targetName);
 
     // Collapse rules: drop the source's rule; if the target had none, carry the
     // source's margin over so the merged brand keeps a rule.
@@ -268,14 +350,20 @@ export function RetailSettings() {
     if (sourceRule && !targetHasRule) {
       nextRules = [...nextRules, { ...sourceRule, brandName: targetName }];
     }
-    retailConfig.brandMarginRules = nextRules;
+    persistBrandRules(nextRules);
 
     const updatedBrands = brands.filter((b) => b.id !== mergeBrand.id);
     setBrands(updatedBrands);
-    retailConfig.brands = updatedBrands;
+    persistBrands(updatedBrands);
 
     toast.success(
-      `Merged "${mergeBrand.name}" into "${targetName}" — moved ${moved} product${moved === 1 ? "" : "s"}.`,
+      moved === 1
+        ? fill(t("mergedOne"), { from: mergeBrand.name, into: targetName })
+        : fill(t("mergedMany"), {
+            from: mergeBrand.name,
+            into: targetName,
+            count: String(moved),
+          }),
     );
     setMergeBrand(null);
     setMergeTargetId("");
@@ -352,24 +440,26 @@ export function RetailSettings() {
   const handleSendTestReceipt = () => {
     const via =
       receiptFormat === "both"
-        ? "print and email"
+        ? "testSentBoth"
         : receiptFormat === "email"
-          ? "email"
-          : "print";
-    toast.success(`Test receipt sent via ${via}`);
+          ? "testSentEmail"
+          : "testSentPrint";
+    toast.success(t(via));
   };
 
   const handleSave = () => {
-    retailConfig.categories = categories;
-    retailConfig.suppliers = suppliers;
-    retailConfig.brands = brands;
-    retailConfig.productTags = tags;
-    retailConfig.unitsOfMeasure = units;
+    persistLists({
+      categories,
+      suppliers,
+      brands,
+      productTags: tags,
+      unitsOfMeasure: units,
+    });
     saveTaxConfig.mutate();
     saveReceiptConfig.mutate();
     saveLowStockConfig.mutate();
     savePricingConfig.mutate();
-    toast.success("Retail settings saved");
+    toast.success(t("saved"));
   };
 
   if (role !== "owner" && role !== "manager") {
@@ -377,9 +467,7 @@ export function RetailSettings() {
       <Card>
         <CardContent className="flex items-center gap-3 py-8">
           <Shield className="text-muted-foreground size-5" />
-          <p className="text-muted-foreground text-sm">
-            Retail settings are only accessible to facility owners and managers.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("denied")}</p>
         </CardContent>
       </Card>
     );
@@ -388,10 +476,7 @@ export function RetailSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Configure product categories, suppliers, brands, tags, and units for
-          your retail module.
-        </p>
+        <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </div>
 
       {/* Categories */}
@@ -399,7 +484,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Package className="size-4" />
-            Product categories
+            {t("categories")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -433,10 +518,10 @@ export function RetailSettings() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active" className="text-xs">
-                    Active
+                    {t("active")}
                   </SelectItem>
                   <SelectItem value="draft" className="text-xs">
-                    Draft
+                    {t("draft")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -470,7 +555,7 @@ export function RetailSettings() {
                   setNewCat("");
                 }
               }}
-              placeholder="Add category..."
+              placeholder={t("addCategory")}
               className="h-8 text-sm"
             />
             <Button
@@ -509,30 +594,29 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Tag className="size-4" />
-            Default pricing
+            {t("defaultPricing")}
           </CardTitle>
           <p className="text-muted-foreground text-xs">
-            How new products are priced by default. Individual products can
-            still override this on their own page.
+            {t("defaultPricingHelp")}
           </p>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-1.5">
-            <Label className="text-xs">Default pricing method</Label>
+            <Label className="text-xs">{t("pricingMethod")}</Label>
             <Select
               value={defaultPricingMethod}
               onValueChange={(v) => setDefaultPricingMethod(v as PricingMethod)}
             >
               <SelectTrigger
-                aria-label="Default pricing method"
+                aria-label={t("pricingMethod")}
                 className="max-w-[240px]"
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="manual">Manual price</SelectItem>
-                <SelectItem value="margin">Product margin %</SelectItem>
-                <SelectItem value="brand_rule">Brand rule</SelectItem>
+                <SelectItem value="manual">{t("pricingManual")}</SelectItem>
+                <SelectItem value="margin">{t("pricingMargin")}</SelectItem>
+                <SelectItem value="brand_rule">{t("pricingBrand")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -540,7 +624,7 @@ export function RetailSettings() {
           {defaultPricingMethod === "margin" && (
             <div className="space-y-1.5">
               <Label htmlFor="default-margin-percent" className="text-xs">
-                Default margin %
+                {t("defaultMargin")}
               </Label>
               <div className="flex items-center gap-2">
                 <Input
@@ -556,40 +640,35 @@ export function RetailSettings() {
                 <span className="text-muted-foreground text-sm">%</span>
               </div>
               <p className="text-muted-foreground text-xs">
-                Pre-fills the margin field when a new product is created in
-                margin mode.
+                {t("defaultMarginHelp")}
               </p>
             </div>
           )}
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Selling price rounding</Label>
+            <Label className="text-xs">{t("rounding")}</Label>
             <Select
               value={rounding}
               onValueChange={(v) => setRounding(v as RoundingRule)}
             >
               <SelectTrigger
-                aria-label="Selling price rounding"
+                aria-label={t("rounding")}
                 className="max-w-[240px]"
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No rounding</SelectItem>
-                <SelectItem value="nearest_0.05">Nearest $0.05</SelectItem>
-                <SelectItem value="nearest_0.10">Nearest $0.10</SelectItem>
-                <SelectItem value="nearest_0.25">Nearest $0.25</SelectItem>
-                <SelectItem value="nearest_0.50">Nearest $0.50</SelectItem>
+                <SelectItem value="none">{t("roundingNone")}</SelectItem>
+                <SelectItem value="nearest_0.05">{t("rounding005")}</SelectItem>
+                <SelectItem value="nearest_0.10">{t("rounding010")}</SelectItem>
+                <SelectItem value="nearest_0.25">{t("rounding025")}</SelectItem>
+                <SelectItem value="nearest_0.50">{t("rounding050")}</SelectItem>
                 <SelectItem value="up_whole_dollar">
-                  Round up to whole dollar
+                  {t("roundingWhole")}
                 </SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-muted-foreground text-xs">
-              Applies to every margin-calculated price (product form, brand
-              rules, invoice import). Changing this affects future calculations
-              only — it does not re-round prices that are already set.
-            </p>
+            <p className="text-muted-foreground text-xs">{t("roundingHelp")}</p>
           </div>
         </CardContent>
       </Card>
@@ -599,19 +678,16 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Receipt className="size-4" />
-            Tax configuration
+            {t("tax")}
           </CardTitle>
-          <p className="text-muted-foreground text-xs">
-            Single source of truth for POS and invoice tax. Replaces the
-            hardcoded tax logic in the point-of-sale module.
-          </p>
+          <p className="text-muted-foreground text-xs">{t("taxHelp")}</p>
         </CardHeader>
         <CardContent className="space-y-5">
           {/* Default rate + tax mode */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="default-tax-rate" className="text-xs">
-                Default tax rate (%)
+                {t("defaultTaxRate")}
               </Label>
               <Input
                 id="default-tax-rate"
@@ -625,11 +701,11 @@ export function RetailSettings() {
                 className="h-9 text-sm"
               />
               <p className="text-muted-foreground text-xs">
-                Applied to all taxable products unless overridden
+                {t("defaultTaxRateHelp")}
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Tax mode</Label>
+              <Label className="text-xs">{t("taxMode")}</Label>
               <Select
                 value={taxMode}
                 onValueChange={(v) => setTaxMode(v as RetailTaxMode)}
@@ -642,14 +718,14 @@ export function RetailSettings() {
                     <SelectItem key={m.value} value={m.value}>
                       <span className="font-medium">{m.label}</span>
                       <span className="text-muted-foreground ml-2 text-xs">
-                        {m.hint}
+                        {t(m.hintKey)}
                       </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-muted-foreground text-xs">
-                For Canadian facilities
+                {t("taxModeHelp")}
               </p>
             </div>
           </div>
@@ -657,7 +733,7 @@ export function RetailSettings() {
           {/* Registration number */}
           <div className="space-y-1.5">
             <Label htmlFor="tax-registration" className="text-xs">
-              Tax registration number
+              {t("taxNumber")}
             </Label>
             <Input
               id="tax-registration"
@@ -673,11 +749,9 @@ export function RetailSettings() {
           {/* Show breakdown on receipt */}
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium">
-                Show tax breakdown on receipt
-              </p>
+              <p className="text-sm font-medium">{t("showTaxBreakdown")}</p>
               <p className="text-muted-foreground text-xs">
-                Itemize each tax line on printed and emailed receipts.
+                {t("showTaxBreakdownHelp")}
               </p>
             </div>
             <Switch
@@ -691,14 +765,14 @@ export function RetailSettings() {
           {/* Per-category tax exemptions */}
           <div className="space-y-2">
             <div>
-              <p className="text-sm font-medium">Tax-exempt categories</p>
+              <p className="text-sm font-medium">{t("exemptCategories")}</p>
               <p className="text-muted-foreground text-xs">
-                Products in an exempt category are sold without tax.
+                {t("exemptCategoriesHelp")}
               </p>
             </div>
             {categories.length === 0 ? (
               <p className="text-muted-foreground py-2 text-xs">
-                Add product categories above to configure exemptions.
+                {t("exemptCategoriesEmpty")}
               </p>
             ) : (
               <div className="divide-y rounded-lg border">
@@ -711,7 +785,7 @@ export function RetailSettings() {
                     <div className="flex items-center gap-2">
                       {exemptCategoryIds.includes(cat.id) && (
                         <Badge variant="secondary" className="text-[10px]">
-                          Exempt
+                          {t("exempt")}
                         </Badge>
                       )}
                       <Switch
@@ -732,7 +806,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Sparkles className="size-4" />
-            Manage brands
+            {t("brands")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -755,7 +829,7 @@ export function RetailSettings() {
                       variant="ghost"
                       size="icon"
                       className="size-7"
-                      aria-label={`Rename ${brand.name}`}
+                      aria-label={`${t("rename")} — ${brand.name}`}
                       onClick={() => {
                         setRenameBrand(brand);
                         setRenameValue(brand.name);
@@ -767,7 +841,7 @@ export function RetailSettings() {
                       variant="ghost"
                       size="icon"
                       className="size-7"
-                      aria-label={`Merge ${brand.name}`}
+                      aria-label={`${t("merge")} — ${brand.name}`}
                       disabled={brands.length < 2}
                       onClick={() => {
                         setMergeBrand(brand);
@@ -780,7 +854,7 @@ export function RetailSettings() {
                       variant="ghost"
                       size="icon"
                       className="text-destructive size-7"
-                      aria-label={`Delete ${brand.name}`}
+                      aria-label={`${t("delete")} — ${brand.name}`}
                       onClick={() =>
                         setBrands(brands.filter((b) => b.id !== brand.id))
                       }
@@ -793,7 +867,7 @@ export function RetailSettings() {
             })}
             {brands.length === 0 && (
               <p className="text-muted-foreground py-2 text-center text-sm">
-                No brands yet.
+                {t("noBrands")}
               </p>
             )}
           </div>
@@ -804,7 +878,7 @@ export function RetailSettings() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") addBrand();
               }}
-              placeholder="Add brand..."
+              placeholder={t("addBrand")}
               className="h-8 text-sm"
             />
             <Button
@@ -827,10 +901,10 @@ export function RetailSettings() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename brand</DialogTitle>
+            <DialogTitle>{t("renameBrand")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <Label>Brand name</Label>
+            <Label>{t("brandName")}</Label>
             <Input
               autoFocus
               value={renameValue}
@@ -838,19 +912,18 @@ export function RetailSettings() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleRenameBrand();
               }}
-              placeholder="Brand name"
+              placeholder={t("brandName")}
             />
             <p className="text-muted-foreground text-xs">
-              Updates the name on every product using this brand and on its
-              margin rule, so &ldquo;Brand Rule&rdquo; pricing keeps matching.
+              {t("renameBrandHelp")}
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRenameBrand(null)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleRenameBrand} disabled={!renameValue.trim()}>
-              Save
+              {t("saveShort")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -868,7 +941,7 @@ export function RetailSettings() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Merge brand</DialogTitle>
+            <DialogTitle>{t("mergeBrand")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <p className="text-muted-foreground text-sm">
@@ -883,10 +956,10 @@ export function RetailSettings() {
               . Duplicate margin rules are collapsed into one.
             </p>
             <div className="space-y-2">
-              <Label>Merge into</Label>
+              <Label>{t("mergeInto")}</Label>
               <Select value={mergeTargetId} onValueChange={setMergeTargetId}>
-                <SelectTrigger aria-label="Merge into">
-                  <SelectValue placeholder="Select target brand" />
+                <SelectTrigger aria-label={t("mergeInto")}>
+                  <SelectValue placeholder={t("selectTargetBrand")} />
                 </SelectTrigger>
                 <SelectContent>
                   {brands
@@ -908,10 +981,10 @@ export function RetailSettings() {
                 setMergeTargetId("");
               }}
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleMergeBrand} disabled={!mergeTargetId}>
-              Merge
+              {t("merge")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -922,7 +995,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Tag className="size-4" />
-            Product tags
+            {t("tags")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -952,7 +1025,7 @@ export function RetailSettings() {
             <Input
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
-              placeholder="Add tag..."
+              placeholder={t("addTag")}
               className="h-8 flex-1 text-sm"
             />
             <Select value={newTagColor} onValueChange={setNewTagColor}>
@@ -972,7 +1045,7 @@ export function RetailSettings() {
                   <SelectItem key={c.value} value={c.value}>
                     <div className="flex items-center gap-2">
                       <div className={cn("size-2.5 rounded-full", c.dot)} />
-                      {c.label}
+                      {t(c.key)}
                     </div>
                   </SelectItem>
                 ))}
@@ -1006,7 +1079,7 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Ruler className="size-4" />
-            Units of measure
+            {t("units")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -1039,7 +1112,7 @@ export function RetailSettings() {
                   setNewUnit("");
                 }
               }}
-              placeholder="Add unit..."
+              placeholder={t("addUnit")}
               className="h-8 text-sm"
             />
             <Button
@@ -1066,13 +1139,13 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Package className="size-4" />
-            Low stock alerts
+            {t("lowStock")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-1.5">
             <Label htmlFor="low-stock-threshold" className="text-xs">
-              Default low-stock threshold (units)
+              {t("lowStockThreshold")}
             </Label>
             <Input
               id="low-stock-threshold"
@@ -1084,8 +1157,7 @@ export function RetailSettings() {
               className="h-9 max-w-[160px] text-sm"
             />
             <p className="text-muted-foreground text-xs">
-              Alert me when any product falls below this many units. Per-product
-              overrides are set from the individual product page.
+              {t("lowStockThresholdHelp")}
             </p>
           </div>
 
@@ -1093,12 +1165,9 @@ export function RetailSettings() {
 
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium">
-                Send low-stock alert to staff notifications
-              </p>
+              <p className="text-sm font-medium">{t("lowStockNotify")}</p>
               <p className="text-muted-foreground text-xs">
-                Post an alert to the staff notifications channel when a product
-                hits its threshold.
+                {t("lowStockNotifyHelp")}
               </p>
             </div>
             <Switch
@@ -1114,22 +1183,20 @@ export function RetailSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Receipt className="size-4" />
-            Receipt settings
+            {t("receipts")}
           </CardTitle>
-          <p className="text-muted-foreground text-xs">
-            Customize how POS receipts look and how they reach customers.
-          </p>
+          <p className="text-muted-foreground text-xs">{t("receiptsHelp")}</p>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-1.5">
             <Label htmlFor="receipt-header" className="text-xs">
-              Receipt header
+              {t("receiptHeader")}
             </Label>
             <Textarea
               id="receipt-header"
               value={receiptHeader}
               onChange={(e) => setReceiptHeader(e.target.value)}
-              placeholder="Custom text shown at the top of the receipt (e.g. store name, address)"
+              placeholder={t("receiptHeaderPlaceholder")}
               rows={2}
               className="text-sm"
             />
@@ -1137,13 +1204,13 @@ export function RetailSettings() {
 
           <div className="space-y-1.5">
             <Label htmlFor="receipt-footer" className="text-xs">
-              Receipt footer
+              {t("receiptFooter")}
             </Label>
             <Textarea
               id="receipt-footer"
               value={receiptFooter}
               onChange={(e) => setReceiptFooter(e.target.value)}
-              placeholder="e.g. Thank you for shopping with us!"
+              placeholder={t("receiptFooterPlaceholder")}
               rows={2}
               className="text-sm"
             />
@@ -1151,7 +1218,7 @@ export function RetailSettings() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs">Receipt format</Label>
+              <Label className="text-xs">{t("receiptFormat")}</Label>
               <Select
                 value={receiptFormat}
                 onValueChange={(v) =>
@@ -1162,20 +1229,20 @@ export function RetailSettings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="print">Print</SelectItem>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="both">Both</SelectItem>
+                  <SelectItem value="print">{t("receiptPrint")}</SelectItem>
+                  <SelectItem value="email">{t("email")}</SelectItem>
+                  <SelectItem value="both">{t("receiptBoth")}</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-muted-foreground text-xs">
-                How receipts are delivered at checkout.
+                {t("receiptFormatHelp")}
               </p>
             </div>
             <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
               <div>
-                <p className="text-sm font-medium">Show facility logo</p>
+                <p className="text-sm font-medium">{t("receiptLogo")}</p>
                 <p className="text-muted-foreground text-xs">
-                  Print the facility logo at the top of the receipt.
+                  {t("receiptLogoHelp")}
                 </p>
               </div>
               <Switch
@@ -1187,18 +1254,18 @@ export function RetailSettings() {
 
           <div className="space-y-1.5">
             <Label htmlFor="receipt-return-policy" className="text-xs">
-              Return policy
+              {t("returnPolicy")}
             </Label>
             <Textarea
               id="receipt-return-policy"
               value={receiptReturnPolicy}
               onChange={(e) => setReceiptReturnPolicy(e.target.value)}
-              placeholder="e.g. Returns accepted within 30 days with receipt."
+              placeholder={t("returnPolicyPlaceholder")}
               rows={2}
               className="text-sm"
             />
             <p className="text-muted-foreground text-xs">
-              Printed near the bottom of every receipt.
+              {t("returnPolicyHelp")}
             </p>
           </div>
 
@@ -1210,7 +1277,7 @@ export function RetailSettings() {
               onClick={handleSendTestReceipt}
             >
               <Send className="size-3.5" />
-              Send test receipt
+              {t("sendTestReceipt")}
             </Button>
           </div>
         </CardContent>
@@ -1219,7 +1286,7 @@ export function RetailSettings() {
       {/* Save */}
       <div className="flex justify-end">
         <Button onClick={handleSave} className="gap-1.5">
-          Save Retail Settings
+          {t("save")}
         </Button>
       </div>
     </div>
@@ -1241,6 +1308,7 @@ function SupplierSection({
   onUpdate: (s: RetailSupplier[]) => void;
   nextId: (prefix: string) => string;
 }) {
+  const t = useSettingsText().section("retail");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<RetailSupplier | null>(null);
   const [form, setForm] = useState<RetailSupplier>(emptySupplier(""));
@@ -1262,7 +1330,7 @@ function SupplierSection({
 
   const handleSave = () => {
     if (!form.name.trim()) {
-      toast.error("Supplier name is required");
+      toast.error(t("supplierNameRequired"));
       return;
     }
     if (editing) {
@@ -1288,14 +1356,14 @@ function SupplierSection({
             <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-100">
               <Truck className="size-4 text-indigo-700" />
             </div>
-            Suppliers
+            {t("suppliers")}
             <Badge variant="secondary" className="text-[10px]">
               {suppliers.length}
             </Badge>
           </CardTitle>
           <Button size="sm" className="gap-1.5" onClick={openCreate}>
             <Plus className="size-3.5" />
-            Add Supplier
+            {t("addSupplier")}
           </Button>
         </CardHeader>
         <CardContent className="p-0">
@@ -1303,7 +1371,7 @@ function SupplierSection({
             <div className="flex flex-col items-center py-10 text-center">
               <Truck className="text-muted-foreground/30 size-10" />
               <p className="text-muted-foreground mt-2 text-sm">
-                No suppliers yet
+                {t("noSuppliers")}
               </p>
             </div>
           ) : (
@@ -1318,13 +1386,13 @@ function SupplierSection({
                       <p className="text-sm font-semibold">{sup.name}</p>
                       {sup.status === "inactive" && (
                         <Badge variant="secondary" className="text-[10px]">
-                          Inactive
+                          {t("inactive")}
                         </Badge>
                       )}
                       {sup.orderingPortalUrl && (
                         <Badge variant="outline" className="gap-1 text-[10px]">
                           <KeyRound className="size-2.5" />
-                          Portal
+                          {t("portal")}
                         </Badge>
                       )}
                     </div>
@@ -1387,28 +1455,29 @@ function SupplierSection({
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Edit Supplier" : "Add Supplier"}
+              {editing ? t("editSupplier") : t("addSupplier")}
             </DialogTitle>
           </DialogHeader>
           <div className="max-h-[65vh] space-y-5 overflow-y-auto py-1 pr-1">
             {/* Company */}
             <div className="space-y-3">
               <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
-                Company
+                {t("company")}
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">
-                    Supplier Name <span className="text-destructive">*</span>
+                    {t("supplierName")}{" "}
+                    <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g. PawNutrition Inc."
+                    placeholder={t("supplierNamePlaceholder")}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Website</Label>
+                  <Label className="text-xs">{t("website")}</Label>
                   <div className="relative">
                     <Globe className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
                     <Input
@@ -1426,13 +1495,13 @@ function SupplierSection({
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Address</Label>
+                <Label className="text-xs">{t("address")}</Label>
                 <Input
                   value={form.address ?? ""}
                   onChange={(e) =>
                     setForm({ ...form, address: e.target.value || undefined })
                   }
-                  placeholder="Street address, city, state, zip"
+                  placeholder={t("addressPlaceholder")}
                 />
               </div>
             </div>
@@ -1440,11 +1509,11 @@ function SupplierSection({
             {/* Contact */}
             <div className="space-y-3">
               <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
-                Contact Person
+                {t("contactPerson")}
               </p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Name</Label>
+                  <Label className="text-xs">{t("name")}</Label>
                   <div className="relative">
                     <User className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
                     <Input
@@ -1455,13 +1524,13 @@ function SupplierSection({
                           contactPerson: e.target.value || undefined,
                         })
                       }
-                      placeholder="Contact name"
+                      placeholder={t("contactNamePlaceholder")}
                       className="pl-8"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Phone</Label>
+                  <Label className="text-xs">{t("phone")}</Label>
                   <div className="relative">
                     <Phone className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
                     <Input
@@ -1475,7 +1544,7 @@ function SupplierSection({
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Email</Label>
+                  <Label className="text-xs">{t("email")}</Label>
                   <div className="relative">
                     <Mail className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
                     <Input
@@ -1483,7 +1552,7 @@ function SupplierSection({
                       onChange={(e) =>
                         setForm({ ...form, email: e.target.value || undefined })
                       }
-                      placeholder="email@supplier.com"
+                      placeholder={t("emailPlaceholder")}
                       className="pl-8"
                     />
                   </div>
@@ -1494,11 +1563,11 @@ function SupplierSection({
             {/* Ordering Portal */}
             <div className="space-y-3">
               <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
-                Ordering Portal
+                {t("orderingPortal")}
               </p>
               <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Portal URL</Label>
+                  <Label className="text-xs">{t("portalUrl")}</Label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <ExternalLink className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
@@ -1530,7 +1599,7 @@ function SupplierSection({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Username</Label>
+                    <Label className="text-xs">{t("username")}</Label>
                     <div className="flex gap-1.5">
                       <Input
                         value={form.orderingPortalUsername ?? ""}
@@ -1540,7 +1609,7 @@ function SupplierSection({
                             orderingPortalUsername: e.target.value || undefined,
                           })
                         }
-                        placeholder="Username"
+                        placeholder={t("username")}
                       />
                       {form.orderingPortalUsername && (
                         <Button
@@ -1560,7 +1629,7 @@ function SupplierSection({
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Password</Label>
+                    <Label className="text-xs">{t("password")}</Label>
                     <div className="flex gap-1.5">
                       <div className="relative flex-1">
                         <Input
@@ -1573,7 +1642,7 @@ function SupplierSection({
                                 e.target.value || undefined,
                             })
                           }
-                          placeholder="Password"
+                          placeholder={t("password")}
                         />
                         <button
                           type="button"
@@ -1611,11 +1680,11 @@ function SupplierSection({
             {/* Payment & Notes */}
             <div className="space-y-3">
               <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
-                Payment & Notes
+                {t("paymentAndNotes")}
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Payment terms</Label>
+                  <Label className="text-xs">{t("paymentTerms")}</Label>
                   <Select
                     value={form.paymentTerms ?? ""}
                     onValueChange={(v) =>
@@ -1623,19 +1692,21 @@ function SupplierSection({
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select..." />
+                      <SelectValue placeholder={t("select")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="COD">COD</SelectItem>
-                      <SelectItem value="Net 15">Net 15</SelectItem>
-                      <SelectItem value="Net 30">Net 30</SelectItem>
-                      <SelectItem value="Net 60">Net 60</SelectItem>
-                      <SelectItem value="Prepaid">Prepaid</SelectItem>
+                      <SelectItem value="Net 15">{t("termsNet15")}</SelectItem>
+                      <SelectItem value="Net 30">{t("termsNet30")}</SelectItem>
+                      <SelectItem value="Net 60">{t("termsNet60")}</SelectItem>
+                      <SelectItem value="Prepaid">
+                        {t("termsPrepaid")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Status</Label>
+                  <Label className="text-xs">{t("status")}</Label>
                   <Select
                     value={form.status ?? "active"}
                     onValueChange={(v) =>
@@ -1649,20 +1720,20 @@ function SupplierSection({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="active">{t("active")}</SelectItem>
+                      <SelectItem value="inactive">{t("inactive")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Notes</Label>
+                <Label className="text-xs">{t("notes")}</Label>
                 <Textarea
                   value={form.notes ?? ""}
                   onChange={(e) =>
                     setForm({ ...form, notes: e.target.value || undefined })
                   }
-                  placeholder="Special instructions, minimum orders, etc."
+                  placeholder={t("notesPlaceholder")}
                   rows={2}
                 />
               </div>
@@ -1670,10 +1741,10 @@ function SupplierSection({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleSave}>
-              {editing ? "Save Changes" : "Add Supplier"}
+              {editing ? t("saveChanges") : t("addSupplier")}
             </Button>
           </DialogFooter>
         </DialogContent>

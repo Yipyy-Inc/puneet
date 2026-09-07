@@ -8245,6 +8245,73 @@ first. Marking them `// french-ok:` was right; translating them would have been
 a second source of truth. The distinction is whether anything reads the string
 when a catalogue entry exists.
 
+## 2026-09-07 — `PricingRulesPanel.tsx` is 5,822 lines, and it is why pricing-rules is not translated yet
+
+**Severity: 🟡 medium.** Measured while planning the French conversion by size:
+
+```
+5822  src/components/facility/PricingRulesPanel.tsx
+1703  src/components/facility/training/training-module-settings.tsx
+1683  src/components/facility/RetailSettings.tsx
+1060  src/components/facility/EvaluationSettings.tsx
+```
+
+CLAUDE.md's rule is **~500 lines**. The panel is **eleven times** that and three
+and a half times the next biggest file in the settings tree. It holds **422 of
+the pricing-rules section's 455 English strings**, and it computes money —
+discounts, surcharges, bundles, holiday pricing.
+
+**Why this stopped the conversion rather than slowing it.** Every other section
+was converted with a scripted pass of exact-match replacements, checked by
+typecheck, the gate and a look at the rendered page. At 5,822 lines that method
+stops being safe: the diff is unreviewable, the file cannot be read in one pass
+to confirm each replacement landed in the right JSX context, and a wrong
+replacement in a pricing engine is a wrong price on a real invoice.
+
+**Do instead:** split the panel before translating it. It is one component per
+rule TYPE — multi-pet, long-stay, room-type, busy-date, late-pickup,
+pet-spec, over-24-hour, custom fees, bundles — and `PricingRulesSettings.tsx`
+already lists exactly those nine as separate cards, so the seam is drawn.
+Nine files of ~600 lines each are nine reviewable changes; one file of 5,822 is
+none.
+
+**Not verified:** whether the nine editors share enough state to make the split
+awkward. That is the first thing to measure, not to assume.
+
+## 2026-09-07 — a handler that mutates a fixture is invisible to the React Compiler until it becomes reactive
+
+**Severity: 🟢 low as a bug, worth knowing as a pattern.**
+
+`RetailSettings.tsx` assigns into imported module objects in five places —
+`retailConfig.brands = …`, `retailConfig.categories = …`, `p.brand = newName`
+over the `products` fixture, and `rule.brandName = …` over
+`retailConfig.brandMarginRules`. That is the same module-singleton write the
+tag catalogue was moved off on 2026-09-06, and it is still there.
+
+**It produced no lint error for as long as it existed.** The moment the section
+learned French, adding a `t(…)` call made those handlers close over a reactive
+value, the React Compiler started analysing them as memoisable scopes, and
+twelve `react-hooks/immutability` errors appeared at once:
+
+```
+217:7  238:5  247:9  252:51  280:9  300:5  304:5  398:5 … 402:5
+  Error: This value cannot be modified
+```
+
+None of them was new. The rule simply cannot see a handler that reads nothing
+reactive.
+
+**Do instead:** when a conversion suddenly produces immutability errors,
+the errors are the truth and the conversion is the messenger — do not undo the
+hook. The fix used here was to hoist each write into a module-level function
+(`persistBrands`, `reassignProducts`, `renameBrandRules`, `persistLists`),
+which is where a module-singleton write belongs anyway and is the seam this
+screen needs when it moves to Postgres.
+
+**And expect more of these.** Any settings screen still writing to a
+`src/data` singleton will do the same thing on the day it is translated. The
+list is `rg "^\s*\w+Config\.\w+ = " src/components src/app`.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

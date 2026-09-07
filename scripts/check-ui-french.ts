@@ -504,7 +504,6 @@ const BASELINE: Record<string, Set<string>> = {
     "pet-breeds",
     "pricing-rules",
     "report-card-template",
-    "retail",
     "roles-permissions",
     "tags-notes",
     "taxes",
