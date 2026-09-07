@@ -19,11 +19,14 @@ import {
   useStaffHrConfig,
   useSaveStaffHrConfig,
 } from "@/lib/api/staff-onboarding";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
+// Keys, not sentences: the same three strings are also the Select's own
+// items below, so one map serves both and they cannot drift apart.
 const CLOSE_REMINDER_LABELS: Record<RegisterCloseReminderMode, string> = {
-  closing_time: "At closing time — any cashier (recommended)",
-  opener_clock_out: "When the person who opened clocks out (single cashier)",
-  manual: "Manual only — close from the register page",
+  closing_time: "reminderClosingTime",
+  opener_clock_out: "reminderOpenerClockOut",
+  manual: "reminderManual",
 };
 
 /** Facility control over the mandatory cash-register open/close flow. Default
@@ -31,6 +34,7 @@ const CLOSE_REMINDER_LABELS: Record<RegisterCloseReminderMode, string> = {
  *  use the portal, and are reminded to count it closed on clock-out / logout.
  *  Persisted to StaffHrConfig. */
 export function RegisterPolicySettings() {
+  const t = useSettingsText().section("hr-config");
   const config = useStaffHrConfig();
   const { hours } = useSettings();
   // The displayed value comes from the REFETCH this mutation triggers, not
@@ -39,16 +43,12 @@ export function RegisterPolicySettings() {
 
   const setRequireOpen = (on: boolean) => {
     saveStaffHrConfig({ requireRegisterOpenOnLogin: on });
-    toast.success(
-      on
-        ? "Staff with register access must now open the register on login"
-        : "Register open/close is no longer mandatory",
-    );
+    toast.success(on ? t("registerRequiredOn") : t("registerRequiredOff"));
   };
 
   const setCloseReminder = (mode: RegisterCloseReminderMode) => {
     saveStaffHrConfig({ registerCloseReminder: mode });
-    toast.success("Close-reminder setting updated");
+    toast.success(t("closeReminderUpdated"));
   };
 
   const closeTime = todayCloseTime(hours);
@@ -58,25 +58,20 @@ export function RegisterPolicySettings() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Vault className="text-muted-foreground size-5" />
-          <CardTitle>Daily register policy</CardTitle>
+          <CardTitle>{t("registerTitle")}</CardTitle>
         </div>
         <p className="text-muted-foreground mt-1 text-sm">
-          When on, any staff member granted “Open / close cash register” access
-          must count the opening float before they reach the rest of their
-          account, and is prompted to count &amp; close the drawer when they
-          clock out or log out — so no one forgets to reconcile the cash.
+          {t("registerHelp")}
         </p>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
           <div className="space-y-0.5">
             <Label htmlFor="require-register-open">
-              Require register open on login
+              {t("requireRegisterOpen")}
             </Label>
             <p className="text-muted-foreground text-xs">
-              Applies only to staff with register access. Once anyone opens the
-              day&apos;s register for a location, others at that location
-              aren&apos;t prompted again.
+              {t("requireRegisterOpenHelp")}
             </p>
           </div>
           <Switch
@@ -88,12 +83,9 @@ export function RegisterPolicySettings() {
 
         <div className="space-y-2 rounded-lg border p-4">
           <div className="space-y-0.5">
-            <Label htmlFor="register-close-reminder">
-              When to remind staff to close the register
-            </Label>
+            <Label htmlFor="register-close-reminder">{t("whenToRemind")}</Label>
             <p className="text-muted-foreground text-xs">
-              Supports shift handovers — a different person can open (morning)
-              and close (evening).
+              {t("whenToRemindHelp")}
             </p>
           </div>
           <Select
@@ -104,26 +96,24 @@ export function RegisterPolicySettings() {
           >
             <SelectTrigger id="register-close-reminder" className="w-full">
               <SelectValue>
-                {CLOSE_REMINDER_LABELS[config.registerCloseReminder]}
+                {t(CLOSE_REMINDER_LABELS[config.registerCloseReminder])}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="closing_time">
-                At closing time — any cashier (recommended)
+                {t("reminderClosingTime")}
               </SelectItem>
               <SelectItem value="opener_clock_out">
-                When the person who opened clocks out (single cashier)
+                {t("reminderOpenerClockOut")}
               </SelectItem>
-              <SelectItem value="manual">
-                Manual only — close from the register page
-              </SelectItem>
+              <SelectItem value="manual">{t("reminderManual")}</SelectItem>
             </SelectContent>
           </Select>
           {config.registerCloseReminder === "closing_time" && (
             <p className="text-muted-foreground text-xs">
               {closeTime
-                ? `Today's closing time is ${closeTime} (from your business hours). Mid-day departures aren't prompted.`
-                : "The facility is closed today, so no closing reminder will fire."}
+                ? t("closingTimeNote").replace("{time}", closeTime)
+                : t("closedTodayNote")}
             </p>
           )}
         </div>

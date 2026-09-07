@@ -39,6 +39,15 @@ const CONVERTED = [
   "hours",
   "language",
   "branding",
+  "payroll-rules",
+  "deposit-rules",
+  "taxes",
+  "mobile-app",
+  "pet-breeds",
+  "hr-config",
+  "my-profile",
+  "offboarding-templates",
+  "my-notifications",
 ] as const;
 
 test("a converted settings section renders no English, no key and no hole", async ({

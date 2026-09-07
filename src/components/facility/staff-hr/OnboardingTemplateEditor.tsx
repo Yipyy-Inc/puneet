@@ -239,9 +239,20 @@ export function OnboardingTemplateEditor({
             onChange={applyManagerTasks}
             assigneeOptions={MANAGER_ASSIGNEES}
             scheduleOptions={MANAGER_SCHEDULE}
-            scheduleLabel="When due"
-            addLabel="Add manager task"
-            emptyText="No manager tasks yet."
+            // french-ok: onboarding-templates is not converted yet — these
+            // moved out of TaskConfigEditor's defaults so the shared component
+            // carries no copy of its own
+            text={{
+              scheduleLabel: "When due",
+              addLabel: "Add manager task",
+              emptyText: "No manager tasks yet.",
+              taskName: "Task name",
+              removeTask: "Remove task",
+              descriptionOptional: "Description (optional)",
+              assignedTo: "Assigned to",
+              days: "Days",
+              required: "Required",
+            }}
           />
         </CardContent>
       </Card>

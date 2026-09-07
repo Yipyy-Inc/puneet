@@ -25,6 +25,7 @@ import {
   useSaveFacilitySetting,
 } from "@/lib/api/facility-settings";
 import type { TaxConfig, TaxEntry } from "@/lib/settings/tax";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // ── THIS SCREEN USED TO SAVE NOTHING ──────────────────────────────────────
@@ -100,6 +101,7 @@ function draftFrom(saved: TaxConfig): Draft {
 }
 
 export function TaxSettings() {
+  const t = useSettingsText().section("taxes");
   const { role } = useFacilityRole();
   const { settings, isPending } = useFacilitySettings();
   const saveSetting = useSaveFacilitySetting();
@@ -231,11 +233,9 @@ export function TaxSettings() {
       // The server's copy is the truth again; drop the edits so the form
       // follows the refetched value rather than shadowing it.
       setDraft(null);
-      toast.success("Tax settings saved");
+      toast.success(t("saved"));
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Tax settings were not saved.",
-      );
+      toast.error(error instanceof Error ? error.message : t("notSaved"));
     }
   };
 
@@ -257,9 +257,7 @@ export function TaxSettings() {
       <Card>
         <CardContent className="flex items-center gap-3 py-8">
           <Shield className="text-muted-foreground size-5" />
-          <p className="text-muted-foreground text-sm">
-            Tax settings are only accessible to facility owners and managers.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("ownerOnly")}</p>
         </CardContent>
       </Card>
     );
@@ -268,11 +266,8 @@ export function TaxSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Tax configuration</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Configure tax rates for your facility. These rates apply to all
-          invoices, estimates, and receipts.
-        </p>
+        <h2 className="text-lg font-semibold">{t("title")}</h2>
+        <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </div>
 
       {/* Location */}
@@ -280,13 +275,13 @@ export function TaxSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Globe className="size-4" />
-            Facility location
+            {t("facilityLocation")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-xs">Country</Label>
+              <Label className="text-xs">{t("country")}</Label>
               <Select value={country} onValueChange={handleCountryChange}>
                 <SelectTrigger className="mt-1 h-9 text-sm">
                   <SelectValue />
@@ -301,7 +296,7 @@ export function TaxSettings() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Province / state / region</Label>
+              <Label className="text-xs">{t("region")}</Label>
               <Select value={province} onValueChange={handleProvinceChange}>
                 <SelectTrigger className="mt-1 h-9 text-sm">
                   <SelectValue />
@@ -316,10 +311,7 @@ export function TaxSettings() {
               </Select>
             </div>
           </div>
-          <p className="text-muted-foreground text-xs">
-            Selecting a location auto-fills standard tax rates. You can
-            customize them below.
-          </p>
+          <p className="text-muted-foreground text-xs">{t("locationHelp")}</p>
         </CardContent>
       </Card>
 
@@ -329,7 +321,7 @@ export function TaxSettings() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Percent className="size-4" />
-              Tax rates
+              {t("taxRates")}
             </CardTitle>
             <Button
               variant="outline"
@@ -338,14 +330,14 @@ export function TaxSettings() {
               onClick={handleAddTax}
             >
               <Plus className="size-3.5" />
-              Add Tax Rate
+              {t("addTaxRate")}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {taxes.length === 0 ? (
             <p className="text-muted-foreground py-4 text-center text-sm">
-              No tax rates configured — your invoices won&apos;t include tax.
+              {t("noRates")}
             </p>
           ) : (
             <>
@@ -362,18 +354,20 @@ export function TaxSettings() {
                     <div className="min-w-0 flex-1">
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                         <div>
-                          <Label className="text-[11px]">Tax name</Label>
+                          <Label className="text-[11px]">{t("taxName")}</Label>
                           <Input
                             value={tax.name}
                             onChange={(e) =>
                               handleUpdateTax(tax.id, { name: e.target.value })
                             }
-                            placeholder="e.g. GST, HST, VAT"
+                            placeholder={t("taxNamePlaceholder")}
                             className="mt-1 h-8 text-sm"
                           />
                         </div>
                         <div>
-                          <Label className="text-[11px]">Rate (%)</Label>
+                          <Label className="text-[11px]">
+                            {t("ratePercent")}
+                          </Label>
                           <Input
                             type="number"
                             step="0.001"
@@ -400,7 +394,9 @@ export function TaxSettings() {
                           />
                         </div>
                         <div>
-                          <Label className="text-[11px]">Applies to</Label>
+                          <Label className="text-[11px]">
+                            {t("appliesTo")}
+                          </Label>
                           <Select
                             value={tax.appliesTo}
                             onValueChange={(v) =>
@@ -413,18 +409,22 @@ export function TaxSettings() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">All items</SelectItem>
+                              <SelectItem value="all">
+                                {t("allItems")}
+                              </SelectItem>
                               <SelectItem value="services_only">
-                                Services only
+                                {t("servicesOnly")}
                               </SelectItem>
                               <SelectItem value="products_only">
-                                Products only
+                                {t("productsOnly")}
                               </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div>
-                          <Label className="text-[11px]">Registration #</Label>
+                          <Label className="text-[11px]">
+                            {t("registrationNumber")}
+                          </Label>
                           <Input
                             value={tax.registrationNumber}
                             onChange={(e) =>
@@ -460,7 +460,7 @@ export function TaxSettings() {
                   <div className="mt-3 grid grid-cols-2 gap-3 border-t pt-3">
                     <div>
                       <Label className="text-[11px]">
-                        Description (optional)
+                        {t("descriptionOptional")}
                       </Label>
                       <Input
                         value={tax.description}
@@ -469,7 +469,7 @@ export function TaxSettings() {
                             description: e.target.value,
                           })
                         }
-                        placeholder="e.g. Federal Goods and Services Tax"
+                        placeholder={t("descriptionPlaceholder")}
                         className="mt-1 h-8 text-sm"
                       />
                     </div>
@@ -486,9 +486,9 @@ export function TaxSettings() {
                           className="accent-primary"
                         />
                         <span>
-                          Compound tax{" "}
+                          {t("compoundTax")}{" "}
                           <span className="text-muted-foreground">
-                            (calculated on subtotal + previous taxes)
+                            {t("compoundTaxHelp")}
                           </span>
                         </span>
                       </label>
@@ -497,7 +497,7 @@ export function TaxSettings() {
                 </div>
               ))}
               <div className="bg-muted/40 flex items-center justify-between rounded-lg px-4 py-2.5">
-                <span className="text-sm font-medium">Combined Rate</span>
+                <span className="text-sm font-medium">{t("combinedRate")}</span>
                 <span className="font-[tabular-nums] text-sm font-bold">
                   {(combinedRate * 100).toFixed(
                     combinedRate * 100 === Math.floor(combinedRate * 100)
@@ -517,16 +517,15 @@ export function TaxSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Receipt className="size-4" />
-            Tax behaviour &amp; display
+            {t("behaviourAndDisplay")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Prices include tax</p>
+              <p className="text-sm font-medium">{t("pricesIncludeTax")}</p>
               <p className="text-muted-foreground text-xs">
-                When on, listed prices already include tax. When off, tax is
-                added on top.
+                {t("pricesIncludeTaxHelp")}
               </p>
             </div>
             <Switch
@@ -537,11 +536,9 @@ export function TaxSettings() {
           <Separator />
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">
-                Show each tax line separately
-              </p>
+              <p className="text-sm font-medium">{t("showSeparately")}</p>
               <p className="text-muted-foreground text-xs">
-                Show GST and QST as separate lines vs a combined total.
+                {t("showSeparatelyHelp")}
               </p>
             </div>
             <Switch
@@ -552,12 +549,9 @@ export function TaxSettings() {
           <Separator />
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">
-                Show registration numbers on invoices
-              </p>
+              <p className="text-sm font-medium">{t("showRegistration")}</p>
               <p className="text-muted-foreground text-xs">
-                Display your tax registration numbers on printed/emailed
-                invoices.
+                {t("showRegistrationHelp")}
               </p>
             </div>
             <Switch
@@ -573,25 +567,23 @@ export function TaxSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Shield className="size-4" />
-            Tax exemptions
+            {t("exemptions")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Tips</p>
-              <p className="text-muted-foreground text-xs">
-                Tips are always tax exempt.
-              </p>
+              <p className="text-sm font-medium">{t("tips")}</p>
+              <p className="text-muted-foreground text-xs">{t("tipsHelp")}</p>
             </div>
             <Switch checked disabled />
           </div>
           <Separator />
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Gift card purchases</p>
+              <p className="text-sm font-medium">{t("giftCards")}</p>
               <p className="text-muted-foreground text-xs">
-                Exempt gift card purchases from tax.
+                {t("giftCardsHelp")}
               </p>
             </div>
             <Switch
@@ -602,9 +594,9 @@ export function TaxSettings() {
           <Separator />
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Store credit redemptions</p>
+              <p className="text-sm font-medium">{t("storeCredit")}</p>
               <p className="text-muted-foreground text-xs">
-                Exempt store credit usage from tax.
+                {t("storeCreditHelp")}
               </p>
             </div>
             <Switch
@@ -622,7 +614,7 @@ export function TaxSettings() {
           disabled={saveSetting.isPending}
           className="gap-1.5"
         >
-          {saveSetting.isPending ? "Saving…" : "Save Tax Settings"}
+          {saveSetting.isPending ? t("saving") : t("save")}
         </Button>
       </div>
     </div>

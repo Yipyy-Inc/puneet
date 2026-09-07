@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import { upsertFacilityStaff } from "@/data/facility-staff";
 import { RolePill } from "@/app/facility/dashboard/staff/_components/staff-shared";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // "My Profile" — the personal settings section every account holds, gated on
@@ -27,6 +28,7 @@ function initials(first: string, last: string) {
 }
 
 export function MyAccountSettings() {
+  const t = useSettingsText().section("my-profile");
   const { viewer } = useFacilityRbac();
 
   const [firstName, setFirstName] = useState(viewer.firstName);
@@ -42,7 +44,7 @@ export function MyAccountSettings() {
 
   const saveProfile = () => {
     upsertFacilityStaff({ ...viewer, firstName, lastName, email, phone });
-    toast.success("Profile updated");
+    toast.success(t("profileUpdated"));
   };
 
   return (
@@ -50,7 +52,7 @@ export function MyAccountSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <User className="size-4" /> My profile
+            <User className="size-4" /> {t("myProfile")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -78,7 +80,7 @@ export function MyAccountSettings() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="my-first">First name</Label>
+              <Label htmlFor="my-first">{t("firstName")}</Label>
               <Input
                 id="my-first"
                 value={firstName}
@@ -86,7 +88,7 @@ export function MyAccountSettings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="my-last">Last name</Label>
+              <Label htmlFor="my-last">{t("lastName")}</Label>
               <Input
                 id="my-last"
                 value={lastName}
@@ -94,7 +96,7 @@ export function MyAccountSettings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="my-email">Email</Label>
+              <Label htmlFor="my-email">{t("email")}</Label>
               <Input
                 id="my-email"
                 type="email"
@@ -103,7 +105,7 @@ export function MyAccountSettings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="my-phone">Phone</Label>
+              <Label htmlFor="my-phone">{t("phone")}</Label>
               <Input
                 id="my-phone"
                 value={phone}
@@ -114,7 +116,7 @@ export function MyAccountSettings() {
 
           <div className="flex justify-end">
             <Button onClick={saveProfile} disabled={!dirty} className="gap-1.5">
-              <Save className="size-4" /> Save changes
+              <Save className="size-4" /> {t("saveChanges")}
             </Button>
           </div>
         </CardContent>
@@ -132,6 +134,7 @@ export function MyAccountSettings() {
 }
 
 function ChangePasswordCard() {
+  const t = useSettingsText().section("my-profile");
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -157,20 +160,20 @@ function ChangePasswordCard() {
     setCurrent("");
     setNext("");
     setConfirm("");
-    toast.success("Password changed");
+    toast.success(t("passwordChanged"));
   };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <KeyRound className="size-4" /> Password
+          <KeyRound className="size-4" /> {t("password")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid max-w-md gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="pw-current">Current password</Label>
+            <Label htmlFor="pw-current">{t("currentPassword")}</Label>
             <Input
               id="pw-current"
               type="password"
@@ -179,19 +182,17 @@ function ChangePasswordCard() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pw-new">New password</Label>
+            <Label htmlFor="pw-new">{t("newPassword")}</Label>
             <Input
               id="pw-new"
               type="password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
             />
-            <p className="text-muted-foreground text-xs">
-              At least 8 characters.
-            </p>
+            <p className="text-muted-foreground text-xs">{t("atLeastEight")}</p>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pw-confirm">Confirm new password</Label>
+            <Label htmlFor="pw-confirm">{t("confirmNewPassword")}</Label>
             <Input
               id="pw-confirm"
               type="password"
@@ -202,7 +203,7 @@ function ChangePasswordCard() {
         </div>
         <div className="flex justify-end">
           <Button onClick={submit} disabled={!canSubmit || pending}>
-            {pending ? "Changing…" : "Update password"}
+            {pending ? t("changing") : t("updatePassword")}
           </Button>
         </div>
       </CardContent>

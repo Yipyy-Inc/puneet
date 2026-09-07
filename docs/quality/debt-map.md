@@ -8536,3 +8536,149 @@ Append under a new dated heading. For each item: a one-line description, a sever
 And where the entry rests on a claim about how the system behaves, **include the measurement that established it** — the row counts, the status codes, the query you ran. Two entries in this file were acted on for the first time on 2026-08-22 and both turned out to be wrong: the facility-delete advice would have erased which facility each audit entry concerned, and the anon-exposure sweep (`proacl::text like '%anon=X%'`) finds none of the eleven functions that were actually exposed, because their ACLs name an empty grantee — PUBLIC — and `anon` is a member of PUBLIC. Neither was careless; both were sound-looking inferences that had never been executed.
 
 That is the failure mode to design against. A recommendation can only be believed, and ages into folklore; a measurement can be re-run and disagreed with, and ages into a test. If you cannot produce one, say so in the entry — "not verified" is a fact about the advice, and the next person is entitled to it.
+
+## 2026-09-07 — a deposit rule's display label is COMPUTED, then STORED, and a customer reads it
+
+**Severity: 🟡 medium.** Found while translating `deposit-rules`.
+
+`formatRuleLabel()` in `DepositRulesSettings.tsx` builds a sentence —
+`"Boarding — 25% deposit"`, `"Bookings over $200 — $50 deposit"` — and the
+result is written into `rule.label`, which is part of the persisted
+`deposit_rules` settings value (`depositRuleSchema` requires it).
+
+**Six other files read it back**, and one of them is customer-facing:
+
+```
+src/components/bookings/modals/CustomerDepositPanel.tsx:73
+  {rule.label} — pay now to confirm your booking.
+```
+
+plus `BookingDepositPrompt`, `BookingModal` (twice, as `ruleLabel`),
+`EstimateWizard`, and the booking detail page.
+
+**Why this blocks the obvious fix.** Translating `formatRuleLabel` looks like
+the rest of the French conversion and is strictly WORSE than leaving it: the
+label is regenerated on every edit, so whichever language the admin's browser
+was in at the moment they last touched a rule is frozen into a field a French
+customer and an English colleague both read afterwards. Consistent English is
+worse than bilingual, but bilingual-by-accident is worse than both.
+
+So it is marked `// french-ok:` in three places with the reason, and the
+section is otherwise fully converted.
+
+**Do instead:** stop storing a display string. `label` is derived from `scope`,
+`serviceType`, `amountType`, `amount` and `minBookingValue`, all of which are
+already on the row — so the seven call sites can each call a shared
+`depositRuleLabel(rule, t)` at render and get it in the reader's language.
+That is a change to a persisted settings value plus seven call sites in the
+booking and estimate flows, which is why it is an entry here and not a commit.
+`label` can stay in the schema during the migration and simply stop being read.
+
+**Also fixed in passing, because it was two lines away:** both number inputs in
+`ThresholdRuleRow` fired the same toast, so editing the deposit AMOUNT reported
+`"Booking value threshold updated"`. They now have a message each.
+
+## 2026-09-07 — `check:hover-actions` could not read `className={cn(…)}`, which is how most of this codebase writes it
+
+**Severity: 🟡 medium.** Found while translating `pet-breeds`, by reading the
+file rather than by running the gate.
+
+The gate matched three literal forms:
+
+```
+className="…"      className='…'      className={`…`}
+```
+
+and nothing else. But a CONDITIONAL reveal is exactly what `cn()` exists to
+express, so the defect it hunts is disproportionately written in the one form
+it could not see:
+
+```jsx
+className={cn(
+  "rounded-sm p-1",
+  restricted ? "text-red-600" : "opacity-0 group-hover:opacity-100",
+)}
+```
+
+**The measurement.** Following `cn(` to its matching paren and treating the
+whole call as one className, across `src/`:
+
+| form                                             | hover-revealed controls |
+| ------------------------------------------------ | ----------------------- |
+| `className="…"` / ``{`…`}`` — what the gate read | **0**                   |
+| `className={cn(…)}` — what it could not          | **3**                   |
+
+Small, and that is the point: the gate has printed **at zero** in AGENTS.md
+since the 41 were cleared, and two of those three were real —
+
+- `BreedManagement.tsx`, the button that restricts a breed
+- `appointment-detail-page.tsx`, the button that pins a note
+
+Neither existed at all on a touch screen, which is rule 11's whole subject.
+Both are now persistently visible and muted; hover changes their COLOUR, not
+their existence.
+
+The third, `EstimateCard.tsx`, is correct and must stay: it carries
+`max-md:opacity-100`, so the control is permanently visible below `md` — every
+width with no hover. The gate now excludes that shape explicitly, which is the
+mirror of the `sm:opacity-0` allowance its header already described.
+
+**One correction worth recording, because it was a self-inflicted weakening.**
+The first version of that exclusion also accepted
+`focus-within:opacity-100` — and the gate's own header says, in as many words,
+that focus does NOT rescue a control: keyboard reachability is §5k, but a
+tablet has no keyboard focus to give either, so the control is still absent in
+the context rule 11 is about. Widening a gate is exactly when it is easiest to
+weaken it by accident, and AGENTS.md's "never weaken a gate" applies to the
+same commit that improves it. `EstimateCard` passes on `max-md:` alone, so
+removing focus cost nothing.
+
+**Verified both directions:** a probe file with the `cn()` pattern makes the
+gate fail and name the file; deleting it returns the gate to zero. A widened
+gate that cannot fail is worse than the narrow one it replaced.
+
+**Do instead:** when a gate reports zero, check what it can READ before
+believing what it counts. That is now the second gate in one day whose "at
+zero" was a statement about its own regex — see the `check:ui-french` entry
+above.
+
+## 2026-09-07 — the key-not-sentence pattern has a failure mode only the browser can see
+
+**Severity: 🟢 low as a defect, high as a lesson.** Caught by
+`tests/e2e/settings-french.spec.ts` on its first real run, hours after it was
+written to catch exactly this.
+
+Converting a module-level constant array has two halves:
+
+```ts
+const CHANNELS = [{ key: "email", label: "channelEmail", hint: "channelEmailHint" }];
+//                                          ↑ now a KEY
+```
+```jsx
+<p>{t(ch.label)}</p>   // ← and the render site has to resolve it
+```
+
+Do the first without the second and **`check:ui-french` goes GREEN** — the
+source no longer contains any English, which is the only thing it measures.
+The screen renders the literal string `channelEmail`.
+
+Six of these shipped into `my-notifications` in one pass: four channel
+labels/hints and two urgent-override strings, the second pair because the
+constant is mapped into a CHILD component that renders the prop directly, so
+the resolution has to happen at the `.map()`, not in the child.
+
+**The static gate cannot ever catch this**, and no widening will fix it — the
+absence of English is genuinely all there is to see in the source. The e2e
+assertion is the only thing that can:
+
+```
+expect(body.match(/\b[a-z]+[A-Z][a-zA-Z]{4,}\b/g) ?? []).toEqual([])
+```
+
+A raw key is camelCase with no space, which no real sentence in either
+language looks like.
+
+**Do instead:** after converting any constant to keys, grep the file for every
+place its fields are read — including props handed to a child — and confirm
+each is wrapped. Then run the spec. "The gate is green" is not evidence for
+this class of defect; it is the symptom.

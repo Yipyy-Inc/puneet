@@ -51,9 +51,24 @@ interface TaskConfigEditorProps {
   onChange: (tasks: TaskConfigValue[]) => void;
   assigneeOptions: Option[];
   scheduleOptions: ScheduleOption[];
-  scheduleLabel?: string;
-  addLabel?: string;
-  emptyText?: string;
+  /**
+   * Every word this component renders, supplied by the caller.
+   *
+   * It used to default to English here, which put six strings on the
+   * untranslated list under BOTH sections that use it and gave a caller no
+   * signal it had forgotten them. Required, so the compiler asks.
+   */
+  text: {
+    scheduleLabel: string;
+    addLabel: string;
+    emptyText: string;
+    taskName: string;
+    removeTask: string;
+    descriptionOptional: string;
+    assignedTo: string;
+    days: string;
+    required: string;
+  };
 }
 
 export function TaskConfigEditor({
@@ -61,9 +76,7 @@ export function TaskConfigEditor({
   onChange,
   assigneeOptions,
   scheduleOptions,
-  scheduleLabel = "When due",
-  addLabel = "Add task",
-  emptyText = "No tasks yet.",
+  text,
 }: TaskConfigEditorProps) {
   const patch = (id: string, p: Partial<TaskConfigValue>) =>
     onChange(tasks.map((t) => (t.id === id ? { ...t, ...p } : t)));
@@ -86,7 +99,7 @@ export function TaskConfigEditor({
   return (
     <div className="space-y-3">
       {tasks.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{emptyText}</p>
+        <p className="text-muted-foreground text-sm">{text.emptyText}</p>
       ) : (
         tasks.map((task) => {
           const sched = scheduleOptions.find((s) => s.value === task.schedule);
@@ -95,7 +108,7 @@ export function TaskConfigEditor({
               <div className="flex items-center gap-2">
                 <Input
                   value={task.name}
-                  placeholder="Task name"
+                  placeholder={text.taskName}
                   className="h-8"
                   onChange={(e) => patch(task.id, { name: e.target.value })}
                 />
@@ -103,7 +116,7 @@ export function TaskConfigEditor({
                   variant="ghost"
                   size="icon"
                   className="size-8 shrink-0"
-                  title="Remove task"
+                  title={text.removeTask}
                   onClick={() => remove(task.id)}
                 >
                   <Trash2 className="size-4" />
@@ -112,14 +125,14 @@ export function TaskConfigEditor({
               <Textarea
                 rows={2}
                 value={task.description}
-                placeholder="Description (optional)"
+                placeholder={text.descriptionOptional}
                 onChange={(e) =>
                   patch(task.id, { description: e.target.value })
                 }
               />
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Assigned to</Label>
+                  <Label className="text-xs">{text.assignedTo}</Label>
                   <Select
                     value={task.assignedTo}
                     onValueChange={(v) => patch(task.id, { assignedTo: v })}
@@ -137,7 +150,7 @@ export function TaskConfigEditor({
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">{scheduleLabel}</Label>
+                  <Label className="text-xs">{text.scheduleLabel}</Label>
                   <Select
                     value={task.schedule}
                     onValueChange={(v) => patch(task.id, { schedule: v })}
@@ -156,7 +169,7 @@ export function TaskConfigEditor({
                 </div>
                 {sched?.needsDays && (
                   <div className="space-y-1">
-                    <Label className="text-xs">Days</Label>
+                    <Label className="text-xs">{text.days}</Label>
                     <Input
                       type="number"
                       min={1}
@@ -175,7 +188,7 @@ export function TaskConfigEditor({
                     checked={task.required}
                     onCheckedChange={(v) => patch(task.id, { required: v })}
                   />
-                  Required
+                  {text.required}
                 </label>
               </div>
             </div>
@@ -184,7 +197,7 @@ export function TaskConfigEditor({
       )}
       <Button variant="outline" size="sm" className="gap-1" onClick={add}>
         <Plus className="size-3.5" />
-        {addLabel}
+        {text.addLabel}
       </Button>
     </div>
   );

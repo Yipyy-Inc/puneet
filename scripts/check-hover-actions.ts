@@ -118,6 +118,61 @@ const NOT_A_CONTROL = /\bpointer-events-none\b/;
 const CLASS_ATTR =
   /class(?:Name)?\s*=\s*(?:"([^"]*)"|'([^']*)'|\{`([^`]*)`\})/g;
 
+/**
+ * `className={cn(…)}`, WHICH IS HOW MOST OF THIS CODEBASE WRITES IT.
+ *
+ * The three literal forms above miss it entirely, and a conditional reveal is
+ * exactly the thing people reach for `cn()` to express:
+ *
+ *     className={cn(
+ *       "rounded-sm p-1",
+ *       restricted ? "text-red-600" : "opacity-0 group-hover:opacity-100",
+ *     )}
+ *
+ * This gate reported ZERO for weeks with three of these in `src/` — two of
+ * them real: a breed's restrict button and a note's pin button, neither of
+ * which existed at all on a touch screen. Found on 2026-09-07 by reading a
+ * file, not by running the gate.
+ *
+ * The whole call is taken as ONE className, which is what it compiles to.
+ * Paren-counting rather than a regex, because `cn()` arguments routinely
+ * contain their own parens.
+ */
+const CN_ATTR = /class(?:Name)?\s*=\s*\{\s*cn\s*\(/g;
+
+function cnClassLists(source: string): string[] {
+  const out: string[] = [];
+  for (const match of source.matchAll(CN_ATTR)) {
+    const start = (match.index ?? 0) + match[0].length;
+    let i = start;
+    let depth = 1;
+    while (i < source.length && depth > 0) {
+      if (source[i] === "(") depth += 1;
+      else if (source[i] === ")") depth -= 1;
+      i += 1;
+    }
+    out.push(source.slice(start, i - 1));
+  }
+  return out;
+}
+
+/**
+ * A reveal that ALSO fires at a breakpoint is not this defect.
+ *
+ * `max-md:opacity-100` leaves the control visible at exactly the widths with
+ * no hover, which is the mirror of the `sm:opacity-0` allowance the header
+ * already describes. Measured when this was added: one such site,
+ * `EstimateCard`, whose select-checkbox is permanently visible below `md`.
+ *
+ * `focus-within:opacity-100` is DELIBERATELY NOT HERE. The header says why,
+ * and it was briefly added by mistake while widening this gate: keyboard
+ * reachability is §5k and a good thing, but a tablet has no keyboard focus to
+ * give either, so the control is still absent in the context rule 11 is
+ * about. A gate that accepted it would be quietly weaker than the one it
+ * replaced.
+ */
+const REACHABLE_WITHOUT_HOVER = /\b(?:max-)?(?:sm|md|lg|xl|2xl):opacity-100\b/;
+
 function tsxFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
@@ -137,9 +192,14 @@ for (const file of tsxFiles("src")) {
   const source = readFileSync(file, "utf8");
   let inFile = 0;
 
-  for (const match of source.matchAll(CLASS_ATTR)) {
-    const value = match[1] ?? match[2] ?? match[3] ?? "";
+  const classLists = [
+    ...[...source.matchAll(CLASS_ATTR)].map((m) => m[1] ?? m[2] ?? m[3] ?? ""),
+    ...cnClassLists(source),
+  ];
+
+  for (const value of classLists) {
     if (NOT_A_CONTROL.test(value)) continue;
+    if (REACHABLE_WITHOUT_HOVER.test(value)) continue;
     if (HIDDEN.test(value) && REVEAL.test(value)) inFile += 1;
   }
 

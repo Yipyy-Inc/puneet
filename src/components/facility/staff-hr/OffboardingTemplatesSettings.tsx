@@ -12,10 +12,12 @@ import {
 } from "@/lib/api/staff-onboarding";
 import type { OffboardingTemplate } from "@/data/staff-onboarding";
 import { OffboardingTemplateEditor } from "./OffboardingTemplateEditor";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 /** Offboarding Templates — list of template cards opening a manager-tasks-only
  *  editor (same structure as Onboarding). Persisted to the Phase 0 store. */
 export function OffboardingTemplatesSettings() {
+  const tx = useSettingsText().section("offboarding-templates");
   const { data: templates = [] } = useOffboardingTemplatesQuery();
   const { mutate: saveTemplate } = useSaveOffboardingTemplate();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -34,10 +36,10 @@ export function OffboardingTemplatesSettings() {
   const create = () => {
     // The id is assigned by the insert — see the note in
     // OnboardingTemplatesSettings. The editor opens on the RETURNED row.
-    saveTemplate({ name: "New offboarding template" } as OffboardingTemplate, {
+    saveTemplate({ name: tx("newTemplateName") } as OffboardingTemplate, {
       onSuccess: (created) => {
         setEditingId(created.id);
-        toast.success("Template created");
+        toast.success(tx("templateCreated"));
       },
       onError: (error: Error) => toast.error(error.message),
     });
@@ -48,21 +50,17 @@ export function OffboardingTemplatesSettings() {
         {/* Description first, then its one action — see the note in
             OnboardingTemplatesSettings. §1: no second action colour. */}
         <div className="flex items-start justify-between gap-4">
-          <p className="text-muted-foreground text-sm">
-            Task checklists run when a staff member leaves. The template
-            matching the departure reason is applied; a universal template
-            covers all reasons.
-          </p>
+          <p className="text-muted-foreground text-sm">{tx("intro")}</p>
           <Button onClick={create} className="shrink-0 gap-1.5">
             <Plus className="size-4" />
-            New template
+            {tx("newTemplate")}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {templates.length === 0 ? (
           <p className="text-muted-foreground py-6 text-center text-sm">
-            No templates yet. Create one to get started.
+            {tx("noTemplates")}
           </p>
         ) : (
           templates.map((t) => (
@@ -85,6 +83,7 @@ function OffboardingCard({
   template: OffboardingTemplate;
   onEdit: () => void;
 }) {
+  const tx = useSettingsText().section("offboarding-templates");
   // Its own mutation, where the delete button is.
   const { mutate: deleteTemplate } = useDeleteOffboardingTemplate();
 
@@ -98,9 +97,12 @@ function OffboardingCard({
         <span className="truncate font-medium">{template.name}</span>
         <span className="text-muted-foreground truncate text-xs">
           {template.appliesToReasons.length === 0
-            ? "Universal · all reasons"
+            ? tx("universalAllReasons")
             : template.appliesToReasons.join(", ")}{" "}
-          · {count} task{count === 1 ? "" : "s"}
+          ·{" "}
+          {count === 1
+            ? tx("taskCountOne")
+            : tx("taskCountMany").replace("{count}", String(count))}
         </span>
       </button>
 
@@ -108,16 +110,16 @@ function OffboardingCard({
         variant="ghost"
         size="icon"
         className="size-8"
-        title="Delete template"
+        title={tx("deleteTemplate")}
         onClick={() => {
           deleteTemplate(template.id);
-          toast.success("Template deleted");
+          toast.success(tx("templateDeleted"));
         }}
       >
         <Trash2 className="size-4" />
       </Button>
 
-      <button onClick={onEdit} aria-label="Edit template">
+      <button onClick={onEdit} aria-label={tx("editTemplate")}>
         <ChevronRight className="text-muted-foreground size-4" />
       </button>
     </div>
