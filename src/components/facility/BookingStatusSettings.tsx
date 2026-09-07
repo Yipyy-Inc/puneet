@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { facilities } from "@/data/facilities";
+import { facilities, saveBookingStatusConfig } from "@/data/facilities";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -61,56 +62,59 @@ interface IftttTransitionRule {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const SYSTEM_STATUSES = [
-  { id: "estimate_sent", label: "Estimate Sent", color: "violet" },
-  { id: "pending", label: "Pending", color: "amber" },
-  { id: "confirmed", label: "Confirmed", color: "emerald" },
-  { id: "checked_in", label: "Checked In", color: "teal" },
-  { id: "in_progress", label: "In Progress", color: "orange" },
-  { id: "ready", label: "Ready", color: "purple" },
-  { id: "completed", label: "Completed", color: "slate" },
-  { id: "no_show", label: "No-Show", color: "red" },
-  { id: "cancelled", label: "Cancelled", color: "red" },
-  { id: "declined", label: "Declined", color: "red" },
+  { id: "estimate_sent", labelKey: "statusEstimateSent", color: "violet" },
+  { id: "pending", labelKey: "statusPending", color: "amber" },
+  { id: "confirmed", labelKey: "statusConfirmed", color: "emerald" },
+  { id: "checked_in", labelKey: "statusCheckedIn", color: "teal" },
+  { id: "in_progress", labelKey: "statusInProgress", color: "orange" },
+  { id: "ready", labelKey: "statusReady", color: "purple" },
+  { id: "completed", labelKey: "statusCompleted", color: "slate" },
+  { id: "no_show", labelKey: "statusNoShow", color: "red" },
+  { id: "cancelled", labelKey: "statusCancelled", color: "red" },
+  { id: "declined", labelKey: "statusDeclined", color: "red" },
 ];
 
 const COLOR_OPTIONS = [
-  { value: "red", label: "Red", dot: "bg-red-500" },
-  { value: "orange", label: "Orange", dot: "bg-orange-500" },
-  { value: "amber", label: "Amber", dot: "bg-amber-500" },
-  { value: "yellow", label: "Yellow", dot: "bg-yellow-500" },
-  { value: "emerald", label: "Green", dot: "bg-emerald-500" },
-  { value: "teal", label: "Teal", dot: "bg-teal-500" },
-  { value: "blue", label: "Blue", dot: "bg-blue-500" },
-  { value: "violet", label: "Violet", dot: "bg-violet-500" },
-  { value: "purple", label: "Purple", dot: "bg-purple-500" },
-  { value: "pink", label: "Pink", dot: "bg-pink-500" },
-  { value: "slate", label: "Gray", dot: "bg-slate-500" },
+  { value: "red", labelKey: "colourRed", dot: "bg-red-500" },
+  { value: "orange", labelKey: "colourOrange", dot: "bg-orange-500" },
+  { value: "amber", labelKey: "colourAmber", dot: "bg-amber-500" },
+  { value: "yellow", labelKey: "colourYellow", dot: "bg-yellow-500" },
+  { value: "emerald", labelKey: "colourGreen", dot: "bg-emerald-500" },
+  { value: "teal", labelKey: "colourTeal", dot: "bg-teal-500" },
+  { value: "blue", labelKey: "colourBlue", dot: "bg-blue-500" },
+  { value: "violet", labelKey: "colourViolet", dot: "bg-violet-500" },
+  { value: "purple", labelKey: "colourPurple", dot: "bg-purple-500" },
+  { value: "pink", labelKey: "colourPink", dot: "bg-pink-500" },
+  { value: "slate", labelKey: "colourGrey", dot: "bg-slate-500" },
 ];
-
-const SYSTEM_STATUS_OPTIONS = SYSTEM_STATUSES.map((s) => ({
-  value: s.id,
-  label: s.label,
-}));
 
 const TRANSITION_EVENT_OPTIONS: {
   value: AutoTransitionAction;
-  label: string;
+  labelKey: string;
 }[] = [
-  { value: "onDepositPaid", label: "Deposit is paid" },
-  { value: "onPaymentComplete", label: "Full payment is received" },
-  { value: "onCheckIn", label: "Pet is checked in" },
-  { value: "onCheckout", label: "Checkout completes" },
+  { value: "onDepositPaid", labelKey: "eventDepositPaid" },
+  { value: "onPaymentComplete", labelKey: "eventPaymentComplete" },
+  { value: "onCheckIn", labelKey: "eventCheckIn" },
+  { value: "onCheckout", labelKey: "eventCheckout" },
 ];
 
-const BASE_SERVICE_OPTIONS = [
-  { value: "any", label: "Any service" },
-  { value: "boarding", label: "Boarding" },
-  { value: "daycare", label: "Daycare" },
-  { value: "grooming", label: "Grooming" },
-  { value: "training", label: "Training" },
-  { value: "evaluation", label: "Evaluation" },
-  { value: "yodas-splash", label: "Yoda's Splash" },
-  { value: "paws-express", label: "Yipyy Express Check-in" },
+const BASE_SERVICE_OPTIONS: {
+  value: string;
+  labelKey?: string;
+  name?: string;
+}[] = [
+  { value: "any", labelKey: "svcAny" },
+  { value: "boarding", labelKey: "svcBoarding" },
+  { value: "daycare", labelKey: "svcDaycare" },
+  { value: "grooming", labelKey: "svcGrooming" },
+  { value: "training", labelKey: "svcTraining" },
+  { value: "evaluation", labelKey: "svcEvaluation" },
+  // french-ok: one facility's own custom service, shipped in a shared
+  // constant. §5q — a name the facility typed never passes through the
+  // locale layer. That it reaches every OTHER facility's dropdown is a
+  // separate defect, recorded in the debt map.
+  { value: "yodas-splash", name: "Yoda's Splash" },
+  { value: "paws-express", labelKey: "svcYipyyExpress" },
 ];
 
 const DEFAULT_IFTTT_RULES: IftttTransitionRule[] = [
@@ -167,14 +171,15 @@ let _iftttRuleId = 1200;
 const TERMINAL_STATUS_IDS = new Set(["no_show", "cancelled", "declined"]);
 
 // Short labels for the auto-transition events, used on the flow arrows.
-const EVENT_ARROW_LABELS: Record<AutoTransitionAction, string> = {
-  onDepositPaid: "deposit",
-  onPaymentComplete: "payment",
-  onCheckIn: "check-in",
-  onCheckout: "checkout",
+const EVENT_ARROW_KEYS: Record<AutoTransitionAction, string> = {
+  onDepositPaid: "arrowDeposit",
+  onPaymentComplete: "arrowPayment",
+  onCheckIn: "arrowCheckIn",
+  onCheckout: "arrowCheckout",
 };
 
 export function BookingStatusSettings() {
+  const t = useSettingsText().section("booking-statuses");
   const { role } = useFacilityRole();
 
   const [showFlow, setShowFlow] = useState(true);
@@ -198,11 +203,14 @@ export function BookingStatusSettings() {
       DEFAULT_IFTTT_RULES,
   );
 
-  const serviceOptions = useMemo(() => {
+  const serviceOptions = (() => {
     const map = new Map<string, string>();
 
     for (const option of BASE_SERVICE_OPTIONS) {
-      map.set(option.value, option.label);
+      map.set(
+        option.value,
+        option.labelKey ? t(option.labelKey) : (option.name ?? option.value),
+      );
     }
 
     for (const location of defaultFacility?.locationsList ?? []) {
@@ -224,13 +232,13 @@ export function BookingStatusSettings() {
       value,
       label,
     }));
-  }, []);
+  })();
 
-  const statusOptions = useMemo(() => {
+  const statusOptions = (() => {
     const statusMap = new Map<string, string>();
 
-    for (const option of SYSTEM_STATUS_OPTIONS) {
-      statusMap.set(option.value, option.label);
+    for (const status of SYSTEM_STATUSES) {
+      statusMap.set(status.id, t(status.labelKey));
     }
 
     for (const status of customStatuses) {
@@ -243,14 +251,19 @@ export function BookingStatusSettings() {
       value,
       label,
     }));
-  }, [customStatuses]);
+  })();
 
   // Linear lifecycle for the flow preview: system statuses in their canonical
   // order (minus terminal ones), merged with custom statuses by their position.
-  const statusFlow = useMemo(() => {
+  const statusFlow = (() => {
     const systemFlow = SYSTEM_STATUSES.filter(
       (s) => !TERMINAL_STATUS_IDS.has(s.id),
-    ).map((s, i) => ({ id: s.id, label: s.label, color: s.color, order: i }));
+    ).map((s, i) => ({
+      id: s.id,
+      label: t(s.labelKey),
+      color: s.color,
+      order: i,
+    }));
     const customFlow = customStatuses
       .filter((s) => s.name.trim())
       .map((s) => ({
@@ -260,18 +273,17 @@ export function BookingStatusSettings() {
         order: s.position ?? systemFlow.length,
       }));
     return [...systemFlow, ...customFlow].sort((a, b) => a.order - b.order);
-  }, [customStatuses]);
+  })();
 
-  const exitStatuses = useMemo(
-    () => SYSTEM_STATUSES.filter((s) => TERMINAL_STATUS_IDS.has(s.id)),
-    [],
+  const exitStatuses = SYSTEM_STATUSES.filter((s) =>
+    TERMINAL_STATUS_IDS.has(s.id),
   );
 
   // Auto-transition events (if any) that lead into a given status.
   const eventsIntoStatus = (statusId: string): string =>
     (Object.keys(autoTransitions) as AutoTransitionAction[])
       .filter((k) => autoTransitions[k] === statusId)
-      .map((k) => EVENT_ARROW_LABELS[k])
+      .map((k) => t(EVENT_ARROW_KEYS[k]))
       .join(", ");
 
   const handleAddCustom = () => {
@@ -328,19 +340,24 @@ export function BookingStatusSettings() {
   const handleSave = () => {
     const empty = customStatuses.find((s) => !s.name.trim());
     if (empty) {
-      toast.error("All custom statuses must have a name");
+      toast.error(t("needsName"));
       return;
     }
 
-    if (defaultFacility) {
-      (defaultFacility as Record<string, unknown>).bookingStatusConfig = {
-        customStatuses,
-        autoTransitions,
-        iftttTransitionRules,
-        advancedAutoTransitions: iftttTransitionRules,
-      };
-    }
-    toast.success("Booking status settings saved");
+    // The write itself moved to src/data/facilities.ts. It is the same
+    // assignment into the same imported fixture, but the React Compiler
+    // refuses one inside a component scope (react-hooks/immutability) and it
+    // has to stay for now: unlike care-tasks, this fixture IS re-read on every
+    // render by the booking detail page and BookingStatusDropdown, so removing
+    // it would break the edit within the session as well as after a reload.
+    // It still does not survive a reload — see the debt map.
+    saveBookingStatusConfig({
+      customStatuses,
+      autoTransitions,
+      iftttTransitionRules,
+      advancedAutoTransitions: iftttTransitionRules,
+    });
+    toast.success(t("savedToast"));
   };
 
   if (role !== "owner" && role !== "manager") {
@@ -348,10 +365,7 @@ export function BookingStatusSettings() {
       <Card>
         <CardContent className="flex items-center gap-3 py-8">
           <Shield className="text-muted-foreground size-5" />
-          <p className="text-muted-foreground text-sm">
-            Booking status settings are only accessible to facility owners and
-            managers.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("restricted")}</p>
         </CardContent>
       </Card>
     );
@@ -360,10 +374,7 @@ export function BookingStatusSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Configure the booking workflow statuses and automatic transitions.
-          System statuses cannot be removed.
-        </p>
+        <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </div>
 
       {/* Status Flow Preview — read-only lifecycle diagram */}
@@ -377,9 +388,9 @@ export function BookingStatusSettings() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Workflow className="size-4" />
-                Status flow preview
+                {t("flowTitle")}
                 <span className="text-muted-foreground rounded-full border px-1.5 py-0.5 text-[10px] font-normal">
-                  Read-only
+                  {t("readOnly")}
                 </span>
               </CardTitle>
               <ChevronDown
@@ -393,10 +404,7 @@ export function BookingStatusSettings() {
         </button>
         {showFlow && (
           <CardContent className="space-y-3">
-            <p className="text-muted-foreground text-xs">
-              Booking lifecycle built from your configured statuses and
-              transition rules — for verification only.
-            </p>
+            <p className="text-muted-foreground text-xs">{t("flowHelp")}</p>
             <div className="flex items-center overflow-x-auto pb-2">
               {statusFlow.map((s, i) => {
                 const dot =
@@ -425,7 +433,7 @@ export function BookingStatusSettings() {
             </div>
             {exitStatuses.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 border-t pt-2 text-[11px]">
-                <span className="text-muted-foreground">Exit states:</span>
+                <span className="text-muted-foreground">{t("exitStates")}</span>
                 {exitStatuses.map((s) => {
                   const dot =
                     COLOR_OPTIONS.find((c) => c.value === s.color)?.dot ??
@@ -436,7 +444,7 @@ export function BookingStatusSettings() {
                       className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
                     >
                       <span className={cn("size-1.5 rounded-full", dot)} />
-                      {s.label}
+                      {t(s.labelKey)}
                     </span>
                   );
                 })}
@@ -451,13 +459,12 @@ export function BookingStatusSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Lock className="size-4" />
-            System statuses
+            {t("systemTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-3 text-xs">
-            These are built-in and cannot be removed. They form the core booking
-            lifecycle.
+            {t("systemHelp")}
           </p>
           <div className="flex flex-wrap gap-2">
             {SYSTEM_STATUSES.map((s) => {
@@ -473,7 +480,7 @@ export function BookingStatusSettings() {
                       colorOpt?.dot ?? "bg-muted-foreground",
                     )}
                   />
-                  <span className="text-xs font-medium">{s.label}</span>
+                  <span className="text-xs font-medium">{t(s.labelKey)}</span>
                 </div>
               );
             })}
@@ -487,7 +494,7 @@ export function BookingStatusSettings() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Palette className="size-4" />
-              Custom statuses
+              {t("customTitle")}
             </CardTitle>
             <Button
               variant="outline"
@@ -496,14 +503,14 @@ export function BookingStatusSettings() {
               onClick={handleAddCustom}
             >
               <Plus className="size-3.5" />
-              Add Status
+              {t("addStatus")}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {customStatuses.length === 0 ? (
             <p className="text-muted-foreground py-4 text-center text-sm">
-              No custom statuses. Click &quot;Add Status&quot; to create one.
+              {t("noCustom")}
             </p>
           ) : (
             customStatuses.map((status) => (
@@ -518,18 +525,18 @@ export function BookingStatusSettings() {
                 className="grid items-end gap-3 rounded-xl border p-3 sm:grid-cols-12"
               >
                 <div className="sm:col-span-4">
-                  <Label className="text-[11px]">Name</Label>
+                  <Label className="text-[11px]">{t("name")}</Label>
                   <Input
                     value={status.name}
                     onChange={(e) =>
                       handleUpdateCustom(status.id, { name: e.target.value })
                     }
-                    placeholder="e.g. On Hold"
+                    placeholder={t("namePlaceholder")}
                     className="mt-1 h-8 text-sm"
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <Label className="text-[11px]">Color</Label>
+                  <Label className="text-[11px]">{t("colour")}</Label>
                   <Select
                     value={status.color}
                     onValueChange={(v) =>
@@ -555,7 +562,7 @@ export function BookingStatusSettings() {
                             <div
                               className={cn("size-2.5 rounded-full", c.dot)}
                             />
-                            {c.label}
+                            {t(c.labelKey)}
                           </div>
                         </SelectItem>
                       ))}
@@ -563,7 +570,7 @@ export function BookingStatusSettings() {
                   </Select>
                 </div>
                 <div className="sm:col-span-4">
-                  <Label className="text-[11px]">Position (after)</Label>
+                  <Label className="text-[11px]">{t("positionAfter")}</Label>
                   <Select
                     value={String(status.position)}
                     onValueChange={(v) =>
@@ -578,7 +585,7 @@ export function BookingStatusSettings() {
                     <SelectContent>
                       {SYSTEM_STATUSES.map((s, idx) => (
                         <SelectItem key={s.id} value={String(idx)}>
-                          After {s.label}
+                          {t("afterStatus").replace("{status}", t(s.labelKey))}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -590,6 +597,7 @@ export function BookingStatusSettings() {
                     size="sm"
                     className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                     onClick={() => handleRemoveCustom(status.id)}
+                    aria-label={t("removeStatus")}
                   >
                     <Trash2 className="size-3.5" />
                   </Button>
@@ -605,28 +613,22 @@ export function BookingStatusSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Zap className="size-4" />
-            Auto-transition rules
+            {t("autoTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-muted-foreground text-xs">
-            Automatically change booking status when these actions happen. Staff
-            can still override manually.
-          </p>
+          <p className="text-muted-foreground text-xs">{t("autoHelp")}</p>
 
           <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
             <div className="flex items-center gap-2">
               <Zap className="size-3.5 text-sky-600" />
-              <h4 className="text-sm font-semibold">Default fallback rules</h4>
+              <h4 className="text-sm font-semibold">{t("fallbackTitle")}</h4>
             </div>
-            <p className="text-muted-foreground text-xs">
-              These apply when no service-specific automatic status rule
-              matches.
-            </p>
+            <p className="text-muted-foreground text-xs">{t("fallbackHelp")}</p>
 
             <div className="space-y-3">
               <TransitionRule
-                label="When deposit is paid"
+                label={t("ruleDepositPaid")}
                 value={autoTransitions.onDepositPaid}
                 onChange={(v) =>
                   setAutoTransitions((p) => ({ ...p, onDepositPaid: v }))
@@ -635,7 +637,7 @@ export function BookingStatusSettings() {
               />
               <Separator />
               <TransitionRule
-                label="When full payment is received"
+                label={t("rulePaymentComplete")}
                 value={autoTransitions.onPaymentComplete}
                 onChange={(v) =>
                   setAutoTransitions((p) => ({ ...p, onPaymentComplete: v }))
@@ -644,7 +646,7 @@ export function BookingStatusSettings() {
               />
               <Separator />
               <TransitionRule
-                label="When pet is checked in"
+                label={t("ruleCheckIn")}
                 value={autoTransitions.onCheckIn}
                 onChange={(v) =>
                   setAutoTransitions((p) => ({ ...p, onCheckIn: v }))
@@ -653,7 +655,7 @@ export function BookingStatusSettings() {
               />
               <Separator />
               <TransitionRule
-                label="When checkout completes"
+                label={t("ruleCheckout")}
                 value={autoTransitions.onCheckout}
                 onChange={(v) =>
                   setAutoTransitions((p) => ({ ...p, onCheckout: v }))
@@ -668,14 +670,10 @@ export function BookingStatusSettings() {
               <div>
                 <div className="flex items-center gap-2">
                   <WandSparkles className="size-3.5 text-violet-600" />
-                  <h4 className="text-sm font-semibold">
-                    Automatic status rules
-                  </h4>
+                  <h4 className="text-sm font-semibold">{t("iftttTitle")}</h4>
                 </div>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Set conditions that automatically move a booking to a specific
-                  status — for example, automatically set grooming bookings to
-                  In Progress when the pet checks in.
+                  {t("iftttHelp")}
                 </p>
               </div>
               <Button
@@ -685,15 +683,13 @@ export function BookingStatusSettings() {
                 onClick={handleAddIftttRule}
               >
                 <Plus className="size-3.5" />
-                Add Automatic Status Rule
+                {t("addIfttt")}
               </Button>
             </div>
 
             {iftttTransitionRules.length === 0 ? (
               <p className="text-muted-foreground rounded-lg border border-dashed py-6 text-center text-sm">
-                No automatic status rules yet. Add one like: when a grooming
-                booking&apos;s pet checks in, automatically set it to In
-                Progress.
+                {t("noIfttt")}
               </p>
             ) : (
               <div className="space-y-3">
@@ -718,7 +714,7 @@ export function BookingStatusSettings() {
       {/* Save */}
       <div className="flex justify-end">
         <Button onClick={handleSave} className="gap-1.5">
-          Save Status Settings
+          {t("save")}
         </Button>
       </div>
     </div>
@@ -738,6 +734,8 @@ function TransitionRule({
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
 }) {
+  const t = useSettingsText().section("booking-statuses");
+
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-2">
@@ -749,7 +747,7 @@ function TransitionRule({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">No auto-transition</SelectItem>
+          <SelectItem value="none">{t("noAutoTransition")}</SelectItem>
           {options.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>
               → {opt.label}
@@ -774,6 +772,8 @@ function IftttRuleRow({
   onUpdate: (updates: Partial<IftttTransitionRule>) => void;
   onRemove: () => void;
 }) {
+  const t = useSettingsText().section("booking-statuses");
+
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3">
       {/* Two things were wrong here and they hid each other.
@@ -791,7 +791,7 @@ function IftttRuleRow({
           this pane actually has. */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <Label className="text-[11px]">IF service is</Label>
+          <Label className="text-[11px]">{t("ifService")}</Label>
           <Select
             value={rule.service}
             onValueChange={(value) => onUpdate({ service: value })}
@@ -810,7 +810,7 @@ function IftttRuleRow({
         </div>
 
         <div>
-          <Label className="text-[11px]">WHEN this event happens</Label>
+          <Label className="text-[11px]">{t("whenEvent")}</Label>
           <Select
             value={rule.action}
             onValueChange={(value) =>
@@ -823,7 +823,7 @@ function IftttRuleRow({
             <SelectContent>
               {TRANSITION_EVENT_OPTIONS.map((event) => (
                 <SelectItem key={event.value} value={event.value}>
-                  {event.label}
+                  {t(event.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -831,7 +831,7 @@ function IftttRuleRow({
         </div>
 
         <div>
-          <Label className="text-[11px]">AND current status is</Label>
+          <Label className="text-[11px]">{t("andStatus")}</Label>
           <Select
             value={rule.currentStatus}
             onValueChange={(value) => onUpdate({ currentStatus: value })}
@@ -840,7 +840,7 @@ function IftttRuleRow({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="any">Any status</SelectItem>
+              <SelectItem value="any">{t("anyStatus")}</SelectItem>
               {statusOptions.map((status) => (
                 <SelectItem key={status.value} value={status.value}>
                   {status.label}
@@ -851,7 +851,7 @@ function IftttRuleRow({
         </div>
 
         <div>
-          <Label className="text-[11px]">THEN set status to</Label>
+          <Label className="text-[11px]">{t("thenStatus")}</Label>
           <Select
             value={rule.targetStatus}
             onValueChange={(value) => onUpdate({ targetStatus: value })}
@@ -860,7 +860,7 @@ function IftttRuleRow({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">No auto-transition</SelectItem>
+              <SelectItem value="none">{t("noAutoTransition")}</SelectItem>
               {statusOptions.map((status) => (
                 <SelectItem key={status.value} value={status.value}>
                   {status.label}
@@ -881,7 +881,7 @@ function IftttRuleRow({
                 onUpdate({ enabled: Boolean(checked) })
               }
             />
-            <span className="text-xs">Enabled</span>
+            <span className="text-xs">{t("enabled")}</span>
           </div>
 
           <Button
@@ -889,6 +889,7 @@ function IftttRuleRow({
             size="sm"
             className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
             onClick={onRemove}
+            aria-label={t("removeRule")}
           >
             <Trash2 className="size-3.5" />
           </Button>

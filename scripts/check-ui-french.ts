@@ -605,14 +605,10 @@ function primitivesSurface(): Offender[] {
 const BASELINE: Record<string, Set<string>> = {
   settings: new Set([
     "addons",
-    "booking-statuses",
-    "estimate-settings",
     "evaluations",
-    "invoice-template",
     "pricing-rules",
     "report-card-template",
     "roles-permissions",
-    "tips",
     "training",
     "yipyygo",
   ]),

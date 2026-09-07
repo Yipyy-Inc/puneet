@@ -1,6 +1,8 @@
 "use client";
 
 import { Users } from "lucide-react";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,35 +43,31 @@ import type {
 // ============================================================================
 
 /** The services a facility can run. Mirrors the `service_module` enum. */
-const SERVICES: { id: string; label: string }[] = [
-  { id: "grooming", label: "Grooming" },
-  { id: "boarding", label: "Boarding" },
-  { id: "daycare", label: "Daycare" },
-  { id: "training", label: "Training" },
-  { id: "retail", label: "Retail" },
+const SERVICES: { id: string; labelKey: string }[] = [
+  { id: "grooming", labelKey: "svcGrooming" },
+  { id: "boarding", labelKey: "svcBoarding" },
+  { id: "daycare", labelKey: "svcDaycare" },
+  { id: "training", labelKey: "svcTraining" },
+  { id: "retail", labelKey: "svcRetail" },
 ];
 
-const MODES: { value: TipAttributionMode; label: string; hint: string }[] = [
+const MODES: {
+  value: TipAttributionMode;
+  labelKey: string;
+  hintKey: string;
+}[] = [
   {
     value: "assigned",
-    label: "Assigned staff member",
-    hint: "The whole tip goes to whoever the booking is assigned to.",
+    labelKey: "modeAssigned",
+    hintKey: "modeAssignedHint",
   },
   {
     value: "split_even",
-    label: "Split evenly",
-    hint: "Divided equally between the staff on the booking.",
+    labelKey: "modeSplitEven",
+    hintKey: "modeSplitEvenHint",
   },
-  {
-    value: "pool",
-    label: "Pool",
-    hint: "Collected and owed to the team, for somebody to divide by hand.",
-  },
-  {
-    value: "none",
-    label: "No attribution",
-    hint: "Collected and not owed to any individual.",
-  },
+  { value: "pool", labelKey: "modePool", hintKey: "modePoolHint" },
+  { value: "none", labelKey: "modeNone", hintKey: "modeNoneHint" },
 ];
 
 export function TipAttributionCard({
@@ -81,6 +79,7 @@ export function TipAttributionCard({
   onChange: (next: TipAttribution) => void;
   disabled: boolean;
 }) {
+  const t = useSettingsText().section("tips");
   const ruleFor = (service: string): TipAttributionRule => ({
     mode: value.byService[service]?.mode ?? value.defaultMode,
     notes: value.byService[service]?.notes,
@@ -100,11 +99,9 @@ export function TipAttributionCard({
       <div className="flex items-start gap-2 border-b px-4 py-3">
         <Users className="text-primary mt-0.5 size-4 shrink-0" />
         <div>
-          <p className="text-sm font-semibold">Staff tip attribution</p>
+          <p className="text-sm font-semibold">{t("attributionTitle")}</p>
           <p className="text-muted-foreground text-xs">
-            Who a tip is owed to once it has been collected. Applied the moment
-            a tip is taken — changing it here does not move money already
-            collected.
+            {t("attributionHelp")}
           </p>
         </div>
       </div>
@@ -114,7 +111,7 @@ export function TipAttributionCard({
             uses, INCLUDING a service that does not exist yet. */}
         <div className="bg-muted/40 space-y-1.5 rounded-lg p-3">
           <Label className="text-xs font-medium">
-            Default — used by any service without a rule of its own
+            {t("attributionDefault")}
           </Label>
           <Select
             value={value.defaultMode}
@@ -129,13 +126,16 @@ export function TipAttributionCard({
             <SelectContent>
               {MODES.map((m) => (
                 <SelectItem key={m.value} value={m.value}>
-                  {m.label}
+                  {t(m.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <p className="text-muted-foreground text-[11px]">
-            {MODES.find((m) => m.value === value.defaultMode)?.hint}
+            {(() => {
+              const mode = MODES.find((m) => m.value === value.defaultMode);
+              return mode ? t(mode.hintKey) : null;
+            })()}
           </p>
         </div>
 
@@ -149,10 +149,10 @@ export function TipAttributionCard({
                 className="grid grid-cols-1 gap-2 border-b pb-3 last:border-0 last:pb-0 sm:grid-cols-[7rem_12rem_1fr] sm:items-center"
               >
                 <span className="text-sm font-medium">
-                  {service.label}
+                  {t(service.labelKey)}
                   {!isOverride && (
                     <span className="text-muted-foreground ml-1 text-[10px]">
-                      (default)
+                      {t("defaultTag")}
                     </span>
                   )}
                 </span>
@@ -170,7 +170,7 @@ export function TipAttributionCard({
                   <SelectContent>
                     {MODES.map((m) => (
                       <SelectItem key={m.value} value={m.value}>
-                        {m.label}
+                        {t(m.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -178,7 +178,7 @@ export function TipAttributionCard({
 
                 <Input
                   type="text"
-                  placeholder="Note for your own team (optional)"
+                  placeholder={t("notePlaceholder")}
                   value={rule.notes ?? ""}
                   disabled={disabled}
                   maxLength={200}
@@ -197,10 +197,12 @@ export function TipAttributionCard({
         {/* Said plainly, because the screen cannot show it: the two modes
             differ only at payout time. */}
         <p className="text-muted-foreground text-[11px]/relaxed">
-          A tip with nobody assigned to the booking is reported as{" "}
-          <span className="font-medium">Unassigned</span> rather than given to
-          somebody by guesswork. Pooled tips are still owed to your team and are
-          counted separately from tips you have chosen not to attribute at all.
+          <InterpolatedText
+            template={t("attributionFooter")}
+            placeholder="{unassigned}"
+          >
+            <span className="font-medium">{t("unassigned")}</span>
+          </InterpolatedText>
         </p>
       </div>
     </div>

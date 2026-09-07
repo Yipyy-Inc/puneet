@@ -3,6 +3,8 @@
 import { Smartphone } from "lucide-react";
 
 import { cloverTipSuggestions } from "@/lib/tips";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { formatMoney, formatPercent } from "@/lib/i18n/format";
 import type { TipConfig } from "@/types/facility";
 
 // ============================================================================
@@ -44,6 +46,8 @@ export function CloverTipPanel({
 }) {
   // The SAME function the terminal route calls. If this panel is right, the
   // device is right, because there is only one answer being computed.
+  const { locale, section } = useSettingsText();
+  const t = section("tips");
   const suggestions = cloverTipSuggestions(config, previewSubtotal);
 
   return (
@@ -51,18 +55,15 @@ export function CloverTipPanel({
       <div className="flex items-start gap-2">
         <Smartphone className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
         <div>
-          <p className="text-xs font-semibold">On your Clover terminal</p>
+          <p className="text-xs font-semibold">{t("cloverTitle")}</p>
           <p className="text-muted-foreground text-[11px]/relaxed">
-            These options are sent to the card reader with each payment, so
-            there is nothing to sync and nothing to set up on the device.
+            {t("cloverHelp")}
           </p>
         </div>
       </div>
 
       {suggestions.length === 0 ? (
-        <p className="text-muted-foreground text-[11px]">
-          Tipping is off, so the terminal will not ask for one.
-        </p>
+        <p className="text-muted-foreground text-[11px]">{t("cloverOff")}</p>
       ) : (
         <>
           <div className="flex flex-wrap gap-1.5">
@@ -72,8 +73,8 @@ export function CloverTipPanel({
                 className="bg-background rounded-md border px-2 py-1 text-[11px] font-medium"
               >
                 {s.percentage !== undefined
-                  ? `${s.percentage}%`
-                  : `$${((s.amount ?? 0) / 100).toFixed(2)}`}
+                  ? formatPercent(s.percentage, locale)
+                  : formatMoney((s.amount ?? 0) / 100, locale)}
                 {s.name ? ` · ${s.name}` : ""}
               </span>
             ))}
@@ -82,15 +83,17 @@ export function CloverTipPanel({
                 offered. Drawing them here as greyed-out chips is the honest
                 version of the spec's "add a fourth, non-editable No Tip card". */}
             <span className="text-muted-foreground rounded-md border border-dashed px-2 py-1 text-[11px]">
-              Custom
+              {t("cloverCustom")}
             </span>
             <span className="text-muted-foreground rounded-md border border-dashed px-2 py-1 text-[11px]">
-              No tip
+              {t("cloverNoTip")}
             </span>
           </div>
           <p className="text-muted-foreground text-[10px]">
-            Shown for a ${previewSubtotal.toFixed(2)} ticket. Custom and No tip
-            are added by Clover itself and cannot be turned off.
+            {t("cloverFooter").replace(
+              "{ticket}",
+              formatMoney(previewSubtotal, locale),
+            )}
           </p>
         </>
       )}

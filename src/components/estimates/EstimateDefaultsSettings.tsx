@@ -14,6 +14,8 @@ import {
 } from "@/lib/api/facility-settings";
 import type { EstimateSettings } from "@/lib/settings/estimates";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 
 // Wrapper gates on the load; editor seeds from props. A `useState`
 // initialiser runs once, so mounting before the facility's own defaults arrive
@@ -33,6 +35,7 @@ function EstimateDefaultsEditor({
 }: {
   initialSettings: EstimateSettings;
 }) {
+  const t = useSettingsText().section("estimate-settings");
   const saveSetting = useSaveFacilitySetting();
   const [settings, setSettings] = useState<EstimateSettings>(initialSettings);
 
@@ -43,12 +46,10 @@ function EstimateDefaultsEditor({
     saveSetting.mutate(
       { domain: "estimate_settings", value: settings },
       {
-        onSuccess: () => toast.success("Estimate defaults saved"),
+        onSuccess: () => toast.success(t("defaultsSaved")),
         onError: (error) =>
           toast.error(
-            error instanceof Error
-              ? error.message
-              : "Those defaults were not saved.",
+            error instanceof Error ? error.message : t("defaultsFailed"),
           ),
       },
     );
@@ -64,16 +65,16 @@ function EstimateDefaultsEditor({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <FileText className="size-4" />
-          Estimate defaults
+          {t("defaultsTitle")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Default Expiry Period */}
         <div className="space-y-1.5">
-          <Label className="text-xs">Default expiry period</Label>
+          <Label className="text-xs">{t("defaultExpiry")}</Label>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs">
-              Estimates expire after
+              {t("estimatesExpireAfter")}
             </span>
             <Input
               type="number"
@@ -85,18 +86,16 @@ function EstimateDefaultsEditor({
               }
               className="h-8 w-20 text-sm"
             />
-            <span className="text-muted-foreground text-xs">days</span>
+            <span className="text-muted-foreground text-xs">{t("days")}</span>
           </div>
         </div>
 
         {/* Default Deposit Requirement */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <Label className="text-sm">
-              Require a deposit when a customer accepts an estimate?
-            </Label>
+            <Label className="text-sm">{t("requireDeposit")}</Label>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              Customers pay the deposit as part of accepting their estimate.
+              {t("requireDepositHelp")}
             </p>
           </div>
           <Switch
@@ -107,11 +106,11 @@ function EstimateDefaultsEditor({
 
         {/* Estimate Number Format */}
         <div className="space-y-2">
-          <Label className="text-xs">Estimate number format</Label>
+          <Label className="text-xs">{t("numberFormat")}</Label>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-muted-foreground text-[11px]">
-                Prefix
+                {t("prefix")}
               </Label>
               <Input
                 value={settings.estimateNumberPrefix}
@@ -122,7 +121,7 @@ function EstimateDefaultsEditor({
             </div>
             <div className="space-y-1.5">
               <Label className="text-muted-foreground text-[11px]">
-                Sequential digits
+                {t("sequentialDigits")}
               </Label>
               <Input
                 type="number"
@@ -135,11 +134,14 @@ function EstimateDefaultsEditor({
             </div>
           </div>
           <p className="text-muted-foreground text-xs">
-            Next estimate will look like{" "}
-            <span className="text-foreground font-mono font-medium">
-              {numberPreview}
-            </span>
-            . The sequential number is generated automatically.
+            <InterpolatedText
+              template={t("nextEstimateNote")}
+              placeholder="{example}"
+            >
+              <span className="text-foreground font-mono font-medium">
+                {numberPreview}
+              </span>
+            </InterpolatedText>
           </p>
         </div>
 
@@ -147,9 +149,9 @@ function EstimateDefaultsEditor({
         <div className="space-y-3 rounded-xl border p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <Label className="text-sm">Expiry warning email</Label>
+              <Label className="text-sm">{t("expiryWarning")}</Label>
               <p className="text-muted-foreground mt-0.5 text-xs">
-                Remind the customer before their estimate expires.
+                {t("expiryWarningHelp")}
               </p>
             </div>
             <Switch
@@ -160,7 +162,7 @@ function EstimateDefaultsEditor({
           {settings.expiryWarningEnabled && (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-xs">
-                Send warning
+                {t("sendWarning")}
               </span>
               <Input
                 type="number"
@@ -173,7 +175,7 @@ function EstimateDefaultsEditor({
                 className="h-8 w-20 text-sm"
               />
               <span className="text-muted-foreground text-xs">
-                hours before expiry
+                {t("hoursBeforeExpiry")}
               </span>
             </div>
           )}
@@ -182,10 +184,9 @@ function EstimateDefaultsEditor({
         {/* Auto-Convert on Acceptance */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <Label className="text-sm">Auto-convert on acceptance</Label>
+            <Label className="text-sm">{t("autoConvert")}</Label>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              Automatically create a booking when a customer accepts and pays
-              the deposit.
+              {t("autoConvertHelp")}
             </p>
           </div>
           <Switch
@@ -196,10 +197,10 @@ function EstimateDefaultsEditor({
 
         {/* Magic Link Expiry */}
         <div className="space-y-1.5">
-          <Label className="text-xs">Magic link expiry</Label>
+          <Label className="text-xs">{t("magicLinkExpiry")}</Label>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs">
-              Account setup links expire after
+              {t("magicLinkHelp")}
             </span>
             <Input
               type="number"
@@ -211,17 +212,16 @@ function EstimateDefaultsEditor({
               }
               className="h-8 w-20 text-sm"
             />
-            <span className="text-muted-foreground text-xs">hours</span>
+            <span className="text-muted-foreground text-xs">{t("hours")}</span>
           </div>
         </div>
 
         {/* Welcome Email */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <Label className="text-sm">Welcome email</Label>
+            <Label className="text-sm">{t("welcomeEmail")}</Label>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              Send a welcome email when an account is auto-created from an
-              estimate.
+              {t("welcomeEmailHelp")}
             </p>
           </div>
           <Switch
@@ -233,10 +233,9 @@ function EstimateDefaultsEditor({
         {/* Allow Customer Acceptance */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <Label className="text-sm">Allow customer acceptance</Label>
+            <Label className="text-sm">{t("allowAcceptance")}</Label>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              When off, customers can view their estimate but can&apos;t accept
-              it themselves.
+              {t("allowAcceptanceHelp")}
             </p>
           </div>
           <Switch
@@ -247,7 +246,7 @@ function EstimateDefaultsEditor({
 
         <Button onClick={handleSave} className="w-full gap-2">
           <Save className="size-4" />
-          Save Estimate Defaults
+          {t("saveDefaults")}
         </Button>
       </CardContent>
     </Card>

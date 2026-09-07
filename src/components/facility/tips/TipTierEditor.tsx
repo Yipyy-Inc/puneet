@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { TipOption, TipTierConfig } from "@/types/facility";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
+import { formatMoney, formatPercent } from "@/lib/i18n/format";
 
 // ============================================================================
 // The three options a customer is offered, and what they come to in money.
@@ -47,6 +50,8 @@ export function TipTierEditor({
   /** The ticket the preview is calculated against. */
   previewSubtotal: number;
 }) {
+  const { locale, section } = useSettingsText();
+  const t = section("tips");
   const setOption = (idx: number, next: TipOption) => {
     const options = [...tier.options] as TipTierConfig["options"];
     options[idx] = next;
@@ -60,11 +65,11 @@ export function TipTierEditor({
           <div key={idx} className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-                Option {idx + 1}
+                {t("option").replace("{n}", String(idx + 1))}
               </span>
               {tier.preferredIndex === idx && (
                 <Badge variant="secondary" className="gap-0.5 text-[9px]">
-                  <Star className="size-2" /> Preferred
+                  <Star className="size-2" /> {t("preferred")}
                 </Badge>
               )}
             </div>
@@ -122,21 +127,26 @@ export function TipTierEditor({
                 information. Only a percentage needs converting. */}
             <p className="text-muted-foreground text-[10px]">
               {opt.type === "percentage" ? (
-                <>
-                  On ${previewSubtotal.toFixed(2)}:{" "}
+                <InterpolatedText
+                  template={t("onTicket").replace(
+                    "{ticket}",
+                    formatMoney(previewSubtotal, locale),
+                  )}
+                  placeholder="{tip}"
+                >
                   <span className="text-foreground font-semibold">
-                    ${tipOptionAmount(opt, previewSubtotal).toFixed(2)}
+                    {formatMoney(tipOptionAmount(opt, previewSubtotal), locale)}
                   </span>
-                </>
+                </InterpolatedText>
               ) : (
-                <>Flat amount, whatever the ticket</>
+                <>{t("flatAmount")}</>
               )}
             </p>
 
             {/* Label input */}
             <Input
               type="text"
-              placeholder="e.g. Good job"
+              placeholder={t("labelPlaceholder")}
               value={opt.label ?? ""}
               disabled={disabled}
               maxLength={32}
@@ -152,7 +162,9 @@ export function TipTierEditor({
             {/* Preview pill — the button as the customer sees it */}
             <div className="bg-muted flex h-7 items-center justify-center rounded-md px-2">
               <span className="truncate text-[11px] font-medium">
-                {opt.type === "percentage" ? `${opt.value}%` : `$${opt.value}`}
+                {opt.type === "percentage"
+                  ? formatPercent(opt.value, locale)
+                  : formatMoney(opt.value, locale)}
                 {opt.label ? ` · ${opt.label}` : ""}
               </span>
             </div>
@@ -165,7 +177,7 @@ export function TipTierEditor({
                 }
                 className="text-muted-foreground hover:text-primary w-full text-center text-[10px] underline"
               >
-                Set as preferred
+                {t("setAsPreferred")}
               </button>
             )}
           </div>
@@ -174,8 +186,9 @@ export function TipTierEditor({
 
       <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
         <MessageSquare className="size-3" />
-        The label is shown to customers alongside the tip amount (e.g.&nbsp;
-        <span className="font-medium">20% · Fantastic job</span>).
+        <InterpolatedText template={t("labelHelp")} placeholder="{example}">
+          <span className="font-medium">{t("labelHelpExample")}</span>
+        </InterpolatedText>
       </p>
     </div>
   );

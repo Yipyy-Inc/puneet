@@ -24,6 +24,7 @@ import {
   Save,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // Sample data used to render the merge-tag preview (same idea as the Report
 // Card Builder's preview mode).
@@ -59,10 +60,10 @@ interface EstimateExpiryConfig {
   action: ExpiryAction;
 }
 
-const EXPIRY_ACTION_OPTIONS: { value: ExpiryAction; label: string }[] = [
-  { value: "declined", label: "Mark as declined" },
-  { value: "archive", label: "Archive" },
-  { value: "none", label: "No action" },
+const EXPIRY_ACTION_OPTIONS: { value: ExpiryAction; labelKey: string }[] = [
+  { value: "declined", labelKey: "actionDeclined" },
+  { value: "archive", labelKey: "actionArchive" },
+  { value: "none", labelKey: "actionNone" },
 ];
 
 interface ReminderRule {
@@ -85,11 +86,11 @@ interface FollowUpConfig {
   viewedNotBooked: ReminderRule;
 }
 
-const STOP_CONDITION_OPTIONS: { value: StopCondition; label: string }[] = [
-  { value: "accepted", label: "Estimate is accepted" },
-  { value: "declined", label: "Estimate is declined" },
-  { value: "expires", label: "Estimate expires" },
-  { value: "books_different", label: "Customer books a different service" },
+const STOP_CONDITION_OPTIONS: { value: StopCondition; labelKey: string }[] = [
+  { value: "accepted", labelKey: "stopAccepted" },
+  { value: "declined", labelKey: "stopDeclined" },
+  { value: "expires", labelKey: "stopExpires" },
+  { value: "books_different", labelKey: "stopBooksDifferent" },
 ];
 
 // Merge tags — the {{...}} syntax matches what's used in the message templates.
@@ -101,37 +102,38 @@ const MERGE_TAGS = [
   "{{estimate_link}}",
 ];
 
-const DEFAULT_CONFIG: FollowUpConfig = {
-  enabled: true,
-  expiry: {
-    days: 30,
-    action: "declined",
-  },
-  notViewedReminder: {
+/** The shipped config, with its four message bodies in the viewer's language. */
+function defaultConfig(t: (key: string) => string): FollowUpConfig {
+  return {
     enabled: true,
-    delayDays: 3,
-    channel: "email",
-    message:
-      "Hi {{customer_name}}, we sent you an estimate for {{service_name}} a few days ago. Just wanted to make sure you received it! Let us know if you have any questions.",
-    smsMessage:
-      "Hi {{customer_name}}, just checking you got our estimate for {{service_name}}. View & book: {{estimate_link}}",
-    maxFollowUps: 2,
-    stopCondition: "accepted",
-  },
-  viewedNotBooked: {
-    enabled: true,
-    delayDays: 2,
-    channel: "email",
-    message:
-      "Hi {{customer_name}}, we noticed you checked out the estimate for {{pet_name}}. We'd love to help you get booked! Is there anything we can answer or adjust?",
-    smsMessage:
-      "Hi {{customer_name}}, ready to book {{pet_name}}'s {{service_name}}? {{estimate_link}}",
-    maxFollowUps: 1,
-    stopCondition: "accepted",
-  },
-};
+    expiry: {
+      days: 30,
+      action: "declined",
+    },
+    notViewedReminder: {
+      enabled: true,
+      delayDays: 3,
+      channel: "email",
+      message: t("defaultNotViewedEmail"),
+      smsMessage: t("defaultNotViewedSms"),
+      maxFollowUps: 2,
+      stopCondition: "accepted",
+    },
+    viewedNotBooked: {
+      enabled: true,
+      delayDays: 2,
+      channel: "email",
+      message: t("defaultViewedEmail"),
+      smsMessage: t("defaultViewedSms"),
+      maxFollowUps: 1,
+      stopCondition: "accepted",
+    },
+  };
+}
 
 export function EstimateFollowUpSettings() {
+  const t = useSettingsText().section("estimate-settings");
+  const DEFAULT_CONFIG = defaultConfig(t);
   const [config, setConfig] = useState<FollowUpConfig>(() => {
     if (typeof window === "undefined") return DEFAULT_CONFIG;
     try {
@@ -167,7 +169,7 @@ export function EstimateFollowUpSettings() {
 
   const handleSave = () => {
     localStorage.setItem("estimate-followup-config", JSON.stringify(config));
-    toast.success("Follow-up settings saved");
+    toast.success(t("followUpsSaved"));
   };
 
   return (
@@ -177,13 +179,13 @@ export function EstimateFollowUpSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <CalendarClock className="size-4" />
-            Estimate expiry
+            {t("expiryTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs">Expires after</Label>
+              <Label className="text-xs">{t("expiresAfter")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
@@ -201,11 +203,13 @@ export function EstimateFollowUpSettings() {
                   }
                   className="h-8 w-20 text-sm"
                 />
-                <span className="text-muted-foreground text-xs">days</span>
+                <span className="text-muted-foreground text-xs">
+                  {t("days")}
+                </span>
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Expired estimate action</Label>
+              <Label className="text-xs">{t("expiredAction")}</Label>
               <Select
                 value={config.expiry.action}
                 onValueChange={(v) =>
@@ -221,17 +225,14 @@ export function EstimateFollowUpSettings() {
                 <SelectContent>
                   {EXPIRY_ACTION_OPTIONS.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
-                      {o.label}
+                      {t(o.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <p className="text-muted-foreground text-xs">
-            Expired estimates can no longer be booked. Follow-up reminders stop
-            automatically once an estimate expires.
-          </p>
+          <p className="text-muted-foreground text-xs">{t("expiryHelp")}</p>
         </CardContent>
       </Card>
 
@@ -241,7 +242,7 @@ export function EstimateFollowUpSettings() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Bell className="size-4" />
-              Auto follow-up reminders
+              {t("followUpTitle")}
             </CardTitle>
             <Switch
               checked={config.enabled}
@@ -256,7 +257,7 @@ export function EstimateFollowUpSettings() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Eye className="size-4 text-amber-500" />
-                  <p className="text-sm font-semibold">Estimate Not Viewed</p>
+                  <p className="text-sm font-semibold">{t("notViewedTitle")}</p>
                 </div>
                 <Switch
                   checked={config.notViewedReminder.enabled}
@@ -272,12 +273,12 @@ export function EstimateFollowUpSettings() {
                 />
               </div>
               <p className="text-muted-foreground text-xs">
-                Send a reminder if the customer hasn&apos;t opened the estimate.
+                {t("notViewedHelp")}
               </p>
               {config.notViewedReminder.enabled && (
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Send after</Label>
+                    <Label className="text-xs">{t("sendAfter")}</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
@@ -296,12 +297,12 @@ export function EstimateFollowUpSettings() {
                         max={14}
                       />
                       <span className="text-muted-foreground text-xs">
-                        days
+                        {t("days")}
                       </span>
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Channel</Label>
+                    <Label className="text-xs">{t("channel")}</Label>
                     <Select
                       value={config.notViewedReminder.channel}
                       onValueChange={(v) =>
@@ -318,17 +319,19 @@ export function EstimateFollowUpSettings() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="sms">SMS</SelectItem>
-                        <SelectItem value="both">Both</SelectItem>
+                        <SelectItem value="email">
+                          {t("channelEmail")}
+                        </SelectItem>
+                        <SelectItem value="sms">{t("channelSms")}</SelectItem>
+                        <SelectItem value="both">{t("channelBoth")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Max follow-ups</Label>
+                    <Label className="text-xs">{t("maxFollowUps")}</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground text-xs">
-                        Send up to
+                        {t("sendUpTo")}
                       </span>
                       <Input
                         type="number"
@@ -347,12 +350,12 @@ export function EstimateFollowUpSettings() {
                         className="h-8 w-16 text-sm"
                       />
                       <span className="text-muted-foreground text-xs">
-                        times, then stop
+                        {t("timesThenStop")}
                       </span>
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Stop following up when</Label>
+                    <Label className="text-xs">{t("stopWhen")}</Label>
                     <Select
                       value={config.notViewedReminder.stopCondition}
                       onValueChange={(v) =>
@@ -371,7 +374,7 @@ export function EstimateFollowUpSettings() {
                       <SelectContent>
                         {STOP_CONDITION_OPTIONS.map((o) => (
                           <SelectItem key={o.value} value={o.value}>
-                            {o.label}
+                            {t(o.labelKey)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -385,8 +388,8 @@ export function EstimateFollowUpSettings() {
                         <div className="flex items-center justify-between">
                           <Label className="text-xs">
                             {config.notViewedReminder.channel === "both"
-                              ? "Email message"
-                              : "Message template"}
+                              ? t("emailMessage")
+                              : t("messageTemplate")}
                           </Label>
                           <Button
                             type="button"
@@ -398,12 +401,12 @@ export function EstimateFollowUpSettings() {
                             {previewNotViewed ? (
                               <>
                                 <Pencil className="size-3" />
-                                Edit
+                                {t("edit")}
                               </>
                             ) : (
                               <>
                                 <Eye className="size-3" />
-                                Preview
+                                {t("preview")}
                               </>
                             )}
                           </Button>
@@ -438,9 +441,7 @@ export function EstimateFollowUpSettings() {
                       config.notViewedReminder.channel === "both") && (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <Label className="text-xs">
-                            SMS message (shorter)
-                          </Label>
+                          <Label className="text-xs">{t("smsMessage")}</Label>
                           <Button
                             type="button"
                             variant="ghost"
@@ -451,12 +452,12 @@ export function EstimateFollowUpSettings() {
                             {previewNotViewedSms ? (
                               <>
                                 <Pencil className="size-3" />
-                                Edit
+                                {t("edit")}
                               </>
                             ) : (
                               <>
                                 <Eye className="size-3" />
-                                Preview
+                                {t("preview")}
                               </>
                             )}
                           </Button>
@@ -507,7 +508,7 @@ export function EstimateFollowUpSettings() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="size-4 text-blue-500" />
-                  <p className="text-sm font-semibold">Viewed but Not Booked</p>
+                  <p className="text-sm font-semibold">{t("viewedTitle")}</p>
                 </div>
                 <Switch
                   checked={config.viewedNotBooked.enabled}
@@ -522,14 +523,11 @@ export function EstimateFollowUpSettings() {
                   }
                 />
               </div>
-              <p className="text-muted-foreground text-xs">
-                Send a follow-up if the customer viewed the estimate but
-                didn&apos;t book.
-              </p>
+              <p className="text-muted-foreground text-xs">{t("viewedHelp")}</p>
               {config.viewedNotBooked.enabled && (
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Send after viewing</Label>
+                    <Label className="text-xs">{t("sendAfterViewing")}</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
@@ -548,12 +546,12 @@ export function EstimateFollowUpSettings() {
                         max={14}
                       />
                       <span className="text-muted-foreground text-xs">
-                        days
+                        {t("days")}
                       </span>
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Channel</Label>
+                    <Label className="text-xs">{t("channel")}</Label>
                     <Select
                       value={config.viewedNotBooked.channel}
                       onValueChange={(v) =>
@@ -570,17 +568,19 @@ export function EstimateFollowUpSettings() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="sms">SMS</SelectItem>
-                        <SelectItem value="both">Both</SelectItem>
+                        <SelectItem value="email">
+                          {t("channelEmail")}
+                        </SelectItem>
+                        <SelectItem value="sms">{t("channelSms")}</SelectItem>
+                        <SelectItem value="both">{t("channelBoth")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Max follow-ups</Label>
+                    <Label className="text-xs">{t("maxFollowUps")}</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground text-xs">
-                        Send up to
+                        {t("sendUpTo")}
                       </span>
                       <Input
                         type="number"
@@ -599,12 +599,12 @@ export function EstimateFollowUpSettings() {
                         className="h-8 w-16 text-sm"
                       />
                       <span className="text-muted-foreground text-xs">
-                        times, then stop
+                        {t("timesThenStop")}
                       </span>
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Stop following up when</Label>
+                    <Label className="text-xs">{t("stopWhen")}</Label>
                     <Select
                       value={config.viewedNotBooked.stopCondition}
                       onValueChange={(v) =>
@@ -623,7 +623,7 @@ export function EstimateFollowUpSettings() {
                       <SelectContent>
                         {STOP_CONDITION_OPTIONS.map((o) => (
                           <SelectItem key={o.value} value={o.value}>
-                            {o.label}
+                            {t(o.labelKey)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -637,8 +637,8 @@ export function EstimateFollowUpSettings() {
                         <div className="flex items-center justify-between">
                           <Label className="text-xs">
                             {config.viewedNotBooked.channel === "both"
-                              ? "Email message"
-                              : "Message template"}
+                              ? t("emailMessage")
+                              : t("messageTemplate")}
                           </Label>
                           <Button
                             type="button"
@@ -650,12 +650,12 @@ export function EstimateFollowUpSettings() {
                             {previewViewed ? (
                               <>
                                 <Pencil className="size-3" />
-                                Edit
+                                {t("edit")}
                               </>
                             ) : (
                               <>
                                 <Eye className="size-3" />
-                                Preview
+                                {t("preview")}
                               </>
                             )}
                           </Button>
@@ -688,9 +688,7 @@ export function EstimateFollowUpSettings() {
                       config.viewedNotBooked.channel === "both") && (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <Label className="text-xs">
-                            SMS message (shorter)
-                          </Label>
+                          <Label className="text-xs">{t("smsMessage")}</Label>
                           <Button
                             type="button"
                             variant="ghost"
@@ -701,12 +699,12 @@ export function EstimateFollowUpSettings() {
                             {previewViewedSms ? (
                               <>
                                 <Pencil className="size-3" />
-                                Edit
+                                {t("edit")}
                               </>
                             ) : (
                               <>
                                 <Eye className="size-3" />
-                                Preview
+                                {t("preview")}
                               </>
                             )}
                           </Button>
@@ -757,7 +755,7 @@ export function EstimateFollowUpSettings() {
 
       <Button onClick={handleSave} className="w-full gap-2">
         <Save className="size-4" />
-        Save Estimate Settings
+        {t("saveFollowUps")}
       </Button>
     </div>
   );
