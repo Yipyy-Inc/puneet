@@ -8800,3 +8800,104 @@ as the thing to grep for:
 ```
 rg "^\s*(cfg|facilityConfig)\.\w+ = " src/data src/lib/api
 ```
+
+---
+
+## One facility's own service name is shipped to every facility
+
+**Found 2026-09-07 while translating `booking-statuses`. Not fixed — fixing it
+needs a decision about the default rules that reference it.**
+
+`BookingStatusSettings.tsx` has a module constant listing the services an
+automatic status rule can name:
+
+```ts
+const BASE_SERVICE_OPTIONS = [
+  { value: "any", … }, { value: "boarding", … }, … ,
+  { value: "yodas-splash", label: "Yoda's Splash" },   // ← not a Yipyy service
+  { value: "paws-express", label: "Yipyy Express Check-in" },
+];
+```
+
+"Yoda's Splash" is one facility's own custom module, hardcoded into a list every
+facility reads. It is the same shape as the mobile-app fixture that shipped
+another company's identity ("PawCare", `com.pawcare.facility`) as every
+facility's app name.
+
+The list already merges in each facility's REAL services from
+`locationsList[].services`, humanised — so the entry is not only wrong, it is
+redundant for the facility that owns it.
+
+**Why it was not simply deleted:** `DEFAULT_IFTTT_RULES` ships a rule whose
+`service` is `"yodas-splash"`. Remove the option and that rule's dropdown has no
+matching entry, so a facility opening the screen sees a rule pointing at
+nothing. The fix is to drop the option AND the default rule together, which is a
+behaviour change rather than a translation one.
+
+For now it carries a `// french-ok:` marker, because §5q is right about it in
+isolation: a name a facility typed never passes through the locale layer.
+
+**Also worth knowing:** `paws-express` is labelled "Yipyy Express Check-in",
+which the settings taxonomy work is due to rename "Yipyy Go" — and it is a
+different feature from the `checkin-requirements` section, which is _also_
+called "Express Check-in". Two unrelated features, near-identical labels.
+
+---
+
+## `booking-statuses` saves into a fixture, and that one is NOT dead
+
+**Measured 2026-09-07. Distinct from the care-tasks case above — read both
+before touching either.**
+
+`BookingStatusSettings` wrote its whole config into the imported `facilities`
+fixture:
+
+```ts
+(defaultFacility as Record<string, unknown>).bookingStatusConfig = { … };
+```
+
+The React Compiler refuses that inside a component scope
+(`react-hooks/immutability`), so it moved to `saveBookingStatusConfig()` in
+`src/data/facilities.ts`, where module code may do it and where the shape is at
+least visible.
+
+**It could not simply be deleted, unlike care-tasks'.** The two readers here do
+a per-render lookup rather than capturing at module scope:
+
+| Reader                                                                  | Line |
+| ----------------------------------------------------------------------- | ---- |
+| `src/app/facility/dashboard/clients/[id]/bookings/[bookingId]/page.tsx` | 369  |
+| `src/components/bookings/BookingStatusDropdown.tsx`                     | 214  |
+
+So a custom status added here DOES appear on a booking — until the tab reloads,
+at which point it is gone. Removing the write would have broken it inside the
+session too.
+
+**What it needs:** a `booking_status_config` settings domain and those two
+readers moved onto it. `BookingStatusSettings.tsx` is already in
+`check:success-claims`' baseline for the toast.
+
+---
+
+## The French e2e spec read a merge tag as an unfilled placeholder
+
+**Found and fixed 2026-09-07.** `tests/e2e/settings-french.spec.ts` asserts that
+no `{token}` survives to the screen — the failure mode where
+`.replace("{count}", …)` names a token the French string spells differently.
+
+`estimate-settings` draws its five merge tags as badges on purpose
+(`{{customer_name}}`, `{{estimate_link}}`, …) beside the message templates that
+use them, so the tags being visible is the feature. The assertion matched the
+inner single-brace of each double-braced tag and failed the section the day it
+was added to `CONVERTED`.
+
+It now requires a token that is NOT double-braced:
+
+```js
+/(?<!\{)\{[a-z]\w*\}(?!\})/gi;
+```
+
+**The general point:** this spec's assertions are all about an ABSENCE, and an
+absence check that is slightly too wide fails on correct pages, which is the
+fastest way to get a spec disabled rather than fixed. Widen the exception, never
+the section list.

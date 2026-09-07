@@ -14,32 +14,32 @@ import type { TipAttribution, TipConfig } from "@/types/facility";
 import { TipTierEditor } from "./tips/TipTierEditor";
 import { CloverTipPanel } from "./tips/CloverTipPanel";
 import { TipAttributionCard } from "./tips/TipAttributionCard";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
+import { formatMoney } from "@/lib/i18n/format";
 
-// Defaults used when an older tipConfig (without reminder/reportCardPrompt) is loaded.
-const DEFAULT_REMINDER = {
-  enabled: true,
-  delayHours: 3,
-  channels: { email: true, sms: false, push: true },
-  subject: "Thanks for trusting us with {petName} 🐾",
-  messageHeadline: "Your care team would love your thanks",
-  messageBody:
-    "{petName} just went home after a wonderful visit. If the team made {petName}'s day brighter, you can leave them a tip in one tap — 100% goes directly to the staff who looked after {petName}.",
-  includeReportCard: true,
-} as const;
-
-const DEFAULT_REPORT_CARD_PROMPT = {
-  enabled: true,
-  headline: "Loved the care {petName} received?",
-  subcopy:
-    "Tip the team that made today special. Tips are split evenly and go 100% to the staff.",
-  onlyOnPositiveFeedback: false,
-} as const;
+// `DEFAULT_REMINDER` stood here with eight lines of customer-facing copy and no
+// reader: the reminder's fields moved to Automations (see the note on the
+// reminder card below) and nothing has referenced it since. Deleted rather than
+// translated — a default nobody applies is not a default.
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function TipSettings() {
+  const { locale, section } = useSettingsText();
+  const t = section("tips");
   const { tipConfig, updateTipConfig, tipAttribution, updateTipAttribution } =
     useSettings();
+
+  // The shipped report-card prompt. Built here rather than at module scope so
+  // a facility starting fresh gets it in their own language; once they edit it
+  // the stored copy wins, as it should — it is their message to their clients.
+  const defaultReportCardPrompt = {
+    enabled: true,
+    headline: t("defaultHeadline"),
+    subcopy: t("defaultSubcopy"),
+    onlyOnPositiveFeedback: false,
+  };
   const [local, setLocal] = useState<TipConfig>(tipConfig);
   const [attribution, setAttribution] =
     useState<TipAttribution>(tipAttribution);
@@ -71,19 +71,17 @@ export function TipSettings() {
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div>
-          <p className="text-sm font-semibold">Tip Settings</p>
-          <p className="text-muted-foreground text-xs">
-            Configure tip options shown when confirming a booking
-          </p>
+          <p className="text-sm font-semibold">{t("title")}</p>
+          <p className="text-muted-foreground text-xs">{t("intro")}</p>
         </div>
         <div className="flex items-center gap-3">
           {isEditing ? (
             <>
               <Button variant="outline" size="sm" onClick={handleCancel}>
-                Cancel
+                {t("cancel")}
               </Button>
               <Button size="sm" onClick={handleSave}>
-                Save
+                {t("save")}
               </Button>
             </>
           ) : (
@@ -92,7 +90,7 @@ export function TipSettings() {
               size="sm"
               onClick={() => setIsEditing(true)}
             >
-              Edit
+              {t("edit")}
             </Button>
           )}
         </div>
@@ -102,9 +100,9 @@ export function TipSettings() {
         {/* Enable / disable */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium">Enable tipping</p>
+            <p className="text-sm font-medium">{t("enableTipping")}</p>
             <p className="text-muted-foreground text-xs">
-              Show tip selection on the booking confirmation step
+              {t("enableTippingHelp")}
             </p>
           </div>
           <Switch
@@ -118,7 +116,7 @@ export function TipSettings() {
           <>
             {/* Mode selector */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Tip mode</Label>
+              <Label className="text-sm font-medium">{t("tipMode")}</Label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -132,9 +130,9 @@ export function TipSettings() {
                     !isEditing && "cursor-default",
                   )}
                 >
-                  <p className="font-medium">General</p>
+                  <p className="font-medium">{t("modeGeneral")}</p>
                   <p className="text-muted-foreground mt-0.5 text-xs">
-                    One set of tip options for all transactions
+                    {t("modeGeneralHelp")}
                   </p>
                 </button>
                 <button
@@ -149,9 +147,9 @@ export function TipSettings() {
                     !isEditing && "cursor-default",
                   )}
                 >
-                  <p className="font-medium">Smart Tips</p>
+                  <p className="font-medium">{t("modeSmart")}</p>
                   <p className="text-muted-foreground mt-0.5 text-xs">
-                    Different options based on ticket amount
+                    {t("modeSmartHelp")}
                   </p>
                 </button>
               </div>
@@ -160,7 +158,7 @@ export function TipSettings() {
             {/* General mode */}
             {local.mode === "general" && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Tip options</Label>
+                <Label className="text-sm font-medium">{t("tipOptions")}</Label>
                 <TipTierEditor
                   tier={local.general}
                   disabled={!isEditing}
@@ -176,7 +174,7 @@ export function TipSettings() {
                 {/* Threshold */}
                 <div className="flex items-center gap-3">
                   <Label className="shrink-0 text-sm font-medium">
-                    Threshold — if ticket is less than
+                    {t("threshold")}
                   </Label>
                   <div className="relative w-28">
                     <span className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2 text-sm">
@@ -201,14 +199,17 @@ export function TipSettings() {
                     />
                   </div>
                   <span className="text-muted-foreground text-sm">
-                    use fixed amounts; otherwise use percentages
+                    {t("thresholdSuffix")}
                   </span>
                 </div>
 
                 {/* Below threshold */}
                 <div className="rounded-lg border p-3">
                   <p className="mb-3 text-xs font-semibold">
-                    Below ${local.smart.thresholdAmount} — Fixed amounts
+                    {t("belowThreshold").replace(
+                      "{amount}",
+                      formatMoney(local.smart.thresholdAmount, locale),
+                    )}
                   </p>
                   <TipTierEditor
                     tier={local.smart.belowThreshold}
@@ -226,7 +227,10 @@ export function TipSettings() {
                 {/* Above threshold */}
                 <div className="rounded-lg border p-3">
                   <p className="mb-3 text-xs font-semibold">
-                    ${local.smart.thresholdAmount}+ — Percentages
+                    {t("aboveThreshold").replace(
+                      "{amount}",
+                      formatMoney(local.smart.thresholdAmount, locale),
+                    )}
                   </p>
                   <TipTierEditor
                     tier={local.smart.aboveThreshold}
@@ -245,9 +249,7 @@ export function TipSettings() {
 
             {/* ── The ticket the previews are drawn against ──────────── */}
             <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-              <Label className="text-xs font-medium">
-                Preview amounts on a
-              </Label>
+              <Label className="text-xs font-medium">{t("previewOn")}</Label>
               <div className="relative w-24">
                 <span className="text-muted-foreground absolute top-1/2 left-2.5 -translate-y-1/2 text-sm">
                   $
@@ -264,8 +266,7 @@ export function TipSettings() {
                 />
               </div>
               <span className="text-muted-foreground text-xs">
-                ticket. Changes nothing a customer sees — it only decides what
-                the figures above are worked out on.
+                {t("previewHelp")}
               </span>
             </div>
 
@@ -275,9 +276,9 @@ export function TipSettings() {
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Custom tip</p>
+                  <p className="text-sm font-medium">{t("customTip")}</p>
                   <p className="text-muted-foreground text-xs">
-                    Let customers type their own amount.
+                    {t("customTipHelp")}
                   </p>
                 </div>
                 <Switch
@@ -288,10 +289,9 @@ export function TipSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Round up</p>
+                  <p className="text-sm font-medium">{t("roundUp")}</p>
                   <p className="text-muted-foreground text-xs">
-                    Offer to round the bill up to the next dollar. Hidden when
-                    the total is already whole.
+                    {t("roundUpHelp")}
                   </p>
                 </div>
                 <Switch
@@ -301,8 +301,7 @@ export function TipSettings() {
                 />
               </div>
               <p className="text-muted-foreground text-[11px]">
-                Neither applies to the card reader: Clover always offers a
-                custom tip and a no-tip button of its own.
+                {t("readerNote")}
               </p>
             </div>
 
@@ -327,33 +326,35 @@ export function TipSettings() {
               <div className="flex items-start gap-2">
                 <Bell className="text-primary mt-0.5 size-4 shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold">
-                    Post check-out tip reminder
-                  </p>
+                  <p className="text-sm font-semibold">{t("reminderTitle")}</p>
                   <p className="text-muted-foreground text-xs/relaxed">
-                    Ask for a tip a few hours after the pet goes home, when
-                    appreciation is highest. This is an automation: choose
-                    <span className="font-medium"> Check-Out</span>, set how
-                    long to wait, and pick the{" "}
-                    <span className="font-medium">Tip Reminder</span> template.
+                    <InterpolatedText
+                      template={t("reminderHelp").replace(
+                        "{trigger}",
+                        t("reminderTrigger"),
+                      )}
+                      placeholder="{template}"
+                    >
+                      <span className="font-medium">
+                        {t("reminderTemplate")}
+                      </span>
+                    </InterpolatedText>
                   </p>
                 </div>
               </div>
               <Button asChild variant="outline" size="sm">
                 <Link href="/facility/dashboard/automations">
-                  Set it up in Automations
+                  {t("setUpInAutomations")}
                 </Link>
               </Button>
               <p className="text-muted-foreground text-[11px]/relaxed">
-                Every message sent that way is recorded — what was sent, to
-                whom, and when — and anyone who has unsubscribed is skipped.
+                {t("reminderAudit")}
               </p>
             </div>
 
             {/* ── Report card tip prompt ─────────────────────────────── */}
             {(() => {
-              const prompt =
-                local.reportCardPrompt ?? DEFAULT_REPORT_CARD_PROMPT;
+              const prompt = local.reportCardPrompt ?? defaultReportCardPrompt;
               const updatePrompt = (patch: Partial<typeof prompt>) =>
                 setLocal({
                   ...local,
@@ -366,17 +367,15 @@ export function TipSettings() {
                       <Heart className="text-primary mt-0.5 size-4 shrink-0" />
                       <div>
                         <p className="text-sm font-semibold">
-                          Tip ask on report cards
+                          {t("reportCardTitle")}
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          Add a gentle tip prompt to the daily report card sent
-                          to clients.
+                          {t("reportCardHelp")}
                         </p>
                         {/* Same as the reminder above: `reportCardPrompt` is
                             saved and read by nothing. */}
                         <p className="mt-1 rounded-sm border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300">
-                          Not showing yet. These settings are saved, but report
-                          cards do not carry the tip ask.
+                          {t("reportCardNotLive")}
                         </p>
                       </div>
                     </div>
@@ -390,7 +389,9 @@ export function TipSettings() {
                   {prompt.enabled && (
                     <div className="space-y-3 pt-1">
                       <div className="space-y-1">
-                        <Label className="text-xs font-medium">Headline</Label>
+                        <Label className="text-xs font-medium">
+                          {t("headline")}
+                        </Label>
                         <Input
                           value={prompt.headline}
                           disabled={!isEditing}
@@ -401,7 +402,9 @@ export function TipSettings() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs font-medium">Subcopy</Label>
+                        <Label className="text-xs font-medium">
+                          {t("subcopy")}
+                        </Label>
                         <Textarea
                           rows={2}
                           value={prompt.subcopy}
@@ -414,7 +417,7 @@ export function TipSettings() {
                       </div>
                       <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2">
                         <span className="text-xs font-medium">
-                          Only show on 5-star / happy report cards
+                          {t("onlyPositive")}
                         </span>
                         <Switch
                           checked={prompt.onlyOnPositiveFeedback}

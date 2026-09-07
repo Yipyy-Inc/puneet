@@ -36,6 +36,9 @@ import {
 } from "@/lib/invoice-document";
 import { buildRetailTaxLines, retailQueries } from "@/lib/api/retail";
 import { invoiceTemplateMutations } from "@/lib/api/invoice-template";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { formatDateLong } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 import type { RetailTaxConfig } from "@/data/retail-config";
 
 // Heavy, conditionally-shown modal — loaded on demand when the user opens the
@@ -67,6 +70,7 @@ const PREVIEW_DEPOSIT = 50;
 function buildPreviewData(
   taxConfig: RetailTaxConfig | undefined,
   numberFormat: InvoiceNumberFormat,
+  locale: AppLocale,
 ): InvoiceDocumentData {
   const taxes = taxConfig
     ? buildRetailTaxLines(PREVIEW_SUBTOTAL, taxConfig)
@@ -82,11 +86,7 @@ function buildPreviewData(
       numberFormat.nextNumber,
     ),
     invoiceStatus: "open",
-    issuedDate: new Date().toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    }),
+    issuedDate: formatDateLong(new Date(), locale),
     bookingDateRange: "Apr 1 – Apr 4, 2026 (3 nights)",
     clientName: "Alice Johnson",
     clientEmail: "alice@example.com",
@@ -145,6 +145,8 @@ function exampleInvoiceNumber(fmt: InvoiceNumberFormat): string {
 }
 
 export function InvoiceTemplateSettings() {
+  const { locale, section } = useSettingsText();
+  const t = section("invoice-template");
   const [template, setTemplate] = useState<InvoiceTemplate>(
     defaultInvoiceTemplate,
   );
@@ -210,13 +212,13 @@ export function InvoiceTemplateSettings() {
 
   const handleLogoUpload = (file: File) => {
     if (file.size > 1024 * 1024) {
-      toast.error("Logo must be under 1 MB");
+      toast.error(t("logoTooLarge"));
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
       update("logoUrl", reader.result as string);
-      toast.success("Logo uploaded");
+      toast.success(t("logoUploaded"));
     };
     reader.readAsDataURL(file);
   };
@@ -226,7 +228,7 @@ export function InvoiceTemplateSettings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoice-template"] });
       setDirty(false);
-      toast.success("Invoice template saved");
+      toast.success(t("savedToast"));
     },
   });
 
@@ -244,10 +246,10 @@ export function InvoiceTemplateSettings() {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     return buildInvoiceDocumentHtml(
       template,
-      buildPreviewData(taxConfig, template.invoiceNumberFormat),
+      buildPreviewData(taxConfig, template.invoiceNumberFormat, locale),
       origin,
     );
-  }, [template, hasMounted, taxConfig]);
+  }, [template, hasMounted, taxConfig, locale]);
 
   if (!hasMounted) return null;
 
@@ -255,16 +257,14 @@ export function InvoiceTemplateSettings() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Invoice template</h2>
+          <h2 className="text-lg font-semibold">{t("title")}</h2>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            Brand the invoice your clients receive. Logo, contact info, footer
-            message, and signature line — all configurable. Live preview on the
-            right updates as you type.
+            {t("intro")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleReset}>
-            Reset to defaults
+            {t("resetDefaults")}
           </Button>
           <Button
             variant="outline"
@@ -272,10 +272,10 @@ export function InvoiceTemplateSettings() {
             onClick={() => setFullPreviewOpen(true)}
           >
             <Eye className="size-3.5" />
-            Full preview
+            {t("fullPreview")}
           </Button>
           <Button onClick={handleSave} disabled={!dirty}>
-            {dirty ? "Save changes" : "Saved"}
+            {t(dirty ? "saveChanges" : "saved")}
           </Button>
         </div>
       </div>
@@ -286,11 +286,11 @@ export function InvoiceTemplateSettings() {
           {/* Branding */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Branding</CardTitle>
+              <CardTitle className="text-sm">{t("branding")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label className="text-xs">Logo</Label>
+                <Label className="text-xs">{t("logo")}</Label>
                 <div className="mt-1.5 flex items-center gap-3">
                   <div className="bg-muted/30 flex size-20 items-center justify-center rounded-lg border border-dashed">
                     {template.logoUrl ? (
@@ -320,7 +320,7 @@ export function InvoiceTemplateSettings() {
                       size="sm"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      Upload logo
+                      {t("uploadLogo")}
                     </Button>
                     {template.logoUrl && (
                       <Button
@@ -330,17 +330,17 @@ export function InvoiceTemplateSettings() {
                         onClick={() => update("logoUrl", "")}
                       >
                         <Trash2 className="size-3.5" />
-                        Remove
+                        {t("remove")}
                       </Button>
                     )}
                   </div>
                 </div>
                 <p className="text-muted-foreground mt-1.5 text-[11px]">
-                  PNG or JPG, under 1 MB. Replaces the Yipyy logo.
+                  {t("logoHelp")}
                 </p>
               </div>
               <div>
-                <Label className="text-xs">Accent color</Label>
+                <Label className="text-xs">{t("accentColour")}</Label>
                 <div className="mt-1.5 flex items-center gap-2">
                   <input
                     type="color"
@@ -362,11 +362,11 @@ export function InvoiceTemplateSettings() {
           {/* Facility info */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Facility information</CardTitle>
+              <CardTitle className="text-sm">{t("facilityInfo")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label className="text-xs">Facility name</Label>
+                <Label className="text-xs">{t("facilityName")}</Label>
                 <Input
                   value={template.facilityName}
                   onChange={(e) => update("facilityName", e.target.value)}
@@ -375,27 +375,27 @@ export function InvoiceTemplateSettings() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <Label className="text-xs">Address line 1</Label>
+                  <Label className="text-xs">{t("addressLine1")}</Label>
                   <Input
                     value={template.addressLine1 ?? ""}
                     onChange={(e) => update("addressLine1", e.target.value)}
                     className="mt-1"
-                    placeholder="123 Main St"
+                    placeholder={t("addressPlaceholder1")}
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Address line 2</Label>
+                  <Label className="text-xs">{t("addressLine2")}</Label>
                   <Input
                     value={template.addressLine2 ?? ""}
                     onChange={(e) => update("addressLine2", e.target.value)}
                     className="mt-1"
-                    placeholder="City, State ZIP"
+                    placeholder={t("addressPlaceholder2")}
                   />
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <Label className="text-xs">Phone</Label>
+                  <Label className="text-xs">{t("phone")}</Label>
                   <Input
                     value={template.phone ?? ""}
                     onChange={(e) => update("phone", e.target.value)}
@@ -403,7 +403,7 @@ export function InvoiceTemplateSettings() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Email</Label>
+                  <Label className="text-xs">{t("email")}</Label>
                   <Input
                     value={template.email ?? ""}
                     onChange={(e) => update("email", e.target.value)}
@@ -412,24 +412,23 @@ export function InvoiceTemplateSettings() {
                 </div>
               </div>
               <div>
-                <Label className="text-xs">Website (optional)</Label>
+                <Label className="text-xs">{t("website")}</Label>
                 <Input
                   value={template.website ?? ""}
                   onChange={(e) => update("website", e.target.value)}
                   className="mt-1"
-                  placeholder="examplepetcare.com"
+                  placeholder={t("websitePlaceholder")}
                 />
               </div>
               <div>
-                <Label className="text-xs">Tax / registration numbers</Label>
+                <Label className="text-xs">{t("taxRegistrations")}</Label>
                 <p className="text-muted-foreground mt-0.5 text-[11px]">
-                  Add each tax or registration number your invoices must show —
-                  label each one however your region requires.
+                  {t("taxRegistrationsHelp")}
                 </p>
                 <div className="mt-2 space-y-2">
                   {template.taxRegistrations.length === 0 && (
                     <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-[11px]">
-                      No registration numbers yet. Add one below.
+                      {t("noRegistrations")}
                     </p>
                   )}
                   {template.taxRegistrations.map((reg) => (
@@ -442,8 +441,8 @@ export function InvoiceTemplateSettings() {
                           })
                         }
                         className="h-9 flex-1"
-                        placeholder="Label (e.g. GST/HST Number)"
-                        aria-label="Tax registration label"
+                        placeholder={t("registrationLabelPlaceholder")}
+                        aria-label={t("registrationLabel")}
                       />
                       <Input
                         value={reg.value}
@@ -453,15 +452,15 @@ export function InvoiceTemplateSettings() {
                           })
                         }
                         className="h-9 flex-1"
-                        placeholder="Number"
-                        aria-label="Tax registration number"
+                        placeholder={t("registrationNumberPlaceholder")}
+                        aria-label={t("registrationNumber")}
                       />
                       <Button
                         variant="ghost"
                         size="icon"
                         className="text-muted-foreground hover:text-destructive size-9 shrink-0"
                         onClick={() => removeTaxRegistration(reg.id)}
-                        aria-label="Remove registration number"
+                        aria-label={t("removeRegistration")}
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
@@ -474,7 +473,7 @@ export function InvoiceTemplateSettings() {
                     onClick={addTaxRegistration}
                   >
                     <Plus className="size-3.5" />
-                    Add registration number
+                    {t("addRegistration")}
                   </Button>
                 </div>
               </div>
@@ -484,23 +483,23 @@ export function InvoiceTemplateSettings() {
           {/* Invoice numbering */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Invoice numbering</CardTitle>
+              <CardTitle className="text-sm">{t("numbering")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <Label className="text-xs">Prefix</Label>
+                  <Label className="text-xs">{t("prefix")}</Label>
                   <Input
                     value={template.invoiceNumberFormat.prefix}
                     onChange={(e) =>
                       updateNumberFormat({ prefix: e.target.value })
                     }
                     className="mt-1"
-                    placeholder="e.g. INV"
+                    placeholder={t("prefixPlaceholder")}
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Counter digits</Label>
+                  <Label className="text-xs">{t("counterDigits")}</Label>
                   <Input
                     type="number"
                     min={1}
@@ -518,7 +517,7 @@ export function InvoiceTemplateSettings() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Year format</Label>
+                  <Label className="text-xs">{t("yearFormat")}</Label>
                   <Select
                     value={template.invoiceNumberFormat.yearFormat}
                     onValueChange={(v) =>
@@ -531,14 +530,14 @@ export function InvoiceTemplateSettings() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="none">{t("formatNone")}</SelectItem>
                       <SelectItem value="YYYY">YYYY (2026)</SelectItem>
                       <SelectItem value="YY">YY (26)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Month format</Label>
+                  <Label className="text-xs">{t("monthFormat")}</Label>
                   <Select
                     value={template.invoiceNumberFormat.monthFormat}
                     onValueChange={(v) =>
@@ -551,13 +550,13 @@ export function InvoiceTemplateSettings() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="none">{t("formatNone")}</SelectItem>
                       <SelectItem value="MM">MM (06)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Next number</Label>
+                  <Label className="text-xs">{t("nextNumber")}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -572,7 +571,9 @@ export function InvoiceTemplateSettings() {
                 </div>
               </div>
               <div className="bg-muted/40 rounded-md border px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Next invoice: </span>
+                <span className="text-muted-foreground">
+                  {t("nextInvoice")}{" "}
+                </span>
                 <span className="font-mono font-semibold">
                   {exampleInvoiceNumber(template.invoiceNumberFormat)}
                 </span>
@@ -583,11 +584,11 @@ export function InvoiceTemplateSettings() {
           {/* Payment terms */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Payment terms</CardTitle>
+              <CardTitle className="text-sm">{t("paymentTerms")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label className="text-xs">Terms</Label>
+                <Label className="text-xs">{t("terms")}</Label>
                 <Select
                   value={template.paymentTerms.type}
                   onValueChange={(v) =>
@@ -601,30 +602,32 @@ export function InvoiceTemplateSettings() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="due_on_receipt">
-                      Due on receipt
+                      {t("termsDueOnReceipt")}
                     </SelectItem>
-                    <SelectItem value="net_7">Net 7</SelectItem>
-                    <SelectItem value="net_14">Net 14</SelectItem>
-                    <SelectItem value="net_30">Net 30</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
+                    {[7, 14, 30].map((days) => (
+                      <SelectItem key={days} value={`net_${days}`}>
+                        {t("termsNet").replace("{n}", String(days))}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom">{t("termsCustom")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               {template.paymentTerms.type === "custom" && (
                 <div>
-                  <Label className="text-xs">Custom terms</Label>
+                  <Label className="text-xs">{t("customTerms")}</Label>
                   <Input
                     value={template.paymentTerms.customText}
                     onChange={(e) =>
                       updatePaymentTerms({ customText: e.target.value })
                     }
                     className="mt-1"
-                    placeholder="e.g. 50% due now, balance on pickup"
+                    placeholder={t("customTermsPlaceholder")}
                   />
                 </div>
               )}
               <p className="text-muted-foreground text-xs">
-                Shown on the invoice to tell customers when payment is due.
+                {t("paymentTermsHelp")}
               </p>
             </CardContent>
           </Card>
@@ -632,29 +635,28 @@ export function InvoiceTemplateSettings() {
           {/* Footer + signature */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Footer & signature</CardTitle>
+              <CardTitle className="text-sm">{t("footerSignature")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label className="text-xs">Custom footer message</Label>
+                <Label className="text-xs">{t("footerMessage")}</Label>
                 <Textarea
                   value={template.footerText}
                   onChange={(e) => update("footerText", e.target.value)}
                   className="mt-1 h-24 text-sm"
-                  placeholder="Thank you for trusting us with your furry family member."
+                  placeholder={t("footerPlaceholder")}
                 />
                 <p className="text-muted-foreground mt-1.5 text-[11px]">
-                  Appears in a highlighted box at the bottom of every invoice.
+                  {t("footerHelp")}
                 </p>
               </div>
 
               <div className="rounded-lg border p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium">Show thank-you line</p>
+                    <p className="text-xs font-medium">{t("showThankYou")}</p>
                     <p className="text-muted-foreground text-[11px]">
-                      Small centered note at the very bottom of the printed
-                      page.
+                      {t("showThankYouHelp")}
                     </p>
                   </div>
                   <Switch
@@ -667,7 +669,7 @@ export function InvoiceTemplateSettings() {
                     value={template.thankYouMessage}
                     onChange={(e) => update("thankYouMessage", e.target.value)}
                     className="mt-2 text-sm"
-                    placeholder="We'll see you again soon!"
+                    placeholder={t("thankYouPlaceholder")}
                   />
                 )}
               </div>
@@ -676,11 +678,10 @@ export function InvoiceTemplateSettings() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium">
-                      Include signature line
+                      {t("includeSignature")}
                     </p>
                     <p className="text-muted-foreground text-[11px]">
-                      Adds a signature + date line for clients to sign on the
-                      printed copy.
+                      {t("includeSignatureHelp")}
                     </p>
                   </div>
                   <Switch
@@ -690,12 +691,12 @@ export function InvoiceTemplateSettings() {
                 </div>
                 {template.signatureEnabled && (
                   <div className="mt-2">
-                    <Label className="text-[11px]">Signature label</Label>
+                    <Label className="text-[11px]">{t("signatureLabel")}</Label>
                     <Input
                       value={template.signatureLabel}
                       onChange={(e) => update("signatureLabel", e.target.value)}
                       className="mt-1 text-sm"
-                      placeholder="Client Signature"
+                      placeholder={t("signatureLabelPlaceholder")}
                     />
                   </div>
                 )}
@@ -710,16 +711,16 @@ export function InvoiceTemplateSettings() {
             <CardHeader className="bg-muted/40 flex flex-row items-center justify-between border-b py-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <FileText className="size-4" />
-                Live preview
+                {t("livePreview")}
               </CardTitle>
               <Badge variant="outline" className="text-[10px]">
-                Sample data
+                {t("sampleData")}
               </Badge>
             </CardHeader>
             <CardContent className="p-0">
               <div className="bg-zinc-200/50 p-4">
                 <iframe
-                  title="Invoice preview"
+                  title={t("previewTitle")}
                   srcDoc={previewHtml}
                   className="h-[720px] w-full rounded-md border bg-white shadow-sm"
                   sandbox="allow-same-origin"

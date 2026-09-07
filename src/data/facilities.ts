@@ -969,3 +969,33 @@ export const facilities = [
     ],
   },
 ];
+
+// ============================================================================
+// BOOKING STATUS CONFIG — WRITTEN HERE BECAUSE A COMPONENT MAY NOT.
+//
+// BookingStatusSettings used to do this assignment inline:
+//
+//   (defaultFacility as Record<string, unknown>).bookingStatusConfig = { … }
+//
+// The React Compiler refuses a write into an imported module from inside a
+// component scope (react-hooks/immutability), and it is right to. The write
+// still has to happen for now, so it happens here, in plain module code, where
+// what it actually is — a mutation of a fixture — is visible.
+//
+// ── WHAT THIS DOES AND DOES NOT DO ────────────────────────────────────────
+//
+// It is NOT persistence. Nothing leaves the browser and a reload loses every
+// custom status and every transition rule. It is not dead either, which is the
+// difference from the care-tasks case: `facility?.bookingStatusConfig` is read
+// on every render by the booking detail page and by BookingStatusDropdown, so
+// an edit made here does take effect for the rest of the session.
+//
+// The fix is a `booking_status_config` settings domain and those two readers
+// moved onto it. Until then this function is the honest shape of the current
+// behaviour rather than a hidden one. See docs/quality/debt-map.md.
+// ============================================================================
+export function saveBookingStatusConfig(config: unknown): void {
+  const facility = facilities.find((f) => f.id === 11);
+  if (!facility) return;
+  (facility as unknown as Record<string, unknown>).bookingStatusConfig = config;
+}

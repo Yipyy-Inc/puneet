@@ -54,6 +54,10 @@ const CONVERTED = [
   "onboarding-templates",
   "care-tasks",
   "tags-notes",
+  "invoice-template",
+  "tips",
+  "booking-statuses",
+  "estimate-settings",
 ] as const;
 
 test("a converted settings section renders no English, no key and no hole", async ({
@@ -95,8 +99,13 @@ test("a converted settings section renders no English, no key and no hole", asyn
 
     // 3. No unfilled placeholder — a `.replace("{count}", …)` that named a
     //    token the French string spells differently leaves `{count}` visible.
+    //
+    //    A DOUBLE brace is not that. `{{customer_name}}` is a merge tag, and
+    //    estimate-settings draws its five of them as badges on purpose, next
+    //    to the message templates that use them — so the tag being on screen
+    //    is the feature. Only a single-braced token is an unfilled hole.
     expect(
-      [...body.matchAll(/\{[a-z]\w*\}/gi)].map((m) => m[0]),
+      [...body.matchAll(/(?<!\{)\{[a-z]\w*\}(?!\})/gi)].map((m) => m[0]),
       `unfilled placeholders on ${section}`,
     ).toEqual([]);
   }

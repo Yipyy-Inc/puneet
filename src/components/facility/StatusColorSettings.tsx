@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { RotateCcw, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,25 @@ import {
   STATUS_COLOR_MAP,
 } from "@/lib/operations-calendar";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+
+/**
+ * A calendar status's name, in the viewer's language.
+ *
+ * `STATUS_COLOR_MAP` is keyed by the ENGLISH status word, and that key is also
+ * what an override is stored under — so the key travels and only the label is
+ * translated. A status the catalogue does not know keeps the map's own word
+ * rather than showing a raw key.
+ */
+function useCalendarStatusLabel(): (status: string) => string {
+  const t = useSettingsText().section("booking-statuses");
+  return (status: string) => {
+    // french-ok: a catalogue key built from the map's own English key
+    const key = `calStatus.${status}`;
+    const label = t(key);
+    return label === key ? status : label;
+  };
+}
 
 function StatusColorRow({
   label,
@@ -34,6 +53,7 @@ function StatusColorRow({
   onReset: () => void;
   hasOverride: boolean;
 }) {
+  const t = useSettingsText().section("booking-statuses");
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -45,9 +65,11 @@ function StatusColorRow({
             className="size-3.5 rounded-full ring-1 ring-black/10"
             style={{ backgroundColor: currentColor }}
           />
-          <span className="text-sm font-semibold text-slate-700 capitalize">
-            {label}
-          </span>
+          {/* `capitalize` title-cased the translated label — "En Attente"
+              rather than "En attente". §5q is sentence case everywhere, and
+              the catalogue already carries the right casing for both
+              languages, so the CSS was only able to make it wrong. */}
+          <span className="text-sm font-semibold text-slate-700">{label}</span>
         </div>
         <div className="flex items-center gap-1">
           {hasOverride && (
@@ -59,7 +81,7 @@ function StatusColorRow({
               className="h-6 gap-1 px-2 text-xs text-slate-400 hover:text-slate-600"
             >
               <RotateCcw className="size-3" />
-              Reset
+              {t("reset")}
             </Button>
           )}
           <Button
@@ -68,9 +90,9 @@ function StatusColorRow({
             size="sm"
             onClick={() => setExpanded((prev) => !prev)}
             aria-expanded={expanded}
-            aria-label={
-              expanded ? `Close ${label} colour picker` : `Edit ${label} colour`
-            }
+            aria-label={t(
+              expanded ? "closeColourPickerNamed" : "editColourNamed",
+            ).replace("{name}", label)}
             className={cn(
               "size-6 p-0",
               expanded
@@ -92,7 +114,7 @@ function StatusColorRow({
             label=""
           />
           <p className="px-0.5 text-[10px] text-slate-400">
-            Default:{" "}
+            {t("defaultIs")}{" "}
             <span className="font-semibold">
               {BRAND_COLOR_PALETTE.find((c) => c.hex === defaultColor)?.name ??
                 defaultColor}
@@ -105,16 +127,16 @@ function StatusColorRow({
 }
 
 export function StatusColorSettings() {
+  const t = useSettingsText().section("booking-statuses");
+  const statusLabel = useCalendarStatusLabel();
   const { serviceColorOverrides, updateServiceColorOverrides } = useSettings();
 
-  const statusEntries = useMemo(
-    () =>
-      Object.entries(STATUS_COLOR_MAP).map(([status, color]) => ({
-        key: status,
-        label: status,
-        defaultColor: color,
-      })),
-    [],
+  const statusEntries = Object.entries(STATUS_COLOR_MAP).map(
+    ([status, color]) => ({
+      key: status,
+      label: statusLabel(status),
+      defaultColor: color,
+    }),
   );
 
   const overrideCount = Object.keys(serviceColorOverrides.statuses).length;
@@ -150,11 +172,8 @@ export function StatusColorSettings() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Status colors</CardTitle>
-            <CardDescription>
-              Customize how booking statuses appear across the calendar and
-              badges.
-            </CardDescription>
+            <CardTitle>{t("coloursTitle")}</CardTitle>
+            <CardDescription>{t("coloursHelp")}</CardDescription>
           </div>
           {overrideCount > 0 && (
             <Button
@@ -164,7 +183,7 @@ export function StatusColorSettings() {
               className="h-8 gap-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-700"
             >
               <RotateCcw className="size-3" />
-              Reset all
+              {t("resetAll")}
             </Button>
           )}
         </div>
