@@ -8651,11 +8651,14 @@ written to catch exactly this.
 Converting a module-level constant array has two halves:
 
 ```ts
-const CHANNELS = [{ key: "email", label: "channelEmail", hint: "channelEmailHint" }];
+const CHANNELS = [
+  { key: "email", label: "channelEmail", hint: "channelEmailHint" },
+];
 //                                          ↑ now a KEY
 ```
+
 ```jsx
-<p>{t(ch.label)}</p>   // ← and the render site has to resolve it
+<p>{t(ch.label)}</p> // ← and the render site has to resolve it
 ```
 
 Do the first without the second and **`check:ui-french` goes GREEN** — the
