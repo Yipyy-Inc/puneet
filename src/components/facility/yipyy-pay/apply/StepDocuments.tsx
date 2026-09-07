@@ -24,6 +24,7 @@ import {
   type MerchantApplication,
   type MerchantApplicationDocument,
 } from "@/lib/merchant-application/application";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Step 4 — the evidence.
@@ -65,6 +66,7 @@ export function StepDocuments({
   onBack: () => void;
   onContinue: () => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const live = application.documents.filter((d) => !d.purgedAt);
 
   const forSlot = (docType: DocumentType, principalId: string | null) =>
@@ -174,7 +176,7 @@ export function StepDocuments({
             </p>
           )}
           <Button size="lg" onClick={onContinue} disabled={missing.length > 0}>
-            Continue
+            {t("continue")}
             <ArrowRight className="size-4" />
           </Button>
         </div>

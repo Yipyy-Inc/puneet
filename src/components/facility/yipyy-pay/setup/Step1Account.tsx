@@ -13,6 +13,7 @@ import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
 import { PoweredByClover } from "../YipyyPayBrand";
 import { ConnectIllustration } from "../illustrations";
 import { useYipyyPayNav } from "../use-yipyy-pay-nav";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Step 1 — connecting the account the money lands in.
@@ -38,6 +39,7 @@ import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 // ============================================================================
 
 export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
+  const t = useSettingsText().section("yipyy-pay");
   const nav = useYipyyPayNav();
   const { connection } = overview;
 
@@ -47,8 +49,8 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
         <div className="flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 text-sm dark:border-emerald-900/50 dark:bg-emerald-950/20">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <p className="leading-relaxed">
-            <span className="font-semibold">Account connected.</span> Yipyy Pay
-            is linked to your merchant account
+            <span className="font-semibold">{t("accountConnected")}</span> Yipyy
+            Pay is linked to your merchant account
             {connection.merchantId && (
               <>
                 {" "}
@@ -63,7 +65,7 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
 
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={() => nav.go({ step: 2 })}>
-            Continue
+            {t("continue")}
             <ArrowRight className="size-4" />
           </Button>
           {/* A facility that picked the wrong merchant from a list of theirs
@@ -72,7 +74,7 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
               it could ever have. */}
           <Button asChild variant="ghost" size="sm">
             <a href="/api/payments/clover/connect">
-              Use a different account
+              {t("useDifferentAccount")}
               <ExternalLink className="size-3.5 opacity-70" />
             </a>
           </Button>
@@ -86,16 +88,14 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
       <ConnectIllustration />
 
       <div className="space-y-2 text-center">
-        <h3 className="text-xl font-semibold">Connect your payment account</h3>
+        <h3 className="text-xl font-semibold">{t("connectTitle")}</h3>
         <p className="text-muted-foreground mx-auto max-w-md text-sm/relaxed">
-          Yipyy Pay pays out through a Clover merchant account in your own
-          business name. Sign in to yours to link it — or open one on the way
-          through if you do not have one yet.
+          {t("connectHelp")}
         </p>
       </div>
 
       <div className="mx-auto max-w-md space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">What happens next</p>
+        <p className="text-sm font-semibold">{t("whatHappensNext")}</p>
         <ol className="space-y-2.5">
           {[
             "You go to Clover, who hold the merchant account.",
@@ -130,9 +130,7 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
         <div className="mx-auto flex max-w-md items-start gap-2.5 rounded-lg border border-rose-200 bg-rose-50/60 p-3 text-sm dark:border-rose-900/50 dark:bg-rose-950/20">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-rose-600 dark:text-rose-400" />
           <p className="leading-relaxed">
-            <span className="font-semibold">
-              The last attempt did not finish.
-            </span>{" "}
+            <span className="font-semibold">{t("lastAttemptFailed")}</span>{" "}
             {connection.lastError}
           </p>
         </div>
@@ -142,12 +140,12 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
         <Button asChild size="lg">
           {/* A plain anchor: /connect 303s to Clover. Nothing to fetch. */}
           <a href="/api/payments/clover/connect">
-            Connect my account
+            {t("connectMyAccount")}
             <ArrowRight className="size-4" />
           </a>
         </Button>
         <p className="text-muted-foreground text-xs">
-          You will be taken to a secure page to sign in.
+          {t("connectSecureNote")}
         </p>
         {/* Two of three. Named here because the next screen carries their logo. */}
         <PoweredByClover />

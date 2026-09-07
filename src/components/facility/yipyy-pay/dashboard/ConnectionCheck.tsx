@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import {
   CheckCircle2,
   CircleHelp,
@@ -63,6 +64,7 @@ const TONE: Record<CapabilityState, string> = {
 };
 
 export function ConnectionCheck() {
+  const t = useSettingsText().section("yipyy-pay");
   const check = useMutation({
     mutationFn: async (): Promise<CapabilityReport> => {
       const response = await fetch("/api/payments/clover/capabilities", {
@@ -104,7 +106,7 @@ export function ConnectionCheck() {
             ) : (
               <ShieldQuestion className="mr-2 size-3.5" />
             )}
-            {check.isPending ? "Checking…" : "Check now"}
+            {check.isPending ? t("checking") : "Check now"}
           </Button>
         </div>
 

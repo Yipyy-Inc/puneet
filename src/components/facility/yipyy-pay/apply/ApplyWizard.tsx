@@ -15,6 +15,7 @@ import { StepBusiness } from "./StepBusiness";
 import { StepDocuments } from "./StepDocuments";
 import { StepOwners } from "./StepOwners";
 import { StepReview } from "./StepReview";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // The merchant application, in five steps.
@@ -45,6 +46,7 @@ export function ApplyWizard({
   application: MerchantApplication;
   overview: YipyyPayOverview;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const nav = useYipyyPayNav();
   const done = stepCompletion(application);
 
@@ -80,13 +82,15 @@ export function ApplyWizard({
         className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm font-medium"
       >
         <ArrowLeft className="size-4" />
-        Back to Yipyy Pay
+        {t("backToPay")}
       </button>
 
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <YipyyPayWordmark size="md" tone="ink" />
-          <span className="text-muted-foreground text-lg">application</span>
+          <span className="text-ink-tertiary text-lg">
+            {t("wordApplication")}
+          </span>
         </div>
         <p className="text-muted-foreground text-sm/relaxed">
           What we need to open a merchant account for{" "}

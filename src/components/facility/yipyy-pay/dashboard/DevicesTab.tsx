@@ -48,6 +48,7 @@ import {
 } from "@/lib/api/yipyy-pay";
 import { TerminalIllustration } from "../illustrations";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // The card readers, and the first screen that can actually name one.
@@ -79,28 +80,29 @@ const PROBE_COPY: Record<
   { label: string; tone: string; dot: string }
 > = {
   ready: {
-    label: "Online",
+    label: "deviceOnline",
     tone: "text-emerald-600 dark:text-emerald-400",
     dot: "bg-emerald-500",
   },
   busy: {
-    label: "In use",
+    label: "deviceInUse",
     tone: "text-sky-600 dark:text-sky-400",
     dot: "bg-sky-500",
   },
   asleep: {
-    label: "App closed",
+    label: "deviceAppClosed",
     tone: "text-amber-600 dark:text-amber-400",
     dot: "bg-amber-500",
   },
   unreachable: {
-    label: "Not answering",
+    label: "deviceNotAnswering",
     tone: "text-rose-600 dark:text-rose-400",
     dot: "bg-rose-500",
   },
 };
 
 export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
+  const t = useSettingsText().section("yipyy-pay");
   const settingsPath = useSettingsHref();
   const { data, isPending } = useAdminTerminals(overview.connection.connected);
   const [renaming, setRenaming] = useState<AdminTerminal | null>(null);
@@ -117,7 +119,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
       setProbes((prev) => ({ ...prev, [terminal.serial]: result }));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "The terminal did not answer.",
+        error instanceof Error ? error.message : t("terminalNoAnswer"),
       );
     } finally {
       setProbing(null);
@@ -135,14 +137,12 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
         // Always sent, because the table requires a name and most devices have
         // no row yet. The model is what the screen was already displaying, so
         // nothing is invented.
-        label: terminal.label ?? terminal.model ?? "Card reader",
+        label: terminal.label ?? terminal.model ?? t("cardReader"),
         ...changes,
       });
       toast.success(message);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "That did not save.",
-      );
+      toast.error(error instanceof Error ? error.message : t("didNotSave"));
     }
   };
 
@@ -163,10 +163,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
         <Card className="border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
           <div className="flex items-start gap-2.5 text-sm/relaxed">
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-            <p>
-              Your card readers could not be listed. This usually means the
-              payment account needs reconnecting.
-            </p>
+            <p>{t("readersFailed")}</p>
           </div>
         </Card>
       )}
@@ -176,11 +173,9 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
           <CardContent className="space-y-4 p-8 text-center">
             <TerminalIllustration />
             <div className="space-y-1">
-              <p className="font-semibold">No card reader yet</p>
+              <p className="font-semibold">{t("noReaderYet")}</p>
               <p className="text-muted-foreground mx-auto max-w-md text-sm/relaxed">
-                You can already take payments online — a payment link or an
-                emailed invoice needs no hardware. A card reader is for taking
-                the card in front of you at the counter.
+                {t("noReaderYetHelp")}
               </p>
             </div>
             <ConnectDeviceHelp />
@@ -216,26 +211,26 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-semibold">
-                          {terminal.label ?? terminal.model ?? "Card reader"}
+                          {terminal.label ?? terminal.model ?? t("cardReader")}
                         </p>
                         {terminal.isDefault && (
                           <Badge variant="secondary" className="gap-1">
                             <Star className="size-3" />
-                            Default
+                            {t("defaultReader")}
                           </Badge>
                         )}
                         {!terminal.isActive && (
-                          <Badge variant="outline">Retired</Badge>
+                          <Badge variant="outline">{t("retired")}</Badge>
                         )}
                         {terminal.support === "unsupported" && (
                           <Badge variant="outline" className="text-amber-600">
-                            Cannot take payments
+                            {t("cannotTakePayments")}
                           </Badge>
                         )}
                       </div>
 
                       <p className="text-muted-foreground text-xs">
-                        {terminal.model ?? "Unknown model"} · Serial{" "}
+                        {terminal.model ?? t("unknownModel")} · Serial{" "}
                         <span className="font-[tabular-nums]">
                           ····{terminal.serial.slice(-4)}
                         </span>
@@ -246,7 +241,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
                           <MapPin className="size-3" />
                           {overview.locations.find(
                             (l) => l.id === terminal.locationId,
-                          )?.name ?? "Unassigned"}
+                          )?.name ?? t("unassigned")}
                         </p>
                       )}
 
@@ -261,7 +256,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
                               className={cn("size-1.5 rounded-full", copy.dot)}
                             />
                             <span className={cn("font-medium", copy.tone)}>
-                              {copy.label}
+                              {t(copy.label)}
                             </span>
                             {state?.detail && (
                               <span className="text-muted-foreground truncate">
@@ -273,7 +268,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
                           <>
                             <CircleDot className="text-muted-foreground size-3" />
                             <span className="text-muted-foreground">
-                              Status not checked
+                              {t("statusNotChecked")}
                             </span>
                           </>
                         )}
@@ -281,8 +276,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
 
                       {terminal.support === "unsupported" && (
                         <p className="text-muted-foreground text-xs/relaxed">
-                          This model cannot be driven from a web app. A Clover
-                          Flex, Mini or Compact can.
+                          {t("modelNotDrivable")}
                         </p>
                       )}
                     </div>
@@ -299,7 +293,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
                         ) : (
                           <Signal className="size-3.5" />
                         )}
-                        {busy ? "Checking…" : "Check"}
+                        {busy ? t("checking") : t("check")}
                       </Button>
                       <Button
                         variant="ghost"
@@ -307,7 +301,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
                         onClick={() => setRenaming(terminal)}
                       >
                         <Pencil className="size-3.5" />
-                        Rename
+                        {t("rename")}
                       </Button>
                       {terminal.isActive ? (
                         <>
@@ -325,7 +319,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
                                 }
                               >
                                 <Star className="size-3.5" />
-                                Make default
+                                {t("makeDefault")}
                               </Button>
                             )}
                           <Button
@@ -340,7 +334,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
                               )
                             }
                           >
-                            Retire
+                            {t("retire")}
                           </Button>
                         </>
                       ) : (
@@ -356,7 +350,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
                           }
                         >
                           <RotateCcw className="size-3.5" />
-                          Bring back
+                          {t("bringBack")}
                         </Button>
                       )}
                     </div>
@@ -374,16 +368,14 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
           <div className="min-w-0">
-            <p className="text-sm font-medium">Tipping at the reader</p>
+            <p className="text-sm font-medium">{t("tippingAtReader")}</p>
             <p className="text-muted-foreground text-sm/relaxed">
-              Your readers ask for a tip during the sale, using the tiers set in
-              Yipyy. There is nothing to push to a device — change the tiers and
-              the next payment uses them.
+              {t("tippingAtReaderHelp")}
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
             <a href={settingsPath("tips")}>
-              Tip settings
+              {t("tipSettings")}
               <ArrowRight className="size-3.5" />
             </a>
           </Button>
@@ -402,11 +394,11 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
               label,
               locationId,
             });
-            toast.success("Saved.");
+            toast.success(t("saved"));
             setRenaming(null);
           } catch (error) {
             toast.error(
-              error instanceof Error ? error.message : "That did not save.",
+              error instanceof Error ? error.message : t("didNotSave"),
             );
           }
         }}
@@ -425,6 +417,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
  * pretends to do something the hardware already did.
  */
 function ConnectDeviceHelp({ compact }: { compact?: boolean }) {
+  const t = useSettingsText().section("yipyy-pay");
   const [open, setOpen] = useState(false);
 
   return (
@@ -435,17 +428,14 @@ function ConnectDeviceHelp({ compact }: { compact?: boolean }) {
         onClick={() => setOpen(true)}
       >
         <Smartphone className="size-4" />
-        Add a reader
+        {t("addReader")}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Adding a card reader</DialogTitle>
-            <DialogDescription>
-              You do not pair a reader with Yipyy. It belongs to your payment
-              account, and it appears here on its own once it is running.
-            </DialogDescription>
+            <DialogTitle>{t("addingReader")}</DialogTitle>
+            <DialogDescription>{t("addingReaderHelp")}</DialogDescription>
           </DialogHeader>
 
           <ol className="space-y-3">
@@ -468,17 +458,12 @@ function ConnectDeviceHelp({ compact }: { compact?: boolean }) {
 
           <div className="flex items-start gap-2.5 rounded-lg border p-3 text-sm/relaxed">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-            <p className="text-muted-foreground">
-              Give each reader a name as soon as it appears — &ldquo;Front
-              desk&rdquo;, &ldquo;Grooming room&rdquo;. Two readers of the same
-              model are otherwise told apart only by their serial, and picking
-              the wrong one sends the card request to another room.
-            </p>
+            <p className="text-muted-foreground">{t("nameReadersHelp")}</p>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Close
+              {t("close")}
             </Button>
             <Button asChild>
               <a
@@ -486,7 +471,7 @@ function ConnectDeviceHelp({ compact }: { compact?: boolean }) {
                 target="_blank"
                 rel="noreferrer noopener"
               >
-                Buy a reader
+                {t("buyReaderShort")}
               </a>
             </Button>
           </DialogFooter>
@@ -513,6 +498,7 @@ function RenameDialog({
   onSave: (label: string, locationId: string | null) => void;
   saving: boolean;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const [value, setValue] = useState("");
   // `undefined` means "not touched" (send the current value back unchanged),
   // distinct from `null` meaning "the person picked Unassigned" -- both are
@@ -531,20 +517,18 @@ function RenameDialog({
     >
       <DialogContent key={terminal?.serial} className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Name this reader</DialogTitle>
-          <DialogDescription>
-            Staff pick a reader by this name at checkout. Say where it is.
-          </DialogDescription>
+          <DialogTitle>{t("nameThisReader")}</DialogTitle>
+          <DialogDescription>{t("nameThisReaderHelp")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2">
-          <Label htmlFor="terminal-label">Name</Label>
+          <Label htmlFor="terminal-label">{t("name")}</Label>
           <Input
             id="terminal-label"
             autoFocus
             maxLength={60}
             defaultValue={terminal?.label ?? terminal?.model ?? ""}
-            placeholder="Front desk"
+            placeholder={t("frontDesk")}
             onChange={(event) => setValue(event.target.value)}
           />
           <p className="text-muted-foreground text-xs">
@@ -554,7 +538,7 @@ function RenameDialog({
 
         {locations.length > 1 && (
           <div className="space-y-2">
-            <Label htmlFor="terminal-location">Location</Label>
+            <Label htmlFor="terminal-location">{t("location")}</Label>
             <Select
               defaultValue={terminal?.locationId ?? UNASSIGNED}
               onValueChange={(next) =>
@@ -565,7 +549,7 @@ function RenameDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                <SelectItem value={UNASSIGNED}>{t("unassigned")}</SelectItem>
                 {locations.map((loc) => (
                   <SelectItem key={loc.id} value={loc.id}>
                     {loc.name}
@@ -578,7 +562,7 @@ function RenameDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             disabled={saving}

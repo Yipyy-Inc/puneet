@@ -1,6 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
+
 import Link from "next/link";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { CreditCard, Receipt, Smartphone } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -56,123 +59,127 @@ const CHANNEL: Record<
   Transaction["channel"],
   { label: string; icon: typeof CreditCard }
 > = {
-  in_person: { label: "In person", icon: Smartphone },
-  online: { label: "Online", icon: CreditCard },
-  other: { label: "Other", icon: Receipt },
+  in_person: { label: "channelInPerson", icon: Smartphone },
+  online: { label: "channelOnline", icon: CreditCard },
+  other: { label: "channelOther", icon: Receipt },
 };
 
-const columns: ColumnDef<Transaction>[] = [
-  {
-    key: "at",
-    label: "When",
-    sortable: true,
-    sortValue: (row) => row.at,
-    render: (row) => {
-      const at = when(row.at);
-      return (
-        <div className="leading-tight">
-          <p className="font-medium">{at.day}</p>
-          <p className="text-muted-foreground text-xs">{at.time}</p>
-        </div>
-      );
+type Translate = (key: string) => string;
+
+function buildColumns(t: Translate): ColumnDef<Transaction>[] {
+  return [
+    {
+      key: "at",
+      label: t("columnWhen"),
+      sortable: true,
+      sortValue: (row) => row.at,
+      render: (row) => {
+        const at = when(row.at);
+        return (
+          <div className="leading-tight">
+            <p className="font-medium">{at.day}</p>
+            <p className="text-muted-foreground text-xs">{at.time}</p>
+          </div>
+        );
+      },
     },
-  },
-  {
-    key: "amountCents",
-    label: "Amount",
-    align: "right",
-    sortable: true,
-    sortValue: (row) => row.amountCents,
-    render: (row) => (
-      <div className="leading-tight">
-        <p
-          className={
-            row.amountCents < 0
-              ? "font-semibold text-amber-600 dark:text-amber-400"
-              : "font-semibold"
-          }
-        >
-          {money(row.amountCents)}
-        </p>
-        {row.tipCents !== 0 && (
-          <p className="text-muted-foreground text-xs">
-            incl. {money(row.tipCents)} tip
+    {
+      key: "amountCents",
+      label: t("columnAmount"),
+      align: "right",
+      sortable: true,
+      sortValue: (row) => row.amountCents,
+      render: (row) => (
+        <div className="leading-tight">
+          <p
+            className={
+              row.amountCents < 0
+                ? "font-semibold text-amber-600 dark:text-amber-400"
+                : "font-semibold"
+            }
+          >
+            {money(row.amountCents)}
           </p>
-        )}
-      </div>
-    ),
-  },
-  {
-    key: "cardBrand",
-    label: "Card",
-    render: (row) =>
-      row.cardBrand || row.cardLast4 ? (
-        <span className="text-sm">
-          {row.cardBrand ?? "Card"}
-          {row.cardLast4 ? ` ••••${row.cardLast4}` : ""}
-        </span>
-      ) : (
-        <span className="text-muted-foreground text-sm capitalize">
-          {row.method?.replace(/-/g, " ") ?? "—"}
-        </span>
-      ),
-  },
-  {
-    key: "channel",
-    label: "Taken",
-    render: (row) => {
-      const channel = CHANNEL[row.channel];
-      const Icon = channel.icon;
-      return (
-        <div className="flex items-center gap-1.5">
-          <Icon className="text-muted-foreground size-3.5 shrink-0" />
-          <span className="text-sm">{channel.label}</span>
+          {row.tipCents !== 0 && (
+            <p className="text-muted-foreground text-xs">
+              incl. {money(row.tipCents)} tip
+            </p>
+          )}
         </div>
-      );
+      ),
     },
-  },
-  {
-    key: "service",
-    label: "For",
-    render: (row) =>
-      row.bookingRef ? (
-        <div className="leading-tight">
-          <p className="text-sm capitalize">{row.service ?? "Booking"}</p>
-          <p className="text-muted-foreground text-xs">
-            {row.clientName ?? "—"}
-            {row.petNames.length > 0 ? ` · ${row.petNames.join(", ")}` : ""}
-          </p>
-        </div>
-      ) : (
-        <span className="text-muted-foreground text-sm">Not attached</span>
+    {
+      key: "cardBrand",
+      label: t("columnCard"),
+      render: (row) =>
+        row.cardBrand || row.cardLast4 ? (
+          <span className="text-sm">
+            {row.cardBrand ?? "Card"}
+            {row.cardLast4 ? ` ••••${row.cardLast4}` : ""}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-sm capitalize">
+            {row.method?.replace(/-/g, " ") ?? "—"}
+          </span>
+        ),
+    },
+    {
+      key: "channel",
+      label: t("columnTaken"),
+      render: (row) => {
+        const channel = CHANNEL[row.channel];
+        const Icon = channel.icon;
+        return (
+          <div className="flex items-center gap-1.5">
+            <Icon className="text-muted-foreground size-3.5 shrink-0" />
+            <span className="text-[14.5px]">{t(channel.label)}</span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "service",
+      label: t("columnFor"),
+      render: (row) =>
+        row.bookingRef ? (
+          <div className="leading-tight">
+            <p className="text-sm capitalize">{row.service ?? "Booking"}</p>
+            <p className="text-muted-foreground text-xs">
+              {row.clientName ?? "—"}
+              {row.petNames.length > 0 ? ` · ${row.petNames.join(", ")}` : ""}
+            </p>
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">Not attached</span>
+        ),
+    },
+    {
+      key: "kind",
+      label: "Status",
+      render: (row) => (
+        <Badge variant={row.kind === "refund" ? "outline" : "success"}>
+          {row.kind === "refund" ? "refunded" : "paid"}
+        </Badge>
       ),
-  },
-  {
-    key: "kind",
-    label: "Status",
-    render: (row) => (
-      <Badge variant={row.kind === "refund" ? "outline" : "success"}>
-        {row.kind === "refund" ? "Refunded" : "Paid"}
-      </Badge>
-    ),
-  },
-  {
-    key: "cloverPaymentId",
-    label: "Clover",
-    defaultVisible: false,
-    render: (row) =>
-      row.cloverPaymentId ? (
-        <div className="leading-tight">
-          <p className="font-mono text-xs">{row.cloverPaymentId}</p>
-          <p className="text-muted-foreground font-mono text-[10px]">
-            {row.deviceSerial ?? row.cloverOrderId ?? ""}
-          </p>
-        </div>
-      ) : (
-        <span className="text-muted-foreground text-xs">—</span>
-      ),
-  },
-];
+    },
+    {
+      key: "cloverPaymentId",
+      label: "Clover",
+      defaultVisible: false,
+      render: (row) =>
+        row.cloverPaymentId ? (
+          <div className="leading-tight">
+            <p className="font-mono text-xs">{row.cloverPaymentId}</p>
+            <p className="text-muted-foreground font-mono text-[10px]">
+              {row.deviceSerial ?? row.cloverOrderId ?? ""}
+            </p>
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        ),
+    },
+  ];
+}
 
 export function TransactionsTable({
   transactions,
@@ -189,6 +196,11 @@ export function TransactionsTable({
   limit: number;
   onOffset: (next: number) => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
+  // Memoised: DataTable takes `columns` by identity, and a fresh array every
+  // render would reset its sort and column state on each keystroke.
+  const columns = useMemo(() => buildColumns(t), [t]);
+
   if (loading) {
     return (
       <div

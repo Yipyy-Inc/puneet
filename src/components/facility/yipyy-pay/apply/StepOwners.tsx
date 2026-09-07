@@ -35,6 +35,7 @@ import {
   type Principal,
 } from "@/lib/merchant-application/application";
 import { OwnerDialog } from "./OwnerDialog";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Step 2 — everyone the acquirer has to know about.
@@ -63,6 +64,7 @@ export function StepOwners({
   onBack: () => void;
   onContinue: () => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const [editing, setEditing] = useState<Principal | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [removing, setRemoving] = useState<Principal | null>(null);
@@ -181,7 +183,7 @@ export function StepOwners({
           onClick={onContinue}
           disabled={blocking.length > 0 || !hasControl}
         >
-          Continue
+          {t("continue")}
           <ArrowRight className="size-4" />
         </Button>
       </div>

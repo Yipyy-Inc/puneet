@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
 import { YipyyPayWordmark } from "../YipyyPayBrand";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // The moment it works.
@@ -98,6 +99,12 @@ export function SetupSuccess({
   /** Straight to the Devices tab — the one thing still worth doing today. */
   onDevices: () => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
   const [secondsLeft, setSecondsLeft] = useState(AUTO_REDIRECT_MS / 1000);
 
   useEffect(() => {
@@ -115,14 +122,19 @@ export function SetupSuccess({
   const scope =
     overview.config.locationScope === "all"
       ? overview.locations.length > 1
-        ? `All ${overview.locations.length} locations`
-        : "Your facility"
-      : `${overview.config.locationIds.length} of ${overview.locations.length} locations`;
+        ? fill("allLocationsCount", {
+            count: String(overview.locations.length),
+          })
+        : t("yourFacility")
+      : fill("someLocationsCount", {
+          chosen: String(overview.config.locationIds.length),
+          total: String(overview.locations.length),
+        });
 
   const schedule =
     overview.config.payoutSchedule === "next_day"
-      ? "Next business day"
-      : "Two to three business days";
+      ? t("payoutNextDay")
+      : t("payoutTwoThree");
 
   return (
     <Card className="relative overflow-hidden">
@@ -131,7 +143,7 @@ export function SetupSuccess({
         <div className="space-y-3">
           <YipyyPayWordmark size="md" tone="ink" className="justify-center" />
           <h3 className="text-2xl font-bold text-balance">
-            You can take payments.
+            {t("canTakePayments")}
           </h3>
           <p className="text-muted-foreground text-sm/relaxed">
             Yipyy Pay is live for{" "}
@@ -140,8 +152,8 @@ export function SetupSuccess({
         </div>
 
         <ul className="mx-auto max-w-xs space-y-2.5 text-left">
-          <Done>Payment account connected</Done>
-          <Done>Business details confirmed</Done>
+          <Done>{t("doneAccount")}</Done>
+          <Done>{t("doneBusiness")}</Done>
           <Done>Payouts: {schedule}</Done>
           <Done>{scope} covered</Done>
         </ul>
@@ -149,18 +161,17 @@ export function SetupSuccess({
         {/* The honest next action. A facility with no terminal yet is not
             finished with hardware, and the dashboard is where they do that. */}
         <p className="text-muted-foreground mx-auto max-w-sm text-sm/relaxed">
-          Next: name your card terminal so staff can tell one from another at
-          checkout.
+          {t("nextNameTerminal")}
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Button size="lg" onClick={onDone}>
-            Go to Yipyy Pay
+            {t("goToPay")}
             <ArrowRight className="size-4" />
           </Button>
           <Button variant="outline" size="lg" onClick={onDevices}>
             <Smartphone className="size-4" />
-            Set up a terminal
+            {t("setUpTerminal")}
           </Button>
         </div>
 

@@ -16,6 +16,7 @@ import {
 } from "../YipyyPayBrand";
 import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 import { OverviewTab } from "./OverviewTab";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // The devices tab makes a slow, optional call and the preferences tab carries a
 // form. Neither is on screen when Overview is, so neither is in its bundle.
@@ -56,10 +57,10 @@ const TransactionsTab = dynamic(
 type TabKey = "overview" | "transactions" | "devices" | "preferences";
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: "overview", label: "Overview" },
-  { key: "transactions", label: "Transactions" },
-  { key: "devices", label: "Devices" },
-  { key: "preferences", label: "Preferences" },
+  { key: "overview", label: "tabOverview" },
+  { key: "transactions", label: "tabTransactions" },
+  { key: "devices", label: "tabDevices" },
+  { key: "preferences", label: "tabPreferences" },
 ];
 
 export function YipyyPayDashboard({
@@ -67,6 +68,12 @@ export function YipyyPayDashboard({
 }: {
   overview: YipyyPayOverview;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
   const nav = useYipyyPayNav();
   const requested = nav.requestedTab as TabKey | null;
   const tab: TabKey =
@@ -78,9 +85,14 @@ export function YipyyPayDashboard({
   const scope =
     overview.config.locationScope === "all"
       ? overview.locations.length > 1
-        ? `All ${overview.locations.length} locations`
+        ? fill("allLocationsCount", {
+            count: String(overview.locations.length),
+          })
         : null
-      : `${overview.config.locationIds.length} of ${overview.locations.length} locations`;
+      : fill("someLocationsCount", {
+          chosen: String(overview.config.locationIds.length),
+          total: String(overview.locations.length),
+        });
 
   return (
     <div className="space-y-6">
@@ -109,7 +121,7 @@ export function YipyyPayDashboard({
                   healthy ? "bg-emerald-300" : "bg-amber-300",
                 )}
               />
-              {healthy ? "Active" : "Needs attention"}
+              {healthy ? t("active") : t("needsAttention")}
             </span>
             <Button
               size="sm"
@@ -118,7 +130,7 @@ export function YipyyPayDashboard({
               onClick={() => nav.go({ tab: "preferences" })}
             >
               <Settings2 className="size-3.5" />
-              Update details
+              {t("updateDetails")}
             </Button>
           </div>
         </div>
@@ -133,13 +145,10 @@ export function YipyyPayDashboard({
           <div className="flex items-start gap-2.5">
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <div className="space-y-1 text-sm/relaxed">
-              <p className="font-semibold">
-                Card payments are not working right now.
-              </p>
+              <p className="font-semibold">{t("cardPaymentsDown")}</p>
               <p>
-                {connection.lastError ??
-                  "Your payment account is no longer connected. This happens if the app was removed from your merchant account."}{" "}
-                Reconnect from Preferences to start taking cards again.
+                {connection.lastError ?? t("disconnected")} Reconnect from
+                Preferences to start taking cards again.
               </p>
             </div>
           </div>
@@ -151,9 +160,8 @@ export function YipyyPayDashboard({
           <div className="flex items-start gap-2.5 text-sm/relaxed">
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <p>
-              <span className="font-semibold">This is a test account.</span>{" "}
-              Cards are simulated, no money reaches your bank, and the figures
-              below are not real takings.
+              <span className="font-semibold">{t("testAccount")}</span>{" "}
+              {t("testAccountSimulated")}
             </p>
           </div>
         </Card>
@@ -163,7 +171,7 @@ export function YipyyPayDashboard({
         <TabsList>
           {TABS.map((entry) => (
             <TabsTrigger key={entry.key} value={entry.key}>
-              {entry.label}
+              {t(entry.label)}
             </TabsTrigger>
           ))}
         </TabsList>

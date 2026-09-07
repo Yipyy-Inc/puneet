@@ -33,6 +33,7 @@ import {
   fieldErrors,
   type FieldErrors,
 } from "./fields";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Adding or editing one owner.
@@ -132,6 +133,7 @@ export function OwnerDialog({
   principal: Principal | null;
   suggestControl: boolean;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const [draft, setDraft] = useState<OwnerForm | null>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [replacingId, setReplacingId] = useState(false);
@@ -181,9 +183,7 @@ export function OwnerDialog({
     try {
       saved = await savePrincipal.mutateAsync(parsed.data);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "That could not be saved.",
-      );
+      toast.error(error instanceof Error ? error.message : t("saveFailed"));
       return;
     }
 
@@ -351,7 +351,7 @@ export function OwnerDialog({
               />
               <SelectField
                 id="owner-country"
-                label="Country"
+                label={t("country")}
                 value={form.country}
                 error={errors.country}
                 onChange={(v) => set("country", v)}
@@ -428,7 +428,7 @@ export function OwnerDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={close} disabled={busy}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             className="bg-emerald-600 text-white hover:bg-emerald-700"

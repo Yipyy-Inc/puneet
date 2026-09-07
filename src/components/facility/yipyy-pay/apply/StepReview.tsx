@@ -23,6 +23,7 @@ import {
   type MerchantApplication,
 } from "@/lib/merchant-application/application";
 import { TextField, fieldErrors, type FieldErrors } from "./fields";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Step 5 — read it back, sign it, send it.
@@ -50,6 +51,7 @@ export function StepReview({
   onBack: () => void;
   onEditStep: (step: number) => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const [signedName, setSignedName] = useState("");
   const [signedTitle, setSignedTitle] = useState("");
   const [agreed, setAgreed] = useState(false);
@@ -137,13 +139,13 @@ export function StepReview({
         </div>
       )}
 
-      <Section title="Business" onEdit={() => onEditStep(1)}>
+      <Section title={t("business")} onEdit={() => onEditStep(1)}>
         <Row label="Legal name" value={business.legalName} />
         <Row label="Trading as" value={business.tradingName || "—"} />
         <Row label="Structure" value={business.businessStructure} />
         <Row label="Tax number" value={business.taxId} />
         <Row
-          label="Address"
+          label={t("address")}
           value={[
             business.addressLine1,
             business.addressLine2,

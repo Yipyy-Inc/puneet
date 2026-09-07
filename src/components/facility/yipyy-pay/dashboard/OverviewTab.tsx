@@ -21,6 +21,7 @@ import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
 import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 import { UnattachedPayments } from "./UnattachedPayments";
 import { ConnectionCheck } from "./ConnectionCheck";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Is my money moving, and where is it?
@@ -92,6 +93,12 @@ function ReconciliationAlert({
 }: {
   reconciliation: YipyyPayOverview["reconciliation"];
 }) {
+  const t = useSettingsText().section("yipyy-pay");
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
   const { lastSweptAt, stale, unsettled } = reconciliation;
   if (!stale && unsettled === 0) return null;
 
@@ -103,15 +110,20 @@ function ReconciliationAlert({
           aria-hidden="true"
         />
         <div className="space-y-1 text-sm">
-          <p className="font-medium">
-            Refunds made in Clover may not be reaching Yipyy
-          </p>
+          <p className="font-medium">{t("refundsMayNotReach")}</p>
           <p className="text-muted-foreground">
+            {/* English pluralisation twice in one template — "update"/"s"
+                and "has"/"have". French agrees the participle as well, so each
+                count owns a whole sentence. */}
             {stale
               ? lastSweptAt
-                ? `The last check for changes made at Clover was ${formatDay(lastSweptAt)}. It normally runs every 15 minutes.`
-                : "Nothing has ever checked this connection for changes made at Clover."
-              : `${unsettled} update${unsettled === 1 ? "" : "s"} from Clover ${unsettled === 1 ? "has" : "have"} been received but not applied.`}{" "}
+                ? fill("lastSyncNote", { when: formatDay(lastSweptAt) })
+                : t("neverSwept")
+              : unsettled === 1
+                ? t("pendingUpdatesOne")
+                : fill("pendingUpdatesMany", {
+                    count: String(unsettled),
+                  })}{" "}
             Payment totals on this page may be missing refunds until this is
             resolved.
           </p>
@@ -122,6 +134,12 @@ function ReconciliationAlert({
 }
 
 export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
+  const t = useSettingsText().section("yipyy-pay");
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
   const nav = useYipyyPayNav();
   const money = useMoney(overview.connection.currency);
   const { connection, payouts, activity } = overview;
@@ -146,12 +164,12 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <KpiTile
-          label="Next payout"
+          label={t("nextPayout")}
           value={next ? money(next.amountCents) : "—"}
           hint={
             next
-              ? `Estimated ${formatDay(next.expectedOn)}`
-              : "Nothing waiting to settle"
+              ? fill("estimatedOn", { when: formatDay(next.expectedOn) })
+              : t("nothingWaiting")
           }
           icon={Wallet}
           tone="emerald"
@@ -162,30 +180,30 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
           }
         />
         <KpiTile
-          label="On its way"
+          label={t("onItsWay")}
           value={money(pendingCents)}
           hint={
             payouts.length > 1
-              ? `Across ${payouts.length} payouts`
-              : "Estimated, before any Clover adjustments"
+              ? fill("acrossPayouts", { count: String(payouts.length) })
+              : t("estimatedBeforeAdjustments")
           }
           icon={Banknote}
           tone="indigo"
         />
         <KpiTile
-          label="Card payments"
-          value={connection.connected ? "Enabled" : "Not working"}
+          label={t("cardPayments")}
+          value={connection.connected ? t("enabled") : t("notWorking")}
           hint={
             connection.currency
-              ? `Settling in ${connection.currency}`
-              : "Currency not confirmed yet"
+              ? fill("settlingInCurrency", { currency: connection.currency })
+              : t("currencyNotConfirmed")
           }
           icon={CreditCard}
           tone={connection.connected ? "emerald" : "rose"}
           alert={
             connection.connected
               ? undefined
-              : { label: "Reconnect required", tone: "rose" }
+              : { label: t("reconnectRequired"), tone: "rose" }
           }
         />
       </div>
@@ -195,10 +213,9 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
         <CardContent className="space-y-4 p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="font-semibold">Money on its way to your bank</p>
+              <p className="font-semibold">{t("moneyOnItsWay")}</p>
               <p className="text-muted-foreground text-sm/relaxed">
-                Estimated from the card payments you have taken. Clover settles
-                the final amount.
+                {t("moneyOnItsWayHelp")}
               </p>
             </div>
             <Button asChild variant="ghost" size="sm">
@@ -207,7 +224,7 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
                 target="_blank"
                 rel="noreferrer noopener"
               >
-                See actual deposits
+                {t("seeDeposits")}
                 <ExternalLink className="size-3.5 opacity-70" />
               </a>
             </Button>
@@ -215,8 +232,7 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
 
           {payouts.length === 0 ? (
             <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm/relaxed">
-              Nothing is waiting to settle. Card payments you take today will
-              appear here with the date they should reach your bank.
+              {t("nothingSettling")}
             </p>
           ) : (
             <ul className="divide-y">
@@ -251,8 +267,8 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
               Schedule:{" "}
               <span className="text-foreground font-medium">
                 {overview.config.payoutSchedule === "next_day"
-                  ? "Next business day"
-                  : "2–3 business days"}
+                  ? t("payoutNextDay")
+                  : t("payoutTwoThreeShort")}
               </span>
             </span>
             <button
@@ -260,7 +276,7 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
               onClick={() => nav.go({ tab: "preferences" })}
               className="hover:text-foreground font-medium underline underline-offset-2"
             >
-              Change
+              {t("change")}
             </button>
           </div>
         </CardContent>
@@ -270,7 +286,7 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
       <Card>
         <CardContent className="space-y-4 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-semibold">Recent card payments</p>
+            <p className="font-semibold">{t("recentPayments")}</p>
             <Button asChild variant="ghost" size="sm">
               {/* The full ledger, not a second copy of it. This pointed at
                   /facility/dashboard/billing, which listed fourteen fixture
@@ -278,7 +294,7 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
                   "View all" led away from a real payment shown above it to a
                   list that could not contain it. */}
               <Link href="/facility/dashboard/payments">
-                View all
+                {t("viewAll")}
                 <ArrowRight className="size-3.5" />
               </Link>
             </Button>
@@ -287,10 +303,9 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
           {activity.length === 0 ? (
             <div className="rounded-lg border border-dashed p-6 text-center">
               <Receipt className="text-muted-foreground mx-auto size-6" />
-              <p className="mt-2 text-sm font-medium">No card payments yet</p>
+              <p className="mt-2 text-sm font-medium">{t("noPaymentsYet")}</p>
               <p className="text-muted-foreground mx-auto mt-1 max-w-sm text-sm/relaxed">
-                Take one at checkout, or send a customer a payment link, and it
-                will show up here with the booking it belongs to.
+                {t("noPaymentsYetHelp")}
               </p>
             </div>
           ) : (
@@ -328,7 +343,7 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
                         {money(row.amountCents)}
                       </span>
                       <Badge variant={refunded ? "outline" : "success"}>
-                        {refunded ? "Refunded" : "Paid"}
+                        {refunded ? t("refunded") : t("paid")}
                       </Badge>
                     </span>
                   </li>

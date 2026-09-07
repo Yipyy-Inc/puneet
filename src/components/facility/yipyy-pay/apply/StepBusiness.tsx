@@ -19,6 +19,7 @@ import {
   fieldErrors,
   type FieldErrors,
 } from "./fields";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Step 1 — the business the merchant account will belong to.
@@ -89,6 +90,7 @@ export function StepBusiness({
   application: MerchantApplication;
   onSaved: () => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   // Derived from the server, never seeded into state — a `useState(saved)` here
   // latches whatever the query had not returned yet, and Save then writes the
   // blanks back over the real row.
@@ -123,7 +125,7 @@ export function StepBusiness({
   return (
     <div className="space-y-8">
       <header className="space-y-1">
-        <h3 className="text-xl font-semibold">Your business</h3>
+        <h3 className="text-xl font-semibold">{t("stepBusiness")}</h3>
         <p className="text-muted-foreground text-sm/relaxed">
           As it appears on your registration and tax records — not as your
           customers know you. There is a separate field below for that.
@@ -256,7 +258,7 @@ export function StepBusiness({
           />
           <SelectField
             id="country"
-            label="Country"
+            label={t("country")}
             value={form.country}
             error={errors.country}
             onChange={(v) => set("country", v)}

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { useMerchantApplication } from "@/lib/api/merchant-application";
@@ -48,6 +49,7 @@ export function YipyyPayPreConnection({
 }: {
   overview: YipyyPayOverview;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   const nav = useYipyyPayNav();
   const { data: application, isPending, error } = useMerchantApplication();
 
@@ -57,9 +59,7 @@ export function YipyyPayPreConnection({
     return (
       <Card>
         <CardContent className="text-muted-foreground p-6 text-sm">
-          {error instanceof Error
-            ? error.message
-            : "Your application could not be loaded."}
+          {error instanceof Error ? error.message : t("applicationLoadFailed")}
         </CardContent>
       </Card>
     );
