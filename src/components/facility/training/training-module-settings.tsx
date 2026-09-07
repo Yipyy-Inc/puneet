@@ -61,13 +61,15 @@ import {
 } from "lucide-react";
 import {
   DURATION_OPTIONS,
-  REPORT_CARD_SEND_MODE_HELP,
   REPORT_CARD_SEND_MODE_LABELS,
   defaultTrainingModuleSettings,
   type ReportCardSendMode,
   type TrainingLocation,
   type TrainingModuleSettings,
 } from "@/lib/training-module-settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useTrainingLabels } from "@/lib/settings/use-training-labels";
+import { formatDuration, formatNumber } from "@/lib/i18n/format";
 import { defaultTrainingWaivers } from "@/data/training-waivers";
 import type {
   TrainingPathway,
@@ -81,8 +83,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { TrainingPackage } from "@/types/training";
-import { MILESTONE_LABELS, MILESTONE_ORDER } from "@/lib/pet-milestones";
-import { MILESTONE_VISUAL } from "@/components/training/milestone-visuals";
+import { MILESTONE_ORDER } from "@/lib/pet-milestones";
+import { MILESTONE_VISUAL } from "@/components/training/milestone-visual-table";
 
 // Module-level seed for newly-created location ids — keeps writes pure for
 // the React Compiler (no Date.now() inside render).
@@ -101,6 +103,14 @@ function nextPathwayId(): string {
 }
 
 export function TrainingModuleSettings() {
+  const { locale, section } = useSettingsText();
+  const t = section("training");
+  const labels = useTrainingLabels();
+  // Intl picks the plural form, not `n === 1`: French counts 0 as singular.
+  const rules = new Intl.PluralRules(locale === "fr" ? "fr-CA" : "en-CA");
+  const pluralWord = (n: number, one: string, other: string) =>
+    t(rules.select(n) === "one" ? one : other);
+
   const queryClient = useQueryClient();
   // Hydrate from the shared cache so the toggle persists across navigations
   // within the session — consumers (customer Homework tab) read from the
@@ -169,13 +179,13 @@ export function TrainingModuleSettings() {
       trainingQueries.trainingPathways().queryKey,
       pathwaysDraft.filter((p) => p.isActive),
     );
-    toast.success("Training module settings saved.");
+    toast.success(t("savedToast"));
   }
 
   function handleRevert() {
     setDraft(saved);
     setPathwaysDraft(pathwaysSaved);
-    toast.success("Reverted unsaved changes.");
+    toast.success(t("revertedToast"));
   }
 
   function openAddPathway() {
@@ -203,7 +213,7 @@ export function TrainingModuleSettings() {
     if (!deletingPathway) return;
     const removed = deletingPathway;
     setPathwaysDraft((prev) => prev.filter((p) => p.id !== removed.id));
-    toast.success(`"${removed.name}" removed`);
+    toast.success(t("pathRemoved").replace("{name}", removed.name));
     setDeletingPathway(null);
   }
 
@@ -235,7 +245,7 @@ export function TrainingModuleSettings() {
       ...prev,
       locations: prev.locations.filter((l) => l.id !== deletingLocation.id),
     }));
-    toast.success(`"${deletingLocation.name}" removed`);
+    toast.success(t("locRemoved").replace("{name}", deletingLocation.name));
     setDeletingLocation(null);
   }
 
@@ -247,23 +257,20 @@ export function TrainingModuleSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <GraduationCap className="text-muted-foreground size-4" />
-              Training module
+              {t("modTitle")}
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              Master switches for the whole module. Turn off to hide training
-              everywhere — staff and customer portal both.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("modIntro")}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <ToggleRow
-              label="Module enabled"
-              description="When off, the Training nav and all training pages are hidden."
+              label={t("modEnabled")}
+              description={t("modEnabledHelp")}
               checked={draft.enabled}
               onCheckedChange={(v) => update("enabled", v)}
             />
             <ToggleRow
-              label="Visible to customers"
-              description="Owners see the Training section in their portal when enabled."
+              label={t("modVisible")}
+              description={t("modVisibleHelp")}
               checked={draft.visibleToCustomers}
               onCheckedChange={(v) => update("visibleToCustomers", v)}
               disabled={!draft.enabled}
@@ -277,22 +284,21 @@ export function TrainingModuleSettings() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Building className="text-muted-foreground size-4" />
-                Training locations
+                {t("locTitle")}
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
-                Physical rooms and outdoor areas where training happens. Used as
-                the picker on the Series Create dialog.
+                {t("locIntro")}
               </p>
             </div>
             <Button onClick={openAddLocation} size="sm">
               <Plus className="mr-1.5 size-4" />
-              Add location
+              {t("locAdd")}
             </Button>
           </CardHeader>
           <CardContent>
             {draft.locations.length === 0 ? (
               <div className="text-muted-foreground rounded-xl border border-dashed py-8 text-center text-sm">
-                No training locations yet — add one to start scheduling series.
+                {t("locEmpty")}
               </div>
             ) : (
               <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -300,16 +306,17 @@ export function TrainingModuleSettings() {
                   <li
                     key={location.id}
                     className={cn(
+                      // §6 rule 4: the "Hidden" chip beside the name carries this, in a
+                      // word. Opacity carried it by taking every ratio in the row down.
                       "bg-card flex items-center gap-3 rounded-xl border p-3 shadow-sm",
-                      !location.isActive && "opacity-70",
                     )}
                   >
                     <div
                       className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-xl",
-                        location.type === "indoor"
-                          ? "bg-indigo-100 text-indigo-700"
-                          : "bg-emerald-100 text-emerald-700",
+                        // A SOLID disc with a white glyph rather than a wash behind a tinted
+                        // icon — §6 rule 2, and light-on-light is what disappears.
+                        "flex size-9 shrink-0 items-center justify-center rounded-xl text-white",
+                        location.type === "indoor" ? "bg-violet" : "bg-success",
                       )}
                     >
                       {location.type === "indoor" ? (
@@ -323,29 +330,23 @@ export function TrainingModuleSettings() {
                         {location.name}
                       </p>
                       <p className="text-muted-foreground mt-0.5 inline-flex flex-wrap items-center gap-x-1.5 text-[11px]">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "border text-[10px]",
-                            location.type === "indoor"
-                              ? "border-indigo-200 bg-indigo-50 text-indigo-700"
-                              : "border-emerald-200 bg-emerald-50 text-emerald-700",
-                          )}
-                        >
-                          {location.type === "indoor" ? "Indoor" : "Outdoor"}
+                        <Badge variant="outline" className="text-[10px]">
+                          {location.type === "indoor"
+                            ? t("locIndoor")
+                            : t("locOutdoor")}
                         </Badge>
                         {location.capacity && (
                           <span className="inline-flex items-center gap-0.5">
                             <Users className="size-3" />
-                            max {location.capacity}
+                            {t("locMax").replace(
+                              "{n}",
+                              formatNumber(location.capacity, locale),
+                            )}
                           </span>
                         )}
                         {!location.isActive && (
-                          <Badge
-                            variant="outline"
-                            className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
-                          >
-                            Hidden
+                          <Badge variant="outline" className="text-[10px]">
+                            {t("locHiddenTag")}
                           </Badge>
                         )}
                       </p>
@@ -356,7 +357,7 @@ export function TrainingModuleSettings() {
                         size="icon"
                         className="size-8"
                         onClick={() => openEditLocation(location)}
-                        title="Edit location"
+                        title={t("locEdit")}
                       >
                         <Edit className="size-4" />
                       </Button>
@@ -365,7 +366,7 @@ export function TrainingModuleSettings() {
                         size="icon"
                         className="text-destructive size-8"
                         onClick={() => setDeletingLocation(location)}
-                        title="Delete location"
+                        title={t("locDelete")}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -383,23 +384,21 @@ export function TrainingModuleSettings() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Route className="text-muted-foreground size-4" />
-                Training pathways
+                {t("pathTitle")}
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
-                Multi-program journeys you can show clients on the customer
-                portal so they see what comes next after each class.
+                {t("pathIntro")}
               </p>
             </div>
             <Button onClick={openAddPathway} size="sm">
               <Plus className="mr-1.5 size-4" />
-              Add pathway
+              {t("pathAdd")}
             </Button>
           </CardHeader>
           <CardContent>
             {pathwaysDraft.length === 0 ? (
               <div className="text-muted-foreground rounded-xl border border-dashed py-8 text-center text-sm">
-                No pathways yet — create one to give clients a visual map of the
-                training journey.
+                {t("pathEmpty")}
               </div>
             ) : (
               <ul className="space-y-2">
@@ -422,17 +421,14 @@ export function TrainingModuleSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarClock className="text-muted-foreground size-4" />
-              Session defaults
+              {t("sessTitle")}
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              Prefilled values when staff create a new series. They can still
-              override per-series.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("sessIntro")}</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold">
-                Default session duration
+                {t("sessDuration")}
               </Label>
               <div className="flex flex-wrap gap-1.5">
                 {DURATION_OPTIONS.map((mins) => {
@@ -446,12 +442,15 @@ export function TrainingModuleSettings() {
                       }
                       data-active={active || undefined}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium text-slate-700 transition-colors",
-                        "hover:bg-slate-100",
-                        "data-active:border-slate-900 data-active:bg-slate-900 data-active:text-white",
+                        "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                        "hover:bg-muted",
+                        // A selected filter is the primary, not near-black (§1: there is
+                        // no second action colour).
+                        "data-active:border-primary data-active:bg-primary data-active:text-primary-foreground",
                       )}
                     >
-                      {mins} min
+                      {/* `45 min` · `1 h 30` — the shape §5q insists on for French. */}
+                      {formatDuration(mins, locale)}
                     </button>
                   );
                 })}
@@ -462,7 +461,7 @@ export function TrainingModuleSettings() {
                 className="text-sm font-semibold"
                 htmlFor="default-class-size"
               >
-                Default group class size
+                {t("sessClassSize")}
               </Label>
               <Input
                 id="default-class-size"
@@ -479,7 +478,7 @@ export function TrainingModuleSettings() {
                 className="max-w-32"
               />
               <p className="text-muted-foreground text-[11px]">
-                Used as the default `maxCapacity` on new group series.
+                {t("sessClassSizeHelp")}
               </p>
             </div>
           </CardContent>
@@ -490,29 +489,26 @@ export function TrainingModuleSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Ticket className="text-muted-foreground size-4" />
-              Enrollment
+              {t("enrolTitle")}
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              How customers join. Each series can still override these via its
-              own `enrollmentRules`.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("enrolIntro")}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <ToggleRow
-              label="Allow online enrollment"
-              description="Customers can enroll their dogs through the portal without staff intervention."
+              label={t("enrolOnline")}
+              description={t("enrolOnlineHelp")}
               checked={draft.allowOnlineEnrollment}
               onCheckedChange={(v) => update("allowOnlineEnrollment", v)}
             />
             <ToggleRow
-              label="Allow drop-ins globally"
-              description="When off, the Book Drop-In Session button is hidden everywhere even when a series opts in."
+              label={t("enrolDropIns")}
+              description={t("enrolDropInsHelp")}
               checked={draft.allowDropIns}
               onCheckedChange={(v) => update("allowDropIns", v)}
             />
             <ToggleRow
-              label="Require evaluation before enrollment"
-              description="Customers must complete a pre-enrollment evaluation before they can book advanced programs."
+              label={t("enrolEvaluation")}
+              description={t("enrolEvaluationHelp")}
               checked={draft.requireEvaluationBeforeEnrollment}
               onCheckedChange={(v) =>
                 update("requireEvaluationBeforeEnrollment", v)
@@ -523,7 +519,7 @@ export function TrainingModuleSettings() {
                 className="text-sm font-semibold"
                 htmlFor="default-message"
               >
-                Default enrollment message
+                {t("enrolMessage")}
               </Label>
               <Textarea
                 id="default-message"
@@ -532,11 +528,10 @@ export function TrainingModuleSettings() {
                 onChange={(e) =>
                   update("defaultEnrollmentMessage", e.target.value)
                 }
-                placeholder="Welcome! We can't wait to meet your dog…"
+                placeholder={t("enrolMessagePlaceholder")}
               />
               <p className="text-muted-foreground text-[11px]">
-                Surfaced in the enrollment confirmation email + the
-                customer-portal confirmation modal.
+                {t("enrolMessageHelp")}
               </p>
             </div>
           </CardContent>
@@ -547,13 +542,9 @@ export function TrainingModuleSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileSignature className="text-muted-foreground size-4" />
-              Waiver requirements
+              {t("waiverTitle")}
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              Toggle which waivers customers must sign before enrolling in any
-              training class. Each card flips between Required and Optional
-              independently.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("waiverIntro")}</p>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -567,39 +558,35 @@ export function TrainingModuleSettings() {
                   <li
                     key={waiver.id}
                     className={cn(
+                      // The required state was a rose WASH behind the card — §6 rule 2
+                      // tints a metric tile and a status chip and nothing else. The chip
+                      // beside the title says "Required" in a word already.
                       "bg-card rounded-xl border p-3 shadow-sm",
-                      required && "border-rose-200/70 bg-rose-50/30",
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <p className="text-sm font-semibold text-slate-800">
-                            {waiver.title}
+                          <p className="text-sm font-semibold">
+                            {labels.waiverTitle(waiver.id)}
                           </p>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-[10px]",
-                              required
-                                ? "border-rose-200 bg-rose-50 text-rose-700"
-                                : "border-slate-200 bg-slate-50 text-slate-600",
-                            )}
-                          >
-                            {required ? "Required" : "Optional"}
+                          <Badge variant={required ? "pending" : "outline"}>
+                            {required
+                              ? t("waiverRequired")
+                              : t("waiverOptional")}
                           </Badge>
                           {overridden && (
                             <Badge
                               variant="outline"
-                              className="border-amber-200 bg-amber-50 text-[10px] text-amber-700"
-                              title="Overrides the catalog default"
+                              className="text-[10px]"
+                              title={t("waiverOverriddenHelp")}
                             >
-                              Overridden
+                              {t("waiverOverridden")}
                             </Badge>
                           )}
                         </div>
                         <p className="text-muted-foreground text-micro/relaxed mt-1">
-                          {waiver.summary}
+                          {labels.waiverSummary(waiver.id)}
                         </p>
                       </div>
                       <Switch
@@ -621,7 +608,10 @@ export function TrainingModuleSettings() {
                             };
                           })
                         }
-                        aria-label={`Toggle ${waiver.title} required`}
+                        aria-label={t("waiverToggle").replace(
+                          "{name}",
+                          labels.waiverTitle(waiver.id),
+                        )}
                       />
                     </div>
                   </li>
@@ -636,23 +626,23 @@ export function TrainingModuleSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ClipboardCheck className="text-muted-foreground size-4" />
-              Report cards
+              {t("rcTitle")}
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              How fresh training report cards get drafted + delivered.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("rcIntro")}</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <ToggleRow
-              label="Auto-create on session completion"
-              description="A draft report card is built automatically when a session is marked complete. Trainers can edit before sending."
+              label={t("rcAutoCreate")}
+              description={t("rcAutoCreateHelp")}
               checked={draft.autoCreateReportCardOnSessionComplete}
               onCheckedChange={(v) =>
                 update("autoCreateReportCardOnSessionComplete", v)
               }
             />
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold">Send to owner</Label>
+              <Label className="text-sm font-semibold">
+                {t("rcSendToOwner")}
+              </Label>
               <RadioGroup
                 value={draft.reportCardSendMode}
                 onValueChange={(v) =>
@@ -671,8 +661,8 @@ export function TrainingModuleSettings() {
                     className={cn(
                       "flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition-colors",
                       draft.reportCardSendMode === mode
-                        ? "border-slate-900 bg-slate-50"
-                        : "hover:bg-slate-50/60",
+                        ? "border-primary ring-primary ring-2"
+                        : "hover:border-foreground/15",
                     )}
                   >
                     <RadioGroupItem
@@ -682,10 +672,10 @@ export function TrainingModuleSettings() {
                     />
                     <div>
                       <p className="text-sm font-medium">
-                        {REPORT_CARD_SEND_MODE_LABELS[mode]}
+                        {labels.sendMode(mode)}
                       </p>
                       <p className="text-muted-foreground text-[11px]/relaxed">
-                        {REPORT_CARD_SEND_MODE_HELP[mode]}
+                        {labels.sendModeHelp(mode)}
                       </p>
                     </div>
                   </label>
@@ -700,16 +690,14 @@ export function TrainingModuleSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="text-muted-foreground size-4" />
-              Homework
+              {t("hwTitle")}
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              Controls how owners submit homework practice from their portal.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("hwIntro")}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <ToggleRow
-              label="Require video for homework submission"
-              description="When on, owners must attach a short video clip before the 'Mark as Done' button activates. Use this when you want proof of practice, not just a self-reported tap."
+              label={t("hwRequireVideo")}
+              description={t("hwRequireVideoHelp")}
               icon={GraduationCap}
               checked={draft.requireVideoForHomeworkSubmission}
               onCheckedChange={(v) =>
@@ -724,18 +712,14 @@ export function TrainingModuleSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <GraduationCap className="text-muted-foreground size-4" />
-              Graduation follow-up
+              {t("gradTitle")}
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              If a graduating client hasn&apos;t enrolled in the recommended
-              next program after the configured delay, the system sends them an
-              automated nudge with the enrollment link.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("gradIntro")}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <ToggleRow
-              label="Send automated follow-up"
-              description="When off, no follow-up fires regardless of timing."
+              label={t("gradEnabled")}
+              description={t("gradEnabledHelp")}
               icon={Bell}
               checked={draft.graduationFollowUpEnabled}
               onCheckedChange={(v) => update("graduationFollowUpEnabled", v)}
@@ -745,7 +729,7 @@ export function TrainingModuleSettings() {
                 htmlFor="grad-followup-days"
                 className="text-sm font-medium"
               >
-                Delay
+                {t("gradDelay")}
               </Label>
               <div className="flex items-center gap-2">
                 <Input
@@ -764,10 +748,16 @@ export function TrainingModuleSettings() {
                     }
                   }}
                   disabled={!draft.graduationFollowUpEnabled}
-                  className="h-9 w-24"
+                  // `w-24` on a number field is fine; `h-9` was overriding Input's
+                  // own min-height, which is what stops a control clipping (§5g).
+                  className="w-24"
                 />
                 <span className="text-muted-foreground text-sm">
-                  days after the graduation card sends
+                  {pluralWord(
+                    draft.graduationFollowUpDays,
+                    "gradDelayUnitOne",
+                    "gradDelayUnitOther",
+                  )}
                 </span>
               </div>
             </div>
@@ -776,7 +766,7 @@ export function TrainingModuleSettings() {
                 htmlFor="grad-followup-template"
                 className="text-sm font-medium"
               >
-                Message template
+                {t("gradTemplate")}
               </Label>
               <Textarea
                 id="grad-followup-template"
@@ -788,11 +778,32 @@ export function TrainingModuleSettings() {
                 className="min-h-[60px] text-sm/relaxed"
               />
               <p className="text-muted-foreground text-[11px]">
-                Use{" "}
-                <code className="rounded-sm bg-slate-100 px-1">{`{petName}`}</code>{" "}
-                and{" "}
-                <code className="rounded-sm bg-slate-100 px-1">{`{programName}`}</code>{" "}
-                — substituted at send time.
+                {/* This was a sentence built from "Use", "and" and a dash around
+                    two <code> children — §5q's "never build a sentence from
+                    fragments", and untranslatable because French does not join
+                    a list the same way. The tags are one substitution now. */}
+                {t("gradTemplateHelp")
+                  .split("{tags}")
+                  .flatMap((part, i) =>
+                    i === 0
+                      ? [<span key="lead">{part}</span>]
+                      : [
+                          <code
+                            key="petName"
+                            className="bg-muted rounded-sm px-1"
+                          >
+                            {"{petName}"}
+                          </code>,
+                          <span key="sep"> · </span>,
+                          <code
+                            key="programName"
+                            className="bg-muted rounded-sm px-1"
+                          >
+                            {"{programName}"}
+                          </code>,
+                          <span key="rest">{part}</span>,
+                        ],
+                  )}
               </p>
             </div>
           </CardContent>
@@ -803,13 +814,9 @@ export function TrainingModuleSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="text-muted-foreground size-4" />
-              Milestone notifications
+              {t("mileTitle")}
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              Milestones auto-fire as the system detects achievements. By
-              default every milestone notifies the pet parent — turn off any
-              individual one you&apos;d rather keep internal.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("mileIntro")}</p>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -835,13 +842,11 @@ export function TrainingModuleSettings() {
                         <Icon className="size-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800">
-                          {MILESTONE_LABELS[kind]}
+                        <p className="text-sm font-medium">
+                          {labels.milestone(kind)}
                         </p>
                         <p className="text-muted-foreground text-[11px]">
-                          {enabled
-                            ? "Pet parents are notified when this milestone unlocks."
-                            : "Notification suppressed — milestone still appears on profiles."}
+                          {enabled ? t("mileOn") : t("mileOff")}
                         </p>
                       </div>
                     </div>
@@ -856,7 +861,10 @@ export function TrainingModuleSettings() {
                           },
                         }))
                       }
-                      aria-label={`Toggle ${MILESTONE_LABELS[kind]} notification`}
+                      aria-label={t("mileToggle").replace(
+                        "{name}",
+                        labels.milestone(kind),
+                      )}
                     />
                   </li>
                 );
@@ -870,13 +878,9 @@ export function TrainingModuleSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Hourglass className="text-muted-foreground size-4" />
-              Waitlist
+              {t("waitTitle")}
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              How long an Offer Spot invitation holds before auto-moving the
-              spot to the next person on the list. A reminder fires at the
-              half-window mark.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("waitIntro")}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
@@ -884,7 +888,7 @@ export function TrainingModuleSettings() {
                 htmlFor="waitlist-hold-hours"
                 className="text-sm font-medium"
               >
-                Hold window
+                {t("waitHold")}
               </Label>
               <div className="flex items-center gap-2">
                 <Input
@@ -902,13 +906,19 @@ export function TrainingModuleSettings() {
                       );
                     }
                   }}
-                  className="h-9 w-24"
+                  className="w-24"
                 />
                 <span className="text-muted-foreground text-sm">
-                  hours · reminder fires at{" "}
-                  <span className="font-semibold text-slate-700 tabular-nums">
-                    {Math.max(1, Math.round(draft.waitlistHoldHours / 2))}h
-                  </span>
+                  {/* `{n}h` is an English shape; `formatDuration` gives French
+                        the `1 h 30` §5q insists on, and the half-window is a
+                        DURATION rather than a bare number. */}
+                  {t("waitHoldUnit").replace(
+                    "{half}",
+                    formatDuration(
+                      Math.max(1, Math.round(draft.waitlistHoldHours / 2)) * 60,
+                      locale,
+                    ),
+                  )}
                 </span>
               </div>
             </div>
@@ -920,24 +930,21 @@ export function TrainingModuleSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bell className="text-muted-foreground size-4" />
-              Notifications
+              {t("notifTitle")}
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              Customer-facing reminders about sessions, homework, and report
-              cards.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("notifIntro")}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <ToggleRow
-                label="Email reminders"
+                label={t("notifEmail")}
                 description=""
                 icon={Mail}
                 checked={draft.notifications.emailEnabled}
                 onCheckedChange={(v) => updateNotifications("emailEnabled", v)}
               />
               <ToggleRow
-                label="SMS reminders"
+                label={t("notifSms")}
                 description=""
                 icon={MessageSquare}
                 checked={draft.notifications.smsEnabled}
@@ -946,7 +953,7 @@ export function TrainingModuleSettings() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold" htmlFor="reminder-lead">
-                Reminder lead time
+                {t("notifLead")}
               </Label>
               <div className="flex items-center gap-2">
                 <Input
@@ -964,33 +971,37 @@ export function TrainingModuleSettings() {
                   className="max-w-24"
                 />
                 <span className="text-muted-foreground text-[12px]">
-                  hours before each session
+                  {pluralWord(
+                    draft.notifications.reminderLeadHours,
+                    "notifLeadUnitOne",
+                    "notifLeadUnitOther",
+                  )}
                 </span>
               </div>
             </div>
             <div className="space-y-2 border-t pt-3">
               <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
-                Event triggers
+                {t("notifTriggers")}
               </p>
               <ToggleRow
-                label="Homework assigned"
-                description="Email the owner when fresh homework is logged at session completion."
+                label={t("notifHomework")}
+                description={t("notifHomeworkHelp")}
                 checked={draft.notifications.homeworkAssigned}
                 onCheckedChange={(v) =>
                   updateNotifications("homeworkAssigned", v)
                 }
               />
               <ToggleRow
-                label="Report card sent"
-                description="Email the owner when a new training report card is delivered."
+                label={t("notifReportCard")}
+                description={t("notifReportCardHelp")}
                 checked={draft.notifications.reportCardSent}
                 onCheckedChange={(v) =>
                   updateNotifications("reportCardSent", v)
                 }
               />
               <ToggleRow
-                label="Series cancelled"
-                description="Email + SMS all enrolled owners when staff cancels a session or series."
+                label={t("notifCancelled")}
+                description={t("notifCancelledHelp")}
                 checked={draft.notifications.seriesCancelled}
                 onCheckedChange={(v) =>
                   updateNotifications("seriesCancelled", v)
@@ -1007,15 +1018,15 @@ export function TrainingModuleSettings() {
         <div className="bg-card sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 shadow-lg">
           <p className="text-muted-foreground inline-flex items-center gap-1.5 text-[12.5px]">
             <SettingsIcon className="size-3.5" />
-            You have unsaved changes.
+            {t("unsaved")}
           </p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRevert}>
-              Revert
+              {t("revert")}
             </Button>
             <Button size="sm" onClick={handleSave} className="gap-1">
               <Save className="size-4" />
-              Save changes
+              {t("saveChanges")}
             </Button>
           </div>
         </div>
@@ -1049,21 +1060,22 @@ export function TrainingModuleSettings() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete &quot;{deletingPathway?.name}&quot;?
+              {t("pathDeleteTitle").replace(
+                "{name}",
+                deletingPathway?.name ?? "",
+              )}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Clients currently in a program on this pathway will lose the
-              journey map on their portal. Active enrollments aren&apos;t
-              affected.
+              {t("pathDeleteBody")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeletePathway}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90 text-white"
             >
-              Delete
+              {t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1076,21 +1088,22 @@ export function TrainingModuleSettings() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete &quot;{deletingLocation?.name}&quot;?
+              {t("locDeleteTitle").replace(
+                "{name}",
+                deletingLocation?.name ?? "",
+              )}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Series currently scheduled at this location will keep their text
-              label, but staff won&apos;t be able to pick it again on new
-              series.
+              {t("locDeleteBody")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteLocation}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90 text-white"
             >
-              Delete
+              {t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1112,6 +1125,7 @@ function LocationDialog({
   editing,
   onSave,
 }: LocationDialogProps) {
+  const t = useSettingsText().section("training");
   const [name, setName] = useState("");
   const [type, setType] = useState<"indoor" | "outdoor">("indoor");
   const [capacity, setCapacity] = useState<string>("");
@@ -1135,7 +1149,7 @@ function LocationDialog({
   function handleSave() {
     const trimmed = name.trim();
     if (!trimmed) {
-      toast.error("Name is required.");
+      toast.error(t("locNameRequired"));
       return;
     }
     const cap = capacity.trim() ? Number(capacity) : undefined;
@@ -1155,61 +1169,60 @@ function LocationDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="text-muted-foreground size-4" />
-            {editing ? "Edit location" : "Add training location"}
+            {editing ? t("locDialogEdit") : t("locDialogAdd")}
           </DialogTitle>
-          <DialogDescription>
-            Physical rooms and outdoor areas where training happens.
-          </DialogDescription>
+          <DialogDescription>{t("locDialogIntro")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Name</Label>
+            <Label className="text-sm font-semibold">{t("name")}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Training Room A, Outdoor Field"
+              placeholder={t("locNamePlaceholder")}
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Type</Label>
+            <Label className="text-sm font-semibold">{t("locType")}</Label>
             <div className="flex gap-1.5">
               <TypePill
                 active={type === "indoor"}
                 onClick={() => setType("indoor")}
                 icon={Home}
-                label="Indoor"
+                label={t("locIndoor")}
                 tone="indigo"
               />
               <TypePill
                 active={type === "outdoor"}
                 onClick={() => setType("outdoor")}
                 icon={Sun}
-                label="Outdoor"
+                label={t("locOutdoor")}
                 tone="emerald"
               />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Capacity (optional)</Label>
+            <Label className="text-sm font-semibold">{t("locCapacity")}</Label>
             <Input
               type="number"
               min={1}
               max={100}
               value={capacity}
               onChange={(e) => setCapacity(e.target.value)}
-              placeholder="e.g. 8"
+              placeholder={t("locCapacityPlaceholder")}
               className="max-w-32"
             />
             <p className="text-muted-foreground text-[11px]">
-              Surfaces as &quot;max N dogs&quot; on the series creation picker.
+              {/* The example is the live value, so the help text shows what the
+                  picker will actually say rather than a literal N. */}
+              {t("locCapacityHelp").replace("{n}", capacity.trim() || "8")}
             </p>
           </div>
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">
             <div>
-              <p className="text-sm font-medium">Active</p>
+              <p className="text-sm font-medium">{t("locActiveLabel")}</p>
               <p className="text-muted-foreground text-xs">
-                Hidden locations don&apos;t appear in the series-create picker
-                but stay in this list for history.
+                {t("locActiveHelp")}
               </p>
             </div>
             <Switch checked={isActive} onCheckedChange={setIsActive} />
@@ -1217,10 +1230,10 @@ function LocationDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button onClick={handleSave} disabled={!name.trim()}>
-            {editing ? "Save changes" : "Add location"}
+            {editing ? t("saveChanges") : t("locAdd")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1228,10 +1241,10 @@ function LocationDialog({
   );
 }
 
-const TYPE_PILL_ACTIVE_CLS: Record<"indigo" | "emerald", string> = {
-  indigo: "border-indigo-300 bg-indigo-50 text-indigo-800",
-  emerald: "border-emerald-300 bg-emerald-50 text-emerald-800",
-};
+// Both selected states were a tint of their own hue, which §6 rule 2
+// bans and which also made "indoor" and "outdoor" read as two different
+// KINDS of selection rather than two values of one control. One ring.
+const TYPE_PILL_ACTIVE_CLS = "border-primary ring-primary text-primary ring-2";
 
 function TypePill({
   active,
@@ -1253,9 +1266,7 @@ function TypePill({
       data-active={active || undefined}
       className={cn(
         "flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-        active
-          ? TYPE_PILL_ACTIVE_CLS[tone]
-          : "text-slate-700 hover:bg-slate-50",
+        active ? TYPE_PILL_ACTIVE_CLS : "hover:bg-muted",
       )}
     >
       <Icon className="size-4" />
@@ -1277,6 +1288,12 @@ interface PathwayRowProps {
 }
 
 function PathwayRow({ pathway, programs, onEdit, onDelete }: PathwayRowProps) {
+  const { locale, section } = useSettingsText();
+  const t = section("training");
+  const rules = new Intl.PluralRules(locale === "fr" ? "fr-CA" : "en-CA");
+  const plural = (n: number, one: string, other: string) =>
+    t(rules.select(n) === "one" ? one : other).replace("{n}", String(n));
+
   const programNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of programs) map.set(p.id, p.name);
@@ -1286,32 +1303,23 @@ function PathwayRow({ pathway, programs, onEdit, onDelete }: PathwayRowProps) {
   return (
     <li
       className={cn(
+        // §6 rule 4 — the "Hidden" chip beside the name says this in a word.
         "bg-card rounded-xl border p-3 shadow-sm",
-        !pathway.isActive && "opacity-70",
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+        <div className="bg-violet text-violet-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
           <Route className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <p className="text-sm font-semibold text-slate-800">
-              {pathway.name}
-            </p>
-            <Badge
-              variant="outline"
-              className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
-            >
-              {pathway.steps.length} step
-              {pathway.steps.length === 1 ? "" : "s"}
+            <p className="text-sm font-semibold">{pathway.name}</p>
+            <Badge variant="outline" className="text-[10px]">
+              {plural(pathway.steps.length, "pathStepOne", "pathStepOther")}
             </Badge>
             {!pathway.isActive && (
-              <Badge
-                variant="outline"
-                className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
-              >
-                Hidden
+              <Badge variant="outline" className="text-[10px]">
+                {t("pathHiddenTag")}
               </Badge>
             )}
           </div>
@@ -1324,7 +1332,8 @@ function PathwayRow({ pathway, programs, onEdit, onDelete }: PathwayRowProps) {
             <ol className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
               {pathway.steps.map((step, idx) => {
                 const programName =
-                  programNameById.get(step.programId) ?? "Unknown program";
+                  programNameById.get(step.programId) ??
+                  t("pathUnknownProgram");
                 const unknown = !programNameById.has(step.programId);
                 return (
                   <li
@@ -1346,8 +1355,8 @@ function PathwayRow({ pathway, programs, onEdit, onDelete }: PathwayRowProps) {
                     >
                       <span className="font-medium">{programName}</span>
                       {!step.required && (
-                        <span className="text-muted-foreground/80 text-[10px]">
-                          optional
+                        <span className="text-muted-foreground text-[10px]">
+                          {t("pathOptional")}
                         </span>
                       )}
                     </span>
@@ -1363,7 +1372,7 @@ function PathwayRow({ pathway, programs, onEdit, onDelete }: PathwayRowProps) {
             size="icon"
             className="size-8"
             onClick={onEdit}
-            title="Edit pathway"
+            title={t("pathEdit")}
           >
             <Edit className="size-4" />
           </Button>
@@ -1372,7 +1381,7 @@ function PathwayRow({ pathway, programs, onEdit, onDelete }: PathwayRowProps) {
             size="icon"
             className="text-destructive size-8"
             onClick={onDelete}
-            title="Delete pathway"
+            title={t("pathDelete")}
           >
             <Trash2 className="size-4" />
           </Button>
@@ -1397,6 +1406,11 @@ function PathwayDialog({
   programs,
   onSave,
 }: PathwayDialogProps) {
+  const { locale, section } = useSettingsText();
+  const t = section("training");
+  const rules = new Intl.PluralRules(locale === "fr" ? "fr-CA" : "en-CA");
+  const plural = (n: number, one: string, other: string) =>
+    t(rules.select(n) === "one" ? one : other).replace("{n}", String(n));
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -1455,11 +1469,11 @@ function PathwayDialog({
   function handleSave() {
     const trimmed = name.trim();
     if (!trimmed) {
-      toast.error("Pathway name is required.");
+      toast.error(t("pathNameRequired"));
       return;
     }
     if (steps.length === 0) {
-      toast.error("Add at least one program to the pathway.");
+      toast.error(t("pathStepsRequired"));
       return;
     }
     onSave({
@@ -1481,47 +1495,48 @@ function PathwayDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Route className="text-muted-foreground size-4" />
-            {editing ? "Edit pathway" : "Create pathway"}
+            {editing ? t("pathDialogEdit") : t("pathDialogCreate")}
           </DialogTitle>
-          <DialogDescription>
-            Arrange courses in the order a dog typically progresses. Clients see
-            this on their portal as the journey map.
-          </DialogDescription>
+          <DialogDescription>{t("pathDialogIntro")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Pathway name</Label>
+            <Label className="text-sm font-semibold">{t("pathName")}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Obedience Track, Agility Journey"
+              placeholder={t("pathNamePlaceholder")}
             />
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm font-semibold">
-              Description (optional)
+              {t("descriptionOptional")}
             </Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="One-line summary shown on the customer portal."
+              placeholder={t("pathDescriptionPlaceholder")}
               rows={2}
             />
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold">Steps</Label>
+              <Label className="text-sm font-semibold">{t("pathSteps")}</Label>
               <span className="text-muted-foreground text-[11px]">
                 {steps.length === 0
-                  ? "Add the first course below"
-                  : `${steps.length} program${steps.length === 1 ? "" : "s"} in sequence`}
+                  ? t("pathAddFirst")
+                  : plural(
+                      steps.length,
+                      "pathInSequenceOne",
+                      "pathInSequenceOther",
+                    )}
               </span>
             </div>
 
             {steps.length === 0 ? (
               <div className="text-muted-foreground rounded-lg border border-dashed py-6 text-center text-[12px]">
-                No courses added yet.
+                {t("pathNoCourses")}
               </div>
             ) : (
               <ol className="space-y-2">
@@ -1543,10 +1558,10 @@ function PathwayDialog({
                               onClick={() => moveStep(idx, -1)}
                               disabled={idx === 0}
                               className={cn(
-                                "rounded-sm p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700",
+                                "text-muted-foreground hover:bg-muted hover:text-foreground rounded-sm p-0.5",
                                 idx === 0 && "cursor-not-allowed opacity-30",
                               )}
-                              title="Move up"
+                              title={t("pathMoveUp")}
                             >
                               <ChevronUp className="size-3" />
                             </button>
@@ -1555,11 +1570,11 @@ function PathwayDialog({
                               onClick={() => moveStep(idx, 1)}
                               disabled={idx === steps.length - 1}
                               className={cn(
-                                "rounded-sm p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700",
+                                "text-muted-foreground hover:bg-muted hover:text-foreground rounded-sm p-0.5",
                                 idx === steps.length - 1 &&
                                   "cursor-not-allowed opacity-30",
                               )}
-                              title="Move down"
+                              title={t("pathMoveDown")}
                             >
                               <ChevronDown className="size-3" />
                             </button>
@@ -1567,8 +1582,8 @@ function PathwayDialog({
                         </div>
                         <div className="min-w-0 flex-1 space-y-1.5">
                           <div className="flex flex-wrap items-center justify-between gap-1.5">
-                            <p className="text-sm font-semibold text-slate-800">
-                              {program?.name ?? "Unknown program"}
+                            <p className="text-sm font-semibold">
+                              {program?.name ?? t("pathUnknownProgram")}
                             </p>
                             <div className="flex items-center gap-1.5">
                               <label className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
@@ -1579,16 +1594,18 @@ function PathwayDialog({
                                   }
                                 />
                                 <span>
-                                  {step.required ? "Required" : "Optional"}
+                                  {step.required
+                                    ? t("pathRequired")
+                                    : t("pathOptionalLabel")}
                                 </span>
                               </label>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="size-7 text-rose-600"
+                                className="text-destructive size-7"
                                 onClick={() => removeStep(idx)}
-                                title="Remove step"
+                                title={t("pathRemoveStep")}
                               >
                                 <X className="size-4" />
                               </Button>
@@ -1599,8 +1616,8 @@ function PathwayDialog({
                             onChange={(e) =>
                               updateStep(idx, { description: e.target.value })
                             }
-                            placeholder="What dogs are ready for after this step (optional)"
-                            className="h-8 text-[12px]"
+                            placeholder={t("pathStepPlaceholder")}
+                            className="text-[12px]"
                           />
                         </div>
                       </div>
@@ -1613,11 +1630,11 @@ function PathwayDialog({
             {availablePrograms.length > 0 && (
               <div className="space-y-1.5">
                 <Label className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
-                  Add a program
+                  {t("pathAddProgram")}
                 </Label>
                 <Select onValueChange={addStep} value="">
-                  <SelectTrigger className="h-9 text-[12px]">
-                    <SelectValue placeholder="Pick a program to append…" />
+                  <SelectTrigger className="text-[12px]">
+                    <SelectValue placeholder={t("pathPickProgram")} />
                   </SelectTrigger>
                   <SelectContent>
                     {availablePrograms.map((p) => (
@@ -1633,10 +1650,9 @@ function PathwayDialog({
 
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">
             <div>
-              <p className="text-sm font-medium">Visible to customers</p>
+              <p className="text-sm font-medium">{t("pathVisible")}</p>
               <p className="text-muted-foreground text-xs">
-                Hidden pathways stay in this list but don&apos;t render on the
-                customer portal.
+                {t("pathVisibleHelp")}
               </p>
             </div>
             <Switch checked={isActive} onCheckedChange={setIsActive} />
@@ -1644,13 +1660,13 @@ function PathwayDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={handleSave}
             disabled={!name.trim() || steps.length === 0}
           >
-            {editing ? "Save changes" : "Create pathway"}
+            {editing ? t("saveChanges") : t("pathDialogCreate")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1683,7 +1699,7 @@ function ToggleRow({
       )}
     >
       <div className="min-w-0 flex-1">
-        <p className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800">
+        <p className="inline-flex items-center gap-1.5 text-sm font-medium">
           {Icon && <Icon className="text-muted-foreground size-3.5" />}
           {label}
         </p>

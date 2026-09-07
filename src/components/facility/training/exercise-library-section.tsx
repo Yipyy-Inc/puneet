@@ -1,6 +1,7 @@
 "use client";
 
 import { Library, Sparkles } from "lucide-react";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { TrainingDisciplinesManager } from "./training-disciplines-manager";
 import { TrainingExercisesManager } from "./training-exercises-manager";
 
@@ -9,36 +10,37 @@ import { TrainingExercisesManager } from "./training-exercises-manager";
  *  per the spec, "everything builds on this." The anchor id lets the
  *  in-page jump nav and external deep-links land directly here. */
 export function ExerciseLibrarySection() {
+  const t = useSettingsText().section("training");
+
   return (
     <section
       id="exercise-library"
       aria-labelledby="exercise-library-heading"
       className="scroll-mt-24 space-y-3"
     >
-      <header className="flex flex-wrap items-start justify-between gap-3 rounded-xl border bg-linear-to-br from-indigo-50/60 via-white to-white px-4 py-3 shadow-sm">
+      {/* White, and a SOLID disc with a white glyph — §6 rule 2 tints a
+          metric tile and a status chip, and a section header is neither;
+          light-on-light is also what disappears against a wash. */}
+      <header className="bg-card flex flex-wrap items-start justify-between gap-3 rounded-xl border px-4 py-3 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 shadow-sm">
+          <div className="bg-violet text-violet-foreground flex size-10 shrink-0 items-center justify-center rounded-xl shadow-sm">
             <Library className="size-5" />
           </div>
           <div>
             <h3
               id="exercise-library-heading"
-              className="text-lg/tight font-bold text-slate-900"
+              className="text-lg/tight font-bold"
             >
-              Exercise library
+              {t("libraryTitle")}
             </h3>
             <p className="text-muted-foreground mt-0.5 text-[12.5px]/relaxed">
-              The foundation of all training data. Disciplines define the
-              categories; exercises feed the Session Completion picker, the
-              report cards, and the progress charts. Add custom items, hide
-              predefined ones you don&apos;t use, and drag exercises within a
-              tier to set the order trainers see them.
+              {t("libraryIntro")}
             </p>
           </div>
         </div>
         <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
-          <Sparkles className="size-3 text-indigo-400" />
-          Always findable from Settings → Training
+          <Sparkles className="text-muted-foreground size-3" />
+          {t("libraryAlways")}
         </span>
       </header>
 

@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { hexToRgba } from "@/lib/color-utils";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import { trainingQueries } from "@/lib/api/training";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import type { TrainingDiscipline } from "@/types/training";
 
 interface FormState {
@@ -66,6 +67,14 @@ function nextDisciplineId(): string {
 }
 
 export function TrainingDisciplinesManager() {
+  const { locale, section } = useSettingsText();
+  const t = section("training");
+  // Intl picks the plural form, not `n === 1`: French counts 0 as
+  // singular, and "1 active" / "2 actives" differ by more than an s.
+  const rules = new Intl.PluralRules(locale === "fr" ? "fr-CA" : "en-CA");
+  const plural = (n: number, one: string, other: string) =>
+    t(rules.select(n) === "one" ? one : other).replace("{n}", String(n));
+
   const queryClient = useQueryClient();
   const { data: disciplines = [] } = useQuery(trainingQueries.allDisciplines());
 
@@ -130,7 +139,7 @@ export function TrainingDisciplinesManager() {
 
   function handleSave() {
     if (!form.name.trim()) {
-      toast.error("Discipline name is required.");
+      toast.error(t("discNameRequired"));
       return;
     }
     if (editingDiscipline) {
@@ -146,7 +155,7 @@ export function TrainingDisciplinesManager() {
           : d,
       );
       pushDisciplines(next);
-      toast.success(`"${form.name.trim()}" updated`);
+      toast.success(t("discUpdated").replace("{name}", form.name.trim()));
     } else {
       const created: TrainingDiscipline = {
         id: nextDisciplineId(),
@@ -156,7 +165,7 @@ export function TrainingDisciplinesManager() {
         isActive: form.isActive,
       };
       pushDisciplines([...disciplines, created]);
-      toast.success(`"${created.name}" added`);
+      toast.success(t("discAdded").replace("{name}", created.name));
     }
     setDialogOpen(false);
     setEditingDiscipline(null);
@@ -173,7 +182,7 @@ export function TrainingDisciplinesManager() {
     if (!deletingDiscipline) return;
     const next = disciplines.filter((d) => d.id !== deletingDiscipline.id);
     pushDisciplines(next);
-    toast.success(`"${deletingDiscipline.name}" deleted`);
+    toast.success(t("discDeleted").replace("{name}", deletingDiscipline.name));
     setDeletingDiscipline(null);
   }
 
@@ -183,35 +192,25 @@ export function TrainingDisciplinesManager() {
         <div>
           <CardTitle className="flex items-center gap-2">
             <Layers className="text-muted-foreground size-4" />
-            Training disciplines
+            {t("discTitle")}
           </CardTitle>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Disciplines tag every course, exercise, and report card so the
-            colored badge shows up consistently across the system. Yipyy ships
-            with the most common ones — add or hide as needed.
-          </p>
+          <p className="text-muted-foreground mt-1 text-sm">{t("discIntro")}</p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className="gap-1 border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
-            >
+            <Badge variant="outline" className="gap-1 text-[10px]">
               <Eye className="size-3" />
-              {summary.active} active
+              {plural(summary.active, "discActiveOne", "discActiveOther")}
             </Badge>
             {summary.inactive > 0 && (
-              <Badge
-                variant="outline"
-                className="gap-1 border-slate-200 bg-slate-50 text-[10px] text-slate-600"
-              >
+              <Badge variant="outline" className="gap-1 text-[10px]">
                 <EyeOff className="size-3" />
-                {summary.inactive} hidden
+                {plural(summary.inactive, "discHiddenOne", "discHiddenOther")}
               </Badge>
             )}
           </div>
         </div>
         <Button onClick={openAdd} size="sm">
           <Plus className="mr-1.5 size-4" />
-          Add discipline
+          {t("discAdd")}
         </Button>
       </CardHeader>
 
@@ -219,7 +218,7 @@ export function TrainingDisciplinesManager() {
         {disciplines.length === 0 ? (
           <div className="text-muted-foreground rounded-xl border border-dashed py-10 text-center text-sm">
             <Sparkles className="text-muted-foreground/40 mx-auto mb-2 size-6" />
-            No disciplines yet — add your first to start tagging courses.
+            {t("discEmpty")}
           </div>
         ) : (
           <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -229,8 +228,11 @@ export function TrainingDisciplinesManager() {
                 <li
                   key={d.id}
                   className={cn(
+                    // A hidden discipline used to be `opacity-70` over the whole row,
+                    // which §6 rule 4 bans — it drops the name and the description below
+                    // the text floor together. The "Hidden" chip beside the name already
+                    // says it, in a word, which is the only version that prints.
                     "group bg-card flex items-start gap-3 rounded-xl border p-3 shadow-sm transition-all",
-                    !d.isActive && "opacity-70",
                   )}
                 >
                   {/* Color swatch */}
@@ -261,14 +263,11 @@ export function TrainingDisciplinesManager() {
                           className="size-1.5 rounded-full"
                           style={{ backgroundColor: color }}
                         />
-                        Badge preview
+                        {t("discBadgePreview")}
                       </Badge>
                       {!d.isActive && (
-                        <Badge
-                          variant="outline"
-                          className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
-                        >
-                          Hidden
+                        <Badge variant="outline" className="text-[10px]">
+                          {t("discHiddenTag")}
                         </Badge>
                       )}
                     </div>
@@ -283,7 +282,7 @@ export function TrainingDisciplinesManager() {
                     <Switch
                       checked={d.isActive}
                       onCheckedChange={() => toggleActive(d.id)}
-                      aria-label={`Toggle ${d.name}`}
+                      aria-label={t("discToggle").replace("{name}", d.name)}
                       className="scale-90"
                     />
                     <Button
@@ -291,7 +290,7 @@ export function TrainingDisciplinesManager() {
                       size="icon"
                       className="size-8"
                       onClick={() => openEdit(d)}
-                      title="Edit discipline"
+                      title={t("discEdit")}
                     >
                       <Edit className="size-4" />
                     </Button>
@@ -300,7 +299,7 @@ export function TrainingDisciplinesManager() {
                       size="icon"
                       className="text-destructive size-8"
                       onClick={() => setDeletingDiscipline(d)}
-                      title="Delete discipline"
+                      title={t("discDelete")}
                     >
                       <Trash2 className="size-4" />
                     </Button>
@@ -323,26 +322,23 @@ export function TrainingDisciplinesManager() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editingDiscipline ? "Edit discipline" : "Add discipline"}
+              {editingDiscipline ? t("discDialogEdit") : t("discDialogAdd")}
             </DialogTitle>
-            <DialogDescription>
-              Disciplines group your training programs and exercises so badges
-              and filters stay consistent.
-            </DialogDescription>
+            <DialogDescription>{t("discDialogIntro")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold">Name</Label>
+              <Label className="text-sm font-semibold">{t("name")}</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Obedience, Agility, Scent Work"
+                placeholder={t("discNamePlaceholder")}
               />
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold">
-                Description (optional)
+                {t("descriptionOptional")}
               </Label>
               <Textarea
                 rows={2}
@@ -350,20 +346,19 @@ export function TrainingDisciplinesManager() {
                 onChange={(e) =>
                   setForm({ ...form, description: e.target.value })
                 }
-                placeholder="Short tagline so staff know what falls under this discipline."
+                placeholder={t("discDescriptionPlaceholder")}
               />
             </div>
             <RateColorPicker
               value={form.color}
               onChange={(hex) => setForm({ ...form, color: hex })}
-              label="Badge color"
+              label={t("discBadgeColour")}
             />
             <div className="flex items-center justify-between rounded-lg border px-3 py-2">
               <div>
-                <p className="text-sm font-medium">Active</p>
+                <p className="text-sm font-medium">{t("discActiveLabel")}</p>
                 <p className="text-muted-foreground text-xs">
-                  Hidden disciplines stay on file but disappear from course +
-                  exercise pickers.
+                  {t("discActiveHelp")}
                 </p>
               </div>
               <Switch
@@ -375,10 +370,10 @@ export function TrainingDisciplinesManager() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleSave} disabled={!form.name.trim()}>
-              {editingDiscipline ? "Save changes" : "Add discipline"}
+              {editingDiscipline ? t("saveChanges") : t("discAdd")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -392,21 +387,27 @@ export function TrainingDisciplinesManager() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete &quot;{deletingDiscipline?.name}&quot;?
+              {/* The whole question is ONE string. Built from fragments it
+                  cannot take French quotation marks or the no-break space
+                  before the question mark (§5q). */}
+              {t("discDeleteTitle").replace(
+                "{name}",
+                deletingDiscipline?.name ?? "",
+              )}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Programs and exercises currently tagged with this discipline will
-              lose their tag — they won&apos;t be deleted. Consider hiding
-              instead if you might want it back later.
+              {t("discDeleteBody")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            {/* `bg-red-600` is off-palette; the destructive action's colour is
+                `--destructive`, which is the one measured against white. */}
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90 text-white"
             >
-              Delete
+              {t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

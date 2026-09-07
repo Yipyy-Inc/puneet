@@ -73,12 +73,13 @@ import { hexToRgba } from "@/lib/color-utils";
 import { trainingQueries } from "@/lib/api/training";
 import {
   DIFFICULTY_BADGE_CLS,
-  DIFFICULTY_LABELS,
   DIFFICULTY_LEVELS,
   difficultyRank,
   type DifficultyLevel,
   type TrainingExerciseDef,
 } from "@/data/training-exercises";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useTrainingLabels } from "@/lib/settings/use-training-labels";
 import type { TrainingDiscipline } from "@/types/training";
 
 interface FormState {
@@ -108,6 +109,14 @@ function nextExerciseId(): string {
 const UNCATEGORIZED = "__uncategorized__";
 
 export function TrainingExercisesManager() {
+  const { locale, section } = useSettingsText();
+  const t = section("training");
+  const labels = useTrainingLabels();
+  // Intl picks the plural form, not `n === 1`: French counts 0 as singular.
+  const rules = new Intl.PluralRules(locale === "fr" ? "fr-CA" : "en-CA");
+  const plural = (n: number, one: string, other: string) =>
+    t(rules.select(n) === "one" ? one : other).replace("{n}", String(n));
+
   const queryClient = useQueryClient();
   const { data: exercises = [] } = useQuery(trainingQueries.allExercises());
   const { data: disciplines = [] } = useQuery(trainingQueries.allDisciplines());
@@ -224,11 +233,11 @@ export function TrainingExercisesManager() {
 
   function handleSave() {
     if (!form.name.trim()) {
-      toast.error("Exercise name is required.");
+      toast.error(t("exNameRequired"));
       return;
     }
     if (!form.disciplineId) {
-      toast.error("Pick a discipline for this exercise.");
+      toast.error(t("exDisciplineRequired"));
       return;
     }
     if (editing) {
@@ -254,7 +263,7 @@ export function TrainingExercisesManager() {
           : ex,
       );
       pushExercises(next);
-      toast.success(`"${form.name.trim()}" updated`);
+      toast.success(t("exUpdated").replace("{name}", form.name.trim()));
     } else {
       const created: TrainingExerciseDef = {
         id: nextExerciseId(),
@@ -267,7 +276,7 @@ export function TrainingExercisesManager() {
         isCustom: true,
       };
       pushExercises([...exercises, created]);
-      toast.success(`"${created.name}" added`);
+      toast.success(t("exAdded").replace("{name}", created.name));
     }
     setDialogOpen(false);
     setEditing(null);
@@ -284,7 +293,7 @@ export function TrainingExercisesManager() {
   function confirmDelete() {
     if (!deleting) return;
     pushExercises(exercises.filter((ex) => ex.id !== deleting.id));
-    toast.success(`"${deleting.name}" deleted`);
+    toast.success(t("exDeleted").replace("{name}", deleting.name));
     setDeleting(null);
   }
 
@@ -324,46 +333,31 @@ export function TrainingExercisesManager() {
         <div>
           <CardTitle className="flex items-center gap-2">
             <Dumbbell className="text-muted-foreground size-4" />
-            Training exercises
+            {t("exTitle")}
           </CardTitle>
-          <p className="text-muted-foreground mt-1 text-sm">
-            The exercise library powers the Session Completion picker. Exercises
-            are grouped by difficulty so the picker mirrors how a real training
-            program progresses — Foundation first, then up to Competition. Drag
-            rows within a tier to reorder; predefined exercises can be hidden
-            but not deleted so historical session logs keep their names.
-          </p>
+          <p className="text-muted-foreground mt-1 text-sm">{t("exIntro")}</p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className="gap-1 border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
-            >
+            <Badge variant="outline" className="gap-1 text-[10px]">
               <Eye className="size-3" />
-              {summary.visible} visible
+              {plural(summary.visible, "exVisibleOne", "exVisibleOther")}
             </Badge>
             {summary.hidden > 0 && (
-              <Badge
-                variant="outline"
-                className="gap-1 border-slate-200 bg-slate-50 text-[10px] text-slate-600"
-              >
+              <Badge variant="outline" className="gap-1 text-[10px]">
                 <EyeOff className="size-3" />
-                {summary.hidden} hidden
+                {plural(summary.hidden, "exHiddenOne", "exHiddenOther")}
               </Badge>
             )}
             {summary.custom > 0 && (
-              <Badge
-                variant="outline"
-                className="gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-700"
-              >
+              <Badge variant="outline" className="gap-1 text-[10px]">
                 <Sparkles className="size-3" />
-                {summary.custom} custom
+                {plural(summary.custom, "exCustomOne", "exCustomOther")}
               </Badge>
             )}
           </div>
         </div>
         <Button onClick={openAdd} size="sm">
           <Plus className="mr-1.5 size-4" />
-          Add exercise
+          {t("exAdd")}
         </Button>
       </CardHeader>
 
@@ -373,7 +367,7 @@ export function TrainingExercisesManager() {
             <FilterPill
               active={filterDisciplineId === "all"}
               onClick={() => setFilterDisciplineId("all")}
-              label={`All (${summary.total})`}
+              label={t("exFilterAll").replace("{n}", String(summary.total))}
             />
             {activeDisciplines.map((d) => {
               const count = exercises.filter(
@@ -385,7 +379,9 @@ export function TrainingExercisesManager() {
                   key={d.id}
                   active={filterDisciplineId === d.id}
                   onClick={() => setFilterDisciplineId(d.id)}
-                  label={`${d.name} (${count})`}
+                  label={t("exFilterOne")
+                    .replace("{name}", d.name)
+                    .replace("{n}", String(count))}
                   color={d.color}
                 />
               );
@@ -396,11 +392,11 @@ export function TrainingExercisesManager() {
         {empty ? (
           <div className="text-muted-foreground rounded-xl border border-dashed py-10 text-center text-sm">
             <Sparkles className="text-muted-foreground/40 mx-auto mb-2 size-6" />
-            No exercises yet — add your first to start logging session work.
+            {t("exEmpty")}
           </div>
         ) : filteredEmpty ? (
           <div className="text-muted-foreground rounded-xl border border-dashed py-8 text-center text-sm">
-            No exercises tagged with this discipline yet.
+            {t("exFilteredEmpty")}
           </div>
         ) : (
           <div className="space-y-2">
@@ -412,11 +408,13 @@ export function TrainingExercisesManager() {
                   ? undefined
                   : disciplineById.get(sectionId);
               const color = discipline?.color ?? "#94a3b8";
+              // A discipline is named by the facility, so its name is a name and
+              // never passes through the locale layer. Only the two FALLBACKS do.
               const name =
                 discipline?.name ??
                 (sectionId === UNCATEGORIZED
-                  ? "Uncategorized"
-                  : "Unknown discipline");
+                  ? t("exUncategorized")
+                  : t("exUnknownDiscipline"));
               const sectionCount = Array.from(tierMap.values()).reduce(
                 (sum, list) => sum + list.length,
                 0,
@@ -449,15 +447,11 @@ export function TrainingExercisesManager() {
                               color,
                             }}
                           >
-                            {sectionCount} exercise
-                            {sectionCount === 1 ? "" : "s"}
+                            {plural(sectionCount, "exCountOne", "exCountOther")}
                           </Badge>
                           {discipline && !discipline.isActive && (
-                            <Badge
-                              variant="outline"
-                              className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
-                            >
-                              Discipline hidden
+                            <Badge variant="outline" className="text-[10px]">
+                              {t("exDisciplineHidden")}
                             </Badge>
                           )}
                         </div>
@@ -504,32 +498,31 @@ export function TrainingExercisesManager() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Edit exercise" : "Add exercise"}
+              {editing ? t("exDialogEdit") : t("exDialogAdd")}
             </DialogTitle>
-            <DialogDescription>
-              Exercises feed the Session Completion picker so trainers can log
-              what they worked on and rate the dog&apos;s performance.
-            </DialogDescription>
+            <DialogDescription>{t("exDialogIntro")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold">Name</Label>
+              <Label className="text-sm font-semibold">{t("name")}</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Heel, Recall, Weave poles"
+                placeholder={t("exNamePlaceholder")}
               />
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-sm font-semibold">Discipline</Label>
+                <Label className="text-sm font-semibold">
+                  {t("exDiscipline")}
+                </Label>
                 <Select
                   value={form.disciplineId}
                   onValueChange={(v) => setForm({ ...form, disciplineId: v })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Pick a discipline" />
+                    <SelectValue placeholder={t("exPickDiscipline")} />
                   </SelectTrigger>
                   <SelectContent>
                     {activeDisciplines.map((d) => (
@@ -547,7 +540,9 @@ export function TrainingExercisesManager() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-semibold">Difficulty</Label>
+                <Label className="text-sm font-semibold">
+                  {t("exDifficulty")}
+                </Label>
                 <Select
                   value={form.difficultyLevel}
                   onValueChange={(v) =>
@@ -560,7 +555,7 @@ export function TrainingExercisesManager() {
                   <SelectContent>
                     {DIFFICULTY_LEVELS.map((level) => (
                       <SelectItem key={level} value={level}>
-                        {DIFFICULTY_LABELS[level]}
+                        {labels.difficulty(level)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -569,7 +564,7 @@ export function TrainingExercisesManager() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold">
-                Description (optional)
+                {t("descriptionOptional")}
               </Label>
               <Textarea
                 rows={2}
@@ -577,15 +572,14 @@ export function TrainingExercisesManager() {
                 onChange={(e) =>
                   setForm({ ...form, description: e.target.value })
                 }
-                placeholder="Cue, criteria, or anything trainers should remember."
+                placeholder={t("exDescriptionPlaceholder")}
               />
             </div>
             <div className="flex items-center justify-between rounded-lg border px-3 py-2">
               <div>
-                <p className="text-sm font-medium">Visible in picker</p>
+                <p className="text-sm font-medium">{t("exVisibleInPicker")}</p>
                 <p className="text-muted-foreground text-xs">
-                  Hidden exercises stay on file so historical session logs keep
-                  their names, but drop out of the Session Completion picker.
+                  {t("exVisibleInPickerHelp")}
                 </p>
               </div>
               <Switch
@@ -597,21 +591,22 @@ export function TrainingExercisesManager() {
               (editing.disciplineId !== form.disciplineId ||
                 editing.difficultyLevel !== form.difficultyLevel) && (
                 <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-xs">
-                  Saving will move &quot;{editing.name}&quot; to the bottom of
-                  its new tier.
+                  {/* One sentence with one hole. Assembled from three JSX children
+                      it could not take French quotation marks (§5q). */}
+                  {t("exWillMove").replace("{name}", editing.name)}
                 </p>
               )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               onClick={handleSave}
               disabled={!form.name.trim() || !form.disciplineId}
             >
-              {editing ? "Save changes" : "Add exercise"}
+              {editing ? t("saveChanges") : t("exAdd")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -624,22 +619,17 @@ export function TrainingExercisesManager() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete &quot;{deleting?.name}&quot;?
+              {t("exDeleteTitle").replace("{name}", deleting?.name ?? "")}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              This exercise will be removed from the library. Any historical
-              session logs that reference it will keep the recorded name but you
-              won&apos;t be able to pick it again. Consider hiding instead if
-              you might want it back later.
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t("exDeleteBody")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90 text-white"
             >
-              Delete
+              {t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -679,6 +669,8 @@ function TierBlock({
   onDelete: (ex: TrainingExerciseDef) => void;
   onReorder: (fromId: string, toId: string) => void;
 }) {
+  const t = useSettingsText().section("training");
+  const labels = useTrainingLabels();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       // Slight activation distance so an accidental nudge while clicking
@@ -704,11 +696,15 @@ function TierBlock({
           className={cn("gap-1 text-[10px]", DIFFICULTY_BADGE_CLS[level])}
         >
           <span className="size-1 rounded-full bg-current opacity-70" />
-          {DIFFICULTY_LABELS[level]}
+          {labels.difficulty(level)}
         </Badge>
         <span className="text-muted-foreground text-[10px] font-medium">
-          Tier {difficultyRank(level) + 1} of {DIFFICULTY_LEVELS.length} · drag
-          to reorder
+          {/* One sentence, two holes. Split across JSX children it could not
+                be reordered, and French puts the rank and the total in the
+                same places but with a different word between them (§5q). */}
+          {t("exTierOf")
+            .replace("{rank}", String(difficultyRank(level) + 1))
+            .replace("{total}", String(DIFFICULTY_LEVELS.length))}
         </span>
       </div>
       <DndContext
@@ -748,6 +744,7 @@ function SortableExerciseRow({
   onToggleHidden: () => void;
   onDelete: () => void;
 }) {
+  const t = useSettingsText().section("training");
   const {
     attributes,
     listeners,
@@ -767,9 +764,11 @@ function SortableExerciseRow({
       ref={setNodeRef}
       style={style}
       className={cn(
+        // The hidden state was `opacity-60` over the row, which §6 rule 4
+        // bans — it takes the name and the description below the text floor
+        // together. The "Hidden" chip beside the name already says it.
         "bg-card flex items-center gap-2 rounded-lg border px-2 py-1.5 transition-shadow",
-        exercise.isHidden && "opacity-60",
-        isDragging && "shadow-lg ring-2 ring-indigo-200",
+        isDragging && "ring-primary shadow-lg ring-2",
       )}
     >
       <button
@@ -777,8 +776,8 @@ function SortableExerciseRow({
         {...attributes}
         {...listeners}
         className="text-muted-foreground hover:text-foreground -ml-1 cursor-grab touch-none rounded-sm p-1 active:cursor-grabbing"
-        title="Drag to reorder within this tier"
-        aria-label={`Drag handle for ${exercise.name}`}
+        title={t("exDragTitle")}
+        aria-label={t("exDragHandle").replace("{name}", exercise.name)}
       >
         <GripVertical className="size-4" />
       </button>
@@ -788,20 +787,14 @@ function SortableExerciseRow({
             {exercise.name}
           </p>
           {exercise.isCustom && (
-            <Badge
-              variant="outline"
-              className="gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-700"
-            >
+            <Badge variant="outline" className="gap-1 text-[10px]">
               <Sparkles className="size-3" />
-              Custom
+              {t("exCustomTag")}
             </Badge>
           )}
           {exercise.isHidden && (
-            <Badge
-              variant="outline"
-              className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
-            >
-              Hidden
+            <Badge variant="outline" className="text-[10px]">
+              {t("exHiddenTag")}
             </Badge>
           )}
         </div>
@@ -815,7 +808,7 @@ function SortableExerciseRow({
         <Switch
           checked={!exercise.isHidden}
           onCheckedChange={onToggleHidden}
-          aria-label={`Toggle ${exercise.name}`}
+          aria-label={t("exToggle").replace("{name}", exercise.name)}
           className="scale-90"
         />
         <Button
@@ -823,7 +816,7 @@ function SortableExerciseRow({
           size="icon"
           className="size-8"
           onClick={onEdit}
-          title="Edit exercise"
+          title={t("exEdit")}
         >
           <Edit className="size-4" />
         </Button>
@@ -833,14 +826,14 @@ function SortableExerciseRow({
             size="icon"
             className="text-destructive size-8"
             onClick={onDelete}
-            title="Delete exercise"
+            title={t("exDelete")}
           >
             <Trash2 className="size-4" />
           </Button>
         ) : (
           <span
             className="text-muted-foreground/30 inline-flex size-8 items-center justify-center"
-            title="Predefined exercises can be hidden but not deleted."
+            title={t("exPredefined")}
           >
             <Trash2 className="size-4" />
           </span>
