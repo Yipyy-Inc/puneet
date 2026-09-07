@@ -10,6 +10,7 @@ import {
   useStaffHrConfig,
   useSaveStaffHrConfig,
 } from "@/lib/api/staff-onboarding";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 const INVITE_MIN = 3;
 const INVITE_MAX = 30;
@@ -17,6 +18,7 @@ const INVITE_MAX = 30;
 /** Onboarding invite expiry / completion deadline / HR document retention —
  *  persisted to the Phase 0 staff-onboarding store (StaffHrConfig). */
 export function StaffHrConfigSettings() {
+  const t = useSettingsText().section("hr-config");
   const config = useStaffHrConfig();
   // The displayed value comes from the REFETCH this mutation triggers, not
   // from the input — see the note in src/lib/api/staff.ts.
@@ -50,21 +52,18 @@ export function StaffHrConfigSettings() {
       hrDocRetentionYears: Math.max(1, Math.round(hrDocRetentionYears) || 1),
     });
     setInviteExpiryDays(invite);
-    toast.success("Onboarding & HR settings saved");
+    toast.success(t("hrSaved"));
   };
 
   return (
     <Card>
       <CardHeader>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Defaults for the self-serve onboarding invite, completion window, and
-          how long signed HR documents are retained.
-        </p>
+        <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid gap-6 sm:grid-cols-3">
           <div className="space-y-1.5">
-            <Label htmlFor="inviteExpiry">Invite expiry (days)</Label>
+            <Label htmlFor="inviteExpiry">{t("inviteExpiry")}</Label>
             <Input
               id="inviteExpiry"
               type="number"
@@ -74,13 +73,14 @@ export function StaffHrConfigSettings() {
               onChange={(e) => setInviteExpiryDays(Number(e.target.value))}
             />
             <p className="text-muted-foreground text-xs">
-              Onboarding link stays valid this long ({INVITE_MIN}–{INVITE_MAX},
-              default 7).
+              {t("inviteExpiryHelp")
+                .replace("{min}", String(INVITE_MIN))
+                .replace("{max}", String(INVITE_MAX))}
             </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="completionDeadline">
-              Completion deadline (days)
+              {t("completionDeadline")}
             </Label>
             <Input
               id="completionDeadline"
@@ -92,11 +92,11 @@ export function StaffHrConfigSettings() {
               }
             />
             <p className="text-muted-foreground text-xs">
-              Days a new hire has to finish onboarding (default 14).
+              {t("completionDeadlineHelp")}
             </p>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="retention">HR document retention (years)</Label>
+            <Label htmlFor="retention">{t("retention")}</Label>
             <Input
               id="retention"
               type="number"
@@ -105,18 +105,14 @@ export function StaffHrConfigSettings() {
               onChange={(e) => setHrDocRetentionYears(Number(e.target.value))}
             />
             <p className="text-muted-foreground text-xs">
-              How long signed HR documents are kept (default 7).
+              {t("retentionHelp")}
             </p>
           </div>
         </div>
 
         <div className="flex justify-end">
-          <Button
-            onClick={handleSave}
-            disabled={!dirty}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-          >
-            Save changes
+          <Button onClick={handleSave} disabled={!dirty}>
+            {t("saveChanges")}
           </Button>
         </div>
       </CardContent>

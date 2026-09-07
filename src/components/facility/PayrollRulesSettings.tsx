@@ -23,6 +23,9 @@ import {
   useSaveFacilitySetting,
 } from "@/lib/api/facility-settings";
 import { useFacilityRole } from "@/hooks/use-facility-role";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
+import { weekdayNames } from "@/lib/dates/calendar-names";
 import type { PayrollConfig, PayrollHoliday } from "@/lib/settings/payroll";
 
 // ============================================================================
@@ -53,16 +56,6 @@ import type { PayrollConfig, PayrollHoliday } from "@/lib/settings/payroll";
 // is a decision.
 // ============================================================================
 
-const DAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
-
 /** The form, as the saved config would fill it in. */
 interface Draft {
   enabled: boolean;
@@ -83,6 +76,8 @@ function draftFrom(saved: PayrollConfig | undefined): Draft {
 }
 
 export function PayrollRulesSettings() {
+  const { section, locale } = useSettingsText();
+  const t = section("payroll-rules");
   const { role } = useFacilityRole();
   const { settings, isPending } = useFacilitySettings();
   const saveSetting = useSaveFacilitySetting();
@@ -145,7 +140,7 @@ export function PayrollRulesSettings() {
 
   const handleSave = async () => {
     if (blocked) {
-      toast.error("Fix the highlighted fields before saving.");
+      toast.error(t("fixHighlighted"));
       return;
     }
     // Awaited, and the failure reported. RLS refuses this write without
@@ -168,13 +163,9 @@ export function PayrollRulesSettings() {
         } satisfies PayrollConfig,
       });
       setDraft(null);
-      toast.success("Payroll rules saved");
+      toast.success(t("saved"));
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Payroll rules were not saved.",
-      );
+      toast.error(error instanceof Error ? error.message : t("notSaved"));
     }
   };
 
@@ -193,7 +184,7 @@ export function PayrollRulesSettings() {
     return (
       <Card>
         <CardContent className="text-muted-foreground p-6 text-sm">
-          Only an owner or a manager can change what the facility pays.
+          {t("ownerOnly")}
         </CardContent>
       </Card>
     );
@@ -204,7 +195,7 @@ export function PayrollRulesSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Timer className="size-4" /> Overtime
+            <Timer className="size-4" /> {t("overtime")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -212,19 +203,21 @@ export function PayrollRulesSettings() {
             <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <p>
-                No overtime rule is set. Payroll is currently billing every hour
-                at the ordinary rate — which is <em>not</em> a statement that no
-                overtime is owed here, only that nobody has said what the rule
-                is.
+                {/* One sentence in the catalogue with the emphasised word as
+                    a placeholder. It was three JSX fragments around an <em>,
+                    and French does not put the negation where English does. */}
+                <InterpolatedText template={t("noRuleSet")} placeholder="{not}">
+                  <em>{t("wordNot")}</em>
+                </InterpolatedText>
               </p>
             </div>
           ) : null}
 
           <div className="flex items-center justify-between gap-4">
             <div>
-              <Label className="text-sm font-medium">Pay overtime</Label>
+              <Label className="text-sm font-medium">{t("payOvertime")}</Label>
               <p className="text-muted-foreground text-xs">
-                Hours past the weekly threshold pay at the multiplier below.
+                {t("payOvertimeHelp")}
               </p>
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
@@ -235,7 +228,7 @@ export function PayrollRulesSettings() {
               <Separator />
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="ot-threshold">Weekly threshold (hours)</Label>
+                  <Label htmlFor="ot-threshold">{t("weeklyThreshold")}</Label>
                   <Input
                     id="ot-threshold"
                     inputMode="decimal"
@@ -245,12 +238,12 @@ export function PayrollRulesSettings() {
                   />
                   {badThreshold ? (
                     <p className="text-xs text-rose-600">
-                      Must be more than zero.
+                      {t("mustBeAboveZero")}
                     </p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ot-multiplier">Multiplier</Label>
+                  <Label htmlFor="ot-multiplier">{t("multiplier")}</Label>
                   <Input
                     id="ot-multiplier"
                     inputMode="decimal"
@@ -259,17 +252,17 @@ export function PayrollRulesSettings() {
                     className={badMultiplier ? "border-rose-400" : undefined}
                   />
                   <p className="text-muted-foreground text-xs">
-                    1.5 = time and a half.
+                    {t("multiplierHelp")}
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Week starts on</Label>
+                  <Label>{t("weekStartsOn")}</Label>
                   <Select value={weekStartsOn} onValueChange={setWeekStartsOn}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {DAYS.map((day, index) => (
+                      {weekdayNames(locale, "long").map((day, index) => (
                         <SelectItem key={day} value={String(index)}>
                           {day}
                         </SelectItem>
@@ -277,7 +270,7 @@ export function PayrollRulesSettings() {
                     </SelectContent>
                   </Select>
                   <p className="text-muted-foreground text-xs">
-                    Decides where a week&apos;s hours are counted from.
+                    {t("weekStartsOnHelp")}
                   </p>
                 </div>
               </div>
@@ -289,20 +282,18 @@ export function PayrollRulesSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <CalendarDays className="size-4" /> Statutory holidays
+            <CalendarDays className="size-4" /> {t("statutoryHolidays")}
           </CardTitle>
           <p className="text-muted-foreground text-xs">
-            Hours worked on these dates pay at their multiplier. The calendar
-            shows them on the roster and payroll bills them — one list, so the
-            two cannot disagree. Holiday hours are not <em>also</em> given the
-            overtime premium.
+            <InterpolatedText template={t("holidaysHelp")} placeholder="{also}">
+              <em>{t("wordAlso")}</em>
+            </InterpolatedText>
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
           {holidays.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              No holidays set. Quebec has eight and Ontario nine, and they fall
-              on different days — so none are assumed.
+              {t("noHolidaysSet")}
             </p>
           ) : (
             holidays.map((holiday, index) => (
@@ -311,7 +302,7 @@ export function PayrollRulesSettings() {
                 className="grid items-end gap-2 sm:grid-cols-[1fr_1fr_100px_40px]"
               >
                 <div className="space-y-1">
-                  <Label className="text-xs">Date</Label>
+                  <Label className="text-xs">{t("date")}</Label>
                   <Input
                     type="date"
                     value={holiday.date}
@@ -321,7 +312,7 @@ export function PayrollRulesSettings() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Name</Label>
+                  <Label className="text-xs">{t("name")}</Label>
                   <Input
                     value={holiday.name}
                     placeholder="Fête nationale"
@@ -331,7 +322,7 @@ export function PayrollRulesSettings() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Multiplier</Label>
+                  <Label className="text-xs">{t("multiplier")}</Label>
                   <Input
                     inputMode="decimal"
                     value={String(holiday.multiplier)}
@@ -346,7 +337,10 @@ export function PayrollRulesSettings() {
                   variant="ghost"
                   size="icon"
                   onClick={() => removeHoliday(index)}
-                  aria-label={`Remove ${holiday.name || "holiday"}`}
+                  aria-label={t("removeNamed").replace(
+                    "{name}",
+                    holiday.name || t("wordHoliday"),
+                  )}
                 >
                   <Trash2 className="size-4" />
                 </Button>
@@ -355,11 +349,11 @@ export function PayrollRulesSettings() {
           )}
           {badHoliday ? (
             <p className="text-xs text-rose-600">
-              Every holiday needs a date and a name.
+              {t("holidayNeedsDateAndName")}
             </p>
           ) : null}
           <Button variant="outline" size="sm" onClick={addHoliday}>
-            <Plus className="mr-1.5 size-3.5" /> Add a holiday
+            <Plus className="mr-1.5 size-3.5" /> {t("addHoliday")}
           </Button>
         </CardContent>
       </Card>
@@ -368,9 +362,8 @@ export function PayrollRulesSettings() {
         <Button
           onClick={handleSave}
           disabled={blocked || saveSetting.isPending}
-          className="bg-emerald-600 hover:bg-emerald-700"
         >
-          {saveSetting.isPending ? "Saving…" : "Save payroll rules"}
+          {saveSetting.isPending ? t("saving") : t("save")}
         </Button>
       </div>
     </div>

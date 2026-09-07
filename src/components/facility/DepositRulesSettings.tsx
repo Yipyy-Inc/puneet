@@ -40,6 +40,23 @@ import type {
   DepositRefundType,
 } from "@/types/deposit-rules";
 import { SERVICE_TYPES_FOR_DEPOSITS } from "@/types/deposit-rules";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+
+/**
+ * The catalogue key for each service type.
+ *
+ * SERVICE_LABELS below is still what `formatRuleLabel` uses, because that
+ * function's output is STORED (see the note on it). This map is for the words
+ * a person reads on this screen, which are not stored anywhere.
+ */
+const SERVICE_TEXT: Record<string, string> = {
+  boarding: "svcBoarding",
+  daycare: "svcDaycare",
+  grooming: "svcGrooming",
+  training: "svcTraining",
+  vet: "svcVet",
+  retail: "svcRetail",
+};
 
 const SERVICE_LABELS: Record<string, string> = {
   boarding: "Boarding",
@@ -50,8 +67,21 @@ const SERVICE_LABELS: Record<string, string> = {
   retail: "Retail",
 };
 
+// ── WHY THIS ONE STAYS IN ENGLISH ─────────────────────────────────────────
+//
+// `label` is not interface copy. It is DERIVED here and then PERSISTED into
+// the saved deposit_rules value, and six other screens read it back —
+// including CustomerDepositPanel, which shows it to the customer. Translating
+// it would freeze whichever language the admin's browser happened to be in
+// into a field a French customer and an English colleague both read.
+//
+// The real fix is to stop storing a display string and derive it at render,
+// which is a change across seven call sites and a settings value. Recorded in
+// the debt map rather than half-done here.
+// french-ok: a stored value read by six other screens, not interface copy
 function formatRuleLabel(rule: DepositRule): string {
   if (rule.scope === "service") {
+    // french-ok: stored, not rendered — see the note on this function
     const service = SERVICE_LABELS[rule.serviceType ?? ""] ?? "Service";
     if (!rule.enabled || rule.amount <= 0) return `${service} — no deposit`;
     return rule.amountType === "percentage"
@@ -65,7 +95,8 @@ function formatRuleLabel(rule: DepositRule): string {
     rule.amountType === "percentage"
       ? `${rule.amount}%`
       : `$${rule.amount.toFixed(2)}`;
-  return `Bookings over $${(rule.minBookingValue ?? 0).toFixed(0)} — ${amount} deposit`;
+  // french-ok: stored, not rendered — see the note on this function
+  return `Bookings over ${(rule.minBookingValue ?? 0).toFixed(0)} — ${amount} deposit`;
 }
 
 // ── NOTHING RENDERS UNTIL THE TERMS HAVE ARRIVED ──────────────────────────
@@ -111,6 +142,7 @@ function DepositRulesEditor({
   initialRefundPolicy: DepositRefundPolicy;
   configured: boolean;
 }) {
+  const t = useSettingsText().section("deposit-rules");
   const saveSetting = useSaveFacilitySetting();
   const [rules, setRules] = useState<DepositRuleSet>(() =>
     ensureAllServiceRules(initialRules),
@@ -139,11 +171,7 @@ function DepositRulesEditor({
       {
         onSuccess: () => toast.success(message),
         onError: (error) =>
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Those deposit rules were not saved.",
-          ),
+          toast.error(error instanceof Error ? error.message : t("notSaved")),
       },
     );
   };
@@ -201,7 +229,7 @@ function DepositRulesEditor({
   };
 
   const handleSave = () => {
-    persist(rules, refundPolicy, "Deposit rules saved");
+    persist(rules, refundPolicy, t("depositRulesSaved"));
     setDirty(false);
   };
 
@@ -216,22 +244,15 @@ function DepositRulesEditor({
       {!configured && (
         <div className="border-warning/40 bg-card flex items-start gap-2 rounded-xl border p-3">
           <TriangleAlert className="text-warning mt-0.5 size-4 shrink-0" />
-          <p className="text-warning text-[13.5px]">
-            No deposit terms are set up yet, so no deposit is asked for on any
-            booking. Turn on the services below that should require one.
-          </p>
+          <p className="text-warning text-[13.5px]">{t("noTermsYet")}</p>
         </div>
       )}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Set automatic deposit requirements per service type or by booking
-            value. When a matching booking is created, staff are prompted to
-            collect the deposit before confirming.
-          </p>
+          <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
         </div>
         <Button onClick={handleSave} disabled={!dirty} className="shrink-0">
-          {dirty ? "Save changes" : "Saved"}
+          {dirty ? t("saveChanges") : t("savedState")}
         </Button>
       </div>
 
@@ -239,7 +260,7 @@ function DepositRulesEditor({
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles className="size-4 text-amber-500" />
-            Per-service rules
+            {t("perServiceRules")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -259,11 +280,10 @@ function DepositRulesEditor({
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <DollarSign className="size-4 text-emerald-600" />
-              Booking value threshold
+              {t("bookingValueThreshold")}
             </CardTitle>
             <p className="text-muted-foreground mt-1 text-xs">
-              Applies when no per-service rule matches. Useful for catching
-              high-value one-off bookings.
+              {t("thresholdHelp")}
             </p>
           </CardHeader>
           <CardContent>
@@ -282,24 +302,51 @@ function DepositRulesEditor({
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <RotateCcw className="size-4 text-sky-600" />
-            Deposit refund policy
+            {t("refundPolicy")}
           </CardTitle>
           <p className="text-muted-foreground mt-1 text-xs">
-            Your{" "}
-            <span className="text-foreground font-medium">
-              cancellation policy
-            </span>{" "}
-            (Business Settings) allows free cancellation up to{" "}
-            <span className="text-foreground font-medium">
-              {freeCancellationHours} hours
-            </span>{" "}
-            before a booking.
+            {/* One sentence, two emphasised values. Split on each placeholder
+                in turn rather than assembled from five JSX fragments — French
+                does not order the clause the way English does. §5q. */}
+            {t("cancellationNote")
+              .split("{policy}")
+              .flatMap((part, index) =>
+                index === 0
+                  ? [part]
+                  : [
+                      <span
+                        key="policy"
+                        className="text-foreground font-medium"
+                      >
+                        {t("cancellationPolicy")}
+                      </span>,
+                      part,
+                    ],
+              )
+              .flatMap((part, index) =>
+                typeof part !== "string"
+                  ? [part]
+                  : part.split("{hours}").flatMap((bit, i) =>
+                      i === 0
+                        ? [bit]
+                        : [
+                            <span
+                              key={`hours-${index}`}
+                              className="text-foreground font-medium"
+                            >
+                              {t("hoursCount").replace(
+                                "{count}",
+                                String(freeCancellationHours),
+                              )}
+                            </span>,
+                            bit,
+                          ],
+                    ),
+              )}
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm font-medium">
-            If a booking is cancelled, the deposit is:
-          </p>
+          <p className="text-sm font-medium">{t("ifCancelled")}</p>
           <RadioGroup
             value={refundPolicy.type}
             onValueChange={(v) =>
@@ -310,7 +357,7 @@ function DepositRulesEditor({
             <label className="hover:bg-muted/40 flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors">
               <RadioGroupItem value="full_before_window" id="refund-full" />
               <div className="flex flex-1 flex-wrap items-center gap-2">
-                <span className="text-sm">Full refund if cancelled before</span>
+                <span className="text-sm">{t("fullRefundBefore")}</span>
                 <Input
                   type="number"
                   min={0}
@@ -324,18 +371,16 @@ function DepositRulesEditor({
                   }
                   className="h-8 w-20 text-right font-[tabular-nums]"
                 />
-                <span className="text-sm">hours</span>
+                <span className="text-sm">{t("wordHours")}</span>
               </div>
             </label>
             <label className="hover:bg-muted/40 flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors">
               <RadioGroupItem value="non_refundable" id="refund-none" />
-              <span className="text-sm">Non-refundable</span>
+              <span className="text-sm">{t("nonRefundable")}</span>
             </label>
             <label className="hover:bg-muted/40 flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors">
               <RadioGroupItem value="credit" id="refund-credit" />
-              <span className="text-sm">
-                Applied as credit toward a future booking
-              </span>
+              <span className="text-sm">{t("appliedAsCredit")}</span>
             </label>
           </RadioGroup>
 
@@ -344,9 +389,9 @@ function DepositRulesEditor({
               <div className="flex flex-wrap items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                 <span className="flex-1">
-                  This {refundPolicy.refundBeforeHours}h refund window differs
-                  from your {freeCancellationHours}h free-cancellation policy —
-                  customers may get conflicting terms.
+                  {t("windowConflict")
+                    .replace("{refund}", String(refundPolicy.refundBeforeHours))
+                    .replace("{policy}", String(freeCancellationHours))}
                 </span>
                 <Button
                   variant="outline"
@@ -358,7 +403,10 @@ function DepositRulesEditor({
                     })
                   }
                 >
-                  Match to {freeCancellationHours}h
+                  {t("matchTo").replace(
+                    "{hours}",
+                    String(freeCancellationHours),
+                  )}
                 </Button>
               </div>
             )}
@@ -377,8 +425,11 @@ function ServiceRuleRow({
   onChange: (patch: Partial<DepositRule>) => void;
   onCommit: (patch: Partial<DepositRule>, message: string) => void;
 }) {
+  const t = useSettingsText().section("deposit-rules");
   const service = rule.serviceType ?? "";
-  const serviceLabel = SERVICE_LABELS[service] ?? service;
+  const serviceLabel = SERVICE_TEXT[service]
+    ? t(SERVICE_TEXT[service])
+    : service;
   return (
     <div
       className={cn(
@@ -391,21 +442,27 @@ function ServiceRuleRow({
         onCheckedChange={(enabled) =>
           onCommit(
             { enabled },
-            `${serviceLabel} deposit ${enabled ? "enabled" : "disabled"}`,
+            (enabled ? t("toastEnabled") : t("toastDisabled")).replace(
+              "{service}",
+              serviceLabel,
+            ),
           )
         }
       />
       <div className="min-w-[120px] flex-1">
         <p className="text-sm font-medium">{serviceLabel}</p>
         <p className="text-muted-foreground text-[11px]">
-          {rule.enabled ? rule.label : "Disabled — no deposit collected"}
+          {rule.enabled ? rule.label : t("disabledNoDeposit")}
         </p>
       </div>
       <AmountTypeSelect
         value={rule.amountType}
         disabled={!rule.enabled}
         onChange={(amountType) =>
-          onCommit({ amountType }, `${serviceLabel} deposit type updated`)
+          onCommit(
+            { amountType },
+            t("toastTypeUpdated").replace("{service}", serviceLabel),
+          )
         }
       />
       <div className="flex items-center gap-1.5">
@@ -443,6 +500,7 @@ function ThresholdRuleRow({
   onChange: (patch: Partial<DepositRule>) => void;
   onCommit: (patch: Partial<DepositRule>, message: string) => void;
 }) {
+  const t = useSettingsText().section("deposit-rules");
   return (
     <div
       className={cn(
@@ -456,14 +514,16 @@ function ThresholdRuleRow({
           onCheckedChange={(enabled) =>
             onCommit(
               { enabled },
-              `High-value booking deposit ${enabled ? "enabled" : "disabled"}`,
+              enabled
+                ? t("toastHighValueEnabled")
+                : t("toastHighValueDisabled"),
             )
           }
         />
         <div className="flex-1">
-          <p className="text-sm font-medium">High-value booking deposit</p>
+          <p className="text-sm font-medium">{t("highValueDeposit")}</p>
           <p className="text-muted-foreground text-[11px]">
-            {rule.enabled ? rule.label : "Disabled"}
+            {rule.enabled ? rule.label : t("disabled")}
           </p>
         </div>
         {rule.enabled && (
@@ -471,14 +531,14 @@ function ThresholdRuleRow({
             variant="outline"
             className="border-amber-300 bg-amber-50 text-amber-800"
           >
-            Active
+            {t("active")}
           </Badge>
         )}
       </div>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
           <Label className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-            Triggered when total ≥
+            {t("triggeredWhenTotal")}
           </Label>
           <div className="mt-1 flex items-center gap-1.5">
             <DollarSign className="text-muted-foreground size-3.5" />
@@ -491,7 +551,7 @@ function ThresholdRuleRow({
               onChange={(e) =>
                 onChange({ minBookingValue: parseFloat(e.target.value) || 0 })
               }
-              onBlur={() => onCommit({}, "Booking value threshold updated")}
+              onBlur={() => onCommit({}, t("toastThresholdUpdated"))}
               onKeyDown={(e) => {
                 if (e.key === "Enter") e.currentTarget.blur();
               }}
@@ -501,14 +561,14 @@ function ThresholdRuleRow({
         </div>
         <div>
           <Label className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-            Deposit type
+            {t("depositType")}
           </Label>
           <div className="mt-1">
             <AmountTypeSelect
               value={rule.amountType}
               disabled={!rule.enabled}
               onChange={(amountType) =>
-                onCommit({ amountType }, "Deposit type updated")
+                onCommit({ amountType }, t("toastDepositTypeUpdated"))
               }
               className="w-full"
             />
@@ -516,7 +576,7 @@ function ThresholdRuleRow({
         </div>
         <div>
           <Label className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-            Deposit amount
+            {t("depositAmount")}
           </Label>
           <div className="mt-1 flex items-center gap-1.5">
             {rule.amountType === "percentage" ? (
@@ -533,7 +593,7 @@ function ThresholdRuleRow({
               onChange={(e) =>
                 onChange({ amount: parseFloat(e.target.value) || 0 })
               }
-              onBlur={() => onCommit({}, "Booking value threshold updated")}
+              onBlur={() => onCommit({}, t("toastAmountUpdated"))}
               onKeyDown={(e) => {
                 if (e.key === "Enter") e.currentTarget.blur();
               }}
@@ -557,6 +617,7 @@ function AmountTypeSelect({
   onChange: (value: DepositAmountType) => void;
   className?: string;
 }) {
+  const t = useSettingsText().section("deposit-rules");
   return (
     <Select
       value={value}
@@ -567,8 +628,8 @@ function AmountTypeSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="percentage">% of total</SelectItem>
-        <SelectItem value="fixed">Flat $</SelectItem>
+        <SelectItem value="percentage">{t("percentOfTotal")}</SelectItem>
+        <SelectItem value="fixed">{t("flatAmount")}</SelectItem>
       </SelectContent>
     </Select>
   );

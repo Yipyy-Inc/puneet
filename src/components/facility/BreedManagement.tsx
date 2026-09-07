@@ -52,14 +52,19 @@ import {
   type Breed,
 } from "@/data/breeds";
 import { breedMutations } from "@/lib/api/breeds";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
+// The label is a KEY. It was three English words rendered straight, and the
+// group heading, the "No X breeds" empty line and the species dropdown all
+// read from it — so a French user saw "Dogs" three times per screen.
 const SPECIES_CONFIG = [
-  { key: "Dog" as const, label: "Dogs", icon: PawPrint },
-  { key: "Cat" as const, label: "Cats", icon: Cat },
-  { key: "Other" as const, label: "Other", icon: Rabbit },
+  { key: "Dog" as const, label: "speciesDogs", icon: PawPrint },
+  { key: "Cat" as const, label: "speciesCats", icon: Cat },
+  { key: "Other" as const, label: "speciesOther", icon: Rabbit },
 ];
 
 export function BreedManagement() {
+  const t = useSettingsText().section("pet-breeds");
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -99,7 +104,7 @@ export function BreedManagement() {
         queryKey: ["breeds", "restriction-message"],
       });
       setSavedMessage(messageDraft);
-      toast.success("Restriction message saved");
+      toast.success(t("messageSaved"));
     },
   });
 
@@ -107,9 +112,10 @@ export function BreedManagement() {
     const next = !breed.restricted;
     restrictMutation.mutate({ name: breed.name, restricted: next });
     toast.success(
-      next
-        ? `"${breed.name}" is now restricted`
-        : `Restriction removed from "${breed.name}"`,
+      (next ? t("nowRestricted") : t("restrictionRemoved")).replace(
+        "{name}",
+        breed.name,
+      ),
     );
   };
 
@@ -159,14 +165,14 @@ export function BreedManagement() {
 
     if (editingBreed) {
       updateBreed(editingBreed.name, breed);
-      toast.success(`Updated "${breed.name}"`);
+      toast.success(t("updatedNamed").replace("{name}", breed.name));
     } else {
       const ok = addBreed(breed);
       if (!ok) {
-        toast.error(`"${breed.name}" already exists`);
+        toast.error(t("alreadyExists").replace("{name}", breed.name));
         return;
       }
-      toast.success(`Added "${breed.name}"`);
+      toast.success(t("addedNamed").replace("{name}", breed.name));
     }
 
     setDialogOpen(false);
@@ -174,14 +180,10 @@ export function BreedManagement() {
   };
 
   const handleRemove = (breed: Breed) => {
-    if (
-      !window.confirm(
-        `Remove "${breed.name}"? Pets already assigned this breed will keep it.`,
-      )
-    )
+    if (!window.confirm(t("confirmRemove").replace("{name}", breed.name)))
       return;
     removeBreed(breed.name);
-    toast.success(`Removed "${breed.name}"`);
+    toast.success(t("removedNamed").replace("{name}", breed.name));
     setRefreshKey((k) => k + 1);
   };
 
@@ -195,12 +197,15 @@ export function BreedManagement() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-muted-foreground mt-1 text-sm">
-              Manage the breed list used when creating and editing pets.{" "}
-              {allBreeds.length} breeds total
+              {t("intro")}{" "}
+              {t("breedsTotal").replace("{count}", String(allBreeds.length))}
               {restrictedCount > 0 && (
                 <span className="text-red-600">
                   {" · "}
-                  {restrictedCount} restricted
+                  {t("restrictedCount").replace(
+                    "{count}",
+                    String(restrictedCount),
+                  )}
                 </span>
               )}
               .
@@ -208,7 +213,7 @@ export function BreedManagement() {
           </div>
           <Button size="sm" className="gap-1.5" onClick={openAddDialog}>
             <Plus className="size-3.5" />
-            Add Breed
+            {t("addBreed")}
           </Button>
         </div>
       </CardHeader>
@@ -217,7 +222,7 @@ export function BreedManagement() {
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
           <Input
-            placeholder="Search breeds..."
+            placeholder={t("searchBreeds")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-9 pl-9 text-sm"
@@ -229,19 +234,18 @@ export function BreedManagement() {
           <div className="flex items-center gap-2">
             <ShieldAlert className="size-4 text-red-600" />
             <span className="text-sm font-semibold">
-              Restricted breed booking message
+              {t("restrictionMessageTitle")}
             </span>
           </div>
           <p className="text-muted-foreground text-xs">
-            Shown to a customer who tries to book with a breed you&apos;ve
-            marked as restricted.
+            {t("restrictionMessageHelp")}
           </p>
           <Textarea
             value={messageDraft}
             onChange={(e) => setMessageDraft(e.target.value)}
             rows={2}
             className="bg-background text-sm"
-            placeholder="Explain why this breed can't be booked…"
+            placeholder={t("restrictionMessagePlaceholder")}
           />
           <div className="flex justify-end">
             <Button
@@ -254,17 +258,19 @@ export function BreedManagement() {
               }
               onClick={() => saveMessageMutation.mutate()}
             >
-              {saveMessageMutation.isPending ? "Saving…" : "Save message"}
+              {saveMessageMutation.isPending ? t("saving") : t("saveMessage")}
             </Button>
           </div>
         </div>
 
         {/* Legend — explains every icon/marker shown on breed rows */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-md border px-3 py-2 text-xs">
-          <span className="text-muted-foreground font-medium">Legend</span>
+          <span className="text-muted-foreground font-medium">
+            {t("legend")}
+          </span>
           <span className="flex items-center gap-1.5">
             <Star className="size-3 fill-amber-400 text-amber-400" />
-            Popular breed — shown at the top of breed search
+            {t("legendPopular")}
           </span>
           <span className="flex items-center gap-1.5">
             <Badge
@@ -272,9 +278,9 @@ export function BreedManagement() {
               className="gap-1 border-red-200 bg-red-50 text-[10px] text-red-700"
             >
               <Ban className="size-2.5" />
-              Restricted
+              {t("restricted")}
             </Badge>
-            Blocked from booking (shows your restriction message)
+            {t("legendRestricted")}
           </span>
         </div>
 
@@ -292,15 +298,14 @@ export function BreedManagement() {
                 <div className="flex flex-col items-start gap-0.5 text-left">
                   <div className="flex items-center gap-2">
                     <Icon className="text-muted-foreground size-4" />
-                    <span className="text-sm font-semibold">{sp.label}</span>
+                    <span className="text-sm font-semibold">{t(sp.label)}</span>
                     <Badge variant="secondary" className="text-[10px]">
                       {list.length}
                     </Badge>
                   </div>
                   {sp.key === "Other" && (
                     <span className="text-muted-foreground ml-6 text-[11px] font-normal">
-                      Other species (rabbits, ferrets, guinea pigs, birds,
-                      reptiles, etc.)
+                      {t("otherSpeciesHelp")}
                     </span>
                   )}
                 </div>
@@ -316,8 +321,8 @@ export function BreedManagement() {
                   {list.length === 0 ? (
                     <p className="text-muted-foreground py-4 text-center text-xs">
                       {searchQuery
-                        ? "No matches"
-                        : `No ${sp.label.toLowerCase()} breeds`}
+                        ? t("noMatches")
+                        : t("noBreedsIn").replace("{species}", t(sp.label))}
                     </p>
                   ) : (
                     list.map((breed) => (
@@ -347,7 +352,7 @@ export function BreedManagement() {
                               className="shrink-0 gap-1 border-red-200 bg-red-50 text-[10px] text-red-700"
                             >
                               <Ban className="size-2.5" />
-                              Restricted
+                              {t("restricted")}
                             </Badge>
                           )}
                         </div>
@@ -358,12 +363,12 @@ export function BreedManagement() {
                               "rounded-sm p-1 transition-colors",
                               breed.restricted
                                 ? "text-red-600 hover:text-red-700"
-                                : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-red-600",
+                                : "text-ink-disabled hover:text-red-600",
                             )}
                             title={
                               breed.restricted
-                                ? "Remove restriction"
-                                : "Restrict breed"
+                                ? t("removeRestriction")
+                                : t("restrictBreed")
                             }
                           >
                             <Ban className="size-3" />
@@ -372,14 +377,14 @@ export function BreedManagement() {
                             <button
                               onClick={() => openEditDialog(breed)}
                               className="text-muted-foreground hover:text-foreground rounded-sm p-1 transition-colors"
-                              title="Edit"
+                              title={t("edit")}
                             >
                               <Pencil className="size-3" />
                             </button>
                             <button
                               onClick={() => handleRemove(breed)}
                               className="text-muted-foreground hover:text-destructive rounded-sm p-1 transition-colors"
-                              title="Remove"
+                              title={t("remove")}
                             >
                               <Trash2 className="size-3" />
                             </button>
@@ -400,23 +405,23 @@ export function BreedManagement() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>
-              {editingBreed ? "Edit Breed" : "Add Breed"}
+              {editingBreed ? t("editBreed") : t("addBreed")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid gap-1.5">
               <Label className="text-sm">
-                Breed Name <span className="text-destructive">*</span>
+                {t("breedName")} <span className="text-destructive">*</span>
               </Label>
               <Input
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
-                placeholder="e.g. Goldendoodle"
+                placeholder={t("breedNamePlaceholder")}
                 autoFocus
               />
             </div>
             <div className="grid gap-1.5">
-              <Label className="text-sm">Species</Label>
+              <Label className="text-sm">{t("species")}</Label>
               <Select
                 value={formSpecies}
                 onValueChange={(v) =>
@@ -427,9 +432,9 @@ export function BreedManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Dog">Dog</SelectItem>
-                  <SelectItem value="Cat">Cat</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Dog">{t("speciesDog")}</SelectItem>
+                  <SelectItem value="Cat">{t("speciesCat")}</SelectItem>
+                  <SelectItem value="Other">{t("speciesOtherOne")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -438,17 +443,15 @@ export function BreedManagement() {
                 checked={formPopular}
                 onCheckedChange={(v) => setFormPopular(!!v)}
               />
-              <span className="text-sm">
-                Mark as popular (shows at top of breed search)
-              </span>
+              <span className="text-sm">{t("markPopular")}</span>
             </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleSave} disabled={!formName.trim()}>
-              {editingBreed ? "Save Changes" : "Add Breed"}
+              {editingBreed ? t("saveChanges") : t("addBreed")}
             </Button>
           </DialogFooter>
         </DialogContent>

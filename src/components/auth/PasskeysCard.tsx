@@ -22,6 +22,7 @@ import {
   usePasskeySupport,
   type StoredPasskey,
 } from "@/lib/auth/passkey-client";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Manage the passkeys on this account. The third of the three passkey surfaces,
@@ -61,6 +62,7 @@ function useLocale() {
 }
 
 export function PasskeysCard() {
+  const t = useSettingsText().section("my-profile");
   const locale = useLocale();
 
   const supported = usePasskeySupport();
@@ -90,7 +92,7 @@ export function PasskeysCard() {
     const result = await enrolPasskey();
     // A cancellation is silent — they closed the sheet on purpose.
     if ("ok" in result) {
-      toast.success("Passkey added.");
+      toast.success(t("passkeyAdded"));
       await refresh();
     } else if ("error" in result) {
       toast.error(result.error);
@@ -102,7 +104,7 @@ export function PasskeysCard() {
     setBusy(credentialId);
     const result = await revokePasskey(credentialId);
     if ("ok" in result) {
-      toast.success("Passkey removed.");
+      toast.success(t("passkeyRemoved"));
       await refresh();
     } else if ("error" in result) {
       toast.error(result.error);
@@ -113,9 +115,12 @@ export function PasskeysCard() {
   function describe(passkey: StoredPasskey) {
     const added = new Date(passkey.created_at).toLocaleDateString(locale);
     const used = passkey.last_used_at
-      ? `Last used ${new Date(passkey.last_used_at).toLocaleDateString(locale)}`
-      : "Not used yet";
-    return `Added ${added} · ${used}`;
+      ? t("lastUsed").replace(
+          "{date}",
+          new Date(passkey.last_used_at).toLocaleDateString(locale),
+        )
+      : t("notUsedYet");
+    return t("addedOn").replace("{date}", added).replace("{used}", used);
   }
 
   return (
@@ -123,27 +128,18 @@ export function PasskeysCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Fingerprint className="size-4" aria-hidden />
-          Passkeys
+          {t("passkeys")}
         </CardTitle>
-        <CardDescription>
-          Sign in with your fingerprint, face or device PIN instead of a
-          password.
-        </CardDescription>
+        <CardDescription>{t("passkeysHelp")}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
         {supported === false && (
-          <p className="text-muted-foreground text-sm">
-            This browser cannot use passkeys.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("browserCannot")}</p>
         )}
 
         {supported === true && hasSensor === false && (
-          <p className="text-muted-foreground text-sm">
-            This device has no fingerprint reader, face scanner or PIN set up,
-            so a passkey cannot be added here. Any passkey you already have
-            still works.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("noSensor")}</p>
         )}
 
         {passkeys === undefined ? (
@@ -152,9 +148,7 @@ export function PasskeysCard() {
             aria-hidden
           />
         ) : passkeys.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            You have not added a passkey yet.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("noneYet")}</p>
         ) : (
           <ul className="divide-border divide-y">
             {passkeys.map((passkey) => (
@@ -164,7 +158,7 @@ export function PasskeysCard() {
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
-                    {passkey.nickname ?? "Passkey"}
+                    {passkey.nickname ?? t("passkeyFallbackName")}
                   </p>
                   <p className="text-muted-foreground text-xs">
                     {describe(passkey)}
@@ -180,8 +174,8 @@ export function PasskeysCard() {
                   */}
                   <Badge variant="outline">
                     {passkey.backed_up
-                      ? "Synced across your devices"
-                      : "This device only"}
+                      ? t("syncedAcross")
+                      : t("thisDeviceOnly")}
                   </Badge>
 
                   <Button
@@ -191,7 +185,7 @@ export function PasskeysCard() {
                     className="text-red-600 hover:text-red-700"
                     onClick={() => remove(passkey.credential_id)}
                     disabled={busy === passkey.credential_id}
-                    aria-label="Remove passkey"
+                    aria-label={t("removePasskey")}
                   >
                     {busy === passkey.credential_id ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -212,7 +206,7 @@ export function PasskeysCard() {
             onClick={add}
             disabled={adding}
           >
-            {adding ? "Waiting for your device…" : "Add a passkey"}
+            {adding ? t("waitingForDevice") : t("addPasskey")}
           </Button>
         )}
       </CardContent>

@@ -39,6 +39,7 @@ import {
   DEFAULT_CATEGORY_PREF,
   type ChannelPrefs,
 } from "@/lib/staff-notification-prefs-store";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 interface StaticCategory {
   id: string;
@@ -50,45 +51,55 @@ interface StaticCategory {
 const STATIC_CATEGORIES: StaticCategory[] = [
   {
     id: "customers",
-    label: "Customers",
+    label: "catCustomers",
     icon: Users,
     iconClass: "text-blue-600",
   },
-  { id: "boarding", label: "Boarding", icon: Bed, iconClass: "text-blue-600" },
+  {
+    id: "boarding",
+    label: "catBoarding",
+    icon: Bed,
+    iconClass: "text-blue-600",
+  },
   {
     id: "daycare",
-    label: "Daycare",
+    label: "catDaycare",
     icon: PawPrint,
     iconClass: "text-blue-600",
   },
   {
     id: "grooming",
-    label: "Grooming",
+    label: "catGrooming",
     icon: Scissors,
     iconClass: "text-blue-600",
   },
   {
     id: "training",
-    label: "Training",
+    label: "catTraining",
     icon: GraduationCap,
     iconClass: "text-blue-600",
   },
   {
     id: "tasks",
-    label: "Tasks",
+    label: "catTasks",
     icon: ListChecks,
     iconClass: "text-amber-600",
   },
   {
     id: "schedule",
-    label: "Schedule & Shifts",
+    label: "catSchedule",
     icon: CalendarClock,
     iconClass: "text-blue-600",
   },
-  { id: "forms", label: "Forms", icon: FileText, iconClass: "text-blue-600" },
+  {
+    id: "forms",
+    label: "catForms",
+    icon: FileText,
+    iconClass: "text-blue-600",
+  },
   {
     id: "yipyygo",
-    label: "Express Check-In",
+    label: "catYipyygo",
     icon: CheckCircle,
     iconClass: "text-green-600",
   },
@@ -96,22 +107,10 @@ const STATIC_CATEGORIES: StaticCategory[] = [
 
 // Safety-critical, always delivered in-app, cannot be muted (spec Table 49).
 const MANDATORY_ALWAYS_ON: { label: string; description: string }[] = [
-  {
-    label: "Form red flag / aggressive behavior",
-    description: "A submitted form flags a safety concern.",
-  },
-  {
-    label: "Safety incident report",
-    description: "An incident is logged for a pet in care.",
-  },
-  {
-    label: "Daycare fully booked (100% capacity)",
-    description: "A play area has reached its safe limit.",
-  },
-  {
-    label: "System-wide Yipyy maintenance",
-    description: "Platform maintenance that may affect service.",
-  },
+  { label: "mandatoryRedFlag", description: "mandatoryRedFlagHelp" },
+  { label: "mandatoryIncident", description: "mandatoryIncidentHelp" },
+  { label: "mandatoryFull", description: "mandatoryFullHelp" },
+  { label: "mandatoryMaintenance", description: "mandatoryMaintenanceHelp" },
 ];
 
 // User-toggleable urgent overrides — ON by default (spec Table 47).
@@ -119,8 +118,8 @@ const URGENT_OVERRIDES: { key: string; label: string; description: string }[] =
   [
     {
       key: "task_overdue",
-      label: "Task overdue 24h+",
-      description: "A care task is more than a day past due.",
+      label: "urgentTaskOverdue",
+      description: "urgentTaskOverdueHelp",
     },
   ];
 
@@ -132,16 +131,17 @@ const CHANNELS: {
 }[] = [
   {
     key: "email",
-    label: "Email",
+    label: "channelEmail",
     icon: Mail,
-    hint: "Delivered to your inbox.",
+    hint: "channelEmailHint",
   },
-  { key: "sms", label: "SMS", icon: MessageSquare, hint: "Text messages." },
+  // french-ok: SMS is the same three letters in both languages
+  { key: "sms", label: "SMS", icon: MessageSquare, hint: "channelSmsHint" },
   {
     key: "push",
-    label: "Push (mobile)",
+    label: "channelPush",
     icon: Smartphone,
-    hint: "Push notifications on the mobile app.",
+    hint: "channelPushHint",
   },
 ];
 
@@ -159,6 +159,7 @@ export function StaffNotificationPreferences({
   staffName?: string;
   readOnly?: boolean;
 }) {
+  const t = useSettingsText().section("my-notifications");
   const { user } = useCurrentUser();
   const id = staffId ?? user.id;
   const prefs = useStaffNotificationPrefs(id);
@@ -181,9 +182,7 @@ export function StaffNotificationPreferences({
     <div className="space-y-6">
       {locked && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          You&rsquo;re viewing the notification preferences for{" "}
-          {staffName ?? "this staff member"}. Admins can view but cannot change
-          another staff member&rsquo;s personal choices.
+          {t("viewingFor").replace("{name}", staffName ?? t("thisStaffMember"))}
         </div>
       )}
 
@@ -192,12 +191,9 @@ export function StaffNotificationPreferences({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="size-5" />
-            Delivery channels
+            {t("deliveryChannels")}
           </CardTitle>
-          <CardDescription>
-            Enabling a channel means every category you&rsquo;ve opted into
-            flows through it.
-          </CardDescription>
+          <CardDescription>{t("deliveryChannelsHelp")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {/* In-App — always on, locked */}
@@ -205,15 +201,15 @@ export function StaffNotificationPreferences({
             <div className="flex items-center gap-3">
               <Bell className="text-muted-foreground size-4" />
               <div>
-                <p className="text-sm font-medium">In-App</p>
+                <p className="text-sm font-medium">{t("inApp")}</p>
                 <p className="text-muted-foreground text-xs">
-                  The bell + Notifications page. Always on.
+                  {t("inAppHelp")}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Lock className="text-muted-foreground size-3.5" />
-              <Switch checked disabled aria-label="In-App (always on)" />
+              <Switch checked disabled aria-label={t("inAppAlwaysOn")} />
             </div>
           </div>
 
@@ -227,15 +223,17 @@ export function StaffNotificationPreferences({
                 <div className="flex items-center gap-3">
                   <Icon className="text-muted-foreground size-4" />
                   <div>
-                    <p className="text-sm font-medium">{ch.label}</p>
-                    <p className="text-muted-foreground text-xs">{ch.hint}</p>
+                    <p className="text-sm font-medium">{t(ch.label)}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t(ch.hint)}
+                    </p>
                   </div>
                 </div>
                 <Switch
                   checked={prefs.channels[ch.key]}
                   disabled={locked}
                   onCheckedChange={(v) => setStaffChannel(id, ch.key, v)}
-                  aria-label={ch.label}
+                  aria-label={t(ch.label)}
                 />
               </div>
             );
@@ -248,19 +246,17 @@ export function StaffNotificationPreferences({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ListChecks className="size-5" />
-            Notification categories
+            {t("categoriesTitle")}
           </CardTitle>
-          <CardDescription>
-            Choose how you receive each category. Email and SMS are only
-            available when the matching channel above is on.
-          </CardDescription>
+          <CardDescription>{t("categoriesHelp")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {/* Column header (desktop) */}
           <div className="text-muted-foreground hidden grid-cols-[1fr_repeat(3,4.5rem)] gap-2 border-b px-4 py-2 text-[11px] font-medium sm:grid">
             <span />
-            <span className="text-center">In-App</span>
-            <span className="text-center">Email</span>
+            <span className="text-center">{t("inApp")}</span>
+            <span className="text-center">{t("channelEmail")}</span>
+            {/* french-ok: SMS is the same three letters in both languages */}
             <span className="text-center">SMS</span>
           </div>
           <div className="divide-y">
@@ -281,11 +277,11 @@ export function StaffNotificationPreferences({
                     >
                       <Icon className="size-3.5" />
                     </span>
-                    <p className="text-sm font-medium">{cat.label}</p>
+                    <p className="text-sm font-medium">{t(cat.label)}</p>
                   </div>
                   <div className="flex items-center gap-6 sm:contents">
                     <ToggleCell
-                      label="In-App"
+                      label={t("inApp")}
                       checked={state.inApp}
                       disabled={locked}
                       onChange={(v) =>
@@ -293,7 +289,7 @@ export function StaffNotificationPreferences({
                       }
                     />
                     <ToggleCell
-                      label="Email"
+                      label={t("channelEmail")}
                       checked={state.email && prefs.channels.email}
                       disabled={locked || !prefs.channels.email}
                       onChange={(v) =>
@@ -321,18 +317,15 @@ export function StaffNotificationPreferences({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="size-5 text-red-600" />
-            Urgent overrides
+            {t("urgentTitle")}
           </CardTitle>
-          <CardDescription>
-            Safety-critical alerts you&rsquo;ll always receive, even if
-            you&rsquo;ve muted the category above.
-          </CardDescription>
+          <CardDescription>{t("urgentHelp")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Always on — locked (Table 49). */}
           <div className="space-y-2">
             <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-              Always delivered · can&rsquo;t be turned off
+              {t("alwaysDelivered")}
             </p>
             {MANDATORY_ALWAYS_ON.map((o) => (
               <div
@@ -341,22 +334,24 @@ export function StaffNotificationPreferences({
               >
                 <Lock className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{o.label}</p>
+                  <p className="text-sm font-medium">{t(o.label)}</p>
                   <p className="text-muted-foreground text-xs">
-                    {o.description}
+                    {t(o.description)}
                   </p>
                 </div>
                 <Checkbox
                   checked
                   disabled
-                  aria-label={`${o.label} (always on)`}
+                  aria-label={t("alwaysOnSuffix").replace(
+                    "{label}",
+                    t(o.label),
+                  )}
                   className="mt-0.5"
                 />
               </div>
             ))}
             <p className="text-muted-foreground text-xs">
-              These safety-critical alerts always arrive in-app and are flagged
-              urgent, regardless of the settings above.
+              {t("alwaysArriveNote")}
             </p>
           </div>
 
@@ -364,13 +359,13 @@ export function StaffNotificationPreferences({
           {URGENT_OVERRIDES.length > 0 && (
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-                Recommended · on by default
+                {t("recommendedOnByDefault")}
               </p>
               {URGENT_OVERRIDES.map((o) => (
                 <UrgentOverrideRow
                   key={o.key}
-                  label={o.label}
-                  description={o.description}
+                  label={t(o.label)}
+                  description={t(o.description)}
                   checked={prefs.urgentOverrides[o.key] ?? true}
                   disabled={locked}
                   onChange={(v) => setStaffUrgentOverride(id, o.key, v)}
@@ -421,6 +416,7 @@ function UrgentOverrideRow({
   disabled: boolean;
   onChange: (v: boolean) => void;
 }) {
+  const t = useSettingsText().section("my-notifications");
   const id = `urgent-${label.replace(/\s+/g, "-").toLowerCase()}`;
   return (
     <div className="rounded-lg border p-3">
@@ -437,14 +433,13 @@ function UrgentOverrideRow({
           <p className="text-muted-foreground text-xs">{description}</p>
         </div>
         <span className="text-muted-foreground shrink-0 text-xs">
-          Always notify me
+          {t("alwaysNotifyMe")}
         </span>
       </label>
       {!checked && (
         <p className="mt-2 flex items-center gap-1.5 pl-7 text-xs text-red-600 dark:text-red-400">
           <AlertTriangle className="size-3.5 shrink-0" />
-          Turning this off means you won&rsquo;t be notified about
-          safety-related events.
+          {t("turningOffWarning")}
         </p>
       )}
     </div>

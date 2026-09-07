@@ -22,18 +22,22 @@ import {
   type Option,
   type ScheduleOption,
 } from "./TaskConfigEditor";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // Offboarding tasks (2.1 / Table 3): assigned to Manager / Owner / HR; due on
 // termination date / within N days / before last day.
-const OFFBOARDING_ASSIGNEES: Option[] = [
-  { value: "manager", label: "Manager" },
-  { value: "owner", label: "Owner" },
-  { value: "hr", label: "HR" },
+// The label is a KEY; the option list is built inside the component so it
+// can be translated. Both arrays are handed to a Select that renders `label`
+// itself, so a key left unresolved would show on screen.
+const OFFBOARDING_ASSIGNEE_KEYS: Option[] = [
+  { value: "manager", label: "assigneeManager" },
+  { value: "owner", label: "assigneeOwner" },
+  { value: "hr", label: "assigneeHr" },
 ];
-const OFFBOARDING_SCHEDULE: ScheduleOption[] = [
-  { value: "on_termination", label: "On termination date" },
-  { value: "within_days", label: "Within N days", needsDays: true },
-  { value: "before_last_day", label: "Before last day" },
+const OFFBOARDING_SCHEDULE_KEYS: ScheduleOption[] = [
+  { value: "on_termination", label: "scheduleOnTermination" },
+  { value: "within_days", label: "scheduleWithinDays", needsDays: true },
+  { value: "before_last_day", label: "scheduleBeforeLastDay" },
 ];
 
 const taskToValue = (t: OffboardingTask): TaskConfigValue => ({
@@ -63,6 +67,7 @@ export function OffboardingTemplateEditor({
   template: OffboardingTemplate;
   onBack: () => void;
 }) {
+  const t = useSettingsText().section("offboarding-templates");
   // Reason options come from the editable Staff & HR config (the same list the
   // status-change dialog offers), so a reason-scoped template actually matches
   // a termination. `appliesToReasons` stores the reason LABEL string.
@@ -89,13 +94,11 @@ export function OffboardingTemplateEditor({
   const save = () => {
     saveTemplate(draft, {
       onSuccess: () => {
-        toast.success("Template saved");
+        toast.success(t("templateSaved"));
         onBack();
       },
       onError: (error) =>
-        toast.error(
-          error instanceof Error ? error.message : "Could not save template.",
-        ),
+        toast.error(error instanceof Error ? error.message : t("couldNotSave")),
     });
   };
 
@@ -104,25 +107,22 @@ export function OffboardingTemplateEditor({
       <div className="flex items-center justify-between gap-3">
         <Button variant="ghost" size="sm" className="gap-1.5" onClick={onBack}>
           <ArrowLeft className="size-4" />
-          Templates
+          {t("backToTemplates")}
         </Button>
-        <Button
-          onClick={save}
-          disabled={!dirty || saving}
-          className="bg-emerald-600 text-white hover:bg-emerald-700"
-        >
-          Save template
+        {/* §1: there is no second action colour. */}
+        <Button onClick={save} disabled={!dirty || saving}>
+          {t("saveTemplate")}
         </Button>
       </div>
 
       {/* Template settings — name + applies-to reasons */}
       <Card>
         <CardHeader>
-          <CardTitle>Template settings</CardTitle>
+          <CardTitle>{t("templateSettings")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-1.5">
-            <Label>Name</Label>
+            <Label>{t("name")}</Label>
             <Input
               value={draft.name}
               onChange={(e) => patch({ name: e.target.value })}
@@ -130,9 +130,9 @@ export function OffboardingTemplateEditor({
           </div>
 
           <div className="space-y-2">
-            <Label>Applies to reasons</Label>
+            <Label>{t("appliesToReasons")}</Label>
             <p className="text-muted-foreground text-xs">
-              None selected = universal (applies to all departure reasons).
+              {t("appliesToReasonsHelp")}
             </p>
             <div className="flex flex-wrap gap-2">
               {terminationReasons.map((reason) => (
@@ -155,9 +155,9 @@ export function OffboardingTemplateEditor({
       {/* Manager tasks — shared task-config editor (reused from onboarding 1.2) */}
       <Card>
         <CardHeader>
-          <CardTitle>Manager tasks</CardTitle>
+          <CardTitle>{t("managerTasks")}</CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
-            Steps the facility completes when the staffer leaves.
+            {t("managerTasksHelp")}
           </p>
         </CardHeader>
         <CardContent>
@@ -166,22 +166,32 @@ export function OffboardingTemplateEditor({
             onChange={(values) =>
               patch({ managerTasks: values.map(valueToTask) })
             }
-            assigneeOptions={OFFBOARDING_ASSIGNEES}
-            scheduleOptions={OFFBOARDING_SCHEDULE}
-            scheduleLabel="Due"
-            addLabel="Add task"
-            emptyText="No tasks yet."
+            assigneeOptions={OFFBOARDING_ASSIGNEE_KEYS.map((o) => ({
+              ...o,
+              label: t(o.label),
+            }))}
+            scheduleOptions={OFFBOARDING_SCHEDULE_KEYS.map((o) => ({
+              ...o,
+              label: t(o.label),
+            }))}
+            text={{
+              scheduleLabel: t("due"),
+              addLabel: t("addTask"),
+              emptyText: t("noTasksYet"),
+              taskName: t("taskName"),
+              removeTask: t("removeTask"),
+              descriptionOptional: t("descriptionOptional"),
+              assignedTo: t("assignedTo"),
+              days: t("days"),
+              required: t("required"),
+            }}
           />
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button
-          onClick={save}
-          disabled={!dirty || saving}
-          className="bg-emerald-600 text-white hover:bg-emerald-700"
-        >
-          Save template
+        <Button onClick={save} disabled={!dirty || saving}>
+          {t("saveTemplate")}
         </Button>
       </div>
     </div>

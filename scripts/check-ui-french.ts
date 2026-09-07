@@ -131,6 +131,22 @@ const PRIMITIVES = "src/components/ui";
 /** Static `from "…"` and dynamic `import("…")` alike. */
 const IMPORTS = /(?:from\s+|import\s*\()["']([^"']+)["']/g;
 
+/**
+ * `import type { … } from "…"` — ERASED AT COMPILE TIME, so the target never
+ * reaches the browser and none of its strings can render.
+ *
+ * The walk followed these like any other import, which is how two error
+ * messages in `src/app/api/roles/overrides/route.ts` were attributed to the
+ * `my-notifications` SETTINGS SCREEN: `src/lib/api/roles.ts` imports the
+ * route's response TYPE, and that was enough to drag a server file into a
+ * client surface.
+ *
+ * Measured across `src/`: 2,047 type-only imports, 149 of them into an API
+ * route. Blanking them before the walk is not a loosening — it is the
+ * difference between "what this screen renders" and "what its types mention".
+ */
+const TYPE_IMPORT = /\bimport\s+type\s+[\s\S]{0,400}?from\s+["'][^"']+["']/g;
+
 /** Attributes whose literal value is read by a person, not by a machine. */
 const VISIBLE_ATTR =
   /\b(?:placeholder|title|aria-label|label|description|emptyMessage|emptyLabel|helperText|tooltip|heading|subtitle|confirmLabel|cancelLabel|submitLabel)\s*=\s*"([^"]{2,})"/g;
@@ -498,7 +514,13 @@ function walk(
   if (seen.has(file)) return;
   seen.add(file);
   if (depth <= 0) return;
-  for (const m of read(file).stripped.matchAll(IMPORTS)) {
+  // Type-only imports are blanked first: they carry no runtime code, so the
+  // file they name renders nothing on this surface. Length-preserving so the
+  // regex indices still line up with the source.
+  const source = read(file).stripped.replace(TYPE_IMPORT, (m) =>
+    " ".repeat(m.length),
+  );
+  for (const m of source.matchAll(IMPORTS)) {
     const target = resolveSpec(m[1], file);
     if (!target) continue;
     // The shadcn primitives are their own surface, not fifty sections' debt.
@@ -587,24 +609,15 @@ const BASELINE: Record<string, Set<string>> = {
     "booking-statuses",
     "care-tasks",
     "checkin-requirements",
-    "deposit-rules",
     "estimate-settings",
     "evaluations",
     "form-notifications",
-    "hr-config",
     "invoice-template",
-    "mobile-app",
-    "my-notifications",
-    "my-profile",
-    "offboarding-templates",
     "onboarding-templates",
-    "payroll-rules",
-    "pet-breeds",
     "pricing-rules",
     "report-card-template",
     "roles-permissions",
     "tags-notes",
-    "taxes",
     "tips",
     "training",
     "yipyygo",

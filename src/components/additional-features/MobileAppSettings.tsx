@@ -21,6 +21,7 @@ import {
   useSaveFacilitySetting,
 } from "@/lib/api/facility-settings";
 import type { MobileAppConfig } from "@/lib/settings/mobile-app";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ── NOTHING RENDERS UNTIL THE FACILITY'S OWN CONFIG HAS ARRIVED ────────────
 //
@@ -49,6 +50,7 @@ function MobileAppEditor({
 }: {
   initialConfig: MobileAppConfig;
 }) {
+  const t = useSettingsText().section("mobile-app");
   const saveSetting = useSaveFacilitySetting();
   const [settings, setSettings] = useState<MobileAppConfig>(initialConfig);
   const [savedSettings, setSavedSettings] =
@@ -79,14 +81,10 @@ function MobileAppEditor({
       {
         onSuccess: () => {
           setSavedSettings(settings);
-          toast.success("Mobile app settings saved");
+          toast.success(t("saved"));
         },
         onError: (error) =>
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Those mobile app settings were not saved.",
-          ),
+          toast.error(error instanceof Error ? error.message : t("notSaved")),
       },
     );
   };
@@ -98,13 +96,13 @@ function MobileAppEditor({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Smartphone className="size-5" />
-            App identity
+            {t("appIdentity")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="appName">App name</Label>
+              <Label htmlFor="appName">{t("appName")}</Label>
               <Input
                 id="appName"
                 value={settings.appName}
@@ -115,10 +113,11 @@ function MobileAppEditor({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customDomain">Custom domain</Label>
+              <Label htmlFor="customDomain">{t("customDomain")}</Label>
               <Input
                 id="customDomain"
                 value={settings.customDomain || ""}
+                // french-ok: an example domain, identical in both languages
                 placeholder="app.yourfacility.com"
                 onChange={(e) =>
                   setSettings({ ...settings, customDomain: e.target.value })
@@ -129,7 +128,7 @@ function MobileAppEditor({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="app-icon-url">App icon</Label>
+              <Label htmlFor="app-icon-url">{t("appIcon")}</Label>
               {/* Was a read-only line of text under an Upload button with no
                   onClick and no file input. There is no image store to upload
                   to yet, and a button that does nothing is worse than a field
@@ -150,12 +149,12 @@ function MobileAppEditor({
                 />
               </div>
               <p className="text-ink-tertiary text-xs">
-                Recommended: 1024x1024px PNG
+                {t("iconRecommended")}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="splash-url">Splash screen</Label>
+              <Label htmlFor="splash-url">{t("splashScreen")}</Label>
               <div className="flex items-center gap-3">
                 <div className="border-line bg-surface-inset flex size-16 items-center justify-center rounded-lg border">
                   <ImageIcon className="text-ink-disabled size-8" />
@@ -170,7 +169,7 @@ function MobileAppEditor({
                 />
               </div>
               <p className="text-ink-tertiary text-xs">
-                Recommended: 2048x2732px PNG
+                {t("splashRecommended")}
               </p>
             </div>
           </div>
@@ -182,13 +181,13 @@ function MobileAppEditor({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Palette className="size-5" />
-            Branding colors
+            {t("brandingColours")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="primaryColor">Primary color</Label>
+              <Label htmlFor="primaryColor">{t("primaryColour")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="primaryColor"
@@ -210,7 +209,7 @@ function MobileAppEditor({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="secondaryColor">Secondary color</Label>
+              <Label htmlFor="secondaryColor">{t("secondaryColour")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="secondaryColor"
@@ -232,7 +231,7 @@ function MobileAppEditor({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="accentColor">Accent color</Label>
+              <Label htmlFor="accentColor">{t("accentColour")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="accentColor"
@@ -256,7 +255,7 @@ function MobileAppEditor({
 
           {/* Color Preview */}
           <div className="rounded-lg border bg-slate-50 p-4">
-            <p className="mb-3 text-sm font-medium">Preview</p>
+            <p className="mb-3 text-sm font-medium">{t("preview")}</p>
             <div className="flex gap-3">
               <div
                 className="h-16 w-16 rounded-lg border-2 shadow-sm"
@@ -278,15 +277,16 @@ function MobileAppEditor({
       {/* App Store Links */}
       <Card>
         <CardHeader>
-          <CardTitle>App store links</CardTitle>
+          <CardTitle>{t("appStoreLinks")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="iosAppId">iOS App ID</Label>
+              <Label htmlFor="iosAppId">{t("iosAppId")}</Label>
               <Input
                 id="iosAppId"
                 value={settings.iosAppId || ""}
+                // french-ok: an example bundle id, identical in both languages
                 placeholder="com.yourfacility.app"
                 onChange={(e) =>
                   setSettings({ ...settings, iosAppId: e.target.value })
@@ -295,10 +295,11 @@ function MobileAppEditor({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="androidPackageName">Android package name</Label>
+              <Label htmlFor="androidPackageName">{t("androidPackage")}</Label>
               <Input
                 id="androidPackageName"
                 value={settings.androidPackageName || ""}
+                // french-ok: an example package name, identical in both languages
                 placeholder="com.yourfacility.app"
                 onChange={(e) =>
                   setSettings({
@@ -312,7 +313,7 @@ function MobileAppEditor({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="appStoreUrl">App store URL</Label>
+              <Label htmlFor="appStoreUrl">{t("appStoreUrl")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="appStoreUrl"
@@ -337,7 +338,7 @@ function MobileAppEditor({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="playStoreUrl">Play store URL</Label>
+              <Label htmlFor="playStoreUrl">{t("playStoreUrl")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="playStoreUrl"
@@ -367,18 +368,18 @@ function MobileAppEditor({
       {/* Feature Toggles */}
       <Card>
         <CardHeader>
-          <CardTitle>Feature toggles</CardTitle>
+          <CardTitle>{t("featureToggles")}</CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
-            Control which features are available in the mobile app
+            {t("featureTogglesHelp")}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex-1">
-                <p className="font-medium">Push Notifications</p>
+                <p className="font-medium">{t("pushNotifications")}</p>
                 <p className="text-muted-foreground text-sm">
-                  Enable push notifications for bookings, updates, etc.
+                  {t("pushNotificationsHelp")}
                 </p>
               </div>
               <Switch
@@ -391,9 +392,9 @@ function MobileAppEditor({
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex-1">
-                <p className="font-medium">In-App Messaging</p>
+                <p className="font-medium">{t("inAppMessaging")}</p>
                 <p className="text-muted-foreground text-sm">
-                  Chat with customers directly in the app
+                  {t("inAppMessagingHelp")}
                 </p>
               </div>
               <Switch
@@ -406,9 +407,9 @@ function MobileAppEditor({
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex-1">
-                <p className="font-medium">Live Camera Access</p>
+                <p className="font-medium">{t("liveCamera")}</p>
                 <p className="text-muted-foreground text-sm">
-                  Let customers view live pet cameras
+                  {t("liveCameraHelp")}
                 </p>
               </div>
               <Switch
@@ -421,9 +422,9 @@ function MobileAppEditor({
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex-1">
-                <p className="font-medium">Booking Flow</p>
+                <p className="font-medium">{t("bookingFlow")}</p>
                 <p className="text-muted-foreground text-sm">
-                  Allow customers to book services via app
+                  {t("bookingFlowHelp")}
                 </p>
               </div>
               <Switch
@@ -436,9 +437,9 @@ function MobileAppEditor({
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex-1">
-                <p className="font-medium">Loyalty Program</p>
+                <p className="font-medium">{t("loyaltyProgram")}</p>
                 <p className="text-muted-foreground text-sm">
-                  Show loyalty points and rewards
+                  {t("loyaltyProgramHelp")}
                 </p>
               </div>
               <Switch
@@ -455,12 +456,12 @@ function MobileAppEditor({
       {/* Legal Links */}
       <Card>
         <CardHeader>
-          <CardTitle>Legal & compliance</CardTitle>
+          <CardTitle>{t("legalAndCompliance")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="termsUrl">Terms of service URL</Label>
+              <Label htmlFor="termsUrl">{t("termsUrl")}</Label>
               <Input
                 id="termsUrl"
                 value={settings.termsOfServiceUrl}
@@ -474,7 +475,7 @@ function MobileAppEditor({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="privacyUrl">Privacy policy URL</Label>
+              <Label htmlFor="privacyUrl">{t("privacyUrl")}</Label>
               <Input
                 id="privacyUrl"
                 value={settings.privacyPolicyUrl}
@@ -490,14 +491,12 @@ function MobileAppEditor({
       {/* Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">White-Label Ready</Badge>
+          <Badge variant="secondary">{t("whiteLabelReady")}</Badge>
           <Badge variant="outline">iOS & Android</Badge>
         </div>
         <div className="flex items-center gap-2">
           {isDirty && (
-            <p className="text-ink-tertiary text-sm">
-              You have unsaved changes
-            </p>
+            <p className="text-ink-tertiary text-sm">{t("unsavedChanges")}</p>
           )}
           {/* Both of these had NO onClick — not a stub, not a toast, nothing.
               "Export Config" is a pure function of what is on screen, so it is
@@ -505,13 +504,13 @@ function MobileAppEditor({
               §5q: a button is a verb plus its object. */}
           <Button variant="outline" onClick={handleExport}>
             <Download className="mr-2 size-4" />
-            Download app config
+            {t("downloadConfig")}
           </Button>
           <Button
             onClick={handleSave}
             disabled={!isDirty || saveSetting.isPending}
           >
-            {saveSetting.isPending ? "Saving…" : "Save mobile app settings"}
+            {saveSetting.isPending ? t("saving") : t("save")}
           </Button>
         </div>
       </div>

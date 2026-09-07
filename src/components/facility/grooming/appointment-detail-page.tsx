@@ -223,7 +223,7 @@ function ProfileNoteRow({
         title={isPinned ? "Unpin" : "Pin to top"}
         onClick={onTogglePin}
         className={cn(
-          "shrink-0 rounded-sm p-1 opacity-0 transition group-hover:opacity-100",
+          "shrink-0 rounded-sm p-1 transition",
           isPinned
             ? "text-amber-700 hover:bg-amber-100 dark:text-amber-300"
             : "text-muted-foreground hover:bg-muted",
