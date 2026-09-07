@@ -9080,3 +9080,161 @@ Two things are excluded, deliberately, and the test says why:
 `node -e` inside a shell. `scratchpad/lines.mjs` and the `Write` tool both
 avoid it; the CLAUDE.md note about heredocs eating `\s` is the same lesson,
 one layer up.
+
+## The add-ons screen imported the customer booking flow to read two fields
+
+`AddOnsManager.tsx` built its list of attachable services with
+
+```ts
+getAllServiceCategories(SERVICE_CATEGORIES, modules)
+  .filter(
+    (s) =>
+      ["daycare", "boarding", "grooming", "training", "retail", "vet"].includes(
+        s.id,
+      ) || s.isCustom,
+  )
+  .map((s) => ({ id: s.id, name: s.name }));
+```
+
+`SERVICE_CATEGORIES` lives in `src/components/bookings/modals/constants.ts` —
+the **customer** booking flow's catalogue, carrying Unsplash photographs, base
+prices and marketing bullets ("Comfy lodging", "Lots of attention"). Every one
+of those was thrown away one line later: the screen wanted `{id, name}`.
+
+**Two things followed from that, and only one was visible.**
+
+The measured one: `check:ui-french` walks three imports deep from a section, so
+all **64** English strings in `constants.ts` counted against the `addons`
+section — out of 172 total. A file the screen used for two fields was 37% of
+its translation debt, and translating those 64 would have translated the
+customer booking wizard's fixtures by accident, under a settings commit.
+
+The unmeasured one is worse. **The filter names `retail` and `vet`, and
+`SERVICE_CATEGORIES` contains neither.** It holds exactly `daycare`,
+`boarding`, `grooming`, `training`, `evaluation`. So the filter has been
+asking for six services and receiving four since it was written, and no
+facility has ever been able to scope an add-on to retail or to the vet module.
+Nothing failed; the two ids simply never matched, which is what an
+`includes()` against the wrong list does.
+
+**Fixed** by naming the four that actually render, in the screen itself:
+
+```ts
+const BUILTIN_ADDON_SERVICES = [
+  "daycare",
+  "boarding",
+  "grooming",
+  "training",
+] as const;
+```
+
+plus the custom modules, filtered on `status === "active" &&
+onlineBooking.enabled` exactly as `getAllServiceCategories` did. Behaviour is
+unchanged on purpose — **adding retail and vet is a product decision, not a
+translation one**, and it is left for whoever owns that call.
+
+**The general shape, which is the part worth keeping:** a screen that imports a
+rich constant and immediately `.map`s it down to two fields is importing a
+dependency it does not have. Here it cost a translation surface and hid a dead
+filter for as long as anyone has looked. Check what a `.map` keeps before
+trusting what an import implies.
+
+## `Uncategorized` was an English word doing an object key's job
+
+`AddOnsManager` grouped its rows with
+
+```ts
+const key = addon.category || "Uncategorized";
+```
+
+and then ordered the groups with `[...categoryNames, "Uncategorized"]`. The
+word is a **key** — it buckets rows and sorts them — and it was also the
+heading on screen, so translating it would have moved the key with it.
+
+It also collided. A facility is free to create a category called
+"Uncategorized", and the two would have merged into one group with no error and
+no way to tell them apart.
+
+**Fixed** with a sentinel, `const UNCATEGORIZED = "__uncategorized__"`, and a
+translation applied only at the render site. This is the third instance of the
+same shape in this section of the map — see "An object key rendered as a word"
+under 2026-09-07 — and the rule is the same each time: **the key never travels
+through the locale layer; only the label does.**
+
+## Add-on prices were assembled with a `$`, a `/` and a fragment
+
+`formatPrice` in `AddOnsManager.tsx` built six shapes by hand:
+
+```ts
+case "per_day":  return `$${addon.price}/day`;
+case "per_hour": return `$${addon.price}/${addon.unitLabel || "hr"}`;
+case "percentage_of_booking": return `${addon.price}% of booking`;
+```
+
+Three §5q defects in one function. The dollar sign LEADS, which fr-CA does not
+do — it writes `42,50 $`, sign trailing, behind a non-breaking space so the two
+never wrap apart. The `/` is an English joint: French says `par jour`, not
+`/jour`. And the percentage had no `Intl` anywhere near it, so it could not
+take the NBSP French requires before `%`.
+
+**Fixed** with `formatMoney` / `formatPercent` for the figure and a whole
+catalogue string for each suffix — `{amount} par jour`, not `{amount}` glued to
+a `/`. The unit fallbacks (`session`, `hour`, `item`) became catalogue entries
+too; a facility's own `unitLabel` is the facility's word and still passes
+through untouched.
+
+This is the same defect the retail and Yipyy Pay screens carried, and the third
+time a `$${…}` template has been found doing money. **A leading `$` in a
+template literal is the tell** — it is grep-able, and worth grepping before the
+next money screen is called finished.
+
+## Three §6 violations that only a French pass went looking for
+
+None of these are French problems. They were all found by reading the add-ons
+screen closely enough to translate it, which is the argument for doing the two
+jobs in one pass rather than scheduling a separate "design polish" that never
+comes.
+
+1. **`opacity-60` on the whole card** for an inactive add-on. §6 rule 4: opacity
+   rewrites every ratio in the subtree at once, so the name, the price, the
+   description and the metadata all dropped below the text floor together. It
+   is a `secondary` chip now — a WORD, which is also the only version a
+   colour-blind reader and a printout can read (§3, rule 10).
+2. **A "Default" badge in `blue-50` / `blue-200` / `blue-700`, with a
+   `dark:` triple after it.** A tint fill (rule 2), off-palette, and dark-mode
+   styling in a product that has no dark mode. Now `variant="secondary"`.
+3. **A `bg-blue-50/40` panel** around the extended scheduling fields, and a
+   `bg-violet-50 ring-violet-200` disc behind a violet icon in the category
+   sheet. Rule 2 leaves exactly two things tinted — a metric or filter tile and
+   a status chip — and a group of form fields is neither. The panel is white
+   with a hairline; the disc is a SOLID `--violet` with a white glyph, which is
+   what §6 rule 2(a) says a disc on a light ground must be, because
+   light-on-light disappears.
+
+Also cleared on the way: **fifteen fixed control heights** (`h-9`, `h-8`,
+`h-7`) inside `AddOnFormDialog`, each of which overrode `Input`'s own
+`min-h-10 max-lg:min-h-12` back to a fixed 36 / 32 / 28px. That is precisely
+the defect stage 8b existed to fix, still alive in the call sites — **stage 8b
+changed the primitives and could not reach the `className` overrides**, so
+expect more of these on every screen that has not been through its own pass.
+`rg 'className="h-[0-9]' src` finds them.
+
+And two icon-only buttons in `AddOnCategorySheet` with **no accessible name at
+all** — a screen reader read the category list as "button, button". They now
+name the category they act on.
+
+## `verify-replace.mjs` reports what it is given, and silence is not a result
+
+Run with no arguments it prints
+
+```
+✓ 0 template fills checked — every placeholder exists and every one is filled
+```
+
+which reads exactly like a pass. It takes its file list from `argv`, so an
+empty list is a clean sweep of nothing. This is the same failure the French
+e2e spec had — a check whose every assertion is about an absence cannot tell
+"clean" from "not looking" — and it was nearly believed a second time.
+
+**Run it as** `node verify-replace.mjs $(rg -l 'section\("' src)` and **read
+the count**, not the tick. 115 files, 220 fills, is the current shape.

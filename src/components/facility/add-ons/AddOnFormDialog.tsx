@@ -9,6 +9,7 @@ import type {
   AddOnPetScope,
 } from "@/types/facility";
 import { cn } from "@/lib/utils";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import {
   Dialog,
   DialogContent,
@@ -53,89 +54,92 @@ import {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
+// A module-level table cannot know a locale, so it carries the KEY and the
+// render site resolves it. The `value` is what travels — it is stored on the
+// add-on and read back by the booking flow — so only the label moves.
 const PRICING_OPTIONS: {
   value: AddOnPricingType;
-  label: string;
-  desc: string;
+  labelKey: string;
+  descKey: string;
   Icon: React.ComponentType<{ className?: string }>;
 }[] = [
   {
     value: "flat",
-    label: "Fixed Price",
-    desc: "One flat charge regardless of duration or quantity",
+    labelKey: "priceFlat",
+    descKey: "priceFlatHelp",
     Icon: DollarSign,
   },
   {
     value: "per_item",
-    label: "Per Item",
-    desc: "Price multiplied by the quantity selected",
+    labelKey: "pricePerItem",
+    descKey: "pricePerItemHelp",
     Icon: Package,
   },
   {
     value: "per_day",
-    label: "Per Day",
-    desc: "Charged once for each day of the booking",
+    labelKey: "pricePerDayLabel",
+    descKey: "pricePerDayHelp",
     Icon: CalendarClock,
   },
   {
     value: "per_session",
-    label: "Per Session",
-    desc: "Charged per session or occurrence",
+    labelKey: "pricePerSession",
+    descKey: "pricePerSessionHelp",
     Icon: Repeat,
   },
   {
     value: "per_hour",
-    label: "Per Hour",
-    desc: "Charged based on duration in hours",
+    labelKey: "pricePerHour",
+    descKey: "pricePerHourHelp",
     Icon: Clock,
   },
   {
     value: "percentage_of_booking",
-    label: "% of Booking",
-    desc: "A percentage of the base service price",
+    labelKey: "pricePercent",
+    descKey: "pricePercentHelp",
     Icon: Percent,
   },
 ];
 
 const SCHEDULING_OPTIONS: {
   value: AddOnSchedulingType;
-  label: string;
-  desc: string;
+  labelKey: string;
+  descKey: string;
   Icon: React.ComponentType<{ className?: string }>;
 }[] = [
   {
     value: "quantity",
-    label: "Quantity Only",
-    desc: "Client picks how many — no time slot needed",
+    labelKey: "schedQuantityLabel",
+    descKey: "schedQuantityHelp",
     Icon: Hash,
   },
   {
     value: "time_slot",
-    label: "Time Slot",
-    desc: "A specific time slot must be booked by staff or customer",
+    labelKey: "schedTimeSlotLabel",
+    descKey: "schedTimeSlotHelp",
     Icon: Clock,
   },
   {
     value: "per_stay_night",
-    label: "Per Night",
-    desc: "Auto-applied once per night of a boarding stay",
+    labelKey: "schedPerNightLabel",
+    descKey: "schedPerNightHelp",
     Icon: Repeat,
   },
   {
     value: "grooming_linked",
-    label: "Grooming-linked",
-    desc: "Occurs alongside a grooming session in the same booking",
+    labelKey: "schedGroomingLabel",
+    descKey: "schedGroomingHelp",
     Icon: Scissors,
   },
 ];
 
 const SIZE_KEYS = ["small", "medium", "large", "giant"] as const;
 type SizeKey = (typeof SIZE_KEYS)[number];
-const SIZE_LABELS: Record<SizeKey, string> = {
-  small: "Small",
-  medium: "Medium",
-  large: "Large",
-  giant: "Giant",
+const SIZE_LABEL_KEY: Record<SizeKey, string> = {
+  small: "sizeSmall",
+  medium: "sizeMedium",
+  large: "sizeLarge",
+  giant: "sizeGiant",
 };
 
 // ── Form state ─────────────────────────────────────────────────────────────────
@@ -253,8 +257,8 @@ function OptionCard({
       className={cn(
         "flex flex-col gap-1.5 rounded-xl border p-3 text-left transition-all",
         selected
-          ? "border-primary bg-primary/6 ring-primary/20 shadow-sm ring-2"
-          : "hover:border-slate-300 hover:bg-slate-50/50",
+          ? "border-primary ring-primary bg-card shadow-sm ring-2"
+          : "hover:border-foreground/15",
       )}
     >
       <div className="flex items-center gap-2">
@@ -306,6 +310,7 @@ export function AddOnFormDialog({
   onClose,
   onSave,
 }: Props) {
+  const t = useSettingsText().section("addons");
   const [form, setForm] = useState<AddOnFormValues>(() =>
     editing && editing.id !== ""
       ? {
@@ -411,36 +416,37 @@ export function AddOnFormDialog({
       <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b bg-linear-to-r from-slate-50 to-white px-6 pt-6 pb-4">
           <DialogTitle className="text-xl font-bold tracking-tight">
-            {editing && editing.id !== "" ? "Edit Add-On" : "Create Add-On"}
+            {editing && editing.id !== "" ? t("dialogEdit") : t("dialogCreate")}
           </DialogTitle>
           <p className="text-muted-foreground mt-0.5 text-sm">
-            Configure pricing, scheduling, and eligibility for this add-on.
+            {t("dialogIntro")}
           </p>
         </DialogHeader>
 
         <ScrollArea className="max-h-[70vh]">
           <div className="space-y-4 px-6 py-5">
             {/* ── 1. Basic Info ── */}
-            <Section title="Basic Information">
+            <Section title={t("secBasics")}>
               <div className="space-y-1.5">
                 <Label className="text-muted-foreground text-xs">
-                  Name <span className="text-destructive">*</span>
+                  {t("fieldName")} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   value={form.name}
                   onChange={(e) => f("name", e.target.value)}
-                  placeholder="e.g. Welcome Treat, Daily Walk"
+                  placeholder={t("namePlaceholder")}
                   autoFocus
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-muted-foreground text-xs">
-                  Description <span className="text-destructive">*</span>
+                  {t("fieldDescription")}{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   value={form.description}
                   onChange={(e) => f("description", e.target.value)}
-                  placeholder="What does this add-on include? What will the pet experience?"
+                  placeholder={t("descriptionPlaceholder")}
                   rows={2}
                   className="resize-none"
                 />
@@ -448,14 +454,14 @@ export function AddOnFormDialog({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground text-xs">
-                    Category
+                    {t("fieldCategory")}
                   </Label>
                   <Select
                     value={form.category ?? ""}
                     onValueChange={(v) => f("category", v)}
                   >
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Select category" />
+                    <SelectTrigger className="text-sm">
+                      <SelectValue placeholder={t("categoryPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((c) => (
@@ -476,13 +482,13 @@ export function AddOnFormDialog({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground text-xs">
-                    Image URL
+                    {t("fieldImage")}
                   </Label>
                   <Input
                     value={form.image ?? ""}
                     onChange={(e) => f("image", e.target.value)}
                     placeholder="https://..."
-                    className="h-9 text-sm"
+                    className="text-sm"
                   />
                 </div>
               </div>
@@ -493,20 +499,17 @@ export function AddOnFormDialog({
             </Section>
 
             {/* ── 2. Pricing ── */}
-            <Section
-              title="Pricing"
-              subtitle="How the price is calculated when this add-on is selected"
-            >
+            <Section title={t("secPricing")} subtitle={t("secPricingHelp")}>
               {/* Pricing type tiles */}
               <div className="grid grid-cols-3 gap-2">
-                {PRICING_OPTIONS.map(({ value, label, desc, Icon }) => (
+                {PRICING_OPTIONS.map(({ value, labelKey, descKey, Icon }) => (
                   <OptionCard
                     key={value}
                     selected={form.pricingType === value}
                     onClick={() => f("pricingType", value)}
                     Icon={Icon}
-                    label={label}
-                    desc={desc}
+                    label={t(labelKey)}
+                    desc={t(descKey)}
                   />
                 ))}
               </div>
@@ -515,7 +518,7 @@ export function AddOnFormDialog({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground text-xs">
-                    {isPercentage ? "Percentage (%)" : "Price ($)"}
+                    {isPercentage ? t("fieldPercentage") : t("fieldPrice")}
                   </Label>
                   <div className="relative">
                     <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
@@ -530,13 +533,13 @@ export function AddOnFormDialog({
                       onChange={(e) =>
                         f("price", parseFloat(e.target.value) || 0)
                       }
-                      className="h-9 pl-7 text-sm"
+                      className="pl-7 text-sm"
                     />
                   </div>
                   {isPercentage && (
                     <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
                       <Info className="size-3" />
-                      Applied to the base service price at booking time
+                      {t("percentHelp")}
                     </p>
                   )}
                 </div>
@@ -545,19 +548,19 @@ export function AddOnFormDialog({
                   form.pricingType === "per_item") && (
                   <div className="space-y-1.5">
                     <Label className="text-muted-foreground text-xs">
-                      Unit Label
+                      {t("fieldUnitLabel")}
                     </Label>
                     <Input
                       value={form.unitLabel ?? ""}
                       onChange={(e) => f("unitLabel", e.target.value)}
                       placeholder={
                         form.pricingType === "per_hour"
-                          ? "hr"
+                          ? t("unitHour")
                           : form.pricingType === "per_item"
-                            ? "item"
-                            : "session"
+                            ? t("unitItem")
+                            : t("unitSession")
                       }
-                      className="h-9 text-sm"
+                      className="text-sm"
                     />
                   </div>
                 )}
@@ -567,7 +570,7 @@ export function AddOnFormDialog({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground text-xs">
-                    Duration (minutes)
+                    {t("fieldDuration")}
                   </Label>
                   <Input
                     type="number"
@@ -579,14 +582,14 @@ export function AddOnFormDialog({
                         e.target.value ? parseInt(e.target.value) : undefined,
                       )
                     }
-                    placeholder="Optional"
-                    className="h-9 text-sm"
+                    placeholder={t("durationPlaceholder")}
+                    className="text-sm"
                   />
                 </div>
                 {form.pricingType === "per_item" && (
                   <div className="space-y-1.5">
                     <Label className="text-muted-foreground text-xs">
-                      Max Quantity
+                      {t("fieldMaxQuantity")}
                     </Label>
                     <Input
                       type="number"
@@ -598,8 +601,8 @@ export function AddOnFormDialog({
                           e.target.value ? parseInt(e.target.value) : undefined,
                         )
                       }
-                      placeholder="No limit"
-                      className="h-9 text-sm"
+                      placeholder={t("noLimit")}
+                      className="text-sm"
                     />
                   </div>
                 )}
@@ -608,8 +611,8 @@ export function AddOnFormDialog({
               {/* Taxes */}
               <div className="space-y-2">
                 <FieldRow
-                  label="Taxes apply"
-                  hint="Toggle whether this add-on is subject to tax"
+                  label={t("fieldTaxesApply")}
+                  hint={t("fieldTaxesApplyHelp")}
                 >
                   <Switch
                     checked={form.taxEnabled ?? true}
@@ -619,7 +622,7 @@ export function AddOnFormDialog({
                 {form.taxEnabled && (
                   <div className="space-y-1.5">
                     <Label className="text-muted-foreground text-xs">
-                      Tax Rate % override
+                      {t("fieldTaxRate")}
                     </Label>
                     <Input
                       type="number"
@@ -634,8 +637,8 @@ export function AddOnFormDialog({
                             : undefined,
                         )
                       }
-                      placeholder="Leave blank to use facility default"
-                      className="h-9 text-sm"
+                      placeholder={t("taxRatePlaceholder")}
+                      className="text-sm"
                     />
                   </div>
                 )}
@@ -644,8 +647,8 @@ export function AddOnFormDialog({
               {/* Size-based pricing */}
               <div className="space-y-2">
                 <FieldRow
-                  label="Size-based pricing"
-                  hint="Add a price modifier for each pet size"
+                  label={t("fieldSizePricing")}
+                  hint={t("fieldSizePricingHelp")}
                 >
                   <Switch
                     checked={sizePricingOn}
@@ -662,8 +665,8 @@ export function AddOnFormDialog({
                           i > 0 && "border-t",
                         )}
                       >
-                        <span className="text-muted-foreground w-14 text-xs font-medium capitalize">
-                          {SIZE_LABELS[row.size]}
+                        <span className="text-muted-foreground min-w-14 text-xs font-medium">
+                          {t(SIZE_LABEL_KEY[row.size])}
                         </span>
                         <Input
                           type="number"
@@ -683,7 +686,7 @@ export function AddOnFormDialog({
                               ),
                             )
                           }
-                          className="h-7 flex-1 text-xs"
+                          className="min-h-7 flex-1 text-xs"
                         />
                         <Select
                           value={row.modifierType}
@@ -700,12 +703,16 @@ export function AddOnFormDialog({
                             )
                           }
                         >
-                          <SelectTrigger className="h-7 w-24 text-xs">
+                          <SelectTrigger className="min-h-7 min-w-24 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="flat">$ Add</SelectItem>
-                            <SelectItem value="percentage">% Add</SelectItem>
+                            <SelectItem value="flat">
+                              {t("modifierFlat")}
+                            </SelectItem>
+                            <SelectItem value="percentage">
+                              {t("modifierPercent")}
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -716,23 +723,20 @@ export function AddOnFormDialog({
             </Section>
 
             {/* ── 3. Pet Scope ── */}
-            <Section
-              title="Pet Scope"
-              subtitle="Is this add-on charged per booking or per pet?"
-            >
+            <Section title={t("secPetScope")} subtitle={t("secPetScopeHelp")}>
               <div className="grid grid-cols-2 gap-2">
                 {(
                   [
                     {
                       value: "per_booking" as AddOnPetScope,
-                      label: "Per Booking",
-                      desc: "Charged once regardless of how many pets are in the booking",
+                      label: t("scopePerBooking"),
+                      desc: t("scopePerBookingHelp"),
                       Icon: Package,
                     },
                     {
                       value: "per_pet" as AddOnPetScope,
-                      label: "Per Pet",
-                      desc: "Charged separately for each pet included in the booking",
+                      label: t("scopePerPet"),
+                      desc: t("scopePerPetHelp"),
                       Icon: Dog,
                     },
                   ] as const
@@ -751,27 +755,29 @@ export function AddOnFormDialog({
 
             {/* ── 4. Scheduling ── */}
             <Section
-              title="Scheduling"
-              subtitle="How this add-on is booked and fulfilled"
+              title={t("secScheduling")}
+              subtitle={t("secSchedulingHelp")}
             >
               <div className="grid grid-cols-2 gap-2">
-                {SCHEDULING_OPTIONS.map(({ value, label, desc, Icon }) => (
-                  <OptionCard
-                    key={value}
-                    selected={form.schedulingType === value}
-                    onClick={() => f("schedulingType", value)}
-                    Icon={Icon}
-                    label={label}
-                    desc={desc}
-                  />
-                ))}
+                {SCHEDULING_OPTIONS.map(
+                  ({ value, labelKey, descKey, Icon }) => (
+                    <OptionCard
+                      key={value}
+                      selected={form.schedulingType === value}
+                      onClick={() => f("schedulingType", value)}
+                      Icon={Icon}
+                      label={t(labelKey)}
+                      desc={t(descKey)}
+                    />
+                  ),
+                )}
               </div>
 
               {/* Quantity cap for quantity-only mode */}
               {form.schedulingType === "quantity" && (
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground text-xs">
-                    Max Quantity per booking
+                    {t("fieldMaxPerBooking")}
                   </Label>
                   <Input
                     type="number"
@@ -783,26 +789,29 @@ export function AddOnFormDialog({
                         e.target.value ? parseInt(e.target.value) : undefined,
                       )
                     }
-                    placeholder="No limit"
-                    className="h-9 text-sm"
+                    placeholder={t("noLimit")}
+                    className="text-sm"
                   />
                 </div>
               )}
 
-              {/* Extended scheduling options — only shown when time slot or grooming-linked */}
+              {/* Extended scheduling options — only shown when time slot or
+                  grooming-linked. A white panel with a hairline, not a blue wash:
+                  §6 rule 2 leaves exactly two things tinted — a metric or filter
+                  tile, and a status chip — and a group of fields is neither. */}
               {needsScheduling && (
-                <div className="mt-1 space-y-3 rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+                <div className="bg-card mt-1 space-y-3 rounded-xl border p-4">
                   <div className="mb-1 flex items-center gap-1.5">
-                    <CalendarClock className="size-3.5 text-blue-600" />
-                    <span className="text-xs font-semibold text-blue-800">
-                      Scheduling Options
+                    <CalendarClock className="text-muted-foreground size-3.5" />
+                    <span className="text-xs font-semibold">
+                      {t("schedulingOptions")}
                     </span>
                   </div>
 
                   {/* Who can schedule */}
                   <FieldRow
-                    label="Who can schedule"
-                    hint="Staff only, or allow customers to self-schedule"
+                    label={t("fieldSchedulableBy")}
+                    hint={t("fieldSchedulableByHelp")}
                   >
                     <Select
                       value={form.scheduleConfig?.schedulableBy ?? "staff_only"}
@@ -813,13 +822,15 @@ export function AddOnFormDialog({
                         )
                       }
                     >
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className="text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="staff_only">Staff only</SelectItem>
+                        <SelectItem value="staff_only">
+                          {t("staffOnly")}
+                        </SelectItem>
                         <SelectItem value="customer_and_staff">
-                          Customer & staff
+                          {t("customerAndStaff")}
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -827,8 +838,8 @@ export function AddOnFormDialog({
 
                   {/* Show staff on customer summary */}
                   <FieldRow
-                    label="Show staff on summary"
-                    hint="Display assigned staff member on the customer's booking summary"
+                    label={t("fieldShowStaff")}
+                    hint={t("fieldShowStaffHelp")}
                   >
                     <Switch
                       checked={form.scheduleConfig?.showStaffOnSummary ?? false}
@@ -838,8 +849,8 @@ export function AddOnFormDialog({
 
                   {/* Show on dashboard */}
                   <FieldRow
-                    label="Show icon on dashboard"
-                    hint="Display a scheduling badge on boarding/daycare dashboard cards"
+                    label={t("fieldShowDashboard")}
+                    hint={t("fieldShowDashboardHelp")}
                   >
                     <Switch
                       checked={form.scheduleConfig?.showOnDashboard ?? false}
@@ -850,13 +861,13 @@ export function AddOnFormDialog({
                   {/* Schedule category */}
                   <div className="space-y-1.5">
                     <Label className="text-muted-foreground text-xs">
-                      Schedule category
+                      {t("fieldScheduleCategory")}
                     </Label>
                     <Input
                       value={form.scheduleConfig?.scheduleCategory ?? ""}
                       onChange={(e) => sc("scheduleCategory", e.target.value)}
-                      placeholder="e.g. Grooming, Activity, Communication"
-                      className="h-8 text-xs"
+                      placeholder={t("scheduleCategoryPlaceholder")}
+                      className="text-xs"
                     />
                   </div>
 
@@ -864,7 +875,7 @@ export function AddOnFormDialog({
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-muted-foreground text-xs">
-                        Max bookings per day
+                        {t("fieldMaxPerDay")}
                       </Label>
                       <Input
                         type="number"
@@ -878,13 +889,13 @@ export function AddOnFormDialog({
                               : undefined,
                           )
                         }
-                        placeholder="Unlimited"
-                        className="h-8 text-xs"
+                        placeholder={t("unlimited")}
+                        className="text-xs"
                       />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-muted-foreground text-xs">
-                        Buffer between bookings (min)
+                        {t("fieldBuffer")}
                       </Label>
                       <Input
                         type="number"
@@ -899,7 +910,7 @@ export function AddOnFormDialog({
                           )
                         }
                         placeholder="0"
-                        className="h-8 text-xs"
+                        className="text-xs"
                       />
                     </div>
                   </div>
@@ -907,7 +918,7 @@ export function AddOnFormDialog({
                   {/* Slots per unit */}
                   <div className="space-y-1.5">
                     <Label className="text-muted-foreground text-xs">
-                      Schedulable slots per quantity unit
+                      {t("fieldSlotsPerUnit")}
                     </Label>
                     <Input
                       type="number"
@@ -920,11 +931,10 @@ export function AddOnFormDialog({
                         )
                       }
                       placeholder="1"
-                      className="h-8 text-xs"
+                      className="text-xs"
                     />
                     <p className="text-muted-foreground text-[11px]">
-                      How many slots this add-on consumes per quantity selected
-                      (e.g. a walk-pair = 2)
+                      {t("fieldSlotsPerUnitHelp")}
                     </p>
                   </div>
                 </div>
@@ -932,19 +942,19 @@ export function AddOnFormDialog({
             </Section>
 
             {/* ── 5. Staff ── */}
-            <Section title="Staff Requirement">
+            <Section title={t("secStaff")}>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   {
                     val: false,
-                    label: "No Assignment",
-                    desc: "No staff assignment required",
+                    label: t("staffNone"),
+                    desc: t("staffNoneHelp"),
                     Icon: UserX,
                   },
                   {
                     val: true,
-                    label: "Staff Assigned",
-                    desc: "A staff member must be assigned when this add-on is added",
+                    label: t("staffAssigned"),
+                    desc: t("staffAssignedHelp"),
                     Icon: UserCheck,
                   },
                 ].map(({ val, label, desc, Icon }) => (
@@ -961,15 +971,15 @@ export function AddOnFormDialog({
             </Section>
 
             {/* ── 6. Applicable Services ── */}
-            <Section
-              title="Applicable Services"
-              subtitle="Which services can include this add-on"
-            >
+            <Section title={t("secServices")} subtitle={t("secServicesHelp")}>
               <div className="mb-3 flex gap-2">
                 {(
                   [
-                    { key: "all" as const, label: "All Services" },
-                    { key: "specific" as const, label: "Specific Services" },
+                    { key: "all" as const, label: t("scopeAllServices") },
+                    {
+                      key: "specific" as const,
+                      label: t("scopeSpecificServices"),
+                    },
                   ] as const
                 ).map(({ key, label }) => {
                   const isAll = form.applicableServices.length === 0;
@@ -984,8 +994,8 @@ export function AddOnFormDialog({
                       className={cn(
                         "flex-1 rounded-lg border py-2 text-xs font-medium transition-all",
                         active
-                          ? "border-primary bg-primary/8 text-primary"
-                          : "text-muted-foreground hover:border-slate-300",
+                          ? "border-primary ring-primary text-primary ring-2"
+                          : "text-muted-foreground hover:border-foreground/15",
                       )}
                     >
                       {label}
@@ -1004,8 +1014,8 @@ export function AddOnFormDialog({
                       className={cn(
                         "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
                         selected
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "hover:border-slate-300 hover:bg-slate-50",
+                          ? "border-primary ring-primary text-primary ring-2"
+                          : "hover:border-foreground/15",
                       )}
                     >
                       {selected && <CheckCircle2 className="size-3" />}
@@ -1018,13 +1028,13 @@ export function AddOnFormDialog({
 
             {/* ── 7. Pet Eligibility ── */}
             <Section
-              title="Pet Eligibility"
-              subtitle="Restrict this add-on to specific pet types, breeds, or sizes"
+              title={t("secEligibility")}
+              subtitle={t("secEligibilityHelp")}
               collapsible
               defaultOpen={false}
             >
               <p className="text-muted-foreground -mt-1 text-xs">
-                Leave all fields blank to allow this add-on for every pet.
+                {t("eligibilityBlank")}
               </p>
               <AddOnPetFilter
                 value={form.petTypeFilter}
@@ -1034,14 +1044,14 @@ export function AddOnFormDialog({
 
             {/* ── 8. Auto-Task ── */}
             <Section
-              title="Auto-Task"
-              subtitle="Automatically create a staff task when this add-on is booked"
+              title={t("secAutoTask")}
+              subtitle={t("secAutoTaskHelp")}
               collapsible
               defaultOpen={false}
             >
               <FieldRow
-                label="Generate staff task"
-                hint="Creates a reminder task in the staff queue when this add-on is booked"
+                label={t("fieldGenerateTask")}
+                hint={t("fieldGenerateTaskHelp")}
               >
                 <Switch
                   checked={form.generatesTask}
@@ -1051,30 +1061,27 @@ export function AddOnFormDialog({
               {form.generatesTask && (
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground text-xs">
-                    Task Category
+                    {t("fieldTaskCategory")}
                   </Label>
                   <Input
                     value={form.taskCategory ?? ""}
                     onChange={(e) => f("taskCategory", e.target.value)}
-                    placeholder="e.g. grooming, communication, exercise"
-                    className="h-9 text-sm"
+                    placeholder={t("taskCategoryPlaceholder")}
+                    className="text-sm"
                   />
                 </div>
               )}
             </Section>
 
             {/* ── 9. Status ── */}
-            <Section title="Status">
-              <FieldRow
-                label="Active"
-                hint="Inactive add-ons won't appear in the booking flow"
-              >
+            <Section title={t("secStatus")}>
+              <FieldRow label={t("fieldActive")} hint={t("fieldActiveHelp")}>
                 <div className="flex items-center justify-end gap-2">
                   <Badge
                     variant={form.isActive ? "default" : "secondary"}
                     className="text-[10px]"
                   >
-                    {form.isActive ? "Active" : "Inactive"}
+                    {form.isActive ? t("statusActive") : t("statusInactive")}
                   </Badge>
                   <Switch
                     checked={form.isActive}
@@ -1089,10 +1096,10 @@ export function AddOnFormDialog({
         <Separator />
         <DialogFooter className="bg-slate-50/60 px-6 py-4">
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button disabled={!isValid} onClick={handleSave}>
-            {editing && editing.id !== "" ? "Save Changes" : "Create Add-On"}
+            {editing && editing.id !== "" ? t("saveChanges") : t("createAddOn")}
           </Button>
         </DialogFooter>
       </DialogContent>
