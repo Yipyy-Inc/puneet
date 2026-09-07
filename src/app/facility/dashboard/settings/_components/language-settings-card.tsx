@@ -5,6 +5,7 @@ import {
   CUSTOMER_LANGUAGE_OPTIONS,
   getCustomerLanguageLabel,
 } from "@/lib/language-settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 import { SettingsBlock } from "@/components/ui/settings-block";
 
@@ -23,11 +24,30 @@ import {
 
 export function LanguageSettingsCard() {
   const { languageSettings, updateLanguageSettings } = useSettings();
+  const t = useSettingsText().section("language");
+
+  /**
+   * One whole sentence per branch, not fragments joined with " · ".
+   *
+   * The summary line below used to be built by concatenating six pieces —
+   * "Current mode: ", the mode, " · Primary: ", the locale, and so on. §5q is
+   * explicit that a sentence assembled from fragments cannot be translated:
+   * French puts the qualifier on the other side and needs a non-breaking space
+   * before its colon, and neither survives a join. The placeholders are filled
+   * here so each locale owns its whole sentence.
+   */
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
+  // french-ok: a language picker names each language in that language.
+  const localeName = (code: string) => (code === "en" ? "English" : "Français");
 
   return (
     <SettingsBlock
-      title="Language & Localization"
-      description="Choose software languages and configure customer preferred-language support for signup and communications."
+      title={t("title")}
+      description={t("intro")}
       data={languageSettings}
       onSave={updateLanguageSettings}
     >
@@ -36,17 +56,14 @@ export function LanguageSettingsCard() {
           <div className="flex items-start gap-3 rounded-lg border border-sky-100 bg-sky-50/60 p-3">
             <Languages className="mt-0.5 size-4 shrink-0 text-sky-600" />
             <div className="space-y-1 text-sm">
-              <p className="font-medium text-sky-900">Software Language Mode</p>
-              <p className="text-sky-800/90">
-                Use English only, or enable bilingual mode (English + French) so
-                forms and translated UI content can be used in both languages.
-              </p>
+              <p className="font-medium text-sky-900">{t("modeHeading")}</p>
+              <p className="text-sky-800/90">{t("modeHelp")}</p>
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
             <div className="space-y-2">
-              <Label htmlFor="primary-language">Primary language</Label>
+              <Label htmlFor="primary-language">{t("primaryLanguage")}</Label>
               <Select
                 value={localLanguageSettings.primaryLocale}
                 onValueChange={(value) => {
@@ -66,10 +83,11 @@ export function LanguageSettingsCard() {
                 }}
                 disabled={!isEditing}
               >
-                <SelectTrigger id="primary-language">
+                <SelectTrigger id="primary-language" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  {/* french-ok: an endonym — a picker names each language in that language */}
                   <SelectItem value="en">English</SelectItem>
                   <SelectItem value="fr">Français</SelectItem>
                 </SelectContent>
@@ -77,7 +95,9 @@ export function LanguageSettingsCard() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="secondary-language">Secondary language</Label>
+              <Label htmlFor="secondary-language">
+                {t("secondaryLanguage")}
+              </Label>
               <Select
                 value={localLanguageSettings.secondaryLocale}
                 onValueChange={(value) =>
@@ -88,11 +108,12 @@ export function LanguageSettingsCard() {
                 }
                 disabled={!isEditing || !localLanguageSettings.secondaryEnabled}
               >
-                <SelectTrigger id="secondary-language">
+                <SelectTrigger id="secondary-language" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {localLanguageSettings.primaryLocale !== "en" && (
+                    // french-ok: an endonym, as above
                     <SelectItem value="en">English</SelectItem>
                   )}
                   {localLanguageSettings.primaryLocale !== "fr" && (
@@ -105,9 +126,11 @@ export function LanguageSettingsCard() {
 
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
-              <p className="text-sm font-medium">Enable Secondary Language</p>
-              <p className="text-muted-foreground text-xs">
-                Turn this off for English-only operation.
+              <p className="text-[14.5px] font-medium">
+                {t("enableSecondary")}
+              </p>
+              <p className="text-ink-tertiary text-[13.5px]">
+                {t("enableSecondaryHelp")}
               </p>
             </div>
             <Switch
@@ -125,13 +148,11 @@ export function LanguageSettingsCard() {
           <div className="space-y-3 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
-                <p className="text-sm font-medium text-emerald-900">
-                  Customer Preferred Language
+                <p className="text-[14.5px] font-medium text-emerald-900">
+                  {t("customerPreference")}
                 </p>
-                <p className="text-xs text-emerald-800/90">
-                  When enabled, customers can choose their preferred language
-                  during account creation. Staff will see this language in the
-                  client profile and messaging views.
+                <p className="text-[13.5px] text-emerald-800/90">
+                  {t("customerPreferenceHelp")}
                 </p>
               </div>
               <Switch
@@ -150,8 +171,8 @@ export function LanguageSettingsCard() {
 
             {localLanguageSettings.customerLanguagePreferenceEnabled && (
               <div className="border-border space-y-2 border-t pt-3">
-                <p className="text-xs font-medium text-emerald-900">
-                  Languages available to customers
+                <p className="text-[13.5px] font-medium text-emerald-900">
+                  {t("availableToCustomers")}
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {CUSTOMER_LANGUAGE_OPTIONS.map((option) => {
@@ -215,22 +236,30 @@ export function LanguageSettingsCard() {
             )}
           </div>
 
-          <p className="text-muted-foreground text-xs">
-            Current mode:{" "}
-            {localLanguageSettings.secondaryEnabled
-              ? "Bilingual"
-              : "Single language"}
-            {" · "}
-            Primary:{" "}
-            {localLanguageSettings.primaryLocale === "en"
-              ? "English"
-              : "Français"}
-            {localLanguageSettings.secondaryEnabled
-              ? ` · Secondary: ${localLanguageSettings.secondaryLocale === "en" ? "English" : "Français"}`
-              : ""}
-            {localLanguageSettings.customerLanguagePreferenceEnabled
-              ? ` · Customer signup options: ${localLanguageSettings.customerSupportedLanguages.map(getCustomerLanguageLabel).join(", ")}`
-              : " · Customer preferred language: Disabled"}
+          {/* Two whole sentences, one per fact. See `fill` above for why this
+              is not the six-fragment join it used to be. */}
+          <p className="text-ink-tertiary space-y-1 text-[13.5px]">
+            <span className="block">
+              {localLanguageSettings.secondaryEnabled
+                ? fill("currentModeBilingual", {
+                    primary: localeName(localLanguageSettings.primaryLocale),
+                    secondary: localeName(
+                      localLanguageSettings.secondaryLocale,
+                    ),
+                  })
+                : fill("currentModeSingle", {
+                    primary: localeName(localLanguageSettings.primaryLocale),
+                  })}
+            </span>
+            <span className="block">
+              {localLanguageSettings.customerLanguagePreferenceEnabled
+                ? fill("customerOptions", {
+                    languages: localLanguageSettings.customerSupportedLanguages
+                      .map(getCustomerLanguageLabel)
+                      .join(", "),
+                  })
+                : t("customerOptionsOff")}
+            </span>
           </p>
         </div>
       )}

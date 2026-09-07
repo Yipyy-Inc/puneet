@@ -59,7 +59,11 @@ export function HeaderDropdown() {
             disabled={locale === localeCode}
             className="cursor-pointer"
           >
-            {localeCode === "en" ? t("English") : "Francais"}{" "}
+            {/* A language switcher names each language in itself. "Francais"
+                here was missing its cedilla, on the one control whose whole
+                job is choosing French. */}
+            {/* french-ok: an endonym, not a translation */}
+            {localeCode === "en" ? "English" : "Français"}{" "}
             {locale === localeCode && "✓"}
           </DropdownMenuItem>
         ))}

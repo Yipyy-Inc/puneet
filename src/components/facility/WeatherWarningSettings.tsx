@@ -43,20 +43,25 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import type {
   WeatherWarningRule,
   WeatherCondition,
   WeatherWarningSeverity,
 } from "@/types/facility";
 
-const CONDITION_LABELS: Record<WeatherCondition, string> = {
-  temperature_below: "Temperature drops below",
-  temperature_above: "Temperature rises above",
-  feels_like_below: "Feels-like drops below",
-  feels_like_above: "Feels-like rises above",
-  wind_speed_above: "Wind speed exceeds",
-  weather_is: "Weather condition is",
-  precipitation_probability_above: "Precipitation chance above",
+// The three maps below hold KEYS, not words. They used to hold English, which
+// is why a French user configured weather rules entirely in English — the
+// condition, the severity and every area name. The words live in the settings
+// catalogue now and the maps say which key each value uses.
+const CONDITION_KEYS: Record<WeatherCondition, string> = {
+  temperature_below: "conditionTemperatureBelow",
+  temperature_above: "conditionTemperatureAbove",
+  feels_like_below: "conditionFeelsLikeBelow",
+  feels_like_above: "conditionFeelsLikeAbove",
+  wind_speed_above: "conditionWindSpeedAbove",
+  weather_is: "conditionWeatherIs",
+  precipitation_probability_above: "conditionPrecipitationAbove",
 };
 
 const CONDITION_ICONS: Record<string, typeof Thermometer> = {
@@ -81,19 +86,23 @@ const WEATHER_TYPES = [
 ];
 
 const SEVERITY_CONFIG = {
-  info: { label: "Info", color: "bg-blue-100 text-blue-800" },
-  warning: { label: "Warning", color: "bg-amber-100 text-amber-800" },
-  critical: { label: "Critical", color: "bg-red-100 text-red-800" },
+  info: { key: "severityInfo", color: "bg-blue-100 text-blue-800" },
+  warning: { key: "severityWarning", color: "bg-amber-100 text-amber-800" },
+  critical: { key: "severityCritical", color: "bg-red-100 text-red-800" },
 };
 
 const DEFAULT_AREAS = [
-  { value: "indoor_park", label: "Indoor Park" },
-  { value: "outdoor_park", label: "Outdoor Park" },
-  { value: "indoor_area", label: "Indoor Area" },
-  { value: "covered_patio", label: "Covered Patio" },
-  { value: "pool", label: "Pool / Splash Pad" },
-  { value: "all", label: "All Areas" },
+  { value: "indoor_park", key: "areaIndoorPark" },
+  { value: "outdoor_park", key: "areaOutdoorPark" },
+  { value: "indoor_area", key: "areaIndoorArea" },
+  { value: "covered_patio", key: "areaCoveredPatio" },
+  { value: "pool", key: "areaPool" },
+  { value: "all", key: "areaAll" },
 ];
+
+/** A weather type is stored lowercase and rendered from the catalogue. */
+const WEATHER_TYPE_KEY = (type: string) =>
+  `weather${type[0].toUpperCase()}${type.slice(1)}`;
 
 function getStoredCustomAreas(): Array<{ value: string; label: string }> {
   if (typeof window === "undefined") return [];
@@ -117,9 +126,14 @@ function makeId() {
 function conditionSummary(
   rule: WeatherWarningRule,
   unitSymbol: string,
+  t: (key: string) => string,
 ): string {
-  const label = CONDITION_LABELS[rule.condition];
-  if (rule.condition === "weather_is") return `${label} ${rule.value}`;
+  const label = t(CONDITION_KEYS[rule.condition]);
+  // The VALUE is translated too. Without this the French summary read "La
+  // condition météo est rain" — the label in French, the condition in English,
+  // in one sentence.
+  if (rule.condition === "weather_is")
+    return `${label} ${t(WEATHER_TYPE_KEY(String(rule.value))).toLowerCase()}`;
   if (rule.condition === "wind_speed_above")
     return `${label} ${rule.value} km/h`;
   if (rule.condition === "precipitation_probability_above")
@@ -149,12 +163,31 @@ const emptyForm: RuleForm = {
 
 export function WeatherWarningSettings() {
   const { weatherRules, updateWeatherRules, profile } = useSettings();
+  const t = useSettingsText().section("weather");
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<WeatherWarningRule | null>(null);
   const [form, setForm] = useState<RuleForm>(emptyForm);
   const [customAreas, setCustomAreas] = useState(getStoredCustomAreas);
   const [newAreaName, setNewAreaName] = useState("");
-  const AREA_OPTIONS = [...DEFAULT_AREAS, ...customAreas];
+  const AREA_OPTIONS: Array<{ value: string; key?: string; label?: string }> = [
+    ...DEFAULT_AREAS,
+    ...customAreas,
+  ];
+
+  /**
+   * A shipped area is a KEY; one the facility typed is a NAME.
+   *
+   * §5q: "a pet's name, a breed as the owner typed it" never passes through
+   * the locale layer, and a custom area is the same kind of thing — somebody
+   * called it "Le grand parc" and it stays that in both languages.
+   */
+  const areaLabel = (area: { key?: string; label?: string }) =>
+    area.key ? t(area.key) : (area.label ?? "");
   const unitSymbol =
     profile.preferences.temperatureUnit === "fahrenheit" ? "°F" : "°C";
 
@@ -197,7 +230,7 @@ export function WeatherWarningSettings() {
 
   const handleSave = () => {
     if (!form.name.trim() || !form.message.trim()) {
-      toast.error("Name and message are required");
+      toast.error(t("nameAndMessageRequired"));
       return;
     }
     const rule: WeatherWarningRule = {
@@ -220,23 +253,27 @@ export function WeatherWarningSettings() {
       updateWeatherRules(
         weatherRules.map((r) => (r.id === editing.id ? rule : r)),
       );
-      toast.success(`"${form.name}" updated`);
+      toast.success(fill("ruleUpdated", { name: form.name }));
     } else {
       updateWeatherRules([...weatherRules, rule]);
-      toast.success(`"${form.name}" created`);
+      toast.success(fill("ruleCreated", { name: form.name }));
     }
     setModalOpen(false);
   };
 
   const handleDuplicate = (rule: WeatherWarningRule) => {
-    const dup = { ...rule, id: makeId(), name: `${rule.name} (copy)` };
+    const dup = {
+      ...rule,
+      id: makeId(),
+      name: fill("copySuffix", { name: rule.name }),
+    };
     updateWeatherRules([...weatherRules, dup]);
-    toast.success("Rule duplicated");
+    toast.success(fill("ruleDuplicated", { name: rule.name }));
   };
 
   const handleDelete = (rule: WeatherWarningRule) => {
     updateWeatherRules(weatherRules.filter((r) => r.id !== rule.id));
-    toast.success(`"${rule.name}" deleted`);
+    toast.success(fill("ruleDeleted", { name: rule.name }));
   };
 
   const isWeatherCondition = form.condition === "weather_is";
@@ -251,15 +288,13 @@ export function WeatherWarningSettings() {
             <CloudSun className="size-4 text-sky-700" />
           </div>
           <div>
-            <h3 className="text-sm font-bold">Yipyy Forecast</h3>
-            <p className="text-muted-foreground text-xs">
-              Set up automatic weather alerts to protect pets in your facility
-            </p>
+            <h3 className="text-[14.5px] font-bold">{t("title")}</h3>
+            <p className="text-ink-tertiary text-[13.5px]">{t("intro")}</p>
           </div>
         </div>
         <Button size="sm" className="gap-1.5" onClick={openCreate}>
           <Plus className="size-3.5" />
-          Add Rule
+          {t("addRule")}
         </Button>
       </div>
 
@@ -269,8 +304,8 @@ export function WeatherWarningSettings() {
           <Card>
             <CardContent className="flex flex-col items-center py-10 text-center">
               <CloudSun className="text-muted-foreground/30 size-10" />
-              <p className="text-muted-foreground mt-3 text-sm">
-                No forecast rules configured
+              <p className="text-ink-tertiary mt-3 text-[14.5px]">
+                {t("noRules")}
               </p>
             </CardContent>
           </Card>
@@ -306,25 +341,35 @@ export function WeatherWarningSettings() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold">{rule.name}</p>
-                        <Badge className={`text-[10px] ${sev.color}`}>
-                          {sev.label}
+                        <p className="text-[14.5px] font-semibold">
+                          {rule.name}
+                        </p>
+                        <Badge className={`text-[12px] ${sev.color}`}>
+                          {t(sev.key)}
                         </Badge>
                       </div>
-                      <p className="text-muted-foreground text-xs">
-                        {conditionSummary(rule, unitSymbol)}
+                      <p className="text-ink-tertiary text-[13.5px]">
+                        {conditionSummary(rule, unitSymbol, t)}
                       </p>
-                      <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
+                      <p className="text-ink-tertiary mt-0.5 line-clamp-1 text-[13.5px]">
                         {rule.message}
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1">
+                        {/* These read `area.replace(/_/g, " ")` with a CSS
+                            `capitalize` — the stored key, prettied up. So the
+                            badges said "Outdoor Park" in French while the
+                            checkbox that set them said "Parc extérieur". */}
                         {rule.appliesToAreas.map((area) => (
                           <Badge
                             key={area}
                             variant="outline"
-                            className="text-[9px] capitalize"
+                            className="text-[12px]"
                           >
-                            {area.replace(/_/g, " ")}
+                            {areaLabel(
+                              AREA_OPTIONS.find((a) => a.value === area) ?? {
+                                label: area.replace(/_/g, " "),
+                              },
+                            )}
                           </Badge>
                         ))}
                       </div>
@@ -345,24 +390,24 @@ export function WeatherWarningSettings() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="size-8">
                           <MoreVertical className="size-4" />
-                          <span className="sr-only">Open menu</span>
+                          <span className="sr-only">{t("openMenu")}</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => openEdit(rule)}>
                           <Pencil className="mr-2 size-4" />
-                          Edit
+                          {t("edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDuplicate(rule)}>
                           <Copy className="mr-2 size-4" />
-                          Duplicate
+                          {t("duplicate")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDelete(rule)}
                           className="text-destructive"
                         >
                           <Trash2 className="mr-2 size-4" />
-                          Delete
+                          {t("delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -379,22 +424,22 @@ export function WeatherWarningSettings() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Edit Weather Rule" : "Add Weather Rule"}
+              {editing ? t("editRule") : t("createRule")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Rule name</Label>
+              <Label>{t("ruleName")}</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Extreme Cold Alert"
+                placeholder={t("ruleNamePlaceholder")}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
               <div className="space-y-2">
-                <Label>Condition</Label>
+                <Label>{t("condition")}</Label>
                 <Select
                   value={form.condition}
                   onValueChange={(v) =>
@@ -405,32 +450,32 @@ export function WeatherWarningSettings() {
                     })
                   }
                 >
-                  <SelectTrigger className="text-xs">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(CONDITION_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k} className="text-xs">
-                        {v}
+                    {Object.entries(CONDITION_KEYS).map(([value, key]) => (
+                      <SelectItem key={value} value={value}>
+                        {t(key)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Threshold</Label>
+                <Label>{t("threshold")}</Label>
                 {isWeatherCondition ? (
                   <Select
                     value={String(form.value)}
                     onValueChange={(v) => setForm({ ...form, value: v })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {WEATHER_TYPES.map((t) => (
-                        <SelectItem key={t} value={t} className="capitalize">
-                          {t}
+                      {WEATHER_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {t(WEATHER_TYPE_KEY(type))}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -460,7 +505,7 @@ export function WeatherWarningSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Severity</Label>
+              <Label>{t("severity")}</Label>
               <div className="flex gap-2">
                 {(["info", "warning", "critical"] as const).map((s) => (
                   <button
@@ -473,35 +518,35 @@ export function WeatherWarningSettings() {
                         : "hover:bg-muted"
                     }`}
                   >
-                    {SEVERITY_CONFIG[s].label}
+                    {t(SEVERITY_CONFIG[s].key)}
                   </button>
                 ))}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Alert message</Label>
+              <Label>{t("alertMessage")}</Label>
               <Textarea
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
-                placeholder="What should staff see on the dashboard?"
+                placeholder={t("alertMessagePlaceholder")}
                 rows={2}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Suggested action (optional)</Label>
+              <Label>{t("suggestedAction")}</Label>
               <Input
                 value={form.autoAction}
                 onChange={(e) =>
                   setForm({ ...form, autoAction: e.target.value })
                 }
-                placeholder="e.g. Move all dogs to indoor areas"
+                placeholder={t("suggestedActionPlaceholder")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Affected areas</Label>
+              <Label>{t("affectedAreas")}</Label>
               <div className="flex flex-wrap gap-2">
                 {AREA_OPTIONS.map((area) => {
                   const isCustom = customAreas.some(
@@ -525,14 +570,15 @@ export function WeatherWarningSettings() {
                           })
                         }
                       />
-                      <span className="text-xs">{area.label}</span>
+                      <span className="text-[13.5px]">{areaLabel(area)}</span>
                       {isCustom && (
                         <button
                           type="button"
                           onClick={() => removeCustomArea(area.value)}
-                          className="text-muted-foreground text-[10px] hover:text-red-500"
+                          aria-label={t("removeArea")}
+                          className="text-ink-tertiary hover:text-error-ink flex size-6 items-center justify-center rounded-full text-[13.5px]"
                         >
-                          x
+                          ×
                         </button>
                       )}
                     </label>
@@ -549,27 +595,29 @@ export function WeatherWarningSettings() {
                       addCustomArea();
                     }
                   }}
-                  placeholder="Add custom area..."
-                  className="h-7 flex-1 text-xs"
+                  placeholder={t("addAreaPlaceholder")}
+                  aria-label={t("addArea")}
+                  className="flex-1"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 text-xs"
                   onClick={addCustomArea}
                   disabled={!newAreaName.trim()}
                 >
-                  Add
+                  {t("addArea")}
                 </Button>
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
-            <Button onClick={handleSave}>{editing ? "Save" : "Create"}</Button>
+            <Button onClick={handleSave}>
+              {editing ? t("save") : t("create")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

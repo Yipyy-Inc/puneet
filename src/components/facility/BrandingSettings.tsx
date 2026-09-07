@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { useWorkosSupabaseClient } from "@/lib/supabase/workos-client";
 
 // ============================================================================
@@ -55,6 +56,7 @@ interface Branding {
 const BRANDING_KEY = ["facility", "branding"] as const;
 
 export function BrandingSettings() {
+  const t = useSettingsText().section("branding");
   const queryClient = useQueryClient();
   const supabase = useWorkosSupabaseClient();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -99,7 +101,7 @@ export function BrandingSettings() {
       const body = (await response.json().catch(() => null)) as {
         error?: string;
       } | null;
-      if (!response.ok) throw new Error(body?.error ?? "Could not save.");
+      if (!response.ok) throw new Error(body?.error ?? t("saveFailed"));
       return body;
     },
     onSuccess: () => {
@@ -160,24 +162,21 @@ export function BrandingSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Palette className="size-4" />
-            Your login page
+            {t("loginPage")}
           </CardTitle>
-          <CardDescription>
-            This is what your customers and staff see at your own web address,
-            before they sign in.
-          </CardDescription>
+          <CardDescription>{t("loginPageHelp")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {isLoading ? (
             <div className="text-muted-foreground flex items-center gap-2 text-sm">
-              <Loader2 className="size-4 animate-spin" /> Loading…
+              <Loader2 className="size-4 animate-spin" /> {t("loading")}
             </div>
           ) : (
-            <div className="grid gap-8 lg:grid-cols-2">
+            <div className="grid gap-8">
               {/* ── The controls ───────────────────────────────────────── */}
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <Label>Logo</Label>
+                  <Label>{t("logo")}</Label>
                   <div className="flex items-center gap-3">
                     <Button
                       type="button"
@@ -185,7 +184,7 @@ export function BrandingSettings() {
                       onClick={() => fileInput.current?.click()}
                     >
                       <Upload className="mr-2 size-4" />
-                      {value("logoUrl") ? "Replace logo" : "Upload logo"}
+                      {value("logoUrl") ? t("replaceLogo") : t("uploadLogo")}
                     </Button>
                     {value("logoUrl") && (
                       <Button
@@ -195,7 +194,7 @@ export function BrandingSettings() {
                           setDraft((p) => ({ ...p, logoUrl: null }))
                         }
                       >
-                        Remove
+                        {t("removeLogo")}
                       </Button>
                     )}
                   </div>
@@ -210,9 +209,8 @@ export function BrandingSettings() {
                       e.target.value = "";
                     }}
                   />
-                  <p className="text-muted-foreground text-xs">
-                    PNG, JPEG or WebP, up to 2 MB. No logo is fine — your name
-                    is shown instead.
+                  <p className="text-ink-tertiary text-[13.5px]">
+                    {t("logoHelp")}
                   </p>
                   {uploadError && (
                     <p className="text-destructive text-sm" role="alert">
@@ -228,7 +226,7 @@ export function BrandingSettings() {
                     the card. Facilities that only have one mark upload it as
                     the logo and never come here. */}
                 <div className="space-y-2">
-                  <Label>Wordmark</Label>
+                  <Label>{t("wordmark")}</Label>
                   <div className="flex items-center gap-3">
                     <Button
                       type="button"
@@ -237,8 +235,8 @@ export function BrandingSettings() {
                     >
                       <Upload className="mr-2 size-4" />
                       {value("wordmarkUrl")
-                        ? "Replace wordmark"
-                        : "Upload wordmark"}
+                        ? t("replaceWordmark")
+                        : t("uploadWordmark")}
                     </Button>
                     {value("wordmarkUrl") && (
                       <Button
@@ -248,7 +246,7 @@ export function BrandingSettings() {
                           setDraft((p) => ({ ...p, wordmarkUrl: null }))
                         }
                       >
-                        Remove
+                        {t("removeWordmark")}
                       </Button>
                     )}
                   </div>
@@ -263,14 +261,13 @@ export function BrandingSettings() {
                       e.target.value = "";
                     }}
                   />
-                  <p className="text-muted-foreground text-xs">
-                    Optional. Your name drawn as an image, for the top of your
-                    sign-in page. Used there in preference to the logo.
+                  <p className="text-ink-tertiary text-[13.5px]">
+                    {t("wordmarkHelp")}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="branding-primary">Brand colour</Label>
+                  <Label htmlFor="branding-primary">{t("brandColour")}</Label>
                   <div className="flex items-center gap-2">
                     <input
                       id="branding-primary"
@@ -293,35 +290,35 @@ export function BrandingSettings() {
                         }))
                       }
                       className="w-32 font-mono"
-                      aria-label="Brand colour hex value"
+                      aria-label={t("brandColourHex")}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="branding-tagline">Tagline</Label>
+                  <Label htmlFor="branding-tagline">{t("tagline")}</Label>
                   <Input
                     id="branding-tagline"
                     value={value("tagline") ?? ""}
                     maxLength={120}
-                    placeholder="Boarding, daycare and grooming since 2014"
+                    placeholder={t("taglinePlaceholder")}
                     onChange={(e) =>
                       setDraft((p) => ({ ...p, tagline: e.target.value }))
                     }
                   />
-                  <p className="text-muted-foreground text-xs">
-                    Shown under your name on the sign-in card.
+                  <p className="text-ink-tertiary text-[13.5px]">
+                    {t("taglineHelp")}
                   </p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
                   <div className="space-y-2">
-                    <Label htmlFor="branding-email">Support email</Label>
+                    <Label htmlFor="branding-email">{t("supportEmail")}</Label>
                     <Input
                       id="branding-email"
                       type="email"
                       value={value("supportEmail") ?? ""}
-                      placeholder="hello@yourfacility.com"
+                      placeholder={t("supportEmailPlaceholder")}
                       onChange={(e) =>
                         setDraft((p) => ({
                           ...p,
@@ -331,11 +328,11 @@ export function BrandingSettings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="branding-phone">Support phone</Label>
+                    <Label htmlFor="branding-phone">{t("supportPhone")}</Label>
                     <Input
                       id="branding-phone"
                       value={value("supportPhone") ?? ""}
-                      placeholder="(555) 123-4567"
+                      placeholder={t("supportPhonePlaceholder")}
                       onChange={(e) =>
                         setDraft((p) => ({
                           ...p,
@@ -345,15 +342,14 @@ export function BrandingSettings() {
                     />
                   </div>
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  Support details are for your signed-in screens. They are not
-                  published on the login page.
+                <p className="text-ink-tertiary text-[13.5px]">
+                  {t("supportHelp")}
                 </p>
               </div>
 
               {/* ── The preview ────────────────────────────────────────── */}
               <div className="space-y-2">
-                <Label>Preview</Label>
+                <Label>{t("preview")}</Label>
                 <div className="bg-muted/40 flex items-center justify-center rounded-xl border p-6">
                   <div className="bg-card w-full max-w-xs rounded-2xl border p-6 shadow-sm">
                     <div className="mb-4 flex justify-center">
@@ -380,14 +376,19 @@ export function BrandingSettings() {
                           className="text-2xl font-bold tracking-tight"
                           style={{ color: primary }}
                         >
-                          {data?.facilityName ?? "Your facility"}
+                          {data?.facilityName ?? t("previewFacility")}
                         </span>
                       )}
                     </div>
-                    <p className="text-center text-xl font-bold">Sign in</p>
+                    <p className="text-center text-xl font-bold">
+                      {t("previewSignIn")}
+                    </p>
                     <p className="text-muted-foreground mt-1 text-center text-sm">
                       {value("tagline") ||
-                        `Sign in to ${data?.facilityName ?? "your facility"}.`}
+                        t("previewTagline").replace(
+                          "{facility}",
+                          data?.facilityName ?? t("previewFacility"),
+                        )}
                     </p>
                     <div className="bg-muted mt-5 h-9 rounded-md" />
                     <div className="bg-muted mt-2 h-9 rounded-md" />
@@ -397,9 +398,8 @@ export function BrandingSettings() {
                     />
                   </div>
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  Approximate — the real page uses your facility&apos;s own web
-                  address.
+                <p className="text-ink-tertiary text-[13.5px]">
+                  {t("previewHelp")}
                 </p>
               </div>
             </div>
@@ -415,17 +415,18 @@ export function BrandingSettings() {
             <Button
               onClick={() => save.mutate()}
               disabled={!dirty || save.isPending}
-              className="bg-emerald-600 hover:bg-emerald-700"
             >
-              {save.isPending ? "Saving…" : "Save branding"}
+              {save.isPending ? t("saving") : t("save")}
             </Button>
             {dirty && !save.isPending && (
               <Button variant="ghost" onClick={() => setDraft({})}>
-                Discard changes
+                {t("discard")}
               </Button>
             )}
             {!dirty && save.isSuccess && (
-              <span className="text-muted-foreground text-sm">Saved.</span>
+              <span className="text-ink-tertiary text-[14.5px]">
+                {t("saved")}
+              </span>
             )}
           </div>
         </CardContent>

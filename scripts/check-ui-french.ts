@@ -166,6 +166,55 @@ const TERNARY = /\?\s*"([^"]{2,})"\s*:\s*"([^"]{2,})"/g;
  */
 const TEMPLATE = /`([^`]{4,300})`/g;
 
+/**
+ * Copy sitting in an OBJECT, not in JSX: `{ href: "…", label: "HQ Overview" }`.
+ *
+ * ── WHY THIS WAS ADDED ON 2026-09-07 ──────────────────────────────────────
+ *
+ * `VISIBLE_ATTR` matches the JSX attribute form, `label="…"`. It does not
+ * match the property form, `label: "…"`, and a settings screen renders plenty
+ * of copy from arrays of objects — a list of links, a set of service tabs, a
+ * table's column headers.
+ *
+ * Measured the day this landed: the `hq` section reported TWO English strings
+ * and rendered NINE. The seven it hid were the entire list of links the page
+ * exists to show. Across the settings tree, 44 hits in 8 files.
+ *
+ * The discriminator is the same one `FALLBACK` and `TERNARY` already use — a
+ * capital or a space — because the same keys carry enum values (`label: "sm"`,
+ * `title: "none"`). It is deliberately a short key list: `value:`, `id:`,
+ * `key:` and `name:` are usually data, and `name` in particular is what §5q
+ * says must never pass through the locale layer.
+ *
+ * ── AND IT RUNS ON THE SETTINGS SURFACE ONLY ──────────────────────────────
+ *
+ * Not to spare the shells. It was run against all six surfaces first, and
+ * every hit outside settings was checked one by one:
+ *
+ *   FacilityMobileBottomNav  `label:` is the KEY `useNavText()` looks up, and
+ *                            the fallback if it misses. Renders "Accueil".
+ *   GlobalSearch             `heading:` is the key of the grouped-results
+ *                            object, rendered as `t(GROUP_KEY[heading])`.
+ *   UserProfileSheet         hardcoded mock notifications — "HealthFirst
+ *                            Clinic has requested to join the platform".
+ *                            A real finding, and translating invented
+ *                            notifications would make it worse, not better.
+ *                            Recorded in the debt map instead.
+ *
+ * Two of the three are a key sitting next to its own translator, which is the
+ * one shape this rule cannot tell from copy. Annotating them `french-ok` would
+ * put twenty lines of noise on surfaces that are genuinely at zero, to say
+ * nothing. The shells are exactly as strict as they were before this rule
+ * existed; the settings surface is stricter, which is where it found the
+ * seven-link `hq` list and a card rendering a service name with no translator
+ * while its two siblings translated the same expression.
+ *
+ * If a shell ever needs it, turn it on there and annotate — the flag is one
+ * argument.
+ */
+const OBJECT_COPY =
+  /\b(?:label|title|description|placeholder|heading|subtitle|helpText|hint|message|summary|caption|emptyText)\s*:\s*"([^"]{2,})"/g;
+
 const FRENCH_OK = /french-ok:/;
 
 /**
@@ -281,7 +330,7 @@ function lineOf(source: string, index: number): number {
   return n;
 }
 
-function hits(file: string): Hit[] {
+function hits(file: string, objectCopy = false): Hit[] {
   const { stripped, lines } = read(file);
   const found: Hit[] = [];
 
@@ -296,6 +345,13 @@ function hits(file: string): Hit[] {
 
   for (const m of stripped.matchAll(VISIBLE_ATTR)) record(m[1], m.index ?? 0);
   for (const m of stripped.matchAll(TOAST)) record(m[1], m.index ?? 0);
+  if (objectCopy) {
+    for (const m of stripped.matchAll(OBJECT_COPY)) {
+      // Same guard as FALLBACK below: `label: "sm"` is an enum value, not copy.
+      if (!/^[A-Z]/.test(m[1]) && !m[1].includes(" ")) continue;
+      record(m[1], m.index ?? 0);
+    }
+  }
   for (const m of stripped.matchAll(FALLBACK)) {
     // A fallback is as often a variant as a sentence — `variant ?? "outline"`,
     // `size ?? "sm"`. Copy either starts with a capital or has a space in it;
@@ -375,7 +431,7 @@ function settingsSurface(): Offender[] {
     const id = file.replace(/\.tsx$/, "");
     const seen = new Set<string>();
     walk(`${SECTIONS}/${id}`.concat(".tsx"), 3, seen, true);
-    const found = [...seen].filter(isComponent).flatMap(hits);
+    const found = [...seen].filter(isComponent).flatMap((f) => hits(f, true));
     if (found.length > 0) out.push({ id, hits: found });
   }
   return out;
@@ -431,7 +487,6 @@ const BASELINE: Record<string, Set<string>> = {
     "boarding",
     "booking-rules",
     "booking-statuses",
-    "branding",
     "care-tasks",
     "checkin-requirements",
     "custom-email-domain",
@@ -443,13 +498,10 @@ const BASELINE: Record<string, Set<string>> = {
     "form-notifications",
     "form-requirements",
     "grooming",
-    "hq",
     "hr-config",
     "incident-reporting",
     "integrations",
     "invoice-template",
-    "language",
-    "locations",
     "mobile-app",
     "my-notifications",
     "my-profile",
@@ -471,7 +523,6 @@ const BASELINE: Record<string, Set<string>> = {
     "tips",
     "training",
     "vaccination-requirements",
-    "weather",
     "yipyy-pay",
     "yipyygo",
   ]),
