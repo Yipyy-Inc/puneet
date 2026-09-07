@@ -8,22 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { Switch } from "@/components/ui/switch";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // Booking Rules Component
 export function BookingRulesCard() {
+  const t = useSettingsText().section("booking-rules");
   const { rules, updateRules } = useSettings();
 
   return (
-    <SettingsBlock
-      title="Booking Rules & Policies"
-      data={rules}
-      onSave={updateRules}
-    >
+    <SettingsBlock title={t("rulesTitle")} data={rules} onSave={updateRules}>
       {(isEditing, localRules, setLocalRules) => (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Minimum advance booking (hours)</Label>
+              <Label>{t("minAdvance")}</Label>
               <Input
                 type="number"
                 value={localRules.minimumAdvanceBooking}
@@ -38,7 +36,7 @@ export function BookingRulesCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Maximum advance booking (days)</Label>
+              <Label>{t("maxAdvance")}</Label>
               <Input
                 type="number"
                 value={localRules.maximumAdvanceBooking}
@@ -53,7 +51,7 @@ export function BookingRulesCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Cancellation policy (hours before)</Label>
+              <Label>{t("cancellationPolicy")}</Label>
               <Input
                 type="number"
                 value={localRules.cancelPolicyHours}
@@ -68,7 +66,7 @@ export function BookingRulesCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Cancellation fee (%)</Label>
+              <Label>{t("cancellationFee")}</Label>
               <Input
                 type="number"
                 value={localRules.cancelFeePercentage}
@@ -83,7 +81,7 @@ export function BookingRulesCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Deposit percentage (%)</Label>
+              <Label>{t("depositPercentage")}</Label>
               <Input
                 type="number"
                 value={localRules.depositPercentage}
@@ -98,7 +96,7 @@ export function BookingRulesCard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Facility capacity limit</Label>
+              <Label>{t("facilityCapacity")}</Label>
               <Input
                 type="number"
                 value={localRules.capacityLimit}
@@ -115,7 +113,7 @@ export function BookingRulesCard() {
           </div>
 
           <div className="space-y-2">
-            <Label>Daily capacity limit</Label>
+            <Label>{t("dailyCapacity")}</Label>
             <Input
               type="number"
               value={localRules.dailyCapacityLimit}
@@ -132,9 +130,9 @@ export function BookingRulesCard() {
 
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
-              <div className="font-medium">Require Deposit</div>
+              <div className="font-medium">{t("requireDeposit")}</div>
               <div className="text-muted-foreground text-sm">
-                Require deposit at booking
+                {t("requireDepositHelp")}
               </div>
             </div>
             <Switch
@@ -148,9 +146,9 @@ export function BookingRulesCard() {
 
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
-              <div className="font-medium">Allow Overbooking</div>
+              <div className="font-medium">{t("allowOverbooking")}</div>
               <div className="text-muted-foreground text-sm">
-                Accept bookings beyond capacity
+                {t("allowOverbookingHelp")}
               </div>
             </div>
             <Switch

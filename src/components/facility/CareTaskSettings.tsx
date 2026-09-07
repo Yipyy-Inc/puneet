@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { facilityConfig } from "@/data/facility-config";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 
 interface FeedbackOption {
   value: string;
@@ -20,6 +22,7 @@ interface FeedbackOption {
 }
 
 export function CareTaskSettings() {
+  const t = useSettingsText().section("care-tasks");
   const [feedingOptions, setFeedingOptions] = useState<FeedbackOption[]>(
     facilityConfig.careTaskFeedback.feeding,
   );
@@ -44,45 +47,53 @@ export function CareTaskSettings() {
     if (!newFeeding.trim()) return;
     const value = newFeeding.trim().toLowerCase().replace(/\s+/g, "_");
     if (feedingOptions.some((o) => o.value === value)) {
-      toast.error("This option already exists");
+      toast.error(t("duplicateOption"));
       return;
     }
     setFeedingOptions((prev) => [...prev, { value, label: newFeeding.trim() }]);
     setNewFeeding("");
-    toast.success("Feeding option added");
+    toast.success(t("feedingOptionAdded"));
   };
 
   const handleAddMed = () => {
     if (!newMed.trim()) return;
     const value = newMed.trim().toLowerCase().replace(/\s+/g, "_");
     if (medOptions.some((o) => o.value === value)) {
-      toast.error("This option already exists");
+      toast.error(t("duplicateOption"));
       return;
     }
     setMedOptions((prev) => [...prev, { value, label: newMed.trim() }]);
     setNewMed("");
-    toast.success("Medication option added");
+    toast.success(t("medicationOptionAdded"));
   };
 
   const handleSave = () => {
-    // In production: save to API/database
-    // For now: update the in-memory config
-    facilityConfig.careTaskFeedback.feeding = feedingOptions;
-    facilityConfig.careTaskFeedback.medication = medOptions;
+    // ── THIS ASSIGNED TO THE IMPORTED FIXTURE, AND REACHED NOBODY ─────────
+    //
+    // It was `facilityConfig.careTaskFeedback.feeding = feedingOptions`, which
+    // the React Compiler refuses (react-hooks/immutability) now that this scope
+    // is analysed. Removing it costs nothing measurable: all three consumers —
+    // CareTasks.tsx:95-96 and FeedingSection.tsx:58 — capture the list in a
+    // MODULE-LEVEL const, so they read it once when their module is first
+    // evaluated and never see a later mutation. Editing a feedback option here
+    // has never changed the dropdown a staff member sees, in this session or
+    // any other.
+    //
+    // The screen still needs a `care_task_feedback` settings domain and those
+    // three reads moved onto it. Recorded in the debt map; this file is
+    // already in check:success-claims' baseline for the toast below.
     setSavedSnapshot(
       JSON.stringify({ feeding: feedingOptions, medication: medOptions }),
     );
-    toast.success("Care task feedback options saved");
+    toast.success(t("feedbackSaved"));
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Care task feedback</h2>
+        <h2 className="text-lg font-semibold">{t("feedbackTitle")}</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          Customize the feedback options staff see when logging feeding and
-          medication tasks. These appear as dropdown choices on the booking
-          detail page.
+          {t("feedbackHelp")}
         </p>
       </div>
 
@@ -91,20 +102,22 @@ export function CareTaskSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <UtensilsCrossed className="size-4" />
-            Feeding feedback options
+            {t("feedingFeedback")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-muted-foreground text-xs">
-            Staff selects one of these when logging a meal. Drag to reorder.
+            {t("feedingFeedbackHelp")}
           </p>
           <p className="text-muted-foreground text-xs">
-            Any percentage is a{" "}
-            <span className="text-foreground font-medium">
-              portion-of-meal reference
-            </span>{" "}
-            — how much of the meal the pet ate (100% = the full meal). It is not
-            a historical usage rate.
+            <InterpolatedText
+              template={t("portionNote")}
+              placeholder="{reference}"
+            >
+              <span className="text-foreground font-medium">
+                {t("portionReference")}
+              </span>
+            </InterpolatedText>
           </p>
           <div className="space-y-1.5">
             {feedingOptions.map((opt, idx) => (
@@ -130,7 +143,7 @@ export function CareTaskSettings() {
                   className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
                   onClick={() => {
                     if (feedingOptions.length <= 1) {
-                      toast.error("Must have at least one option");
+                      toast.error(t("atLeastOne"));
                       return;
                     }
                     setFeedingOptions((prev) =>
@@ -150,7 +163,7 @@ export function CareTaskSettings() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleAddFeeding();
               }}
-              placeholder="Add new option..."
+              placeholder={t("addOptionPlaceholder")}
               className="h-8 text-sm"
             />
             <Button
@@ -161,7 +174,7 @@ export function CareTaskSettings() {
               disabled={!newFeeding.trim()}
             >
               <Plus className="size-3.5" />
-              Add
+              {t("add")}
             </Button>
           </div>
         </CardContent>
@@ -172,12 +185,12 @@ export function CareTaskSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Pill className="size-4" />
-            Medication feedback options
+            {t("medicationFeedback")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-muted-foreground text-xs">
-            Staff selects one of these when logging a medication dose.
+            {t("medicationFeedbackHelp")}
           </p>
           <div className="space-y-1.5">
             {medOptions.map((opt, idx) => (
@@ -203,7 +216,7 @@ export function CareTaskSettings() {
                   className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
                   onClick={() => {
                     if (medOptions.length <= 1) {
-                      toast.error("Must have at least one option");
+                      toast.error(t("atLeastOne"));
                       return;
                     }
                     setMedOptions((prev) => prev.filter((_, i) => i !== idx));
@@ -221,7 +234,7 @@ export function CareTaskSettings() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleAddMed();
               }}
-              placeholder="Add new option..."
+              placeholder={t("addOptionPlaceholder")}
               className="h-8 text-sm"
             />
             <Button
@@ -232,7 +245,7 @@ export function CareTaskSettings() {
               disabled={!newMed.trim()}
             >
               <Plus className="size-3.5" />
-              Add
+              {t("add")}
             </Button>
           </div>
         </CardContent>
@@ -242,10 +255,10 @@ export function CareTaskSettings() {
       {dirty && (
         <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky bottom-0 z-10 flex items-center justify-end gap-3 border-t py-3 backdrop-blur-sm">
           <span className="text-muted-foreground mr-auto text-sm">
-            You have unsaved changes
+            {t("unsavedChanges")}
           </span>
           <Button onClick={handleSave} className="gap-1.5">
-            Save Changes
+            {t("saveChanges")}
           </Button>
         </div>
       )}

@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { facilityConfig } from "@/data/facility-config";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // Facility whose forms back the settings demo (matches the seeded forms).
 const DEMO_FACILITY_ID = 11;
@@ -54,29 +55,28 @@ interface NotifToggle {
 }
 
 export function FormNotificationSettings() {
+  const t = useSettingsText().section("form-notifications");
   const initial = facilityConfig.notifications?.forms;
 
   const [staffToggles, setStaffToggles] = useState<NotifToggle[]>([
     {
       key: "newSubmission",
-      label: "New submission received",
-      description: "Alert staff when any new form submission comes in",
+      label: "newSubmission",
+      description: "newSubmissionHelp",
       icon: <FileText className="size-4 text-blue-600" />,
       enabled: initial?.staff?.newSubmission ?? true,
     },
     {
       key: "redFlagAnswers",
-      label: "Red-flag answers detected",
-      description:
-        "Alert when a submission triggers a logic rule alert flag (e.g. aggression, health concern)",
+      label: "redFlagAnswers",
+      description: "redFlagAnswersHelp",
       icon: <ShieldAlert className="size-4 text-red-600" />,
       enabled: initial?.staff?.redFlagAnswers ?? true,
     },
     {
       key: "hasFileUpload",
-      label: "Submission includes file upload",
-      description:
-        "Alert when a submission contains file attachments (vaccine records, documents)",
+      label: "hasFileUpload",
+      description: "hasFileUploadHelp",
       icon: <Paperclip className="size-4 text-amber-600" />,
       enabled: initial?.staff?.hasFileUpload ?? true,
     },
@@ -85,25 +85,22 @@ export function FormNotificationSettings() {
   const [customerToggles, setCustomerToggles] = useState<NotifToggle[]>([
     {
       key: "submissionConfirmed",
-      label: "Submission confirmed",
-      description:
-        "Notify customer when staff marks their submission as processed/confirmed",
+      label: "submissionConfirmed",
+      description: "submissionConfirmedHelp",
       icon: <CheckCircle className="size-4 text-green-600" />,
       enabled: initial?.customer?.submissionConfirmed ?? true,
     },
     {
       key: "missingRequiredFormsReminder",
-      label: "Missing required forms reminder",
-      description:
-        "Send reminder when customer has outstanding required forms before a booking",
+      label: "missingFormsReminder",
+      description: "missingFormsReminderHelp",
       icon: <Clock className="size-4 text-amber-600" />,
       enabled: initial?.customer?.missingRequiredFormsReminder ?? true,
     },
     {
       key: "formRejectedNeedsCorrection",
-      label: "Form rejected / needs correction",
-      description:
-        "Notify customer when their submission is rejected and needs changes",
+      label: "formRejected",
+      description: "formRejectedHelp",
       icon: <AlertTriangle className="size-4 text-red-600" />,
       enabled: initial?.customer?.formRejectedNeedsCorrection ?? true,
     },
@@ -136,15 +133,19 @@ export function FormNotificationSettings() {
   };
 
   const handleSave = () => {
-    const customer = facilityConfig.notifications?.forms?.customer;
-    if (customer) {
-      customer.missingRequiredFormsReminderTiming = {
-        value: reminderValue,
-        unit: reminderUnit,
-        anchor: reminderAnchor,
-      };
-    }
-    toast.success("Form notification settings saved");
+    // ── SAME AS CareTaskSettings: A WRITE INTO AN IMPORTED FIXTURE ────────
+    //
+    // This mutated `facilityConfig.notifications.forms.customer` in place, and
+    // the React Compiler refuses it now that this scope is analysed. It reached
+    // nobody either: both consumers — facility-notifications.ts:571 and
+    // form-customer-notifications.ts:9 — read their slice into a MODULE-LEVEL
+    // const at first evaluation. And the two toggle LISTS were never written
+    // anywhere at all, not even here.
+    //
+    // The reminder timing and both toggle lists need a `form_notifications`
+    // settings domain. Recorded in the debt map; this file is already in
+    // check:success-claims' baseline for the toast below.
+    toast.success(t("saved"));
   };
 
   const activeStaffCount = staffToggles.filter((t) => t.enabled).length;
@@ -158,12 +159,9 @@ export function FormNotificationSettings() {
               one action — description first, because an action above the
               sentence explaining it reads backwards. */}
           <div className="flex items-start justify-between gap-4">
-            <p className="text-muted-foreground text-sm">
-              Configure when staff and customers are notified about form
-              activity.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("intro")}</p>
             <Button size="sm" className="shrink-0" onClick={handleSave}>
-              Save changes
+              {t("saveChanges")}
             </Button>
           </div>
         </CardHeader>
@@ -172,19 +170,21 @@ export function FormNotificationSettings() {
           <div>
             <div className="mb-4 flex items-center gap-2">
               <BellRing className="text-primary size-4" />
-              <h3 className="text-sm font-semibold">Notify staff when</h3>
+              <h3 className="text-sm font-semibold">{t("notifyStaffWhen")}</h3>
               <Badge
                 variant="outline"
                 className="border-teal-200 bg-teal-50 text-xs text-teal-700"
               >
-                {activeStaffCount}/{staffToggles.length} active
+                {t("activeCount")
+                  .replace("{on}", String(activeStaffCount))
+                  .replace("{total}", String(staffToggles.length))}
               </Badge>
               <Badge
                 variant="outline"
                 className="ml-auto h-5 gap-1 text-[10px]"
               >
                 <Bell className="size-3" />
-                In-app
+                {t("inApp")}
               </Badge>
             </div>
             <div className="space-y-3">
@@ -200,11 +200,11 @@ export function FormNotificationSettings() {
                         className="cursor-pointer text-sm font-medium"
                         htmlFor={`staff-${toggle.key}`}
                       >
-                        {toggle.label}
+                        {t(toggle.label)}
                       </Label>
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      {toggle.description}
+                      {t(toggle.description)}
                     </p>
                     {toggle.key === "redFlagAnswers" && (
                       <button
@@ -213,7 +213,7 @@ export function FormNotificationSettings() {
                         className="text-primary mt-1.5 inline-flex items-center gap-1 text-xs font-medium hover:underline"
                       >
                         <SlidersHorizontal className="size-3" />
-                        Configure red-flag keywords and responses
+                        {t("configureRedFlags")}
                       </button>
                     )}
                   </div>
@@ -233,17 +233,21 @@ export function FormNotificationSettings() {
           <div>
             <div className="mb-4 flex items-center gap-2">
               <Users className="text-primary size-4" />
-              <h3 className="text-sm font-semibold">Notify customer when</h3>
+              <h3 className="text-sm font-semibold">
+                {t("notifyCustomerWhen")}
+              </h3>
               <Badge
                 variant="outline"
                 className="border-blue-200 bg-blue-50 text-xs text-blue-700"
               >
-                {activeCustomerCount}/{customerToggles.length} active
+                {t("activeCount")
+                  .replace("{on}", String(activeCustomerCount))
+                  .replace("{total}", String(customerToggles.length))}
               </Badge>
               <div className="ml-auto flex gap-1">
                 <Badge variant="outline" className="h-5 gap-1 text-[10px]">
                   <Mail className="size-3" />
-                  Email
+                  {t("email")}
                 </Badge>
                 <Badge variant="outline" className="h-5 gap-1 text-[10px]">
                   <MessageSquare className="size-3" />
@@ -264,17 +268,17 @@ export function FormNotificationSettings() {
                         className="cursor-pointer text-sm font-medium"
                         htmlFor={`cust-${toggle.key}`}
                       >
-                        {toggle.label}
+                        {t(toggle.label)}
                       </Label>
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      {toggle.description}
+                      {t(toggle.description)}
                     </p>
                     {toggle.key === "missingRequiredFormsReminder" &&
                       toggle.enabled && (
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                           <span className="text-muted-foreground">
-                            Send reminder
+                            {t("sendReminder")}
                           </span>
                           <Input
                             type="number"
@@ -286,7 +290,7 @@ export function FormNotificationSettings() {
                               )
                             }
                             className="h-7 w-16 text-xs"
-                            aria-label="Reminder lead time"
+                            aria-label={t("reminderLeadTime")}
                           />
                           <Select
                             value={reminderUnit}
@@ -298,11 +302,17 @@ export function FormNotificationSettings() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="hours">hours</SelectItem>
-                              <SelectItem value="days">days</SelectItem>
+                              <SelectItem value="hours">
+                                {t("unitHours")}
+                              </SelectItem>
+                              <SelectItem value="days">
+                                {t("unitDays")}
+                              </SelectItem>
                             </SelectContent>
                           </Select>
-                          <span className="text-muted-foreground">before</span>
+                          <span className="text-muted-foreground">
+                            {t("before")}
+                          </span>
                           <Select
                             value={reminderAnchor}
                             onValueChange={(v) =>
@@ -314,10 +324,10 @@ export function FormNotificationSettings() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="check_in">
-                                check-in date
+                                {t("anchorCheckIn")}
                               </SelectItem>
                               <SelectItem value="appointment">
-                                appointment
+                                {t("anchorAppointment")}
                               </SelectItem>
                             </SelectContent>
                           </Select>

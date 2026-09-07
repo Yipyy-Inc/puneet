@@ -17,10 +17,12 @@ import { Plus, Trash2 } from "lucide-react";
 import {
   EMPLOYEE_TASK_LABEL,
   EMPLOYEE_TASK_FIELDS,
+  type EmployeeFieldSpec,
   type EmployeeOnboardingTask,
   type EmployeeOnboardingTaskType,
   type CustomQuestionFormat,
 } from "@/data/staff-onboarding";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // Types that only make sense once per template (fixed collected-field shapes).
 const SINGLE_TYPES: EmployeeOnboardingTaskType[] = [
@@ -42,10 +44,10 @@ const ALL_TYPES: EmployeeOnboardingTaskType[] = [
   ...MULTI_TYPES,
 ];
 
-const QUESTION_FORMATS: { value: CustomQuestionFormat; label: string }[] = [
-  { value: "text", label: "Text" },
-  { value: "multiple_choice", label: "Multiple choice" },
-  { value: "file", label: "File upload" },
+const QUESTION_FORMATS: { value: CustomQuestionFormat; key: string }[] = [
+  { value: "text", key: "fmtText" },
+  { value: "multiple_choice", key: "fmtMultipleChoice" },
+  { value: "file", key: "fmtFile" },
 ];
 
 function newEmployeeTask(
@@ -78,6 +80,26 @@ export function EmployeeTaskEditor({
   tasks,
   onChange,
 }: EmployeeTaskEditorProps) {
+  const t = useSettingsText().section("onboarding-templates");
+
+  // The type's name and the fields it collects live in a src/data fixture, so
+  // they cannot know a locale. The catalogue answers by key and falls back to
+  // the fixture's English on a miss — a field added to the fixture later then
+  // reads as English words rather than as a raw key.
+  const typeLabel = (type: EmployeeOnboardingTaskType) => {
+    const key = `type.${type}`;
+    const label = t(key);
+    return label === key ? EMPLOYEE_TASK_LABEL[type] : label;
+  };
+  const fieldLabel = (
+    type: EmployeeOnboardingTaskType,
+    field: EmployeeFieldSpec,
+  ) => {
+    const key = `field.${type}.${field.key}`;
+    const label = t(key);
+    return label === key ? field.label : label;
+  };
+
   const patch = (id: string, p: Partial<EmployeeOnboardingTask>) =>
     onChange(tasks.map((t) => (t.id === id ? { ...t, ...p } : t)));
   const remove = (id: string) => onChange(tasks.filter((t) => t.id !== id));
@@ -102,27 +124,27 @@ export function EmployeeTaskEditor({
       <div className="space-y-2">
         {tasks.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            No employee tasks yet — add from the list below.
+            {t("noEmployeeTasks")}
           </p>
         ) : (
           tasks.map((task) => (
             <div key={task.id} className="space-y-3 rounded-md border p-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold">
-                  {EMPLOYEE_TASK_LABEL[task.type]}
+                  {typeLabel(task.type)}
                 </span>
                 <label className="text-muted-foreground ml-auto flex items-center gap-1.5 text-xs">
                   <Switch
                     checked={task.required}
                     onCheckedChange={(v) => patch(task.id, { required: v })}
                   />
-                  Required
+                  {t("required")}
                 </label>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="size-8 shrink-0"
-                  title="Remove"
+                  title={t("remove")}
                   onClick={() => remove(task.id)}
                 >
                   <Trash2 className="size-4" />
@@ -132,10 +154,10 @@ export function EmployeeTaskEditor({
               {/* Document to upload — facility names it, employee uploads. */}
               {task.type === "document_upload" && (
                 <div className="space-y-1">
-                  <Label className="text-xs">Document name</Label>
+                  <Label className="text-xs">{t("documentName")}</Label>
                   <Input
                     value={task.documentName ?? ""}
-                    placeholder="e.g. Government photo ID"
+                    placeholder={t("documentUploadPlaceholder")}
                     className="h-8"
                     onChange={(e) =>
                       patch(task.id, { documentName: e.target.value })
@@ -148,10 +170,10 @@ export function EmployeeTaskEditor({
               {task.type === "document_sign" && (
                 <div className="space-y-2">
                   <div className="space-y-1">
-                    <Label className="text-xs">Document name</Label>
+                    <Label className="text-xs">{t("documentName")}</Label>
                     <Input
                       value={task.documentName ?? ""}
-                      placeholder="e.g. Employment contract"
+                      placeholder={t("documentSignPlaceholder")}
                       className="h-8"
                       onChange={(e) =>
                         patch(task.id, { documentName: e.target.value })
@@ -174,21 +196,21 @@ export function EmployeeTaskEditor({
                       against a task with no text at all. */}
                   <div className="space-y-1">
                     <Label className="text-xs" htmlFor={`agreement-${task.id}`}>
-                      What the employee is agreeing to
+                      {t("agreementLabel")}
                     </Label>
                     <Textarea
                       id={`agreement-${task.id}`}
                       value={task.agreementText ?? ""}
                       rows={6}
-                      placeholder="Paste the full text of the agreement. This is copied into the signature record, so it is what the signature proves."
+                      placeholder={t("agreementPlaceholder")}
                       onChange={(e) =>
                         patch(task.id, { agreementText: e.target.value })
                       }
                     />
                     <p className="text-muted-foreground text-[11px]">
                       {task.agreementText?.trim()
-                        ? "Copied into each signature and hashed. Editing it later does not change signatures already given."
-                        : "Required — a signature cannot be recorded against an agreement with no text."}
+                        ? t("agreementHelpFilled")
+                        : t("agreementHelpEmpty")}
                     </p>
                   </div>
                 </div>
@@ -199,7 +221,7 @@ export function EmployeeTaskEditor({
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-end gap-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Format</Label>
+                      <Label className="text-xs">{t("format")}</Label>
                       <Select
                         value={task.question?.format ?? "text"}
                         onValueChange={(v) =>
@@ -214,7 +236,7 @@ export function EmployeeTaskEditor({
                         <SelectContent>
                           {QUESTION_FORMATS.map((f) => (
                             <SelectItem key={f.value} value={f.value}>
-                              {f.label}
+                              {t(f.key)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -222,7 +244,7 @@ export function EmployeeTaskEditor({
                     </div>
                     <Input
                       value={task.question?.prompt ?? ""}
-                      placeholder="Question prompt"
+                      placeholder={t("questionPrompt")}
                       className="h-8 flex-1"
                       onChange={(e) =>
                         patchQuestion(task, { prompt: e.target.value })
@@ -249,7 +271,7 @@ export function EmployeeTaskEditor({
                         variant="secondary"
                         className="text-xs font-normal"
                       >
-                        {f.label}
+                        {fieldLabel(task.type, f)}
                       </Badge>
                     ))}
                   </div>
@@ -274,7 +296,7 @@ export function EmployeeTaskEditor({
             onClick={() => add(type)}
           >
             <Plus className="size-3.5" />
-            {EMPLOYEE_TASK_LABEL[type]}
+            {typeLabel(type)}
           </Button>
         ))}
       </div>
@@ -289,14 +311,16 @@ function OptionsEditor({
   options: string[];
   onChange: (o: string[]) => void;
 }) {
+  const t = useSettingsText().section("onboarding-templates");
+
   return (
     <div className="space-y-2 pl-1">
-      <Label className="text-xs">Choices</Label>
+      <Label className="text-xs">{t("choices")}</Label>
       {options.map((opt, i) => (
         <div key={i} className="flex items-center gap-2">
           <Input
             value={opt}
-            placeholder={`Choice ${i + 1}`}
+            placeholder={t("choicePlaceholder").replace("{n}", String(i + 1))}
             className="h-8"
             onChange={(e) =>
               onChange(options.map((o, j) => (j === i ? e.target.value : o)))
@@ -319,7 +343,7 @@ function OptionsEditor({
         onClick={() => onChange([...options, ""])}
       >
         <Plus className="size-3.5" />
-        Add choice
+        {t("addChoice")}
       </Button>
     </div>
   );

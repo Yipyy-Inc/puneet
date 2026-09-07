@@ -20,6 +20,9 @@ import {
 import { toast } from "sonner";
 import { getCareTasksConfig } from "@/data/care-tasks";
 import { careTaskMutations } from "@/lib/api/care-tasks";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { formatTime } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 import type {
   ScheduleItem,
   FeedingOptions,
@@ -45,11 +48,13 @@ function ReorderButtons({
   count: number;
   onMove: (dir: -1 | 1) => void;
 }) {
+  const t = useSettingsText().section("care-tasks");
+
   return (
     <div className="flex shrink-0 flex-col">
       <button
         type="button"
-        aria-label="Move up"
+        aria-label={t("moveUp")}
         disabled={index === 0}
         onClick={() => onMove(-1)}
         className="text-muted-foreground hover:text-foreground disabled:opacity-30"
@@ -58,7 +63,7 @@ function ReorderButtons({
       </button>
       <button
         type="button"
-        aria-label="Move down"
+        aria-label={t("moveDown")}
         disabled={index === count - 1}
         onClick={() => onMove(1)}
         className="text-muted-foreground hover:text-foreground disabled:opacity-30"
@@ -152,6 +157,7 @@ function ScheduleTagEditor({
   items: ScheduleItem[];
   onChange: (values: ScheduleItem[]) => void;
 }) {
+  const t = useSettingsText().section("care-tasks");
   const [draftLabel, setDraftLabel] = useState("");
   const [draftTime, setDraftTime] = useState("08:00");
   const add = () => {
@@ -175,7 +181,7 @@ function ScheduleTagEditor({
             value={item.label}
             onChange={(e) => patch(i, { label: e.target.value })}
             className="h-8 flex-1 text-sm"
-            placeholder="Label"
+            placeholder={t("label")}
           />
           <input
             type="time"
@@ -203,7 +209,7 @@ function ScheduleTagEditor({
               add();
             }
           }}
-          placeholder="e.g. Evening"
+          placeholder={t("phSchedule")}
           className="h-8 flex-1 text-sm"
         />
         <input
@@ -243,6 +249,8 @@ function CategoryGroup({
   readOnly: React.ReactNode;
   editor: React.ReactNode;
 }) {
+  const t = useSettingsText().section("care-tasks");
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -263,12 +271,12 @@ function CategoryGroup({
           {editing ? (
             <>
               <Check className="size-3" />
-              Done
+              {t("done")}
             </>
           ) : (
             <>
               <Pencil className="size-3" />
-              Edit
+              {t("edit")}
             </>
           )}
         </Button>
@@ -290,13 +298,25 @@ function StringTags({ items }: { items: string[] }) {
   );
 }
 
-function ScheduleTags({ items }: { items: ScheduleItem[] }) {
+/** "HH:mm" as a Date on an arbitrary day, so Intl can format the time. */
+function atTime(hhmm: string): Date {
+  const [h, m] = hhmm.split(":").map((n) => Number(n) || 0);
+  return new Date(2000, 0, 1, h, m);
+}
+
+function ScheduleTags({
+  items,
+  locale,
+}: {
+  items: ScheduleItem[];
+  locale: AppLocale;
+}) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((s, i) => (
         <Badge key={s.id ?? i} variant="outline" className="gap-1 text-xs">
           <Clock className="size-2.5" />
-          {s.label} ({s.time})
+          {s.label} ({formatTime(atTime(s.time), locale)})
         </Badge>
       ))}
     </div>
@@ -306,6 +326,8 @@ function ScheduleTags({ items }: { items: ScheduleItem[] }) {
 // ── Main component ───────────────────────────────────────────────────
 
 export function FeedingMedicationConfig() {
+  const { locale, section } = useSettingsText();
+  const t = section("care-tasks");
   const [feeding, setFeeding] = useState<FeedingOptions>(
     () => getCareTasksConfig().feeding,
   );
@@ -343,7 +365,7 @@ export function FeedingMedicationConfig() {
   const toggle = (cat: string) =>
     setEditingCat((c) => {
       if (c === cat) {
-        toast.success("Changes saved");
+        toast.success(t("changesSaved"));
         return null;
       }
       return cat;
@@ -357,14 +379,8 @@ export function FeedingMedicationConfig() {
           <Utensils className="size-4 text-orange-700" />
         </div>
         <div>
-          <h3 className="text-sm font-bold">
-            Feeding &amp; medication options
-          </h3>
-          <p className="text-muted-foreground text-xs">
-            Configure the options staff and customers see when adding care
-            instructions. Edit any category to rename, reorder, or remove
-            values.
-          </p>
+          <h3 className="text-sm font-bold">{t("optionsTitle")}</h3>
+          <p className="text-muted-foreground text-xs">{t("optionsHelp")}</p>
         </div>
       </div>
 
@@ -375,16 +391,18 @@ export function FeedingMedicationConfig() {
             <div className="flex size-8 items-center justify-center rounded-lg bg-orange-100">
               <Utensils className="size-4 text-orange-700" />
             </div>
-            Feeding
+            {t("feeding")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5 pt-4">
           <CategoryGroup
-            label="Schedules"
+            label={t("catSchedules")}
             count={feeding.schedules.length}
             editing={editingCat === "schedules"}
             onToggle={() => toggle("schedules")}
-            readOnly={<ScheduleTags items={feeding.schedules} />}
+            readOnly={
+              <ScheduleTags items={feeding.schedules} locale={locale} />
+            }
             editor={
               <ScheduleTagEditor
                 items={feeding.schedules}
@@ -393,7 +411,7 @@ export function FeedingMedicationConfig() {
             }
           />
           <CategoryGroup
-            label="Units"
+            label={t("catUnits")}
             count={feeding.units.length}
             editing={editingCat === "units"}
             onToggle={() => toggle("units")}
@@ -402,12 +420,12 @@ export function FeedingMedicationConfig() {
               <StringTagEditor
                 items={feeding.units}
                 onChange={(v) => setFeedingList("units", v)}
-                placeholder="e.g. Lbs"
+                placeholder={t("phUnits")}
               />
             }
           />
           <CategoryGroup
-            label="Food Types"
+            label={t("catFoodTypes")}
             count={feeding.foodTypes.length}
             editing={editingCat === "foodTypes"}
             onToggle={() => toggle("foodTypes")}
@@ -416,12 +434,12 @@ export function FeedingMedicationConfig() {
               <StringTagEditor
                 items={feeding.foodTypes}
                 onChange={(v) => setFeedingList("foodTypes", v)}
-                placeholder="e.g. Freeze-dried"
+                placeholder={t("phFoodTypes")}
               />
             }
           />
           <CategoryGroup
-            label="Instructions"
+            label={t("catInstructions")}
             count={feeding.instructions.length}
             editing={editingCat === "instructions"}
             onToggle={() => toggle("instructions")}
@@ -430,12 +448,12 @@ export function FeedingMedicationConfig() {
               <StringTagEditor
                 items={feeding.instructions}
                 onChange={(v) => setFeedingList("instructions", v)}
-                placeholder="e.g. Elevated bowl"
+                placeholder={t("phInstructions")}
               />
             }
           />
           <CategoryGroup
-            label="Sources"
+            label={t("catSources")}
             count={feeding.sources.length}
             editing={editingCat === "sources"}
             onToggle={() => toggle("sources")}
@@ -444,12 +462,12 @@ export function FeedingMedicationConfig() {
               <StringTagEditor
                 items={feeding.sources}
                 onChange={(v) => setFeedingList("sources", v)}
-                placeholder="e.g. Mix both"
+                placeholder={t("phSources")}
               />
             }
           />
           <CategoryGroup
-            label="Destinations"
+            label={t("catDestinations")}
             count={feeding.destinations.length}
             editing={editingCat === "destinations"}
             onToggle={() => toggle("destinations")}
@@ -458,12 +476,12 @@ export function FeedingMedicationConfig() {
               <StringTagEditor
                 items={feeding.destinations}
                 onChange={(v) => setFeedingList("destinations", v)}
-                placeholder="e.g. Feeding station"
+                placeholder={t("phDestinations")}
               />
             }
           />
           <CategoryGroup
-            label="Frequencies"
+            label={t("catFrequencies")}
             count={feeding.frequencies.length}
             editing={editingCat === "feeding-frequencies"}
             onToggle={() => toggle("feeding-frequencies")}
@@ -472,12 +490,12 @@ export function FeedingMedicationConfig() {
               <StringTagEditor
                 items={feeding.frequencies}
                 onChange={(v) => setFeedingList("frequencies", v)}
-                placeholder="e.g. Every 8 hours"
+                placeholder={t("phFrequencies")}
               />
             }
           />
           <CategoryGroup
-            label="Allowed Proteins"
+            label={t("catAllowedProteins")}
             count={feeding.allowedProteins.length}
             editing={editingCat === "allowedProteins"}
             onToggle={() => toggle("allowedProteins")}
@@ -486,12 +504,12 @@ export function FeedingMedicationConfig() {
               <StringTagEditor
                 items={feeding.allowedProteins}
                 onChange={(v) => setFeedingList("allowedProteins", v)}
-                placeholder="e.g. Venison"
+                placeholder={t("phProteins")}
               />
             }
           />
           <CategoryGroup
-            label="Allergy Presets"
+            label={t("catAllergyPresets")}
             count={feeding.allergyPresets.length}
             editing={editingCat === "allergyPresets"}
             onToggle={() => toggle("allergyPresets")}
@@ -500,7 +518,7 @@ export function FeedingMedicationConfig() {
               <StringTagEditor
                 items={feeding.allergyPresets}
                 onChange={(v) => setFeedingList("allergyPresets", v)}
-                placeholder="e.g. Soy"
+                placeholder={t("phAllergies")}
               />
             }
           />
@@ -514,12 +532,12 @@ export function FeedingMedicationConfig() {
             <div className="flex size-8 items-center justify-center rounded-lg bg-violet-100">
               <Pill className="size-4 text-violet-700" />
             </div>
-            Medication
+            {t("medication")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5 pt-4">
           <CategoryGroup
-            label="Methods"
+            label={t("catMethods")}
             count={medication.methods.length}
             editing={editingCat === "methods"}
             onToggle={() => toggle("methods")}
@@ -528,12 +546,12 @@ export function FeedingMedicationConfig() {
               <StringTagEditor
                 items={medication.methods}
                 onChange={(v) => setMedList("methods", v)}
-                placeholder="e.g. Inhaled"
+                placeholder={t("phMethods")}
               />
             }
           />
           <CategoryGroup
-            label="Frequencies"
+            label={t("catFrequencies")}
             count={medication.frequencies.length}
             editing={editingCat === "frequencies"}
             onToggle={() => toggle("frequencies")}
@@ -542,16 +560,18 @@ export function FeedingMedicationConfig() {
               <StringTagEditor
                 items={medication.frequencies}
                 onChange={(v) => setMedList("frequencies", v)}
-                placeholder="e.g. Every 12 hours"
+                placeholder={t("phMedFrequencies")}
               />
             }
           />
           <CategoryGroup
-            label="Quick Times"
+            label={t("catQuickTimes")}
             count={medication.quickTimes.length}
             editing={editingCat === "quickTimes"}
             onToggle={() => toggle("quickTimes")}
-            readOnly={<ScheduleTags items={medication.quickTimes} />}
+            readOnly={
+              <ScheduleTags items={medication.quickTimes} locale={locale} />
+            }
             editor={
               <ScheduleTagEditor
                 items={medication.quickTimes}

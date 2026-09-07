@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldAlert, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { formQueries, formMutations } from "@/lib/api/forms";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import type { Form, RedFlagConfig, RedFlagRule } from "@/types/forms";
 
 interface RedFlagConfigModalProps {
@@ -36,6 +37,7 @@ export function RedFlagConfigModal({
   onOpenChange,
   facilityId,
 }: RedFlagConfigModalProps) {
+  const t = useSettingsText().section("form-notifications");
   const config = useQuery({
     ...formQueries.redFlags(),
     enabled: open,
@@ -53,13 +55,9 @@ export function RedFlagConfigModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldAlert className="size-5 text-red-600" />
-            Red-flag answers
+            {t("redFlagTitle")}
           </DialogTitle>
-          <DialogDescription>
-            Define what counts as a red-flag answer. Matching submissions
-            trigger the &ldquo;Red-flag answers detected&rdquo; staff
-            notification.
-          </DialogDescription>
+          <DialogDescription>{t("redFlagHelp")}</DialogDescription>
         </DialogHeader>
 
         {!ready ? (
@@ -96,6 +94,7 @@ function RedFlagEditor({
   forms: Form[];
   onClose: () => void;
 }) {
+  const t = useSettingsText().section("form-notifications");
   const queryClient = useQueryClient();
   const [keywords, setKeywords] = useState<string[]>(initial.keywords);
   const [keywordDraft, setKeywordDraft] = useState("");
@@ -142,7 +141,7 @@ function RedFlagEditor({
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forms", "red-flags"] });
-      toast.success("Red-flag configuration saved");
+      toast.success(t("configSaved"));
       onClose();
     },
   });
@@ -153,15 +152,15 @@ function RedFlagEditor({
         {/* Keywords */}
         <section className="space-y-2">
           <div>
-            <h3 className="text-sm font-semibold">Flag keywords</h3>
+            <h3 className="text-sm font-semibold">{t("flagKeywords")}</h3>
             <p className="text-muted-foreground text-xs">
-              Any free-text answer containing one of these words is flagged.
+              {t("flagKeywordsHelp")}
             </p>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {keywords.length === 0 && (
               <span className="text-muted-foreground text-xs">
-                No keywords yet.
+                {t("noKeywords")}
               </span>
             )}
             {keywords.map((k) => (
@@ -174,7 +173,7 @@ function RedFlagEditor({
                   type="button"
                   onClick={() => setKeywords(keywords.filter((x) => x !== k))}
                   className="hover:text-red-900"
-                  aria-label={`Remove ${k}`}
+                  aria-label={t("removeNamed").replace("{name}", k)}
                 >
                   <X className="size-3" />
                 </button>
@@ -191,7 +190,7 @@ function RedFlagEditor({
                   addKeyword();
                 }
               }}
-              placeholder="e.g. aggression"
+              placeholder={t("keywordPlaceholder")}
               className="h-9 text-sm"
             />
             <Button
@@ -203,7 +202,7 @@ function RedFlagEditor({
               onClick={addKeyword}
             >
               <Plus className="size-3.5" />
-              Add
+              {t("add")}
             </Button>
           </div>
         </section>
@@ -212,16 +211,15 @@ function RedFlagEditor({
         <section className="space-y-2">
           <div>
             <h3 className="text-sm font-semibold">
-              Question &amp; answer rules
+              {t("questionAnswerRules")}
             </h3>
             <p className="text-muted-foreground text-xs">
-              Flag when a specific question is answered a certain way — e.g.
-              &ldquo;Has your dog shown aggression?&rdquo; is &ldquo;Yes&rdquo;.
+              {t("questionAnswerHelp")}
             </p>
           </div>
           {rules.length === 0 && (
             <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-xs">
-              No rules yet. Add one below.
+              {t("noRules")}
             </p>
           )}
           <div className="space-y-2">
@@ -244,17 +242,17 @@ function RedFlagEditor({
             onClick={addRule}
           >
             <Plus className="size-3.5" />
-            Add rule
+            {t("addRule")}
           </Button>
         </section>
       </div>
 
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>
-          Cancel
+          {t("cancel")}
         </Button>
         <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "Saving…" : "Save configuration"}
+          {save.isPending ? t("saving") : t("saveConfiguration")}
         </Button>
       </DialogFooter>
     </>
@@ -272,6 +270,7 @@ function RuleRow({
   onChange: (patch: Partial<RedFlagRule>) => void;
   onRemove: () => void;
 }) {
+  const t = useSettingsText().section("form-notifications");
   const selectedForm = forms.find((f) => f.id === rule.formId);
   const question = selectedForm?.questions.find(
     (q) => q.id === rule.questionId,
@@ -279,8 +278,11 @@ function RuleRow({
   const valueOptions =
     question?.type === "yes_no"
       ? [
-          { value: "Yes", label: "Yes" },
-          { value: "No", label: "No" },
+          // french-ok: the VALUE is the stored answer a submission is matched
+          // against, so it stays English on both sides of the comparison; only
+          // the label is read.
+          { value: "Yes", label: t("yes") },
+          { value: "No", label: t("no") },
         ]
       : (question?.options ?? []);
 
@@ -302,7 +304,7 @@ function RuleRow({
           }}
         >
           <SelectTrigger className="h-8 flex-1 text-xs">
-            <SelectValue placeholder="Form" />
+            <SelectValue placeholder={t("form")} />
           </SelectTrigger>
           <SelectContent>
             {forms.map((f) => (
@@ -318,7 +320,7 @@ function RuleRow({
           size="icon"
           className="text-muted-foreground hover:text-destructive size-8 shrink-0"
           onClick={onRemove}
-          aria-label="Remove rule"
+          aria-label={t("removeRule")}
         >
           <Trash2 className="size-3.5" />
         </Button>
@@ -339,7 +341,7 @@ function RuleRow({
           disabled={!selectedForm || selectedForm.questions.length === 0}
         >
           <SelectTrigger className="h-8 min-w-[180px] flex-1 text-xs">
-            <SelectValue placeholder="Question" />
+            <SelectValue placeholder={t("question")} />
           </SelectTrigger>
           <SelectContent>
             {selectedForm?.questions.map((q) => (
@@ -361,8 +363,8 @@ function RuleRow({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="equals">is</SelectItem>
-            <SelectItem value="contains">contains</SelectItem>
+            <SelectItem value="equals">{t("operatorIs")}</SelectItem>
+            <SelectItem value="contains">{t("contains")}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -373,7 +375,7 @@ function RuleRow({
             onValueChange={(v) => onChange({ value: v })}
           >
             <SelectTrigger className="h-8 min-w-[120px] flex-1 text-xs">
-              <SelectValue placeholder="Answer" />
+              <SelectValue placeholder={t("answer")} />
             </SelectTrigger>
             <SelectContent>
               {valueOptions.map((o) => (
@@ -387,7 +389,7 @@ function RuleRow({
           <Input
             value={rule.value}
             onChange={(e) => onChange({ value: e.target.value })}
-            placeholder="Answer"
+            placeholder={t("answer")}
             className="h-8 min-w-[120px] flex-1 text-xs"
           />
         )}

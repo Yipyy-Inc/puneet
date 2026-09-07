@@ -9,16 +9,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { Switch } from "@/components/ui/switch";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // Facility booking access & evaluation requirements
 export function FacilityBookingFlowCard() {
+  const t = useSettingsText().section("booking-rules");
   const { bookingFlow, updateBookingFlow } = useSettings();
 
   const serviceOptions = [
-    { id: "daycare", label: "Daycare" },
-    { id: "boarding", label: "Boarding" },
-    { id: "grooming", label: "Grooming" },
-    { id: "training", label: "Training" },
+    { id: "daycare", label: t("svcDaycare") },
+    { id: "boarding", label: t("svcBoarding") },
+    { id: "grooming", label: t("svcGrooming") },
+    { id: "training", label: t("svcTraining") },
   ];
 
   const toggleService = (
@@ -32,8 +34,8 @@ export function FacilityBookingFlowCard() {
 
   return (
     <SettingsBlock
-      title="Booking Access & Evaluation Rules"
-      description="Control when evaluations are required and which services appear in online booking."
+      title={t("flowTitle")}
+      description={t("flowHelp")}
       data={bookingFlow}
       onSave={updateBookingFlow}
     >
@@ -41,9 +43,9 @@ export function FacilityBookingFlowCard() {
         <div className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
-              <div className="font-medium">Evaluation Required</div>
+              <div className="font-medium">{t("evaluationRequired")}</div>
               <div className="text-muted-foreground text-sm">
-                Require evaluation before any service booking.
+                {t("evaluationRequiredHelp")}
               </div>
             </div>
             <Switch
@@ -59,12 +61,9 @@ export function FacilityBookingFlowCard() {
             <div className="space-y-3">
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <div className="font-medium">
-                    Hide Services Until Evaluation Completed
-                  </div>
+                  <div className="font-medium">{t("hideUntilEvaluated")}</div>
                   <div className="text-muted-foreground text-sm">
-                    Show only the Evaluation service until it is completed or
-                    booked.
+                    {t("hideUntilEvaluatedHelp")}
                   </div>
                 </div>
                 <Switch
@@ -79,11 +78,11 @@ export function FacilityBookingFlowCard() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Custom lock message shown to customers</Label>
+                <Label>{t("lockMessage")}</Label>
                 <Textarea
                   rows={3}
                   disabled={!isEditing}
-                  placeholder="e.g. This service requires a pet evaluation first. Please book an evaluation so we can get to know your pet."
+                  placeholder={t("lockMessagePlaceholder")}
                   value={localFlow.evaluationLockedMessage ?? ""}
                   onChange={(e) =>
                     setLocalFlow({
@@ -93,15 +92,14 @@ export function FacilityBookingFlowCard() {
                   }
                 />
                 <p className="text-muted-foreground text-xs">
-                  Shown to customers when they try to book a service that
-                  requires evaluation.
+                  {t("lockMessageHelp")}
                 </p>
               </div>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Services requiring evaluation first</Label>
+                <Label>{t("servicesRequiringEval")}</Label>
                 <div className="space-y-2 rounded-lg border p-3">
                   {serviceOptions.map((service) => (
                     <div key={service.id} className="flex items-center gap-2">
@@ -131,7 +129,7 @@ export function FacilityBookingFlowCard() {
               </div>
 
               <div className="space-y-2">
-                <Label>Hidden from online booking</Label>
+                <Label>{t("hiddenFromBooking")}</Label>
                 <div className="space-y-2 rounded-lg border p-3">
                   {serviceOptions.map((service) => (
                     <div key={service.id} className="flex items-center gap-2">
@@ -161,11 +159,11 @@ export function FacilityBookingFlowCard() {
           )}
 
           <div className="space-y-1.5">
-            <Label>Booking request confirmation message</Label>
+            <Label>{t("confirmationMessage")}</Label>
             <Textarea
               rows={4}
               disabled={!isEditing}
-              placeholder="e.g. Thank you! We've received your booking request and will verify all the details. You'll receive a confirmation email shortly."
+              placeholder={t("confirmationPlaceholder")}
               value={localFlow.bookingRequestConfirmationMessage ?? ""}
               onChange={(e) =>
                 setLocalFlow({
@@ -175,8 +173,7 @@ export function FacilityBookingFlowCard() {
               }
             />
             <p className="text-muted-foreground text-xs">
-              Shown to customers on the confirmation screen after they submit a
-              booking request.
+              {t("confirmationHelp")}
             </p>
           </div>
         </div>

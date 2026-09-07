@@ -8685,3 +8685,118 @@ language looks like.
 place its fields are read — including props handed to a child — and confirm
 each is wrapped. Then run the spec. "The gate is green" is not evidence for
 this class of defect; it is the symptom.
+
+---
+
+## A gate that reads English words goes blind the moment the words move to a catalogue
+
+**Found 2026-09-07, while converting `care-tasks`. Fixed in the same change —
+recorded because the shape will recur for every gate keyed on copy.**
+
+`check:success-claims` matches a toast carrying a completed verb:
+
+```js
+const CLAIM_BARE = /toast\.success\s*\([^)]*\b(?:created|sent|saved|…)\b/i;
+```
+
+The French conversion turns every such toast into a lookup:
+
+```jsx
+toast.success("Care task feedback options saved"); // seen
+toast.success(t("feedbackSaved")); // the same claim, unseen
+```
+
+`\bsaved\b` needs a word boundary and `feedbackSaved` has none, so the claim
+vanished and the gate reported the file as **FIXED**. It was not fixed. It was
+translated — and `CareTaskSettings.tsx` still tells the user its feedback
+options were saved while saving nothing.
+
+**This was not one file.** Every settings section converted so far took its
+toasts through `t()`. The handful still counted were counted by accident,
+because their key happens to BE a bare verb — `t("saved")` contains `saved`.
+Left alone, this gate would have quietly emptied itself as the French work
+finished, and the emptying would have read as progress.
+
+**The fix:** the gate loads `messages/en.json` and resolves a `t("key")`
+argument to its English string before testing the line, looking the key up
+across every settings section and every shell group (a file's own section is
+not knowable from the file alone, and a key that is a claim in ANY catalogue is
+worth reading as one here).
+
+**The general lesson, which is the reason this is written down:** any gate whose
+rule is "these English words mean X" has this exposure, and the French
+conversion is walking through the whole product turning literals into keys.
+Before trusting a copy-shaped gate's green during that work, check whether it
+can follow a key. `check:badge-glyph` and `check:hardcoded-locale` read
+structure rather than words and are unaffected; `check:ui-french` reads
+literals on purpose, and a key is exactly what it wants to see.
+
+---
+
+## `check:settings-persistence` counts `useMutation` as "can leave the browser". It cannot.
+
+**Measured 2026-09-07. Not fixed — the fix is wiring two domains, not editing a
+regex.**
+
+The gate asks the right question in its own header — _does the save path reach
+ANYTHING that could leave the browser?_ — and answers it with:
+
+```js
+const PERFORMS = /\bfetch\s*\(|useMutation|\.mutate\b|…/;
+```
+
+`useMutation` proves nothing. TanStack Query will happily run a `mutationFn`
+that assigns to a module-level object, and `src/lib/api/care-tasks.ts` does
+exactly that:
+
+```ts
+export function saveCareTasksConfig(config: CareTasksConfig): CareTasksConfig {
+  cfg.feedingOptions = config.feeding; // a module-level fixture
+  cfg.medicationOptions = config.medication;
+  return config;
+}
+```
+
+So `care-tasks` passes the gate with **neither** of its two cards persisting
+anything. `FeedingMedicationConfig` goes through a `useMutation` into that
+splice; `CareTaskSettings` assigned to `facilityConfig.careTaskFeedback`
+directly until this change removed it.
+
+**And the fixture write reached nobody even inside one session.** All three
+consumers capture the list in a MODULE-LEVEL const:
+
+| Reader                                           | Line  |
+| ------------------------------------------------ | ----- |
+| `src/app/facility/dashboard/tasks/CareTasks.tsx` | 95–96 |
+| `src/components/bookings/FeedingSection.tsx`     | 58    |
+
+A module const is evaluated once, so a later mutation is invisible to it.
+Editing a feeding-feedback option has never changed the dropdown a staff member
+sees — not after a reload, and not before one.
+
+**`form-notifications` is the same shape**, and worse: `handleSave` wrote only
+the reminder timing into `facilityConfig.notifications.forms.customer`, and the
+two toggle LISTS — twelve switches deciding who is notified about a form — were
+never written anywhere at all. Its two readers are module consts too
+(`src/data/facility-notifications.ts:571`,
+`src/lib/form-customer-notifications.ts:9`).
+
+Both files are in `check:success-claims`' baseline for the toast, so the claim
+is recorded; what was not recorded is that the gate built to catch exactly this
+says both sections are fine.
+
+**What it needs:** a `care_task_feedback` domain and a `form_notifications`
+domain in `src/lib/settings/domains.ts` — registry entries, not migrations,
+per the `deposit_rules` / `yipyy_go_config` / `tag_note_settings` precedent —
+and the five module-level reads above moved onto them. The React Compiler now
+refuses the in-component fixture writes (`react-hooks/immutability`), so the
+dead assignments are gone; the sections still save nothing.
+
+**Do not "fix" this by widening `PERFORMS`.** Following a `mutationFn` to its
+body is real dataflow analysis, and the honest cheap version is to keep the
+gate as it is and treat `src/lib/api/*.ts` factories that assign to an import
+as the thing to grep for:
+
+```
+rg "^\s*(cfg|facilityConfig)\.\w+ = " src/data src/lib/api
+```

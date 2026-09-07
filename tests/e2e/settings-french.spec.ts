@@ -48,6 +48,12 @@ const CONVERTED = [
   "my-profile",
   "offboarding-templates",
   "my-notifications",
+  "booking-rules",
+  "form-notifications",
+  "checkin-requirements",
+  "onboarding-templates",
+  "care-tasks",
+  "tags-notes",
 ] as const;
 
 test("a converted settings section renders no English, no key and no hole", async ({

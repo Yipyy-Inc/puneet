@@ -14,14 +14,14 @@ import {
 } from "@/lib/api/staff-onboarding";
 import type { OnboardingTemplate } from "@/data/staff-onboarding";
 import { OnboardingTemplateEditor } from "./OnboardingTemplateEditor";
-
-const humanizeRole = (r: string) =>
-  r.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 
 /** Onboarding Templates — list of template cards, opening a full editor
  *  (template settings + manager tasks + employee self-serve tasks). Persisted
  *  to the Phase 0 staff-onboarding store. */
 export function OnboardingTemplatesSettings() {
+  const t = useSettingsText().section("onboarding-templates");
   const { data: templates = [], isLoading } = useOnboardingTemplatesQuery();
   const { mutate: saveTemplate } = useSaveOnboardingTemplate();
   const { mutate: deleteTemplate } = useDeleteOnboardingTemplate();
@@ -48,13 +48,13 @@ export function OnboardingTemplatesSettings() {
   const create = () => {
     saveTemplate(
       {
-        name: "New onboarding template",
+        name: t("newTemplateName"),
         status: "draft",
       } as OnboardingTemplate,
       {
         onSuccess: (created) => {
           setEditingId(created.id);
-          toast.success("Template created");
+          toast.success(t("created"));
         },
         onError: (error: Error) => toast.error(error.message),
       },
@@ -69,20 +69,17 @@ export function OnboardingTemplatesSettings() {
             sentence explaining it reads backwards. §1: there is no second
             action colour, so the emerald is gone with it. */}
         <div className="flex items-start justify-between gap-4">
-          <p className="text-muted-foreground text-sm">
-            Role-appropriate onboarding flows. The active template matching a
-            new hire’s role drives their self-serve checklist.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("intro")}</p>
           <Button onClick={create} className="shrink-0 gap-1.5">
             <Plus className="size-4" />
-            New template
+            {t("newTemplate")}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {templates.length === 0 ? (
           <p className="text-muted-foreground py-6 text-center text-sm">
-            No templates yet. Create one to get started.
+            {t("empty")}
           </p>
         ) : (
           templates.map((t) => (
@@ -105,6 +102,9 @@ function TemplateCard({
   template: OnboardingTemplate;
   onEdit: () => void;
 }) {
+  const { locale, section } = useSettingsText();
+  const t = section("onboarding-templates");
+  const roleLabel = useStaffRoleLabel();
   // Its own mutations rather than two callbacks threaded down from the parent:
   // the switch and the delete button live here, so the calls belong here too.
   const { mutate: saveTemplate } = useSaveOnboardingTemplate();
@@ -112,6 +112,13 @@ function TemplateCard({
 
   const taskCount =
     template.managerTasks.length + template.employeeTasks.length;
+
+  // Intl picks the form, not `n === 1`: French counts 0 as singular
+  // ("0 tâche") and English does not ("0 tasks").
+  const plural = new Intl.PluralRules(locale === "fr" ? "fr-CA" : "en-CA");
+  const taskCountLabel = t(
+    plural.select(taskCount) === "one" ? "taskCountOne" : "taskCountOther",
+  ).replace("{n}", String(taskCount));
 
   return (
     <div className="hover:border-primary/40 flex items-center gap-3 rounded-lg border p-3 transition-colors">
@@ -123,16 +130,16 @@ function TemplateCard({
           <span className="truncate font-medium">{template.name}</span>
           <Badge
             variant={template.status === "active" ? "default" : "secondary"}
-            className="text-xs capitalize"
+            className="text-xs"
           >
-            {template.status}
+            {t(template.status === "active" ? "statusActive" : "statusDraft")}
           </Badge>
         </div>
         <span className="text-muted-foreground truncate text-xs">
           {template.appliesToRoles.length === 0
-            ? "All roles"
-            : template.appliesToRoles.map(humanizeRole).join(", ")}{" "}
-          · {taskCount} task{taskCount === 1 ? "" : "s"}
+            ? t("allRoles")
+            : template.appliesToRoles.map(roleLabel).join(", ")}{" "}
+          · {taskCountLabel}
         </span>
       </button>
 
@@ -151,17 +158,17 @@ function TemplateCard({
             )
           }
         />
-        Active
+        {t("statusActive")}
       </label>
 
       <Button
         variant="ghost"
         size="icon"
         className="size-8"
-        title="Delete template"
+        title={t("deleteTemplate")}
         onClick={() =>
           deleteTemplate(template.id, {
-            onSuccess: () => toast.success("Template deleted"),
+            onSuccess: () => toast.success(t("deleted")),
             onError: (error: Error) => toast.error(error.message),
           })
         }
@@ -169,7 +176,7 @@ function TemplateCard({
         <Trash2 className="size-4" />
       </Button>
 
-      <button onClick={onEdit} aria-label="Edit template">
+      <button onClick={onEdit} aria-label={t("editTemplate")}>
         <ChevronRight className="text-muted-foreground size-4" />
       </button>
     </div>

@@ -34,16 +34,18 @@ import { facilityStaff } from "@/data/facility-staff";
 import { getCurrentUserId } from "@/lib/role-utils";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { checkinMutations } from "@/lib/api/checkin-requirements";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 import type { ExpressCheckinConfig } from "@/data/checkin-requirements";
 
 type Requirement = "required" | "optional" | "disabled";
 
-const SERVICE_OPTIONS: { value: string; label: string }[] = [
-  { value: "boarding", label: "Boarding" },
-  { value: "daycare", label: "Daycare" },
-  { value: "grooming", label: "Grooming" },
-  { value: "training", label: "Training" },
-  { value: "evaluation", label: "Evaluation" },
+const SERVICE_OPTIONS: { value: string; key: string }[] = [
+  { value: "boarding", key: "svcBoarding" },
+  { value: "daycare", key: "svcDaycare" },
+  { value: "grooming", key: "svcGrooming" },
+  { value: "training", key: "svcTraining" },
+  { value: "evaluation", key: "svcEvaluation" },
 ];
 
 // Sentinel for the per-service dropdown's "inherit the default" choice.
@@ -61,12 +63,12 @@ const defaultConfig = defaultFacility?.expressCheckinConfig;
 
 const REQUIREMENT_OPTIONS: {
   value: Requirement;
-  label: string;
+  key: string;
   color: string;
 }[] = [
-  { value: "required", label: "Required", color: "text-red-600" },
-  { value: "optional", label: "Optional", color: "text-amber-600" },
-  { value: "disabled", label: "Disabled", color: "text-muted-foreground" },
+  { value: "required", key: "reqRequired", color: "text-red-600" },
+  { value: "optional", key: "reqOptional", color: "text-amber-600" },
+  { value: "disabled", key: "reqDisabled", color: "text-muted-foreground" },
 ];
 
 let _customSeq = 900;
@@ -76,6 +78,7 @@ function nextCustomId(): string {
 }
 
 export function CheckinRequirementsSettings() {
+  const t = useSettingsText().section("checkin-requirements");
   const { role } = useFacilityRole();
 
   const [sections, setSections] = useState<Record<string, Requirement>>({
@@ -119,10 +122,10 @@ export function CheckinRequirementsSettings() {
     );
   });
 
-  const sendTest = (what: string) => {
+  const sendTest = (messageKey: "testFormSent" | "testReminderSent") => {
     const email = testEmail.trim();
     if (!email) return;
-    toast.success(`Test ${what} sent to ${email}`);
+    toast.success(t(messageKey).replace("{email}", email));
   };
 
   const queryClient = useQueryClient();
@@ -130,46 +133,50 @@ export function CheckinRequirementsSettings() {
   const builtInSections: SectionConfig[] = [
     {
       key: "feeding",
-      label: "Feeding Instructions",
+      label: t("secFeeding"),
       icon: UtensilsCrossed,
       value: sections.feeding,
     },
     {
       key: "medication",
-      label: "Medication Instructions",
+      label: t("secMedication"),
       icon: Pill,
       value: sections.medication,
     },
     {
       key: "belongings",
-      label: "Belongings Checklist",
+      label: t("secBelongings"),
       icon: Backpack,
       value: sections.belongings,
     },
     {
       key: "additionalContacts",
-      label: "Additional Contacts Verification",
+      label: t("secContacts"),
       icon: Phone,
       value: sections.additionalContacts,
     },
     {
       key: "vaccination",
-      label: "Vaccination Verification",
+      label: t("secVaccination"),
       icon: Syringe,
       value: sections.vaccination,
     },
     {
       key: "waiver",
-      label: "Waiver / Agreement Confirmation",
+      label: t("secWaiver"),
       icon: FileText,
       value: sections.waiver,
     },
   ];
 
-  const requirementLabel = (v: Requirement) =>
-    REQUIREMENT_OPTIONS.find((o) => o.value === v)?.label ?? v;
-  const serviceLabel = (v: string) =>
-    SERVICE_OPTIONS.find((s) => s.value === v)?.label ?? v;
+  const requirementLabel = (v: Requirement) => {
+    const option = REQUIREMENT_OPTIONS.find((o) => o.value === v);
+    return option ? t(option.key) : v;
+  };
+  const serviceLabel = (v: string) => {
+    const option = SERVICE_OPTIONS.find((s) => s.value === v);
+    return option ? t(option.key) : v;
+  };
 
   // Persist every change immediately through the query layer. Building the full
   // config from the changed slice keeps writes correct despite async setState.
@@ -200,7 +207,11 @@ export function CheckinRequirementsSettings() {
     const next = { ...sections, [key]: value };
     setSections(next);
     commit({ sections: next });
-    toast.success(`${label} default set to ${requirementLabel(value)}`);
+    toast.success(
+      t("defaultSetTo")
+        .replace("{section}", label)
+        .replace("{value}", requirementLabel(value)),
+    );
   };
 
   const updateCustomRequirement = (idx: number, value: Requirement) => {
@@ -209,8 +220,12 @@ export function CheckinRequirementsSettings() {
     );
     setCustomSections(next);
     commit({ customSections: next });
-    const name = customSections[idx]?.name?.trim() || "Custom section";
-    toast.success(`${name} default set to ${requirementLabel(value)}`);
+    const name = customSections[idx]?.name?.trim() || t("customSection");
+    toast.success(
+      t("defaultSetTo")
+        .replace("{section}", name)
+        .replace("{value}", requirementLabel(value)),
+    );
   };
 
   // Effective requirement for a section under the selected service.
@@ -243,8 +258,13 @@ export function CheckinRequirementsSettings() {
     commit({ serviceOverrides: next });
     toast.success(
       value === INHERIT
-        ? `${sectionLabel} for ${serviceLabel(service)} now follows the default`
-        : `${sectionLabel} for ${serviceLabel(service)} set to ${requirementLabel(value)}`,
+        ? t("overrideCleared")
+            .replace("{section}", sectionLabel)
+            .replace("{service}", serviceLabel(service))
+        : t("overrideSet")
+            .replace("{section}", sectionLabel)
+            .replace("{service}", serviceLabel(service))
+            .replace("{value}", requirementLabel(value)),
     );
   };
 
@@ -284,7 +304,7 @@ export function CheckinRequirementsSettings() {
 
   const handleSave = () => {
     commit({});
-    toast.success("Express Check-in requirements saved");
+    toast.success(t("saved"));
   };
 
   if (role !== "owner" && role !== "manager") {
@@ -292,10 +312,7 @@ export function CheckinRequirementsSettings() {
       <Card>
         <CardContent className="flex items-center gap-3 py-8">
           <Shield className="text-muted-foreground size-5" />
-          <p className="text-muted-foreground text-sm">
-            Check-in settings are only accessible to facility owners and
-            managers.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("restricted")}</p>
         </CardContent>
       </Card>
     );
@@ -304,14 +321,8 @@ export function CheckinRequirementsSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">
-          Yipyy express check-in requirements
-        </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Configure what information customers must provide via Express Check-in
-          before their appointment. Like airline check-in — customers verify and
-          fill in all details before arrival.
-        </p>
+        <h2 className="text-lg font-semibold">{t("title")}</h2>
+        <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </div>
 
       {/* Built-in sections */}
@@ -319,7 +330,7 @@ export function CheckinRequirementsSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <ClipboardCheck className="size-4" />
-            Check-in sections
+            {t("sectionsTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -354,7 +365,7 @@ export function CheckinRequirementsSettings() {
                         value={opt.value}
                         className="text-xs"
                       >
-                        <span className={opt.color}>{opt.label}</span>
+                        <span className={opt.color}>{t(opt.key)}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -371,7 +382,7 @@ export function CheckinRequirementsSettings() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Plus className="size-4" />
-              Custom sections
+              {t("customTitle")}
             </CardTitle>
           </div>
         </CardHeader>
@@ -403,7 +414,7 @@ export function CheckinRequirementsSettings() {
                         value={opt.value}
                         className="text-xs"
                       >
-                        <span className={opt.color}>{opt.label}</span>
+                        <span className={opt.color}>{t(opt.key)}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -423,7 +434,7 @@ export function CheckinRequirementsSettings() {
             <Input
               value={newCustomName}
               onChange={(e) => setNewCustomName(e.target.value)}
-              placeholder="Add custom section..."
+              placeholder={t("addCustomPlaceholder")}
               className="h-8 text-sm"
               onKeyDown={(e) => {
                 if (e.key === "Enter") addCustomSection();
@@ -447,18 +458,21 @@ export function CheckinRequirementsSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Layers className="size-4" />
-            Service-specific check-in requirements
+            {t("serviceTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-muted-foreground text-xs">
-            Override the defaults above for a specific service — e.g. require
-            Feeding Instructions for Boarding but disable it for Daycare. Leave
-            a row on <span className="font-medium">Default</span> to inherit.
+            <InterpolatedText
+              template={t("serviceHelp")}
+              placeholder="{default}"
+            >
+              <span className="font-medium">{t("optDefault")}</span>
+            </InterpolatedText>
           </p>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs font-medium">
-              Configuring
+              {t("configuring")}
             </span>
             <Select value={selectedService} onValueChange={setSelectedService}>
               <SelectTrigger className="min-w-[160px]">
@@ -467,7 +481,7 @@ export function CheckinRequirementsSettings() {
               <SelectContent>
                 {SERVICE_OPTIONS.map((s) => (
                   <SelectItem key={s.value} value={s.value} className="text-xs">
-                    {s.label}
+                    {t(s.key)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -483,7 +497,7 @@ export function CheckinRequirementsSettings() {
               })),
               ...customSections.map((cs) => ({
                 key: cs.id,
-                label: cs.name.trim() || "Untitled section",
+                label: cs.name.trim() || t("untitledSection"),
                 defaultValue: cs.type,
               })),
             ].map((section) => {
@@ -502,10 +516,17 @@ export function CheckinRequirementsSettings() {
                       {section.label}
                     </p>
                     <p className="text-muted-foreground text-[11px]">
-                      Default: {requirementLabel(section.defaultValue)}
+                      {t("defaultIs").replace(
+                        "{value}",
+                        requirementLabel(section.defaultValue),
+                      )}
                       {override && (
                         <span className="ml-1 text-sky-600">
-                          · overridden to {requirementLabel(effective)}
+                          {" "}
+                          {t("overriddenTo").replace(
+                            "{value}",
+                            requirementLabel(effective),
+                          )}
                         </span>
                       )}
                     </p>
@@ -527,7 +548,9 @@ export function CheckinRequirementsSettings() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={INHERIT} className="text-xs">
-                        <span className="text-muted-foreground">Default</span>
+                        <span className="text-muted-foreground">
+                          {t("optDefault")}
+                        </span>
                       </SelectItem>
                       {REQUIREMENT_OPTIONS.map((opt) => (
                         <SelectItem
@@ -535,7 +558,7 @@ export function CheckinRequirementsSettings() {
                           value={opt.value}
                           className="text-xs"
                         >
-                          <span className={opt.color}>{opt.label}</span>
+                          <span className={opt.color}>{t(opt.key)}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -552,50 +575,54 @@ export function CheckinRequirementsSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Clock className="size-4" />
-            Timing
+            {t("timingTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Send check-in form</p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">{t("sendForm")}</p>
               <p className="text-muted-foreground text-xs">
-                Hours before appointment to send the form link
+                {t("sendFormHelp")}
               </p>
             </div>
             <Select
               value={String(sendBefore)}
               onValueChange={(v) => updateSendBefore(parseInt(v, 10))}
             >
-              <SelectTrigger className="min-w-[140px]">
+              <SelectTrigger className="min-w-[170px] shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="24">24 hours before</SelectItem>
-                <SelectItem value="48">48 hours before</SelectItem>
-                <SelectItem value="72">72 hours before</SelectItem>
-                <SelectItem value="168">1 week before</SelectItem>
+                {[24, 48, 72].map((h) => (
+                  <SelectItem key={h} value={String(h)}>
+                    {t("hoursBefore").replace("{n}", String(h))}
+                  </SelectItem>
+                ))}
+                <SelectItem value="168">{t("weekBefore")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Send reminder</p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">{t("sendReminder")}</p>
               <p className="text-muted-foreground text-xs">
-                Remind customer if form not completed
+                {t("sendReminderHelp")}
               </p>
             </div>
             <Select
               value={String(reminderHours)}
               onValueChange={(v) => updateReminderHours(parseInt(v, 10))}
             >
-              <SelectTrigger className="min-w-[140px]">
+              <SelectTrigger className="min-w-[170px] shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="6">6 hours before</SelectItem>
-                <SelectItem value="12">12 hours before</SelectItem>
-                <SelectItem value="24">24 hours before</SelectItem>
+                {[6, 12, 24].map((h) => (
+                  <SelectItem key={h} value={String(h)}>
+                    {t("hoursBefore").replace("{n}", String(h))}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -607,26 +634,23 @@ export function CheckinRequirementsSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Send className="size-4" />
-            Testing
+            {t("testingTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="test-recipient" className="text-xs">
-              Send to
+              {t("sendTo")}
             </Label>
             <Input
               id="test-recipient"
               type="email"
               value={testEmail}
               onChange={(e) => setTestEmail(e.target.value)}
-              placeholder="name@example.com"
+              placeholder={t("emailPlaceholder")}
               className="h-9 max-w-sm text-sm"
             />
-            <p className="text-muted-foreground text-xs">
-              Test messages are sent to this address (defaults to your account
-              email).
-            </p>
+            <p className="text-muted-foreground text-xs">{t("testHelp")}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -634,20 +658,20 @@ export function CheckinRequirementsSettings() {
               size="sm"
               className="h-8 gap-1.5"
               disabled={!testEmail.trim()}
-              onClick={() => sendTest("check-in form")}
+              onClick={() => sendTest("testFormSent")}
             >
               <Send className="size-3.5" />
-              Send check-in form
+              {t("sendForm")}
             </Button>
             <Button
               variant="outline"
               size="sm"
               className="h-8 gap-1.5"
               disabled={!testEmail.trim()}
-              onClick={() => sendTest("reminder")}
+              onClick={() => sendTest("testReminderSent")}
             >
               <Send className="size-3.5" />
-              Send reminder
+              {t("sendReminder")}
             </Button>
           </div>
         </CardContent>
@@ -656,7 +680,7 @@ export function CheckinRequirementsSettings() {
       {/* Save */}
       <div className="flex justify-end">
         <Button onClick={handleSave} className="gap-1.5">
-          Save Check-in Settings
+          {t("save")}
         </Button>
       </div>
     </div>
