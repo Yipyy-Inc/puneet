@@ -54,7 +54,6 @@ import {
   useFacilityRbac,
 } from "@/hooks/use-facility-rbac";
 import {
-  ACCESS_SCOPE_META,
   ALWAYS_ON_PERMISSIONS,
   PERMISSION_GROUPS,
   ROLE_META,
@@ -67,6 +66,14 @@ import {
 import { facilityStaff } from "@/data/facility-staff";
 import { POSITION_EDITOR_GROUPS } from "@/lib/nav/facility-nav";
 import { RoleIcon } from "@/app/facility/dashboard/staff/_components/staff-shared";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import {
+  useStaffRoleLabel,
+  useStaffRoleTagline,
+} from "@/lib/settings/use-staff-role-label";
+import { usePermissionText } from "@/lib/settings/use-permission-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
+import { formatDateShort, formatPercent } from "@/lib/i18n/format";
 
 // ============================================================================
 // Types & constants
@@ -76,21 +83,60 @@ type RoleKind =
   | { type: "preset"; id: FacilityStaffRole }
   | { type: "custom"; id: string };
 
-export const ACCENT_CHOICES: { label: string; accent: string; ring: string }[] =
-  [
-    { label: "Amber", accent: "bg-amber-500/10", ring: "ring-amber-500/40" },
-    { label: "Violet", accent: "bg-violet-500/10", ring: "ring-violet-500/40" },
-    { label: "Sky", accent: "bg-sky-500/10", ring: "ring-sky-500/40" },
-    { label: "Rose", accent: "bg-rose-500/10", ring: "ring-rose-500/40" },
-    {
-      label: "Emerald",
-      accent: "bg-emerald-500/10",
-      ring: "ring-emerald-500/40",
-    },
-    { label: "Orange", accent: "bg-orange-500/10", ring: "ring-orange-500/40" },
-    { label: "Indigo", accent: "bg-indigo-500/10", ring: "ring-indigo-500/40" },
-    { label: "Teal", accent: "bg-teal-500/10", ring: "ring-teal-500/40" },
-  ];
+export const ACCENT_CHOICES: {
+  labelKey: string;
+  accent: string;
+  ring: string;
+}[] = [
+  {
+    labelKey: "accentAmber",
+    accent: "bg-amber-500/10",
+    ring: "ring-amber-500/40",
+  },
+  {
+    labelKey: "accentViolet",
+    accent: "bg-violet-500/10",
+    ring: "ring-violet-500/40",
+  },
+  { labelKey: "accentSky", accent: "bg-sky-500/10", ring: "ring-sky-500/40" },
+  {
+    labelKey: "accentRose",
+    accent: "bg-rose-500/10",
+    ring: "ring-rose-500/40",
+  },
+  {
+    labelKey: "accentEmerald",
+    accent: "bg-emerald-500/10",
+    ring: "ring-emerald-500/40",
+  },
+  {
+    labelKey: "accentOrange",
+    accent: "bg-orange-500/10",
+    ring: "ring-orange-500/40",
+  },
+  {
+    labelKey: "accentIndigo",
+    accent: "bg-indigo-500/10",
+    ring: "ring-indigo-500/40",
+  },
+  {
+    labelKey: "accentTeal",
+    accent: "bg-teal-500/10",
+    ring: "ring-teal-500/40",
+  },
+];
+
+/**
+ * Intl picks the plural form, not `n === 1`: French counts 0 as singular
+ * ("0 employé") and English does not ("0 staff members").
+ */
+function usePlural(): (n: number, one: string, other: string) => string {
+  const { locale, section } = useSettingsText();
+  const t = section("roles-permissions");
+  const rules = new Intl.PluralRules(locale === "fr" ? "fr-CA" : "en-CA");
+  return (n, one, other) =>
+    t(rules.select(n) === "one" ? one : other).replace("{n}", String(n));
+}
 
 // ============================================================================
 // Wrapper — ensures the provider is available in the settings tree
@@ -105,6 +151,7 @@ export function FacilityRolesStudio() {
 }
 
 function StudioInner() {
+  const t = useSettingsText().section("roles-permissions");
   const {
     customRoles,
     presetOverrides,
@@ -170,7 +217,7 @@ function StudioInner() {
     const created = createCustomRole(next);
     setSelected({ type: "custom", id: created.id });
     setCreateOpen(false);
-    toast.success(`${next.label} role created`);
+    toast.success(t("roleCreated").replace("{role}", next.label));
   }
 
   function handleDelete(role: CustomFacilityRole) {
@@ -179,7 +226,7 @@ function StudioInner() {
     if (selected.type === "custom" && selected.id === role.id) {
       setSelected({ type: "preset", id: "manager" });
     }
-    toast.success(`${role.label} role deleted`);
+    toast.success(t("roleDeleted").replace("{role}", role.label));
   }
 
   // Duplicate any role (preset or custom) into a new custom role — persisted via
@@ -190,7 +237,7 @@ function StudioInner() {
   ): void {
     const created = createCustomRole(profile);
     setSelected({ type: "custom", id: created.id });
-    toast.success(`${profile.label} created — rename it via Edit`);
+    toast.success(t("roleDuplicated").replace("{role}", profile.label));
   }
 
   return (
@@ -200,11 +247,7 @@ function StudioInner() {
           <div className="max-w-3xl">
             {/* The h1 names this section (§5b2), so the title that used to sit
                 here has gone with its icon. */}
-            <p className="text-muted-foreground text-sm">
-              Define what each role can do. Create custom roles for your
-              facility, or override the built-in presets. Assign these roles to
-              individual staff from staff management.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("intro")}</p>
           </div>
 
           {/* Every action in one group. "Go to staff management" used to sit
@@ -216,7 +259,7 @@ function StudioInner() {
             <Button asChild variant="outline" size="sm" className="gap-1.5">
               <Link href="/facility/dashboard/staff">
                 <Users className="size-3.5" />
-                Go to staff management
+                {t("goToStaff")}
                 <ArrowRight className="size-3.5" />
               </Link>
             </Button>
@@ -226,14 +269,14 @@ function StudioInner() {
                 size="sm"
                 onClick={() => {
                   resetAllPresets();
-                  toast.success("All preset overrides cleared");
+                  toast.success(t("presetsReset"));
                 }}
               >
-                <RotateCcw className="size-3.5" /> Reset presets
+                <RotateCcw className="size-3.5" /> {t("resetPresets")}
               </Button>
             )}
             <Button size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus className="size-3.5" /> New role
+              <Plus className="size-3.5" /> {t("newRole")}
             </Button>
           </div>
         </div>
@@ -247,25 +290,25 @@ function StudioInner() {
             None of that was in the local copy. */}
         <div className="grid gap-2 sm:grid-cols-4">
           <StatCard
-            title="Preset roles"
+            title={t("statPresetRoles")}
             value={presetRoles.length}
             icon={Shield}
             variant="primary"
           />
           <StatCard
-            title="Custom roles"
+            title={t("statCustomRoles")}
             value={customList.length}
             icon={Sparkles}
             variant="secondary"
           />
           <StatCard
-            title="Preset overrides"
+            title={t("statPresetOverrides")}
             value={totalPresetOverrides}
             icon={RotateCcw}
             variant={totalPresetOverrides > 0 ? "warning" : "default"}
           />
           <StatCard
-            title="Staff assigned"
+            title={t("statStaffAssigned")}
             value={facilityStaff.length}
             icon={Users}
             variant="info"
@@ -278,7 +321,7 @@ function StudioInner() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="h-9 pl-8"
-            placeholder="Search roles"
+            placeholder={t("searchRoles")}
           />
         </div>
       </CardHeader>
@@ -290,7 +333,7 @@ function StudioInner() {
             {filteredPresets.length > 0 && (
               <div>
                 <div className="text-muted-foreground mb-1.5 px-1 text-[10px] font-semibold tracking-wider uppercase">
-                  Presets
+                  {t("presets")}
                 </div>
                 <div className="space-y-1.5">
                   {filteredPresets.map((r) => (
@@ -312,7 +355,7 @@ function StudioInner() {
             {filteredCustom.length > 0 && (
               <div>
                 <div className="text-muted-foreground mb-1.5 px-1 text-[10px] font-semibold tracking-wider uppercase">
-                  Custom
+                  {t("custom")}
                 </div>
                 <div className="space-y-1.5">
                   {filteredCustom.map((r) => (
@@ -332,7 +375,7 @@ function StudioInner() {
 
             {filteredPresets.length === 0 && filteredCustom.length === 0 && (
               <div className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-xs">
-                No roles match “{query}”.
+                {t("noRolesMatch").replace("{query}", query)}
               </div>
             )}
           </div>
@@ -370,26 +413,27 @@ function StudioInner() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete custom role</DialogTitle>
+            <DialogTitle>{t("deleteTitle")}</DialogTitle>
             <DialogDescription>
               {pendingDelete && (
-                <>
-                  Remove <b>{pendingDelete.label}</b>? Staff members with this
-                  role will lose any permissions it granted. This cannot be
-                  undone.
-                </>
+                <InterpolatedText
+                  template={t("deleteBody")}
+                  placeholder="{role}"
+                >
+                  <b>{pendingDelete.label}</b>
+                </InterpolatedText>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPendingDelete(null)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={() => pendingDelete && handleDelete(pendingDelete)}
             >
-              Delete role
+              {t("deleteRole")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -419,7 +463,11 @@ function PresetRoleButton({
   overrideCount: number;
   onClick: () => void;
 }) {
+  const t = useSettingsText().section("roles-permissions");
+  const roleLabel = useStaffRoleLabel();
+  const plural = usePlural();
   const meta = ROLE_META[role];
+
   return (
     <button
       onClick={onClick}
@@ -439,13 +487,13 @@ function PresetRoleButton({
         <RoleIcon role={role} className="size-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold">{meta.label}</div>
+        <div className="truncate text-sm font-semibold">{roleLabel(role)}</div>
         <div className="text-muted-foreground truncate text-[11px]">
-          {staffCount} staff
+          {plural(staffCount, "staffCountOne", "staffCountOther")}
           {overrideCount > 0 && (
-            <span className="ml-1 text-amber-600 dark:text-amber-400">
-              · {overrideCount} override
-              {overrideCount === 1 ? "" : "s"}
+            <span className="ml-1 text-amber-600">
+              ·{" "}
+              {plural(overrideCount, "overrideCountOne", "overrideCountOther")}
             </span>
           )}
         </div>
@@ -454,7 +502,7 @@ function PresetRoleButton({
         variant="outline"
         className="h-5 border-slate-300 bg-slate-50 px-1 text-[9px] dark:border-slate-600 dark:bg-slate-900"
       >
-        Preset
+        {t("presetBadge")}
       </Badge>
     </button>
   );
@@ -471,6 +519,8 @@ function CustomRoleButton({
   staffCount: number;
   onClick: () => void;
 }) {
+  const plural = usePlural();
+
   return (
     <button
       onClick={onClick}
@@ -492,8 +542,12 @@ function CustomRoleButton({
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold">{role.label}</div>
         <div className="text-muted-foreground truncate text-[11px]">
-          {staffCount} staff · {Object.keys(role.permissions).length} permission
-          {Object.keys(role.permissions).length === 1 ? "" : "s"}
+          {plural(staffCount, "staffCountOne", "staffCountOther")} ·{" "}
+          {plural(
+            Object.keys(role.permissions).length,
+            "permissionCountOne",
+            "permissionCountOther",
+          )}
         </div>
       </div>
     </button>
@@ -511,6 +565,11 @@ function PresetRoleEditor({
   role: FacilityStaffRole;
   onDuplicate: (profile: Omit<CustomFacilityRole, "id" | "createdAt">) => void;
 }) {
+  const { locale, section } = useSettingsText();
+  const t = section("roles-permissions");
+  const roleLabel = useStaffRoleLabel();
+  const roleTagline = useStaffRoleTagline();
+  const plural = usePlural();
   const { presetOverrides, setPresetPermission, resetPresetRole, customRoles } =
     useFacilityRbac();
   const meta = ROLE_META[role];
@@ -583,11 +642,11 @@ function PresetRoleEditor({
             </div>
             <div>
               <div className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-                Preset role
+                {t("presetRole")}
               </div>
-              <div className="text-lg font-bold">{meta.label}</div>
+              <div className="text-lg font-bold">{roleLabel(role)}</div>
               <p className="text-muted-foreground mt-0.5 max-w-md text-xs">
-                {meta.tagline}
+                {roleTagline(role)}
               </p>
             </div>
           </div>
@@ -599,7 +658,7 @@ function PresetRoleEditor({
               size="sm"
               onClick={() => {
                 startRolePreview({
-                  label: meta.label,
+                  label: roleLabel(role),
                   permissions: resolvePresetRolePermissions(role, {
                     customRoles,
                     presetOverrides,
@@ -608,15 +667,15 @@ function PresetRoleEditor({
                 window.open("/employee", "_blank", "noopener");
               }}
             >
-              <Eye className="size-3.5" /> Preview as employee
+              <Eye className="size-3.5" /> {t("previewAsEmployee")}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() =>
                 onDuplicate({
-                  label: `${meta.label} (Copy)`,
-                  description: meta.tagline,
+                  label: t("copySuffix").replace("{role}", roleLabel(role)),
+                  description: roleTagline(role),
                   accent: meta.accent,
                   ring: meta.ring,
                   icon: meta.icon,
@@ -633,7 +692,7 @@ function PresetRoleEditor({
                 })
               }
             >
-              <Copy className="size-3.5" /> Duplicate
+              <Copy className="size-3.5" /> {t("duplicate")}
             </Button>
             {Object.keys(overrides).length > 0 && (
               <Button
@@ -641,10 +700,12 @@ function PresetRoleEditor({
                 size="sm"
                 onClick={() => {
                   resetPresetRole(role);
-                  toast.success(`${meta.label} reset to defaults`);
+                  toast.success(
+                    t("roleReset").replace("{role}", roleLabel(role)),
+                  );
                 }}
               >
-                <RotateCcw className="size-3.5" /> Reset defaults
+                <RotateCcw className="size-3.5" /> {t("resetDefaults")}
               </Button>
             )}
           </div>
@@ -652,7 +713,9 @@ function PresetRoleEditor({
 
         <div className="bg-background/80 mt-3 grid gap-2 rounded-xl p-2 backdrop-blur-sm sm:grid-cols-3">
           <div className="px-2">
-            <div className="text-muted-foreground text-[10px]">Granted</div>
+            <div className="text-muted-foreground text-[10px]">
+              {t("granted")}
+            </div>
             <div className="text-base font-semibold">
               {totalGranted}
               <span className="text-muted-foreground text-[11px] font-normal">
@@ -662,12 +725,18 @@ function PresetRoleEditor({
             </div>
           </div>
           <div className="px-2">
-            <div className="text-muted-foreground text-[10px]">Coverage</div>
-            <div className="text-base font-semibold">{coverage}%</div>
+            <div className="text-muted-foreground text-[10px]">
+              {t("coverage")}
+            </div>
+            <div className="text-base font-semibold">
+              {formatPercent(coverage, locale)}
+            </div>
             <Progress value={coverage} className="mt-0.5 h-1" />
           </div>
           <div className="px-2">
-            <div className="text-muted-foreground text-[10px]">Overrides</div>
+            <div className="text-muted-foreground text-[10px]">
+              {t("overrides")}
+            </div>
             <div className="text-base font-semibold">
               {Object.keys(overrides).length}
             </div>
@@ -719,16 +788,18 @@ function PresetRoleEditor({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change default permissions?</DialogTitle>
+            <DialogTitle>{t("changeDefaultsTitle")}</DialogTitle>
             <DialogDescription>
-              This will change default permissions for {affectedStaff} staff
-              member{affectedStaff === 1 ? "" : "s"} who have this role.
-              Individual overrides will not be affected.
+              {plural(
+                affectedStaff,
+                "changeDefaultsBodyOne",
+                "changeDefaultsBodyOther",
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPendingAction(null)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               onClick={() => {
@@ -737,7 +808,7 @@ function PresetRoleEditor({
                 setPendingAction(null);
               }}
             >
-              Change defaults
+              {t("changeDefaults")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -759,6 +830,8 @@ function CustomRoleEditor({
   onDelete: () => void;
   onDuplicate: (profile: Omit<CustomFacilityRole, "id" | "createdAt">) => void;
 }) {
+  const { locale, section } = useSettingsText();
+  const t = section("roles-permissions");
   const { customRoles, updateCustomRole, setCustomRolePermission } =
     useFacilityRbac();
   const role = customRoles[roleId];
@@ -777,7 +850,7 @@ function CustomRoleEditor({
   if (!role) {
     return (
       <div className="text-muted-foreground flex h-full items-center justify-center rounded-xl border border-dashed text-sm">
-        Role not found
+        {t("roleNotFound")}
       </div>
     );
   }
@@ -799,7 +872,7 @@ function CustomRoleEditor({
 
   function saveEdit() {
     if (!localLabel.trim()) {
-      toast.error("Role name is required");
+      toast.error(t("nameRequired"));
       return;
     }
     updateCustomRole(role.id, {
@@ -809,7 +882,7 @@ function CustomRoleEditor({
       ring: localRing,
     });
     setEditingMeta(false);
-    toast.success("Role updated");
+    toast.success(t("roleUpdated"));
   }
 
   return (
@@ -828,11 +901,11 @@ function CustomRoleEditor({
             </div>
             <div>
               <div className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-                Custom role
+                {t("customRole")}
               </div>
               <div className="text-lg font-bold">{role.label}</div>
               <p className="text-muted-foreground mt-0.5 max-w-md text-xs">
-                {role.description || "No description"}
+                {role.description || t("noDescription")}
               </p>
             </div>
           </div>
@@ -852,17 +925,17 @@ function CustomRoleEditor({
                 window.open("/employee", "_blank", "noopener");
               }}
             >
-              <Eye className="size-3.5" /> Preview as employee
+              <Eye className="size-3.5" /> {t("previewAsEmployee")}
             </Button>
             <Button variant="outline" size="sm" onClick={openEdit}>
-              <Pencil className="size-3.5" /> Edit
+              <Pencil className="size-3.5" /> {t("edit")}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() =>
                 onDuplicate({
-                  label: `${role.label} (Copy)`,
+                  label: t("copySuffix").replace("{role}", role.label),
                   description: role.description,
                   accent: role.accent,
                   ring: role.ring,
@@ -871,9 +944,14 @@ function CustomRoleEditor({
                 })
               }
             >
-              <Copy className="size-3.5" /> Duplicate
+              <Copy className="size-3.5" /> {t("duplicate")}
             </Button>
-            <Button variant="outline" size="sm" onClick={onDelete}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDelete}
+              aria-label={t("deleteRoleLabel")}
+            >
               <Trash2 className="size-3.5 text-rose-600" />
             </Button>
           </div>
@@ -881,18 +959,29 @@ function CustomRoleEditor({
 
         <div className="bg-background/80 mt-3 grid gap-2 rounded-xl p-2 backdrop-blur-sm sm:grid-cols-3">
           <div className="px-2">
-            <div className="text-muted-foreground text-[10px]">Granted</div>
+            <div className="text-muted-foreground text-[10px]">
+              {t("granted")}
+            </div>
             <div className="text-base font-semibold">{totalGranted}</div>
           </div>
           <div className="px-2">
-            <div className="text-muted-foreground text-[10px]">Coverage</div>
-            <div className="text-base font-semibold">{coverage}%</div>
+            <div className="text-muted-foreground text-[10px]">
+              {t("coverage")}
+            </div>
+            <div className="text-base font-semibold">
+              {formatPercent(coverage, locale)}
+            </div>
             <Progress value={coverage} className="mt-0.5 h-1" />
           </div>
           <div className="px-2">
-            <div className="text-muted-foreground text-[10px]">Created</div>
+            <div className="text-muted-foreground text-[10px]">
+              {t("created")}
+            </div>
+            {/* §5q: `toLocaleDateString()` with no locale takes the BROWSER's,
+                which is neither the user's chosen language nor a stable one.
+                §6 rule 8 also bans a numeric date outright. */}
             <div className="text-sm font-semibold">
-              {new Date(role.createdAt).toLocaleDateString()}
+              {formatDateShort(role.createdAt, locale)}
             </div>
           </div>
         </div>
@@ -922,22 +1011,19 @@ function CustomRoleEditor({
       <Dialog open={editingMeta} onOpenChange={setEditingMeta}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit role</DialogTitle>
-            <DialogDescription>
-              Update the display details. Permissions are edited in the main
-              grid.
-            </DialogDescription>
+            <DialogTitle>{t("editRoleTitle")}</DialogTitle>
+            <DialogDescription>{t("editRoleHelp")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-xs">Role name</Label>
+              <Label className="text-xs">{t("roleName")}</Label>
               <Input
                 value={localLabel}
                 onChange={(e) => setLocalLabel(e.target.value)}
               />
             </div>
             <div>
-              <Label className="text-xs">Description</Label>
+              <Label className="text-xs">{t("description")}</Label>
               <Textarea
                 value={localDescription}
                 onChange={(e) => setLocalDescription(e.target.value)}
@@ -945,7 +1031,7 @@ function CustomRoleEditor({
               />
             </div>
             <div>
-              <Label className="text-xs">Accent color</Label>
+              <Label className="text-xs">{t("accentColour")}</Label>
               <AccentPicker
                 accent={localAccent}
                 onChange={(accent, ring) => {
@@ -957,9 +1043,9 @@ function CustomRoleEditor({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingMeta(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
-            <Button onClick={saveEdit}>Save</Button>
+            <Button onClick={saveEdit}>{t("save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -990,6 +1076,9 @@ export function PermissionsGrid({
   onRevokeAll?: (keys: PermissionKey[]) => void;
   showPresetOption?: boolean;
 }) {
+  const t = useSettingsText().section("roles-permissions");
+  const permissionText = usePermissionText();
+
   // ── CATEGORIES ARE ACCORDIONS, AND THEY START CLOSED ──────────────────
   //
   // They always were accordions. The set started EMPTY, so nothing was
@@ -1070,10 +1159,10 @@ export function PermissionsGrid({
                 />
                 <span className="min-w-0">
                   <span className="block truncate text-xs font-semibold">
-                    {group.label}
+                    {permissionText.group(group)}
                   </span>
                   <span className="text-muted-foreground block truncate text-[10px]">
-                    {group.description}
+                    {permissionText.groupHelp(group)}
                   </span>
                 </span>
               </button>
@@ -1083,7 +1172,7 @@ export function PermissionsGrid({
                     variant="outline"
                     className="h-5 border-slate-300 bg-slate-100 px-1 text-[9px] text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300"
                   >
-                    <Lock className="mr-0.5 size-2.5" /> Always on
+                    <Lock className="mr-0.5 size-2.5" /> {t("alwaysOn")}
                   </Badge>
                 ) : (
                   grantableKeys.length > 0 && (
@@ -1097,7 +1186,8 @@ export function PermissionsGrid({
                           className="h-6 gap-1 px-2 text-[10px]"
                           onClick={() => onGrantAll(grantableKeys)}
                         >
-                          <CheckCheck className="size-3" /> Grant all in section
+                          <CheckCheck className="size-3" />{" "}
+                          {t("grantAllInSection")}
                         </Button>
                       )}
                       {onRevokeAll && (
@@ -1107,7 +1197,7 @@ export function PermissionsGrid({
                           className="h-6 gap-1 px-2 text-[10px] text-rose-600 hover:text-rose-700 dark:text-rose-400"
                           onClick={() => onRevokeAll(grantableKeys)}
                         >
-                          <Ban className="size-3" /> Revoke all in section
+                          <Ban className="size-3" /> {t("revokeAllInSection")}
                         </Button>
                       )}
                     </>
@@ -1132,11 +1222,11 @@ export function PermissionsGrid({
                     >
                       <div className="min-w-0">
                         <div className="truncate text-xs font-medium">
-                          {p.label}
+                          {permissionText.permission(p.key)}
                         </div>
-                        {p.hint && (
+                        {permissionText.hint(p.key) && (
                           <div className="text-muted-foreground truncate text-[10px]">
-                            {p.hint}
+                            {permissionText.hint(p.key)}
                           </div>
                         )}
                       </div>
@@ -1172,6 +1262,8 @@ function PermissionValueSelect({
   showPresetOption?: boolean;
   onChange: (v: GridValue) => void;
 }) {
+  const t = useSettingsText().section("roles-permissions");
+  const permissionText = usePermissionText();
   const dotColor =
     value === "anytime"
       ? "bg-emerald-500"
@@ -1192,16 +1284,16 @@ function PermissionValueSelect({
   // The scope actually in force — shown as the primary label so each row reflects
   // the role's real state, not the system default (which becomes a small hint).
   const effectiveLabel = alwaysOn
-    ? "Always on"
+    ? t("alwaysOn")
     : value === "preset"
       ? presetDefault
-        ? ACCESS_SCOPE_META[presetDefault].label
-        : "Not granted"
+        ? permissionText.scope(presetDefault)
+        : t("notGranted")
       : value === "revoked"
-        ? "Revoked"
+        ? t("revoked")
         : value === "none"
-          ? "Not granted"
-          : ACCESS_SCOPE_META[value].label;
+          ? t("notGranted")
+          : permissionText.scope(value);
   const inheritedFromDefault = value === "preset" && !alwaysOn;
 
   return (
@@ -1219,7 +1311,7 @@ function PermissionValueSelect({
             <span className="font-medium">{effectiveLabel}</span>
             {inheritedFromDefault && (
               <span className="text-muted-foreground text-[9px] font-normal">
-                default
+                {t("defaultHint")}
               </span>
             )}
           </span>
@@ -1230,22 +1322,35 @@ function PermissionValueSelect({
           <SelectItem value="preset">
             <span className="inline-flex items-center gap-1.5 text-[11px]">
               <RotateCcw className="size-3" />
-              Default
-              {presetDefault && ` (${ACCESS_SCOPE_META[presetDefault].label})`}
+              {presetDefault
+                ? t("defaultOptionWith").replace(
+                    "{scope}",
+                    permissionText.scope(presetDefault),
+                  )
+                : t("defaultOption")}
             </span>
           </SelectItem>
         )}
         <SelectItem value="anytime">
-          <ScopeOption color="bg-emerald-500" label="Anytime" />
+          <ScopeOption
+            color="bg-emerald-500"
+            label={permissionText.scope("anytime")}
+          />
         </SelectItem>
         <SelectItem value="operating_hours">
-          <ScopeOption color="bg-sky-500" label="Operating hours" />
+          <ScopeOption
+            color="bg-sky-500"
+            label={permissionText.scope("operating_hours")}
+          />
         </SelectItem>
         <SelectItem value="assigned_shifts">
-          <ScopeOption color="bg-amber-500" label="Assigned shifts" />
+          <ScopeOption
+            color="bg-amber-500"
+            label={permissionText.scope("assigned_shifts")}
+          />
         </SelectItem>
         <SelectItem value={showPresetOption ? "revoked" : "none"}>
-          <ScopeOption color="bg-rose-500" label="Not granted" />
+          <ScopeOption color="bg-rose-500" label={t("notGranted")} />
         </SelectItem>
       </SelectContent>
     </Select>
@@ -1281,6 +1386,8 @@ function CreateRoleDialog({
   const [copyFrom, setCopyFrom] = useState<"blank" | FacilityStaffRole>(
     "blank",
   );
+  const t = useSettingsText().section("roles-permissions");
+  const roleLabel = useStaffRoleLabel();
 
   function reset() {
     setLabel("");
@@ -1292,7 +1399,7 @@ function CreateRoleDialog({
 
   function submit() {
     if (!label.trim()) {
-      toast.error("Role name is required");
+      toast.error(t("nameRequired"));
       return;
     }
     const permissions: Partial<Record<PermissionKey, AccessScope>> = {};
@@ -1326,32 +1433,29 @@ function CreateRoleDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create a custom role</DialogTitle>
-          <DialogDescription>
-            Give your new role a name and starting permissions. You can
-            fine-tune them after creation.
-          </DialogDescription>
+          <DialogTitle>{t("createTitle")}</DialogTitle>
+          <DialogDescription>{t("createHelp")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label className="text-xs">Role name</Label>
+            <Label className="text-xs">{t("roleName")}</Label>
             <Input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Senior Groomer, Shift Lead"
+              placeholder={t("roleNamePlaceholder")}
             />
           </div>
           <div>
-            <Label className="text-xs">Description</Label>
+            <Label className="text-xs">{t("description")}</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              placeholder="What does this role do?"
+              placeholder={t("descriptionPlaceholder")}
             />
           </div>
           <div>
-            <Label className="text-xs">Accent color</Label>
+            <Label className="text-xs">{t("accentColour")}</Label>
             <AccentPicker
               accent={accent}
               onChange={(a, r) => {
@@ -1361,7 +1465,7 @@ function CreateRoleDialog({
             />
           </div>
           <div>
-            <Label className="text-xs">Start from</Label>
+            <Label className="text-xs">{t("startFrom")}</Label>
             <Select
               value={copyFrom}
               onValueChange={(v) =>
@@ -1374,15 +1478,14 @@ function CreateRoleDialog({
               <SelectContent>
                 <SelectItem value="blank">
                   <span className="inline-flex items-center gap-1.5">
-                    <CheckCheck className="size-3" /> Blank (core permissions
-                    only)
+                    <CheckCheck className="size-3" /> {t("startBlank")}
                   </span>
                 </SelectItem>
                 {(Object.keys(ROLE_META) as FacilityStaffRole[]).map((r) => (
                   <SelectItem key={r} value={r}>
                     <span className="inline-flex items-center gap-1.5">
-                      <Users className="size-3" /> Copy from{" "}
-                      {ROLE_META[r].label}
+                      <Users className="size-3" />{" "}
+                      {t("copyFrom").replace("{role}", roleLabel(r))}
                     </span>
                   </SelectItem>
                 ))}
@@ -1392,10 +1495,10 @@ function CreateRoleDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button onClick={submit}>
-            <Plus className="size-3.5" /> Create role
+            <Plus className="size-3.5" /> {t("createRole")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1410,6 +1513,8 @@ export function AccentPicker({
   accent: string;
   onChange: (accent: string, ring: string) => void;
 }) {
+  const t = useSettingsText().section("roles-permissions");
+
   return (
     <div className="flex flex-wrap gap-1.5">
       {ACCENT_CHOICES.map((choice) => (
@@ -1422,7 +1527,7 @@ export function AccentPicker({
             accent === choice.accent && "ring-primary/50 ring-2 ring-offset-1",
           )}
         >
-          {choice.label}
+          {t(choice.labelKey)}
         </button>
       ))}
     </div>

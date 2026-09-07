@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EvaluationSettings } from "@/components/facility/EvaluationSettings";
 import { EvaluationBookingWizardSettings } from "@/components/facility/EvaluationBookingWizardSettings";
 import { settingsPortalFor } from "@/lib/settings/nav";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // What an evaluation IS — its price, its duration, which services require one,
 // and whether the booking wizard offers it. All values a facility states once.
@@ -17,6 +18,7 @@ import { settingsPortalFor } from "@/lib/settings/nav";
 // /evaluations/templates. They design a document; these set values, and putting
 // both under one nav item is the habit that made settings 8.2 screens deep.
 export function EvaluationsSection() {
+  const t = useSettingsText().section("evaluations");
   const pathname = usePathname() ?? "";
   const templates =
     settingsPortalFor(pathname) === "employee"
@@ -29,13 +31,10 @@ export function EvaluationsSection() {
       <EvaluationBookingWizardSettings />
 
       <div className="bg-muted/30 rounded-lg border px-4 py-3 text-sm">
-        <p className="text-muted-foreground">
-          The evaluation form and its report card are designed under
-          Evaluations.{" "}
-        </p>
+        <p className="text-muted-foreground">{t("templatesNote")} </p>
         <Button asChild variant="outline" size="sm" className="mt-2">
           <Link href={templates}>
-            Open evaluation templates
+            {t("openTemplates")}
             <ExternalLink className="ml-1.5 size-3.5" />
           </Link>
         </Button>

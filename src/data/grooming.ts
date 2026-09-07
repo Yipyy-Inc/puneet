@@ -1,4 +1,4 @@
-﻿// Grooming Module Mock Data
+// Grooming Module Mock Data
 // Types are defined in @/types/grooming â€” re-exported here for backward compatibility
 
 export type { PetSize } from "@/types/base";

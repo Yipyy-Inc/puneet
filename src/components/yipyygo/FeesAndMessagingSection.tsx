@@ -33,22 +33,25 @@ import {
   defaultTipPopupConfig,
   defaultConfirmationEmailConfig,
 } from "@/data/yipyygo-config";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 
 interface FeesAndMessagingSectionProps {
   config: YipyyGoSettings;
   onConfigChange: (updates: Partial<YipyyGoSettings>) => void;
 }
 
-const BILLING_LABELS: Record<MedicationFeeBilling, string> = {
-  per_dose: "Per dose administered",
-  per_day: "Per day",
-  per_stay: "Per stay (flat)",
+const BILLING_KEYS: Record<MedicationFeeBilling, string> = {
+  per_dose: "billingPerDose",
+  per_day: "billingPerDay",
+  per_stay: "billingPerStay",
 };
 
 export function FeesAndMessagingSection({
   config,
   onConfigChange,
 }: FeesAndMessagingSectionProps) {
+  const t = useSettingsText().section("yipyygo");
   const medFee: MedicationFeeConfig =
     config.medicationFee ?? defaultMedicationFeeConfig;
   const tipPopup: TipPopupConfig = config.tipPopup ?? defaultTipPopupConfig;
@@ -79,7 +82,7 @@ export function FeesAndMessagingSection({
     updateTipPopup({
       presets: [
         ...tipPopup.presets,
-        { id, label: "Custom", type: "percentage", value: 15 },
+        { id, label: t("presetNewLabel"), type: "percentage", value: 15 },
       ],
     });
   };
@@ -97,11 +100,8 @@ export function FeesAndMessagingSection({
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle>Medication administration fee</CardTitle>
-              <CardDescription>
-                Charged automatically when the customer adds medications during
-                Express Check-in.
-              </CardDescription>
+              <CardTitle>{t("medFeeTitle")}</CardTitle>
+              <CardDescription>{t("medFeeHelp")}</CardDescription>
             </div>
             <Switch
               checked={medFee.enabled}
@@ -126,7 +126,7 @@ export function FeesAndMessagingSection({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Billing</Label>
+                <Label>{t("billing")}</Label>
                 <Select
                   value={medFee.billing}
                   onValueChange={(billing) =>
@@ -137,9 +137,9 @@ export function FeesAndMessagingSection({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(BILLING_LABELS).map(([v, l]) => (
-                      <SelectItem key={v} value={v}>
-                        {l}
+                    {Object.entries(BILLING_KEYS).map(([value, key]) => (
+                      <SelectItem key={value} value={value}>
+                        {t(key)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -147,21 +147,21 @@ export function FeesAndMessagingSection({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="med-fee-label">Label shown to customer</Label>
+              <Label htmlFor="med-fee-label">{t("labelShownToCustomer")}</Label>
               <Input
                 id="med-fee-label"
                 value={medFee.label ?? ""}
                 onChange={(e) => updateMedFee({ label: e.target.value })}
-                placeholder="Medication administration fee"
+                placeholder={t("medFeeTitle")}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="med-fee-desc">Description (optional)</Label>
+              <Label htmlFor="med-fee-desc">{t("descriptionOptional")}</Label>
               <Textarea
                 id="med-fee-desc"
                 value={medFee.description ?? ""}
                 onChange={(e) => updateMedFee({ description: e.target.value })}
-                placeholder="Applied daily when our team administers medication during the stay."
+                placeholder={t("medFeeDescPlaceholder")}
                 rows={2}
               />
             </div>
@@ -174,11 +174,8 @@ export function FeesAndMessagingSection({
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle>End-of-flow tip prompt</CardTitle>
-              <CardDescription>
-                Shown as a popup right before the customer saves the Express
-                Check-in.
-              </CardDescription>
+              <CardTitle>{t("tipPopupTitle")}</CardTitle>
+              <CardDescription>{t("tipPopupHelp")}</CardDescription>
             </div>
             <Switch
               checked={tipPopup.enabled}
@@ -189,7 +186,7 @@ export function FeesAndMessagingSection({
         {tipPopup.enabled && (
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="tip-title">Popup title</Label>
+              <Label htmlFor="tip-title">{t("popupTitle")}</Label>
               <Input
                 id="tip-title"
                 value={tipPopup.title}
@@ -197,7 +194,7 @@ export function FeesAndMessagingSection({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tip-message">Message from facility</Label>
+              <Label htmlFor="tip-message">{t("messageFromFacility")}</Label>
               <Textarea
                 id="tip-message"
                 value={tipPopup.message}
@@ -207,7 +204,7 @@ export function FeesAndMessagingSection({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Tip applies to</Label>
+                <Label>{t("tipAppliesTo")}</Label>
                 <Select
                   value={tipPopup.appliesTo}
                   onValueChange={(v) =>
@@ -220,9 +217,11 @@ export function FeesAndMessagingSection({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="stay_total">Full stay total</SelectItem>
+                    <SelectItem value="stay_total">
+                      {t("tipStayTotal")}
+                    </SelectItem>
                     <SelectItem value="selected_services">
-                      Services only (excludes add-ons)
+                      {t("tipServicesOnly")}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -237,7 +236,7 @@ export function FeesAndMessagingSection({
                     }
                   />
                   <Label htmlFor="tip-custom" className="cursor-pointer">
-                    Allow custom amount
+                    {t("allowCustomAmount")}
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
@@ -247,21 +246,21 @@ export function FeesAndMessagingSection({
                     onCheckedChange={(v) => updateTipPopup({ allowSkip: v })}
                   />
                   <Label htmlFor="tip-skip" className="cursor-pointer">
-                    Allow skip
+                    {t("allowSkip")}
                   </Label>
                 </div>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Tip presets</Label>
+                <Label>{t("tipPresets")}</Label>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={addPreset}
                 >
-                  <Plus className="mr-1 size-4" /> Add preset
+                  <Plus className="mr-1 size-4" /> {t("addPreset")}
                 </Button>
               </div>
               <div className="space-y-2">
@@ -275,7 +274,7 @@ export function FeesAndMessagingSection({
                       onChange={(e) =>
                         updatePreset(i, { label: e.target.value })
                       }
-                      placeholder="Label"
+                      placeholder={t("presetLabel")}
                     />
                     <Select
                       value={p.type}
@@ -289,8 +288,12 @@ export function FeesAndMessagingSection({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="percentage">Percentage</SelectItem>
-                        <SelectItem value="fixed">Fixed $</SelectItem>
+                        <SelectItem value="percentage">
+                          {t("presetPercentage")}
+                        </SelectItem>
+                        <SelectItem value="fixed">
+                          {t("presetFixed")}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <Input
@@ -308,6 +311,7 @@ export function FeesAndMessagingSection({
                       variant="ghost"
                       size="icon"
                       onClick={() => removePreset(i)}
+                      aria-label={t("removePreset")}
                     >
                       <Trash2 className="size-4" />
                     </Button>
@@ -324,11 +328,19 @@ export function FeesAndMessagingSection({
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle>Confirmation email</CardTitle>
+              <CardTitle>{t("confirmationTitle")}</CardTitle>
               <CardDescription>
-                Sent to the customer after they submit the Express Check-in. Use{" "}
-                <code>{"{petName}"}</code> and <code>{"{date}"}</code> as
-                tokens.
+                {/* The two tokens are matched against the record, not read, so
+                    they stay literal in both languages — only the sentence
+                    around them moves. */}
+                <InterpolatedText
+                  template={t("confirmationHelp")}
+                  placeholder="{tokens}"
+                >
+                  <>
+                    <code>{"{petName}"}</code> / <code>{"{date}"}</code>
+                  </>
+                </InterpolatedText>
               </CardDescription>
             </div>
             <Switch
@@ -340,7 +352,7 @@ export function FeesAndMessagingSection({
         {confirmation.enabled && (
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="conf-subject">Subject</Label>
+              <Label htmlFor="conf-subject">{t("subject")}</Label>
               <Input
                 id="conf-subject"
                 value={confirmation.subject}
@@ -350,7 +362,7 @@ export function FeesAndMessagingSection({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="conf-message">Message</Label>
+              <Label htmlFor="conf-message">{t("message")}</Label>
               <Textarea
                 id="conf-message"
                 value={confirmation.message}

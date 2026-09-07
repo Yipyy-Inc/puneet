@@ -39,15 +39,26 @@ import {
 import { toast } from "sonner";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { useSettings } from "@/hooks/use-settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { formatMoney } from "@/lib/i18n/format";
 
+// Keys, not labels: a module constant is frozen at whichever locale
+// evaluated the module first.
 const SERVICES = [
-  { id: "daycare", label: "Daycare" },
-  { id: "boarding", label: "Boarding" },
-  { id: "grooming", label: "Grooming" },
-  { id: "training", label: "Training" },
+  { id: "daycare", labelKey: "svcDaycare" },
+  { id: "boarding", labelKey: "svcBoarding" },
+  { id: "grooming", labelKey: "svcGrooming" },
+  { id: "training", labelKey: "svcTraining" },
 ];
 
 export function EvaluationSettings() {
+  const { locale, section } = useSettingsText();
+  const t = section("evaluations");
+
+  // Intl picks the plural form, not `n === 1`: French counts 0 as singular.
+  const rules = new Intl.PluralRules(locale === "fr" ? "fr-CA" : "en-CA");
+  const plural = (n: number, one: string, other: string) =>
+    t(rules.select(n) === "one" ? one : other).replace("{n}", String(n));
   const { role } = useFacilityRole();
   // ── THIS SCREEN USED TO MUTATE ITS IMPORTS ──────────────────────────────
   //
@@ -203,16 +214,12 @@ export function EvaluationSettings() {
         notifyViaEmail: notifyEmail,
         notifyViaSMS: notifySMS,
       });
-      toast.success("Evaluation settings saved");
+      toast.success(t("savedToast"));
     } catch (error) {
       // Previously unreachable: assigning to an object cannot fail. Now that
       // these are three writes RLS can refuse, silence would leave the toast
       // claiming a save that did not happen.
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not save evaluation settings.",
-      );
+      toast.error(error instanceof Error ? error.message : t("saveFailed"));
     }
   };
 
@@ -221,10 +228,7 @@ export function EvaluationSettings() {
       <Card>
         <CardContent className="flex items-center gap-3 py-8">
           <Shield className="text-muted-foreground size-5" />
-          <p className="text-muted-foreground text-sm">
-            Evaluation settings are only accessible to facility owners and
-            managers.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("restricted")}</p>
         </CardContent>
       </Card>
     );
@@ -240,12 +244,9 @@ export function EvaluationSettings() {
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-tight text-slate-900">
-              Evaluation system
+              {t("title")}
             </h2>
-            <p className="text-sm text-slate-500">
-              Configure pet assessments, scheduling, pricing, and result
-              delivery
-            </p>
+            <p className="text-sm text-slate-500">{t("intro")}</p>
           </div>
         </div>
       </div>
@@ -258,10 +259,9 @@ export function EvaluationSettings() {
               <ClipboardCheck className="size-5 text-slate-700" />
             </div>
             <div>
-              <p className="font-semibold">Enable Evaluation Requirement</p>
+              <p className="font-semibold">{t("enableRequirement")}</p>
               <p className="text-muted-foreground text-sm">
-                Require pets to pass an evaluation before booking certain
-                services
+                {t("enableRequirementHelp")}
               </p>
             </div>
           </div>
@@ -276,13 +276,12 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Lock className="size-4" />
-                Services requiring Evaluation
+                {t("servicesRequiring")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground text-xs">
-                Select which services require a pet evaluation before booking.
-                Unselected services can be booked without evaluation.
+                {t("servicesRequiringHelp")}
               </p>
               <div className="space-y-2">
                 {SERVICES.map((svc) => {
@@ -298,13 +297,15 @@ export function EvaluationSettings() {
                         ) : (
                           <Unlock className="text-muted-foreground/40 size-4" />
                         )}
-                        <span className="text-sm font-medium">{svc.label}</span>
+                        <span className="text-sm font-medium">
+                          {t(svc.labelKey)}
+                        </span>
                         {isRequired && (
                           <Badge
                             variant="outline"
                             className="border-amber-200 bg-amber-50 text-[10px] text-amber-700"
                           >
-                            Evaluation required
+                            {t("evaluationRequired")}
                           </Badge>
                         )}
                       </div>
@@ -321,12 +322,9 @@ export function EvaluationSettings() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">
-                    Block booking without evaluation
-                  </p>
+                  <p className="text-sm font-medium">{t("blockBooking")}</p>
                   <p className="text-muted-foreground text-xs">
-                    When on, customers must complete evaluation before booking.
-                    When off, they can book but staff gets a reminder.
+                    {t("blockBookingHelp")}
                   </p>
                 </div>
                 <Switch
@@ -336,13 +334,11 @@ export function EvaluationSettings() {
               </div>
 
               <div>
-                <Label className="text-xs">
-                  Custom message shown to customers
-                </Label>
+                <Label className="text-xs">{t("customMessage")}</Label>
                 <Textarea
                   value={lockedMessage}
                   onChange={(e) => setLockedMessage(e.target.value)}
-                  placeholder="This service requires a pet evaluation first..."
+                  placeholder={t("customMessagePlaceholder")}
                   className="mt-1 min-h-[60px] text-sm"
                   rows={2}
                 />
@@ -355,13 +351,13 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <FileText className="size-4" />
-                Evaluation service details
+                {t("serviceDetails")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-xs">Internal name (staff sees)</Label>
+                  <Label className="text-xs">{t("internalName")}</Label>
                   <Input
                     value={internalName}
                     onChange={(e) => setInternalName(e.target.value)}
@@ -369,9 +365,7 @@ export function EvaluationSettings() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">
-                    Customer name (online booking)
-                  </Label>
+                  <Label className="text-xs">{t("customerName")}</Label>
                   <Input
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
@@ -382,9 +376,7 @@ export function EvaluationSettings() {
 
               <div>
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs">
-                    Description (shown to customers)
-                  </Label>
+                  <Label className="text-xs">{t("descriptionShown")}</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -393,7 +385,7 @@ export function EvaluationSettings() {
                     onClick={() => setPreviewOpen(true)}
                   >
                     <Eye className="size-3" />
-                    Preview
+                    {t("preview")}
                   </Button>
                 </div>
                 <Textarea
@@ -407,11 +399,11 @@ export function EvaluationSettings() {
               {/* Status toggle */}
               <div className="bg-background flex items-center justify-between rounded-lg border px-4 py-3">
                 <div>
-                  <p className="text-sm font-medium">Service Status</p>
+                  <p className="text-sm font-medium">{t("serviceStatus")}</p>
                   <p className="text-muted-foreground text-xs">
                     {serviceActive
-                      ? "Active — available for booking"
-                      : "Inactive — hidden from booking"}
+                      ? t("statusActiveLong")
+                      : t("statusInactiveLong")}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -419,7 +411,7 @@ export function EvaluationSettings() {
                     variant={serviceActive ? "default" : "secondary"}
                     className="text-[10px]"
                   >
-                    {serviceActive ? "Active" : "Inactive"}
+                    {t(serviceActive ? "statusActive" : "statusInactive")}
                   </Badge>
                   <Switch
                     checked={serviceActive}
@@ -440,15 +432,15 @@ export function EvaluationSettings() {
                     className="mt-1 h-9 text-sm"
                   />
                   <p className="text-muted-foreground mt-0.5 text-[10px]">
-                    Set to 0 for free evaluations
+                    {t("freeHint")}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs">Tax</Label>
+                  <Label className="text-xs">{t("tax")}</Label>
                   <div className="mt-1 flex h-9 items-center gap-2">
                     <Switch checked={taxable} onCheckedChange={setTaxable} />
                     <span className="text-muted-foreground text-xs">
-                      {taxable ? "Taxable" : "Tax exempt"}
+                      {t(taxable ? "taxable" : "taxExempt")}
                     </span>
                   </div>
                 </div>
@@ -466,7 +458,7 @@ export function EvaluationSettings() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Calendar color</Label>
+                  <Label className="text-xs">{t("calendarColour")}</Label>
                   <div className="mt-1 flex items-center gap-2">
                     <input
                       type="color"
@@ -502,9 +494,9 @@ export function EvaluationSettings() {
                     className="accent-primary"
                   />
                   <div>
-                    <p className="text-sm font-medium">Always valid</p>
+                    <p className="text-sm font-medium">{t("alwaysValid")}</p>
                     <p className="text-muted-foreground text-xs">
-                      Once a pet passes evaluation, it never expires
+                      {t("alwaysValidHelp")}
                     </p>
                   </div>
                 </div>
@@ -520,11 +512,10 @@ export function EvaluationSettings() {
                   />
                   <div className="flex-1">
                     <p className="text-sm font-medium">
-                      Expire after inactivity
+                      {t("expireAfterInactivity")}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      Clear the &quot;Pass&quot; if the pet hasn&apos;t had
-                      services for a specified period
+                      {t("expireHelp")}
                     </p>
                   </div>
                   {validityMode === "expires_after_inactivity" && (
@@ -541,7 +532,7 @@ export function EvaluationSettings() {
                         className="h-8 w-16 text-sm"
                       />
                       <span className="text-muted-foreground text-xs">
-                        months
+                        {t("months")}
                       </span>
                     </div>
                   )}
@@ -555,7 +546,7 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Users className="size-4" />
-                Staff assignment
+                {t("staffAssignment")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -569,18 +560,14 @@ export function EvaluationSettings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="manual">
-                    Manually assign evaluator
-                  </SelectItem>
-                  <SelectItem value="auto">
-                    Auto-assign available staff
-                  </SelectItem>
+                  <SelectItem value="manual">{t("manualAssign")}</SelectItem>
+                  <SelectItem value="auto">{t("autoAssign")}</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-muted-foreground text-xs">
                 {staffAssignment === "manual"
-                  ? "Staff with evaluation skills will be selectable when booking. Configure who can evaluate in Staff settings."
-                  : "System automatically assigns the first available qualified staff member."}
+                  ? t("manualAssignHelp")
+                  : t("autoAssignHelp")}
               </p>
             </CardContent>
           </Card>
@@ -590,21 +577,20 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <FileText className="size-4" />
-                Eligible lodging types
+                {t("eligibleLodging")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-muted-foreground text-xs">
-                Select which lodging/room types are eligible to include
-                evaluation services. Leave all checked for no restrictions.
+                {t("eligibleLodgingHelp")}
               </p>
               <div className="space-y-2">
                 {[
-                  { id: "standard", label: "Standard Kennel" },
-                  { id: "premium", label: "Premium Suite" },
-                  { id: "deluxe", label: "Deluxe Suite" },
-                  { id: "luxury", label: "Luxury Villa" },
-                  { id: "shared", label: "Shared Play Room" },
+                  { id: "standard", label: t("lodgingStandardKennel") },
+                  { id: "premium", label: t("lodgingPremiumSuite") },
+                  { id: "deluxe", label: t("lodgingDeluxeSuite") },
+                  { id: "luxury", label: t("lodgingLuxuryVilla") },
+                  { id: "shared", label: t("lodgingSharedPlayRoom") },
                 ].map((lodging) => (
                   <div
                     key={lodging.id}
@@ -627,13 +613,13 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Calendar className="size-4" />
-                Online booking availability
+                {t("onlineAvailability")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-xs">Minimum lead time</Label>
+                  <Label className="text-xs">{t("minimumLeadTime")}</Label>
                   <Select
                     value={String(minLeadTime)}
                     onValueChange={(v) => setMinLeadTime(parseInt(v, 10))}
@@ -642,7 +628,7 @@ export function EvaluationSettings() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0">No minimum</SelectItem>
+                      <SelectItem value="0">{t("noMinimum")}</SelectItem>
                       <SelectItem value="12">12 hours</SelectItem>
                       <SelectItem value="24">24 hours</SelectItem>
                       <SelectItem value="48">48 hours</SelectItem>
@@ -651,7 +637,7 @@ export function EvaluationSettings() {
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Maximum advance booking</Label>
+                  <Label className="text-xs">{t("maximumAdvance")}</Label>
                   <Select
                     value={String(maxAdvanceDays)}
                     onValueChange={(v) => setMaxAdvanceDays(parseInt(v, 10))}
@@ -660,11 +646,11 @@ export function EvaluationSettings() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="7">7 days</SelectItem>
-                      <SelectItem value="14">14 days</SelectItem>
-                      <SelectItem value="30">30 days</SelectItem>
-                      <SelectItem value="60">60 days</SelectItem>
-                      <SelectItem value="90">90 days</SelectItem>
+                      {[7, 14, 30, 60, 90].map((d) => (
+                        <SelectItem key={d} value={String(d)}>
+                          {t("daysCount").replace("{n}", String(d))}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -676,9 +662,9 @@ export function EvaluationSettings() {
               <div>
                 <div className="mb-3 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">Daily pet limits</p>
+                    <p className="text-sm font-medium">{t("dailyLimits")}</p>
                     <p className="text-muted-foreground text-xs">
-                      Maximum evaluations per day. Set per weekday.
+                      {t("dailyLimitsHelp")}
                     </p>
                   </div>
                   <Switch
@@ -690,13 +676,13 @@ export function EvaluationSettings() {
                   <div className="grid grid-cols-7 gap-2">
                     {(
                       [
-                        { key: "mon", label: "Mon" },
-                        { key: "tue", label: "Tue" },
-                        { key: "wed", label: "Wed" },
-                        { key: "thu", label: "Thu" },
-                        { key: "fri", label: "Fri" },
-                        { key: "sat", label: "Sat" },
-                        { key: "sun", label: "Sun" },
+                        { key: "mon", label: t("dayMon") },
+                        { key: "tue", label: t("dayTue") },
+                        { key: "wed", label: t("dayWed") },
+                        { key: "thu", label: t("dayThu") },
+                        { key: "fri", label: t("dayFri") },
+                        { key: "sat", label: t("daySat") },
+                        { key: "sun", label: t("daySun") },
                       ] as const
                     ).map((day) => (
                       <div key={day.key} className="text-center">
@@ -727,12 +713,9 @@ export function EvaluationSettings() {
               {/* Checkout alert */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">
-                    Checkout alert for unrecorded results
-                  </p>
+                  <p className="text-sm font-medium">{t("checkoutAlert")}</p>
                   <p className="text-muted-foreground text-xs">
-                    Alert staff at checkout if evaluation results haven&apos;t
-                    been recorded
+                    {t("checkoutAlertHelp")}
                   </p>
                 </div>
                 <Switch
@@ -749,7 +732,7 @@ export function EvaluationSettings() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Send className="size-4" />
-                  Result report card
+                  {t("resultReportCard")}
                 </CardTitle>
                 <Switch
                   checked={reportEnabled}
@@ -760,12 +743,11 @@ export function EvaluationSettings() {
             {reportEnabled && (
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground text-xs">
-                  After evaluation, a report card is sent to the customer with
-                  results and approved services. Customize what&apos;s included.
+                  {t("resultReportCardHelp")}
                 </p>
 
                 <div>
-                  <Label className="text-xs">Pass message</Label>
+                  <Label className="text-xs">{t("passMessage")}</Label>
                   <Textarea
                     value={passMessage}
                     onChange={(e) => setPassMessage(e.target.value)}
@@ -774,7 +756,7 @@ export function EvaluationSettings() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Fail message</Label>
+                  <Label className="text-xs">{t("failMessage")}</Label>
                   <Textarea
                     value={failMessage}
                     onChange={(e) => setFailMessage(e.target.value)}
@@ -786,31 +768,31 @@ export function EvaluationSettings() {
                 <Separator />
 
                 <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Include in report card
+                  {t("includeInReportCard")}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     {
                       key: "evaluator",
-                      label: "Evaluator name",
+                      label: t("includeEvaluatorName"),
                       value: showEvaluator,
                       set: setShowEvaluator,
                     },
                     {
                       key: "temperament",
-                      label: "Temperament ratings",
+                      label: t("includeTemperament"),
                       value: showTemperament,
                       set: setShowTemperament,
                     },
                     {
                       key: "playStyle",
-                      label: "Play style & group",
+                      label: t("includePlayStyle"),
                       value: showPlayStyle,
                       set: setShowPlayStyle,
                     },
                     {
                       key: "services",
-                      label: "Approved services list",
+                      label: t("includeApprovedServices"),
                       value: showApprovedServices,
                       set: setShowApprovedServices,
                     },
@@ -828,11 +810,11 @@ export function EvaluationSettings() {
                 <Separator />
 
                 <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Send via
+                  {t("sendVia")}
                 </p>
                 <div className="flex gap-3">
                   <div className="flex flex-1 items-center justify-between rounded-lg border px-3 py-2">
-                    <span className="text-sm">Email</span>
+                    <span className="text-sm">{t("channelEmail")}</span>
                     <Switch
                       checked={notifyEmail}
                       onCheckedChange={setNotifyEmail}
@@ -859,16 +841,15 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <AlertCircle className="size-4" />
-                Advanced result options
+                {t("advancedResults")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Allow conditional pass</p>
+                  <p className="text-sm font-medium">{t("conditionalPass")}</p>
                   <p className="text-muted-foreground text-xs">
-                    Staff can pass with conditions (e.g., &quot;approved for
-                    small dog group only&quot;)
+                    {t("conditionalPassHelp")}
                   </p>
                 </div>
                 <Switch
@@ -882,15 +863,15 @@ export function EvaluationSettings() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">
-                    Auto-suggest re-evaluation on fail
+                    {t("autoSuggestReeval")}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    When a pet fails, prompt to schedule a re-evaluation
+                    {t("autoSuggestReevalHelp")}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground text-xs">
-                    Suggest after
+                    {t("suggestAfter")}
                   </span>
                   <Input
                     type="number"
@@ -902,7 +883,9 @@ export function EvaluationSettings() {
                     }
                     className="h-8 w-16 text-sm"
                   />
-                  <span className="text-muted-foreground text-xs">days</span>
+                  <span className="text-muted-foreground text-xs">
+                    {t("days")}
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -913,33 +896,39 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <BarChart3 className="size-4" />
-                Evaluation analytics
+                {t("analytics")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <div className="bg-background rounded-lg border p-3 text-center">
                   <p className="text-2xl font-bold">24</p>
-                  <p className="text-muted-foreground text-xs">This month</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("thisMonth")}
+                  </p>
                 </div>
                 <div className="bg-background rounded-lg border p-3 text-center">
                   <p className="text-2xl font-bold text-emerald-600">83%</p>
-                  <p className="text-muted-foreground text-xs">Pass rate</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("passRate")}
+                  </p>
                 </div>
                 <div className="bg-background rounded-lg border p-3 text-center">
                   <p className="text-2xl font-bold text-amber-600">4</p>
                   <p className="text-muted-foreground text-xs">
-                    Failed this month
+                    {t("failedThisMonth")}
                   </p>
                 </div>
                 <div className="bg-background rounded-lg border p-3 text-center">
                   <p className="text-2xl font-bold">1.2h</p>
-                  <p className="text-muted-foreground text-xs">Avg duration</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("avgDuration")}
+                  </p>
                 </div>
               </div>
               <div className="bg-muted/20 mt-3 rounded-lg border p-3">
                 <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
-                  Top fail reasons
+                  {t("topFailReasons")}
                 </p>
                 <div className="space-y-1.5">
                   {[
@@ -987,7 +976,7 @@ export function EvaluationSettings() {
       {/* Save */}
       <div className="flex justify-end pt-2">
         <Button onClick={handleSave} className="gap-1.5 px-6">
-          Save Evaluation Settings
+          {t("save")}
         </Button>
       </div>
 
@@ -997,13 +986,11 @@ export function EvaluationSettings() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="size-5" />
-              Customer preview
+              {t("customerPreview")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-muted-foreground text-xs">
-              This is how the evaluation appears to customers in online booking:
-            </p>
+            <p className="text-muted-foreground text-xs">{t("previewIntro")}</p>
             <div className="bg-muted/10 rounded-xl border p-5">
               <div className="flex items-center gap-3">
                 <div
@@ -1017,27 +1004,27 @@ export function EvaluationSettings() {
               </p>
               <Separator className="my-4" />
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Duration</span>
+                <span className="text-muted-foreground">{t("duration")}</span>
                 <span className="font-medium">
-                  {duration} hour{duration !== 1 ? "s" : ""}
+                  {plural(duration ?? 0, "hourCountOne", "hourCountOther")}
                 </span>
               </div>
               {price > 0 && (
                 <div className="mt-1 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Price</span>
+                  <span className="text-muted-foreground">{t("price")}</span>
                   <span className="font-[tabular-nums] font-semibold">
-                    ${price.toFixed(2)}
+                    {formatMoney(price, locale)}
                   </span>
                 </div>
               )}
               {price === 0 && (
                 <div className="mt-1 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Price</span>
+                  <span className="text-muted-foreground">{t("price")}</span>
                   <Badge
                     variant="outline"
                     className="border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
                   >
-                    Free
+                    {t("free")}
                   </Badge>
                 </div>
               )}
@@ -1045,7 +1032,7 @@ export function EvaluationSettings() {
             {lockedMessage && (
               <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
                 <p className="text-xs font-medium text-blue-800">
-                  Message shown when services are locked:
+                  {t("lockedMessagePreview")}
                 </p>
                 <p className="mt-1 text-sm text-blue-700 italic">
                   &quot;{lockedMessage}&quot;

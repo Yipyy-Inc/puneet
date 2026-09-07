@@ -87,7 +87,7 @@ export function EmployeeTaskEditor({
   // the fixture's English on a miss — a field added to the fixture later then
   // reads as English words rather than as a raw key.
   const typeLabel = (type: EmployeeOnboardingTaskType) => {
-    const key = `type.${type}`;
+    const key = `type_${type}`;
     const label = t(key);
     return label === key ? EMPLOYEE_TASK_LABEL[type] : label;
   };
@@ -95,7 +95,7 @@ export function EmployeeTaskEditor({
     type: EmployeeOnboardingTaskType,
     field: EmployeeFieldSpec,
   ) => {
-    const key = `field.${type}.${field.key}`;
+    const key = `field_${type}_${field.key}`;
     const label = t(key);
     return label === key ? field.label : label;
   };

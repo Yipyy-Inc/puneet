@@ -29,6 +29,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { reportCardSectionMeta } from "@/data/settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { formatDateLong } from "@/lib/i18n/format";
 
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type {
@@ -39,6 +41,14 @@ import type {
 } from "@/types/facility";
 
 export function ReportCardSettingsCard() {
+  const { locale, section } = useSettingsText();
+  const t = section("report-card-template");
+
+  // Intl picks the plural form, not `n === 1`: French counts 0 as singular.
+  const rules = new Intl.PluralRules(locale === "fr" ? "fr-CA" : "en-CA");
+  const plural = (n: number, one: string, other: string) =>
+    t(rules.select(n) === "one" ? one : other).replace("{n}", String(n));
+
   const { reportCards, updateReportCards } = useSettings();
   const { activeModules: customServices } = useCustomServices();
   // The facility's OWN details. A preview of the report card a customer will
@@ -72,21 +82,36 @@ export function ReportCardSettingsCard() {
     });
 
   const themeOptions = [
-    { id: "everyday", label: "Everyday" },
-    { id: "christmas", label: "Christmas" },
-    { id: "halloween", label: "Halloween" },
-    { id: "easter", label: "Easter" },
-    { id: "thanksgiving", label: "Thanksgiving" },
-    { id: "new_year", label: "New Year" },
-    { id: "valentines", label: "Valentine’s Day" },
+    { id: "everyday", label: t("themeEveryday") },
+    { id: "christmas", label: t("themeChristmas") },
+    { id: "halloween", label: t("themeHalloween") },
+    { id: "easter", label: t("themeEaster") },
+    { id: "thanksgiving", label: t("themeThanksgiving") },
+    { id: "new_year", label: t("themeNewYear") },
+    { id: "valentines", label: t("themeValentines") },
   ] as const;
 
   const standardServices = [
-    { id: "daycare", label: "Daycare" },
-    { id: "boarding", label: "Boarding" },
-    { id: "grooming", label: "Grooming" },
-    { id: "training", label: "Training" },
+    { id: "daycare", label: t("svcDaycare") },
+    { id: "boarding", label: t("svcBoarding") },
+    { id: "grooming", label: t("svcGrooming") },
+    { id: "training", label: t("svcTraining") },
   ];
+
+  // The eleven section names and descriptions live in a src/data fixture, so
+  // they cannot know a locale. Key first, fixture second — a section added to
+  // the fixture later reads as English words rather than a raw key.
+  const sectionLabel = (id: string) => {
+    const key = `sec_${id}`;
+    const label = t(key);
+    return label === key ? (reportCardSectionMeta[id]?.label ?? id) : label;
+  };
+  const sectionHelp = (id: string) => {
+    // french-ok: a catalogue key built from the section id
+    const key = `secHelp_${id}`;
+    const help = t(key);
+    return help === key ? (reportCardSectionMeta[id]?.description ?? "") : help;
+  };
 
   const allServices = [
     ...standardServices,
@@ -159,14 +184,14 @@ export function ReportCardSettingsCard() {
 
   return (
     <SettingsBlock
-      title="Report Card Builder"
-      description="Configure report card themes, sections, feedback, and delivery for each service."
+      title={t("title")}
+      description={t("intro")}
       data={reportCards}
       onSave={updateReportCards}
     >
       {(isEditing, localConfig, setLocalConfig) => {
         const brand = localConfig.brand ?? {
-          reportTitle: "Daily Report Card",
+          reportTitle: t("defaultReportTitle"),
           accentColor: "#6366f1",
           showFacilityLogo: true,
           logoPosition: "top_center" as const,
@@ -178,9 +203,9 @@ export function ReportCardSettingsCard() {
           showSocialLinks: true,
           socialLinksStyle: "icons" as const,
           showBookingCta: true,
-          bookingCtaText: "Book Your Next Visit",
+          bookingCtaText: t("defaultCtaText"),
           bookingCtaUrl: "",
-          footerText: "Thank you for trusting us with your fur baby!",
+          footerText: t("defaultFooterText"),
           showPoweredBy: true,
         };
         const updateBrand = (patch: Partial<typeof brand>) =>
@@ -189,7 +214,7 @@ export function ReportCardSettingsCard() {
             brand: { ...brand, ...patch },
           });
         const overallFeedback = localConfig.overallFeedback ?? {
-          title: "Overall Experience",
+          title: t("defaultFeedbackTitle"),
           responseOptions: ["Excellent", "Good", "Fair", "Needs Attention"],
         };
         const customQuestions = localConfig.customQuestions ?? [];
@@ -203,22 +228,24 @@ export function ReportCardSettingsCard() {
         return (
           <Tabs defaultValue="general" className="w-full">
             <TabsList className="mb-4 grid w-full grid-cols-5">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="sections">Sections</TabsTrigger>
-              <TabsTrigger value="feedback">Feedback</TabsTrigger>
-              <TabsTrigger value="condition">Condition</TabsTrigger>
-              <TabsTrigger value="delivery">Delivery</TabsTrigger>
+              <TabsTrigger value="general">{t("tabGeneral")}</TabsTrigger>
+              <TabsTrigger value="sections">{t("tabSections")}</TabsTrigger>
+              <TabsTrigger value="feedback">{t("tabFeedback")}</TabsTrigger>
+              <TabsTrigger value="condition">{t("tabCondition")}</TabsTrigger>
+              <TabsTrigger value="delivery">{t("tabDelivery")}</TabsTrigger>
             </TabsList>
 
             {/* ── General Tab ─────────────────────────────── */}
             <TabsContent value="general" className="space-y-6">
               <div className="space-y-6">
-                <Label className="text-base font-semibold">Brand styling</Label>
+                <Label className="text-base font-semibold">
+                  {t("brandStyling")}
+                </Label>
 
                 {/* Title + Color */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Report title</Label>
+                    <Label>{t("reportTitle")}</Label>
                     <Input
                       value={brand.reportTitle}
                       readOnly={!isEditing}
@@ -228,7 +255,7 @@ export function ReportCardSettingsCard() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Accent color</Label>
+                    <Label>{t("accentColour")}</Label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -253,7 +280,7 @@ export function ReportCardSettingsCard() {
 
                 {/* Header Style */}
                 <div className="space-y-2">
-                  <Label>Header style</Label>
+                  <Label>{t("headerStyle")}</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {(["minimal", "banner", "centered"] as const).map((s) => (
                       <button
@@ -284,11 +311,11 @@ export function ReportCardSettingsCard() {
                         updateBrand({ showFacilityLogo: checked })
                       }
                     />
-                    <Label htmlFor="rc-show-logo">Show facility logo</Label>
+                    <Label htmlFor="rc-show-logo">{t("showLogo")}</Label>
                   </div>
                   {brand.showFacilityLogo && (
                     <div className="space-y-2">
-                      <Label>Logo position</Label>
+                      <Label>{t("logoPosition")}</Label>
                       <Select
                         value={brand.logoPosition ?? "top_center"}
                         disabled={!isEditing}
@@ -305,9 +332,15 @@ export function ReportCardSettingsCard() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="top_center">Top Center</SelectItem>
-                          <SelectItem value="top_left">Top Left</SelectItem>
-                          <SelectItem value="top_right">Top Right</SelectItem>
+                          <SelectItem value="top_center">
+                            {t("logoTopCentre")}
+                          </SelectItem>
+                          <SelectItem value="top_left">
+                            {t("logoTopLeft")}
+                          </SelectItem>
+                          <SelectItem value="top_right">
+                            {t("logoTopRight")}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -316,7 +349,9 @@ export function ReportCardSettingsCard() {
 
                 {/* Contact Info */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Contact info</Label>
+                  <Label className="text-sm font-semibold">
+                    {t("contactInfo")}
+                  </Label>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="flex items-center gap-2">
                       <Switch
@@ -327,7 +362,7 @@ export function ReportCardSettingsCard() {
                           updateBrand({ showFacilityName: c })
                         }
                       />
-                      <Label htmlFor="rc-name">Show facility name</Label>
+                      <Label htmlFor="rc-name">{t("showFacilityName")}</Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Switch
@@ -338,7 +373,7 @@ export function ReportCardSettingsCard() {
                           updateBrand({ showFacilityPhone: c })
                         }
                       />
-                      <Label htmlFor="rc-phone">Show phone</Label>
+                      <Label htmlFor="rc-phone">{t("showPhone")}</Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Switch
@@ -349,7 +384,7 @@ export function ReportCardSettingsCard() {
                           updateBrand({ showFacilityEmail: c })
                         }
                       />
-                      <Label htmlFor="rc-email">Show email</Label>
+                      <Label htmlFor="rc-email">{t("showEmail")}</Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Switch
@@ -360,7 +395,7 @@ export function ReportCardSettingsCard() {
                           updateBrand({ showFacilityWebsite: c })
                         }
                       />
-                      <Label htmlFor="rc-website">Show website</Label>
+                      <Label htmlFor="rc-website">{t("showWebsite")}</Label>
                     </div>
                   </div>
                 </div>
@@ -380,12 +415,12 @@ export function ReportCardSettingsCard() {
                       htmlFor="rc-social"
                       className="text-sm font-semibold"
                     >
-                      Show social links
+                      {t("showSocialLinks")}
                     </Label>
                   </div>
                   {brand.showSocialLinks && (
                     <div className="space-y-2">
-                      <Label>Social links style</Label>
+                      <Label>{t("socialLinksStyle")}</Label>
                       <Select
                         value={brand.socialLinksStyle ?? "icons"}
                         disabled={!isEditing}
@@ -402,9 +437,15 @@ export function ReportCardSettingsCard() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="icons">Icons</SelectItem>
-                          <SelectItem value="buttons">Buttons</SelectItem>
-                          <SelectItem value="text_links">Text Links</SelectItem>
+                          <SelectItem value="icons">
+                            {t("socialIcons")}
+                          </SelectItem>
+                          <SelectItem value="buttons">
+                            {t("socialButtons")}
+                          </SelectItem>
+                          <SelectItem value="text_links">
+                            {t("socialTextLinks")}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -423,15 +464,15 @@ export function ReportCardSettingsCard() {
                       }
                     />
                     <Label htmlFor="rc-cta" className="text-sm font-semibold">
-                      Booking call-to-action
+                      {t("bookingCta")}
                     </Label>
                   </div>
                   {brand.showBookingCta && (
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label>Button text</Label>
+                        <Label>{t("buttonText")}</Label>
                         <Input
-                          value={brand.bookingCtaText ?? "Book Your Next Visit"}
+                          value={brand.bookingCtaText ?? t("defaultCtaText")}
                           readOnly={!isEditing}
                           onChange={(e) =>
                             updateBrand({ bookingCtaText: e.target.value })
@@ -439,7 +480,7 @@ export function ReportCardSettingsCard() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Button URL</Label>
+                        <Label>{t("buttonUrl")}</Label>
                         <Input
                           value={brand.bookingCtaUrl ?? ""}
                           readOnly={!isEditing}
@@ -455,14 +496,14 @@ export function ReportCardSettingsCard() {
 
                 {/* Footer */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Footer</Label>
+                  <Label className="text-sm font-semibold">{t("footer")}</Label>
                   <div className="space-y-2">
-                    <Label>Custom footer text</Label>
+                    <Label>{t("customFooterText")}</Label>
                     <Textarea
                       value={brand.footerText ?? ""}
                       readOnly={!isEditing}
                       rows={2}
-                      placeholder="Thank you for trusting us with your fur baby!"
+                      placeholder={t("defaultFooterText")}
                       onChange={(e) =>
                         updateBrand({ footerText: e.target.value })
                       }
@@ -475,53 +516,49 @@ export function ReportCardSettingsCard() {
                       disabled={!isEditing}
                       onCheckedChange={(c) => updateBrand({ showPoweredBy: c })}
                     />
-                    <Label htmlFor="rc-powered">
-                      Show &quot;powered by Yipyy&quot;
-                    </Label>
+                    <Label htmlFor="rc-powered">{t("showPoweredBy")}</Label>
                   </div>
                 </div>
 
                 {/* AI Tone */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-semibold">
-                    AI summary tone
-                  </Label>
+                  <Label className="text-sm font-semibold">{t("aiTone")}</Label>
                   <p className="text-muted-foreground text-xs">
-                    Choose how AI-generated summaries sound on report cards and
-                    evaluations.
+                    {t("aiToneHelp")}
                   </p>
                   <div className="grid grid-cols-3 gap-3">
                     {[
                       {
                         value: "warm" as const,
-                        label: "Warm",
-                        desc: "Friendly, caring, reassuring",
+                        label: t("toneWarm"),
+                        desc: t("toneWarmHelp"),
                       },
                       {
                         value: "professional" as const,
-                        label: "Professional",
-                        desc: "Formal, concise, factual",
+                        label: t("toneProfessional"),
+                        desc: t("toneProfessionalHelp"),
                       },
                       {
                         value: "playful" as const,
-                        label: "Playful",
-                        desc: "Fun, lighthearted, upbeat",
+                        label: t("tonePlayful"),
+                        desc: t("tonePlayfulHelp"),
                       },
-                    ].map((t) => (
+                      // `tone`, not `t` — the translator is called above.
+                    ].map((tone) => (
                       <button
-                        key={t.value}
+                        key={tone.value}
                         type="button"
                         disabled={!isEditing}
-                        onClick={() => updateBrand({ aiTone: t.value })}
+                        onClick={() => updateBrand({ aiTone: tone.value })}
                         className={`rounded-lg border-2 p-3 text-left transition-all ${
-                          (brand.aiTone ?? "warm") === t.value
+                          (brand.aiTone ?? "warm") === tone.value
                             ? "border-primary bg-primary/5"
                             : "border-muted hover:border-primary/30"
                         } disabled:cursor-not-allowed disabled:opacity-60`}
                       >
-                        <p className="text-sm font-medium">{t.label}</p>
+                        <p className="text-sm font-medium">{tone.label}</p>
                         <p className="text-muted-foreground text-[11px]">
-                          {t.desc}
+                          {tone.desc}
                         </p>
                       </button>
                     ))}
@@ -532,7 +569,7 @@ export function ReportCardSettingsCard() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-semibold">
-                      Live preview
+                      {t("livePreview")}
                     </Label>
                     {/* In-portal ↔ SMS switch */}
                     <div className="flex rounded-md border p-0.5 text-xs">
@@ -545,7 +582,7 @@ export function ReportCardSettingsCard() {
                             : "text-muted-foreground"
                         }`}
                       >
-                        In-portal
+                        {t("previewInPortal")}
                       </button>
                       <button
                         type="button"
@@ -556,7 +593,7 @@ export function ReportCardSettingsCard() {
                             : "text-muted-foreground"
                         }`}
                       >
-                        SMS
+                        {t("previewSms")}
                       </button>
                     </div>
                   </div>
@@ -566,8 +603,18 @@ export function ReportCardSettingsCard() {
                       <ReportCardBrandedHeader
                         brandConfig={brand}
                         profile={facilityProfile}
-                        title={`${brand.reportTitle || "Daily Report"} — Buddy`}
-                        subtitle="Daycare · Mon, April 5, 2026"
+                        title={t("previewTitle")
+                          .replace(
+                            "{title}",
+                            brand.reportTitle || t("defaultReportTitle"),
+                          )
+                          .replace("{pet}", "Buddy")}
+                        subtitle={t("previewSubtitle")
+                          .replace("{service}", t("svcDaycare"))
+                          .replace(
+                            "{date}",
+                            formatDateLong(new Date(), locale),
+                          )}
                       />
                       <div className="space-y-1.5 px-6 py-4">
                         {/* Reflects the section toggles for the selected service */}
@@ -580,20 +627,20 @@ export function ReportCardSettingsCard() {
                             className="flex items-center gap-2 text-xs text-slate-600"
                           >
                             <Check className="size-3 text-emerald-500" />
-                            {reportCardSectionMeta[sid]?.label ?? sid}
+                            {sectionLabel(sid)}
                           </div>
                         ))}
                         {sectionServiceId === "grooming" &&
                           localConfig.groomingBeforeAfter && (
                             <div className="flex items-center gap-2 text-xs text-slate-600">
                               <Check className="size-3 text-emerald-500" />
-                              Before / After slider
+                              {t("beforeAfterSlider")}
                             </div>
                           )}
                         {getServiceConfig(localConfig, sectionServiceId)
                           .enabledSections.length === 0 && (
                           <p className="text-muted-foreground text-center text-xs italic">
-                            No sections enabled for this service.
+                            {t("noSectionsEnabled")}
                           </p>
                         )}
                       </div>
@@ -625,10 +672,10 @@ export function ReportCardSettingsCard() {
 
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Enabled services
+                  {t("enabledServices")}
                 </Label>
                 <p className="text-muted-foreground text-sm">
-                  Choose which services can have report cards.
+                  {t("enabledServicesHelp")}
                 </p>
                 <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
                   {allServices.map((svc) => {
@@ -656,7 +703,7 @@ export function ReportCardSettingsCard() {
 
               <div className="space-y-2">
                 <Label className="text-base font-semibold">
-                  Enabled themes
+                  {t("enabledThemes")}
                 </Label>
                 <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
                   {themeOptions.map((theme) => (
@@ -687,7 +734,7 @@ export function ReportCardSettingsCard() {
             {/* ── Sections Tab ─────────────────────────────── */}
             <TabsContent value="sections" className="space-y-6">
               <div className="space-y-2">
-                <Label>Configure sections for</Label>
+                <Label>{t("configureSectionsFor")}</Label>
                 <Select
                   value={sectionServiceId}
                   onValueChange={setSectionServiceId}
@@ -719,10 +766,10 @@ export function ReportCardSettingsCard() {
                     >
                       <div>
                         <p className="text-sm font-medium">
-                          {meta?.label ?? sectionId}
+                          {sectionLabel(sectionId)}
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          {meta?.description}
+                          {sectionHelp(sectionId)}
                         </p>
                       </div>
                       <Switch
@@ -752,10 +799,11 @@ export function ReportCardSettingsCard() {
               {sectionServiceId === "grooming" && (
                 <div className="flex items-center justify-between rounded-lg border border-pink-200 bg-pink-50/60 px-4 py-3 dark:border-pink-900 dark:bg-pink-950/20">
                   <div>
-                    <p className="text-sm font-medium">Before / After photos</p>
+                    <p className="text-sm font-medium">
+                      {t("beforeAfterPhotos")}
+                    </p>
                     <p className="text-muted-foreground text-xs">
-                      Prompt the groomer to upload a before + after pair — the
-                      customer sees a drag-to-reveal slider.
+                      {t("beforeAfterHelp")}
                     </p>
                   </div>
                   <Switch
@@ -776,10 +824,10 @@ export function ReportCardSettingsCard() {
             <TabsContent value="feedback" className="space-y-6">
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Overall feedback
+                  {t("overallFeedback")}
                 </Label>
                 <div className="space-y-2">
-                  <Label>Feedback title</Label>
+                  <Label>{t("feedbackTitle")}</Label>
                   <Input
                     value={overallFeedback.title}
                     readOnly={!isEditing}
@@ -795,7 +843,7 @@ export function ReportCardSettingsCard() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Response options</Label>
+                  <Label>{t("responseOptions")}</Label>
                   <div className="space-y-1">
                     {overallFeedback.responseOptions.map((opt, idx) => (
                       <div key={idx} className="flex items-center gap-2">
@@ -843,7 +891,7 @@ export function ReportCardSettingsCard() {
                     {isEditing && (
                       <div className="flex items-center gap-2 pt-1">
                         <Input
-                          placeholder="New option..."
+                          placeholder={t("newOptionPlaceholder")}
                           value={newFeedbackOption}
                           onChange={(e) => setNewFeedbackOption(e.target.value)}
                         />
@@ -865,7 +913,7 @@ export function ReportCardSettingsCard() {
                             setNewFeedbackOption("");
                           }}
                         >
-                          <Plus className="mr-1 size-4" /> Add
+                          <Plus className="mr-1 size-4" /> {t("add")}
                         </Button>
                       </div>
                     )}
@@ -875,11 +923,10 @@ export function ReportCardSettingsCard() {
 
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Custom questions
+                  {t("customQuestions")}
                 </Label>
                 <p className="text-muted-foreground text-sm">
-                  Create your own feedback questions that staff fill out per
-                  report card.
+                  {t("customQuestionsHelp")}
                 </p>
                 <div className="space-y-2">
                   {customQuestions.map((q) => (
@@ -898,12 +945,16 @@ export function ReportCardSettingsCard() {
                           </Badge>
                           {q.required && (
                             <Badge variant="secondary" className="text-xs">
-                              Required
+                              {t("required")}
                             </Badge>
                           )}
                           {q.type === "select" && q.options && (
                             <span className="text-muted-foreground text-xs">
-                              {q.options.length} options
+                              {plural(
+                                q.options.length,
+                                "optionCountOne",
+                                "optionCountOther",
+                              )}
                             </span>
                           )}
                         </div>
@@ -931,16 +982,16 @@ export function ReportCardSettingsCard() {
                   <Card>
                     <CardContent className="space-y-3 p-4">
                       <Label className="text-sm font-medium">
-                        Add new question
+                        {t("addNewQuestion")}
                       </Label>
                       <Input
-                        placeholder="Question text..."
+                        placeholder={t("questionPlaceholder")}
                         value={newQuestionText}
                         onChange={(e) => setNewQuestionText(e.target.value)}
                       />
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-xs">Type</Label>
+                          <Label className="text-xs">{t("questionType")}</Label>
                           <Select
                             value={newQuestionType}
                             onValueChange={(v) =>
@@ -951,22 +1002,28 @@ export function ReportCardSettingsCard() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="text">Text</SelectItem>
-                              <SelectItem value="rating">
-                                Rating (1-5)
+                              <SelectItem value="text">
+                                {t("typeText")}
                               </SelectItem>
-                              <SelectItem value="select">Select</SelectItem>
-                              <SelectItem value="yes_no">Yes / No</SelectItem>
+                              <SelectItem value="rating">
+                                {t("typeRating")}
+                              </SelectItem>
+                              <SelectItem value="select">
+                                {t("typeSelect")}
+                              </SelectItem>
+                              <SelectItem value="yes_no">
+                                {t("typeYesNo")}
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         {newQuestionType === "select" && (
                           <div className="space-y-1">
                             <Label className="text-xs">
-                              Options (comma-separated)
+                              {t("optionsCommaSeparated")}
                             </Label>
                             <Input
-                              placeholder="Option A, Option B, ..."
+                              placeholder={t("optionsPlaceholder")}
                               value={newOptionText}
                               onChange={(e) => setNewOptionText(e.target.value)}
                             />
@@ -999,7 +1056,7 @@ export function ReportCardSettingsCard() {
                           setNewOptionText("");
                         }}
                       >
-                        <Plus className="mr-1 size-4" /> Add Question
+                        <Plus className="mr-1 size-4" /> {t("addQuestion")}
                       </Button>
                     </CardContent>
                   </Card>
@@ -1011,11 +1068,10 @@ export function ReportCardSettingsCard() {
             <TabsContent value="condition" className="space-y-6">
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Pet condition categories
+                  {t("petConditionCategories")}
                 </Label>
                 <p className="text-muted-foreground text-sm">
-                  Document health, coat, skin, and other observations on each
-                  report card.
+                  {t("petConditionHelp")}
                 </p>
                 {petCondition.categories.map((cat) => (
                   <Card key={cat.id}>
@@ -1081,7 +1137,7 @@ export function ReportCardSettingsCard() {
                       {isEditing && (
                         <div className="mt-2 flex items-center gap-2">
                           <Input
-                            placeholder="New option..."
+                            placeholder={t("newOptionPlaceholder")}
                             className="h-8 text-sm"
                             value={newConditionOption[cat.id] ?? ""}
                             onChange={(e) =>
@@ -1133,7 +1189,7 @@ export function ReportCardSettingsCard() {
                 {isEditing && (
                   <div className="flex items-center gap-2">
                     <Input
-                      placeholder="New category label..."
+                      placeholder={t("newCategoryPlaceholder")}
                       value={newCategoryLabel}
                       onChange={(e) => setNewCategoryLabel(e.target.value)}
                     />
@@ -1157,7 +1213,7 @@ export function ReportCardSettingsCard() {
                         setNewCategoryLabel("");
                       }}
                     >
-                      <Plus className="mr-1 size-4" /> Add Category
+                      <Plus className="mr-1 size-4" /> {t("addCategory")}
                     </Button>
                   </div>
                 )}
@@ -1168,7 +1224,7 @@ export function ReportCardSettingsCard() {
             <TabsContent value="delivery" className="space-y-6">
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Auto-send timing
+                  {t("autoSendTiming")}
                 </Label>
                 <div className="grid grid-cols-2 gap-4">
                   <Select
@@ -1186,16 +1242,16 @@ export function ReportCardSettingsCard() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="immediate">
-                        Send immediately
+                        {t("sendImmediately")}
                       </SelectItem>
                       <SelectItem value="scheduled">
-                        Schedule for time
+                        {t("scheduleForTime")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
                   <Input
                     type="time"
-                    aria-label="Report card send time"
+                    aria-label={t("sendTime")}
                     value={localConfig.autoSend.sendTime ?? "18:00"}
                     readOnly={
                       !isEditing || localConfig.autoSend.mode !== "scheduled"
@@ -1236,8 +1292,16 @@ export function ReportCardSettingsCard() {
                           })
                         }
                       />
-                      <Label htmlFor={`rc-send-${ch}`} className="capitalize">
-                        {ch}
+                      {/* `capitalize` was rendering the raw enum — "email",
+                          "sms". Capitalising an enum does not translate it. */}
+                      <Label htmlFor={`rc-send-${ch}`}>
+                        {t(
+                          ch === "email"
+                            ? "channelEmail"
+                            : ch === "sms"
+                              ? "channelSms"
+                              : "channelMessage",
+                        )}
                       </Label>
                     </div>
                   ))}
@@ -1246,14 +1310,14 @@ export function ReportCardSettingsCard() {
 
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Review booster
+                  {t("reviewBooster")}
                 </Label>
                 <p className="text-muted-foreground text-sm">
-                  Prompt happy customers to leave reviews on external platforms.
+                  {t("reviewBoosterHelp")}
                 </p>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Min rating to show prompt</Label>
+                    <Label>{t("minRating")}</Label>
                     <Select
                       value={String(reviewBooster.ratingThreshold)}
                       disabled={!isEditing}
@@ -1273,14 +1337,14 @@ export function ReportCardSettingsCard() {
                       <SelectContent>
                         {[1, 2, 3, 4, 5].map((n) => (
                           <SelectItem key={n} value={String(n)}>
-                            {n} star{n > 1 ? "s" : ""}
+                            {plural(n, "starCountOne", "starCountOther")}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Review site URL</Label>
+                    <Label>{t("reviewUrl")}</Label>
                     <Input
                       placeholder="https://g.page/your-business/review"
                       value={reviewBooster.reviewUrl}
@@ -1298,7 +1362,7 @@ export function ReportCardSettingsCard() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Review prompt text</Label>
+                  <Label>{t("reviewPromptText")}</Label>
                   <Textarea
                     value={reviewBooster.reviewPromptText}
                     readOnly={!isEditing}
@@ -1318,9 +1382,9 @@ export function ReportCardSettingsCard() {
                 <div className="grid gap-4 md:grid-cols-3">
                   {(
                     [
-                      { key: "googleUrl", label: "Google review link" },
-                      { key: "yelpUrl", label: "Yelp review link" },
-                      { key: "facebookUrl", label: "Facebook review link" },
+                      { key: "googleUrl", label: t("googleUrl") },
+                      { key: "yelpUrl", label: t("yelpUrl") },
+                      { key: "facebookUrl", label: t("facebookUrl") },
                     ] as const
                   ).map((p) => (
                     <div key={p.key} className="space-y-2">
@@ -1346,7 +1410,7 @@ export function ReportCardSettingsCard() {
 
               <div className="space-y-4">
                 <Label className="text-base font-semibold">
-                  Template wording (by theme)
+                  {t("templateWording")}
                 </Label>
                 <div className="space-y-4">
                   {themeOptions.map((theme) => (

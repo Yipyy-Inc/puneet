@@ -8901,3 +8901,182 @@ It now requires a token that is NOT double-braced:
 absence check that is slightly too wide fails on correct pages, which is the
 fastest way to get a spec disabled rather than fixed. Widen the exception, never
 the section list.
+
+---
+
+## A dot in a message key breaks the whole app, and nothing was watching
+
+**Found and fixed 2026-09-07. The most expensive hour of the French work, and
+the cause was one character.**
+
+next-intl treats `.` as its nesting separator and refuses a key containing one:
+
+```
+INVALID_KEY: Namespace keys can not contain the character "." as this is used
+to express nesting. Please remove it or replace it with another character.
+```
+
+It throws from `getLocale()` in **`src/app/layout.tsx`** — the root layout — so
+it is not confined to the screen whose keys are wrong.
+
+**How 277 of them got in.** The conversion needed compound keys: a task type
+and the fields it collects (`field.banking.iban`), a calendar status
+(`calStatus.Confirmed`), 168 permissions and 19 groups
+(`perm.view_client_address`). A dot read nicely and nothing said otherwise.
+
+**Nothing said otherwise for four commits**, three of which are on staging:
+
+| What ran                                  | Why it was green                                                               |
+| ----------------------------------------- | ------------------------------------------------------------------------------ |
+| `typecheck`, `lint`, `format`, `build`    | a JSON key is a string                                                         |
+| `test:unit`, `test:sql`, the 29-spec gate | none of them read the catalogues                                               |
+| `check:ui-french`                         | it measures ENGLISH in `src/`, not key shape                                   |
+| the parity checker                        | it compares the two catalogues to each other, and both were wrong the same way |
+| `settings-french.spec.ts`                 | **it passed against an empty panel**                                           |
+
+That last one is the lesson. Every assertion in that spec tests for an
+ABSENCE — no English, no raw key, no unfilled placeholder — and an empty panel
+satisfies all three. Its French-word check passed on words in the surrounding
+rail. It was found by opening the page and noticing the roles studio was gone.
+
+**What changed:**
+
+1. Every key undotted — `perm.view_dashboard` → `perm_view_dashboard`. The
+   separator was only ever a readability choice.
+2. **`tests/unit/message-keys.test.ts`** fails on one dot anywhere in either
+   catalogue, in under a second, which is what should have happened first.
+3. The e2e spec now asserts, before anything else, that the section's own body
+   is non-empty — polling, so "still fetching" and "never rendered" are
+   distinguishable — and `settings-shell.tsx` carries a
+   `data-slot="settings-section"` so the check measures the SECTION and not the
+   shell it sits in. Without that handle its selector matched the whole page,
+   which is full of the rail's text whatever the section does.
+4. Its raw-key check learned kebab-case. `nav-dashboard` printed on screen and
+   the camelCase test could not see a hyphen.
+
+**The general rule this is worth remembering for:** a spec built entirely from
+absence assertions cannot tell a clean page from a blank one. At least one
+assertion has to be about something being THERE.
+
+---
+
+## The permission catalogue is translated, and eleven files get it free
+
+**Landed 2026-09-07.** `PERMISSION_GROUPS` and `ACCESS_SCOPE_META` in
+`src/types/facility-staff.ts` are 168 permissions across 19 groups plus four
+access scopes, all English module constants — and eleven files read them:
+
+`FacilityRolesStudio`, `StaffPermissionEditor`, `CallingSettingsPanel`, and the
+staff screens' `access-tab`, `custom-role-quick-create-dialog`, `role-matrix`,
+`staff-form-sections`, `staff-roles-tab`, `staff-shared`.
+
+They live in a shared `permissions` catalogue block now, read through
+`usePermissionText()` (`src/lib/settings/use-permission-text.ts`). **Only the
+roles studio has been wired to it.** The other ten still render the constants,
+so a French user reads English permission names anywhere but there — the hook
+exists and the strings exist, so each is a small change.
+
+Three things worth knowing before wiring the rest:
+
+- **The key is the permission.** `manage_roles` is written onto a role, checked
+  by the server and compared against the database. Nothing here rewrites the
+  constants; the hook reads them for its fallback and answers from the
+  catalogue.
+- **`group()` takes the group, not its id.** The roles studio draws
+  `POSITION_EDITOR_GROUPS`, which is `PERMISSION_GROUPS` **plus** fourteen
+  `nav-*` groups derived from the nav. An id-keyed lookup fell back to the id
+  and printed "nav-dashboard" on screen for all fourteen.
+- **Five nav sections have no sidebar heading** — dashboard, services, customer,
+  scheduling, settings — so the nav catalogue has no entry and `nav.section()`
+  returned its English fallback. Those five carry their own `group_nav-*` key.
+
+---
+
+## A duration and a clock time were both spelled by hand, in English
+
+**Fixed 2026-09-07 while translating `evaluations`.** Two helpers in
+`EvaluationBookingWizardSettings.tsx` built strings the `Intl` layer already
+knows how to build:
+
+```ts
+// durations, with their own English label table
+const PRESET_DURATIONS = [{ minutes: 60, label: "1 hr" }, …];
+if (h > 0 && m > 0) return `${h}h ${m}min`;
+
+// and a clock time, with hardcoded AM/PM
+const ampm = h >= 12 ? "PM" : "AM";
+return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+```
+
+`formatDuration` and `formatTime` in `src/lib/i18n/format.ts` both exist, both
+take the locale, and both give French the `14 h 30` shape §5q calls the single
+most common French-Canadian formatting error in software. The table now carries
+only the numbers.
+
+**Worth grepping for elsewhere.** These were invisible to `check:ui-french` —
+no English WORD appears in `${h}h ${m}min` — and to
+`check:hardcoded-locale`, which looks for a literal locale passed to a
+formatter, not for a formatter that was never called:
+
+```
+rg '"(AM|PM)"|\$\{h\}h |padStart\(2, "0"\)\} \$\{ampm\}' src
+```
+
+---
+
+## `lines.mjs`: replace by visible text, not by indentation
+
+**A tooling note, written after losing most of an hour to it.**
+
+The conversion scripts match exact source snippets, which means every one
+carries an indentation guess — and a JSX text node three levels into a
+`<Card><CardContent><div>` is fourteen spaces in, or sixteen, or eighteen. Nine
+of the `evaluations` replacements failed on nothing but whitespace.
+
+`scratchpad/lines.mjs` matches a run of lines by their TRIMMED content and
+re-indents the replacement from the line it replaced. The visible words are
+what a person knows; the indentation is what the file knows.
+
+One caveat that cost two more rounds: it compares the WHOLE trimmed line, so
+`"Presets"` matches a bare text node but not
+`<Label className="text-xs">Presets</Label>`. Grep first, paste the real line.
+
+---
+
+## An invisible byte in a regex, and the guard that now catches it
+
+**Found 2026-09-07 after an hour of chasing the wrong thing.**
+
+`tests/e2e/settings-french.spec.ts` reported `yipyy-pay is not rendering
+French` against a page whose every visible word was French. Three rounds went
+into the page — is the section empty? is the locale cookie applying? is the
+dev server cold? — before the problem turned out to be in the assertion:
+
+```
+/^H(?:param[eè]tres|enregistrer|…)^H/i
+```
+
+A literal **BACKSPACE (U+0008)** where `\b` was meant. It got there through a
+shell: `node -e '… "\b" …'` lost one level of escaping, JavaScript read the
+survivor as the backspace escape, and the raw byte was written to the file.
+`/\x08(?:…)\x08/` cannot match anything.
+
+**It is invisible in the editor, in `git diff` and in the terminal.** `cat -A`
+is what found it.
+
+**`tests/unit/no-control-characters.test.ts` now fails on one**, in under a
+second, across `src/`, `tests/`, `scripts/` and `messages/`. On its first run
+it also found a **byte-order mark at the top of `src/data/grooming.ts`**, which
+is now gone.
+
+Two things are excluded, deliberately, and the test says why:
+
+- **ESC (U+001B)** — 57 of them, in `scripts/check-*.ts`. Every gate writes its
+  ANSI colours as literal escapes rather than `"\x1b[31m"`. House style.
+- **NUL (U+0000)** — `scripts/generate-supabase-seed.ts` writes a COPY stream
+  where the byte is the delimiter.
+
+**And the practice that caused it:** authoring code with backslashes through
+`node -e` inside a shell. `scratchpad/lines.mjs` and the `Write` tool both
+avoid it; the CLAUDE.md note about heredocs eating `\s` is the same lesson,
+one layer up.

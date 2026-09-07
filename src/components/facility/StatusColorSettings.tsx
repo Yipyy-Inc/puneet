@@ -32,7 +32,7 @@ function useCalendarStatusLabel(): (status: string) => string {
   const t = useSettingsText().section("booking-statuses");
   return (status: string) => {
     // french-ok: a catalogue key built from the map's own English key
-    const key = `calStatus.${status}`;
+    const key = `calStatus_${status}`;
     const label = t(key);
     return label === key ? status : label;
   };
