@@ -141,8 +141,37 @@ const TOAST = /toast(?:\.\w+)?\(\s*"([^"]{2,})"/g;
 /** A fallback value: `{displayValue || "No date selected"}`. */
 const FALLBACK = /(?:\?\?|\|\|)\s*"([^"]{2,})"/g;
 
-/** A JSX text node — what sits between a tag's `>` and the next `<`. */
-const JSX_TEXT = />([^<>{}]{2,400})</g;
+/**
+ * A JSX text node.
+ *
+ * It used to be `/>([^<>{}]{2,400})</` — text between a tag's `>` and the
+ * next `<`, with no brace allowed in between. That missed every text node
+ * SITTING NEXT TO AN INTERPOLATION, which is most of the copy that carries a
+ * value:
+ *
+ *     <p>Yipyy Pay is live for{" "}<span>{name}</span>.</p>
+ *
+ * The opening half never matched, because the run from `>` to the next `<`
+ * contains `{`. So a sentence half-translated — `{t("live")}` beside a raw
+ * English tail — reported CLEAN, which is the exact shape a conversion leaves
+ * behind. 140 fragments in Yipyy Pay alone were invisible this way.
+ *
+ * A text node is therefore a run between any of `>` `}` and any of `<` `{`.
+ *
+ * ── AND THE LENGTH CAP WAS 400, WHICH HID A WHOLE PARAGRAPH ──────────────
+ *
+ * The cap counts the run as it appears in the SOURCE, indentation included, so
+ * a paragraph nested six levels deep spends ~80 characters on whitespace
+ * before its first word. Yipyy Pay's privacy paragraph — what Yipyy does with
+ * a facility's identity documents — is 354 characters of visible text and 438
+ * in the file, so it sat one line over an invisible limit and reported clean
+ * while rendering English on screen. Found by LOOKING at the page in French,
+ * not by the gate.
+ *
+ * 2000 is far past any real sentence. The class is negated, so there is no
+ * backtracking to protect against and the cap was never load-bearing.
+ */
+const JSX_TEXT = /[>}]([^<>{}]{2,2000})[<{]/g;
 
 /**
  * Both branches of a ternary: `{online ? "Online" : "Offline"}`.
@@ -236,6 +265,69 @@ const FRENCH_OK = /french-ok:/;
  * whitespace, so the distinction is what comes BEFORE the whitespace, which is
  * a scan and not a lookbehind.
  */
+/**
+ * Does the `}` at `at` close a JSX INTERPOLATION, rather than a block or an
+ * object?
+ *
+ * `} else {` and `} from "x";` both look like a text node to the regex. The
+ * separator is the first word after the brace: JS continues a block with a
+ * keyword, JSX continues a sentence with a word.
+ */
+const AFTER_BRACE_KEYWORD =
+  /^(?:else|catch|finally|while|from|as|satisfies|return|export|default|const|let|var|function|class|interface|type|enum|namespace|declare|abstract|readonly|public|private|protected|static|async|get|set|extends|implements|in|of|instanceof|typeof|delete|void|await|yield|case|do|for|if|switch|try|throw|new)\b/;
+
+/**
+ * Tests that hold WHICHEVER delimiter opened the run.
+ *
+ * Widening the terminator to `{` gave every run a second way to end, so a
+ * `>` inside a Tailwind child selector — `[&>svg]:text-current` — now runs on
+ * to the `{` that opens a cva variant block. That is a class list, not copy,
+ * and the same three tests reject it and the template-literal case at once.
+ */
+function looksLikeCode(t: string): boolean {
+  // An ATTRIBUTE LIST. Between one interpolation's closing brace and the next
+  // one's opening brace sits `onClick=`, or `className="row" disabled=` — and
+  // because the run is TERMINATED BY that opening brace, every one of them
+  // ends at an `=`. A sentence never does. This one test removed ~300 false
+  // hits across the shadcn primitives.
+  if (t.endsWith("=")) return true;
+  if (/=\s*"/.test(t)) return true; // `className="x" onClick=` mid-run
+  // A template literal's interior, or a cva class string. Both carry a
+  // backtick or a statement terminator; JSX text carries neither, because
+  // both would have to be escaped to reach the screen.
+  //
+  // An HTML ENTITY is the exception and it matters: `It&apos;s past closing
+  // time` is copy, and testing for a bare `;` threw it away — a false
+  // NEGATIVE introduced by the fix for a false positive. Entities go first.
+  const bare = t.replace(/&[a-zA-Z]+;|&#\d+;/g, "");
+  if (bare.includes("`") || bare.includes(";")) return true;
+  // A CALL or an INDEX: `setBrands([...brands,`, `start.mutate(undefined,`.
+  // Both sit between one block's closing brace and the next one's opening
+  // brace, and both end at a comma, so the punctuation test below lets them
+  // through. The tell is a bracket flush against a word — prose that carries
+  // a parenthesis puts a space in front of it.
+  if (/[\w$]\(/.test(bare) || /[\w$]\[/.test(bare)) return true;
+  // Prose has a space between two words, closes a sentence, or is a single
+  // whole word. That last case is not a loosening for its own sake: `{total}
+  // unread` and `{n} credits` put ONE word next to the value, and demanding
+  // two threw both away — the same false-negative shape as the entity test
+  // above. An attribute in this position always ends at `=`, which the first
+  // test already took, so a bare alphabetic word here is copy.
+  if (
+    !/[A-Za-z]\s+[A-Za-z]/.test(t) &&
+    !/[.!?:,]$/.test(t) &&
+    !/^[A-Za-z]{3,}$/.test(t)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function closesExpression(source: string, at: number, text: string): boolean {
+  if (source[at] !== "}") return true; // not our case
+  return !AFTER_BRACE_KEYWORD.test(text.trim());
+}
+
 function closesTag(source: string, at: number): boolean {
   let i = at - 1;
   let skippedSpace = false;
@@ -382,8 +474,14 @@ function hits(file: string, objectCopy = false): Hit[] {
   // A JSX text node cannot exist in a file with no JSX.
   if (file.endsWith(".tsx")) {
     for (const m of stripped.matchAll(JSX_TEXT)) {
-      if (!closesTag(stripped, m.index ?? 0)) continue;
-      record(m[1], m.index ?? 0);
+      const at = m.index ?? 0;
+      if (looksLikeCode(m[1].trim())) continue;
+      if (stripped[at] === "}") {
+        if (!closesExpression(stripped, at, m[1])) continue;
+      } else if (!closesTag(stripped, at)) {
+        continue;
+      }
+      record(m[1], at);
     }
   }
 
@@ -565,13 +663,16 @@ for (const surface of SURFACES) {
   for (const offender of introduced) {
     failed = true;
     console.log(`    ${ANSI.red}NEW${ANSI.reset}  ${offender.id}`);
-    for (const hit of offender.hits.slice(0, 8))
+    // Eight is enough to recognise the shape of the work. Converting a
+    // section wants the whole list, so `UI_FRENCH_LIMIT=100` prints it.
+    const limit = Math.max(1, Number(process.env.UI_FRENCH_LIMIT ?? 8));
+    for (const hit of offender.hits.slice(0, limit))
       console.log(
         `          ${ANSI.dim}${hit.file}:${hit.line}${ANSI.reset}  ${JSON.stringify(hit.text)}`,
       );
-    if (offender.hits.length > 8)
+    if (offender.hits.length > limit)
       console.log(
-        `          ${ANSI.dim}… and ${offender.hits.length - 8} more${ANSI.reset}`,
+        `          ${ANSI.dim}… and ${offender.hits.length - limit} more${ANSI.reset}`,
       );
     console.log(
       `          ${ANSI.dim}${surface.advice}, or — if it is a name — mark the line // french-ok: <reason>.${ANSI.reset}`,

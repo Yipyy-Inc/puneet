@@ -1030,7 +1030,7 @@ export function DateSelectionCalendar({
                             }}
                             className="text-primary hover:bg-primary/5 mt-1 w-full rounded-md px-2 py-1.5 text-center text-[10px] font-medium transition-colors"
                           >
-                            Next available: {label} →
+                            {t("nextAvailable").replace("{date}", label)} →
                           </button>
                         );
                       }

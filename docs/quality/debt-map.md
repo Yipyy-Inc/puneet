@@ -8378,6 +8378,157 @@ ternary branches also matches an object property's colon. It rewrote
 in eight files, none of which compile. If you script this, match a ternary as
 `\?\s*"…"\s*:` rather than on either punctuation mark alone.
 
+## 2026-09-07 — the French gate could not see a sentence next to a value, and five surfaces were wrong because of it
+
+**Severity: 🔴 high — it made five "at zero" claims in AGENTS.md false.**
+
+`check:ui-french` extracted a JSX text node as `/>([^<>{}]{2,400})</` — the run
+between a tag's `>` and the next `<`, **with no brace allowed in between**. So
+any text node sitting NEXT TO AN INTERPOLATION was invisible:
+
+```jsx
+<p>
+  Yipyy Pay is live for <span>{name}</span>.
+</p>
+```
+
+The run from `>` to the next `<` contains `{`, so it never matched. That is
+precisely the shape a half-finished conversion leaves behind — `{t("live")}`
+beside a raw English tail — and the gate reported it CLEAN.
+
+**The measurement.** Widening the text node to a run between any of `>` `}` and
+any of `<` `{`, with the code tests below:
+
+| surface           | claimed | actually                                    |
+| ----------------- | ------- | ------------------------------------------- |
+| settings sections | 26      | **33** (6 of them sections marked finished) |
+| facility shell    | at zero | 1 file, 2 strings                           |
+| customer shell    | at zero | 1 file, 1 string                            |
+| employee shell    | at zero | 2 files, 3 strings                          |
+| super-admin shell | at zero | 2 files, 2 strings                          |
+| shadcn primitives | at zero | 7 files, 8 strings                          |
+
+Among them: `DataTable`'s "Showing {n} of {m}" and "{n} selected" — on ~88
+screens — and the pet avatar's screen-reader-only "{name} is here now", which
+a French screen-reader user heard in English.
+
+**Widening a text-node regex needs four tests, and each was earned.** Every one
+of them was added because the widened version produced a specific class of
+false positive, in this order:
+
+1. **`t.endsWith("=")`** — between one interpolation's `}` and the next one's
+   `{` sits an ATTRIBUTE LIST (`onClick=`, `className="row" disabled=`), and
+   because the run is terminated BY that brace, every one ends at an `=`. A
+   sentence never does. ~300 false hits in the primitives alone.
+2. **a keyword list** — `} else {`, `} from "x";`, `} interface Foo {`. JS
+   continues a block with a keyword; JSX continues a sentence with a word.
+3. **backtick or `;`** — a template literal's interior (`` `${m}m ago` ``) and a
+   cva class string. **HTML ENTITIES ARE THE EXCEPTION and cost a real string:**
+   testing for a bare `;` threw away `It&apos;s past closing time`. Strip
+   `&[a-z]+;` before the test — a false positive fixed by hand became a false
+   negative nobody would have found.
+4. **a bracket flush against a word** — `setBrands([...brands,` and
+   `start.mutate(undefined,` both end at a comma, so the punctuation test lets
+   them through. Prose that carries a parenthesis puts a space in front of it.
+
+**And one deliberate loosening.** Requiring two words dropped `{total} unread`
+and `{n} credits` — one word beside a value is still copy, and an attribute in
+that position was already taken by test 1. Allowing a bare alphabetic word
+found four more real strings and no new noise.
+
+**A THIRD hole, and the only one a screenshot found rather than a regex.** The
+text-node pattern also carried a length cap — `{2,400}` — and the cap counts
+the run **as it appears in the source, indentation included**, so a paragraph
+nested six levels deep spends ~80 characters on whitespace before its first
+word. Yipyy Pay's privacy paragraph — what Yipyy does with a facility's
+identity documents and bank account number — is 354 characters of visible text
+and **438 in the file**. One line over an invisible limit, reported clean, and
+rendering English on screen to a French reader.
+
+It was found by loading the page in French and looking at it, after the gate
+had gone green twice. Raised to 2000: the character class is negated, so there
+was never any backtracking to protect against and the cap was not load-bearing.
+
+**What it still cannot see, measured on the same pass:**
+
+- an **ARRAY OF STRING LITERALS** rendered through `.map()`. `Step1Account.tsx`
+  held four whole sentences that way and matched no extractor — not a text
+  node, not an attribute, not a toast, not a fallback. Fixed there; **not
+  fixed in the gate**, because an array-of-strings rule needs measuring against
+  the ~740 files that have one before it can be trusted.
+- anything in a **`src/data` fixture**. The platform announcement banner
+  (`src/data/enhanced-announcements.ts`) sits across the top of every facility
+  page and reads English to a French user. That is content rather than chrome —
+  in production these are admin-authored rows and want a per-locale column, not
+  a catalogue key — so it is recorded here rather than converted.
+
+**Do instead:** treat a green run as "this surface has not gone backwards",
+never as "this surface is finished" — the gate's own header already said so and
+it was still over-trusted twice in one session. Before believing a converted
+section, **load it in French and read it**: set the `APP_LANG_PRIMARY=fr`
+cookie (not `app-language-settings`, which is not a cookie this app reads — an
+hour went into a screenshot that came back in English because of it) and assert
+on the rendered text, three ways:
+
+```
+expect(body).toMatch(/\b(?:paramètres|enregistrer|établissement)\b/i)  // it IS French
+expect(body.match(/\b[a-z]+[A-Z][a-zA-Z]{4,}\b/g) ?? []).toEqual([])   // no raw key
+expect(body.match(/\{[a-z]\w*\}/gi) ?? []).toEqual([])                 // no unfilled hole
+```
+
+The first of those is the one that matters. Without it a French screenshot spec
+passes happily against an English page, which is exactly what happened here.
+
+That spec is now `tests/e2e/settings-french.spec.ts`, in `test:e2e:ci`. It
+covers the ten sections whose baseline entry has been removed, and it is the
+only thing in the repo that can see a fixture string reaching the screen.
+
+**One last trap, created by the fix for another one.** Building a catalogue key
+as a template literal — ``t(`${notif.id}Help`)`` — puts a bare `"Help"` on the
+gate's list of untranslated English, because reading a template literal as copy
+is exactly how it catches `` `Clocked in at ${time}` ``. Concatenate the key
+(`id + "Help"`) or hold both keys explicitly in the map. Do not reach for
+`// french-ok` here: the string genuinely is not copy, and the escape hatch is
+for saying WHY something stays English, not for quieting a pattern.
+
+## 2026-09-07 — a heredoc ate a backslash and shipped a broken regex to production
+
+**Severity: 🟡 medium — one commit, one function, found by reading the file.**
+
+`6f2bddff` shipped this in `RetailSettings.tsx`:
+
+```js
+function normalizeBrand(s) {
+  return s.trim().toLowerCase().replace(/s+/g, "");
+}
+```
+
+`/s+/` not `/\s+/`. It strips the letter **s**, not whitespace:
+
+```
+"Blue Seal"    -> "blue eal"      (wanted "blueseal")
+"Science Diet" -> "cience diet"   (wanted "sciencediet")
+"Hills"        -> "hill"          (wanted "hills")
+```
+
+`normalizeBrand` is what decides whether two brands are the same, so duplicate
+detection, the merge dialog and product reassignment were all keyed on a
+mangled string. It typechecks, it lints, and no test covers it.
+
+**The cause is the tool, not the regex.** The function was written into a
+`bash` heredoc, which interprets `\s` before the file is written. This is the
+same class as the eight files broken by a ternary regex the day before.
+
+**Do instead:** never author code containing backslashes through a shell
+heredoc. Use the Write tool, or a script file. To sweep for the damage:
+
+```
+rg '/(s|d|w|b|S|D|W)\+?/[gimsuy]*[,)]' src   # a regex that lost its backslash
+```
+
+That found exactly one instance across everything touched in five commits,
+which is the only reason this is medium and not high.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

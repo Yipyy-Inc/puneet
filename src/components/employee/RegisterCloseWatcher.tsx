@@ -56,10 +56,15 @@ export function RegisterCloseWatcher({ staffId }: { staffId: string }) {
     <div className="flex items-center gap-3 border border-amber-300 bg-amber-100 px-4 py-2 text-sm text-amber-900">
       <Vault className="size-4 shrink-0" />
       <span className="flex-1">
-        It&apos;s past closing time
-        {todayCloseTime(hours) ? ` (${todayCloseTime(hours)})` : ""} and the
-        register is still open. Count &amp; close the drawer to reconcile the
-        day.
+        {/* Two whole sentences, not one built from a fragment and an
+            optional bracket: §5q, and French puts the time somewhere else
+            in the clause anyway. */}
+        {todayCloseTime(hours)
+          ? t("registerStillOpenAt").replace(
+              "{time}",
+              todayCloseTime(hours) as string,
+            )
+          : t("registerStillOpen")}
       </span>
       <Button
         size="sm"

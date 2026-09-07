@@ -59,10 +59,10 @@ export function SupportNotificationBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
-          Support messages
+          {t("messages")}
           {total > 0 && (
             <span className="text-muted-foreground text-xs">
-              {total} unread
+              {t("unreadCount").replace("{count}", String(total))}
             </span>
           )}
         </DropdownMenuLabel>

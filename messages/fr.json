@@ -1091,7 +1091,10 @@
         "fieldPhone": "Téléphone",
         "fieldEmail": "Courriel",
         "fieldAddress": "Adresse",
-        "gateJoiner": "—"
+        "gateJoiner": "—",
+        "readOnlyPreview": "Aperçu en lecture seule",
+        "fieldCountOne": "1 champ",
+        "fieldCountMany": "{count} champs"
       },
       "audit": {
         "intro": "Chaque modification des dossiers de cet établissement, et qui l’a faite.",
@@ -1128,7 +1131,8 @@
         "add": "Ajouter",
         "save": "Enregistrer les modifications",
         "saved": "Types d’emploi enregistrés",
-        "duplicate": "Ce type d’emploi existe déjà"
+        "duplicate": "Ce type d’emploi existe déjà",
+        "removeNamed": "Retirer {name}"
       },
       "termination-reasons": {
         "intro": "Les motifs offerts lorsqu’un membre du personnel est congédié, dans la fenêtre de changement de statut. Modifiez, ajoutez ou retirez-en.",
@@ -1137,7 +1141,8 @@
         "add": "Ajouter",
         "save": "Enregistrer les modifications",
         "saved": "Motifs de cessation d’emploi enregistrés",
-        "duplicate": "Ce motif existe déjà"
+        "duplicate": "Ce motif existe déjà",
+        "removeNamed": "Retirer {name}"
       },
       "integrations": {
         "callingMoved": "La téléphonie et la messagerie ont déménagé",
@@ -1176,7 +1181,45 @@
         "none": "Aucun",
         "push": "Notification poussée",
         "settingsTitle": "Paramètres de notification",
-        "settingsHelp": "Choisissez quelles notifications sont envoyées, et par quels canaux."
+        "settingsHelp": "Choisissez quelles notifications sont envoyées, et par quels canaux.",
+        "categoryClient": "Notifications aux clients",
+        "categoryStaff": "Notifications au personnel",
+        "categorySystem": "Notifications système",
+        "catCustomers": "Clients",
+        "catBoarding": "Pension",
+        "catDaycare": "Garderie",
+        "catGrooming": "Toilettage",
+        "catTraining": "Dressage",
+        "catTasks": "Tâches",
+        "catSchedule": "Horaire et quarts",
+        "catForms": "Formulaires",
+        "catYipyygo": "Arrivée express",
+        "roleOwner": "Propriétaire / admin",
+        "roleOwnerHelp": "Supervision complète — toutes les catégories activées.",
+        "roleManager": "Gestionnaire",
+        "roleManagerHelp": "Supervision opérationnelle — toutes les catégories activées.",
+        "roleFrontDesk": "Accueil / réception",
+        "roleFrontDeskHelp": "Opérations en contact avec la clientèle : clients, arrivées, formulaires, express, tâches, horaire.",
+        "roleGroomer": "Toiletteur",
+        "roleGroomerHelp": "Réservations et confirmations de toilettage, express, tâches, horaire.",
+        "roleTrainer": "Dresseur",
+        "roleDriver": "Chauffeur (toilettage mobile)",
+        "notif-001": "Confirmation de réservation",
+        "notif-001Help": "Envoyer à la création d’une réservation",
+        "notif-002": "Rappel de réservation",
+        "notif-002Help": "Rappel 24 heures avant le rendez-vous",
+        "notif-003": "Avis d’arrivée",
+        "notif-003Help": "Avertir à l’arrivée de l’animal",
+        "notif-004": "Reçu de paiement",
+        "notif-004Help": "Envoyer le reçu après le paiement",
+        "notif-005": "Alerte d’incident",
+        "notif-005Help": "Avertir le gestionnaire des nouveaux incidents",
+        "notif-006": "Alerte de stock bas",
+        "notif-006Help": "Alerter lorsque le stock est bas",
+        "roleTrainerHelp": "Réservations de dressage, notes de séance, inscriptions, tâches, horaire.",
+        "roleKennelTechHelp": "Arrivées en garderie et en pension, capacité, incidents, tâches, horaire.",
+        "roleDriverHelp": "Mises à jour d’itinéraire et rendez-vous de toilettage assignés, tâches, horaire.",
+        "roleKennelTech": "Personnel de garderie / pension"
       },
       "smart-insights": {
         "saved": "Paramètres des analyses intelligentes enregistrés",
@@ -1374,7 +1417,8 @@
         "colourBlue": "Bleu",
         "colourPurple": "Violet",
         "colourPink": "Rose",
-        "colourGrey": "Gris"
+        "colourGrey": "Gris",
+        "mergeBrandHelp": "Déplacez tous les produits de {brand} vers une autre marque, puis retirez {brand}. Les règles de marge en double sont fusionnées en une seule."
       },
       "yipyy-pay": {
         "loadFailed": "Yipyy Pay n’a pas pu être chargé.",
@@ -1646,7 +1690,48 @@
         "settlingInCurrency": "Règlement en {currency}",
         "currencyNotConfirmed": "Devise pas encore confirmée",
         "stillSettingUpWhy": "Tant que le pays et la devise ne sont pas réglés, une carte ne peut pas être débitée — Yipyy refuse plutôt que de deviner, car deviner de travers facture un client dans la mauvaise monnaie.",
-        "testAccountSimulated": "Les cartes sont simulées, aucun argent n’arrive dans votre banque, et les chiffres ci-dessous ne sont pas de vraies recettes."
+        "testAccountSimulated": "Les cartes sont simulées, aucun argent n’arrive dans votre banque, et les chiffres ci-dessous ne sont pas de vraies recettes.",
+        "applicationProgress": "{done} sections sur {total} sont terminées. Rien de ce que vous avez saisi n’est perdu.",
+        "legalNameWarningWhy": "Majuscules, ponctuation et toute mention Inc., Ltée ou SARL comprises. Une différence est la cause la plus fréquente d’un compte de paiement en attente, et la plus facile à éviter.",
+        "alreadyHaveAccount": "Vous acceptez déjà les paiements par carte avec un compte marchand Clover ?",
+        "applyIntro": "Ce qu’il nous faut pour ouvrir un compte marchand pour {facility}. Chaque étape s’enregistre séparément — partez quand vous voulez et revenez-y.",
+        "holdingHelpWhy": "Vos pièces d’identité ainsi que les numéros d’identité et de compte que vous avez fournis sont chiffrés, lisibles seulement par vous et par l’administrateur Yipyy qui traite votre demande, et supprimés une fois votre compte marchand ouvert. Les renseignements sur l’entreprise sont conservés, car c’est à eux que le compte est rattaché.",
+        "setupIntro": "Trois étapes pour commencer à accepter les paiements par carte à {facility}. Vous pouvez partir à tout moment et reprendre où vous en étiez.",
+        "stepOf": "Étape {current} sur {total}",
+        "linkedToMerchant": "Yipyy Pay est relié à votre compte marchand.",
+        "linkedToMerchantId": "Yipyy Pay est relié à votre compte marchand {id}.",
+        "neverSeesPassword": "Yipyy ne voit jamais votre mot de passe marchand. Vous vous connectez à un compte que vous détenez déjà, et rien de ce qui le concerne n’est saisi ici.",
+        "detailsAreCorrect": "Ces renseignements sont exacts",
+        "feeRates": "Les paiements par carte coûtent {terminal} sur votre terminal et {online} en ligne.",
+        "locationsOnAccount": "Vous avez {count} établissements sur ce compte.",
+        "liveFor": "Yipyy Pay est actif pour {facility}.",
+        "payoutsAre": "Versements : {schedule}",
+        "scopeCovered": "{scope} couvert",
+        "takingYouThere": "Redirection dans {seconds} s.",
+        "reconnectFromPreferences": "Reconnectez-vous depuis les préférences pour recommencer à accepter les cartes.",
+        "totalsMayMissRefunds": "Les totaux de paiement de cette page peuvent omettre des remboursements tant que ce problème persiste.",
+        "paymentsTakenOne": "1 paiement encaissé le {date}",
+        "paymentsTakenMany": "{count} paiements encaissés le {date}",
+        "scheduleIs": "Calendrier : {schedule}",
+        "readersOnAccountOne": "1 lecteur sur votre compte. Clover tient cette liste — achetez-en un ou rendez-en un là-bas et la liste change ici.",
+        "readersOnAccountMany": "{count} lecteurs sur votre compte. Clover tient cette liste — achetez-en un ou rendez-en un là-bas et la liste change ici.",
+        "save": "Enregistrer",
+        "savePreferences": "Enregistrer les préférences",
+        "preferencesSaved": "Préférences enregistrées.",
+        "noAccountConnected": "Aucun compte connecté.",
+        "switchingReplaces": "Changer de compte le remplace — les paiements déjà encaissés restent là où ils l’ont été.",
+        "passOnNotReadyWhy": "Cela change ce qu’un client paie, donc la facture, le reçu et le remboursement doivent tous concorder — et son autorisation même varie selon le pays et la province. D’ici là, Yipyy Pay l’absorbe dans vos recettes.",
+        "preauthUnavailableWhy": "Une préautorisation est un débit de carte volontairement non définitif, et le traitement des cartes au Canada les refuse. Yipyy n’a pas non plus encore de coffre de cartes pour les retenir. C’est indiqué ici pour que vous sachiez que la question a été examinée, et non oubliée.",
+        "cardPaymentsOne": "1 paiement par carte",
+        "cardPaymentsMany": "{count} paiements par carte",
+        "refundsOne": "1 remboursement",
+        "refundsMany": "{count} remboursements",
+        "connectStep1": "Vous allez chez Clover, qui détient le compte marchand.",
+        "connectStep2": "Vous vous y connectez avec votre propre courriel et mot de passe marchand.",
+        "connectStep3": "Vous approuvez ce qu’ils demandent — lire vos appareils et encaisser les paiements.",
+        "connectStep4": "Vous revenez directement ici, connecté.",
+        "wordTransactions": "transactions",
+        "whatYipyyCollects": "Yipyy recueille vos pièces d’identité, vos numéros d’identité et votre numéro de compte bancaire, les chiffre et les transmet au fournisseur qui ouvre votre compte marchand. Seuls vous et l’administrateur Yipyy qui traite votre demande peuvent les ouvrir, et ils sont supprimés une fois le compte ouvert. Seuls les quatre derniers chiffres de tout numéro vous sont montrés en retour."
       }
     }
   },
@@ -1923,7 +2008,13 @@
       "halfDay": "Demi-journée",
       "fullDay": "Journée complète",
       "durationHoursMinutes": "{hours} h {minutes}",
-      "durationHours": "{hours} heures"
+      "durationHours": "{hours} heures",
+      "showingBudget": "Affichage de {shown} sur {total}. Masquez-en une pour en afficher une autre.",
+      "selectedCount": "{count} sélectionnés",
+      "moreItems": "+{count} de plus",
+      "nextAvailable": "Prochaine disponibilité : {date}",
+      "nowAt": "Maintenant : {time}",
+      "isHereNow": "{name} est ici en ce moment"
     },
     "customer": {
       "portalLabel": "Portail client",
@@ -1935,7 +2026,8 @@
       "notRegisteredBody": "Vous êtes connecté, mais cet établissement n'a pas de compte pour vous. Vos animaux et vos réservations dans d'autres établissements ne sont pas touchés.",
       "yourName": "Votre nom",
       "registering": "Inscription…",
-      "registerHere": "S'inscrire à cet établissement"
+      "registerHere": "S'inscrire à cet établissement",
+      "creditsAvailable": "{count} crédits disponibles"
     },
     "employee": {
       "calling": "Appels",
@@ -2001,14 +2093,20 @@
       "clockOut": "Pointer le départ",
       "clockedInAt": "Arrivée pointée à {time}",
       "clockedOutAt": "Départ pointé à {time}",
-      "undo": "Annuler"
+      "undo": "Annuler",
+      "previewingAs": "Aperçu en tant que {role} — voici ce qu’un membre du personnel ayant ce rôle voit.",
+      "registerStillOpen": "L’heure de fermeture est passée et la caisse est encore ouverte. Comptez et fermez le tiroir pour faire la conciliation de la journée.",
+      "registerStillOpenAt": "L’heure de fermeture ({time}) est passée et la caisse est encore ouverte. Comptez et fermez le tiroir pour faire la conciliation de la journée."
     },
     "admin": {
       "supportNotifications": "Notifications d'assistance",
       "noNewMessages": "Aucun nouveau message",
       "platformAdmin": "Admin de la plateforme",
       "searchPlaceholder": "Rechercher établissements, factures, demandes, équipe, annonces…",
-      "searching": "Recherche…"
+      "searching": "Recherche…",
+      "messages": "Messages d’assistance",
+      "unreadCount": "{count} non lus",
+      "noResultsFor": "Aucun résultat pour « {term} »."
     }
   }
 }

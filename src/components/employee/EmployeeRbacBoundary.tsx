@@ -59,8 +59,7 @@ export function EmployeeRbacBoundary({
         <div className="sticky top-0 z-50 flex items-center justify-between gap-3 border border-amber-300 bg-amber-100 px-4 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/70 dark:text-amber-100">
           <span className="flex items-center gap-2 font-medium">
             <Eye className="size-4 shrink-0" />
-            Previewing as {activePreview.label} — this is what a staff member
-            with this role sees.
+            {t("previewingAs").replace("{role}", activePreview.label)}
           </span>
           <button
             type="button"

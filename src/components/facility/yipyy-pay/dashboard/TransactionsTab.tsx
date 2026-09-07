@@ -312,14 +312,25 @@ function TakingsRow({
       <KpiTile
         label={t("refunded")}
         value={formatCurrency(takings.refunded)}
-        hint={`${takings.refunds} refund${takings.refunds === 1 ? "" : "s"}`}
+        hint={
+          takings.refunds === 1
+            ? t("refundsOne")
+            : t("refundsMany").replace("{count}", String(takings.refunds))
+        }
         icon={RotateCcw}
         tone={refunded ? "amber" : "slate"}
       />
       <KpiTile
         label={t("throughClover")}
         value={formatCurrency(takings.cloverGross)}
-        hint={`${takings.cloverSales} card payment${takings.cloverSales === 1 ? "" : "s"}`}
+        hint={
+          takings.cloverSales === 1
+            ? t("cardPaymentsOne")
+            : t("cardPaymentsMany").replace(
+                "{count}",
+                String(takings.cloverSales),
+              )
+        }
         icon={CreditCard}
         tone="violet"
         // A failed payment is never a `payments` row — this count comes from

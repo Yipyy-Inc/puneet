@@ -185,9 +185,12 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">
-              {terminals.length} reader{terminals.length === 1 ? "" : "s"} on
-              your account. Clover keeps this list — buy or return one there and
-              it changes here.
+              {terminals.length === 1
+                ? t("readersOnAccountOne")
+                : t("readersOnAccountMany").replace(
+                    "{count}",
+                    String(terminals.length),
+                  )}
             </p>
             <ConnectDeviceHelp compact />
           </div>
@@ -566,7 +569,6 @@ function RenameDialog({
           </Button>
           <Button
             disabled={saving}
-            className="bg-emerald-600 hover:bg-emerald-700"
             onClick={() =>
               onSave(
                 (value || terminal?.label || terminal?.model || "").trim(),
@@ -577,7 +579,7 @@ function RenameDialog({
             }
           >
             {saving && <Loader2 className="size-4 animate-spin" />}
-            Save
+            {t("save")}
           </Button>
         </DialogFooter>
       </DialogContent>

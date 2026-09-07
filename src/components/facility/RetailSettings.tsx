@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 import { toast } from "sonner";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import {
@@ -73,16 +74,6 @@ const TAX_MODES: { value: RetailTaxMode; label: string; hintKey: string }[] = [
 ];
 
 /**
- * Fill a translated template.
- *
- * Module level, not a closure in the component. The two brand handlers below
- * mutate `retailConfig` and the products fixture in place, and the React
- * Compiler will not memoise a scope that does that — closing over a
- * component-scope helper drags those statements into a scope it then refuses,
- * with twelve "This value cannot be modified" errors. The fixture mutation is
- * the real defect; this keeps the translation from making it a build failure.
- */
-/**
  * THE FIXTURE WRITES, MOVED OUT OF THE COMPONENT.
  *
  * `retailConfig`, `products` and `retailConfig.brandMarginRules` are imported
@@ -105,7 +96,7 @@ const TAX_MODES: { value: RetailTaxMode; label: string; hintKey: string }[] = [
 // Same normalization resolveBrandRule uses, so counts and moves match rule
 // lookups. Module level because the writers above need it too.
 function normalizeBrand(s: string): string {
-  return s.trim().toLowerCase().replace(/s+/g, "");
+  return s.trim().toLowerCase().replace(/\s+/g, "");
 }
 
 function persistBrands(next: RetailBrand[]): void {
@@ -149,6 +140,15 @@ function persistLists(next: {
   retailConfig.unitsOfMeasure = next.unitsOfMeasure;
 }
 
+/**
+ * Fill a translated template.
+ *
+ * Module level, not a closure in the component: the brand handlers above
+ * mutate `retailConfig` and the products fixture in place, and the React
+ * Compiler will not memoise a scope that does that — closing over a
+ * component-scope helper drags those statements into a scope it then refuses,
+ * with twelve "This value cannot be modified" errors.
+ */
 function fill(template: string, values: Record<string, string>): string {
   return Object.entries(values).reduce(
     (text, [name, value]) => text.replace(`{${name}}`, value),
@@ -945,15 +945,20 @@ export function RetailSettings() {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <p className="text-muted-foreground text-sm">
-              Move every product from{" "}
-              <span className="text-foreground font-medium">
-                {mergeBrand?.name}
-              </span>{" "}
-              to another brand, then remove{" "}
-              <span className="text-foreground font-medium">
-                {mergeBrand?.name}
-              </span>
-              . Duplicate margin rules are collapsed into one.
+              {/* One sentence in the catalogue with the brand as a
+                  placeholder. The previous version was three JSX fragments —
+                  "Move every product from", "to another brand, then remove",
+                  ". Duplicate margin rules…" — which no translator can
+                  reorder, and French puts the object elsewhere in the
+                  clause. §5q. */}
+              <InterpolatedText
+                template={t("mergeBrandHelp")}
+                placeholder="{brand}"
+              >
+                <span className="text-foreground font-medium">
+                  {mergeBrand?.name}
+                </span>
+              </InterpolatedText>
             </p>
             <div className="space-y-2">
               <Label>{t("mergeInto")}</Label>

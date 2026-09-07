@@ -71,7 +71,9 @@ export function EmploymentTypesSettings() {
                   onClick={() => remove(t)}
                 >
                   <Trash2 className="size-4" />
-                  <span className="sr-only">Remove {humanize(t)}</span>
+                  <span className="sr-only">
+                    {tx("removeNamed").replace("{name}", humanize(t))}
+                  </span>
                 </Button>
               </div>
             ))

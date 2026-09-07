@@ -22,6 +22,7 @@ import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 import { UnattachedPayments } from "./UnattachedPayments";
 import { ConnectionCheck } from "./ConnectionCheck";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 
 // ============================================================================
 // Is my money moving, and where is it?
@@ -124,8 +125,7 @@ function ReconciliationAlert({
                 : fill("pendingUpdatesMany", {
                     count: String(unsettled),
                   })}{" "}
-            Payment totals on this page may be missing refunds until this is
-            resolved.
+            {t("totalsMayMissRefunds")}
           </p>
         </div>
       </CardContent>
@@ -175,7 +175,7 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
           tone="emerald"
           trail={
             next
-              ? [{ label: "transactions", value: next.transactions }]
+              ? [{ label: t("wordTransactions"), value: next.transactions }]
               : undefined
           }
         />
@@ -248,9 +248,17 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
                         {formatDay(payout.expectedOn)}
                       </span>
                       <span className="text-muted-foreground block text-xs">
-                        {payout.transactions} payment
-                        {payout.transactions === 1 ? "" : "s"} taken{" "}
-                        {formatDay(payout.takenOn)}
+                        {/* One key per count. English pluralises the noun and
+                            nothing else; French agrees the participle too, so
+                            "taken" cannot be a shared tail. */}
+                        {payout.transactions === 1
+                          ? t("paymentsTakenOne").replace(
+                              "{date}",
+                              formatDay(payout.takenOn),
+                            )
+                          : t("paymentsTakenMany")
+                              .replace("{count}", String(payout.transactions))
+                              .replace("{date}", formatDay(payout.takenOn))}
                       </span>
                     </span>
                   </span>
@@ -264,12 +272,16 @@ export function OverviewTab({ overview }: { overview: YipyyPayOverview }) {
 
           <div className="text-muted-foreground flex flex-wrap items-center gap-x-6 gap-y-1 border-t pt-3 text-xs/relaxed">
             <span>
-              Schedule:{" "}
-              <span className="text-foreground font-medium">
-                {overview.config.payoutSchedule === "next_day"
-                  ? t("payoutNextDay")
-                  : t("payoutTwoThreeShort")}
-              </span>
+              <InterpolatedText
+                template={t("scheduleIs")}
+                placeholder="{schedule}"
+              >
+                <span className="text-foreground font-medium">
+                  {overview.config.payoutSchedule === "next_day"
+                    ? t("payoutNextDay")
+                    : t("payoutTwoThreeShort")}
+                </span>
+              </InterpolatedText>
             </span>
             <button
               type="button"

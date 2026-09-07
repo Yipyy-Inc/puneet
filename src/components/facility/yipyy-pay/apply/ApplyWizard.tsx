@@ -10,6 +10,7 @@ import { YipyyPayWordmark } from "../YipyyPayBrand";
 import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 import { SetupStepper, type StepState } from "../setup/SetupStepper";
 import { APPLY_STEPS, firstIncompleteStep } from "./steps";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 import { StepBanking } from "./StepBanking";
 import { StepBusiness } from "./StepBusiness";
 import { StepDocuments } from "./StepDocuments";
@@ -93,9 +94,9 @@ export function ApplyWizard({
           </span>
         </div>
         <p className="text-muted-foreground text-sm/relaxed">
-          What we need to open a merchant account for{" "}
-          <span className="font-medium">{overview.facility.name}</span>. Each
-          step saves on its own — leave whenever you like and come back to it.
+          <InterpolatedText template={t("applyIntro")} placeholder="{facility}">
+            <span className="font-medium">{overview.facility.name}</span>
+          </InterpolatedText>
         </p>
       </div>
 

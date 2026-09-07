@@ -487,8 +487,9 @@ export function DataTable<T extends object>({
                     says what the budget did, in the place that can undo it. */}
                 {overBudget > 0 && (
                   <p className="text-ink-tertiary max-w-[240px] px-2 pb-1 text-[13px]">
-                    Showing {budget} of {chosenColumnDefs.length}. Hide one to
-                    show another.
+                    {t("showingBudget")
+                      .replace("{shown}", String(budget))
+                      .replace("{total}", String(chosenColumnDefs.length))}
                   </p>
                 )}
                 <DropdownMenuSeparator />
@@ -696,7 +697,10 @@ export function DataTable<T extends object>({
                         <Minus className="size-4" aria-hidden />
                       </button>
                       <span className="text-[14px] font-bold whitespace-nowrap tabular-nums">
-                        {selectionCount} selected
+                        {t("selectedCount").replace(
+                          "{count}",
+                          String(selectionCount),
+                        )}
                       </span>
                       {bulkActions && (
                         <div className="ml-auto flex flex-wrap items-center gap-2">

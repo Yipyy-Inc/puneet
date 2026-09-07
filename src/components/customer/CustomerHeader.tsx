@@ -32,6 +32,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUiText } from "@/hooks/use-ui-text";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
@@ -41,6 +42,7 @@ export function CustomerHeader() {
   const signOutEverywhere = useSignOutEverywhere();
   const { selectedFacility } = useCustomerFacility();
   const { t } = useUiText();
+  const shell = useShellText("customer");
   const [isPending, startTransition] = useTransition();
 
   // WHOSE CREDITS THESE ARE comes from the session. The membership half was a
@@ -165,7 +167,12 @@ export function CustomerHeader() {
           >
             <Link href="/customer/packages">
               <Package className="size-4" />
-              <span>{availableCredits} credits available</span>
+              <span>
+                {shell("creditsAvailable").replace(
+                  "{count}",
+                  String(availableCredits),
+                )}
+              </span>
             </Link>
           </Button>
         )}

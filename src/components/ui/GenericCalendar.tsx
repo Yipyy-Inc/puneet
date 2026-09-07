@@ -323,7 +323,10 @@ export function GenericCalendar<T extends CalendarItem>({
                       )}
                       {dayItems.length > 3 && (
                         <div className="text-muted-foreground pl-1 text-xs">
-                          +{dayItems.length - 3} more
+                          {t("moreItems").replace(
+                            "{count}",
+                            String(dayItems.length - 3),
+                          )}
                         </div>
                       )}
                     </>

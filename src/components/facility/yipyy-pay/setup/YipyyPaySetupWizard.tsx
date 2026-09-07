@@ -8,6 +8,7 @@ import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
 import { YipyyPayWordmark } from "../YipyyPayBrand";
 import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 import { SetupStepper, type StepState } from "./SetupStepper";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 import { Step1Account } from "./Step1Account";
 import { Step2Business } from "./Step2Business";
 import { Step3Preferences } from "./Step3Preferences";
@@ -127,9 +128,9 @@ export function YipyyPaySetupWizard({
           </span>
         </div>
         <p className="text-muted-foreground text-sm/relaxed">
-          Three steps to start taking card payments at{" "}
-          <span className="font-medium">{overview.facility.name}</span>. You can
-          leave at any point and pick up where you stopped.
+          <InterpolatedText template={t("setupIntro")} placeholder="{facility}">
+            <span className="font-medium">{overview.facility.name}</span>
+          </InterpolatedText>
         </p>
       </div>
 

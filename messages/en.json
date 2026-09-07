@@ -1091,7 +1091,10 @@
         "fieldPhone": "Phone",
         "fieldEmail": "Email",
         "fieldAddress": "Address",
-        "gateJoiner": "at"
+        "gateJoiner": "at",
+        "readOnlyPreview": "Read-only preview",
+        "fieldCountOne": "1 field",
+        "fieldCountMany": "{count} fields"
       },
       "audit": {
         "intro": "Every change to this facility's records, and who made it.",
@@ -1128,7 +1131,8 @@
         "add": "Add",
         "save": "Save changes",
         "saved": "Employment types saved",
-        "duplicate": "That employment type already exists"
+        "duplicate": "That employment type already exists",
+        "removeNamed": "Remove {name}"
       },
       "termination-reasons": {
         "intro": "The reasons offered when a staff member is terminated in the status-change dialog. Edit, add or remove any of them.",
@@ -1137,7 +1141,8 @@
         "add": "Add",
         "save": "Save changes",
         "saved": "Termination reasons saved",
-        "duplicate": "That reason already exists"
+        "duplicate": "That reason already exists",
+        "removeNamed": "Remove {name}"
       },
       "integrations": {
         "callingMoved": "Phone and messaging have moved",
@@ -1176,7 +1181,45 @@
         "none": "None",
         "push": "Push",
         "settingsTitle": "Notification settings",
-        "settingsHelp": "Choose which notifications are sent, and through which channels."
+        "settingsHelp": "Choose which notifications are sent, and through which channels.",
+        "categoryClient": "Client notifications",
+        "categoryStaff": "Staff notifications",
+        "categorySystem": "System notifications",
+        "catCustomers": "Customers",
+        "catBoarding": "Boarding",
+        "catDaycare": "Daycare",
+        "catGrooming": "Grooming",
+        "catTraining": "Training",
+        "catTasks": "Tasks",
+        "catSchedule": "Schedule & Shifts",
+        "catForms": "Forms",
+        "catYipyygo": "Express Check-In",
+        "roleOwner": "Owner / Admin",
+        "roleOwnerHelp": "Full oversight — every category on.",
+        "roleManager": "Manager",
+        "roleManagerHelp": "Operational oversight — every category on.",
+        "roleFrontDesk": "Front Desk / Receptionist",
+        "roleFrontDeskHelp": "Client-facing ops: customers, check-ins, forms, express, tasks, schedule.",
+        "roleGroomer": "Groomer",
+        "roleGroomerHelp": "Grooming bookings/confirmations, express, tasks, schedule.",
+        "roleTrainer": "Trainer",
+        "roleDriver": "Driver (Mobile Grooming)",
+        "notif-001": "Booking Confirmation",
+        "notif-001Help": "Send when a new booking is created",
+        "notif-002": "Booking Reminder",
+        "notif-002Help": "24-hour reminder before appointment",
+        "notif-003": "Check-In Notification",
+        "notif-003Help": "Notify when pet is checked in",
+        "notif-004": "Payment Receipt",
+        "notif-004Help": "Send receipt after payment",
+        "notif-005": "Incident Alert",
+        "notif-005Help": "Notify manager of new incidents",
+        "notif-006": "Low Inventory Alert",
+        "notif-006Help": "Alert when inventory is low",
+        "roleTrainerHelp": "Training bookings, session notes, enrollment, tasks, schedule.",
+        "roleKennelTechHelp": "Daycare + boarding check-ins, capacity, incidents, tasks, schedule.",
+        "roleDriverHelp": "Route updates + assigned grooming appointments, tasks, schedule.",
+        "roleKennelTech": "Daycare / Boarding Staff"
       },
       "smart-insights": {
         "saved": "Smart insights settings saved",
@@ -1374,7 +1417,8 @@
         "colourBlue": "Blue",
         "colourPurple": "Purple",
         "colourPink": "Pink",
-        "colourGrey": "Grey"
+        "colourGrey": "Grey",
+        "mergeBrandHelp": "Move every product from {brand} to another brand, then remove {brand}. Duplicate margin rules are collapsed into one."
       },
       "yipyy-pay": {
         "loadFailed": "Yipyy Pay could not be loaded.",
@@ -1646,7 +1690,48 @@
         "settlingInCurrency": "Settling in {currency}",
         "currencyNotConfirmed": "Currency not confirmed yet",
         "stillSettingUpWhy": "Until the country and currency are settled, a card cannot be charged — Yipyy refuses rather than guessing, because guessing wrong charges a customer in the wrong money.",
-        "testAccountSimulated": "Cards are simulated, no money reaches your bank, and the figures below are not real takings."
+        "testAccountSimulated": "Cards are simulated, no money reaches your bank, and the figures below are not real takings.",
+        "applicationProgress": "{done} of {total} sections finished. Nothing you have entered is lost.",
+        "legalNameWarningWhy": "Capitalisation, punctuation and any Inc., Ltd. or LLC included. A mismatch is the most common reason a payment account sits waiting, and it is the easiest one to avoid.",
+        "alreadyHaveAccount": "Already take card payments through a Clover merchant account?",
+        "applyIntro": "What we need to open a merchant account for {facility}. Each step saves on its own — leave whenever you like and come back to it.",
+        "holdingHelpWhy": "Your identity documents and the identity and account numbers you gave are encrypted, readable only by you and the Yipyy administrator handling this application, and deleted once your merchant account is open. The business details stay, because they are what the account is registered against.",
+        "setupIntro": "Three steps to start taking card payments at {facility}. You can leave at any point and pick up where you stopped.",
+        "stepOf": "Step {current} of {total}",
+        "linkedToMerchant": "Yipyy Pay is linked to your merchant account.",
+        "linkedToMerchantId": "Yipyy Pay is linked to your merchant account {id}.",
+        "neverSeesPassword": "Yipyy never sees your merchant password. You are signing in to an account you already hold, and nothing about it is typed here.",
+        "detailsAreCorrect": "These details are correct",
+        "feeRates": "Card payments cost {terminal} on your terminal and {online} online.",
+        "locationsOnAccount": "You have {count} locations on this account.",
+        "liveFor": "Yipyy Pay is live for {facility}.",
+        "payoutsAre": "Payouts: {schedule}",
+        "scopeCovered": "{scope} covered",
+        "takingYouThere": "Taking you there in {seconds}s.",
+        "reconnectFromPreferences": "Reconnect from Preferences to start taking cards again.",
+        "totalsMayMissRefunds": "Payment totals on this page may be missing refunds until this is resolved.",
+        "paymentsTakenOne": "1 payment taken {date}",
+        "paymentsTakenMany": "{count} payments taken {date}",
+        "scheduleIs": "Schedule: {schedule}",
+        "readersOnAccountOne": "1 reader on your account. Clover keeps this list — buy or return one there and it changes here.",
+        "readersOnAccountMany": "{count} readers on your account. Clover keeps this list — buy or return one there and it changes here.",
+        "save": "Save",
+        "savePreferences": "Save preferences",
+        "preferencesSaved": "Preferences saved.",
+        "noAccountConnected": "No account connected.",
+        "switchingReplaces": "Switching replaces it — payments already taken stay where they were taken.",
+        "passOnNotReadyWhy": "It changes what a customer is charged, so the invoice, the receipt and the refund all have to agree about it — and whether it is allowed at all differs by country and by state. Yipyy Pay absorbs it into your takings until then.",
+        "preauthUnavailableWhy": "A pre-authorisation is a card charge that is deliberately not final, and Canadian card processing refuses those. Yipyy also has no card vault to hold against yet. This is here so you know it has been looked at, not forgotten.",
+        "cardPaymentsOne": "1 card payment",
+        "cardPaymentsMany": "{count} card payments",
+        "refundsOne": "1 refund",
+        "refundsMany": "{count} refunds",
+        "connectStep1": "You go to Clover, who hold the merchant account.",
+        "connectStep2": "You sign in there with your own merchant email and password.",
+        "connectStep3": "You approve what they ask for — reading your devices, and taking payments.",
+        "connectStep4": "You come straight back here, connected.",
+        "wordTransactions": "transactions",
+        "whatYipyyCollects": "Yipyy collects your identity documents, identity numbers and bank account number, encrypts them, and passes them to the provider who opens your merchant account. Only you and the Yipyy administrator handling your application can open them, and they are deleted once the account is open. Only the last four digits of any number are ever shown back to you."
       }
     }
   },
@@ -1923,7 +2008,13 @@
       "halfDay": "Half day",
       "fullDay": "Full day",
       "durationHoursMinutes": "{hours}h {minutes}m",
-      "durationHours": "{hours} hours"
+      "durationHours": "{hours} hours",
+      "showingBudget": "Showing {shown} of {total}. Hide one to show another.",
+      "selectedCount": "{count} selected",
+      "moreItems": "+{count} more",
+      "nextAvailable": "Next available: {date}",
+      "nowAt": "Now: {time}",
+      "isHereNow": "{name} is here now"
     },
     "customer": {
       "portalLabel": "Customer portal",
@@ -1935,7 +2026,8 @@
       "notRegisteredBody": "You are signed in, but this facility does not have an account for you. Your pets and bookings at other facilities are unaffected.",
       "yourName": "Your name",
       "registering": "Registering…",
-      "registerHere": "Register at this facility"
+      "registerHere": "Register at this facility",
+      "creditsAvailable": "{count} credits available"
     },
     "employee": {
       "calling": "Calling",
@@ -2001,14 +2093,20 @@
       "clockOut": "Clock out",
       "clockedInAt": "Clocked in at {time}",
       "clockedOutAt": "Clocked out at {time}",
-      "undo": "Undo"
+      "undo": "Undo",
+      "previewingAs": "Previewing as {role} — this is what a staff member with this role sees.",
+      "registerStillOpen": "It’s past closing time and the register is still open. Count and close the drawer to reconcile the day.",
+      "registerStillOpenAt": "It’s past closing time ({time}) and the register is still open. Count and close the drawer to reconcile the day."
     },
     "admin": {
       "supportNotifications": "Support notifications",
       "noNewMessages": "No new messages",
       "platformAdmin": "Platform admin",
       "searchPlaceholder": "Search facilities, invoices, tickets, team, announcements…",
-      "searching": "Searching…"
+      "searching": "Searching…",
+      "messages": "Support messages",
+      "unreadCount": "{count} unread",
+      "noResultsFor": "No results for “{term}”."
     }
   }
 }

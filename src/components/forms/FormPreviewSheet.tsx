@@ -67,9 +67,16 @@ export function FormPreviewSheet({
           <SheetTitle className="pr-6">{formName}</SheetTitle>
           <SheetDescription className="flex items-center gap-1.5">
             <Lock className="size-3" />
-            Read-only preview
+            {t("readOnlyPreview")}
             {form
-              ? ` · ${questions.length} field${questions.length === 1 ? "" : "s"}`
+              ? ` · ${
+                  questions.length === 1
+                    ? t("fieldCountOne")
+                    : t("fieldCountMany").replace(
+                        "{count}",
+                        String(questions.length),
+                      )
+                }`
               : ""}
           </SheetDescription>
         </SheetHeader>

@@ -14,6 +14,7 @@ import { PoweredByClover } from "../YipyyPayBrand";
 import { ConnectIllustration } from "../illustrations";
 import { useYipyyPayNav } from "../use-yipyy-pay-nav";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 
 // ============================================================================
 // Step 1 — connecting the account the money lands in.
@@ -49,17 +50,22 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
         <div className="flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 text-sm dark:border-emerald-900/50 dark:bg-emerald-950/20">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <p className="leading-relaxed">
-            <span className="font-semibold">{t("accountConnected")}</span> Yipyy
-            Pay is linked to your merchant account
-            {connection.merchantId && (
-              <>
-                {" "}
+            <span className="font-semibold">{t("accountConnected")}</span>{" "}
+            {/* Two whole sentences, not one with a bracketed tail: French
+                does not put the id where English does, and the trailing "."
+                sat outside the conditional as its own text node. */}
+            {connection.merchantId ? (
+              <InterpolatedText
+                template={t("linkedToMerchantId")}
+                placeholder="{id}"
+              >
                 <span className="font-[tabular-nums]">
                   {connection.merchantId}
                 </span>
-              </>
+              </InterpolatedText>
+            ) : (
+              t("linkedToMerchant")
             )}
-            .
           </p>
         </div>
 
@@ -97,21 +103,22 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
       <div className="mx-auto max-w-md space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold">{t("whatHappensNext")}</p>
         <ol className="space-y-2.5">
-          {[
-            "You go to Clover, who hold the merchant account.",
-            "You sign in there with your own merchant email and password.",
-            "You approve what they ask for — reading your devices, and taking payments.",
-            "You come straight back here, connected.",
-          ].map((line, index) => (
-            <li key={line} className="flex gap-3">
-              <span className="bg-muted text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
-                {index + 1}
-              </span>
-              <span className="text-muted-foreground text-sm/relaxed">
-                {line}
-              </span>
-            </li>
-          ))}
+          {/* Keys, not sentences. An ARRAY OF STRING LITERALS rendered
+              through .map() matches none of the gate's extractors — it is
+              not a JSX text node, an attribute, a toast or a fallback — so
+              these four sat in English with the section reporting clean. */}
+          {["connectStep1", "connectStep2", "connectStep3", "connectStep4"].map(
+            (key, index) => (
+              <li key={key} className="flex gap-3">
+                <span className="bg-muted text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
+                  {index + 1}
+                </span>
+                <span className="text-muted-foreground text-sm/relaxed">
+                  {t(key)}
+                </span>
+              </li>
+            ),
+          )}
         </ol>
 
         <div className="text-muted-foreground flex items-start gap-2 border-t pt-3 text-xs/relaxed">
@@ -120,8 +127,7 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
             {/* Accurate for THIS path only. A facility who applies through
                 Yipyy instead does hand us their documents — that screen says
                 so in its own words, and this one must not be copied there. */}
-            Yipyy never sees your merchant password. You are signing in to an
-            account you already hold, and nothing about it is typed here.
+            {t("neverSeesPassword")}
           </p>
         </div>
       </div>

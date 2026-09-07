@@ -174,7 +174,15 @@ export function AdminGlobalSearch({ className }: { className?: string }) {
               </React.Fragment>
             ))}
 
-            {showEmpty && <CommandEmpty>No results for “{term}”.</CommandEmpty>}
+            {showEmpty && (
+              <CommandEmpty>
+                {/* The quotation marks come from the CATALOGUE, not from the
+                    template: French takes « » with a non-breaking space
+                    inside, and hard-coding “ ” here would have shipped
+                    English typography inside a French sentence. */}
+                {t("noResultsFor").replace("{term}", term)}
+              </CommandEmpty>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
