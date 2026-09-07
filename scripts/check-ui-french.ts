@@ -432,7 +432,6 @@ const BASELINE: Record<string, Set<string>> = {
     "booking-rules",
     "booking-statuses",
     "branding",
-    "business",
     "care-tasks",
     "checkin-requirements",
     "custom-email-domain",
