@@ -220,10 +220,7 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
             <span className="text-foreground font-medium">
               {t("passOnNotReadyShort")}
             </span>{" "}
-            It changes what a customer is charged, so the invoice, the receipt
-            and the refund all have to agree about it — and whether it is
-            allowed at all differs by country and by state. Yipyy Pay absorbs it
-            into your takings until then.
+            {t("passOnNotReadyWhy")}
           </p>
         </div>
       </Section>
@@ -297,10 +294,7 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
               <span className="text-foreground font-medium">
                 {t("preauthUnavailable")}
               </span>{" "}
-              A pre-authorisation is a card charge that is deliberately not
-              final, and Canadian card processing refuses those. Yipyy also has
-              no card vault to hold against yet. This is here so you know it has
-              been looked at, not forgotten.
+              {t("preauthUnavailableWhy")}
             </p>
           </div>
         </CardContent>
@@ -320,9 +314,8 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
                       ? ` ${t("testAccountSuffix")}`
                       : ""
                   }.`
-                : "No account connected."}{" "}
-              Switching replaces it — payments already taken stay where they
-              were taken.
+                : t("noAccountConnected")}{" "}
+              {t("switchingReplaces")}
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
@@ -342,13 +335,15 @@ export function PreferencesTab({ overview }: { overview: YipyyPayOverview }) {
           <Button variant="ghost" onClick={() => setDraft(null)}>
             {t("discard")}
           </Button>
+          {/* §1: there is no second action colour. This was `bg-emerald-600`
+              — the success ink on the primary action — which is the sixth
+              instance of that found during the French pass. */}
           <Button
-            className="bg-emerald-600 hover:bg-emerald-700"
             disabled={save.isPending}
-            onClick={() => commit(form, "Preferences saved.")}
+            onClick={() => commit(form, t("preferencesSaved"))}
           >
             {save.isPending && <Loader2 className="size-4 animate-spin" />}
-            Save preferences
+            {t("savePreferences")}
           </Button>
         </div>
       )}

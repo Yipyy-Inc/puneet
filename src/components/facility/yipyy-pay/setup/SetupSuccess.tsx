@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { YipyyPayOverview } from "@/lib/api/yipyy-pay";
 import { YipyyPayWordmark } from "../YipyyPayBrand";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
 
 // ============================================================================
 // The moment it works.
@@ -146,16 +147,17 @@ export function SetupSuccess({
             {t("canTakePayments")}
           </h3>
           <p className="text-muted-foreground text-sm/relaxed">
-            Yipyy Pay is live for{" "}
-            <span className="font-medium">{overview.facility.name}</span>.
+            <InterpolatedText template={t("liveFor")} placeholder="{facility}">
+              <span className="font-medium">{overview.facility.name}</span>
+            </InterpolatedText>
           </p>
         </div>
 
         <ul className="mx-auto max-w-xs space-y-2.5 text-left">
           <Done>{t("doneAccount")}</Done>
           <Done>{t("doneBusiness")}</Done>
-          <Done>Payouts: {schedule}</Done>
-          <Done>{scope} covered</Done>
+          <Done>{t("payoutsAre").replace("{schedule}", schedule)}</Done>
+          <Done>{t("scopeCovered").replace("{scope}", scope)}</Done>
         </ul>
 
         {/* The honest next action. A facility with no terminal yet is not
@@ -176,7 +178,7 @@ export function SetupSuccess({
         </div>
 
         <p className="text-muted-foreground text-xs">
-          Taking you there in {secondsLeft}s.
+          {t("takingYouThere").replace("{seconds}", String(secondsLeft))}
         </p>
       </CardContent>
     </Card>

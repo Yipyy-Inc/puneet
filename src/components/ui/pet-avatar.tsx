@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // The pet avatar. docs/design-system/design-system.md §2b territories 1 and 2.
@@ -101,6 +102,7 @@ export function PetAvatar({
   pulse,
   className,
 }: PetAvatarProps) {
+  const t = useShellText("primitives");
   const s = SIZES[size];
   const initial = name.trim().charAt(0).toUpperCase() || "?";
 
@@ -178,7 +180,9 @@ export function PetAvatar({
             is that orange never becomes the only channel any more than colour
             does (§3) — delete the mark and the surface must still say it.
           */}
-          <span className="sr-only">{name} is here now</span>
+          <span className="sr-only">
+            {t("isHereNow").replace("{name}", name)}
+          </span>
         </>
       )}
     </span>

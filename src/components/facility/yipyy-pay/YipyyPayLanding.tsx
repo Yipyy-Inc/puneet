@@ -277,8 +277,9 @@ function ApplicationResumeNotice({
         <CircleDashed className="size-5 shrink-0 text-sky-600 dark:text-sky-400" />
         <p className="min-w-0 flex-1 text-sm/relaxed">
           <span className="font-semibold">{t("applicationInProgress")}</span> —{" "}
-          {completed} of {APPLY_STEP_COUNT - 1} sections finished. Nothing you
-          have entered is lost.
+          {t("applicationProgress")
+            .replace("{done}", String(completed))
+            .replace("{total}", String(APPLY_STEP_COUNT - 1))}
         </p>
         <Button size="sm" onClick={onResume}>
           {t("continue")}
@@ -333,9 +334,7 @@ function BeforeYouStart({
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <p className="leading-relaxed">
             <span className="font-semibold">{t("legalNameWarning")}</span>{" "}
-            Capitalisation, punctuation and any Inc., Ltd. or LLC included. A
-            mismatch is the most common reason a payment account sits waiting,
-            and it is the easiest one to avoid.
+            {t("legalNameWarningWhy")}
           </p>
         </div>
 
@@ -344,12 +343,7 @@ function BeforeYouStart({
         <div className="flex items-start gap-2.5 rounded-lg border p-3 text-sm">
           <Lock className="text-muted-foreground mt-0.5 size-4 shrink-0" />
           <p className="text-muted-foreground leading-relaxed">
-            Yipyy collects your identity documents, identity numbers and bank
-            account number, encrypts them, and passes them to the provider who
-            opens your merchant account. Only you and the Yipyy administrator
-            handling your application can open them, and they are deleted once
-            the account is open. Only the last four digits of any number are
-            ever shown back to you.
+            {t("whatYipyyCollects")}
           </p>
         </div>
 
@@ -382,7 +376,7 @@ function AlreadyHaveOne({ onConnect }: { onConnect: () => void }) {
   const t = useSettingsText().section("yipyy-pay");
   return (
     <p className="text-muted-foreground text-center text-sm">
-      Already take card payments through a Clover merchant account?{" "}
+      {t("alreadyHaveAccount")}{" "}
       <button
         type="button"
         onClick={onConnect}

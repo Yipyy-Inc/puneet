@@ -41,6 +41,7 @@ export function ImpersonationBanner() {
     } else {
       startImpersonation(s);
       logImpersonationAction(s, "Started impersonation session", {
+        // french-ok: an audit-log record, not interface
         description: `${s.adminName} started an impersonation session for ${s.facilityName}.`,
         severity: "High",
       });
@@ -73,6 +74,7 @@ export function ImpersonationBanner() {
 
   const handleExit = () => {
     logImpersonationAction(session, "Ended impersonation session", {
+      // french-ok: an audit-log record, not interface
       description: `${session.adminName} ended the impersonation session for ${session.facilityName}.`,
       severity: "High",
     });

@@ -227,11 +227,7 @@ export function ApplicationStatus({
             <span className="text-foreground font-medium">
               {t("holdingHelp")}
             </span>{" "}
-            Your identity documents and the identity and account numbers you
-            gave are encrypted, readable only by you and the Yipyy administrator
-            handling this application, and deleted once your merchant account is
-            open. The business details stay, because they are what the account
-            is registered against.
+            {t("holdingHelpWhy")}
           </p>
         </CardContent>
       </Card>

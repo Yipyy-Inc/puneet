@@ -147,8 +147,8 @@ export function YipyyPayDashboard({
             <div className="space-y-1 text-sm/relaxed">
               <p className="font-semibold">{t("cardPaymentsDown")}</p>
               <p>
-                {connection.lastError ?? t("disconnected")} Reconnect from
-                Preferences to start taking cards again.
+                {connection.lastError ?? t("disconnected")}{" "}
+                {t("reconnectFromPreferences")}
               </p>
             </div>
           </div>

@@ -205,7 +205,7 @@ export function Step2Business({
       <div className="flex flex-wrap items-center justify-center gap-2">
         <Button onClick={confirm} disabled={save.isPending || !chargeable}>
           {save.isPending && <Loader2 className="size-4 animate-spin" />}
-          These details are correct
+          {t("detailsAreCorrect")}
           <ArrowRight className="size-4" />
         </Button>
         <Button

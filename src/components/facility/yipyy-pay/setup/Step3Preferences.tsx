@@ -275,8 +275,9 @@ export function Step3Preferences({
         <div>
           <p className="font-semibold">{t("whoPaysFee")}</p>
           <p className="text-muted-foreground text-sm/relaxed">
-            Card payments cost {formatFeeRate(form.feeCardPresent)} on your
-            terminal and {formatFeeRate(form.feeCardNotPresent)} online.
+            {t("feeRates")
+              .replace("{terminal}", formatFeeRate(form.feeCardPresent))
+              .replace("{online}", formatFeeRate(form.feeCardNotPresent))}
           </p>
         </div>
         <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
@@ -310,7 +311,10 @@ export function Step3Preferences({
             <div>
               <p className="font-semibold">{t("whichLocations")}</p>
               <p className="text-muted-foreground text-sm/relaxed">
-                You have {overview.locations.length} locations on this account.
+                {t("locationsOnAccount").replace(
+                  "{count}",
+                  String(overview.locations.length),
+                )}
               </p>
             </div>
             <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">

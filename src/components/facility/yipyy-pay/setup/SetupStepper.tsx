@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // The progress header, shared by both Yipyy Pay wizards.
@@ -48,13 +49,16 @@ export function SetupStepper({
   /** Supply to make the segments clickable. Omit for a display-only stepper. */
   onSelect?: (n: number) => void;
 }) {
+  const t = useSettingsText().section("yipyy-pay");
   return (
     <>
       {/* Phones get the count and the name, not five stacked cards. The full
           stepper turned vertical is taller than the step it introduces. */}
       <div className="p-3 sm:hidden">
         <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          Step {current} of {steps.length}
+          {t("stepOf")
+            .replace("{current}", String(current))
+            .replace("{total}", String(steps.length))}
         </p>
         <p className="text-sm font-medium">
           {steps.find((s) => s.n === current)?.title}

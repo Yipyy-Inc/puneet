@@ -75,7 +75,9 @@ export function TerminationReasonsSettings() {
                   onClick={() => remove(i)}
                 >
                   <Trash2 className="size-4" />
-                  <span className="sr-only">Remove {reason}</span>
+                  <span className="sr-only">
+                    {tx("removeNamed").replace("{name}", reason)}
+                  </span>
                 </Button>
               </div>
             ))

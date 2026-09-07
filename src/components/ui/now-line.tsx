@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // Now. docs/design-system/design-system.md §2b territory 4.
@@ -51,6 +52,7 @@ export function NowLine({
   label,
   className,
 }: NowLineProps) {
+  const t = useShellText("primitives");
   const horizontal = orientation === "horizontal";
 
   return (
@@ -75,7 +77,9 @@ export function NowLine({
             : "top-0 left-1/2 -translate-x-1/2",
         )}
       />
-      {label && <span className="sr-only">Now: {label}</span>}
+      {label && (
+        <span className="sr-only">{t("nowAt").replace("{time}", label)}</span>
+      )}
     </div>
   );
 }
