@@ -23,7 +23,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import type { ReminderRule, DeliveryChannel } from "@/data/yipyygo-config";
 import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
-import { DELIVERY_CHANNEL_LABELS } from "@/data/yipyygo-config";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useDeliveryChannelLabel } from "./use-yipyygo-labels";
 
 interface TimingRemindersSectionProps {
   config: YipyyGoSettings;
@@ -34,6 +35,9 @@ export function TimingRemindersSection({
   config,
   onConfigChange,
 }: TimingRemindersSectionProps) {
+  const t = useSettingsText().section("yipyygo");
+  const channelLabel = useDeliveryChannelLabel();
+
   const handleInitialSendTimeChange = (value: string) => {
     const hours = parseInt(value, 10);
     if (!isNaN(hours) && hours > 0) {
@@ -101,18 +105,14 @@ export function TimingRemindersSection({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="size-5" />
-            Send timing & deadline
+            {t("timingTitle")}
           </CardTitle>
-          <CardDescription>
-            Configure when forms are sent and when they must be completed.
-          </CardDescription>
+          <CardDescription>{t("timingHelp")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="initial-send-time">
-                Initial Send Time (hours before check-in)
-              </Label>
+              <Label htmlFor="initial-send-time">{t("initialSendTime")}</Label>
               <Input
                 id="initial-send-time"
                 type="number"
@@ -121,11 +121,11 @@ export function TimingRemindersSection({
                 onChange={(e) => handleInitialSendTimeChange(e.target.value)}
               />
               <p className="text-muted-foreground text-xs">
-                When to send the initial form request
+                {t("initialSendHelp")}
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="deadline">Deadline (hours before check-in)</Label>
+              <Label htmlFor="deadline">{t("deadline")}</Label>
               <Input
                 id="deadline"
                 type="number"
@@ -134,7 +134,7 @@ export function TimingRemindersSection({
                 onChange={(e) => handleDeadlineChange(e.target.value)}
               />
               <p className="text-muted-foreground text-xs">
-                Must be completed by this time
+                {t("deadlineHelp")}
               </p>
             </div>
           </div>
@@ -144,10 +144,8 @@ export function TimingRemindersSection({
       {/* Delivery Channels */}
       <Card>
         <CardHeader>
-          <CardTitle>Delivery channels</CardTitle>
-          <CardDescription>
-            Select which channels to use for sending forms and reminders.
-          </CardDescription>
+          <CardTitle>{t("channelsTitle")}</CardTitle>
+          <CardDescription>{t("channelsHelp")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {(["email", "sms", "push"] as DeliveryChannel[]).map((channel) => {
@@ -169,10 +167,10 @@ export function TimingRemindersSection({
                     htmlFor={`channel-${channel}`}
                     className="cursor-pointer font-medium"
                   >
-                    {DELIVERY_CHANNEL_LABELS[channel]}
+                    {channelLabel(channel)}
                   </Label>
                 </div>
-                {isEnabled && <Badge variant="secondary">Enabled</Badge>}
+                {isEnabled && <Badge variant="secondary">{t("enabled")}</Badge>}
               </div>
             );
           })}
@@ -184,21 +182,19 @@ export function TimingRemindersSection({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Reminder rules</CardTitle>
-              <CardDescription>
-                Configure automatic reminders if forms are not submitted.
-              </CardDescription>
+              <CardTitle>{t("remindersTitle")}</CardTitle>
+              <CardDescription>{t("remindersHelp")}</CardDescription>
             </div>
             <Button onClick={handleAddReminder} variant="outline" size="sm">
               <Plus className="mr-2 size-4" />
-              Add Reminder
+              {t("addReminder")}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {config.timing.reminderRules.length === 0 ? (
             <p className="text-muted-foreground py-4 text-center text-sm">
-              No reminder rules configured. Add one to send automatic reminders.
+              {t("noReminders")}
             </p>
           ) : (
             config.timing.reminderRules.map((reminder, index) => (
@@ -208,19 +204,22 @@ export function TimingRemindersSection({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">Reminder {index + 1}</Badge>
+                    <Badge variant="outline">
+                      {t("reminderNumber").replace("{n}", String(index + 1))}
+                    </Badge>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => handleRemoveReminder(reminder.id)}
+                    aria-label={t("removeReminder")}
                   >
                     <Trash2 className="size-4" />
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Send Time (hours before check-in)</Label>
+                    <Label>{t("reminderSendTime")}</Label>
                     <Input
                       type="number"
                       min="1"
@@ -233,7 +232,7 @@ export function TimingRemindersSection({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Channel</Label>
+                    <Label>{t("channel")}</Label>
                     <Select
                       value={reminder.channel}
                       onValueChange={(value: DeliveryChannel) =>
@@ -246,7 +245,7 @@ export function TimingRemindersSection({
                       <SelectContent>
                         {config.timing.deliveryChannels.map((channel) => (
                           <SelectItem key={channel} value={channel}>
-                            {DELIVERY_CHANNEL_LABELS[channel]}
+                            {channelLabel(channel)}
                           </SelectItem>
                         ))}
                       </SelectContent>

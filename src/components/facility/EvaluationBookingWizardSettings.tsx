@@ -23,6 +23,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { formatDuration, formatTime } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 import { cn } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -37,35 +40,21 @@ const ALL_DAYS = [
   { key: "sunday", short: "Sun" },
 ] as const;
 
-const PRESET_DURATIONS = [
-  { minutes: 30, label: "30 min" },
-  { minutes: 45, label: "45 min" },
-  { minutes: 60, label: "1 hr" },
-  { minutes: 90, label: "1.5 hr" },
-  { minutes: 120, label: "2 hr" },
-  { minutes: 180, label: "3 hr" },
-  { minutes: 240, label: "4 hr" },
-];
+const PRESET_DURATIONS = [30, 45, 60, 90, 120, 180, 240];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function durLabel(minutes: number): string {
-  const preset = PRESET_DURATIONS.find((d) => d.minutes === minutes);
-  if (preset) return preset.label;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}min`;
-  if (h > 0) return `${h}h`;
-  return `${m}min`;
+/** A duration in the viewer's language — `1h 30m` · `1 h 30`. */
+function durLabel(minutes: number, locale: AppLocale): string {
+  return formatDuration(minutes, locale);
 }
 
-const PRESET_MINUTE_SET = new Set(PRESET_DURATIONS.map((d) => d.minutes));
+const PRESET_MINUTE_SET = new Set(PRESET_DURATIONS);
 
-function fmtTime(t: string): string {
+/** §5q: `2:30 PM` in English, `14 h 30` in French — never a hand-built one. */
+function fmtTime(t: string, locale: AppLocale): string {
   const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+  return formatTime(new Date(2000, 0, 1, h || 0, m || 0), locale);
 }
 
 function timeToMinutes(t: string): number {
@@ -89,6 +78,9 @@ interface TimeWindow {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function EvaluationBookingWizardSettings() {
+  const { locale, section } = useSettingsText();
+  const t = section("evaluations");
+  const dur = (minutes: number) => durLabel(minutes, locale);
   const { evaluation, updateEvaluation } = useSettings();
   const sched = evaluation.schedule;
 
@@ -150,11 +142,11 @@ export function EvaluationBookingWizardSettings() {
   const addCustomDuration = () => {
     const total = customHours * 60 + customMins;
     if (total <= 0) {
-      toast.error("Duration must be greater than 0");
+      toast.error(t("errDurationZero"));
       return;
     }
     if (durationOptions.includes(total)) {
-      toast.error("This duration is already in the list");
+      toast.error(t("errDurationDuplicate"));
       return;
     }
     setDurationOptions((prev) => [...prev, total].sort((a, b) => a - b));
@@ -168,7 +160,7 @@ export function EvaluationBookingWizardSettings() {
       ...prev,
       {
         id: `w-${Date.now()}`,
-        label: "New Window",
+        label: t("newWindow"),
         startTime: "09:00",
         endTime: "17:00",
       },
@@ -230,15 +222,15 @@ export function EvaluationBookingWizardSettings() {
 
   const handleSave = () => {
     if (allowedDays.length === 0) {
-      toast.error("Select at least one available day");
+      toast.error(t("errNoDay"));
       return;
     }
     if (timeWindows.length === 0) {
-      toast.error("Add at least one availability window");
+      toast.error(t("errNoWindow"));
       return;
     }
     if (slotMode === "fixed" && fixedStartTimes.length === 0) {
-      toast.error("Add at least one start time");
+      toast.error(t("errNoStartTime"));
       return;
     }
     updateEvaluation({
@@ -255,7 +247,7 @@ export function EvaluationBookingWizardSettings() {
         capacityPerSlot,
       },
     });
-    toast.success("Booking wizard settings saved");
+    toast.success(t("wizardSaved"));
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -270,12 +262,9 @@ export function EvaluationBookingWizardSettings() {
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-tight text-violet-900">
-              Booking wizard configuration
+              {t("wizardTitle")}
             </h2>
-            <p className="text-sm text-violet-700">
-              Control which days, hours, and session lengths clients see when
-              booking an evaluation
-            </p>
+            <p className="text-sm text-violet-700">{t("wizardIntro")}</p>
           </div>
         </div>
       </div>
@@ -285,13 +274,12 @@ export function EvaluationBookingWizardSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <CalendarDays className="size-4" />
-            Available days
+            {t("availableDays")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4 text-xs">
-            Clients can only book evaluations on the selected days. Unselected
-            days are greyed out in the booking calendar.
+            {t("availableDaysHelp")}
           </p>
           <div className="flex flex-wrap gap-2">
             {ALL_DAYS.map(({ key, short }) => {
@@ -315,7 +303,7 @@ export function EvaluationBookingWizardSettings() {
           </div>
           {allowedDays.length === 0 && (
             <p className="text-destructive mt-2 text-xs">
-              At least one day must be selected.
+              {t("atLeastOneDay")}
             </p>
           )}
         </CardContent>
@@ -326,22 +314,21 @@ export function EvaluationBookingWizardSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Clock className="size-4" />
-            Session lengths
+            {t("sessionLengths")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground text-xs">
-            Select preset durations or define your own. At least one must be
-            enabled.
+            {t("sessionLengthsHelp")}
           </p>
 
           {/* Presets */}
           <div>
             <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
-              Presets
+              {t("presets")}
             </p>
             <div className="flex flex-wrap gap-2">
-              {PRESET_DURATIONS.map(({ minutes, label }) => {
+              {PRESET_DURATIONS.map((minutes) => {
                 const selected = durationOptions.includes(minutes);
                 return (
                   <button
@@ -355,7 +342,7 @@ export function EvaluationBookingWizardSettings() {
                         : "border-border text-muted-foreground hover:border-violet-200",
                     )}
                   >
-                    {label}
+                    {dur(minutes)}
                   </button>
                 );
               })}
@@ -367,7 +354,7 @@ export function EvaluationBookingWizardSettings() {
           {/* Custom durations */}
           <div>
             <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
-              Custom lengths
+              {t("customLengths")}
             </p>
 
             {/* Existing custom chips */}
@@ -378,12 +365,12 @@ export function EvaluationBookingWizardSettings() {
                     key={m}
                     className="flex items-center gap-1.5 rounded-lg border-2 border-violet-500 bg-violet-50 py-1 pr-1.5 pl-3 text-sm font-medium text-violet-700"
                   >
-                    {durLabel(m)}
+                    {dur(m)}
                     <button
                       type="button"
                       onClick={() => toggleDuration(m)}
                       className="flex size-4 items-center justify-center rounded-full text-violet-400 transition-colors hover:bg-violet-200 hover:text-violet-700"
-                      aria-label={`Remove ${durLabel(m)}`}
+                      aria-label={t("removeNamed").replace("{name}", dur(m))}
                     >
                       <Trash2 className="size-2.5" />
                     </button>
@@ -395,7 +382,7 @@ export function EvaluationBookingWizardSettings() {
             {/* Add custom input */}
             <div className="flex items-end gap-2">
               <div>
-                <Label className="text-xs">Hours</Label>
+                <Label className="text-xs">{t("hours")}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -411,7 +398,7 @@ export function EvaluationBookingWizardSettings() {
                 />
               </div>
               <div>
-                <Label className="text-xs">Minutes</Label>
+                <Label className="text-xs">{t("minutes")}</Label>
                 <Select
                   value={String(customMins)}
                   onValueChange={(v) => setCustomMins(Number(v))}
@@ -422,7 +409,7 @@ export function EvaluationBookingWizardSettings() {
                   <SelectContent>
                     {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
                       <SelectItem key={m} value={String(m)}>
-                        {String(m).padStart(2, "0")} min
+                        {String(m).padStart(2, "0")} {t("minShort")}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -437,7 +424,7 @@ export function EvaluationBookingWizardSettings() {
                 disabled={customHours === 0 && customMins === 0}
               >
                 <Plus className="size-3" />
-                Add
+                {t("add")}
               </Button>
             </div>
             <p className="text-muted-foreground mt-1 text-[10px]">
@@ -450,7 +437,7 @@ export function EvaluationBookingWizardSettings() {
             <>
               <Separator />
               <div>
-                <Label className="text-xs">Default selection</Label>
+                <Label className="text-xs">{t("defaultSelection")}</Label>
                 <Select
                   value={String(defaultDuration)}
                   onValueChange={(v) => setDefaultDuration(Number(v))}
@@ -461,13 +448,13 @@ export function EvaluationBookingWizardSettings() {
                   <SelectContent>
                     {durationOptions.map((m) => (
                       <SelectItem key={m} value={String(m)}>
-                        {durLabel(m)}
+                        {dur(m)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-muted-foreground mt-1 text-[10px]">
-                  Pre-selected when the client opens the wizard
+                  {t("defaultSelectionHelp")}
                 </p>
               </div>
             </>
@@ -480,13 +467,12 @@ export function EvaluationBookingWizardSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Clock className="size-4" />
-            Availability windows
+            {t("availabilityWindows")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-muted-foreground text-xs">
-            Define the time ranges during which evaluations can be scheduled.
-            Slots are only generated within these windows.
+            {t("availabilityWindowsHelp")}
           </p>
 
           <div className="space-y-2">
@@ -498,11 +484,11 @@ export function EvaluationBookingWizardSettings() {
                 <Input
                   value={w.label}
                   onChange={(e) => patchWindow(w.id, "label", e.target.value)}
-                  placeholder="Label"
+                  placeholder={t("windowLabel")}
                   className="h-8 w-28 text-sm"
                 />
                 <span className="text-muted-foreground shrink-0 text-xs">
-                  from
+                  {t("from")}
                 </span>
                 <Input
                   type="time"
@@ -513,7 +499,7 @@ export function EvaluationBookingWizardSettings() {
                   className="h-8 w-28 text-sm"
                 />
                 <span className="text-muted-foreground shrink-0 text-xs">
-                  to
+                  {t("to")}
                 </span>
                 <Input
                   type="time"
@@ -541,7 +527,7 @@ export function EvaluationBookingWizardSettings() {
             onClick={addWindow}
           >
             <Plus className="size-3" />
-            Add window
+            {t("addWindow")}
           </Button>
         </CardContent>
       </Card>
@@ -551,13 +537,12 @@ export function EvaluationBookingWizardSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <LayoutGrid className="size-4" />
-            Slot configuration
+            {t("slotConfiguration")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground text-xs">
-            Choose how evaluation time slots are generated and presented in the
-            booking wizard.
+            {t("slotConfigurationHelp")}
           </p>
 
           {/* Slot mode */}
@@ -566,12 +551,12 @@ export function EvaluationBookingWizardSettings() {
               [
                 {
                   value: "fixed" as const,
-                  label: "Fixed start times",
+                  label: t("fixedStartTimes"),
                   desc: "Evaluations begin only at the specific times you define below.",
                 },
                 {
                   value: "window" as const,
-                  label: "Rolling window",
+                  label: t("rollingWindow"),
                   desc: "Slots are auto-generated across each window, spaced by the session duration plus buffer.",
                 },
               ] as const
@@ -605,10 +590,9 @@ export function EvaluationBookingWizardSettings() {
             <>
               <Separator />
               <div>
-                <Label className="text-xs">Start times</Label>
+                <Label className="text-xs">{t("startTimes")}</Label>
                 <p className="text-muted-foreground mb-2 text-[10px]">
-                  Only times that fall within an availability window will appear
-                  in the wizard.
+                  {t("startTimesHelp")}
                 </p>
                 <div className="space-y-1.5">
                   {fixedStartTimes.map((t, i) => (
@@ -638,7 +622,7 @@ export function EvaluationBookingWizardSettings() {
                   onClick={addFixedTime}
                 >
                   <Plus className="size-3" />
-                  Add time
+                  {t("addTime")}
                 </Button>
               </div>
             </>
@@ -650,15 +634,15 @@ export function EvaluationBookingWizardSettings() {
           <div className="space-y-3">
             <div>
               <p className="text-xs font-semibold text-slate-700">
-                Slot Constraints
+                {t("slotConstraints")}
               </p>
               <p className="text-muted-foreground text-[10px]">
-                Scheduling limits applied to every generated slot.
+                {t("slotConstraintsHelp")}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs">Buffer between sessions (min)</Label>
+                <Label className="text-xs">{t("bufferBetween")}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -671,11 +655,11 @@ export function EvaluationBookingWizardSettings() {
                   className="mt-1 h-9 text-sm"
                 />
                 <p className="text-muted-foreground mt-0.5 text-[10px]">
-                  Gap between back-to-back evaluations
+                  {t("bufferHelp")}
                 </p>
               </div>
               <div>
-                <Label className="text-xs">Pets per slot</Label>
+                <Label className="text-xs">{t("petsPerSlot")}</Label>
                 <Input
                   type="number"
                   min={1}
@@ -687,7 +671,7 @@ export function EvaluationBookingWizardSettings() {
                   className="mt-1 h-9 text-sm"
                 />
                 <p className="text-muted-foreground mt-0.5 text-[10px]">
-                  Max concurrent evaluations at the same start time
+                  {t("petsPerSlotHelp")}
                 </p>
               </div>
             </div>
@@ -700,19 +684,18 @@ export function EvaluationBookingWizardSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Eye className="size-4" />
-            Booking wizard preview
+            {t("wizardPreview")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground text-xs">
-            Based on your configuration, here&#39;s what clients will see when
-            booking an evaluation.
+            {t("wizardPreviewHelp")}
           </p>
 
           {/* Days strip */}
           <div>
             <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
-              Available days
+              {t("availableDays")}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {ALL_DAYS.map(({ key, short }) => {
@@ -739,14 +722,11 @@ export function EvaluationBookingWizardSettings() {
           {/* Slot grid */}
           <div>
             <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
-              Time slots &mdash; {durLabel(defaultDuration)} session
+              {t("timeSlotsFor").replace("{duration}", dur(defaultDuration))}
             </p>
             {previewSlots.length === 0 ? (
               <div className="rounded-xl border border-dashed px-4 py-6 text-center">
-                <p className="text-muted-foreground text-xs">
-                  No slots generated. Check that your start times fall within an
-                  availability window.
-                </p>
+                <p className="text-muted-foreground text-xs">{t("noSlots")}</p>
               </div>
             ) : (
               <div className="grid grid-cols-4 gap-1.5">
@@ -756,10 +736,10 @@ export function EvaluationBookingWizardSettings() {
                     className="flex flex-col items-center rounded-xl border-2 border-violet-100 bg-violet-50 px-2 py-2.5"
                   >
                     <span className="text-xs font-semibold text-violet-700 tabular-nums">
-                      {fmtTime(slot.startTime)}
+                      {fmtTime(slot.startTime, locale)}
                     </span>
                     <span className="text-[10px] text-violet-400">
-                      {fmtTime(slot.endTime)}
+                      {fmtTime(slot.endTime, locale)}
                     </span>
                   </div>
                 ))}
@@ -773,7 +753,7 @@ export function EvaluationBookingWizardSettings() {
               <Separator />
               <div>
                 <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wide uppercase">
-                  Duration options shown to client
+                  {t("durationOptionsShown")}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {durationOptions.map((m) => (
@@ -786,7 +766,7 @@ export function EvaluationBookingWizardSettings() {
                           : "border-border text-muted-foreground",
                       )}
                     >
-                      {durLabel(m)}
+                      {dur(m)}
                       {m === defaultDuration && (
                         <span className="text-violet-400"> (default)</span>
                       )}
@@ -801,7 +781,7 @@ export function EvaluationBookingWizardSettings() {
 
       <div className="flex justify-end pt-2">
         <Button onClick={handleSave} className="gap-1.5 px-6">
-          Save Booking Wizard Settings
+          {t("wizardSave")}
         </Button>
       </div>
     </div>

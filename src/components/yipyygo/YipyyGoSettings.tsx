@@ -23,6 +23,7 @@ import type { YipyyGoSettings as YipyyGoSettingsValue } from "@/lib/settings/yip
 import { useSaveFacilitySetting } from "@/lib/api/facility-settings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 interface YipyyGoSettingsProps {
   /**
@@ -37,6 +38,7 @@ interface YipyyGoSettingsProps {
 }
 
 export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
+  const t = useSettingsText().section("yipyygo");
   const saveSetting = useSaveFacilitySetting();
   const [localConfig, setLocalConfig] =
     useState<YipyyGoSettingsValue>(initialConfig);
@@ -63,14 +65,10 @@ export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
           // The BASELINE moves, not the draft — so a field edited while the
           // request was in flight stays edited instead of being reverted.
           setSavedConfig(localConfig);
-          toast.success("Yipyy Go settings saved");
+          toast.success(t("savedToast"));
         },
         onError: (error) =>
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Those Yipyy Go settings were not saved.",
-          ),
+          toast.error(error instanceof Error ? error.message : t("saveFailed")),
       },
     );
   };
@@ -83,13 +81,9 @@ export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                Yipyy Express check-in forms
+                {t("title")}
               </CardTitle>
-              <CardDescription>
-                Configure pre-check-in forms that customers complete before
-                arrival. Streamline check-in and gather important information in
-                advance.
-              </CardDescription>
+              <CardDescription>{t("intro")}</CardDescription>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
@@ -99,13 +93,13 @@ export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
                   onCheckedChange={handleEnableToggle}
                 />
                 <Label htmlFor="yipyygo-enabled" className="cursor-pointer">
-                  {localConfig.enabled ? "Enabled" : "Disabled"}
+                  {t(localConfig.enabled ? "enabled" : "disabled")}
                 </Label>
               </div>
               {hasChanges && (
                 <Button onClick={handleSave} disabled={isSaving}>
                   <Save className="mr-2 size-4" />
-                  {isSaving ? "Saving…" : "Save Yipyy Go settings"}
+                  {t(isSaving ? "saving" : "save")}
                 </Button>
               )}
             </div>
@@ -115,10 +109,7 @@ export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
           <CardContent>
             <Alert>
               <AlertCircle className="size-4" />
-              <AlertDescription>
-                Yipyy Go is off. Turn it on to ask customers for a pre-arrival
-                form on the services you choose.
-              </AlertDescription>
+              <AlertDescription>{t("offNotice")}</AlertDescription>
             </Alert>
           </CardContent>
         )}
@@ -130,24 +121,20 @@ export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
           <Alert>
             <Info className="size-4" />
             <AlertDescription>
-              <strong>Mandatory vs Optional:</strong> Mandatory forms must be
-              completed before check-in (staff can override if needed). Optional
-              forms are recommended but don&apos;t block check-in.
+              <strong>{t("mandatoryVsOptionalLead")}</strong>{" "}
+              {t("mandatoryVsOptional")}
             </AlertDescription>
           </Alert>
 
           {/* Add-ons approval & staff notifications */}
           <Card>
             <CardHeader>
-              <CardTitle>Add-ons & staff notifications</CardTitle>
-              <CardDescription>
-                How add-ons from Express Check-in forms are applied and when to
-                notify staff.
-              </CardDescription>
+              <CardTitle>{t("addOnsTitle")}</CardTitle>
+              <CardDescription>{t("addOnsHelp")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <Label>Add-ons approval</Label>
+                <Label>{t("addOnsApproval")}</Label>
                 <RadioGroup
                   value={localConfig.addOnsApproval ?? "staff_approval"}
                   onValueChange={(v) =>
@@ -163,8 +150,7 @@ export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
                       htmlFor="addons-auto"
                       className="cursor-pointer font-normal"
                     >
-                      Auto-approve add-ons – add directly to invoice when
-                      customer submits
+                      {t("addOnsAuto")}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -173,8 +159,7 @@ export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
                       htmlFor="addons-staff"
                       className="cursor-pointer font-normal"
                     >
-                      Require staff approval – add as &quot;pending add-on&quot;
-                      until staff approves
+                      {t("addOnsStaff")}
                     </Label>
                   </div>
                 </RadioGroup>
@@ -185,11 +170,10 @@ export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
                     htmlFor="notify-staff-email"
                     className="cursor-pointer"
                   >
-                    Notify staff by email on submission
+                    {t("notifyStaffEmail")}
                   </Label>
                   <p className="text-muted-foreground mt-1 text-sm">
-                    In-app notification is always sent when a customer submits a
-                    form.
+                    {t("notifyStaffHelp")}
                   </p>
                 </div>
                 <Switch
@@ -206,10 +190,10 @@ export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
           {/* Configuration Tabs */}
           <Tabs defaultValue="enablement" className="space-y-4">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="enablement">Enablement & Scope</TabsTrigger>
-              <TabsTrigger value="timing">Timing & Reminders</TabsTrigger>
-              <TabsTrigger value="template">Form Template</TabsTrigger>
-              <TabsTrigger value="fees">Fees & Messaging</TabsTrigger>
+              <TabsTrigger value="enablement">{t("tabEnablement")}</TabsTrigger>
+              <TabsTrigger value="timing">{t("tabTiming")}</TabsTrigger>
+              <TabsTrigger value="template">{t("tabTemplate")}</TabsTrigger>
+              <TabsTrigger value="fees">{t("tabFees")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="enablement" className="space-y-4">
@@ -247,11 +231,11 @@ export function YipyyGoSettings({ initialConfig }: YipyyGoSettingsProps) {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <p className="text-muted-foreground text-sm">
-                    You have unsaved changes
+                    {t("unsavedChanges")}
                   </p>
                   <Button onClick={handleSave} disabled={isSaving} size="lg">
                     <Save className="mr-2 size-4" />
-                    {isSaving ? "Saving…" : "Save Yipyy Go settings"}
+                    {t(isSaving ? "saving" : "save")}
                   </Button>
                 </div>
               </CardContent>

@@ -16,10 +16,10 @@ import { cn } from "@/lib/utils";
 import { FormTemplateSection } from "./FormTemplateSection";
 import type { ServiceType, FormTemplateConfig } from "@/data/yipyygo-config";
 import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
-import {
-  SERVICE_TYPE_LABELS,
-  getServiceTemplateKey,
-} from "@/data/yipyygo-config";
+import { getServiceTemplateKey } from "@/data/yipyygo-config";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { InterpolatedText } from "@/components/ui/interpolated-text";
+import { useServiceTypeLabel } from "./use-yipyygo-labels";
 import {
   defaultCustomServiceModules,
   isExpressCheckInEnabled,
@@ -50,9 +50,17 @@ export function PerServiceFormTemplateSection({
   config,
   onConfigChange,
 }: PerServiceFormTemplateSectionProps) {
-  const tabs = useMemo<ServiceTab[]>(() => {
+  const t = useSettingsText().section("yipyygo");
+  const serviceLabel = useServiceTypeLabel();
+
+  // Plain, not useMemo: the body now calls the translator and the service
+  // label resolver, which are new function identities on every render, so the
+  // React Compiler could not preserve the memo and refused to compile the
+  // file at all. The list is a handful of strings — deriving it is cheaper
+  // than a dependency array that has to lie to stay stable.
+  const tabs = ((): ServiceTab[] => {
     const result: ServiceTab[] = [
-      { key: DEFAULT_KEY, label: "All services (default)" },
+      { key: DEFAULT_KEY, label: t("allServicesDefault") },
     ];
     const standardOrder: ServiceType[] = [
       "daycare",
@@ -64,7 +72,7 @@ export function PerServiceFormTemplateSection({
     for (const st of standardOrder) {
       const sc = config.serviceConfigs.find((c) => c.serviceType === st);
       if (!sc) continue;
-      result.push({ key: st, label: SERVICE_TYPE_LABELS[st] });
+      result.push({ key: st, label: serviceLabel(st) });
     }
     // Custom services keyed by name to avoid the bare "custom" collision.
     for (const sc of config.serviceConfigs) {
@@ -98,7 +106,7 @@ export function PerServiceFormTemplateSection({
     }
 
     return result;
-  }, [config.serviceConfigs]);
+  })();
 
   const [activeKey, setActiveKey] = useState<string>(DEFAULT_KEY);
 
@@ -150,25 +158,23 @@ export function PerServiceFormTemplateSection({
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Edit form for</CardTitle>
-          <CardDescription>
-            Pick a service to customize its Express Check-in form. Services
-            without a custom form inherit from “All services (default)”.
-          </CardDescription>
+          <CardTitle className="text-base">{t("editFormFor")}</CardTitle>
+          <CardDescription>{t("editFormHelp")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-1.5">
-            {tabs.map((t) => {
-              const isActive = activeKey === t.key;
+            {/* `tab`, not `t` — the translator is called inside this map. */}
+            {tabs.map((tab) => {
+              const isActive = activeKey === tab.key;
               const isCustomized =
-                t.key !== DEFAULT_KEY &&
+                tab.key !== DEFAULT_KEY &&
                 !!config.formTemplates &&
-                t.key in config.formTemplates;
+                tab.key in config.formTemplates;
               return (
                 <button
-                  key={t.key}
+                  key={tab.key}
                   type="button"
-                  onClick={() => setActiveKey(t.key)}
+                  onClick={() => setActiveKey(tab.key)}
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
                     isActive
@@ -176,7 +182,7 @@ export function PerServiceFormTemplateSection({
                       : "border-border bg-card hover:bg-muted",
                   )}
                 >
-                  {t.label}
+                  {tab.label}
                   {isCustomized && (
                     <Badge
                       variant="secondary"
@@ -186,7 +192,7 @@ export function PerServiceFormTemplateSection({
                           "bg-primary-foreground/20 text-primary-foreground",
                       )}
                     >
-                      Custom
+                      {t("customBadge")}
                     </Badge>
                   )}
                 </button>
@@ -200,7 +206,12 @@ export function PerServiceFormTemplateSection({
                 <>
                   <Info className="text-muted-foreground size-4" />
                   <span className="text-sm">
-                    Editing the custom form for <strong>{activeLabel}</strong>.
+                    <InterpolatedText
+                      template={t("editingCustomFor")}
+                      placeholder="{service}"
+                    >
+                      <strong>{activeLabel}</strong>
+                    </InterpolatedText>
                   </span>
                   <Button
                     variant="outline"
@@ -209,15 +220,19 @@ export function PerServiceFormTemplateSection({
                     className="ml-auto"
                   >
                     <RotateCcw className="mr-1.5 size-3.5" />
-                    Reset to default
+                    {t("resetToDefault")}
                   </Button>
                 </>
               ) : (
                 <>
                   <Info className="text-muted-foreground size-4" />
                   <span className="text-muted-foreground text-sm">
-                    Currently inheriting the default form. Any edit here will
-                    create a custom form for <strong>{activeLabel}</strong>.
+                    <InterpolatedText
+                      template={t("inheritingDefault")}
+                      placeholder="{service}"
+                    >
+                      <strong>{activeLabel}</strong>
+                    </InterpolatedText>
                   </span>
                 </>
               )}
@@ -227,11 +242,7 @@ export function PerServiceFormTemplateSection({
           {isDefault && (
             <Alert>
               <Info className="size-4" />
-              <AlertDescription>
-                Changes here apply to every service that doesn’t have its own
-                custom form. Switch to a service tab above to override a single
-                service.
-              </AlertDescription>
+              <AlertDescription>{t("defaultAppliesTo")}</AlertDescription>
             </Alert>
           )}
         </CardContent>

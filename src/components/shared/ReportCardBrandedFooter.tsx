@@ -121,9 +121,14 @@ function SocialLinks({
   social: SocialMedia;
   style: "icons" | "buttons" | "text_links";
 }) {
+  // §5q: a name never passes through the locale layer, and these three are
+  // the same word in every language they ship in.
   const links = [
+    // french-ok: a product name
     { url: social.facebook, icon: Facebook, label: "Facebook" },
+    // french-ok: a product name
     { url: social.instagram, icon: Instagram, label: "Instagram" },
+    // french-ok: a product name
     { url: social.twitter, icon: Twitter, label: "Twitter" },
   ].filter((l) => l.url);
 

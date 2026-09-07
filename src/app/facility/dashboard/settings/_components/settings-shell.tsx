@@ -152,8 +152,16 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
             </Link>
           )}
           {/* Nothing while the redirect above is in flight: rendering the
-              section would flash a screen this viewer may not open. */}
-          {allowed ? children : null}
+              section would flash a screen this viewer may not open.
+
+              `data-slot` so a spec can measure the SECTION rather than the
+              page: settings-french.spec.ts asserts the body is not empty, and
+              without a handle its selector matched the whole shell — which is
+              full of text from the rail even when the section renders nothing
+              at all. That is exactly the case it was added to catch. */}
+          <div data-slot="settings-section" className="space-y-6">
+            {allowed ? children : null}
+          </div>
         </div>
       </div>
     </div>

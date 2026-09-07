@@ -9,6 +9,7 @@ import {
   reportCardPushBody,
   reportCardEmailSubject,
 } from "@/lib/report-cards/report-notifications";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 /** Email teaser (Table 63): 3 thumbnails + AI excerpt + "Read Full Report" CTA. */
 export function ReportCardEmailTeaser({
@@ -16,6 +17,7 @@ export function ReportCardEmailTeaser({
 }: {
   data: ReportCardNotificationData;
 }) {
+  const t = useSettingsText().section("report-card-template");
   const thumbs = data.photos.slice(0, 3);
   return (
     <div className="overflow-hidden rounded-xl border bg-white text-slate-800 shadow-sm">
@@ -27,8 +29,11 @@ export function ReportCardEmailTeaser({
       </div>
       <div className="space-y-3 p-4">
         <p className="text-sm font-semibold">
-          {data.facilityName} sent {data.petName}&apos;s {data.serviceType}{" "}
-          report {data.moodEmoji}
+          {t("emailTeaserLine")
+            .replace("{facility}", data.facilityName)
+            .replace("{pet}", data.petName)
+            .replace("{service}", data.serviceType)}{" "}
+          {data.moodEmoji}
         </p>
 
         {/* 3 thumbnail photos */}
@@ -65,11 +70,9 @@ export function ReportCardEmailTeaser({
           href={data.portalUrl}
           className="inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white"
         >
-          Read {data.petName}&apos;s Full Report →
+          {t("readFullReport").replace("{pet}", data.petName)} →
         </a>
-        <p className="text-[11px] text-slate-400">
-          This is a preview — the full report opens securely in your portal.
-        </p>
+        <p className="text-[11px] text-slate-400">{t("previewNote")}</p>
       </div>
     </div>
   );
@@ -81,11 +84,13 @@ export function ReportCardSmsPreview({
 }: {
   data: ReportCardNotificationData;
 }) {
+  const t = useSettingsText().section("report-card-template");
+
   return (
     <div className="rounded-xl border bg-white p-4 shadow-sm">
       <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
         <Smartphone className="size-3.5" />
-        SMS
+        {t("channelSms")}
       </div>
       <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-slate-100 px-3 py-2 text-sm text-slate-800">
         {reportCardSmsBody(data)}
@@ -100,11 +105,13 @@ export function ReportCardPushPreview({
 }: {
   data: ReportCardNotificationData;
 }) {
+  const t = useSettingsText().section("report-card-template");
+
   return (
     <div className="rounded-xl border bg-white p-4 shadow-sm">
       <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
         <Bell className="size-3.5" />
-        Push
+        {t("previewPush")}
       </div>
       <a
         href={data.portalUrl}

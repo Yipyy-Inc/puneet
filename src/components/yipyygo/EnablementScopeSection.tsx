@@ -25,11 +25,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ServiceYipyyGoConfig, ServiceType } from "@/data/yipyygo-config";
 import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
-import {
-  SERVICE_TYPE_LABELS,
-  REQUIREMENT_LABELS,
-  type YipyyGoRequirement,
-} from "@/data/yipyygo-config";
+import { type YipyyGoRequirement } from "@/data/yipyygo-config";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useServiceTypeLabel, useRequirementLabel } from "./use-yipyygo-labels";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { isExpressCheckInEnabled } from "@/data/custom-services";
 
@@ -42,6 +40,9 @@ export function EnablementScopeSection({
   config,
   onConfigChange,
 }: EnablementScopeSectionProps) {
+  const t = useSettingsText().section("yipyygo");
+  const serviceLabel = useServiceTypeLabel();
+  const requirementLabel = useRequirementLabel();
   const handleServiceToggle = (serviceType: ServiceType, enabled: boolean) => {
     const updated = config.serviceConfigs.map((sc) =>
       sc.serviceType === serviceType ? { ...sc, enabled } : sc,
@@ -146,16 +147,15 @@ export function EnablementScopeSection({
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Service scope</CardTitle>
-          <CardDescription>
-            Select which services require Yipyy Express Check-in forms and
-            whether they are mandatory or optional.
-          </CardDescription>
+          <CardTitle>{t("scopeTitle")}</CardTitle>
+          <CardDescription>{t("scopeHelp")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Standard Services */}
           <div className="space-y-4">
-            <Label className="text-base font-semibold">Standard Services</Label>
+            <Label className="text-base font-semibold">
+              {t("standardServices")}
+            </Label>
             {standardServices.map((serviceType) => {
               const serviceConfig = config.serviceConfigs.find(
                 (sc) => sc.serviceType === serviceType,
@@ -176,7 +176,7 @@ export function EnablementScopeSection({
                     />
                     <div className="flex-1">
                       <Label className="cursor-pointer text-base font-medium">
-                        {SERVICE_TYPE_LABELS[serviceType]}
+                        {serviceLabel(serviceType)}
                       </Label>
                       {serviceConfig.enabled && (
                         <div className="mt-2 flex items-center gap-3">
@@ -191,10 +191,10 @@ export function EnablementScopeSection({
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="mandatory">
-                                {REQUIREMENT_LABELS.mandatory}
+                                {requirementLabel("mandatory")}
                               </SelectItem>
                               <SelectItem value="optional">
-                                {REQUIREMENT_LABELS.optional}
+                                {requirementLabel("optional")}
                               </SelectItem>
                             </SelectContent>
                           </Select>
@@ -205,7 +205,7 @@ export function EnablementScopeSection({
                                 : "secondary"
                             }
                           >
-                            {REQUIREMENT_LABELS[serviceConfig.requirement]}
+                            {requirementLabel(serviceConfig.requirement)}
                           </Badge>
                         </div>
                       )}
@@ -222,7 +222,7 @@ export function EnablementScopeSection({
               <Separator />
               <div className="flex items-center justify-between">
                 <Label className="text-base font-semibold">
-                  Custom Services
+                  {t("customServices")}
                 </Label>
               </div>
               {customServices.map((serviceConfig, _index) => {
@@ -244,7 +244,7 @@ export function EnablementScopeSection({
                       }}
                     />
                     <Input
-                      placeholder="Custom service name"
+                      placeholder={t("customServiceName")}
                       value={serviceConfig.customServiceName || ""}
                       onChange={(e) =>
                         handleCustomServiceNameChange(
@@ -271,10 +271,10 @@ export function EnablementScopeSection({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="mandatory">
-                            {REQUIREMENT_LABELS.mandatory}
+                            {requirementLabel("mandatory")}
                           </SelectItem>
                           <SelectItem value="optional">
-                            {REQUIREMENT_LABELS.optional}
+                            {requirementLabel("optional")}
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -283,6 +283,7 @@ export function EnablementScopeSection({
                       variant="ghost"
                       size="icon"
                       onClick={() => handleRemoveCustomService(actualIndex)}
+                      aria-label={t("removeCustomService")}
                     >
                       <Trash2 className="size-4" />
                     </Button>
@@ -299,18 +300,16 @@ export function EnablementScopeSection({
             className="w-full"
           >
             <Plus className="mr-2 size-4" />
-            Add Custom Service
+            {t("addCustomService")}
           </Button>
 
           {/* Info Alert */}
           <Alert>
             <Info className="size-4" />
             <AlertDescription>
-              <strong>Mandatory:</strong> Booking cannot be checked-in without
-              completion (staff can override if needed).
+              <strong>{t("mandatoryLead")}</strong> {t("mandatoryBody")}
               <br />
-              <strong>Optional:</strong> Recommended, doesn&apos;t block
-              check-in.
+              <strong>{t("optionalLead")}</strong> {t("optionalBody")}
             </AlertDescription>
           </Alert>
         </CardContent>

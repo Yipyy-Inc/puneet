@@ -603,15 +603,7 @@ function primitivesSurface(): Offender[] {
  * on chrome that is on screen for every route in the product.
  */
 const BASELINE: Record<string, Set<string>> = {
-  settings: new Set([
-    "addons",
-    "evaluations",
-    "pricing-rules",
-    "report-card-template",
-    "roles-permissions",
-    "training",
-    "yipyygo",
-  ]),
+  settings: new Set(["addons", "pricing-rules", "training"]),
   "shell:facility": new Set<string>(),
   "shell:customer": new Set<string>(),
   "shell:employee": new Set<string>(),
