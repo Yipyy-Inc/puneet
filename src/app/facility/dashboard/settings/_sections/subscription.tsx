@@ -9,22 +9,35 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { subscription } from "@/data/settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useAppLocale } from "@/hooks/use-app-locale";
 
 export function SubscriptionSection() {
+  const t = useSettingsText().section("subscription");
+  const locale = useAppLocale();
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
   const { addons, updateAddons } = useSettings();
   return (
     <div className="space-y-6">
       {/* Current Plan */}
       <Card>
         <CardHeader>
-          <CardTitle>Current subscription</CardTitle>
+          <CardTitle>{t("current")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-start justify-between rounded-lg bg-linear-to-br from-blue-50 to-purple-50 p-6">
             <div>
               <div className="text-2xl font-bold">{subscription.planName}</div>
-              <div className="text-muted-foreground mt-1 capitalize">
-                {subscription.billingCycle} billing
+              <div className="text-ink-tertiary mt-1">
+                {t(
+                  subscription.billingCycle === "monthly"
+                    ? "billedMonthly"
+                    : "billedYearly",
+                )}
               </div>
               <div className="mt-4">
                 <Badge
@@ -39,12 +52,23 @@ export function SubscriptionSection() {
             </div>
             <div className="text-right">
               <div className="text-4xl font-bold">${subscription.price}</div>
-              <div className="text-muted-foreground text-sm">
-                per {subscription.billingCycle === "monthly" ? "month" : "year"}
+              <div className="text-ink-tertiary text-[14.5px]">
+                {t(
+                  subscription.billingCycle === "monthly"
+                    ? "perMonth"
+                    : "perYear",
+                )}
               </div>
-              <div className="text-muted-foreground mt-2 text-xs">
-                Next billing:{" "}
-                {new Date(subscription.nextBillingDate).toLocaleDateString()}
+              {/* §6 rule 8: `toLocaleDateString()` with no options renders
+                  a numeric MM/DD/YYYY, which Canada reads three ways — and
+                  with no locale it followed the browser rather than the
+                  viewer's choice. Long form, in their language. */}
+              <div className="text-ink-tertiary mt-2 text-[13.5px]">
+                {fill("nextBilling", {
+                  date: new Intl.DateTimeFormat(locale, {
+                    dateStyle: "long",
+                  }).format(new Date(subscription.nextBillingDate)),
+                })}
               </div>
             </div>
           </div>
@@ -55,11 +79,13 @@ export function SubscriptionSection() {
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
               <Link href="/facility/account/subscription/change-plan">
-                Change plan
+                {t("changePlan")}
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/facility/account/subscription">Billing history</Link>
+              <Link href="/facility/account/subscription">
+                {t("billingHistory")}
+              </Link>
             </Button>
           </div>
         </CardContent>
@@ -68,9 +94,9 @@ export function SubscriptionSection() {
       {/* Module Add-ons */}
       <Card>
         <CardHeader>
-          <CardTitle>Module add-ons</CardTitle>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Enable additional modules to extend functionality
+          <CardTitle>{t("moduleAddOns")}</CardTitle>
+          <p className="text-ink-tertiary mt-1 text-[14.5px]">
+            {t("moduleAddOnsHelp")}
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -81,18 +107,24 @@ export function SubscriptionSection() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{addon.name}</span>
                     {addon.isIncludedInPlan && (
-                      <Badge variant="default">Included in Plan</Badge>
+                      <Badge variant="default">{t("includedInPlan")}</Badge>
                     )}
                     {addon.isEnabled && !addon.isIncludedInPlan && (
-                      <Badge variant="secondary">Active Add-on</Badge>
+                      <Badge variant="secondary">{t("activeAddOn")}</Badge>
                     )}
                   </div>
                   <div className="text-muted-foreground mt-1 text-sm">
                     {addon.description}
                   </div>
                   {!addon.isIncludedInPlan && (
-                    <div className="mt-2 text-sm font-medium">
-                      ${addon.monthlyPrice}/month
+                    <div className="mt-2 text-[14.5px] font-medium">
+                      {/* The amount itself still comes from `formatCurrency`'s
+                          en-US / USD pair, which is on the hardcoded-locale
+                          ratchet and is not this change's to move. Only the
+                          sentence around it is translated. */}
+                      {fill("pricePerMonth", {
+                        amount: `$${addon.monthlyPrice}`,
+                      })}
                     </div>
                   )}
                 </div>

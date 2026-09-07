@@ -13,6 +13,7 @@ import { useSettings } from "@/hooks/use-settings";
 import type { ModuleConfig } from "@/types/facility";
 import { BUILTIN_SERVICE_COLORS } from "@/lib/operations-calendar";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 type BuiltInService = "Boarding" | "Daycare" | "Grooming" | "Training";
 
@@ -21,6 +22,7 @@ interface ServiceColorCardProps {
 }
 
 export function ServiceColorCard({ service }: ServiceColorCardProps) {
+  const t = useSettingsText().section("service-modules");
   const {
     daycare,
     boarding,
@@ -56,21 +58,18 @@ export function ServiceColorCard({ service }: ServiceColorCardProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Calendar color</CardTitle>
-            <CardDescription>
-              Used on the operations calendar and badges when color mode is set
-              to &ldquo;Service Type&rdquo;.
-            </CardDescription>
+            <CardTitle>{t("calendarColour")}</CardTitle>
+            <CardDescription>{t("calendarColourHelp")}</CardDescription>
           </div>
           {hasOverride && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => update({ ...config, color: defaultColor })}
-              className="h-8 gap-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-700"
+              className="text-ink-tertiary hover:text-ink-secondary gap-1.5 rounded-lg text-[13.5px]"
             >
               <RotateCcw className="size-3" />
-              Reset
+              {t("reset")}
             </Button>
           )}
         </div>
@@ -79,7 +78,10 @@ export function ServiceColorCard({ service }: ServiceColorCardProps) {
         <RateColorPicker
           value={currentColor}
           onChange={(hex) => update({ ...config, color: hex })}
-          label={`${service} Color`}
+          // Was `${service} Color` — a service name concatenated with an
+          // English word. The card's own title already says which service this
+          // is, so the field only has to name itself.
+          label={t("colour")}
         />
       </CardContent>
     </Card>

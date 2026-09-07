@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAppLocale } from "@/hooks/use-app-locale";
 import { auditLogQueries, type AuditLogEntry } from "@/lib/api/audit-log";
 import { downloadReportCsv } from "@/lib/report-export";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // THE AUDIT TRAIL — THE REAL ONE.
@@ -47,6 +48,7 @@ function changeLines(entry: AuditLogEntry): string {
 }
 
 export function AuditSection() {
+  const t = useSettingsText().section("audit");
   // The viewer's own locale, never a literal (§5q). French time is `14 h 30`,
   // and `Intl` is the only thing that knows that.
   const locale = useAppLocale();
@@ -109,9 +111,7 @@ export function AuditSection() {
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Every change to this facility&rsquo;s records, and who made it.
-            </p>
+            <p className="text-ink-tertiary mt-1 text-[14.5px]">{t("intro")}</p>
           </div>
           <Button
             variant="outline"
@@ -119,7 +119,7 @@ export function AuditSection() {
             disabled={isPending || !data?.length}
           >
             <Download className="mr-2 size-4" />
-            Export log
+            {t("exportLog")}
           </Button>
         </div>
       </CardHeader>
@@ -128,9 +128,7 @@ export function AuditSection() {
           <Skeleton className="h-64 w-full rounded-lg" />
         ) : isError ? (
           <p className="text-destructive text-sm">
-            {error instanceof Error
-              ? error.message
-              : "Could not read the audit trail."}
+            {error instanceof Error ? error.message : t("loadFailed")}
           </p>
         ) : (
           <DataTable

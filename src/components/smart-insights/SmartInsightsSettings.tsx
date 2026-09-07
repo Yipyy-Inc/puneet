@@ -1,5 +1,7 @@
 "use client";
 
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { insightMutations, insightQueries } from "@/lib/api/smart-insights";
 import {
   DEFAULT_INSIGHT_SETTINGS,
-  INSIGHT_CATEGORY_LABELS,
   type InsightCategory,
   type InsightSettings,
 } from "@/types/smart-insights";
@@ -19,88 +20,89 @@ const FACILITY_ID = 11;
 
 const THRESHOLD_FIELDS: {
   key: keyof InsightSettings["thresholdOverrides"];
-  label: string;
-  helper: string;
+  labelKey: string;
+  helperKey: string;
   defaultPlaceholder: string;
   unit?: string;
 }[] = [
   {
     key: "churnDaysMultiplier",
-    label: "Churn detection — visit-frequency multiplier",
-    helper: "Fires when days-since-visit exceeds (avg cadence × this number)",
+    labelKey: "thresholdChurn",
+    helperKey: "thresholdChurnHelp",
     defaultPlaceholder: "2",
   },
   {
     key: "overtimeOverBudget",
-    label: "Overtime alert — over budget threshold",
-    helper: "Overtime spend $ over labor budget that triggers an insight",
+    labelKey: "thresholdOvertime",
+    helperKey: "thresholdOvertimeHelp",
     defaultPlaceholder: "1000",
     unit: "$",
   },
   {
     key: "cancellationRatePct",
-    label: "Cancellation rate spike — % above 90-day avg",
-    helper: "Week-over-90-day spike % that triggers a High insight",
+    labelKey: "thresholdCancellation",
+    helperKey: "thresholdCancellationHelp",
     defaultPlaceholder: "25",
     unit: "%",
   },
   {
     key: "depositExposure",
-    label: "Uncollected deposit exposure",
-    helper: "Outstanding deposit total that triggers an insight",
+    labelKey: "thresholdDeposits",
+    helperKey: "thresholdDepositsHelp",
     defaultPlaceholder: "500",
     unit: "$",
   },
   {
     key: "monthlyNoShowLoss",
-    label: "Monthly no-show revenue loss",
-    helper: "No-show revenue loss / month that triggers a High insight",
+    labelKey: "thresholdNoShow",
+    helperKey: "thresholdNoShowHelp",
     defaultPlaceholder: "800",
     unit: "$",
   },
   {
     key: "missedCallsPerDay",
-    label: "Missed calls per day",
-    helper: "Absolute daily missed-call count that triggers an insight",
+    labelKey: "thresholdMissedCalls",
+    helperKey: "thresholdMissedCallsHelp",
     defaultPlaceholder: "10",
   },
   {
     key: "voicemailBacklogCount",
-    label: "Voicemail backlog count",
-    helper: "Unlistened voicemails that trigger the backlog insight",
+    labelKey: "thresholdVoicemailCount",
+    helperKey: "thresholdVoicemailCountHelp",
     defaultPlaceholder: "5",
   },
   {
     key: "voicemailAgeHours",
-    label: "Voicemail max age",
-    helper: "Hours before any voicemail is too old",
+    labelKey: "thresholdVoicemailAge",
+    helperKey: "thresholdVoicemailAgeHelp",
     defaultPlaceholder: "48",
     unit: "h",
   },
   {
     key: "messageResponseHours",
-    label: "Inbox response time ceiling",
-    helper: "Hours before slow-response insight fires",
+    labelKey: "thresholdInbox",
+    helperKey: "thresholdInboxHelp",
     defaultPlaceholder: "4",
     unit: "h",
   },
   {
     key: "stationCleaningMinutes",
-    label: "Station cleaning bottleneck threshold",
-    helper: "Average minutes in Needs Cleaning before insight fires",
+    labelKey: "thresholdStation",
+    helperKey: "thresholdStationHelp",
     defaultPlaceholder: "45",
     unit: "min",
   },
   {
     key: "missedTaskRatePct",
-    label: "Grooming task missed rate threshold",
-    helper: "% of tasks auto-marked Missed before insight fires",
+    labelKey: "thresholdGrooming",
+    helperKey: "thresholdGroomingHelp",
     defaultPlaceholder: "15",
     unit: "%",
   },
 ];
 
 export function SmartInsightsSettings() {
+  const t = useSettingsText().section("smart-insights");
   const queryClient = useQueryClient();
   const settingsQuery = useQuery(insightQueries.settings(FACILITY_ID));
   const settings = settingsQuery.data ?? DEFAULT_INSIGHT_SETTINGS;
@@ -109,7 +111,7 @@ export function SmartInsightsSettings() {
     mutationFn: insightMutations.updateSettings,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["insights", FACILITY_ID] });
-      toast.success("Smart Insights settings saved");
+      toast.success(t("saved"));
     },
   });
 
@@ -143,27 +145,21 @@ export function SmartInsightsSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Control which insights run, how you&#39;re notified, and override the
-          thresholds that decide when an insight fires.
-        </p>
+        <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </div>
 
       {/* Master toggle */}
       <Card>
         <CardHeader>
-          <CardTitle>Smart insights</CardTitle>
+          <CardTitle>{t("sectionTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label htmlFor="si-enabled" className="text-base">
-                Enable smart insights
+                {t("enable")}
               </Label>
-              <p className="text-muted-foreground text-xs">
-                When off, the Smart Insights page, dashboard widget, and nav
-                badge are hidden for everyone in this facility.
-              </p>
+              <p className="text-muted-foreground text-xs">{t("enableHelp")}</p>
             </div>
             <Switch
               id="si-enabled"
@@ -177,18 +173,15 @@ export function SmartInsightsSettings() {
       {/* Daily digest */}
       <Card>
         <CardHeader>
-          <CardTitle>Daily digest email</CardTitle>
+          <CardTitle>{t("digest")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label htmlFor="si-digest" className="text-base">
-                Send the morning digest at 7 AM
+                {t("digestToggle")}
               </Label>
-              <p className="text-muted-foreground text-xs">
-                A one-glance email summary of the top insights generated
-                overnight, sent to owner / manager addresses.
-              </p>
+              <p className="text-muted-foreground text-xs">{t("digestHelp")}</p>
             </div>
             <Switch
               id="si-digest"
@@ -202,12 +195,8 @@ export function SmartInsightsSettings() {
       {/* Per-category toggles */}
       <Card>
         <CardHeader>
-          <CardTitle>Categories</CardTitle>
-          <p className="text-muted-foreground text-sm">
-            Disable any category you don&#39;t want surfaced. Disabled insights
-            still generate in the background — they just don&#39;t appear in
-            lists.
-          </p>
+          <CardTitle>{t("categories")}</CardTitle>
+          <p className="text-muted-foreground text-sm">{t("categoriesHelp")}</p>
         </CardHeader>
         <CardContent className="space-y-3">
           {(Object.keys(settings.categoriesEnabled) as InsightCategory[]).map(
@@ -217,7 +206,11 @@ export function SmartInsightsSettings() {
                 className="flex items-center justify-between gap-4 rounded-md border p-3"
               >
                 <Label htmlFor={`cat-${cat}`} className="font-semibold">
-                  {INSIGHT_CATEGORY_LABELS[cat]}
+                  {/* INSIGHT_CATEGORY_LABELS lives in src/types and is a plain
+                      constant, so it cannot reach a hook. Three other call
+                      sites still render its English on the Smart insights PAGE
+                      — a surface check:ui-french does not cover. Recorded. */}
+                  {t(`category${cat[0].toUpperCase()}${cat.slice(1)}`)}
                 </Label>
                 <Switch
                   id={`cat-${cat}`}
@@ -235,10 +228,9 @@ export function SmartInsightsSettings() {
         <CardHeader>
           <div className="flex items-start justify-between gap-2">
             <div>
-              <CardTitle>Threshold overrides</CardTitle>
+              <CardTitle>{t("thresholds")}</CardTitle>
               <p className="text-muted-foreground text-sm">
-                Tighten or loosen any of the values that decide when an insight
-                fires. Leave a field blank to use the system default.
+                {t("thresholdsHelp")}
               </p>
             </div>
             <Button
@@ -248,7 +240,7 @@ export function SmartInsightsSettings() {
               onClick={resetThresholds}
               disabled={Object.keys(settings.thresholdOverrides).length === 0}
             >
-              Reset to defaults
+              {t("resetDefaults")}
             </Button>
           </div>
         </CardHeader>
@@ -262,9 +254,11 @@ export function SmartInsightsSettings() {
                     htmlFor={`th-${f.key}`}
                     className="text-sm font-semibold"
                   >
-                    {f.label}
+                    {t(f.labelKey)}
                   </Label>
-                  <p className="text-muted-foreground text-xs">{f.helper}</p>
+                  <p className="text-ink-tertiary text-[13.5px]">
+                    {t(f.helperKey)}
+                  </p>
                 </div>
                 <div className="relative">
                   {f.unit && f.unit !== "$" && (
@@ -281,9 +275,12 @@ export function SmartInsightsSettings() {
                     id={`th-${f.key}`}
                     type="number"
                     inputMode="decimal"
-                    placeholder={`Default ${f.defaultPlaceholder}${
-                      f.unit ? (f.unit === "$" ? "" : " " + f.unit) : ""
-                    }`}
+                    placeholder={t("defaultLabel").replace(
+                      "{value}",
+                      `${f.defaultPlaceholder}${
+                        f.unit ? (f.unit === "$" ? "" : " " + f.unit) : ""
+                      }`,
+                    )}
                     value={current ?? ""}
                     onChange={(e) => updateThreshold(f.key, e.target.value)}
                     className={f.unit === "$" ? "pl-6" : ""}

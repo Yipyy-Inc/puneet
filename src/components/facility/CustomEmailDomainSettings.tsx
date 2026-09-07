@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import {
   Card,
   CardContent,
@@ -53,22 +54,16 @@ import {
 // ============================================================================
 
 export function CustomEmailDomainSettings() {
+  const t = useSettingsText().section("custom-email-domain");
   return (
     <Card>
       <CardHeader>
-        <CardDescription>
-          Send booking confirmations, reminders and receipts from your own
-          domain instead of ours.
-        </CardDescription>
+        <CardDescription>{t("intro")}</CardDescription>
       </CardHeader>
       <CardContent>
         <Alert>
-          <AlertTitle>Not available yet</AlertTitle>
-          <AlertDescription>
-            Your email still goes out from Yipyy, and it is delivering normally.
-            Nothing here needs your attention — we will get in touch when you
-            can move it to your own domain.
-          </AlertDescription>
+          <AlertTitle>{t("notAvailable")}</AlertTitle>
+          <AlertDescription>{t("notAvailableHelp")}</AlertDescription>
         </Alert>
       </CardContent>
     </Card>

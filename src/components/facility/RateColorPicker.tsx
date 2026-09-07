@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { BRAND_COLOR_PALETTE } from "@/lib/operations-calendar";
 
 interface RateColorPickerProps {
@@ -20,11 +21,16 @@ interface RateColorPickerProps {
 export function RateColorPicker({
   value,
   onChange,
-  label = "Color",
+  label,
 }: RateColorPickerProps) {
+  // The default was `label = "Color"` — a DEFAULT PARAMETER, which is exactly
+  // the shape check:ui-french calls out in its header as how the global search
+  // read as translated while it was not. Four of the eight call sites pass a
+  // label; the other four got the English word.
+  const t = useSettingsText().section("service-modules");
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label>{label ?? t("colour")}</Label>
       <div className="flex flex-wrap gap-1.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5">
         {BRAND_COLOR_PALETTE.map((color) => (
           <TooltipProvider key={color.hex} delayDuration={200}>

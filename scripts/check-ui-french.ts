@@ -184,7 +184,9 @@ const TEMPLATE = /`([^`]{4,300})`/g;
  * capital or a space — because the same keys carry enum values (`label: "sm"`,
  * `title: "none"`). It is deliberately a short key list: `value:`, `id:`,
  * `key:` and `name:` are usually data, and `name` in particular is what §5q
- * says must never pass through the locale layer.
+ * says must never pass through the locale layer. `helper:` joined the list on
+ * 2026-09-07: the eleven Smart-insights thresholds each carry one, and eleven
+ * sentences of English were invisible while the section reported clean.
  *
  * ── AND IT RUNS ON THE SETTINGS SURFACE ONLY ──────────────────────────────
  *
@@ -213,7 +215,7 @@ const TEMPLATE = /`([^`]{4,300})`/g;
  * argument.
  */
 const OBJECT_COPY =
-  /\b(?:label|title|description|placeholder|heading|subtitle|helpText|hint|message|summary|caption|emptyText)\s*:\s*"([^"]{2,})"/g;
+  /\b(?:label|title|description|placeholder|heading|subtitle|helpText|helper|hint|message|summary|caption|emptyText)\s*:\s*"([^"]{2,})"/g;
 
 const FRENCH_OK = /french-ok:/;
 
@@ -483,27 +485,19 @@ function primitivesSurface(): Offender[] {
 const BASELINE: Record<string, Set<string>> = {
   settings: new Set([
     "addons",
-    "audit",
-    "boarding",
     "booking-rules",
     "booking-statuses",
     "care-tasks",
     "checkin-requirements",
-    "custom-email-domain",
-    "daycare",
     "deposit-rules",
-    "employment-types",
     "estimate-settings",
     "evaluations",
     "form-notifications",
-    "grooming",
     "hr-config",
-    "integrations",
     "invoice-template",
     "mobile-app",
     "my-notifications",
     "my-profile",
-    "notifications",
     "offboarding-templates",
     "onboarding-templates",
     "payroll-rules",
@@ -512,12 +506,8 @@ const BASELINE: Record<string, Set<string>> = {
     "report-card-template",
     "retail",
     "roles-permissions",
-    "smart-insights",
-    "staff-notifications",
-    "subscription",
     "tags-notes",
     "taxes",
-    "termination-reasons",
     "tips",
     "training",
     "yipyy-pay",

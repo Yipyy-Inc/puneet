@@ -8185,6 +8185,66 @@ appeared not to exist. On a case-insensitive filesystem the two are one
 its own change: `bun run prune` will say whether anything still imports it, and
 the rename has to be done in two commits on a case-insensitive checkout.
 
+## 2026-09-07 — three kinds of English `check:ui-french` structurally cannot see
+
+**Severity: 🟡 medium.** The gate's own header says a green run is "proof a
+surface has not gone backwards, not proof it is finished." These are the three
+shapes that make that warning concrete, all found while converting sections and
+all confirmed by looking at the rendered page in French.
+
+### 1. A label in `src/data` or `src/types`
+
+The walk stops at `isComponent()` — `src/components/` and `src/app/` only —
+because a shared lib carries strings that belong to no one section. But a
+CONSTANT holding user-visible labels is not a shared lib, and two are live:
+
+- `STAFF_NOTIF_TRIGGERS` in `src/data/staff-onboarding.ts` — each entry has a
+  `label` and a `timingLabel`, rendered on Settings → Staff notifications.
+  The section reports **clean** and those ~8 labels render English.
+- `INSIGHT_CATEGORY_LABELS` in `src/types/smart-insights.ts` — "Revenue",
+  "Operations", "Customers", "Staff", "Marketing". The settings screen now maps
+  them through its own catalogue; **three other call sites still render the
+  constant** (`InsightCard`, `DismissedInsightsView`, `DrawerHeader`), on the
+  Smart insights PAGE, which is not one of the six surfaces at all.
+
+**Do instead:** when a section reports clean, grep its tree for
+`from "@/data/` and `from "@/types/` before believing it. A constant that a
+component renders is copy wherever it lives — move it to the catalogue and
+leave a key behind, the way `CONDITION_KEYS` and `SEVERITY_ROWS` were done in
+this batch.
+
+### 2. A string shorter than the minimum
+
+`JSX_TEXT` requires 2+ characters and `isProse` filters further. Measured: the
+form-requirements screen rendered a bare **`at`** between two chips — an
+English preposition, reported by nothing, sitting between "Bloque cette étape"
+and "Avant la réservation". Lowering the floor is not the fix (it would match
+every `>` and `·` in the repo); reading the page is.
+
+### 3. An object key rendered as a word
+
+`{area.replace(/_/g, " ")}` with a CSS `capitalize`, and
+`{key[0].toUpperCase() + key.slice(1)}`. Both turn a stored key into a
+Title-Cased English word, and both are expressions, so no rule can see them.
+Two were live: the Yipyy Forecast area badges ("Outdoor Park" beside a checkbox
+that said "Parc extérieur"), and the locations card's capacity line
+("Daycare 40").
+
+**The tell is `capitalize` in a className.** It is almost always a key being
+dressed up as copy:
+
+```
+rg 'capitalize' src/app/facility/dashboard/settings src/components/facility
+```
+
+### And the counter-case, so the rule is not read too widely
+
+`SERVICE_BLOCK_OPTIONS.label` and `FacilityMobileBottomNav`'s `label` ARE
+English on purpose: each is the fallback argument to a translator that answers
+first. Marking them `// french-ok:` was right; translating them would have been
+a second source of truth. The distinction is whether anything reads the string
+when a catalogue entry exists.
+
 ## How to add to this map
 
 Append under a new dated heading. For each item: a one-line description, a severity, **why it's risky**, and **what to do instead** of casually touching it. Don't delete items — strike them through with the date and PR when genuinely resolved.

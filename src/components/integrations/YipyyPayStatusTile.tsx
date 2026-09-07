@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Yipyy Pay's footprint on the Integrations page: one line.
@@ -40,6 +41,7 @@ interface CloverStatus {
 }
 
 export function YipyyPayStatusTile() {
+  const t = useSettingsText().section("integrations");
   // Not a module constant any more: this tile renders on the Integrations
   // section, which the employee shell serves at /employee/settings too.
   const settingsPath = useSettingsHref();
@@ -62,31 +64,31 @@ export function YipyyPayStatusTile() {
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
+            {/* french-ok: a product name */}
             <p className="font-semibold">Yipyy Pay</p>
             {isPending ? (
               <Skeleton className="h-5 w-20" />
             ) : !data?.configured ? (
               <Badge variant="outline" className="gap-1">
                 <TriangleAlert className="size-3" />
-                Unavailable
+                {t("unavailable")}
               </Badge>
             ) : data.connected ? (
-              <Badge variant="success">Connected</Badge>
+              <Badge variant="success">{t("connected")}</Badge>
             ) : data.status === "error" ? (
-              <Badge variant="destructive">Needs attention</Badge>
+              <Badge variant="destructive">{t("needsAttention")}</Badge>
             ) : (
-              <Badge variant="outline">Not set up</Badge>
+              <Badge variant="outline">{t("notSetUp")}</Badge>
             )}
           </div>
-          <p className="text-muted-foreground text-sm/relaxed">
-            Card payments, tips and payouts. Managed under Financial → Payments
-            &amp; Billing.
+          <p className="text-ink-tertiary text-[14.5px]/relaxed">
+            {t("payHelp")}
           </p>
         </div>
 
         <Button asChild variant="outline" size="sm">
           <Link href={settingsPath("yipyy-pay")}>
-            {data?.connected ? "Manage" : "Set up"}
+            {data?.connected ? t("manage") : t("setUp")}
             <ArrowRight className="size-3.5" />
           </Link>
         </Button>

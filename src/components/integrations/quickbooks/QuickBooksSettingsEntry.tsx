@@ -8,20 +8,22 @@ import { Button } from "@/components/ui/button";
 import { useQuickBooksConnection } from "@/lib/quickbooks/connection-store";
 import { withPeriod } from "@/lib/quickbooks/format";
 import { cn } from "@/lib/utils";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // The row inside Settings → Integrations → Accounting. Status only; every
 // action lives on the integration's own page.
 const FACILITY_ID = "11";
 const QUICKBOOKS_HREF = "/facility/dashboard/settings/integrations/quickbooks";
 
-const STATUS_LABEL = {
-  disconnected: "Not connected",
-  connected: "Connected",
-  expired: "Connection expired",
-  outage: "Sync paused",
+const STATUS_KEY = {
+  disconnected: "qbNotConnected",
+  connected: "connected",
+  expired: "qbExpired",
+  outage: "qbPaused",
 } as const;
 
 export function QuickBooksSettingsEntry() {
+  const t = useSettingsText().section("integrations");
   const connection = useQuickBooksConnection({ facilityId: FACILITY_ID });
   const connected = connection.status === "connected";
   const needsAttention =
@@ -35,6 +37,7 @@ export function QuickBooksSettingsEntry() {
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
+          {/* french-ok: a product name, like "Yipyy Pay" below */}
           <span className="font-semibold">QuickBooks Online</span>
           <Badge
             variant="outline"
@@ -57,19 +60,19 @@ export function QuickBooksSettingsEntry() {
                 !connected && !needsAttention && "bg-muted-foreground",
               )}
             />
-            {STATUS_LABEL[connection.status]}
+            {t(STATUS_KEY[connection.status])}
           </Badge>
         </div>
         <p className="text-muted-foreground text-sm">
           {connected && connection.companyName
-            ? `Syncing to ${withPeriod(connection.companyName)}`
-            : "Sync sales, payments and refunds straight to your accountant's books."}
+            ? `${t("syncingTo")} ${withPeriod(connection.companyName)}`
+            : t("qbHelp")}
         </p>
       </div>
 
       <Button asChild variant={connected ? "outline" : "default"} size="sm">
         <Link href={QUICKBOOKS_HREF}>
-          {connected || needsAttention ? "Manage" : "Set up"}
+          {connected || needsAttention ? t("manage") : t("setUp")}
           <ChevronRight className="ml-1 size-4" />
         </Link>
       </Button>

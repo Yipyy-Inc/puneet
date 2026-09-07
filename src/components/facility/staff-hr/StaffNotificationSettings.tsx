@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { cn } from "@/lib/utils";
 import {
   STAFF_NOTIF_TRIGGERS,
@@ -31,6 +32,7 @@ const RECIPIENT_LABEL: Record<string, string> = {
  * (lib/staff-notifications.ts) reads it before every notification.
  */
 export function StaffNotificationSettings() {
+  const tx = useSettingsText().section("staff-notifications");
   const config = useStaffHrConfig();
   // The displayed value comes from the REFETCH this mutation triggers, not
   // from the input — see the note in src/lib/api/staff.ts.
@@ -49,16 +51,13 @@ export function StaffNotificationSettings() {
 
   const handleSave = () => {
     saveStaffHrConfig({ notificationTriggers: draft });
-    toast.success("Staff notification settings saved");
+    toast.success(tx("saved"));
   };
 
   return (
     <Card>
       <CardHeader>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Choose which onboarding &amp; offboarding events notify your team, and
-          on which channels. Turn any trigger off to stop it entirely.
-        </p>
+        <p className="text-ink-tertiary mt-1 text-[14.5px]">{tx("intro")}</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -96,7 +95,7 @@ export function StaffNotificationSettings() {
                                 update(meta.key, { inApp: v })
                               }
                             />
-                            In-app feed
+                            {tx("inAppFeed")}
                           </label>
                         )}
                         {meta.channels.includes("email") && (
@@ -107,7 +106,7 @@ export function StaffNotificationSettings() {
                                 update(meta.key, { email: v })
                               }
                             />
-                            Email
+                            {tx("email")}
                           </label>
                         )}
                         {meta.timingLabel && (
@@ -134,7 +133,7 @@ export function StaffNotificationSettings() {
                   <Switch
                     checked={t.enabled}
                     onCheckedChange={(v) => update(meta.key, { enabled: v })}
-                    aria-label={`Enable ${meta.label}`}
+                    aria-label={`${tx("enable")} — ${meta.label}`}
                   />
                 </div>
               </div>
@@ -143,12 +142,8 @@ export function StaffNotificationSettings() {
         </div>
 
         <div className="flex justify-end">
-          <Button
-            onClick={handleSave}
-            disabled={!dirty}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-          >
-            Save changes
+          <Button onClick={handleSave} disabled={!dirty}>
+            {tx("save")}
           </Button>
         </div>
       </CardContent>
