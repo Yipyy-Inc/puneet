@@ -225,8 +225,16 @@ export function DropOffPickUpOverrideCard() {
                                 variant="secondary"
                                 className="text-xs"
                               >
-                                {SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
-                                  ?.label ?? s}
+                                {/* Through the translator, like the two
+                                    sibling cards. This one read `?.label`
+                                    straight off the constant, so a French
+                                    user saw "Daycare" here and "Garderie"
+                                    on the identical badge one card up. */}
+                                {serviceLabel(
+                                  s,
+                                  SERVICE_BLOCK_OPTIONS.find((o) => o.id === s)
+                                    ?.label ?? s,
+                                )}
                               </Badge>
                             ))
                           )}

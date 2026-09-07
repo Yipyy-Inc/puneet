@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // Whether people can sign themselves up as your customers.
@@ -44,6 +45,12 @@ interface Config {
 const KEY = ["facility", "customer-signup"] as const;
 
 export function CustomerSignupSettings() {
+  const t = useSettingsText().section("branding");
+  const fill = (key: string, values: Record<string, string>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replace(`{${name}}`, value),
+      t(key),
+    );
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -65,7 +72,7 @@ export function CustomerSignupSettings() {
       const body = (await response.json().catch(() => null)) as {
         error?: string;
       } | null;
-      if (!response.ok) throw new Error(body?.error ?? "Could not save.");
+      if (!response.ok) throw new Error(body?.error ?? t("saveFailed"));
       return body;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
@@ -79,38 +86,31 @@ export function CustomerSignupSettings() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <DoorOpen className="size-4" />
-          Customer sign-up
+          {t("signupTitle")}
         </CardTitle>
-        <CardDescription>
-          Whether a pet owner who finds your page can register themselves as
-          your customer.
-        </CardDescription>
+        <CardDescription>{t("signupHelp")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
           <div className="text-muted-foreground flex items-center gap-2 text-sm">
-            <Loader2 className="size-4 animate-spin" /> Loading…
+            <Loader2 className="size-4 animate-spin" /> {t("loading")}
           </div>
         ) : (
           <>
             <div className="flex items-start justify-between gap-6">
               <div className="space-y-1">
                 <Label htmlFor="allow-customer-signup">
-                  Accept online registrations
+                  {t("signupToggle")}
                 </Label>
-                <p className="text-muted-foreground text-sm">
-                  {host ? (
-                    <>
-                      Anyone who signs in at{" "}
-                      <strong className="text-foreground">{host}</strong> can
-                      join {data?.facilityName} and start booking.
-                    </>
-                  ) : (
-                    <>
-                      Anyone who signs in at your own web address can join{" "}
-                      {data?.facilityName} and start booking.
-                    </>
-                  )}
+                {/* One whole sentence per branch, filled here. The English
+                    version wove the host into the middle of the sentence with
+                    a <strong> — a shape French cannot reproduce, because the
+                    address lands somewhere else in the clause. */}
+                <p className="text-ink-tertiary text-[14.5px]">
+                  {fill(host ? "signupAtAddress" : "signupAtOwnAddress", {
+                    host: host ?? "",
+                    facility: data?.facilityName ?? "",
+                  })}
                 </p>
               </div>
               <Switch
@@ -121,11 +121,8 @@ export function CustomerSignupSettings() {
               />
             </div>
 
-            <p className="text-muted-foreground border-t pt-4 text-xs">
-              Turning this off does not lock out the customers you already have.
-              Anyone your team has added can still link their sign-in to the
-              record waiting for them — this only decides whether people you
-              have never met can create new ones.
+            <p className="text-ink-tertiary border-t pt-4 text-[13.5px]">
+              {t("signupOffNote")}
             </p>
           </>
         )}

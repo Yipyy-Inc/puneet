@@ -5,15 +5,34 @@ export interface CustomerLanguageOption {
   label: string;
 }
 
+/**
+ * The languages a customer may state a preference for, each named in ITSELF.
+ *
+ * ── WHY ENDONYMS, AND WHAT THEY REPLACED ──────────────────────────────────
+ *
+ * This read "Spanish", "German", "Portuguese", "Arabic", "Chinese",
+ * "Japanese" — English exonyms — and "Francais", which is not a word in any
+ * language because it is missing its cedilla. A facility switched to French
+ * saw an English list, and the one entry that was meant to be French was
+ * misspelled.
+ *
+ * Endonyms are the convention for a language picker and they solve the problem
+ * rather than deferring it: "Español" is right in every locale, so this list
+ * needs no translation and no catalogue entry, now or when a ninth language is
+ * added. §5q's rule about a name never passing through the locale layer is the
+ * same idea one level up.
+ *
+ * The `code` is what is stored and compared. Only the words changed.
+ */
 export const CUSTOMER_LANGUAGE_OPTIONS: CustomerLanguageOption[] = [
   { code: "en", label: "English" },
-  { code: "fr", label: "Francais" },
-  { code: "es", label: "Spanish" },
-  { code: "de", label: "German" },
-  { code: "pt", label: "Portuguese" },
-  { code: "ar", label: "Arabic" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
+  { code: "fr", label: "Français" },
+  { code: "es", label: "Español" },
+  { code: "de", label: "Deutsch" },
+  { code: "pt", label: "Português" },
+  { code: "ar", label: "العربية" },
+  { code: "zh", label: "中文" },
+  { code: "ja", label: "日本語" },
 ];
 
 const CUSTOMER_LANGUAGE_CODE_SET = new Set(

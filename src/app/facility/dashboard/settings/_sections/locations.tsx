@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFacilityLocations } from "@/lib/api/locations";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useServiceTypeLabel } from "@/lib/settings/use-service-types";
 import {
   LOCATION_CAPACITY_KEYS,
   type FacilityLocation,
@@ -32,19 +34,30 @@ import {
 // forms over one table, drifting.
 // ============================================================================
 
-function addressLine(location: FacilityLocation): string {
+function addressLine(location: FacilityLocation, noAddress: string): string {
   const a = location.address;
-  if (!a) return "No address yet";
+  if (!a) return noAddress;
   return [a.street, a.city, a.state, a.zipCode].filter(Boolean).join(", ");
 }
 
-/** "Daycare 40 · Boarding 25", or nothing when no limit is stated. */
-function capacityLine(location: FacilityLocation): string | null {
+/**
+ * "Garderie 40 · Pension 25", or nothing when no limit is stated.
+ *
+ * The service name came from `key[0].toUpperCase() + key.slice(1)` — the raw
+ * settings key, title-cased — so it read "Daycare 40" in French too. It goes
+ * through the service-type catalogue now, like every other place a service is
+ * named. The label function is passed in because this is not a component.
+ */
+function capacityLine(
+  location: FacilityLocation,
+  serviceLabel: (id: string, fallback: string) => string,
+): string | null {
   const parts = LOCATION_CAPACITY_KEYS.filter(
     (key) => location.capacity[key] !== undefined,
-  ).map(
-    (key) => `${key[0].toUpperCase()}${key.slice(1)} ${location.capacity[key]}`,
-  );
+  ).map((key) => {
+    const name = serviceLabel(key, `${key[0].toUpperCase()}${key.slice(1)}`);
+    return `${name} ${location.capacity[key]}`;
+  });
   // An absent key means no stated limit, which is not the same as zero — so an
   // empty list says nothing rather than "0 pets".
   return parts.length ? parts.join(" · ") : null;
@@ -52,6 +65,8 @@ function capacityLine(location: FacilityLocation): string | null {
 
 export function LocationsSection() {
   const { data: locations, isPending, isError, error } = useFacilityLocations();
+  const t = useSettingsText().section("locations");
+  const serviceLabel = useServiceTypeLabel();
 
   return (
     <Card>
@@ -63,18 +78,13 @@ export function LocationsSection() {
           </>
         ) : isError ? (
           <p className="text-destructive text-sm">
-            {error instanceof Error
-              ? error.message
-              : "Could not read your locations."}
+            {error instanceof Error ? error.message : t("loadFailed")}
           </p>
         ) : locations.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            You have one location. Add another from Multi-location (HQ) when you
-            open a second branch.
-          </p>
+          <p className="text-ink-tertiary text-[14.5px]">{t("onlyOne")}</p>
         ) : (
           locations.map((location) => {
-            const capacity = capacityLine(location);
+            const capacity = capacityLine(location, serviceLabel);
             return (
               <div key={location.id} className="rounded-lg border p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -82,23 +92,23 @@ export function LocationsSection() {
                     <div className="flex flex-wrap items-center gap-2 font-semibold">
                       {location.name}
                       {location.status === "active" && (
-                        <Badge variant="default">Active</Badge>
+                        <Badge variant="default">{t("active")}</Badge>
                       )}
                       {location.isPrimary && (
-                        <Badge variant="outline">Primary</Badge>
+                        <Badge variant="outline">{t("primary")}</Badge>
                       )}
                     </div>
                     <div className="text-muted-foreground mt-1 text-sm">
-                      {addressLine(location)}
+                      {addressLine(location, t("noAddress"))}
                     </div>
                     <div className="mt-2 text-sm">
-                      {location.phone ?? "No phone"}
+                      {location.phone ?? t("noPhone")}
                       {capacity ? ` • ${capacity}` : ""}
                     </div>
                   </div>
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/facility/hq/locations/${location.id}`}>
-                      Edit
+                      {t("edit")}
                     </Link>
                   </Button>
                 </div>
