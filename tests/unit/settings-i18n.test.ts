@@ -143,3 +143,83 @@ describe("the label lookup", () => {
     expect(settingsText("fr", "nope" as never)).toBe("nope");
   });
 });
+
+// ============================================================================
+// AND THE SAME THING, ONE LEVEL DOWN: A SECTION'S OWN BODY COPY.
+//
+// The tests above cover the RAIL — group headings, leaf labels, the index. They
+// say nothing about `settings.sections.<id>`, which is where the actual screen
+// lives: 41 strings for `hours` alone, added by hand in two files with nothing
+// comparing them.
+//
+// `settingsSectionText` falls back `fr → en → key`, and that fallback is
+// correct — a missing French string should read as English words rather than
+// as `blockReasonPlaceholder`. But it is also silent, which is exactly the
+// failure `translateUiText()` had and this whole namespace exists to escape.
+// `check:ui-french` cannot see it either: a string routed through `t("…")` is
+// an expression, so the gate counts the section as converted the moment the
+// literal leaves the JSX — whether or not a French string was ever written.
+//
+// So a section can pass every gate in this repo and still render English.
+// Measured when this was written: `business` and `hours`, 66 keys, all present
+// in both — the hole was real and nothing had fallen into it yet.
+// ============================================================================
+
+const enSections = (
+  en.settings as { sections: Record<string, Record<string, string>> }
+).sections;
+const frSections = (
+  fr.settings as { sections: Record<string, Record<string, string>> }
+).sections;
+
+describe("a settings section's body copy", () => {
+  test("every section with English copy has a French counterpart", () => {
+    const missing = Object.keys(enSections).filter((id) => !frSections[id]);
+    expect(missing).toEqual([]);
+  });
+
+  test("every key is present in both languages", () => {
+    const missing: string[] = [];
+    for (const [section, strings] of Object.entries(enSections)) {
+      for (const key of Object.keys(strings)) {
+        if (frSections[section]?.[key] === undefined) {
+          missing.push(`${section}.${key}`);
+        }
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  test("no French section carries a key English does not", () => {
+    // The other direction, and not symmetry for its own sake: a key removed
+    // from the screen leaves dead copy behind, and dead copy is what makes the
+    // next person think a string is handled when nothing renders it.
+    const orphaned: string[] = [];
+    for (const [section, strings] of Object.entries(frSections)) {
+      for (const key of Object.keys(strings)) {
+        if (enSections[section]?.[key] === undefined) {
+          orphaned.push(`${section}.${key}`);
+        }
+      }
+    }
+    expect(orphaned).toEqual([]);
+  });
+
+  test("a French string is actually different from the English one", () => {
+    // The cheap way to fake a translation is to copy the English across, and
+    // it passes every check above. This cannot demand a difference — "Date",
+    // "Instagram" and "Celsius (°C)" are the same word in both — so it asserts
+    // the SHAPE instead: a section that is entirely identical has not been
+    // translated, it has been duplicated.
+    const suspicious: string[] = [];
+    for (const [section, strings] of Object.entries(enSections)) {
+      const keys = Object.keys(strings);
+      if (keys.length < 5) continue;
+      const differing = keys.filter(
+        (key) => frSections[section]?.[key] !== strings[key],
+      );
+      if (differing.length === 0) suspicious.push(section);
+    }
+    expect(suspicious).toEqual([]);
+  });
+});

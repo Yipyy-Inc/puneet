@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { useWorkosSupabaseClient } from "@/lib/supabase/workos-client";
 
 // ============================================================================
@@ -53,6 +54,10 @@ export function FacilityLogoField({
   /** Sets `logo` on the draft profile; the card's own Save writes it. */
   onChange: (logoUrl: string) => void;
 }) {
+  // This field is used by exactly one card — the Business profile — so its
+  // copy lives in that section's own catalogue rather than in a namespace of its
+  // own. Moving it if a second caller appears is one key prefix.
+  const t = useSettingsText().section("business");
   const supabase = useWorkosSupabaseClient();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -64,7 +69,7 @@ export function FacilityLogoField({
     queryKey: ["facility", "branding"],
     queryFn: async (): Promise<{ facilityId: string }> => {
       const response = await fetch("/api/facility/branding");
-      if (!response.ok) throw new Error("Could not load your facility.");
+      if (!response.ok) throw new Error(t("logoFacilityUnavailable"));
       return (await response.json()) as { facilityId: string };
     },
   });
@@ -79,17 +84,17 @@ export function FacilityLogoField({
   async function upload(file: File) {
     setError(null);
     if (!branding?.facilityId) {
-      setError("Still loading — try again in a moment.");
+      setError(t("logoStillLoading"));
       return;
     }
     // Checked here for a fast, clear message. Storage enforces both again on
     // its side; this is so nobody is told "row-level security" for a big TIFF.
     if (file.size > MAX_BYTES) {
-      setError("That file is over 2 MB. Try a smaller image.");
+      setError(t("logoTooLarge"));
       return;
     }
     if (!ACCEPTED.includes(file.type)) {
-      setError("Use a PNG, JPEG or WebP image.");
+      setError(t("logoWrongType"));
       return;
     }
 
@@ -139,7 +144,7 @@ export function FacilityLogoField({
               onClick={() => input.current?.click()}
             >
               {busy && <Loader2 className="mr-2 size-3 animate-spin" />}
-              {logo ? "Replace logo" : "Upload logo"}
+              {logo ? t("replaceLogo") : t("uploadLogo")}
             </Button>
             {logo && !busy && (
               <Button
@@ -148,7 +153,7 @@ export function FacilityLogoField({
                 disabled={disabled}
                 onClick={() => onChange("")}
               >
-                Remove
+                {t("removeLogo")}
               </Button>
             )}
           </div>
@@ -166,10 +171,7 @@ export function FacilityLogoField({
               if (file) void upload(file);
             }}
           />
-          <p className="text-muted-foreground text-xs">
-            PNG, JPEG or WebP, up to 2 MB. Square works best — it appears on
-            receipts and invoices.
-          </p>
+          <p className="text-ink-tertiary text-[13.5px]">{t("logoHelp")}</p>
           {error && <p className="text-destructive text-xs">{error}</p>}
         </div>
       </div>

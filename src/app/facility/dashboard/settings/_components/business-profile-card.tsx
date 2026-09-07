@@ -1,6 +1,7 @@
 "use client";
 
 import { useSettings } from "@/hooks/use-settings";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 import { SettingsBlock } from "@/components/ui/settings-block";
 
@@ -37,11 +38,41 @@ import {
 // converted yet and the temperature-unit change below has to convert its
 // thresholds. Reading two sources here is the honest half-way state, and the
 // alternative is holding this fix back until twenty other domains land.
+//
+// ── AND ON 2026-09-07 IT LEARNED FRENCH, WHICH FOUND THREE OTHER THINGS ───
+//
+// Every label here was an English literal in the JSX, so a French user read
+// the whole card in English. Routing them through `useSettingsText()` is the
+// small half. Sizing them at the French string is the §5g half, and it is what
+// surfaced the rest:
+//
+//   * THE GRIDS WERE UNGATED. `grid-cols-2` and `grid-cols-3` with no
+//     breakpoint and no `minmax(0, …)`. Three columns is not a width this pane
+//     ever has — it sits past a nav rail and a section rail, about 530px at a
+//     1440 viewport — so "Préférences de l'entreprise" over three ~170px
+//     columns wrapped three ways. Two columns, gated at `sm:`, is what fits at
+//     every width this pane actually gets. Same conclusion as
+//     BookingStatusSettings reached on 2026-09-06, for the same reason.
+//
+//   * THE ADDRESS WAS AMERICAN. "State" and "ZIP Code" on an en-CA / fr-CA
+//     product whose §6 rule 8 exists because Canada reads dates three ways.
+//     They are labels, not columns — the row still stores `state` and
+//     `zipCode` — so this changes what a person reads and nothing about the
+//     shape.
+//
+//   * SEVEN FIELDS HAD NO LABEL, only a placeholder, which disappears the
+//     moment you focus the field. Tab into the address block and you cannot
+//     tell which of four boxes you are in. Every field has a real `<Label>`
+//     now, and the placeholders are gone rather than duplicated.
+//
+// `bg-gray-100` on every read-only field went with them: it is off-palette,
+// and `--surface-inset` is the token that shares the ground's warmth.
 // ============================================================================
 export function BusinessProfileCard() {
   const { weatherRules, updateWeatherRules } = useSettings();
   const { profile, isPending } = useFacilityProfile();
   const saveProfile = useUpdateFacilityProfile();
+  const t = useSettingsText().section("business");
 
   const convertTemperatureValue = (
     value: number,
@@ -88,6 +119,20 @@ export function BusinessProfileCard() {
     }
   };
 
+  /**
+   * Two columns, and never three.
+   *
+   * `minmax(0, 1fr)` because a bare `1fr` floors at the content's min-width,
+   * so one long French label pushes the column past the pane instead of
+   * wrapping inside it. Gated at `sm:` so the fields stack on a phone rather
+   * than becoming two 270px boxes.
+   */
+  const twoColumns = "grid gap-4 sm:grid-cols-[repeat(2,minmax(0,1fr))]";
+
+  /** A field nobody may edit yet. --surface-inset, not an off-palette grey. */
+  const readOnlyField = (isEditing: boolean) =>
+    isEditing ? "" : "cursor-not-allowed bg-surface-inset";
+
   // Blank fields before the row arrives would read as "this facility has no
   // address", which is a claim. A skeleton says only that we do not know yet.
   if (isPending) {
@@ -104,7 +149,7 @@ export function BusinessProfileCard() {
 
   return (
     <SettingsBlock
-      title="Business Profile"
+      title={t("businessProfile")}
       data={profile}
       onSave={handleSaveProfile}
     >
@@ -112,7 +157,7 @@ export function BusinessProfileCard() {
         <div className="space-y-4">
           {/* Facility Logo */}
           <div className="space-y-2">
-            <Label>Facility logo</Label>
+            <Label>{t("facilityLogo")}</Label>
             <FacilityLogoField
               businessName={localProfile.businessName}
               logo={localProfile.logo ?? ""}
@@ -123,9 +168,9 @@ export function BusinessProfileCard() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className={twoColumns}>
             <div className="space-y-2">
-              <Label htmlFor="businessName">Business name *</Label>
+              <Label htmlFor="businessName">{t("businessName")} *</Label>
               <Input
                 id="businessName"
                 value={localProfile.businessName}
@@ -136,11 +181,11 @@ export function BusinessProfileCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
+                className={readOnlyField(isEditing)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">{t("email")} *</Label>
               <Input
                 id="email"
                 type="email"
@@ -149,11 +194,11 @@ export function BusinessProfileCard() {
                   setLocalProfile({ ...localProfile, email: e.target.value })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
+                className={readOnlyField(isEditing)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone *</Label>
+              <Label htmlFor="phone">{t("phone")} *</Label>
               <Input
                 id="phone"
                 value={localProfile.phone}
@@ -161,11 +206,11 @@ export function BusinessProfileCard() {
                   setLocalProfile({ ...localProfile, phone: e.target.value })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
+                className={readOnlyField(isEditing)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
+              <Label htmlFor="website">{t("website")}</Label>
               <Input
                 id="website"
                 value={localProfile.website}
@@ -173,13 +218,13 @@ export function BusinessProfileCard() {
                   setLocalProfile({ ...localProfile, website: e.target.value })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
+                className={readOnlyField(isEditing)}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Business description</Label>
+            <Label htmlFor="description">{t("description")}</Label>
             <Textarea
               id="description"
               value={localProfile.description}
@@ -191,126 +236,156 @@ export function BusinessProfileCard() {
               }
               rows={3}
               readOnly={!isEditing}
-              className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
+              className={readOnlyField(isEditing)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Address</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                placeholder="Street Address"
-                value={localProfile.address.street}
-                onChange={(e) =>
-                  setLocalProfile({
-                    ...localProfile,
-                    address: {
-                      ...localProfile.address,
-                      street: e.target.value,
-                    },
-                  })
-                }
-                readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
-              />
-              <Input
-                placeholder="City"
-                value={localProfile.address.city}
-                onChange={(e) =>
-                  setLocalProfile({
-                    ...localProfile,
-                    address: { ...localProfile.address, city: e.target.value },
-                  })
-                }
-                readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
-              />
-              <Input
-                placeholder="State"
-                value={localProfile.address.state}
-                onChange={(e) =>
-                  setLocalProfile({
-                    ...localProfile,
-                    address: { ...localProfile.address, state: e.target.value },
-                  })
-                }
-                readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
-              />
-              <Input
-                placeholder="ZIP Code"
-                value={localProfile.address.zipCode}
-                onChange={(e) =>
-                  setLocalProfile({
-                    ...localProfile,
-                    address: {
-                      ...localProfile.address,
-                      zipCode: e.target.value,
-                    },
-                  })
-                }
-                readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Social media</Label>
-            <div className="grid grid-cols-3 gap-4">
-              <Input
-                placeholder="Facebook URL"
-                value={localProfile.socialMedia.facebook}
-                onChange={(e) =>
-                  setLocalProfile({
-                    ...localProfile,
-                    socialMedia: {
-                      ...localProfile.socialMedia,
-                      facebook: e.target.value,
-                    },
-                  })
-                }
-                readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
-              />
-              <Input
-                placeholder="Instagram URL"
-                value={localProfile.socialMedia.instagram}
-                onChange={(e) =>
-                  setLocalProfile({
-                    ...localProfile,
-                    socialMedia: {
-                      ...localProfile.socialMedia,
-                      instagram: e.target.value,
-                    },
-                  })
-                }
-                readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
-              />
-              <Input
-                placeholder="Twitter URL"
-                value={localProfile.socialMedia.twitter}
-                onChange={(e) =>
-                  setLocalProfile({
-                    ...localProfile,
-                    socialMedia: {
-                      ...localProfile.socialMedia,
-                      twitter: e.target.value,
-                    },
-                  })
-                }
-                readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Business preferences</Label>
-            <div className="grid gap-4 md:grid-cols-3">
+            <Label>{t("address")}</Label>
+            <div className={twoColumns}>
               <div className="space-y-2">
-                <Label htmlFor="clockFormat">Clock format</Label>
+                <Label htmlFor="street">{t("streetAddress")}</Label>
+                <Input
+                  id="street"
+                  value={localProfile.address.street}
+                  onChange={(e) =>
+                    setLocalProfile({
+                      ...localProfile,
+                      address: {
+                        ...localProfile.address,
+                        street: e.target.value,
+                      },
+                    })
+                  }
+                  readOnly={!isEditing}
+                  className={readOnlyField(isEditing)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">{t("city")}</Label>
+                <Input
+                  id="city"
+                  value={localProfile.address.city}
+                  onChange={(e) =>
+                    setLocalProfile({
+                      ...localProfile,
+                      address: {
+                        ...localProfile.address,
+                        city: e.target.value,
+                      },
+                    })
+                  }
+                  readOnly={!isEditing}
+                  className={readOnlyField(isEditing)}
+                />
+              </div>
+              <div className="space-y-2">
+                {/* The COLUMN is still `state`. Only the word changed — see
+                    the header: this is a Canadian product. */}
+                <Label htmlFor="province">{t("province")}</Label>
+                <Input
+                  id="province"
+                  value={localProfile.address.state}
+                  onChange={(e) =>
+                    setLocalProfile({
+                      ...localProfile,
+                      address: {
+                        ...localProfile.address,
+                        state: e.target.value,
+                      },
+                    })
+                  }
+                  readOnly={!isEditing}
+                  className={readOnlyField(isEditing)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="postalCode">{t("postalCode")}</Label>
+                <Input
+                  id="postalCode"
+                  value={localProfile.address.zipCode}
+                  onChange={(e) =>
+                    setLocalProfile({
+                      ...localProfile,
+                      address: {
+                        ...localProfile.address,
+                        zipCode: e.target.value,
+                      },
+                    })
+                  }
+                  readOnly={!isEditing}
+                  className={readOnlyField(isEditing)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t("socialMedia")}</Label>
+            <div className={twoColumns}>
+              <div className="space-y-2">
+                <Label htmlFor="facebook">{t("facebookUrl")}</Label>
+                <Input
+                  id="facebook"
+                  value={localProfile.socialMedia.facebook}
+                  onChange={(e) =>
+                    setLocalProfile({
+                      ...localProfile,
+                      socialMedia: {
+                        ...localProfile.socialMedia,
+                        facebook: e.target.value,
+                      },
+                    })
+                  }
+                  readOnly={!isEditing}
+                  className={readOnlyField(isEditing)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="instagram">{t("instagramUrl")}</Label>
+                <Input
+                  id="instagram"
+                  value={localProfile.socialMedia.instagram}
+                  onChange={(e) =>
+                    setLocalProfile({
+                      ...localProfile,
+                      socialMedia: {
+                        ...localProfile.socialMedia,
+                        instagram: e.target.value,
+                      },
+                    })
+                  }
+                  readOnly={!isEditing}
+                  className={readOnlyField(isEditing)}
+                />
+              </div>
+              <div className="space-y-2">
+                {/* The FIELD is still `twitter`. The service is called X. */}
+                <Label htmlFor="twitter">{t("twitterUrl")}</Label>
+                <Input
+                  id="twitter"
+                  value={localProfile.socialMedia.twitter}
+                  onChange={(e) =>
+                    setLocalProfile({
+                      ...localProfile,
+                      socialMedia: {
+                        ...localProfile.socialMedia,
+                        twitter: e.target.value,
+                      },
+                    })
+                  }
+                  readOnly={!isEditing}
+                  className={readOnlyField(isEditing)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t("preferences")}</Label>
+            <div className={twoColumns}>
+              <div className="space-y-2">
+                <Label htmlFor="clockFormat">{t("clockFormat")}</Label>
                 <Select
                   value={localProfile.preferences.clockFormat}
                   onValueChange={(value) =>
@@ -324,18 +399,18 @@ export function BusinessProfileCard() {
                   }
                   disabled={!isEditing}
                 >
-                  <SelectTrigger id="clockFormat">
+                  <SelectTrigger id="clockFormat" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="12h">12-hour clock</SelectItem>
-                    <SelectItem value="24h">24-hour clock</SelectItem>
+                    <SelectItem value="12h">{t("clock12")}</SelectItem>
+                    <SelectItem value="24h">{t("clock24")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="weightUnit">Weight unit</Label>
+                <Label htmlFor="weightUnit">{t("weightUnit")}</Label>
                 <Select
                   value={localProfile.preferences.weightUnit}
                   onValueChange={(value) =>
@@ -349,18 +424,21 @@ export function BusinessProfileCard() {
                   }
                   disabled={!isEditing}
                 >
-                  <SelectTrigger id="weightUnit">
+                  <SelectTrigger id="weightUnit" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="lbs">lbs</SelectItem>
+                    {/* french-ok: SI and imperial unit symbols are the same
+                        in both languages — §5q's "a breed as the owner typed
+                        it" rule, applied to units. */}
                     <SelectItem value="kg">kg</SelectItem>
+                    <SelectItem value="lbs">lb</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="temperatureUnit">Temperature unit</Label>
+                <Label htmlFor="temperatureUnit">{t("temperatureUnit")}</Label>
                 <Select
                   value={localProfile.preferences.temperatureUnit}
                   onValueChange={(value) =>
@@ -374,19 +452,23 @@ export function BusinessProfileCard() {
                   }
                   disabled={!isEditing}
                 >
-                  <SelectTrigger id="temperatureUnit">
+                  <SelectTrigger id="temperatureUnit" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="celsius">Celsius (°C)</SelectItem>
-                    <SelectItem value="fahrenheit">Fahrenheit (°F)</SelectItem>
+                    <SelectItem value="celsius">{t("celsius")}</SelectItem>
+                    <SelectItem value="fahrenheit">
+                      {t("fahrenheit")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <p className="text-muted-foreground text-xs">
-              Changing temperature unit automatically converts existing weather
-              warning thresholds.
+            {/* §1: meta is 13.5/400 in --ink-tertiary. `text-xs` is 12px, and
+                this sentence explains a conversion that rewrites saved
+                thresholds — it is not fine print. */}
+            <p className="text-ink-tertiary text-[13.5px]">
+              {t("temperatureNote")}
             </p>
           </div>
         </div>
