@@ -231,7 +231,7 @@ test.describe("facility tasks", () => {
 
     await page.goto("/facility/dashboard/tasks?tab=standalone");
     await expect(
-      page.getByRole("heading", { name: "Task Management" }),
+      page.getByRole("heading", { level: 1, name: "Tasks" }),
     ).toBeVisible();
 
     // SEARCH FOR IT rather than trusting it onto the first page. This test

@@ -447,7 +447,7 @@ test.describe("chore library and task groups", () => {
 
     await page.goto("/facility/dashboard/tasks?tab=library");
     await expect(
-      page.getByRole("heading", { name: "Task Management" }),
+      page.getByRole("heading", { level: 1, name: "Tasks" }),
     ).toBeVisible();
 
     // Search rather than trusting it onto page one — the library only grows,

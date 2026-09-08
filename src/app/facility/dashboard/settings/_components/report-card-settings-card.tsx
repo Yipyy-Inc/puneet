@@ -261,7 +261,7 @@ export function ReportCardSettingsCard() {
                         type="color"
                         value={brand.accentColor}
                         disabled={!isEditing}
-                        className="h-9 w-12 cursor-pointer rounded-sm border disabled:cursor-not-allowed"
+                        className="h-10 w-12 cursor-pointer rounded-sm border disabled:cursor-not-allowed max-lg:h-12"
                         onChange={(e) =>
                           updateBrand({ accentColor: e.target.value })
                         }
@@ -282,19 +282,37 @@ export function ReportCardSettingsCard() {
                 <div className="space-y-2">
                   <Label>{t("headerStyle")}</Label>
                   <div className="grid grid-cols-3 gap-3">
-                    {(["minimal", "banner", "centered"] as const).map((s) => (
+                    {/* ── THE VALUE IS NOT THE LABEL (§5q) ─────────────────
+                        This rendered `{s}` — the stored value — under
+                        `capitalize`, so a French reader chose between
+                        "Minimal", "Banner" and "Centered". `check:ui-french`
+                        cannot see it: the gate reads JSX text, and an
+                        interpolation is not that.
+
+                        The sibling picker forty lines down already does it
+                        correctly, `t("socialIcons")` and friends, which is what
+                        makes this one a slip rather than a pattern. Value and
+                        label are separate: the value travels to the database,
+                        the label is looked up. */}
+                    {(
+                      [
+                        ["minimal", "headerMinimal"],
+                        ["banner", "headerBanner"],
+                        ["centered", "headerCentered"],
+                      ] as const
+                    ).map(([s, key]) => (
                       <button
                         key={s}
                         type="button"
                         disabled={!isEditing}
                         onClick={() => updateBrand({ headerStyle: s })}
-                        className={`rounded-lg border-2 p-3 text-center text-sm font-medium capitalize transition-all ${
+                        className={`rounded-lg border-2 p-3 text-center text-sm font-medium transition-all ${
                           brand.headerStyle === s
-                            ? "border-primary bg-primary/5"
-                            : "border-muted hover:border-primary/30"
-                        } disabled:cursor-not-allowed disabled:opacity-60`}
+                            ? "border-primary"
+                            : "border-line hover:border-line-strong"
+                        } disabled:bg-surface-inset disabled:text-ink-disabled disabled:cursor-not-allowed`}
                       >
-                        {s}
+                        {t(key)}
                       </button>
                     ))}
                   </div>
@@ -552,9 +570,9 @@ export function ReportCardSettingsCard() {
                         onClick={() => updateBrand({ aiTone: tone.value })}
                         className={`rounded-lg border-2 p-3 text-left transition-all ${
                           (brand.aiTone ?? "warm") === tone.value
-                            ? "border-primary bg-primary/5"
-                            : "border-muted hover:border-primary/30"
-                        } disabled:cursor-not-allowed disabled:opacity-60`}
+                            ? "border-primary"
+                            : "border-line hover:border-line-strong"
+                        } disabled:bg-surface-inset disabled:text-ink-disabled disabled:cursor-not-allowed`}
                       >
                         <p className="text-sm font-medium">{tone.label}</p>
                         <p className="text-muted-foreground text-[11px]">
@@ -1138,7 +1156,6 @@ export function ReportCardSettingsCard() {
                         <div className="mt-2 flex items-center gap-2">
                           <Input
                             placeholder={t("newOptionPlaceholder")}
-                            className="h-8 text-sm"
                             value={newConditionOption[cat.id] ?? ""}
                             onChange={(e) =>
                               setNewConditionOption({
@@ -1150,7 +1167,6 @@ export function ReportCardSettingsCard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8"
                             disabled={
                               !(newConditionOption[cat.id] ?? "").trim()
                             }

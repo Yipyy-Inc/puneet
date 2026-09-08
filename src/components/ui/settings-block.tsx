@@ -3,7 +3,7 @@
 import { useState, useEffect, ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, Edit, Loader2 } from "lucide-react";
+import { Save, Edit } from "lucide-react";
 import { useUiText } from "@/hooks/use-ui-text";
 
 export function SettingsBlock<T>({
@@ -17,9 +17,10 @@ export function SettingsBlock<T>({
   description?: string;
   data: T;
   /**
-   * May be async. If it returns a promise, the editor stays open and the
-   * button reads "Saving…" until it settles, and a rejection keeps the editor
-   * open with the message rather than closing over a save that did not happen.
+   * May be async. If it returns a promise, the editor stays open and the save
+   * button holds its loading state until it settles, and a rejection keeps the
+   * editor open with the message rather than closing over a save that did not
+   * happen.
    *
    * Existing synchronous callers are unaffected — awaiting `undefined` resolves
    * immediately and the behaviour is exactly what it was.
@@ -65,8 +66,11 @@ export function SettingsBlock<T>({
       await onSave(localData);
       setIsEditing(false);
     } catch (error) {
+      // `check:ui-french` cannot see this one: it reads JSX text, and a string
+      // handed to a setter is not that. It is still the sentence a French user
+      // reads when RLS declines their row.
       setProblem(
-        error instanceof Error ? error.message : "Could not save changes.",
+        error instanceof Error ? error.message : t("Could not save changes."),
       );
     } finally {
       setSaving(false);
@@ -93,13 +97,27 @@ export function SettingsBlock<T>({
           </div>
           {isEditing ? (
             <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 size-4" />
-                )}
-                {saving ? t("Saving…") : t("Save")}
+              {/* ── THE LOADING CELL BELONGS TO Button (§5s) ──────────────
+                  This hand-rolled it three ways, and each one is a cell of the
+                  §5s matrix answered wrongly:
+
+                  1. It swapped the label to "Saving…", which the matrix names
+                     under Never — "it shifts layout and throws away the verb".
+                  2. `disabled={saving}` made it RENDER disabled while loading.
+                     Those are different cells: Button scopes its disabled fill
+                     and ink to `:not([data-loading])` for exactly this reason,
+                     so a loading button is unclickable without looking dead.
+                  3. `t("Saving…")` is not in `ui-translations.ts` — `Save` is,
+                     as `Enregistrer`, and `translateUiText` returns its input
+                     unchanged on a miss. So a French user pressed Enregistrer
+                     and watched it become the English word "Saving…".
+
+                  Passing `loading` fixes all three and deletes the third
+                  outright: the label never changes, so there is no second
+                  string to translate. */}
+              <Button onClick={handleSave} loading={saving}>
+                <Save className="mr-2 size-4" />
+                {t("Save")}
               </Button>
               <Button
                 variant="outline"
