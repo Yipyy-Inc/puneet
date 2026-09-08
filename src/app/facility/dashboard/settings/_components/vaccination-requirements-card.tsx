@@ -239,7 +239,7 @@ function VaccinationRequirementsEditor({
                                 parseInt(e.target.value) || 0,
                               )
                             }
-                            className="h-8 w-24"
+                            className="w-24"
                           />
                         </div>
 
@@ -309,7 +309,6 @@ function VaccinationRequirementsEditor({
                       onChange={(e) =>
                         setNewExpiry(parseInt(e.target.value) || 0)
                       }
-                      className="h-9"
                     />
                   </div>
                   <Button

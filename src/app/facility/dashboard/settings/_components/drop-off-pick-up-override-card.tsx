@@ -98,7 +98,6 @@ export function DropOffPickUpOverrideCard() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs"
                   onClick={() =>
                     setNewServices(
                       newServices.length === SERVICE_BLOCK_OPTIONS.length

@@ -97,7 +97,6 @@ export function ServiceDayBlockingCard() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs"
                   onClick={() =>
                     setNewServices(
                       newServices.length === SERVICE_BLOCK_OPTIONS.length
@@ -137,7 +136,6 @@ export function ServiceDayBlockingCard() {
                     type="button"
                     variant={newBlockType === "full" ? "default" : "outline"}
                     size="sm"
-                    className="h-8 text-xs"
                     onClick={() => setNewBlockType("full")}
                   >
                     {t("fullyClose")}
@@ -148,7 +146,6 @@ export function ServiceDayBlockingCard() {
                       newBlockType === "check_in" ? "default" : "outline"
                     }
                     size="sm"
-                    className="h-8 text-xs"
                     onClick={() => setNewBlockType("check_in")}
                   >
                     {t("blockCheckInOnly")}
@@ -159,7 +156,6 @@ export function ServiceDayBlockingCard() {
                       newBlockType === "check_out" ? "default" : "outline"
                     }
                     size="sm"
-                    className="h-8 text-xs"
                     onClick={() => setNewBlockType("check_out")}
                   >
                     {t("blockCheckOutOnly")}

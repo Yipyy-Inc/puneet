@@ -120,10 +120,14 @@ test.describe("the kennels board", () => {
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
-    const free = (await rooms(page)).rooms.find(
-      (r) => r.active && !r.id.includes("e2e"),
+    const board = await rooms(page);
+    const free = board.rooms.find(
+      (r) =>
+        r.active &&
+        !r.id.includes("e2e") &&
+        !board.occupied.some((o) => o.roomId === r.id),
     );
-    expect(free, "an active kennel").toBeTruthy();
+    expect(free, "an active kennel with nobody in it").toBeTruthy();
 
     const res = await page.request.post("/api/bookings", {
       data: bookingBody(free!.id),

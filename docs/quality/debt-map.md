@@ -9819,3 +9819,113 @@ one derived 50 roots correctly and simply started in the wrong directory.
 **When adding a surface, ask what renders AROUND the thing you listed**, not
 just what it imports. Chrome, route-level states and error boundaries are the
 three that hide, in that order.
+
+## 2026-09-08 — the shared save paths answer §5s's Loading cell by hand, and get it wrong
+
+**Severity: 🟡 medium.** Found while auditing settings against the §5s matrix.
+
+`Button` implements the Loading cell exactly as §5s specifies — label untouched,
+spinner in the leading glyph's slot, and `disabled` scoped to
+`:not([data-loading])` so a loading button is unclickable **without rendering as
+disabled**, which is a different cell. Neither of the two shared save paths used
+it.
+
+**`SettingsBlock` (7 settings cards) — fixed in this change.** It hand-rolled
+all three parts and missed all three:
+
+|                                       |                                                                                              |
+| ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `{saving ? t("Saving…") : t("Save")}` | §5s Never — "it shifts layout and throws away the verb"                                      |
+| `disabled={saving}`                   | rendered the disabled fill and ink while merely loading                                      |
+| `t("Saving…")`                        | **not in `ui-translations.ts`**, and `translateUiText` returns its input unchanged on a miss |
+
+The third is the one worth keeping. `Save` IS in the map, as `Enregistrer`. So a
+French user pressed **Enregistrer** and watched it turn into the English word
+**"Saving…"** — a language change caused by pressing the button, on the save
+path of every settings card that uses this wrapper. Passing `loading` deletes
+the bug rather than translating it: the label never changes, so there is no
+second string.
+
+**`SaveBar` (8 loyalty pages) — NOT fixed, and it matters.** It has the same
+three defects (`{saving ? "Saving…" : saveLabel}`, `disabled={!dirty || saving}`,
+and no translation layer at all — the string is a bare English literal).
+
+It is called out here because the settings restructure plan promotes exactly
+this component to `src/components/ui/save-bar.tsx` and adopts it as the ONE save
+model across all 50 sections. Promote it as it stands and this ships to fifty
+screens instead of eight. **Fix the Loading cell in the same change as the
+promotion.**
+
+**The general lesson.** Both files predate `Button`'s `loading` prop, and both
+looked finished: a spinner appeared, the button stopped accepting clicks, the
+label said what was happening. Every visible symptom of a correct loading state
+was present. What was wrong is only visible against the matrix — which is the
+argument for §5s existing as a matrix rather than as advice, and for auditing
+against it component by component instead of waiting to notice.
+
+**When a primitive grows a state prop, grep for the hand-rolled version.** Doing
+that here turned "two shared save paths" into the real number:
+
+```
+rg "Saving…|Loading…" src -l     →  33 files
+```
+
+Two of those are not defects — `button.tsx` quotes the rule in its own docstring,
+and `settings-block.tsx` now quotes it in the comment explaining the fix. That
+leaves **~31 call sites** still swapping a label where the primitive would hold
+it, across HQ, gift cards, tasks, automations, calling and the customer portal.
+
+**None of them is in `src/app/facility/dashboard/settings/`**, which is worth
+saying precisely: the 50 sections are clean of this because they either route
+through `SettingsBlock` — fixed here, so all 7 cards are fixed at once — or have
+no save button of their own. So this is not settings debt. It is product-wide
+debt that settings happens to be free of, and the promotion of `SaveBar` is the
+one change that could import it.
+
+Ratchet-shaped, like `check:badge-glyph` and `check:hardcoded-locale`: a gate
+counting label swaps would start at ~31 and only fall. Not written yet — recorded
+so the number exists before someone "fixes" it one file at a time with nothing
+holding the line.
+
+## 2026-09-08 — the kennel board reads occupancy for TODAY and books against a range
+
+**Severity: 🟠 high** — this one is probably not just a test bug.
+
+`boarding-kennel-board.spec.ts:154` ("moving a guest from the board reaches the
+database") fails against production with:
+
+```
+{"error":"That room is already taken for these dates. Pick another room, or
+ override if you have the permission."}
+```
+
+The obvious reading is leftover state, and it is wrong twice over. The spec's
+`afterAll` is careful — it clears the stay BEFORE cancelling the booking,
+because cancelling only releases the row, and it skips already-cancelled rows so
+the counts keep meaning something. And the test does not pick blindly: it
+already filters on `!before.occupied.some((o) => o.roomId === r.id)`.
+
+**The two sides are asking different questions.** `GET /api/boarding/rooms`
+returns the occupancy the BOARD draws, which is a today window — the spec's own
+`bookingBody` comment says so ("covering today, so the board's 'today' window
+sees it"). The server's conflict check runs over the moving stay's FULL date
+range. So a kennel with nobody in it today, booked from Thursday, is
+simultaneously "free" to the read and "taken" to the write.
+
+**Why this is more than a flaky spec.** That is exactly what an operator sees:
+the board shows an empty kennel, they drag a guest into it, and the drag is
+refused by a rule the board never showed them. The board exists to prevent that.
+A square that is free today but booked inside the guest's stay needs to render
+as unavailable — or the refusal needs to say WHICH dates collide, which it
+currently does not.
+
+**Not fixed here.** Deciding whether the read widens to the stay's range, or the
+board learns a third state between free and occupied, is a product call on a
+screen this change has no business touching. Recorded so the next person does
+not "fix" it by relaxing the spec, which would delete the only evidence.
+
+**What WAS changed** is the test above it (`:123`), which took the first active
+kennel and called the variable `free` without consulting `occupied` at all. That
+is a real latent bug of a different kind — it flaked once in this run and passed
+on retry — and the fix is to match what the file's own other two tests already
+do. It is **not** the fix for `:154`, and nothing here claims it is.

@@ -61,6 +61,10 @@ const EN_TO_FR_LITERAL_MAP = (() => {
     Edit: "Modifier",
     Save: "Enregistrer",
     Cancel: "Annuler",
+    // The fallback when a settings save is refused and the refusal carries no
+    // message of its own. It is the sentence a French user reads when RLS
+    // declines their row, so it cannot be the only English left on the path.
+    "Could not save changes.": "Impossible d’enregistrer les modifications.",
     "Profile Settings": "Paramètres du profil",
     "System Settings": "Paramètres système",
     "Context Switcher": "Changement de contexte",

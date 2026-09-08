@@ -95,7 +95,6 @@ export function OneDayScheduleOverrideCard() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs"
                   onClick={() =>
                     setNewScheduleServices(
                       newServices.length === SERVICE_BLOCK_OPTIONS.length
