@@ -777,7 +777,15 @@
       "search": "Search settings",
       "allSettings": "All settings",
       "noMatch": "No matching settings",
-      "noMatchHint": "Try a different word, or the area it belongs to."
+      "noMatchHint": "Try a different word, or the area it belongs to.",
+      "deniedTitle": "This area needs an owner's approval",
+      "deniedBody": "Ask the facility owner to add this section to your role.",
+      "errorTitle": "We couldn't load these settings",
+      "errorBody": "Something went wrong at our end. Nothing you have saved is affected, and trying again usually clears it.",
+      "errorAction": "Try again",
+      "notFoundTitle": "That settings section has moved",
+      "notFoundBody": "The link may be out of date, or the section now lives under a different heading.",
+      "notFoundAction": "Go to all settings"
     },
     "sections": {
       "business": {

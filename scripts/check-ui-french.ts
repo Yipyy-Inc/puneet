@@ -566,6 +566,35 @@ function isComponent(file: string): boolean {
 /** settings — one entry per section. */
 function settingsSurface(): Offender[] {
   const out: Offender[] = [];
+
+  // ── THE CHROME IS PART OF THE AREA ──────────────────────────────────────
+  //
+  // This walked `_sections/` only, so the settings LAYOUT was in no surface at
+  // all — not this one, and not the facility shell's, which stops two imports
+  // below `facility/layout.tsx` and never reaches this far down the tree.
+  //
+  // What sat in that gap is not marginal. `settings-shell.tsx` renders the
+  // page header that names the section, and `SettingsSidebar` renders 51
+  // labels in 9 groups: between them, the most-read text in the entire area,
+  // measured by nothing, on the very surface this gate was written for.
+  //
+  // Found on 2026-09-08 while adding the permission-denied state — a string
+  // that would have rendered in English behind a green gate on all 50
+  // sections. Same lesson as SHELL_ROOTS above, one level in: a surface list
+  // is only as honest as its roots.
+  //
+  // The route-level states are here for the same reason. `error.tsx` and
+  // `not-found.tsx` are the two rungs of the §5s ladder settings implements,
+  // and a state nobody can reach on purpose is exactly the file whose English
+  // survives longest.
+  const chrome = new Set<string>();
+  for (const root of ["layout.tsx", "page.tsx", "error.tsx", "not-found.tsx"])
+    walk(SETTINGS + root, 3, chrome, true);
+  const chromeHits = [...chrome]
+    .filter(isComponent)
+    .flatMap((f) => hits(f, true));
+  if (chromeHits.length > 0) out.push({ id: "(chrome)", hits: chromeHits });
+
   for (const file of readdirSync(SECTIONS).sort()) {
     if (!file.endsWith(".tsx")) continue;
     const id = file.replace(/\.tsx$/, "");

@@ -5,6 +5,7 @@ import { CircleHelp, Settings } from "lucide-react";
 
 import { RouteState } from "@/components/ui/route-state";
 import { settingsIndexHref, settingsPortalFor } from "@/lib/settings/nav";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // A settings address that names no section.
@@ -34,6 +35,7 @@ import { settingsIndexHref, settingsPortalFor } from "@/lib/settings/nav";
 export default function SettingsNotFound() {
   const pathname = usePathname() ?? "";
   const index = settingsIndexHref(settingsPortalFor(pathname));
+  const label = useSettingsText();
 
   return (
     <RouteState
@@ -41,9 +43,13 @@ export default function SettingsNotFound() {
       pose="confused"
       icon={CircleHelp}
       inkClassName="text-ink-secondary"
-      title="That settings section has moved"
-      description="The link may be out of date, or the section now lives under a different heading."
-      action={{ label: "Go to all settings", icon: Settings, href: index }}
+      title={label.text("notFoundTitle")}
+      description={label.text("notFoundBody")}
+      action={{
+        label: label.text("notFoundAction"),
+        icon: Settings,
+        href: index,
+      }}
       className="min-h-0 p-0"
     />
   );

@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 
 import { PageHeader } from "@/components/ui/page-header";
+import { RouteState } from "@/components/ui/route-state";
 import {
   SettingsSidebar,
   canAccessSettingsSection,
 } from "@/components/facility/SettingsSidebar";
+import { usePermissionsResolved } from "@/hooks/use-db-permissions";
 import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
 import {
   settingsIndexHref,
@@ -46,12 +48,29 @@ import { useSettingsText } from "@/lib/settings/use-settings-text";
 // UP rather than being copied 50 times. A section added tomorrow is guarded
 // because it is inside this layout, not because somebody remembered.
 //
-// It stays a redirect rather than a refusal, deliberately. `myPermissions()`
-// returns an empty map on any RPC error, so "denied" and "we could not find
-// out" are the same value here; refusing on it would lock an owner out of their
-// own settings on one transient failure. The server routes refuse. What this
-// does is keep the address bar honest — it used to render Business while the
-// URL still said `taxes`.
+// It used to be a redirect rather than a refusal in EVERY case, and the reason
+// was sound: `myPermissions()` returns an empty map on any RPC error, so
+// "denied" and "we could not find out" were the same value here, and refusing
+// on that would lock an owner out of their own settings on one transient
+// failure.
+//
+// The premise, not the reasoning, was what could be fixed. `usePermissionsResolved()`
+// reports the QUERY's status rather than its data, so the two cases are now
+// distinguishable, and each gets the behaviour it deserves:
+//
+//   resolved + denied   → refuse, with the §5d2 `secure` state. The address
+//                         bar stays put and the screen says why.
+//   unresolved + denied → redirect to the fallback, exactly as before. We do
+//                         not know, so we do not accuse.
+//
+// The silent redirect was the case §6 rule 9 names — "a state a component does
+// not implement is a bug, not a decision". Asking for Taxes and landing on
+// Business with nothing on screen explaining it is indistinguishable, from the
+// user's side, from the bug this layout was built to end: rendering Business
+// while the URL still said `taxes`.
+//
+// None of this is enforcement. RLS refuses the row and the server routes refuse
+// the request whatever this decides; this only decides what the person reads.
 // ============================================================================
 
 export function SettingsShell({ children }: { children: React.ReactNode }) {
@@ -94,9 +113,15 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
   const allowed =
     !guarded || canAccessSettingsSection(leaf?.id ?? segment!, permissions);
 
+  // A denial is only worth saying out loud once the database has answered.
+  // Until then `permissions` may be an empty map standing in for "we could not
+  // find out", and every section would refuse — including the owner's.
+  const resolved = usePermissionsResolved();
+  const refused = !allowed && resolved;
+
   useEffect(() => {
-    if (!allowed) router.replace(settingsPath(fallback));
-  }, [allowed, fallback, router, settingsPath]);
+    if (!allowed && !resolved) router.replace(settingsPath(fallback));
+  }, [allowed, resolved, fallback, router, settingsPath]);
 
   return (
     <div className="space-y-6 p-6">
@@ -151,8 +176,28 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
               {label.text("allSettings")}
             </Link>
           )}
-          {/* Nothing while the redirect above is in flight: rendering the
-              section would flash a screen this viewer may not open.
+          {/* Three cases, and the middle one is the whole point of this block.
+
+              ALLOWED — the section.
+
+              REFUSED — the §5d2 "Permission denied" rung: pose `secure`, the
+              violet ink #4C3BB8, and the sentence the system writes for it,
+              verbatim, the same one src/app/forbidden.tsx uses. `surface="card"`
+              because the layout survives: the rail and the header naming the
+              section stay, and only the body is replaced.
+
+              NEITHER — nothing, while the redirect above is in flight.
+              Rendering the section would flash a screen this viewer may not
+              open.
+
+              No action pill, and that is deliberate twice over. §5d2 names
+              "Request access" as this pose's CTA and there is no request-access
+              flow in the product — forbidden.tsx already recorded that, and a
+              pill that performs nothing is what rule 9 and check:success-claims
+              both exist to catch. The real destination, "All settings", is
+              already on screen four lines above this, so a second copy of it
+              inside the card would be the screen's one 48px control (§5b2)
+              spent on a link the reader can already see.
 
               `data-slot` so a spec can measure the SECTION rather than the
               page: settings-french.spec.ts asserts the body is not empty, and
@@ -160,7 +205,19 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
               full of text from the rail even when the section renders nothing
               at all. That is exactly the case it was added to catch. */}
           <div data-slot="settings-section" className="space-y-6">
-            {allowed ? children : null}
+            {refused ? (
+              <RouteState
+                surface="card"
+                pose="secure"
+                icon={Lock}
+                inkClassName="text-violet"
+                title={label.text("deniedTitle")}
+                description={label.text("deniedBody")}
+                className="min-h-0 p-0"
+              />
+            ) : allowed ? (
+              children
+            ) : null}
           </div>
         </div>
       </div>

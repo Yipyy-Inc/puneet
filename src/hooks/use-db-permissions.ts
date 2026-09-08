@@ -59,3 +59,32 @@ export function useDbPermissions(): EffectivePermissions | null {
   }
   return out;
 }
+
+/**
+ * Whether the database has actually ANSWERED the permission question.
+ *
+ * ── WHY THIS EXISTS SEPARATELY FROM THE MAP ───────────────────────────────
+ *
+ * `useDbPermissions()` collapses three different situations into one `null`:
+ * no session, the query still in flight, and the query having failed. That is
+ * the right shape for the question it answers — "which controls are worth
+ * drawing" — because all three mean the same thing there: fall back.
+ *
+ * It is the wrong shape for REFUSING. A refusal has to distinguish "you may
+ * not open this" from "we could not find out", and on a `null` those are
+ * identical. The settings shell said so in its own header and redirected
+ * instead of refusing for exactly that reason: refusing on an RPC failure
+ * would lock an owner out of their own settings on one bad round trip.
+ *
+ * So this reports the query's own status rather than its data. True only when
+ * a fetch has succeeded AND returned a map — the one state in which a denial
+ * is the database's answer rather than the absence of one.
+ *
+ * `useQuery` on the same key as `useDbPermissions` is one request, not two:
+ * react-query dedupes by key, and the facility layout has already seeded this
+ * cache entry on the server, so in practice this is true on the first render.
+ */
+export function usePermissionsResolved(): boolean {
+  const { isSuccess, data } = useQuery(permissionQueries.mine());
+  return isSuccess && Boolean(data);
+}
