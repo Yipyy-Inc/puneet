@@ -27,6 +27,7 @@ import {
   normalizeApplicableServices,
 } from "@/components/facility/pricing-rules/shared";
 import type { ServiceOption } from "@/components/facility/pricing-rules/shared";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Multi-Pet Discount Modal ─────────────────────────────────────────
 
@@ -45,6 +46,7 @@ export function MultiPetModal({
   serviceOptions: ServiceOption[];
   onSave: (rule: MultiPetDiscountRule) => void;
 }) {
+  const { t } = usePricingLabels();
   const [form, setForm] = useState({
     name: "",
     discountType: "additional_pet" as "per_pet" | "additional_pet",
@@ -91,22 +93,20 @@ export function MultiPetModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {editing ? "Edit Multi-Pet Discount" : "Add Multi-Pet Discount"}
-          </DialogTitle>
+          <DialogTitle>{editing ? t("mpEdit") : t("mpAdd")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Rule name</Label>
+            <Label>{t("mpName")}</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Multi-Pet Boarding Discount"
+              placeholder={t("mpNamePlaceholder")}
             />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label>Discount applies to</Label>
+              <Label>{t("mpAppliesTo")}</Label>
               <Select
                 value={form.discountType}
                 onValueChange={(v) =>
@@ -120,15 +120,15 @@ export function MultiPetModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="per_pet">Per pet</SelectItem>
+                  <SelectItem value="per_pet">{t("mpPerPet")}</SelectItem>
                   <SelectItem value="additional_pet">
-                    Additional pet only
+                    {t("mpAdditionalOnly")}
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Discount value type</Label>
+              <Label>{t("mpValueType")}</Label>
               <Select
                 value={form.discountValueType}
                 onValueChange={(v) =>
@@ -142,8 +142,8 @@ export function MultiPetModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="flat">Flat amount</SelectItem>
-                  <SelectItem value="percentage">Percentage</SelectItem>
+                  <SelectItem value="flat">{t("flat")}</SelectItem>
+                  <SelectItem value="percentage">{t("percent")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -155,12 +155,12 @@ export function MultiPetModal({
                     setForm((p) => ({ ...p, sameLodging: c === true }))
                   }
                 />
-                <span className="text-sm">Same lodging required</span>
+                <span className="text-sm">{t("mpSameLodging")}</span>
               </label>
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Discount Tiers</Label>
+            <Label>{t("mpTiers")}</Label>
             <div className="space-y-2">
               {form.tiers.map((tier, i) => (
                 <div key={i} className="flex items-center gap-2">
@@ -197,7 +197,9 @@ export function MultiPetModal({
                     }}
                     className="w-24"
                   />
-                  <span className="text-muted-foreground text-sm">off</span>
+                  <span className="text-muted-foreground text-sm">
+                    {t("mpTierOff").replace("{amount}", "")}
+                  </span>
                   {form.tiers.length > 1 && (
                     <Button
                       variant="ghost"
@@ -233,12 +235,12 @@ export function MultiPetModal({
                 }
               >
                 <Plus className="size-3" />
-                Add tier
+                {t("mpAddTier")}
               </Button>
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Where this applies</Label>
+            <Label>{t("whereApplies")}</Label>
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2">
                 <Checkbox
@@ -250,7 +252,7 @@ export function MultiPetModal({
                     }))
                   }
                 />
-                <span className="text-sm font-medium">All services</span>
+                <span className="text-sm font-medium">{t("allServices")}</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {serviceOptions.map((service) => (
@@ -294,12 +296,12 @@ export function MultiPetModal({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={() => {
               if (!form.name.trim()) {
-                toast.error("Name is required");
+                toast.error(t("nameRequired"));
                 return;
               }
               onSave({
@@ -316,7 +318,7 @@ export function MultiPetModal({
               });
             }}
           >
-            {editing ? "Save" : "Create"}
+            {editing ? t("save") : t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>

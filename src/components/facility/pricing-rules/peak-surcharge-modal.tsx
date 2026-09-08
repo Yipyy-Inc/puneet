@@ -25,7 +25,6 @@ import { toast } from "sonner";
 import type { PeakSurcharge } from "@/types/boarding";
 import {
   makeId,
-  HOLIDAY_COUNTRIES,
   HOLIDAY_SYNC_YEAR_OPTIONS,
   normalizeApplicableServices,
   buildHolidayDateList,
@@ -35,6 +34,7 @@ import type {
   ServiceOption,
   HolidayCatalogItem,
 } from "@/components/facility/pricing-rules/shared";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Peak Surcharge Modal ─────────────────────────────────────────────
 
@@ -53,6 +53,7 @@ export function PeakSurchargeModal({
   serviceOptions: ServiceOption[];
   onSave: (rule: PeakSurcharge) => void;
 }) {
+  const { t, plural, countries } = usePricingLabels();
   const [form, setForm] = useState({
     name: "",
     dateMode: "specific" as "specific" | "repeat" | "holiday",
@@ -167,9 +168,7 @@ export function PeakSurchargeModal({
       } catch (error) {
         if (cancelled) return;
         const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to sync holiday dates";
+          error instanceof Error ? error.message : t("psSyncFailed");
         setHolidaySyncError(message);
         setHolidayCatalog([]);
       } finally {
@@ -182,7 +181,7 @@ export function PeakSurchargeModal({
     return () => {
       cancelled = true;
     };
-  }, [open, form.dateMode, form.holidayCountryCode, form.holidayYearsAhead]);
+  }, [open, form.dateMode, form.holidayCountryCode, form.holidayYearsAhead, t]);
 
   const filteredHolidayCatalog = holidayCatalog.filter((holiday) =>
     holiday.name.toLowerCase().includes(holidaySearch.trim().toLowerCase()),
@@ -192,22 +191,20 @@ export function PeakSurchargeModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {editing ? "Edit Peak Surcharge" : "Add Peak Surcharge"}
-          </DialogTitle>
+          <DialogTitle>{editing ? t("psEdit") : t("psAdd")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Surcharge Name</Label>
+            <Label>{t("psName")}</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Summer Peak"
+              placeholder={t("psNamePlaceholder")}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Date Source</Label>
+            <Label>{t("psDateSource")}</Label>
             <Select
               value={form.dateMode}
               onValueChange={(value) =>
@@ -221,10 +218,8 @@ export function PeakSurchargeModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="specific">Specific date range</SelectItem>
-                <SelectItem value="holiday">
-                  Holiday auto-sync (changes yearly)
-                </SelectItem>
+                <SelectItem value="specific">{t("psSpecificRange")}</SelectItem>
+                <SelectItem value="holiday">{t("psHolidaySync")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -232,7 +227,7 @@ export function PeakSurchargeModal({
           {form.dateMode !== "holiday" ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Start Date</Label>
+                <Label>{t("psStartDate")}</Label>
                 <Input
                   type="date"
                   value={form.startDate}
@@ -242,7 +237,7 @@ export function PeakSurchargeModal({
                 />
               </div>
               <div className="space-y-2">
-                <Label>End Date</Label>
+                <Label>{t("psEndDate")}</Label>
                 <Input
                   type="date"
                   value={form.endDate}
@@ -255,17 +250,19 @@ export function PeakSurchargeModal({
           ) : (
             <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
               <div className="flex items-center gap-2">
-                <div className="flex size-7 items-center justify-center rounded-md bg-indigo-100">
-                  <Globe2 className="size-4 text-indigo-700" />
+                {/* A solid disc with a white glyph, not a wash behind a
+                    tinted icon — §6 rule 2. */}
+                <div className="bg-violet text-violet-foreground flex size-7 items-center justify-center rounded-md">
+                  <Globe2 className="size-4" />
                 </div>
-                <p className="text-sm font-semibold text-slate-800">
-                  Dynamic Holidays
+                <p className="text-sm font-semibold">
+                  {t("psDynamicHolidays")}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Country</Label>
+                  <Label>{t("psCountry")}</Label>
                   <Select
                     value={form.holidayCountryCode}
                     onValueChange={(value) =>
@@ -281,8 +278,8 @@ export function PeakSurchargeModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {HOLIDAY_COUNTRIES.map((country) => (
-                        <SelectItem key={country.code} value={country.code}>
+                      {countries.map((country) => (
+                        <SelectItem key={country.value} value={country.value}>
                           {country.label}
                         </SelectItem>
                       ))}
@@ -291,7 +288,7 @@ export function PeakSurchargeModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Years to sync</Label>
+                  <Label>{t("psYearsToSync")}</Label>
                   <Select
                     value={String(form.holidayYearsAhead)}
                     onValueChange={(value) =>
@@ -307,7 +304,7 @@ export function PeakSurchargeModal({
                     <SelectContent>
                       {HOLIDAY_SYNC_YEAR_OPTIONS.map((years) => (
                         <SelectItem key={years} value={String(years)}>
-                          Next {years} year{years > 1 ? "s" : ""}
+                          {plural(years, "psNextYearsOne", "psNextYearsOther")}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -318,7 +315,7 @@ export function PeakSurchargeModal({
               <div className="space-y-2 rounded-lg border bg-white p-3">
                 <div className="flex items-center justify-between gap-2">
                   <Label className="text-xs font-semibold">
-                    Holiday window expansion
+                    {t("psWindowExpansion")}
                   </Label>
                   <div className="flex items-center gap-1.5">
                     <Button
@@ -340,7 +337,7 @@ export function PeakSurchargeModal({
                         }))
                       }
                     >
-                      Thanksgiving weekend preset
+                      {t("psWeekendPreset")}
                     </Button>
                     <Button
                       type="button"
@@ -361,14 +358,14 @@ export function PeakSurchargeModal({
                         }))
                       }
                     >
-                      No expansion
+                      {t("psNoExpansion")}
                     </Button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Days before holiday</Label>
+                    <Label className="text-xs">{t("psDaysBefore")}</Label>
                     <Input
                       type="number"
                       min={0}
@@ -393,7 +390,7 @@ export function PeakSurchargeModal({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Days after holiday</Label>
+                    <Label className="text-xs">{t("psDaysAfter")}</Label>
                     <Input
                       type="number"
                       min={0}
@@ -420,8 +417,7 @@ export function PeakSurchargeModal({
                 </div>
 
                 <p className="text-muted-foreground text-[11px]">
-                  Use this to include surrounding weekend days for moving
-                  holidays without manually entering each year.
+                  {t("psExpansionHelp")}
                 </p>
               </div>
 
@@ -429,7 +425,7 @@ export function PeakSurchargeModal({
                 <Input
                   value={holidaySearch}
                   onChange={(e) => setHolidaySearch(e.target.value)}
-                  placeholder="Search holidays (e.g. Thanksgiving, Easter)"
+                  placeholder={t("psSearchHolidays")}
                 />
                 <Button
                   type="button"
@@ -465,12 +461,12 @@ export function PeakSurchargeModal({
                           ),
                         };
                       });
-                      toast.success("Holiday dates synced");
+                      toast.success(t("psSynced"));
                     } catch (error) {
                       const message =
                         error instanceof Error
                           ? error.message
-                          : "Failed to sync holiday dates";
+                          : t("psSyncFailed");
                       setHolidaySyncError(message);
                       toast.error(message);
                     } finally {
@@ -483,7 +479,7 @@ export function PeakSurchargeModal({
                   ) : (
                     <Sparkles className="size-3.5" />
                   )}
-                  Sync
+                  {t("psSync")}
                 </Button>
               </div>
 
@@ -495,13 +491,13 @@ export function PeakSurchargeModal({
                 {holidaySyncLoading ? (
                   <div className="text-muted-foreground flex items-center gap-2 px-1 py-2 text-xs">
                     <Loader2 className="size-3.5 animate-spin" />
-                    Loading holidays...
+                    {t("psSyncing")}
                   </div>
                 ) : filteredHolidayCatalog.length === 0 ? (
                   <p className="text-muted-foreground px-1 py-2 text-xs">
                     {holidayCatalog.length === 0
-                      ? "No holidays loaded yet"
-                      : "No holidays match this search"}
+                      ? t("psNoneLoaded")
+                      : t("psNoneMatch")}
                   </p>
                 ) : (
                   filteredHolidayCatalog.map((holiday) => (
@@ -540,8 +536,11 @@ export function PeakSurchargeModal({
                           {holiday.name}
                         </p>
                         <p className="text-muted-foreground text-[10px]">
-                          {holiday.dates.length} date
-                          {holiday.dates.length !== 1 ? "s" : ""} in sync window
+                          {plural(
+                            holiday.dates.length,
+                            "psDatesInWindowOne",
+                            "psDatesInWindowOther",
+                          )}
                         </p>
                       </div>
                     </label>
@@ -552,7 +551,10 @@ export function PeakSurchargeModal({
               {form.holidayDates.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-muted-foreground text-xs">
-                    Auto-generated fee dates ({form.holidayDates.length})
+                    {t("psGeneratedDates").replace(
+                      "{n}",
+                      String(form.holidayDates.length),
+                    )}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {form.holidayDates.slice(0, 8).map((date) => (
@@ -566,7 +568,10 @@ export function PeakSurchargeModal({
                     ))}
                     {form.holidayDates.length > 8 && (
                       <Badge variant="outline" className="text-[10px]">
-                        +{form.holidayDates.length - 8} more
+                        {t("psAndMore").replace(
+                          "{n}",
+                          String(form.holidayDates.length - 8),
+                        )}
                       </Badge>
                     )}
                   </div>
@@ -577,7 +582,7 @@ export function PeakSurchargeModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Surcharge Type</Label>
+              <Label>{t("psSurchargeType")}</Label>
               <Select
                 value={form.surchargeType}
                 onValueChange={(v) =>
@@ -591,17 +596,13 @@ export function PeakSurchargeModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percentage">Percentage (%)</SelectItem>
-                  <SelectItem value="flat">Flat ($)</SelectItem>
+                  <SelectItem value="percentage">{t("percent")}</SelectItem>
+                  <SelectItem value="flat">{t("flat")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>
-                {form.surchargeType === "percentage"
-                  ? "Percent (%)"
-                  : "Amount ($)"}
-              </Label>
+              <Label>{t("amount")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -622,7 +623,7 @@ export function PeakSurchargeModal({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Scope</Label>
+            <Label>{t("scope")}</Label>
             <Select
               value={form.scope}
               onValueChange={(v) =>
@@ -636,13 +637,17 @@ export function PeakSurchargeModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="per_each_pet">Per each pet</SelectItem>
-                <SelectItem value="first_pet_only">First pet only</SelectItem>
+                <SelectItem value="per_each_pet">
+                  {t("psPerEachPet")}
+                </SelectItem>
+                <SelectItem value="first_pet_only">
+                  {t("psFirstPetOnly")}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Where this applies</Label>
+            <Label>{t("whereApplies")}</Label>
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2">
                 <Checkbox
@@ -654,7 +659,7 @@ export function PeakSurchargeModal({
                     }))
                   }
                 />
-                <span className="text-sm font-medium">All services</span>
+                <span className="text-sm font-medium">{t("allServices")}</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {serviceOptions.map((service) => (
@@ -698,22 +703,22 @@ export function PeakSurchargeModal({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={() => {
               if (!form.name.trim()) {
-                toast.error("Name is required");
+                toast.error(t("nameRequired"));
                 return;
               }
 
               if (form.dateMode === "holiday") {
                 if (!form.holidayCountryCode) {
-                  toast.error("Choose a country for holiday sync");
+                  toast.error(t("psCountryRequired"));
                   return;
                 }
                 if (form.holidayNames.length === 0) {
-                  toast.error("Select at least one holiday");
+                  toast.error(t("psHolidayRequired"));
                   return;
                 }
 
@@ -728,7 +733,7 @@ export function PeakSurchargeModal({
                       );
 
                 if (holidayDates.length === 0) {
-                  toast.error("No holiday dates available. Please sync again.");
+                  toast.error(t("psNoDates"));
                   return;
                 }
 
@@ -765,7 +770,7 @@ export function PeakSurchargeModal({
               }
 
               if (!form.startDate || !form.endDate) {
-                toast.error("Start and end dates are required");
+                toast.error(t("psDatesRequired"));
                 return;
               }
 
@@ -789,7 +794,7 @@ export function PeakSurchargeModal({
               });
             }}
           >
-            {editing ? "Save" : "Create"}
+            {editing ? t("save") : t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>

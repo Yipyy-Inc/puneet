@@ -28,6 +28,7 @@ import {
   normalizeApplicableServices,
 } from "@/components/facility/pricing-rules/shared";
 import type { ServiceOption } from "@/components/facility/pricing-rules/shared";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Service Bundle Modal ────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ export function ServiceBundleModal({
   serviceOptions: ServiceOption[];
   onSave: (rule: ServiceBundleRule) => void;
 }) {
+  const { t } = usePricingLabels();
   const [form, setForm] = useState({
     name: "",
     triggerService: serviceType === "all" ? "boarding" : serviceType,
@@ -117,25 +119,23 @@ export function ServiceBundleModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>
-            {editing ? "Edit Service Bundle" : "Add Service Bundle"}
-          </DialogTitle>
+          <DialogTitle>{editing ? t("sbEdit") : t("sbAdd")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Bundle Name</Label>
+            <Label>{t("sbName")}</Label>
             <Input
               value={form.name}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, name: e.target.value }))
               }
-              placeholder="e.g. 6+ night departure bath bundle"
+              placeholder={t("sbNamePlaceholder")}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Trigger service</Label>
+              <Label>{t("sbTriggerService")}</Label>
               <Select
                 value={form.triggerService}
                 onValueChange={(value) =>
@@ -155,7 +155,7 @@ export function ServiceBundleModal({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Bundled service</Label>
+              <Label>{t("sbBundledService")}</Label>
               <Select
                 value={form.bundledService}
                 onValueChange={(value) =>
@@ -177,7 +177,7 @@ export function ServiceBundleModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Bundled item label</Label>
+            <Label>{t("sbBundledLabel")}</Label>
             <Input
               value={form.bundledServiceLabel}
               onChange={(e) =>
@@ -186,13 +186,13 @@ export function ServiceBundleModal({
                   bundledServiceLabel: e.target.value,
                 }))
               }
-              placeholder="e.g. Departure Bath"
+              placeholder={t("sbBundledLabelPlaceholder")}
             />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
-              <Label>Min</Label>
+              <Label>{t("sbMin")}</Label>
               <Input
                 type="number"
                 min={1}
@@ -206,7 +206,7 @@ export function ServiceBundleModal({
               />
             </div>
             <div className="space-y-2">
-              <Label>Max</Label>
+              <Label>{t("sbMax")}</Label>
               <Input
                 type="number"
                 min={form.minUnits}
@@ -217,11 +217,11 @@ export function ServiceBundleModal({
                     maxUnits: e.target.value ? Number(e.target.value) : null,
                   }))
                 }
-                placeholder="No cap"
+                placeholder={t("noCap")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Unit</Label>
+              <Label>{t("sbUnit")}</Label>
               <Select
                 value={form.triggerUnit}
                 onValueChange={(value) =>
@@ -235,9 +235,9 @@ export function ServiceBundleModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="nights">Nights</SelectItem>
-                  <SelectItem value="days">Days</SelectItem>
-                  <SelectItem value="sessions">Sessions</SelectItem>
+                  <SelectItem value="nights">{t("sbNights")}</SelectItem>
+                  <SelectItem value="days">{t("sbDays")}</SelectItem>
+                  <SelectItem value="sessions">{t("sbSessions")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -254,7 +254,7 @@ export function ServiceBundleModal({
                   }))
                 }
               />
-              <span className="text-sm">Require same pet</span>
+              <span className="text-sm">{t("sbSamePet")}</span>
             </label>
             <label className="flex items-center gap-2">
               <Checkbox
@@ -266,13 +266,13 @@ export function ServiceBundleModal({
                   }))
                 }
               />
-              <span className="text-sm">Require same room</span>
+              <span className="text-sm">{t("sbSameRoom")}</span>
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Bundle mode</Label>
+              <Label>{t("sbMode")}</Label>
               <Select
                 value={form.bundleMode}
                 onValueChange={(value) =>
@@ -286,13 +286,13 @@ export function ServiceBundleModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="mandatory">Mandatory add-on</SelectItem>
-                  <SelectItem value="optional">Optional suggestion</SelectItem>
+                  <SelectItem value="mandatory">{t("sbMandatory")}</SelectItem>
+                  <SelectItem value="optional">{t("sbOptional")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Bundle pricing</Label>
+              <Label>{t("sbPricing")}</Label>
               <Select
                 value={form.pricingMode}
                 onValueChange={(value) =>
@@ -312,11 +312,13 @@ export function ServiceBundleModal({
                 <SelectContent>
                   <SelectItem value="included">Included (free)</SelectItem>
                   <SelectItem value="discount_percentage">
-                    Discount percentage
+                    {t("sbDiscountPercent")}
                   </SelectItem>
-                  <SelectItem value="discount_flat">Discount flat</SelectItem>
+                  <SelectItem value="discount_flat">
+                    {t("sbDiscountFlat")}
+                  </SelectItem>
                   <SelectItem value="fixed_price">
-                    Fixed bundle price
+                    {t("sbFixedPrice")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -327,7 +329,7 @@ export function ServiceBundleModal({
             <div className="space-y-2">
               <Label>
                 {form.pricingMode === "discount_percentage"
-                  ? "Discount (%)"
+                  ? t("sbDiscountPercentLabel")
                   : "$ Value"}
               </Label>
               <Input
@@ -345,19 +347,19 @@ export function ServiceBundleModal({
           )}
 
           <div className="space-y-2">
-            <Label>Notes</Label>
+            <Label>{t("sbNotes")}</Label>
             <Textarea
               rows={2}
               value={form.notes}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, notes: e.target.value }))
               }
-              placeholder="Optional internal notes"
+              placeholder={t("sbNotesPlaceholder")}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Where this applies</Label>
+            <Label>{t("whereApplies")}</Label>
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2">
                 <Checkbox
@@ -369,7 +371,7 @@ export function ServiceBundleModal({
                     }))
                   }
                 />
-                <span className="text-sm font-medium">All services</span>
+                <span className="text-sm font-medium">{t("allServices")}</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {serviceOptions.map((service) => (
@@ -413,20 +415,20 @@ export function ServiceBundleModal({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={() => {
               if (!form.name.trim()) {
-                toast.error("Name is required");
+                toast.error(t("nameRequired"));
                 return;
               }
               if (!form.bundledServiceLabel.trim()) {
-                toast.error("Bundled item label is required");
+                toast.error(t("sbBundledLabelRequired"));
                 return;
               }
               if (form.pricingMode !== "included" && form.pricingValue <= 0) {
-                toast.error("Enter a value greater than 0 for bundle pricing");
+                toast.error(t("sbPricingRequired"));
                 return;
               }
 
@@ -455,7 +457,7 @@ export function ServiceBundleModal({
               });
             }}
           >
-            {editing ? "Save" : "Create"}
+            {editing ? t("save") : t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>

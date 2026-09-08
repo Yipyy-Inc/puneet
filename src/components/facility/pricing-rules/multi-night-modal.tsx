@@ -27,6 +27,7 @@ import {
   normalizeApplicableServices,
 } from "@/components/facility/pricing-rules/shared";
 import type { ServiceOption } from "@/components/facility/pricing-rules/shared";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Multi-Night Discount Modal ───────────────────────────────────────
 
@@ -45,6 +46,7 @@ export function MultiNightModal({
   serviceOptions: ServiceOption[];
   onSave: (rule: MultiNightDiscount) => void;
 }) {
+  const { t } = usePricingLabels();
   const [form, setForm] = useState({
     name: "",
     minNights: 3,
@@ -97,22 +99,20 @@ export function MultiNightModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>
-            {editing ? "Edit Multi-Night Discount" : "Add Multi-Night Discount"}
-          </DialogTitle>
+          <DialogTitle>{editing ? t("mnEdit") : t("mnAdd")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Rule name</Label>
+            <Label>{t("mpName")}</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Extended Stay Discount"
+              placeholder={t("mnNamePlaceholder")}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Min nights</Label>
+              <Label>{t("minNights")}</Label>
               <Input
                 type="number"
                 min={2}
@@ -126,7 +126,7 @@ export function MultiNightModal({
               />
             </div>
             <div className="space-y-2">
-              <Label>Max nights</Label>
+              <Label>{t("maxNights")}</Label>
               <Input
                 type="number"
                 min={form.minNights + 1}
@@ -137,13 +137,13 @@ export function MultiNightModal({
                     maxNights: e.target.value ? parseInt(e.target.value) : null,
                   }))
                 }
-                placeholder="No limit"
+                placeholder={t("noLimit")}
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Discount mode</Label>
+              <Label>{t("mnMode")}</Label>
               <Select
                 value={form.discountMode}
                 onValueChange={(value) =>
@@ -160,19 +160,23 @@ export function MultiNightModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percentage">Percent off</SelectItem>
-                  <SelectItem value="flat">Flat amount off</SelectItem>
-                  <SelectItem value="free_nights">Free nights</SelectItem>
+                  <SelectItem value="percentage">
+                    {t("mnPercentOff")}
+                  </SelectItem>
+                  <SelectItem value="flat">{t("mnFlatOff")}</SelectItem>
+                  <SelectItem value="free_nights">
+                    {t("mnFreeNights")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>
                 {form.discountMode === "percentage"
-                  ? "Discount (%)"
+                  ? t("percent")
                   : form.discountMode === "flat"
-                    ? "Amount off ($)"
-                    : "Free nights"}
+                    ? t("mnAmountOffLabel")
+                    : t("mnFreeNightsLabel")}
               </Label>
               <Input
                 type="number"
@@ -202,7 +206,7 @@ export function MultiNightModal({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Where this applies</Label>
+            <Label>{t("whereApplies")}</Label>
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2">
                 <Checkbox
@@ -214,7 +218,7 @@ export function MultiNightModal({
                     }))
                   }
                 />
-                <span className="text-sm font-medium">All services</span>
+                <span className="text-sm font-medium">{t("allServices")}</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {serviceOptions.map((service) => (
@@ -258,12 +262,12 @@ export function MultiNightModal({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={() => {
               if (!form.name.trim()) {
-                toast.error("Name is required");
+                toast.error(t("nameRequired"));
                 return;
               }
               onSave({
@@ -289,7 +293,7 @@ export function MultiNightModal({
               });
             }}
           >
-            {editing ? "Save" : "Create"}
+            {editing ? t("save") : t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>

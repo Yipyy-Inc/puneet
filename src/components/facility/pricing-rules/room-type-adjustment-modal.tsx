@@ -24,10 +24,10 @@ import { toast } from "sonner";
 import type { RoomTypeAdjustment } from "@/types/boarding";
 import {
   makeId,
-  BOARDING_ROOM_OPTIONS,
   normalizeApplicableServices,
 } from "@/components/facility/pricing-rules/shared";
 import type { ServiceOption } from "@/components/facility/pricing-rules/shared";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Room-Type Adjustment Modal ──────────────────────────────────────
 
@@ -46,6 +46,7 @@ export function RoomTypeAdjustmentModal({
   serviceOptions: ServiceOption[];
   onSave: (rule: RoomTypeAdjustment) => void;
 }) {
+  const { t, rooms } = usePricingLabels();
   const [form, setForm] = useState({
     name: "",
     roomTypeIds: ["standard"],
@@ -98,26 +99,24 @@ export function RoomTypeAdjustmentModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {editing ? "Edit Room-Type Rule" : "Add Room-Type Rule"}
-          </DialogTitle>
+          <DialogTitle>{editing ? t("rtEdit") : t("rtAdd")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Rule Name</Label>
+            <Label>{t("mpName")}</Label>
             <Input
               value={form.name}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, name: e.target.value }))
               }
-              placeholder="e.g. Deluxe room long-stay discount"
+              placeholder={t("rtNamePlaceholder")}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Room Types</Label>
+            <Label>{t("rtRoomTypes")}</Label>
             <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
-              {BOARDING_ROOM_OPTIONS.map((roomType) => (
+              {rooms.map((roomType) => (
                 <label key={roomType.value} className="flex items-center gap-2">
                   <Checkbox
                     checked={form.roomTypeIds.includes(roomType.value)}
@@ -143,7 +142,7 @@ export function RoomTypeAdjustmentModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Min nights</Label>
+              <Label>{t("minNights")}</Label>
               <Input
                 type="number"
                 min={1}
@@ -154,11 +153,11 @@ export function RoomTypeAdjustmentModal({
                     minNights: e.target.value ? Number(e.target.value) : null,
                   }))
                 }
-                placeholder="Any"
+                placeholder={t("anyValue")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Max nights</Label>
+              <Label>{t("maxNights")}</Label>
               <Input
                 type="number"
                 min={1}
@@ -169,7 +168,7 @@ export function RoomTypeAdjustmentModal({
                     maxNights: e.target.value ? Number(e.target.value) : null,
                   }))
                 }
-                placeholder="No cap"
+                placeholder={t("noCap")}
               />
             </div>
           </div>
@@ -184,12 +183,12 @@ export function RoomTypeAdjustmentModal({
                 }))
               }
             />
-            <span className="text-sm">Require same room for all nights</span>
+            <span className="text-sm">{t("rtSameRoom")}</span>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label>{t("kind")}</Label>
               <Select
                 value={form.adjustmentKind}
                 onValueChange={(value) =>
@@ -203,13 +202,13 @@ export function RoomTypeAdjustmentModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="discount">Discount</SelectItem>
-                  <SelectItem value="surcharge">Surcharge</SelectItem>
+                  <SelectItem value="discount">{t("discount")}</SelectItem>
+                  <SelectItem value="surcharge">{t("surcharge")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Format</Label>
+              <Label>{t("format")}</Label>
               <Select
                 value={form.adjustmentType}
                 onValueChange={(value) =>
@@ -223,8 +222,8 @@ export function RoomTypeAdjustmentModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percentage">Percent</SelectItem>
-                  <SelectItem value="flat">Flat</SelectItem>
+                  <SelectItem value="percentage">{t("percent")}</SelectItem>
+                  <SelectItem value="flat">{t("flat")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -245,7 +244,7 @@ export function RoomTypeAdjustmentModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Where this applies</Label>
+            <Label>{t("whereApplies")}</Label>
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2">
                 <Checkbox
@@ -257,7 +256,7 @@ export function RoomTypeAdjustmentModal({
                     }))
                   }
                 />
-                <span className="text-sm font-medium">All services</span>
+                <span className="text-sm font-medium">{t("allServices")}</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {serviceOptions.map((service) => (
@@ -301,16 +300,16 @@ export function RoomTypeAdjustmentModal({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={() => {
               if (!form.name.trim()) {
-                toast.error("Name is required");
+                toast.error(t("nameRequired"));
                 return;
               }
               if (form.roomTypeIds.length === 0) {
-                toast.error("Select at least one room type");
+                toast.error(t("rtRoomRequired"));
                 return;
               }
 
@@ -331,7 +330,7 @@ export function RoomTypeAdjustmentModal({
               });
             }}
           >
-            {editing ? "Save" : "Create"}
+            {editing ? t("save") : t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>
