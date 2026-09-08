@@ -16,7 +16,6 @@ import {
 import { StaffPreviewDialog } from "@/components/facility/StaffPreviewDialog";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import {
-  ACCESS_SCOPE_META,
   ALWAYS_ON_PERMISSIONS,
   ROLE_PRESETS,
   resolvePermission,
@@ -38,6 +37,8 @@ import { AdditionalRolesGrid } from "@/app/facility/dashboard/staff/_components/
 
 type TriState = "default" | "on" | "off";
 
+import { usePermissionText } from "@/lib/settings/use-permission-text";
+
 export function StaffPermissionEditor({
   staffId,
   onChangeRole,
@@ -46,6 +47,7 @@ export function StaffPermissionEditor({
   /** Optional handler for the "Change role" link (e.g. open the role picker). */
   onChangeRole?: () => void;
 }) {
+  const permissionText = usePermissionText();
   const {
     customRoles,
     presetOverrides,
@@ -271,7 +273,9 @@ export function StaffPermissionEditor({
                     : "border-border/60 hover:bg-muted/40",
                 )}
               >
-                <span className="truncate font-medium">{group.label}</span>
+                <span className="truncate font-medium">
+                  {permissionText.group(group)}
+                </span>
                 <span className="flex shrink-0 items-center gap-1">
                   {n > 0 && (
                     <Badge className="h-4 border-amber-300 bg-amber-50 px-1 text-[9px] text-amber-700 dark:border-amber-600/40 dark:bg-amber-950/20 dark:text-amber-400">
@@ -311,11 +315,11 @@ export function StaffPermissionEditor({
                 >
                   <div className="min-w-0">
                     <div className="truncate text-xs font-medium">
-                      {p.label}
+                      {permissionText.permission(p.key)}
                     </div>
-                    {p.hint && (
+                    {permissionText.hint(p.key) && (
                       <div className="text-muted-foreground truncate text-[10px]">
-                        {p.hint}
+                        {permissionText.hint(p.key)}
                       </div>
                     )}
                     {/* Current state + provenance, always visible: which rows
@@ -347,7 +351,7 @@ export function StaffPermissionEditor({
                     <div className="text-muted-foreground mt-0.5 text-[10px]">
                       Role default:{" "}
                       {def.granted
-                        ? ACCESS_SCOPE_META[def.scope].label
+                        ? permissionText.scope(def.scope)
                         : "Not granted"}
                     </div>
                   </div>

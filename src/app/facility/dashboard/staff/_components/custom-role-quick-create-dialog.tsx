@@ -53,11 +53,14 @@ interface CustomRoleQuickCreateDialogProps {
   onCreated: (role: CustomFacilityRole) => void;
 }
 
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
+
 export function CustomRoleQuickCreateDialog({
   open,
   onOpenChange,
   onCreated,
 }: CustomRoleQuickCreateDialogProps) {
+  const roleLabel = useStaffRoleLabel();
   const { createCustomRole } = useFacilityRbac();
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
@@ -182,8 +185,7 @@ export function CustomRoleQuickCreateDialog({
                   {(Object.keys(ROLE_META) as FacilityStaffRole[]).map((r) => (
                     <SelectItem key={r} value={r}>
                       <span className="inline-flex items-center gap-1.5">
-                        <Users className="size-3" /> Copy from{" "}
-                        {ROLE_META[r].label}
+                        <Users className="size-3" /> Copy from {roleLabel(r)}
                       </span>
                     </SelectItem>
                   ))}

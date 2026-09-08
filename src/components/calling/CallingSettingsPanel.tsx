@@ -36,6 +36,7 @@ import {
 import Link from "next/link";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { PERMISSION_GROUPS } from "@/types/facility-staff";
+import { usePermissionText } from "@/lib/settings/use-permission-text";
 import { cn } from "@/lib/utils";
 import {
   useFacilitySettings,
@@ -264,6 +265,7 @@ const SECTIONS: {
 ];
 
 export function CallingSettingsPanel() {
+  const permissionText = usePermissionText();
   const settingsPath = useSettingsHref();
   const { settings: facility, isPending } = useFacilitySettings();
   const saveSetting = useSaveFacilitySetting();
@@ -901,10 +903,10 @@ export function CallingSettingsPanel() {
               <div
                 key={perm.key}
                 className="bg-muted/30 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium"
-                title={perm.hint}
+                title={permissionText.hint(perm.key)}
               >
                 <Shield className="text-muted-foreground size-3" />
-                {perm.label}
+                {permissionText.permission(perm.key)}
               </div>
             ))}
           </div>
