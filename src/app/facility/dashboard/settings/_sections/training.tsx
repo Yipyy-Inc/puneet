@@ -17,7 +17,7 @@ export function TrainingSection() {
         aria-label={t("jumpNavLabel")}
         className="bg-card flex flex-wrap items-center gap-1.5 rounded-xl border px-3 py-2 shadow-sm"
       >
-        <span className="text-muted-foreground mr-1 text-[10px] font-bold tracking-wider uppercase">
+        <span className="text-muted-foreground mr-1 text-[12px] font-bold tracking-wider uppercase">
           {t("jumpTo")}
         </span>
         {/* Three identical pills, one of which was indigo for no reason a
@@ -33,7 +33,7 @@ export function TrainingSection() {
           <a
             key={href}
             href={href}
-            className="hover:bg-muted rounded-full border px-2.5 py-1 text-[11.5px] font-medium"
+            className="hover:bg-muted inline-flex min-h-10 items-center rounded-full border px-3.5 text-[13.5px] font-medium max-lg:min-h-12"
           >
             {t(key)}
           </a>

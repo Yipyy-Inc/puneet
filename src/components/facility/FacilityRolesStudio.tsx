@@ -1150,7 +1150,7 @@ export function PermissionsGrid({
                 // aria-expanded, which every Select on the page also carries.
                 data-slot="permission-group-toggle"
                 onClick={() => toggleCollapse(group.id)}
-                className="flex min-w-0 flex-1 basis-48 items-center gap-2 text-left"
+                className="flex min-h-10 min-w-0 flex-1 basis-48 items-center gap-2 py-1 text-left max-lg:min-h-12"
                 aria-expanded={!isCollapsed}
               >
                 <ChevronDown
