@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useUiText } from "@/hooks/use-ui-text";
 import { formatRelative } from "@/lib/i18n/format";
 import { usePermissionText } from "@/lib/settings/use-permission-text";
+import { useServiceTypeLabel } from "@/lib/settings/use-service-types";
 import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 import {
   Crown,
@@ -165,6 +166,7 @@ export function ServiceChip({
   module: ServiceModule;
   size?: "sm" | "md";
 }) {
+  const serviceLabel = useServiceTypeLabel();
   const meta = SERVICE_MODULE_META[module];
   return (
     <span
@@ -178,7 +180,7 @@ export function ServiceChip({
         module={module}
         className={size === "sm" ? "size-3" : "size-3.5"}
       />
-      {meta.label}
+      {serviceLabel(module, meta.label)}
     </span>
   );
 }

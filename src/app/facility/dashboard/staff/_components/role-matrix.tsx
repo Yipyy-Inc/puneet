@@ -23,6 +23,7 @@ import {
 import { RoleIcon, ScopeBadge } from "./staff-shared";
 import { usePermissionText } from "@/lib/settings/use-permission-text";
 import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 const ROLE_ORDER: FacilityStaffRole[] = [
   "owner",
@@ -44,6 +45,7 @@ function scopeForRole(
 }
 
 export function RoleAccessMatrix() {
+  const { t } = useStaffText("roleMatrix");
   const permissionText = usePermissionText();
   const roleLabel = useStaffRoleLabel();
   const [expanded, setExpanded] = useState(false);
@@ -59,19 +61,16 @@ export function RoleAccessMatrix() {
             <div className="bg-primary/10 text-primary rounded-lg p-1.5">
               <ShieldCheck className="size-4" />
             </div>
-            Role access matrix
+            {t("title")}
           </CardTitle>
-          <CardDescription className="mt-1">
-            What each role sees by default — and when. Individual profiles can
-            override any of these.
-          </CardDescription>
+          <CardDescription className="mt-1">{t("help")}</CardDescription>
         </div>
         <Button
           variant="outline"
           size="sm"
           onClick={() => setExpanded(!expanded)}
         >
-          {expanded ? "Collapse" : "Check permissions"}
+          {expanded ? t("collapse") : t("expand")}
           <ChevronDown
             className={cn(
               "ml-1 size-4 transition-transform",
@@ -92,7 +91,7 @@ export function RoleAccessMatrix() {
               : "border-border/60 hover:bg-muted",
           )}
         >
-          All roles
+          {t("allRoles")}
         </button>
         {ROLE_ORDER.map((role) => {
           const meta = ROLE_META[role];
@@ -121,12 +120,22 @@ export function RoleAccessMatrix() {
           <div className="border-border/60 text-muted-foreground mb-3 flex items-start gap-2 rounded-lg border border-dashed p-3 text-xs">
             <Info className="text-primary mt-0.5 size-3.5 shrink-0" />
             <div>
-              <span className="text-foreground font-medium">Scope tags</span> —{" "}
-              <span className="font-medium">Anytime</span> means 24/7,{" "}
-              <span className="font-medium">Operating hours</span> restricts to
-              facility open times,{" "}
-              <span className="font-medium">Assigned shifts</span> restricts
-              further to the staff&apos;s scheduled shifts.
+              <span className="text-foreground font-medium">
+                {t("legendTitle")}
+              </span>{" "}
+              —{" "}
+              <span className="font-medium">
+                {permissionText.scope("anytime")}
+              </span>{" "}
+              {t("legendAnytime")},{" "}
+              <span className="font-medium">
+                {permissionText.scope("operating_hours")}
+              </span>{" "}
+              {t("legendOperating")},{" "}
+              <span className="font-medium">
+                {permissionText.scope("assigned_shifts")}
+              </span>{" "}
+              {t("legendShifts")}.
             </div>
           </div>
 
@@ -148,7 +157,7 @@ export function RoleAccessMatrix() {
                     <thead>
                       <tr className="border-border/60 border-b">
                         <th className="text-muted-foreground py-2 pr-2 text-left text-xs font-medium">
-                          Permission
+                          {t("colPermission")}
                         </th>
                         {visibleRoles.map((role) => (
                           <th
@@ -203,14 +212,13 @@ export function RoleAccessMatrix() {
 
             <div className="border-border/60 flex flex-wrap items-center gap-2 border-t pt-3 text-xs">
               <Badge variant="outline" className="gap-1">
-                <Check className="size-3 text-emerald-600" /> Granted
+                <Check className="size-3 text-emerald-600" /> {t("granted")}
               </Badge>
               <Badge variant="outline" className="gap-1">
-                <Minus className="text-muted-foreground size-3" /> Not granted
+                <Minus className="text-muted-foreground size-3" />{" "}
+                {t("notGranted")}
               </Badge>
-              <span className="text-muted-foreground">
-                Tags show when the permission is active.
-              </span>
+              <span className="text-muted-foreground">{t("tagsNote")}</span>
             </div>
           </div>
         </CardContent>
