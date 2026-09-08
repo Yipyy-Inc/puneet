@@ -8,10 +8,13 @@ import { cn } from "@/lib/utils";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
-import { canAccessSettingsSection } from "@/components/facility/SettingsSidebar";
 import { FilterBand, FilterBandSearch } from "@/components/ui/filter-band";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
-import { SETTINGS_NAV, type SettingsLeaf } from "@/lib/settings/nav";
+import {
+  SETTINGS_NAV,
+  canAccessSettingsSection,
+  type SettingsLeaf,
+} from "@/lib/settings/nav";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
 
 // ============================================================================

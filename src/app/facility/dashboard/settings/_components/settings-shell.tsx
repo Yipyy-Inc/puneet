@@ -7,13 +7,10 @@ import { ArrowLeft, Lock } from "lucide-react";
 
 import { PageHeader } from "@/components/ui/page-header";
 import { RouteState } from "@/components/ui/route-state";
-import {
-  SettingsSidebar,
-  canAccessSettingsSection,
-} from "@/components/facility/SettingsSidebar";
 import { usePermissionsResolved } from "@/hooks/use-db-permissions";
 import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
 import {
+  canAccessSettingsSection,
   settingsIndexHref,
   settingsLeaf,
   settingsPortalFor,
@@ -24,22 +21,25 @@ import { useSettingsText } from "@/lib/settings/use-settings-text";
 // ============================================================================
 // THE CHROME AROUND EVERY SETTINGS SCREEN — AND THE GUARD.
 //
-// Lives in settings/layout.tsx rather than inside a page, which is the whole
-// reason to have routes: the rail renders once and survives navigation instead
-// of unmounting and remounting — losing which groups were collapsed — under
-// every click.
+// Lives in settings/layout.tsx rather than inside a page, so the header and
+// the guard render once above every section rather than being repeated fifty
+// times.
 //
-// ── THE RAIL BELONGS TO A SECTION, NOT TO THE INDEX ──────────────────────
+// ── THERE IS NO RAIL, AND THAT IS THE DESIGN ─────────────────────────────
 //
-// At /settings the index IS the list of sections, so a rail beside it prints
-// the same 51 items twice — which is what the first build of this did, and it
-// looked exactly as bad as it sounds. The rail appears once you are inside a
-// section, where it is the quick way to the next one.
+// A rail stood beside every section until 2026-09-08. It was the same 51
+// leaves in nine groups that the index already lists — 2,202px of it, taller
+// than every section but two — so a section page carried a second, worse copy
+// of the page you had just come from.
 //
-// Below lg it is one panel either way: the index is the list, a section is the
-// section. That used to be useState(mobileShowDetail) seeded from whether a
-// ?section= was present; the route answers it now, so "All settings" is a real
-// link to a real address and a phone reload lands where it was.
+// The index is now the only place the fifty live: you enter from it and leave
+// by "All settings". One list, one entry point, and every section 266px wider
+// for it.
+//
+// Below lg nothing changed — the rail was already `hidden` there, so the
+// small-screen behaviour was always this: the index is the list, a section is
+// the section, and "All settings" is a real link to a real address that a
+// phone reload lands on.
 //
 // ── ONE PERMISSION GUARD, FOR ALL 50 SECTIONS ────────────────────────────
 //
@@ -140,28 +140,21 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
         description={onSection ? undefined : label.text("description")}
       />
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        {/* ── STICKY, BECAUSE THE RAIL IS TALLER THAN WHAT IT NAVIGATES TO ──
-            51 leaves in nine groups is 2,202px — taller than every section
-            but two, and taller than the viewport on any laptop. Left in the
-            flow it set the height of the whole row, so a 332px screen
-            (Locations) came with 1,870px of nothing beside it, and reaching
-            the rail again meant scrolling back up past a screen you had
-            already read.
+      {/* ── ONE ENTRY POINT: THE INDEX ────────────────────────────────────
+          The rail used to stand beside every section. It was 51 leaves in
+          nine groups — 2,202px, taller than every section but two — so it
+          repeated the whole index next to one page of it, and it was the
+          second copy of a list the index already shows better.
 
-            `max-h`/`overflow-y-auto` so the rail scrolls inside itself
-            rather than the page: a sticky element taller than the viewport
-            pins its TOP and hides its own bottom, which would have put the
-            last two groups permanently out of reach. */}
-        {onSection && (
-          <div className="hidden lg:block">
-            <div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto pr-1">
-              <SettingsSidebar activeSection={leaf?.id ?? segment ?? ""} />
-            </div>
-          </div>
-        )}
+          A section is now reached from the index and left by "All settings",
+          which makes the index the one place the fifty live. The body also
+          stops being a 1fr column beside a fixed rail, so every screen gains
+          266px of width — the wide tables and the report-card preview were
+          the ones paying for it.
 
-        <div className="min-w-0 flex-1 space-y-6">
+          Below lg this changes nothing: the rail was already `hidden`. */}
+      <div>
+        <div className="min-w-0 space-y-6">
           {onSection && (
             <Link
               href={index}
@@ -183,8 +176,8 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
               REFUSED — the §5d2 "Permission denied" rung: pose `secure`, the
               violet ink #4C3BB8, and the sentence the system writes for it,
               verbatim, the same one src/app/forbidden.tsx uses. `surface="card"`
-              because the layout survives: the rail and the header naming the
-              section stay, and only the body is replaced.
+              because the layout survives: the header naming the section and
+              the way back both stay, and only the body is replaced.
 
               NEITHER — nothing, while the redirect above is in flight.
               Rendering the section would flash a screen this viewer may not
