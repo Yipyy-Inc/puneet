@@ -7,7 +7,9 @@ import { SettingsCardGrid } from "@/components/ui/settings-card-grid";
 
 export function BookingStatusesSection() {
   return (
-    <SettingsCardGrid>
+    // Measured 2564 vs 727 — the status list against the badge preview.
+    // Stretching the shorter card would add 1,837px of white to it.
+    <SettingsCardGrid className="items-start">
       <BookingStatusSettings />
       <StatusColorSettings />
     </SettingsCardGrid>

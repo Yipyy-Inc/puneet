@@ -320,7 +320,8 @@ export function CheckinRequirementsSettings() {
   }
 
   return (
-    <div className={SETTINGS_CARD_GRID}>
+    // Measured 620 vs 208 on row 2 — 412px of white if stretched.
+    <div className={`${SETTINGS_CARD_GRID} items-start`}>
       <div className="lg:col-span-2">
         <h2 className="text-lg font-semibold">{t("title")}</h2>
         <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
