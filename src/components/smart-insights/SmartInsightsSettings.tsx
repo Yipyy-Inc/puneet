@@ -144,7 +144,8 @@ export function SmartInsightsSettings() {
   const resetThresholds = () => update({ thresholdOverrides: {} });
 
   return (
-    <div className={SETTINGS_CARD_GRID}>
+    // Measured 414 vs 921 on row 2 — 507px of white if stretched.
+    <div className={`${SETTINGS_CARD_GRID} items-start`}>
       <div className="lg:col-span-2">
         <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </div>

@@ -54,11 +54,14 @@ export function NotificationSettingsCard() {
                       : "categorySystem",
                 )}
               </h3>
-              <div className="grid items-start gap-3 lg:grid-cols-2">
+              <div className="grid gap-3 lg:grid-cols-2">
                 {localNotifications
                   .filter((n) => n.category === category)
                   .map((notif) => (
-                    <div key={notif.id} className="rounded-lg border p-4">
+                    <div
+                      key={notif.id}
+                      className="flex flex-col rounded-lg border p-4"
+                    >
                       <div className="mb-3">
                         <div>
                           {/* The fixture's `name` and `description` are
@@ -73,7 +76,7 @@ export function NotificationSettingsCard() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-6">
+                      <div className="mt-auto flex items-center gap-6">
                         <div className="flex items-center gap-2">
                           <Mail className="text-muted-foreground size-4" />
                           <span className="text-[14.5px]">{t("email")}</span>
