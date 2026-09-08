@@ -644,3 +644,26 @@ export function settingsIndexHref(portal: SettingsPortal = "facility"): string {
 export function settingsPortalFor(pathname: string): SettingsPortal {
   return pathname.startsWith("/employee") ? "employee" : "facility";
 }
+
+/**
+ * True when the acting viewer may open a settings section.
+ *
+ * `!== false` rather than `=== true` on purpose, and it is not the same
+ * question the server asks. `myPermissions()` returns an EMPTY map on any RPC
+ * error, so "denied" and "we could not find out" are indistinguishable there;
+ * reading an absent key as denied would lock a viewer — including the owner —
+ * out of every section on one transient failure. The client stays permissive
+ * about what it does not know, and the server route is what actually refuses.
+ *
+ * Lived in `components/facility/SettingsSidebar.tsx` until the rail was
+ * removed from the section shell on 2026-09-08. It is registry logic, so it
+ * belongs with the registry.
+ */
+export function canAccessSettingsSection(
+  id: string,
+  permissions: Record<string, unknown>,
+): boolean {
+  const leaf = settingsLeaf(id);
+  if (!leaf) return false;
+  return leaf.access === "personal" || permissions[leaf.access] !== false;
+}

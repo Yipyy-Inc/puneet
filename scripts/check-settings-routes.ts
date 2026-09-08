@@ -5,8 +5,9 @@
  * ── WHY THIS EXISTS ───────────────────────────────────────────────────────
  *
  * The settings area was described in three places that had to agree and had no
- * way to check that they did: the rail in `SettingsSidebar.tsx`, the permission
- * map beside it, and ~45 `activeSection === "…"` branches in a 4,748-line
+ * way to check that they did: a rail in `SettingsSidebar.tsx` (deleted
+ * 2026-09-08 — the index is the only entry point now), the permission map
+ * beside it, and ~45 `activeSection === "…"` branches in a 4,748-line
  * `page.tsx`. Links to it were a fourth place — free-hand `?section=` strings
  * scattered across twenty files.
  *
@@ -266,10 +267,15 @@ const unrendered = SETTINGS_LEAVES.filter(
 
 // ── 3. runtime-synthesised leaves have a home ──────────────────────────────
 //
-// The rail and the index do not only render the registry: they synthesise a
+// The index does not only render the registry: it synthesises a
 // `custom-<slug>` entry for every ACTIVE custom service module, from data. A
 // static list cannot contain those, so this is the one check that has to read
-// the rail's source.
+// a component's source.
+//
+// It read the RAIL until 2026-09-08, when the rail was removed and the index
+// became the only entry point. The gate announced that itself — a missing file
+// threw ENOENT rather than quietly finding zero and passing, which is the
+// failure a readFileSync in a gate usually has.
 //
 // It is a ratchet at ONE, not a pass. There is genuinely no screen behind one —
 // `settings-routes.tsx` returns null for the prefix and the layout's permission
@@ -277,14 +283,15 @@ const unrendered = SETTINGS_LEAVES.filter(
 // to the stage that decides whether a custom module should have settings at all.
 // The entry below stops the count growing while that is pending, and makes the
 // next person meet the gap in CI rather than in a support ticket.
-const RAIL = "src/components/facility/SettingsSidebar.tsx";
+const INDEX =
+  "src/app/facility/dashboard/settings/_components/settings-landing.tsx";
 const HANDLER =
   "src/app/facility/dashboard/settings/_components/settings-routes.tsx";
 const KNOWN_UNHANDLED = new Set(["custom-"]);
 
-const railSrc = readFileSync(RAIL, "utf8");
+const indexSrc = readFileSync(INDEX, "utf8");
 const handlerSrc = readFileSync(HANDLER, "utf8");
-const synthesised = [...railSrc.matchAll(/id: `([a-z-]+)-\$\{/g)].map(
+const synthesised = [...indexSrc.matchAll(/id: `([a-z-]+)-\$\{/g)].map(
   (m) => `${m[1]}-`,
 );
 const unhandled = synthesised.filter(
@@ -367,7 +374,7 @@ ${ANSI.red}✗ the rail synthesises ${newUnhandled.length} kind${newUnhandled.le
   for (const p of newUnhandled) console.log(`  ${p}<…>`);
   console.log(
     `
-  ${ANSI.dim}${RAIL} builds these ids at runtime. Give the prefix a route, or
+  ${ANSI.dim}${INDEX} builds these ids at runtime. Give the prefix a route, or
   stop synthesising it.${ANSI.reset}`,
   );
 }
