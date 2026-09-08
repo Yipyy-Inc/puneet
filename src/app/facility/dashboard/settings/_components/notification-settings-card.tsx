@@ -28,6 +28,9 @@ export function NotificationSettingsCard() {
 
   return (
     <SettingsBlock
+      // This card lays its OWN rows out in two columns, so it takes the whole
+      // row rather than sitting in one — see settings-card-grid.tsx.
+      className="lg:col-span-2"
       title={t("settingsTitle")}
       description={t("settingsHelp")}
       data={notifications}
@@ -51,12 +54,12 @@ export function NotificationSettingsCard() {
                       : "categorySystem",
                 )}
               </h3>
-              <div className="space-y-3">
+              <div className="grid items-start gap-3 lg:grid-cols-2">
                 {localNotifications
                   .filter((n) => n.category === category)
                   .map((notif) => (
                     <div key={notif.id} className="rounded-lg border p-4">
-                      <div className="mb-3 flex items-start justify-between">
+                      <div className="mb-3">
                         <div>
                           {/* The fixture's `name` and `description` are
                               English and were rendered straight, so all six

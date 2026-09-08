@@ -5,11 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { SettingsCardGrid } from "../_components/settings-card-grid";
 
 export function DaycareSection() {
   const t = useSettingsText().section("daycare");
   return (
-    <div className="space-y-6">
+    <SettingsCardGrid>
       <Card>
         <CardContent>
           <p className="text-ink-tertiary text-[14.5px]">{t("intro")}</p>
@@ -22,6 +23,6 @@ export function DaycareSection() {
         </CardContent>
       </Card>
       <ServiceColorCard service="Daycare" />
-    </div>
+    </SettingsCardGrid>
   );
 }

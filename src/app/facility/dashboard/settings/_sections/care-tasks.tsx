@@ -2,12 +2,13 @@
 
 import { CareTaskSettings } from "@/components/facility/CareTaskSettings";
 import { FeedingMedicationConfig } from "@/components/facility/FeedingMedicationConfig";
+import { SettingsCardGrid } from "../_components/settings-card-grid";
 
 export function CareTasksSection() {
   return (
-    <div className="space-y-6">
+    <SettingsCardGrid>
       <FeedingMedicationConfig />
       <CareTaskSettings />
-    </div>
+    </SettingsCardGrid>
   );
 }

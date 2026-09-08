@@ -3,12 +3,13 @@
 import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
 
 import { StatusColorSettings } from "@/components/facility/StatusColorSettings";
+import { SettingsCardGrid } from "../_components/settings-card-grid";
 
 export function BookingStatusesSection() {
   return (
-    <div className="space-y-6">
+    <SettingsCardGrid>
       <BookingStatusSettings />
       <StatusColorSettings />
-    </div>
+    </SettingsCardGrid>
   );
 }

@@ -10259,3 +10259,63 @@ there runs through a checkbox — so this needs reading, not a class.
 hidden". The strikethrough is right and the ink is not — unless `unavailable`
 and `blocked` are two different things on that screen, which is exactly the
 question to answer before changing it.
+
+## 2026-09-08 — two cards on a line, and the rule a spanning card needs
+
+Settings stacked every card full width, one per row, content in the left half
+and nothing in the right. **Removing the rail earlier the same day made it
+worse**: sections gained 266px and put none of it to use.
+
+**What the design system actually decides here is very little**, and that
+shaped the change more than any preference:
+
+- §6 rule 6 — every `fr`/fixed grid column needs `minmax(0, …)`. Satisfied by
+  using Tailwind's `grid-cols-2` (it compiles to `repeat(2, minmax(0, 1fr))`)
+  rather than a hand-written template.
+- §6 rule 8 — "Two columns wrap before one column starves."
+- §5m — three contexts, **no wide/≥1440px breakpoint**, and the 600–1023px row
+  says "two-column forms collapse to one".
+
+Cards per row, card min-width, grid gap above 599px and any page max-width are
+all **undefined**. So: `lg:grid-cols-2` — `lg` IS §5m's own desktop boundary,
+where `md` (768px) would split at a width §5m assigns to the tablet check-in
+desk. And two columns, never three: a third would invent §5m's missing fourth
+context, and at 1440px would give each card ~460px when several already split
+their own fields into two columns internally.
+
+### The rule that is not obvious from a diff
+
+**A card that spans both columns must come FIRST in its grid.**
+
+Measured, not predicted. `notifications` renders four cards, and the
+notification card takes `lg:col-span-2` because it splits its own rows two-up
+(without the span each row lands at ~330px — narrower than the full-width
+version it replaced). With that card SECOND, the grid put card one in column 1,
+found the next item needed both columns, could not fit it, and started a new
+row — leaving the top right of the screen empty. Exactly the emptiness the
+change exists to remove.
+
+Only a screenshot caught it. The diff looked right.
+
+### Scope, and what the survey corrected
+
+The plan assumed ~28 convertible sections. **Most sections render ONE root** —
+their 5–6 cards live inside a delegated component, so the section wrapper is not
+where the grid goes. Nine sections have genuine sibling cards at their own level
+(`hr-config`, `booking-rules`, `hours`, `care-tasks`, `booking-statuses`,
+`branding`, `boarding`, `daycare`, `grooming`), plus `notifications`.
+
+`taxes`, `checkin-requirements`, `invoice-template`, `mobile-app`,
+`smart-insights`, `deposit-rules` and `payroll-rules` need the grid pushed into
+the component that owns their cards — a second pass, not done here.
+
+Untouched by design: the ~22 one-card sections, and the six that are full width
+by nature (`audit` — the only DataTable in settings, `locations`, `retail`,
+`pricing-rules`, `roles-permissions`, `report-card-template`).
+
+### Verified
+
+1440 / 900 / 599px and **in French** — where "Notification poussée" is far
+wider than "Push" and the rows still hold. The 51-section 599px audit is
+unchanged at **0 overflowing**, which is the measure a grid is most likely to
+break.
