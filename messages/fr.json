@@ -777,7 +777,15 @@
       "search": "Rechercher dans les paramètres",
       "allSettings": "Tous les paramètres",
       "noMatch": "Aucun paramètre correspondant",
-      "noMatchHint": "Essayez un autre mot, ou le domaine auquel il appartient."
+      "noMatchHint": "Essayez un autre mot, ou le domaine auquel il appartient.",
+      "deniedTitle": "Cette section nécessite l’approbation du propriétaire",
+      "deniedBody": "Demandez au propriétaire de l’établissement d’ajouter cette section à votre rôle.",
+      "errorTitle": "Impossible de charger ces paramètres",
+      "errorBody": "Une erreur est survenue de notre côté. Rien de ce que vous avez enregistré n’est touché, et réessayer suffit généralement.",
+      "errorAction": "Réessayer",
+      "notFoundTitle": "Cette section de paramètres a été déplacée",
+      "notFoundBody": "Le lien est peut-être obsolète, ou la section se trouve maintenant sous une autre rubrique.",
+      "notFoundAction": "Aller à tous les paramètres"
     },
     "sections": {
       "business": {

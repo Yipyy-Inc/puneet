@@ -3,6 +3,7 @@
 import { CircleAlert, RefreshCw } from "lucide-react";
 
 import { RouteState } from "@/components/ui/route-state";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // A settings section that failed to load.
@@ -30,15 +31,21 @@ export default function SettingsError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const label = useSettingsText();
+
   return (
     <RouteState
       surface="card"
       pose="error"
       icon={CircleAlert}
       inkClassName="text-destructive"
-      title="We couldn't load these settings"
-      description="Something went wrong at our end. Nothing you have saved is affected, and trying again usually clears it."
-      action={{ label: "Try again", icon: RefreshCw, onClick: reset }}
+      title={label.text("errorTitle")}
+      description={label.text("errorBody")}
+      action={{
+        label: label.text("errorAction"),
+        icon: RefreshCw,
+        onClick: reset,
+      }}
       className="min-h-0 p-0"
     />
   );

@@ -9772,3 +9772,50 @@ only go down, which is the cheap half. The expensive half — the headings, the
 filters, the empty states, the dialogs and `SERVICE_MODULE_META` — is 725
 strings of real work, and the per-file counts in the baseline are the map of
 where it is.
+
+## 2026-09-08 — the settings gate measured 50 sections and not the chrome around them
+
+**Severity: 🟡 medium.** Found while adding the permission-denied state.
+
+`settingsSurface()` in `scripts/check-ui-french.ts` walked `_sections/*.tsx` and
+nothing else. So `settings/layout.tsx` — and everything it renders — was in **no
+surface at all**:
+
+- not the settings surface, which started one directory down at `_sections/`;
+- not the facility shell's, which stops two imports below `facility/layout.tsx`
+  and never reaches this far into the tree.
+
+What sat in that gap is not marginal. `settings-shell.tsx` renders the page
+header that names the section, and `SettingsSidebar` renders **51 labels in 9
+groups**. Between them that is the most-read text in the entire settings area,
+measured by nothing, on the very surface this gate was written for — while the
+gate printed `settings sections — 0 still rendering English` and had done for
+days.
+
+The shell and the rail turned out to be clean. **The route-level states were
+not.** Widening the root to `layout.tsx`, `page.tsx`, `error.tsx` and
+`not-found.tsx` reported six strings immediately:
+
+```
+src/app/facility/dashboard/settings/error.tsx:39      "We couldn't load these settings"
+src/app/facility/dashboard/settings/error.tsx:40      "Something went wrong at our end. …"
+src/app/facility/dashboard/settings/error.tsx:41      "Try again"
+src/app/facility/dashboard/settings/not-found.tsx:44  "That settings section has moved"
+src/app/facility/dashboard/settings/not-found.tsx:45  "The link may be out of date, …"
+src/app/facility/dashboard/settings/not-found.tsx:46  "Go to all settings"
+```
+
+Both files were written the same week the sections were being converted, by the
+same hand, and both were missed — because a file you cannot reach by clicking is
+the file whose English survives longest, and the gate could not see it either.
+
+**The lesson is the one `SHELL_ROOTS` already carries, one level in.** That
+constant exists because a single facility root measured clean while three other
+portals had never been looked at, 61 strings including a cash-drawer dialog. The
+same mistake was live inside the surface that fix created. A derived surface is
+only as honest as its roots, and "derived" is not the same as "complete" — this
+one derived 50 roots correctly and simply started in the wrong directory.
+
+**When adding a surface, ask what renders AROUND the thing you listed**, not
+just what it imports. Chrome, route-level states and error boundaries are the
+three that hide, in that order.

@@ -191,4 +191,51 @@ test.describe("old settings addresses still resolve", () => {
       page.getByRole("link", { name: /go to all settings/i }),
     ).toBeVisible();
   });
+
+  test("a section a groomer may not open refuses, instead of quietly moving them", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.groomer);
+
+    // Taxes is gated on `settings_manage_taxes`, which a groomer does not
+    // hold. The assertions below FAIL rather than pass vacuously if that ever
+    // stops being true: an allowed groomer renders the taxes screen, which has
+    // no `secure` pose and no refusal heading.
+    await page.goto("/employee/settings/taxes");
+
+    // ── 1. THE ADDRESS STAYS PUT ──────────────────────────────────────────
+    //
+    // This is the behaviour that changed. The shell used to render nothing and
+    // redirect to the fallback, so asking for Taxes landed you on Business
+    // with no explanation — indistinguishable, from where the user sits, from
+    // the fall-through bug the route move existed to end.
+    await expect(page).toHaveURL(/\/employee\/settings\/taxes$/, {
+      timeout: 30_000,
+    });
+
+    const body = page.locator("[data-slot='settings-section']");
+
+    // ── 2. AND THE SECTION SAYS WHY ───────────────────────────────────────
+    //
+    // The pose is asserted by its file rather than the copy by its words,
+    // because the pose is the part §5d2 actually decides: "Permission denied"
+    // is the `secure` rung, and a wrong-register pose is the failure §5d1
+    // names. The wording is en-CA here and asserted in French by
+    // settings-french.spec.ts.
+    await expect(body.locator('img[src*="yipyy-mascot-secure"]')).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(
+      body.getByText("This area needs an owner's approval"),
+    ).toBeVisible();
+
+    // ── 3. THE RAIL SURVIVES ──────────────────────────────────────────────
+    //
+    // `surface="card"` and not the full view: a refusal that took the rail and
+    // the header with it would strand somebody who has 40 other sections they
+    // may open. Same reason the not-found above is carded.
+    await expect(
+      page.getByRole("link", { name: /^\s*My profile\s*$/i }).first(),
+    ).toBeVisible();
+  });
 });
