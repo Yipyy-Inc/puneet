@@ -2,12 +2,13 @@
 
 import { BrandingSettings } from "@/components/facility/BrandingSettings";
 import { CustomerSignupSettings } from "@/components/facility/CustomerSignupSettings";
+import { SettingsCardGrid } from "../_components/settings-card-grid";
 
 export function BrandingSection() {
   return (
-    <div className="space-y-6">
+    <SettingsCardGrid>
       <BrandingSettings />
       <CustomerSignupSettings />
-    </div>
+    </SettingsCardGrid>
   );
 }

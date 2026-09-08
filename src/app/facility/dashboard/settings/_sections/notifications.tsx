@@ -8,11 +8,12 @@ import { ServiceNotificationSettings } from "@/components/facility/ServiceNotifi
 import { Button } from "@/components/ui/button";
 import { NotificationSettingsCard } from "../_components/notification-settings-card";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { SettingsCardGrid } from "../_components/settings-card-grid";
 
 export function NotificationsSection() {
   const t = useSettingsText().section("notifications");
   return (
-    <div className="space-y-6">
+    <SettingsCardGrid>
       {/* `StaffNotificationPreferences` used to open this screen, and it
           does not belong here: it takes `staffId ?? user.id`, so with no
           prop it renders the VIEWER'S OWN preferences — the identical card
@@ -21,10 +22,13 @@ export function NotificationsSection() {
           which look like the facility's and are not. It lives in one place
           now, under My account. */}
 
+      {/* Spans both columns — see settings-card-grid.tsx — so it leads, and
+          the three single-column cards pack below it rather than around a
+          hole. */}
+      <NotificationSettingsCard />
+
       {/* Facility-level per-role notification defaults (spec Table 51). */}
       <NotificationRoleDefaults />
-
-      <NotificationSettingsCard />
 
       <ServiceNotificationSettings />
 
@@ -42,6 +46,6 @@ export function NotificationsSection() {
           </Link>
         </CardContent>
       </Card>
-    </div>
+    </SettingsCardGrid>
   );
 }

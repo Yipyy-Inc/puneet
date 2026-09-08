@@ -3,13 +3,14 @@
 import { StaffHrConfigSettings } from "@/components/facility/staff-hr/StaffHrConfigSettings";
 import { ClockConfirmationSettings } from "@/components/facility/staff-hr/ClockConfirmationSettings";
 import { RegisterPolicySettings } from "@/components/facility/staff-hr/RegisterPolicySettings";
+import { SettingsCardGrid } from "../_components/settings-card-grid";
 
 export function HrConfigSection() {
   return (
-    <div className="space-y-6">
+    <SettingsCardGrid>
       <StaffHrConfigSettings />
       <ClockConfirmationSettings />
       <RegisterPolicySettings />
-    </div>
+    </SettingsCardGrid>
   );
 }

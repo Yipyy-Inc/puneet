@@ -13,10 +13,17 @@ export function SettingsBlock<T>({
   data,
   onSave,
   children,
+  className,
 }: {
   title: string;
   description?: string;
   data: T;
+  /**
+   * Reaches the Card. The one use today is `lg:col-span-2`, for a card that
+   * splits its OWN contents into columns and therefore should not also sit in
+   * a column — see settings-card-grid.tsx.
+   */
+  className?: string;
   /**
    * May be async. If it returns a promise, the editor stays open and the save
    * button holds its loading state until it settles, and a rejection keeps the
@@ -85,7 +92,7 @@ export function SettingsBlock<T>({
   };
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
