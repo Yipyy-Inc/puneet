@@ -60,7 +60,7 @@ import {
   ServiceChip,
   StaffAvatar,
   fullNameOf,
-  formatRelative,
+  useRelativeTime,
 } from "./staff-shared";
 import { StatusBadge } from "./status-change-dialog";
 
@@ -318,6 +318,7 @@ function ScrollableTabsBar({ children }: { children: React.ReactNode }) {
 }
 
 function Header({ profile }: { profile: StaffProfile }) {
+  const relative = useRelativeTime();
   const meta = ROLE_META[profile.primaryRole];
   return (
     <div className={cn("relative shrink-0 overflow-hidden border-b p-6 pb-5")}>
@@ -338,9 +339,9 @@ function Header({ profile }: { profile: StaffProfile }) {
           <DialogDescription className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
             <Clock className="size-3" />
             {profile.status === "active" || profile.status === "invited" ? (
-              <>Active {formatRelative(profile.lastActive)}</>
+              <>Active {relative(profile.lastActive)}</>
             ) : (
-              <>Last active {formatRelative(profile.lastActive)}</>
+              <>Last active {relative(profile.lastActive)}</>
             )}
             {(profile.status === "inactive" ||
               profile.status === "terminated") && (

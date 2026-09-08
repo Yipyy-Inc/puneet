@@ -10362,3 +10362,87 @@ you point it at.
 
 `execSync` throws on a gate's non-zero exit, which is by design for a gate and
 fatal for a script that reads one. Use `spawnSync`; this bit twice today.
+
+## 2026-09-08 — `Intl` does not return "Invalid Date", it throws, and six staff rows proved it
+
+Converting the staff directory to French replaced a hand-rolled
+`formatRelative()` in `staff-shared.tsx` with the locale-aware one in
+`src/lib/i18n/format.ts`. The old one was wrong three ways — English words to a
+French reader on six call sites, relative time running out to seven days where
+§5q expires it at 24 hours, and `toLocaleDateString()` with no locale, which
+takes the machine's and can print a numeric MM/DD that §6 rule 8 bans.
+
+The replacement was right about all three and **took the whole screen down.**
+
+`Intl.DateTimeFormat.format()` and `Intl.RelativeTimeFormat.format()` do not
+return the string "Invalid Date" for a non-finite input. They raise
+`RangeError`. Inside a React render that reaches the nearest error boundary, so
+the staff directory rendered as "We couldn't load your board" — five tiles, four
+tabs, twenty-one rows, all gone.
+
+And the input is not exotic. `src/lib/api/mappers/staff.ts` maps
+`lastActive: row.last_active ?? ""`, so a staff member who has never signed in
+arrives carrying an empty string while the type still says
+`lastActive: string`. The type is not lying about the shape, only about the
+meaning: **the empty string IS the null here.** Six of twenty-one rows in the
+demo facility are in that state, which is why it failed instantly rather than
+rarely.
+
+### What was actually kept, and what was added
+
+The formatter that was replaced degraded — `Math.round(NaN)` fell through every
+branch to "Invalid Date" — and that is the only reason blank timestamps were
+survivable before. So the guard now in `format.ts` is not defensive padding: it
+is the behaviour being preserved. All five date functions return `NO_DATE`
+("—", which 167 files already use for an absent value) rather than throwing.
+
+The screen's own copy is a separate decision from the formatter's fallback. The
+directory knows what a blank `lastActive` MEANS, so it renders "Never signed in"
+/ "Jamais connecté"; the em dash is the right answer only where the caller does
+not know.
+
+### Why this belongs in the unit tier
+
+`tests/unit/i18n-format.test.ts` gained four lines that would have caught it.
+Neither other tier could have. Static analysis saw well-typed code — `""`
+satisfies `lastActive: string`. An e2e spec would have had to seed a blank
+timestamp into the shared production database to assert something three layers
+below the screen. This is the `DataTable` sort comparator all over again, and
+the same answer applies.
+
+### The lesson that generalises
+
+**A formatter that throws is a worse defect than a formatter that is wrong**,
+because wrong is local and a throw is not. Anything called per-cell inside
+render is on the render path for its whole subtree. When replacing a lenient
+implementation with a correct one, the leniency is part of the contract until
+something proves otherwise — check what the old one did with junk before
+deleting it.
+
+And: **the crash was invisible in English.** The English screenshot was taken
+while the roster was still loading, so no card rendered, so nothing threw. The
+French pass ran second, by which time the query had resolved. The bug had
+nothing to do with French — the second look found it. Screenshot the state you
+are testing, not the state that loads first.
+
+## 2026-09-08 — the staff list view is a hand-rolled table, so §6 rule 6 never reached it
+
+Recorded while converting the staff directory, not fixed there.
+
+`StaffListView` in `src/app/facility/dashboard/staff/page.tsx` is a bespoke
+`<table>` inside `overflow-x-auto`, not `DataTable`. So stage 10's column budget
+— 7 columns at ≥1024px, 5 at 600–1023px, 4 card fields below, extras into a
+column picker — never applied to it. At 599px it scrolls sideways inside its
+container, which is exactly what rule 6 forbids:
+
+> A table that will not fit loses columns, it does not scroll … A sideways
+> table hides the identity column, which is the one that makes the others
+> legible.
+
+The page-level overflow measure reads **0px**, because the scroll is inside the
+wrapper rather than on the document. That is worth knowing before trusting that
+number again: `documentElement.scrollWidth` cannot see a table scrolling in its
+own box, so the 599px audit's headline figure is necessary and not sufficient.
+
+The fix is to route it through `DataTable`, which already owns the budget, the
+picker and the saved per-user preference — not to add a second budget by hand.

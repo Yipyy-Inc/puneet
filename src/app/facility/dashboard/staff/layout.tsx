@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ROLE_META } from "@/types/facility-staff";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 
 /**
@@ -56,6 +56,7 @@ const staffTabs = [
 
 function ViewingAsSwitcher() {
   const { t } = useStaffText("shell");
+  const roleLabel = useStaffRoleLabel();
   const {
     viewerId,
     setViewerId,
@@ -87,9 +88,7 @@ function ViewingAsSwitcher() {
           <span className="text-foreground font-medium">
             {viewer.firstName} {viewer.lastName}
           </span>
-          <span className="ml-1.5">
-            · {ROLE_META[viewer.primaryRole].label}
-          </span>
+          <span className="ml-1.5">· {roleLabel(viewer.primaryRole)}</span>
         </span>
       </div>
     );
@@ -101,12 +100,12 @@ function ViewingAsSwitcher() {
         <Eye className="size-3" /> {t("viewingAs")}
       </div>
       <Select value={viewerId} onValueChange={setViewerId}>
-        <SelectTrigger className="h-8 w-52 text-xs">
+        <SelectTrigger className="min-w-52 text-xs">
           <SelectValue>
             <span className="truncate">
               {viewer.firstName} {viewer.lastName}
               <span className="text-muted-foreground ml-1.5">
-                · {ROLE_META[viewer.primaryRole].label}
+                · {roleLabel(viewer.primaryRole)}
               </span>
             </span>
           </SelectValue>
@@ -118,7 +117,7 @@ function ViewingAsSwitcher() {
                 {s.firstName} {s.lastName}
               </span>
               <span className="text-muted-foreground ml-1.5">
-                · {ROLE_META[s.primaryRole].label}
+                · {roleLabel(s.primaryRole)}
               </span>
             </SelectItem>
           ))}

@@ -24,11 +24,30 @@ export function useStaffText(area: string) {
   const locale = useAppLocale();
   const effective: AppLocale = hydrated ? locale : "en";
 
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const t = (key: string) => staffText(effective, area, key);
+
+    return {
       locale: effective,
-      t: (key: string) => staffText(effective, area, key),
-    }),
-    [effective, area],
-  );
+      t,
+      /**
+       * A sentence with a value in it — `fill("reminderSent", { email })`.
+       *
+       * Concatenating a translated fragment with a value is the mistake this
+       * exists to prevent: French word order is not English word order, so
+       * `t("sentTo") + email` pins the value to a position the translator
+       * cannot move. The placeholder travels INSIDE the string, which is also
+       * why both catalogues can be reviewed as sentences.
+       *
+       * Settings re-invented this four times as a local `reduce` before
+       * anybody noticed; putting it here is what stops the staff area doing
+       * it thirty-two more.
+       */
+      fill: (key: string, values: Record<string, string | number>) =>
+        Object.entries(values).reduce(
+          (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+          t(key),
+        ),
+    };
+  }, [effective, area]);
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useUiText } from "@/hooks/use-ui-text";
+import { formatRelative } from "@/lib/i18n/format";
 import { usePermissionText } from "@/lib/settings/use-permission-text";
 import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 import {
@@ -196,14 +198,25 @@ export function ScopeBadge({ scope }: { scope: AccessScope }) {
   );
 }
 
-export function formatRelative(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.round(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
+/**
+ * `il y a 2 h` — a timestamp in the viewer's language.
+ *
+ * This replaced a hand-rolled formatter that was wrong three ways at once, and
+ * each one is a rule in §5q rather than a matter of taste:
+ *
+ *   1. It returned English WORDS — "just now", "2h ago", "3d ago" — to a
+ *      French reader, on six call sites across four staff screens.
+ *   2. It ran relative time out to SEVEN DAYS. §5q expires it at 24 hours:
+ *      "in 20 min" is useful, "3 days ago" is a date pretending to be one.
+ *   3. Past that it called `toLocaleDateString()` with no locale, which takes
+ *      the machine's — so the same row read differently on two laptops, and
+ *      could print a numeric MM/DD, which §6 rule 8 bans outright.
+ *
+ * `@/lib/i18n/format` already had all three answers. This is a hook rather
+ * than a function so a call site needs no locale in hand: six sites changed
+ * one line each instead of threading a parameter down four component trees.
+ */
+export function useRelativeTime(): (iso: string) => string {
+  const { locale } = useUiText();
+  return (iso: string) => formatRelative(iso, locale);
 }

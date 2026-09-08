@@ -36,7 +36,7 @@ import {
   ServiceChip,
   StaffAvatar,
   fullNameOf,
-  formatRelative,
+  useRelativeTime,
 } from "./staff-shared";
 import { StatusBadge } from "./status-change-dialog";
 import { getLatestStaffAuditEntry } from "@/lib/staff-audit";
@@ -77,6 +77,7 @@ export function StaffCard({
   onReview,
   onRemind,
 }: StaffCardProps) {
+  const relative = useRelativeTime();
   const { viewer } = useFacilityRbac();
   // Table 4 — editing staff requires manage_staff (admin: all-access fallback).
   const canManageStaff = usePermission("manage_staff");
@@ -135,7 +136,7 @@ export function StaffCard({
                 )}
                 <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
                   <Clock className="size-3" />
-                  Active {formatRelative(profile.lastActive)}
+                  Active {relative(profile.lastActive)}
                 </div>
               </div>
 
@@ -338,7 +339,7 @@ export function StaffCard({
               {" · "}
               {latestEntry.action.replace(/_/g, " ")}
               {" · "}
-              {formatRelative(latestEntry.timestamp)}
+              {relative(latestEntry.timestamp)}
             </p>
           </div>
         )}

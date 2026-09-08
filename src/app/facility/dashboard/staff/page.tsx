@@ -42,6 +42,8 @@ import {
   type FacilityStaffRole,
   type StaffProfile,
 } from "@/types/facility-staff";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { staffQueries, useCreateStaff, useUpdateStaff } from "@/lib/api/staff";
 // `upsertFacilityStaff` still writes the mock directory, which the 46 files
@@ -68,7 +70,7 @@ import {
   ServiceChip,
   StaffAvatar,
   fullNameOf,
-  formatRelative,
+  useRelativeTime,
   RoleIcon,
 } from "./_components/staff-shared";
 import {
@@ -83,16 +85,16 @@ import { useFacilityRbac, usePermission } from "@/hooks/use-facility-rbac";
 import { runOnboardingNotificationSweep } from "@/lib/staff-notifications";
 import { PageHeader } from "@/components/ui/page-header";
 
-const ROLE_FILTERS: { value: FacilityStaffRole | "all"; label: string }[] = [
-  { value: "all", label: "All roles" },
-  { value: "owner", label: "Owner" },
-  { value: "manager", label: "Manager" },
-  { value: "reception", label: "Reception" },
-  { value: "groomer", label: "Groomer" },
-  { value: "trainer", label: "Trainer" },
-  { value: "daycare_attendant", label: "Daycare" },
-  { value: "boarding_attendant", label: "Boarding" },
-  { value: "sanitation", label: "Sanitation" },
+const ROLE_FILTERS: (FacilityStaffRole | "all")[] = [
+  "all",
+  "owner",
+  "manager",
+  "reception",
+  "groomer",
+  "trainer",
+  "daycare_attendant",
+  "boarding_attendant",
+  "sanitation",
 ];
 
 // A staff member counts under a role if it's their primary OR an additional
@@ -101,6 +103,8 @@ const staffHasRole = (s: StaffProfile, role: FacilityStaffRole) =>
   s.primaryRole === role || s.additionalRoles.includes(role);
 
 export default function FacilityStaffPage() {
+  const { t, fill, locale } = useStaffText("directory");
+  const roleLabel = useStaffRoleLabel();
   const { viewer } = useFacilityRbac();
   // Table 4 — editing staff (Add / Edit, incl. the form's payroll fields)
   // requires manage_staff; admin resolves to all-access via the fallback.
@@ -292,19 +296,14 @@ export default function FacilityStaffPage() {
       } | null;
 
       if (result?.sent) {
-        toast.success(`Reminder sent to ${p.email}`);
+        toast.success(fill("reminderSent", { email: p.email }));
       } else if (result?.reason === "not_configured") {
-        toast.warning(
-          result.message ?? "Email service not configured — link reissued.",
-          {
-            description: result.onboardingUrl
-              ? "Open the resend dialog to copy the new link."
-              : undefined,
-            duration: 8000,
-          },
-        );
+        toast.warning(result.message ?? t("reminderNotConfigured"), {
+          description: result.onboardingUrl ? t("reminderCopyLink") : undefined,
+          duration: 8000,
+        });
       } else {
-        toast.error(result?.message ?? "Could not send the reminder.");
+        toast.error(result?.message ?? t("reminderFailed"));
         return;
       }
 
@@ -319,7 +318,7 @@ export default function FacilityStaffPage() {
         },
       );
     } catch {
-      toast.error("Could not reach the server. Nothing was sent.");
+      toast.error(t("networkFailed"));
     }
   }
 
@@ -382,24 +381,24 @@ export default function FacilityStaffPage() {
         <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
-              <Sparkles className="size-3" /> Team directory
+              <Sparkles className="size-3" /> {t("eyebrow")}
             </div>
             <PageHeader
               className="mt-1"
-              title="Your staff, your access rules"
-              description="Role-based by default, override per permission. Every account sees their schedule, documents, and tasks — service access unlocks the rest."
+              title={t("title")}
+              description={t("description")}
             />
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setDepartmentsOpen(true)}>
-              <Building2 className="size-4" /> Manage departments
+              <Building2 className="size-4" /> {t("manageDepartments")}
             </Button>
             <Button variant="outline">
-              <ArrowUpDown className="size-4" /> Sort staff
+              <ArrowUpDown className="size-4" /> {t("sortStaff")}
             </Button>
             {canManageStaff && (
               <Button onClick={openAddNew}>
-                <Plus className="size-4" /> Add new staff
+                <Plus className="size-4" /> {t("addStaff")}
               </Button>
             )}
           </div>
@@ -409,31 +408,31 @@ export default function FacilityStaffPage() {
         <div className="relative mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <StatPill
             icon={Users}
-            label="Active headcount"
+            label={t("statHeadcount")}
             value={stats.total}
             tone="bg-primary/10 text-primary"
           />
           <StatPill
             icon={UserCheck}
-            label="Active"
+            label={t("statActive")}
             value={stats.active}
             tone="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
           />
           <StatPill
             icon={Mail}
-            label="Invited"
+            label={t("statInvited")}
             value={stats.invited}
             tone="bg-amber-500/10 text-amber-600 dark:text-amber-400"
           />
           <StatPill
             icon={UserMinus}
-            label="On leave"
+            label={t("statOnLeave")}
             value={stats.onLeave}
             tone="bg-amber-500/10 text-amber-600 dark:text-amber-400"
           />
           <StatPill
             icon={ShieldCheck}
-            label="Roles in use"
+            label={t("statRoles")}
             value={stats.roles}
             tone="bg-violet-500/10 text-violet-600 dark:text-violet-400"
           />
@@ -449,7 +448,7 @@ export default function FacilityStaffPage() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name, email, phone…"
+                placeholder={t("searchPlaceholder")}
                 className="pl-9"
               />
             </div>
@@ -460,25 +459,25 @@ export default function FacilityStaffPage() {
                 setRoleFilter(v as FacilityStaffRole | "all")
               }
             >
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="min-w-40">
                 <Filter className="text-muted-foreground size-3.5" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {ROLE_FILTERS.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
+                  <SelectItem key={r} value={r}>
+                    {r === "all" ? t("allRoles") : roleLabel(r)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             <Select value={locationFilter} onValueChange={setLocationFilter}>
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="min-w-44">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All locations</SelectItem>
+                <SelectItem value="all">{t("allLocations")}</SelectItem>
                 {FACILITY_LOCATIONS.map((l) => (
                   <SelectItem key={l.id} value={l.id}>
                     {l.label}
@@ -497,7 +496,7 @@ export default function FacilityStaffPage() {
                     : "text-muted-foreground",
                 )}
               >
-                <LayoutGrid className="size-3.5" /> Grid
+                <LayoutGrid className="size-3.5" /> {t("viewGrid")}
               </button>
               <button
                 onClick={() => setView("list")}
@@ -508,7 +507,7 @@ export default function FacilityStaffPage() {
                     : "text-muted-foreground",
                 )}
               >
-                <List className="size-3.5" /> List
+                <List className="size-3.5" /> {t("viewList")}
               </button>
             </div>
           </div>
@@ -517,13 +516,13 @@ export default function FacilityStaffPage() {
           <div className="scrollbar-hidden -mx-1 mt-2.5 flex gap-0.5 overflow-x-auto px-1 pb-px">
             {ROLE_FILTERS.map((r) => {
               const count = tabFiltered.filter(
-                (s) => r.value === "all" || staffHasRole(s, r.value),
+                (s) => r === "all" || staffHasRole(s, r),
               ).length;
-              const active = roleFilter === r.value;
+              const active = roleFilter === r;
               return (
                 <button
-                  key={r.value}
-                  onClick={() => setRoleFilter(r.value)}
+                  key={r}
+                  onClick={() => setRoleFilter(r)}
                   className={cn(
                     "inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                     active
@@ -531,10 +530,10 @@ export default function FacilityStaffPage() {
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
-                  {r.value !== "all" && (
-                    <RoleIcon role={r.value} className="size-3 opacity-70" />
+                  {r !== "all" && (
+                    <RoleIcon role={r} className="size-3 opacity-70" />
                   )}
-                  {r.label}
+                  {r === "all" ? t("allRoles") : roleLabel(r)}
                   <span
                     className={cn(
                       "ml-0.5 rounded-sm px-1 text-[10px] tabular-nums",
@@ -562,7 +561,7 @@ export default function FacilityStaffPage() {
           }}
           count={staff.filter((s) => s.status === "active").length}
         >
-          Active employees
+          {t("tabActive")}
         </TabButton>
         <TabButton
           active={activeTab === "onboarding"}
@@ -572,7 +571,7 @@ export default function FacilityStaffPage() {
           }}
           count={staff.filter((s) => s.status === "invited").length}
         >
-          Onboarding in progress
+          {t("tabOnboarding")}
         </TabButton>
         <TabButton
           active={activeTab === "on_leave"}
@@ -582,7 +581,7 @@ export default function FacilityStaffPage() {
           }}
           count={stats.onLeave}
         >
-          On leave
+          {t("tabOnLeave")}
         </TabButton>
         <TabButton
           active={activeTab === "former"}
@@ -592,7 +591,7 @@ export default function FacilityStaffPage() {
           }}
           count={stats.terminated}
         >
-          Former employees
+          {t("tabFormer")}
         </TabButton>
       </div>
 
@@ -604,19 +603,15 @@ export default function FacilityStaffPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
             <Users className="text-muted-foreground size-8 animate-pulse" />
-            <div className="text-muted-foreground text-sm">
-              Loading the team…
-            </div>
+            <div className="text-muted-foreground text-sm">{t("loading")}</div>
           </CardContent>
         </Card>
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
             <Users className="text-muted-foreground size-8" />
-            <div className="font-semibold">No staff match those filters</div>
-            <p className="text-muted-foreground text-sm">
-              Try clearing filters or add someone new.
-            </p>
+            <div className="font-semibold">{t("emptyTitle")}</div>
+            <p className="text-muted-foreground text-sm">{t("emptyBody")}</p>
           </CardContent>
         </Card>
       ) : activeTab === "onboarding" ? (
@@ -706,21 +701,14 @@ export default function FacilityStaffPage() {
               actually happens now that the write reaches a database rather
               than a local array. */}
           <DialogHeader>
-            <DialogTitle>End employment</DialogTitle>
+            <DialogTitle>{t("endTitle")}</DialogTitle>
             <DialogDescription>
-              {deleting && (
-                <>
-                  Mark {fullNameOf(deleting)} as terminated? They&apos;ll lose
-                  access immediately and move to the Former tab. Assigned
-                  appointments will need to be transferred. Their record is kept
-                  — payroll history and the audit trail depend on it.
-                </>
-              )}
+              {deleting && fill("endBody", { name: fullNameOf(deleting) })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -747,7 +735,7 @@ export default function FacilityStaffPage() {
                 setDeleting(null);
               }}
             >
-              End employment
+              {t("endTitle")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -760,15 +748,20 @@ export default function FacilityStaffPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Transfer upcoming appointments</DialogTitle>
+            <DialogTitle>{t("transferTitle")}</DialogTitle>
             <DialogDescription>
-              {transferring && (
-                <>
-                  {transferring.upcomingAppointments} upcoming appointments
-                  assigned to {fullNameOf(transferring)}. Pick who takes them
-                  over.
-                </>
-              )}
+              {transferring &&
+                fill(
+                  new Intl.PluralRules(locale).select(
+                    transferring.upcomingAppointments,
+                  ) === "one"
+                    ? "transferBodyOne"
+                    : "transferBodyOther",
+                  {
+                    count: transferring.upcomingAppointments,
+                    name: fullNameOf(transferring),
+                  },
+                )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
@@ -783,7 +776,7 @@ export default function FacilityStaffPage() {
                   <div className="flex-1">
                     <div className="text-sm font-semibold">{fullNameOf(s)}</div>
                     <div className="text-muted-foreground text-xs">
-                      {ROLE_META[s.primaryRole].label}
+                      {roleLabel(s.primaryRole)}
                     </div>
                   </div>
                   <ArrowLeftRight className="text-muted-foreground size-4" />
@@ -792,9 +785,11 @@ export default function FacilityStaffPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTransferring(null)}>
-              Cancel
+              {t("cancel")}
             </Button>
-            <Button onClick={() => setTransferring(null)}>Transfer</Button>
+            <Button onClick={() => setTransferring(null)}>
+              {t("transferConfirm")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -803,11 +798,8 @@ export default function FacilityStaffPage() {
       <Dialog open={departmentsOpen} onOpenChange={setDepartmentsOpen}>
         <DialogContent className="max-h-[85vh] w-[95vw] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle>Departments</DialogTitle>
-            <DialogDescription>
-              Create departments to organize your staff and assign tasks by
-              team. Each staff member belongs to one department.
-            </DialogDescription>
+            <DialogTitle>{t("departmentsTitle")}</DialogTitle>
+            <DialogDescription>{t("departmentsBody")}</DialogDescription>
           </DialogHeader>
           <DepartmentSettings />
         </DialogContent>
@@ -942,6 +934,8 @@ function StaffListView({
   onEdit: (p: StaffProfile) => void;
   canEdit: boolean;
 }) {
+  const { t } = useStaffText("directory");
+  const relative = useRelativeTime();
   return (
     <Card>
       <CardContent className="p-0">
@@ -949,12 +943,20 @@ function StaffListView({
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground text-xs">
               <tr>
-                <th className="px-4 py-2.5 text-left font-medium">Staff</th>
-                <th className="px-4 py-2.5 text-left font-medium">Role</th>
-                <th className="px-4 py-2.5 text-left font-medium">Services</th>
-                <th className="px-4 py-2.5 text-left font-medium">Locations</th>
                 <th className="px-4 py-2.5 text-left font-medium">
-                  Last active
+                  {t("colStaff")}
+                </th>
+                <th className="px-4 py-2.5 text-left font-medium">
+                  {t("colRole")}
+                </th>
+                <th className="px-4 py-2.5 text-left font-medium">
+                  {t("colServices")}
+                </th>
+                <th className="px-4 py-2.5 text-left font-medium">
+                  {t("colLocations")}
+                </th>
+                <th className="px-4 py-2.5 text-left font-medium">
+                  {t("colLastActive")}
                 </th>
                 <th className="px-4 py-2.5 text-right font-medium"></th>
               </tr>
@@ -1001,11 +1003,16 @@ function StaffListView({
                   </td>
                   <td className="text-muted-foreground px-4 py-3 text-xs">
                     {p.assignedLocations.length === FACILITY_LOCATIONS.length
-                      ? "All"
+                      ? t("allLocationsShort")
                       : `${p.assignedLocations.length}/${FACILITY_LOCATIONS.length}`}
                   </td>
                   <td className="text-muted-foreground px-4 py-3 text-xs">
-                    {formatRelative(p.lastActive)}
+                    {/* An empty `lastActive` is not an unknown date, it is a
+                        person who has never signed in — the mapper writes ""
+                        where the column is null. The formatter's em dash is
+                        the right FALLBACK and the wrong ANSWER, so the screen
+                        that knows what the blank means says it. */}
+                    {p.lastActive ? relative(p.lastActive) : t("neverSignedIn")}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {canEdit && (
@@ -1017,7 +1024,7 @@ function StaffListView({
                           onEdit(p);
                         }}
                       >
-                        Edit
+                        {t("edit")}
                       </Button>
                     )}
                   </td>
