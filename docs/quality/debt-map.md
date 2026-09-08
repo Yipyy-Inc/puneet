@@ -10045,3 +10045,52 @@ which component.
 cluster: `report-card-template` 8, `tips` 6, `hours` 3 (almost certainly hidden
 inputs behind switches — confirm before counting), `vaccination-requirements`
 and `tags-notes` 3 each as 42px tab strips, and six sections with one apiece.
+
+## 2026-09-08 — "one sticky SaveBar per page" stopped being possible when settings got routes
+
+**Not debt — a decision, recorded because it contradicts a written plan.**
+
+The settings restructure plan says: _"Adopt the loyalty pattern everywhere: a
+sticky SaveBar with dirty tracking."_ That was written against the old
+4,748-line `settings/page.tsx`, where a section was a branch inside one
+component and a page-level bar had one draft to commit.
+
+**Route-per-section moved persistence to the card.** `booking-rules` renders
+three cards that write three different settings domains through three different
+mutations — `updateRules`, `updateService`, `updateBookingFlow`. A single
+sticky bar per section would have to lift all three drafts into the section and
+fire all three behind one button, which can **half-succeed**: RLS refuses one
+domain, the other two land, and the screen says "saved". That is exactly what
+`check:success-claims` exists to catch, bought for nothing. Three sticky bars
+would also simply stack at the bottom of the viewport.
+
+So the deliverable was kept and the mechanism adapted: `SaveBar` takes a
+`placement`, `page` (sticky, loyalty's shape) or `card` (an inline footer).
+**One component and one set of semantics — same dirty tracking, same Loading
+cell, same words — with the save boundary left where the data boundary already
+is.**
+
+Three spellings of save became one: `SettingsBlock` (7 cards, converted in a
+single edit), `booking-approval-settings-card` (which had reimplemented
+`SettingsBlock`'s exact view/edit/draft pattern by hand), and
+`vaccination-requirements-card` (always-editable and dirty-driven, carrying the
+same `{isPending ? "saving" : "save"}` label swap §5s names under Never).
+
+**Per-toggle autosave was deliberately NOT converted.** 13 settings files save a
+switch the moment it flips. Wrapping those in a draft would add an unsaved-state
+that can be navigated away from, in exchange for nothing — a single toggle has
+no draft worth reviewing. "One save model" means one model for edits that need
+committing, not a save step bolted onto a switch.
+
+**A trap was introduced and caught in the same change.** Moving Save/Cancel out
+of the card header left SaveBar's Discard as the only exit from edit mode — and
+it is disabled when not dirty. Click Edit, change nothing, stranded. Discard is
+now dead only on a `page` bar, where it genuinely does nothing; in a card it
+also leaves the editor, which is meaningful either way. It reads fine in the
+diff and traps a real user, which is the argument for §5s being a matrix rather
+than advice.
+
+**Still open:** the 7 `SettingsBlock` cards keep their Edit affordance, so
+settings has one save COMPONENT but two interaction shapes — read-then-edit, and
+always-editable. Whether the Edit gate should go is a product call: on business
+hours and a facility's public profile, "you are now editing" is worth a click.

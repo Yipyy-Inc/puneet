@@ -20,6 +20,7 @@ import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { SaveBar } from "@/components/ui/save-bar";
 import { useServiceTypeLabel } from "@/lib/settings/use-service-types";
 
 // Vaccination Requirements Component
@@ -166,15 +167,6 @@ function VaccinationRequirementsEditor({
               </p>
             )}
           </div>
-          {isDirty && (
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={saveSetting.isPending}
-            >
-              {saveSetting.isPending ? t("saving") : t("save")}
-            </Button>
-          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -324,6 +316,13 @@ function VaccinationRequirementsEditor({
             </TabsContent>
           ))}
         </Tabs>
+        <SaveBar
+          placement="card"
+          dirty={isDirty}
+          saving={saveSetting.isPending}
+          onSave={handleSave}
+          onReset={() => setRules([...savedRules])}
+        />
       </CardContent>
     </Card>
   );
