@@ -10319,3 +10319,46 @@ by nature (`audit` — the only DataTable in settings, `locations`, `retail`,
 wider than "Push" and the rows still hold. The 51-section 599px audit is
 unchanged at **0 overflowing**, which is the measure a grid is most likely to
 break.
+
+## 2026-09-08 — the grid reaches the last seven, and the rule it needed twice
+
+The first grid pass converted the sections whose sibling cards sit at the
+SECTION level. Seven others render one root and keep their cards inside a
+delegated component, so the wrapper swap never reached them: `taxes` (5 cards),
+`invoice-template` (6), `mobile-app` (5), `smart-insights` (4),
+`checkin-requirements` (6), `deposit-rules` (3), `payroll-rules` (3).
+
+**`SettingsCardGrid` moved to `src/components/ui/` and now exports its class
+string as well.** A section file has exactly one `<div>`, so swapping it for the
+component is unambiguous. `TaxSettings.tsx` is 622 lines with dozens of divs —
+matching the right `</div>` there is guesswork, and a wrong guess still
+compiles. Those files keep their div and take `className={SETTINGS_CARD_GRID}`.
+One source of truth, no tag matching, and no app-route import inside
+`src/components/`.
+
+### The rule, learned twice, both times from a screenshot
+
+> **Anything in one of these grids that is not a card takes `lg:col-span-2`.**
+
+First instance: the notification card, which splits its own rows two-up. Second:
+**four of these seven open with a section intro** — a heading and a sentence —
+which became a grid CELL. A paragraph in the left column with an empty column
+beside it: the exact emptiness the change exists to remove, reintroduced by the
+change itself.
+
+**The overflow assertion passed both times.** A grid that is laid out wrongly is
+still laid out — nothing scrolls, nothing overlaps, and every automated check
+is happy. Only the screenshot showed it. Worth remembering before trusting a
+layout change that has assertions but no picture.
+
+### Two tooling notes
+
+`makeTextEditor`'s occurrence count guards the string it is given and nothing
+else. The class swap was counted and correct in all seven files, while the
+IMPORT insertion — a separate heuristic, "after the last line starting with
+`import `" — landed inside a multi-line import in `SmartInsightsSettings.tsx`
+and produced a syntax error. `tsc` caught it immediately. A guard covers what
+you point it at.
+
+`execSync` throws on a gate's non-zero exit, which is by design for a gate and
+fatal for a script that reads one. Use `spawnSync`; this bit twice today.

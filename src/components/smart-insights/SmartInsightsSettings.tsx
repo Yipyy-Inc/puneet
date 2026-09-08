@@ -15,6 +15,7 @@ import {
   type InsightCategory,
   type InsightSettings,
 } from "@/types/smart-insights";
+import { SETTINGS_CARD_GRID } from "@/components/ui/settings-card-grid";
 
 const FACILITY_ID = 11;
 
@@ -143,8 +144,8 @@ export function SmartInsightsSettings() {
   const resetThresholds = () => update({ thresholdOverrides: {} });
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className={SETTINGS_CARD_GRID}>
+      <div className="lg:col-span-2">
         <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </div>
 

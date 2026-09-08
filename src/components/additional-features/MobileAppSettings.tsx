@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/facility-settings";
 import type { MobileAppConfig } from "@/lib/settings/mobile-app";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { SETTINGS_CARD_GRID } from "@/components/ui/settings-card-grid";
 
 // ── NOTHING RENDERS UNTIL THE FACILITY'S OWN CONFIG HAS ARRIVED ────────────
 //
@@ -90,7 +91,7 @@ function MobileAppEditor({
   };
 
   return (
-    <div className="space-y-6">
+    <div className={SETTINGS_CARD_GRID}>
       {/* App Identity */}
       <Card>
         <CardHeader>

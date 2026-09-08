@@ -37,6 +37,7 @@ import { checkinMutations } from "@/lib/api/checkin-requirements";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { InterpolatedText } from "@/components/ui/interpolated-text";
 import type { ExpressCheckinConfig } from "@/data/checkin-requirements";
+import { SETTINGS_CARD_GRID } from "@/components/ui/settings-card-grid";
 
 type Requirement = "required" | "optional" | "disabled";
 
@@ -319,8 +320,8 @@ export function CheckinRequirementsSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className={SETTINGS_CARD_GRID}>
+      <div className="lg:col-span-2">
         <h2 className="text-lg font-semibold">{t("title")}</h2>
         <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </div>

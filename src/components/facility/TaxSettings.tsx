@@ -26,6 +26,7 @@ import {
 } from "@/lib/api/facility-settings";
 import type { TaxConfig, TaxEntry } from "@/lib/settings/tax";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { SETTINGS_CARD_GRID } from "@/components/ui/settings-card-grid";
 
 // ============================================================================
 // ── THIS SCREEN USED TO SAVE NOTHING ──────────────────────────────────────
@@ -264,8 +265,8 @@ export function TaxSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className={SETTINGS_CARD_GRID}>
+      <div className="lg:col-span-2">
         <h2 className="text-lg font-semibold">{t("title")}</h2>
         <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </div>

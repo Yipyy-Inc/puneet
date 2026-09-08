@@ -27,6 +27,7 @@ import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { InterpolatedText } from "@/components/ui/interpolated-text";
 import { weekdayNames } from "@/lib/dates/calendar-names";
 import type { PayrollConfig, PayrollHoliday } from "@/lib/settings/payroll";
+import { SETTINGS_CARD_GRID } from "@/components/ui/settings-card-grid";
 
 // ============================================================================
 // The overtime rule and the holiday list.
@@ -191,7 +192,7 @@ export function PayrollRulesSettings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={SETTINGS_CARD_GRID}>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">

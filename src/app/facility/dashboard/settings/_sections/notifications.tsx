@@ -8,7 +8,7 @@ import { ServiceNotificationSettings } from "@/components/facility/ServiceNotifi
 import { Button } from "@/components/ui/button";
 import { NotificationSettingsCard } from "../_components/notification-settings-card";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
-import { SettingsCardGrid } from "../_components/settings-card-grid";
+import { SettingsCardGrid } from "@/components/ui/settings-card-grid";
 
 export function NotificationsSection() {
   const t = useSettingsText().section("notifications");
