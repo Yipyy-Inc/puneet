@@ -24,10 +24,11 @@
  * source is English words on the screen in both languages. It does not consult
  * the map, so the map cannot fool it.
  *
- * ── THREE SURFACES, BECAUSE A CURATED LIST HIDES WORK ────────────────────
+ * ── SEVEN SURFACES, BECAUSE A CURATED LIST HIDES WORK ────────────────────
  *
- *   settings    one entry per section, walked three imports deep
- *   shell       DERIVED from src/app/facility/layout.tsx, two deep
+ *   settings    one entry per section, DERIVED from _sections/, three deep
+ *   shell × 4   DERIVED from each portal's layout.tsx, two deep
+ *   staff       DERIVED from the staff route tree, three deep
  *   primitives  every file in src/components/ui
  *
  * The shell was first measured against a list of files chosen by hand. It came
@@ -36,6 +37,23 @@
  * notifications dropdown and the location switcher — all of them shell, none
  * of them on the list. A boundary you draw yourself is a boundary that agrees
  * with you.
+ *
+ * `staff` was added on 2026-09-08 for the sharper version of the same lesson.
+ * `usePermissionText()` had been written the day before to translate 168
+ * permission names, and was wired into ONE of the eight files that render
+ * them. Seven screens kept printing English with every gate green, because
+ * the staff area was on nobody's list at all. It measured 33 files and 725
+ * strings the moment it was looked at.
+ *
+ * ── THE BASELINE IS A COUNT, NOT A NAME ──────────────────────────────────
+ *
+ * It used to be a Set of file ids, which meant a file already in it could
+ * absorb any amount of NEW English silently. Measured, rather than assumed,
+ * by appending an untranslated sentence to a baselined file: the gate passed.
+ * On a surface with 33 files still to convert that is weeks of drift behind a
+ * green build. It is a Map of id → permitted count now, so the number can
+ * only go down; a file that improves prints a note asking for its baseline to
+ * be lowered, the way the badge-glyph and hardcoded-locale ratchets do.
  *
  * ── WHAT COUNTS AS VISIBLE ────────────────────────────────────────────────
  *
@@ -574,6 +592,66 @@ function shellSurface(root: string): Offender[] {
     .filter((entry) => entry.hits.length > 0);
 }
 
+/**
+ * The staff area, derived from its own route tree.
+ *
+ * ── WHY THIS SURFACE EXISTS ──────────────────────────────────────────────
+ *
+ * `usePermissionText()` was written on 2026-09-07 to translate the permission
+ * catalogue — 168 permissions, 19 groups, 4 access scopes — and wired into one
+ * of the eight files that render it. The other seven kept printing English for
+ * a day, and every gate in this repo stayed green, because the measured
+ * surfaces were the settings sections, the four portal shells and the shadcn
+ * primitives. The staff screens were nobody's.
+ *
+ * Adding them is the cheaper half of finishing them: the work now has a number
+ * that cannot go up.
+ *
+ * ── DERIVED, NOT LISTED ──────────────────────────────────────────────────
+ *
+ * Every `page.tsx` and `layout.tsx` under the staff route is a root, found by
+ * reading the directory rather than by naming files here. The shell surface's
+ * own header records why that matters — measured against a hand-picked list it
+ * came back clean while thirty-four strings sat in the support drawer — and
+ * the same trap is open here: a staff sub-route added later would be invisible
+ * to a list somebody has to remember to update.
+ *
+ * Three deep, like `settings`: a page is a wrapper, the screen is one import
+ * down, and its parts are two or three.
+ */
+const STAFF = "src/app/facility/dashboard/staff";
+
+/** Every `page.tsx` and `layout.tsx` under a route, at any depth. */
+function routeRoots(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) out.push(...routeRoots(path));
+    else if (entry.name === "page.tsx" || entry.name === "layout.tsx")
+      out.push(path);
+  }
+  return out.sort();
+}
+
+/** staff — one entry per file, so a file can be cleared on its own. */
+function staffSurface(): Offender[] {
+  const seen = new Set<string>();
+  for (const root of routeRoots(STAFF)) walk(root, 3, seen, true);
+  return [...seen]
+    .filter(
+      (file) =>
+        file.endsWith(".tsx") &&
+        isComponent(file) &&
+        // The settings sections are their own surface and several of them are
+        // reachable from here — the roles studio is rendered by both. Pinning
+        // its strings on `staff` too would make one fix look like two.
+        !file.startsWith(SETTINGS),
+    )
+    .sort()
+    .map((file) => ({ id: file, hits: hits(file) }))
+    .filter((entry) => entry.hits.length > 0);
+}
+
 /** primitives — every shadcn file, one entry per file. */
 function primitivesSurface(): Offender[] {
   return readdirSync(PRIMITIVES)
@@ -602,13 +680,88 @@ function primitivesSurface(): Offender[] {
  * empty — which is the strongest form of this check and the one worth having
  * on chrome that is on screen for every route in the product.
  */
-const BASELINE: Record<string, Set<string>> = {
-  settings: new Set([]),
-  "shell:facility": new Set<string>(),
-  "shell:customer": new Set<string>(),
-  "shell:employee": new Set<string>(),
-  "shell:super-admin": new Set<string>(),
-  primitives: new Set<string>(),
+const BASELINE: Record<string, Map<string, number>> = {
+  settings: new Map<string, number>(),
+  // ── THE STAFF AREA, AS FOUND ON 2026-09-08 ─────────────────────────────
+  //
+  // Thirty-three files, 725 strings, none of it previously measured by
+  // anything. SHRINKING LIST, exactly as `settings` was: delete an entry when
+  // a file is converted, and note that a STALE entry fails too — a file that
+  // was translated cannot quietly go back.
+  //
+  // The permission catalogue itself is already done; this is the copy AROUND
+  // it — the headings, the filters, the empty states, the dialogs, and
+  // `SERVICE_MODULE_META`, a label table with no hook of its own.
+  staff: new Map([
+    ["src/app/facility/dashboard/staff/[id]/staff-profile-tabs.tsx", 46],
+    ["src/app/facility/dashboard/staff/[id]/staff-profile-view.tsx", 14],
+    ["src/app/facility/dashboard/staff/_components/access-tab.tsx", 29],
+    [
+      "src/app/facility/dashboard/staff/_components/custom-role-quick-create-dialog.tsx",
+      15,
+    ],
+    ["src/app/facility/dashboard/staff/_components/employee-files-tab.tsx", 32],
+    ["src/app/facility/dashboard/staff/_components/offboarding-tab.tsx", 44],
+    [
+      "src/app/facility/dashboard/staff/_components/onboarding-progress-list.tsx",
+      1,
+    ],
+    [
+      "src/app/facility/dashboard/staff/_components/onboarding-submission-view.tsx",
+      31,
+    ],
+    [
+      "src/app/facility/dashboard/staff/_components/resend-invite-dialog.tsx",
+      16,
+    ],
+    [
+      "src/app/facility/dashboard/staff/_components/review-activate-dialog.tsx",
+      17,
+    ],
+    ["src/app/facility/dashboard/staff/_components/role-matrix.tsx", 16],
+    ["src/app/facility/dashboard/staff/_components/staff-audit-trail.tsx", 9],
+    [
+      "src/app/facility/dashboard/staff/_components/staff-availability-tab.tsx",
+      10,
+    ],
+    ["src/app/facility/dashboard/staff/_components/staff-card.tsx", 20],
+    ["src/app/facility/dashboard/staff/_components/staff-documents-tab.tsx", 9],
+    ["src/app/facility/dashboard/staff/_components/staff-form-dialog.tsx", 22],
+    [
+      "src/app/facility/dashboard/staff/_components/staff-form-sections.tsx",
+      56,
+    ],
+    [
+      "src/app/facility/dashboard/staff/_components/staff-profile-sheet.tsx",
+      41,
+    ],
+    ["src/app/facility/dashboard/staff/_components/staff-roles-tab.tsx", 3],
+    ["src/app/facility/dashboard/staff/_components/staff-tasks-section.tsx", 5],
+    [
+      "src/app/facility/dashboard/staff/_components/status-change-dialog.tsx",
+      19,
+    ],
+    [
+      "src/app/facility/dashboard/staff/_components/warning-template-builder.tsx",
+      36,
+    ],
+    ["src/app/facility/dashboard/staff/_components/warnings-tab.tsx", 44],
+    ["src/app/facility/dashboard/staff/_components/write-ups-tab.tsx", 30],
+    ["src/app/facility/dashboard/staff/documents/page.tsx", 33],
+    ["src/app/facility/dashboard/staff/layout.tsx", 5],
+    ["src/app/facility/dashboard/staff/page.tsx", 41],
+    ["src/app/facility/dashboard/staff/performance/page.tsx", 19],
+    ["src/app/facility/dashboard/staff/warnings/page.tsx", 39],
+    ["src/components/employee/EmployeeDashboard.tsx", 13],
+    ["src/components/facility/DepartmentSettings.tsx", 6],
+    ["src/components/facility/StaffPreviewDialog.tsx", 2],
+    ["src/components/facility/staff-hr/onboarding-invite-email.tsx", 2],
+  ]),
+  "shell:facility": new Map<string, number>(),
+  "shell:customer": new Map<string, number>(),
+  "shell:employee": new Map<string, number>(),
+  "shell:super-admin": new Map<string, number>(),
+  primitives: new Map<string, number>(),
 };
 
 const SURFACES: {
@@ -630,6 +783,14 @@ const SURFACES: {
     advice: 'Route it through useShellText("<group>") — see lib/shell/text.ts',
   })),
   {
+    name: "staff",
+    label: "staff area (derived from its route tree)",
+    run: staffSurface,
+    advice:
+      "Route it through usePermissionText() for the permission catalogue, " +
+      "useStaffRoleLabel() for a role name, or a settings catalogue block",
+  },
+  {
     name: "primitives",
     label: "shadcn primitives",
     run: primitivesSurface,
@@ -644,10 +805,26 @@ console.log(`${ANSI.bold}The interface, in French${ANSI.reset}\n`);
 
 for (const surface of SURFACES) {
   const offenders = surface.run();
-  const baseline = BASELINE[surface.name] ?? new Set<string>();
-  const introduced = offenders.filter((o) => !baseline.has(o.id));
+  const baseline = BASELINE[surface.name] ?? new Map<string, number>();
+  // ── A BASELINE THAT IS A COUNT, NOT JUST A NAME ─────────────────────────
+  //
+  // It was a Set of file ids, and a file already in it could absorb any amount
+  // of new English silently. Measured on 2026-09-08 by appending an
+  // untranslated sentence to a baselined file: the gate passed. On a surface
+  // with 33 files still to convert that is weeks of drift with a green build.
+  //
+  // A count fails the moment a file grows, so the number can only go down.
+  const introduced = offenders.filter(
+    (o) => o.hits.length > (baseline.get(o.id) ?? 0),
+  );
   const ids = new Set(offenders.map((o) => o.id));
-  const converted = [...baseline].filter((id) => !ids.has(id)).sort();
+  const converted = [...baseline.keys()].filter((id) => !ids.has(id)).sort();
+  // Below its baseline — not a failure, but the ratchet has lost its grip on
+  // that file until the number comes down. The same note the badge-glyph and
+  // hardcoded-locale ratchets print.
+  const slack = offenders
+    .filter((o) => o.hits.length < (baseline.get(o.id) ?? 0))
+    .sort((a, b) => a.id.localeCompare(b.id));
   const strings = offenders.reduce((n, o) => n + o.hits.length, 0);
   total += strings;
 
@@ -673,6 +850,11 @@ for (const surface of SURFACES) {
       `          ${ANSI.dim}${surface.advice}, or — if it is a name — mark the line // french-ok: <reason>.${ANSI.reset}`,
     );
   }
+
+  for (const o of slack)
+    console.log(
+      `    ${ANSI.yellow}note${ANSI.reset} ${o.id} is down to ${o.hits.length} from ${baseline.get(o.id)} — lower its baseline so the ratchet keeps its grip.`,
+    );
 
   if (converted.length > 0) {
     failed = true;
