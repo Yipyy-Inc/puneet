@@ -36,7 +36,7 @@ import {
   PointsExpiryEditor,
   type PointsExpiryValue,
 } from "@/components/loyalty/config/PointsExpiryEditor";
-import { SaveBar } from "@/components/loyalty/config/SaveBar";
+import { SaveBar } from "@/components/ui/save-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import { loyaltyQueries } from "@/lib/api/loyalty";

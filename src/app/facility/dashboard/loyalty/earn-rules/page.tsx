@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { EarnRuleListEditor } from "@/components/loyalty/config/EarnRuleListEditor";
 import { EarnRulesEditor } from "@/components/loyalty/config/EarnRulesEditor";
-import { SaveBar } from "@/components/loyalty/config/SaveBar";
+import { SaveBar } from "@/components/ui/save-bar";
 import { FutureChangesNotice } from "@/components/loyalty/config/FutureChangesNotice";
 import {
   getActiveEarnRules,

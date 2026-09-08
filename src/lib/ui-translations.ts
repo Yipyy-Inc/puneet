@@ -65,6 +65,12 @@ const EN_TO_FR_LITERAL_MAP = (() => {
     // message of its own. It is the sentence a French user reads when RLS
     // declines their row, so it cannot be the only English left on the path.
     "Could not save changes.": "Impossible d’enregistrer les modifications.",
+    // The sticky SaveBar — the one save model, so these three reach every
+    // screen that adopts it. They had no translation at all while it lived in
+    // the loyalty folder.
+    "Save changes": "Enregistrer les modifications",
+    Discard: "Abandonner",
+    "You have unsaved changes": "Vous avez des modifications non enregistrées",
     "Profile Settings": "Paramètres du profil",
     "System Settings": "Paramètres système",
     "Context Switcher": "Changement de contexte",

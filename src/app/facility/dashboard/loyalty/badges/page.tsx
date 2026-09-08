@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { BadgesEditor } from "@/components/loyalty/config/BadgesEditor";
-import { SaveBar } from "@/components/loyalty/config/SaveBar";
+import { SaveBar } from "@/components/ui/save-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import type { Badge } from "@/types/loyalty";
