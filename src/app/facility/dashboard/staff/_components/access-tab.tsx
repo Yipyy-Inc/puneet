@@ -24,8 +24,9 @@ import {
   RotateCcw,
   ShieldAlert,
 } from "lucide-react";
+import { usePermissionText } from "@/lib/settings/use-permission-text";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 import {
-  ACCESS_SCOPE_META,
   ALWAYS_ON_PERMISSIONS,
   PERMISSION_GROUPS,
   ROLE_META,
@@ -154,6 +155,7 @@ function RolesSection({
   canManage: boolean;
   onUpdate?: (p: StaffProfile) => void;
 }) {
+  const roleLabel = useStaffRoleLabel();
   const { customRoles } = useFacilityRbac();
   const customList = Object.values(customRoles);
   const customAssigned = (profile.customRoleIds ?? [])
@@ -275,7 +277,7 @@ function RolesSection({
                       <SelectItem key={r} value={r}>
                         <span className="inline-flex items-center gap-1.5">
                           <RoleIcon role={r} className="size-3" />
-                          {ROLE_META[r].label}
+                          {roleLabel(r)}
                         </span>
                       </SelectItem>
                     ))}
@@ -324,6 +326,7 @@ function PermissionsSection({
   resolveFor: (p: StaffProfile, k: PermissionKey) => PermissionSetting;
   customRoleLabels: Record<string, string>;
 }) {
+  const roleLabel = useStaffRoleLabel();
   // The per-person overrides are withheld without `view_staff_permissions`.
   // Nothing below can be shown honestly without them — the resolved column
   // would silently omit whatever an override changes — and editing would be
@@ -426,7 +429,7 @@ function PermissionsSection({
           Permissions come from the primary role
           {profile.additionalRoles.length > 0 &&
             `, additional preset roles (${profile.additionalRoles
-              .map((r) => ROLE_META[r].label)
+              .map((r) => roleLabel(r))
               .join(", ")})`}
           {(profile.customRoleIds ?? []).length > 0 &&
             `, custom roles (${(profile.customRoleIds ?? [])
@@ -454,6 +457,7 @@ type Row = {
 };
 
 function ReadOnlyPermissions({ rows }: { rows: Row[] }) {
+  const permissionText = usePermissionText();
   const groupsWithGrants = rows
     .map((g) => ({
       ...g,
@@ -466,7 +470,7 @@ function ReadOnlyPermissions({ rows }: { rows: Row[] }) {
       {groupsWithGrants.map((g) => (
         <div key={g.id}>
           <div className="text-muted-foreground mb-1.5 text-xs font-medium">
-            {g.label}
+            {permissionText.group(g)}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {g.permissions.map((p) => (
@@ -477,7 +481,7 @@ function ReadOnlyPermissions({ rows }: { rows: Row[] }) {
                   p.override && "ring-primary/40 ring-1",
                 )}
               >
-                <span>{p.label}</span>
+                <span>{permissionText.permission(p.key)}</span>
                 <ScopeBadge scope={p.resolved.scope} />
                 {p.override && (
                   <Badge
@@ -503,6 +507,7 @@ function EditablePermissions({
   rows: Row[];
   applyScope: (key: PermissionKey, next: AccessScope | "reset") => void;
 }) {
+  const permissionText = usePermissionText();
   return (
     <div className="space-y-3">
       {rows.map((g) => (
@@ -511,7 +516,9 @@ function EditablePermissions({
           className="border-border/60 overflow-hidden rounded-xl border"
         >
           <div className="bg-muted/40 border-b px-3 py-2">
-            <div className="text-xs font-semibold">{g.label}</div>
+            <div className="text-xs font-semibold">
+              {permissionText.group(g)}
+            </div>
             <div className="text-muted-foreground text-[10px]">
               {g.description}
             </div>
@@ -523,7 +530,9 @@ function EditablePermissions({
                 className="flex items-center justify-between gap-3 px-3 py-2"
               >
                 <div className="min-w-0">
-                  <div className="truncate text-xs font-medium">{p.label}</div>
+                  <div className="truncate text-xs font-medium">
+                    {permissionText.permission(p.key)}
+                  </div>
                   {p.hint && (
                     <div className="text-muted-foreground truncate text-[10px]">
                       {p.hint}
@@ -569,7 +578,7 @@ function EditablePermissions({
                         <span className="text-[11px]">
                           Default (
                           {p.resolved.granted
-                            ? ACCESS_SCOPE_META[p.resolved.scope].label
+                            ? permissionText.scope(p.resolved.scope)
                             : "Blocked"}
                           )
                         </span>
@@ -586,7 +595,7 @@ function EditablePermissions({
                                 s === "none" && "bg-rose-500",
                               )}
                             />
-                            {ACCESS_SCOPE_META[s].label}
+                            {permissionText.scope(s)}
                           </span>
                         </SelectItem>
                       ))}
@@ -611,6 +620,7 @@ function InlineScope({
   granted: boolean;
   override: boolean;
 }) {
+  const permissionText = usePermissionText();
   if (!granted) {
     return (
       <span className="inline-flex items-center gap-1.5 text-[11px]">
@@ -630,7 +640,7 @@ function InlineScope({
           scope === "none" && "bg-rose-500",
         )}
       />
-      {ACCESS_SCOPE_META[scope].label}
+      {permissionText.scope(scope)}
     </span>
   );
 }

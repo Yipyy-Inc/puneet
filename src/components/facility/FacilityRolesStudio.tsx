@@ -159,6 +159,8 @@ function StudioInner() {
     deleteCustomRole,
     resetAllPresets,
   } = useFacilityRbac();
+  const roleLabel = useStaffRoleLabel();
+  const roleTagline = useStaffRoleTagline();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<RoleKind>({
     type: "preset",
@@ -176,8 +178,8 @@ function StudioInner() {
     if (!query) return true;
     const q = query.toLowerCase();
     return (
-      ROLE_META[r].label.toLowerCase().includes(q) ||
-      ROLE_META[r].tagline.toLowerCase().includes(q) ||
+      roleLabel(r).toLowerCase().includes(q) ||
+      roleTagline(r).toLowerCase().includes(q) ||
       r.toLowerCase().includes(q)
     );
   });

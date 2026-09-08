@@ -21,6 +21,8 @@ import {
   type AccessScope,
 } from "@/types/facility-staff";
 import { RoleIcon, ScopeBadge } from "./staff-shared";
+import { usePermissionText } from "@/lib/settings/use-permission-text";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 
 const ROLE_ORDER: FacilityStaffRole[] = [
   "owner",
@@ -42,6 +44,8 @@ function scopeForRole(
 }
 
 export function RoleAccessMatrix() {
+  const permissionText = usePermissionText();
+  const roleLabel = useStaffRoleLabel();
   const [expanded, setExpanded] = useState(false);
   const [focusRole, setFocusRole] = useState<FacilityStaffRole | null>(null);
 
@@ -106,7 +110,7 @@ export function RoleAccessMatrix() {
               )}
             >
               <RoleIcon role={role} className="size-3" />
-              {meta.label}
+              {roleLabel(role)}
             </button>
           );
         })}
@@ -131,9 +135,11 @@ export function RoleAccessMatrix() {
               <div key={group.id}>
                 <div className="mb-2 flex items-baseline justify-between">
                   <div>
-                    <h4 className="text-sm font-semibold">{group.label}</h4>
+                    <h4 className="text-sm font-semibold">
+                      {permissionText.group(group)}
+                    </h4>
                     <p className="text-muted-foreground text-xs">
-                      {group.description}
+                      {permissionText.groupHelp(group)}
                     </p>
                   </div>
                 </div>
@@ -152,7 +158,7 @@ export function RoleAccessMatrix() {
                             <div className="flex flex-col items-center gap-1">
                               <RoleIcon role={role} className="size-3.5" />
                               <span className="whitespace-nowrap">
-                                {ROLE_META[role].label}
+                                {roleLabel(role)}
                               </span>
                             </div>
                           </th>
@@ -166,7 +172,9 @@ export function RoleAccessMatrix() {
                           className="border-border/30 border-b last:border-0"
                         >
                           <td className="py-2 pr-2">
-                            <div className="text-xs">{perm.label}</div>
+                            <div className="text-xs">
+                              {permissionText.permission(perm.key)}
+                            </div>
                           </td>
                           {visibleRoles.map((role) => {
                             const scope = scopeForRole(role, perm.key);

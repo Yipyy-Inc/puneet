@@ -59,7 +59,7 @@ const ANSI = {
  * The count on the day the rule got a gate (stage 4, 2026-09-03). Lower it
  * whenever the real number drops — the script tells you to.
  */
-const BASELINE = 373;
+const BASELINE = 363;
 
 /** A palette utility on one of the status hues. */
 const COLOUR_UTILITY =

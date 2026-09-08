@@ -1,6 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { usePermissionText } from "@/lib/settings/use-permission-text";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 import {
   Crown,
   ShieldCheck,
@@ -137,6 +139,7 @@ export function RolePill({
   showIcon?: boolean;
   size?: "sm" | "md";
 }) {
+  const roleLabel = useStaffRoleLabel();
   const meta = ROLE_META[role];
   return (
     <span
@@ -148,7 +151,7 @@ export function RolePill({
       )}
     >
       {showIcon && <RoleIcon role={role} className="size-3" />}
-      {meta.label}
+      {roleLabel(role)}
     </span>
   );
 }
@@ -179,6 +182,7 @@ export function ServiceChip({
 }
 
 export function ScopeBadge({ scope }: { scope: AccessScope }) {
+  const permissionText = usePermissionText();
   const meta = ACCESS_SCOPE_META[scope];
   return (
     <span
@@ -187,7 +191,7 @@ export function ScopeBadge({ scope }: { scope: AccessScope }) {
         meta.tone,
       )}
     >
-      {meta.label}
+      {permissionText.scope(scope)}
     </span>
   );
 }

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { ShieldCheck, ChevronDown } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { usePermissionText } from "@/lib/settings/use-permission-text";
 import {
   PERMISSION_GROUPS,
   ACCESS_SCOPE_META,
@@ -28,6 +29,7 @@ export function StaffRolesTab({
   update: SectionUpdate;
   onRoleChange: (r: FacilityStaffRole) => void;
 }) {
+  const permissionText = usePermissionText();
   const { customRoles, presetOverrides } = useFacilityRbac();
   const effective = useMemo(
     () => resolveAllPermissions(draft, { customRoles, presetOverrides }),
@@ -77,7 +79,9 @@ export function StaffRolesTab({
                 className="border-border/60 bg-card/60 group rounded-xl border"
               >
                 <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-sm">
-                  <span className="font-medium">{group.label}</span>
+                  <span className="font-medium">
+                    {permissionText.group(group)}
+                  </span>
                   <span className="flex items-center gap-2">
                     <span className="text-muted-foreground text-xs">
                       {granted.length}/{group.permissions.length}
@@ -89,12 +93,17 @@ export function StaffRolesTab({
                   {granted.map((p) => {
                     const scope = effective[p.key];
                     const meta = scope ? ACCESS_SCOPE_META[scope] : null;
+                    const scopeLabel = scope
+                      ? permissionText.scope(scope)
+                      : null;
                     return (
                       <div
                         key={p.key}
                         className="flex items-center justify-between gap-3 px-3 py-2"
                       >
-                        <span className="text-sm">{p.label}</span>
+                        <span className="text-sm">
+                          {permissionText.permission(p.key)}
+                        </span>
                         {meta && (
                           <span
                             className={cn(
@@ -102,7 +111,7 @@ export function StaffRolesTab({
                               meta.tone,
                             )}
                           >
-                            {meta.label}
+                            {scopeLabel}
                           </span>
                         )}
                       </div>

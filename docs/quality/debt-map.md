@@ -9669,3 +9669,49 @@ translation commit. The fix is to stub the network at the boundary rather than
 let the provider reach for a hostname: the file already fakes the account id,
 so it is halfway there. `rg "getaddrinfo|fetch\(" tests/unit/calling-provider.test.ts`
 is where to start.
+
+## The permission catalogue is wired now — and what is still English beside it
+
+`usePermissionText()` was written on 2026-09-07 and wired into ONE of the eight
+files that render the catalogue. The other seven printed 168 English permission
+names, 19 group headings and 4 access scopes to a French reader, and **no gate
+could see it**: `check:ui-french` measures the settings sections, the four
+portal shells and the shadcn primitives, and these are staff screens.
+
+Wired on 2026-09-08 — `access-tab`, `role-matrix`, `staff-roles-tab`,
+`staff-form-sections`, `custom-role-quick-create-dialog`, `staff-shared`
+(`RoleChip` and `ScopeBadge`), `StaffPermissionEditor` and
+`CallingSettingsPanel`. Hook users went 2 → 8. Role names go through
+`useStaffRoleLabel()`, which already existed for the same reason.
+
+**One of them was a search comparing the English**, exactly like the
+pricing-rules rail found the same day:
+
+```ts
+ROLE_META[r].label.toLowerCase().includes(q); // FacilityRolesStudio.tsx:179
+```
+
+A French user typing _réception_ while looking straight at **Réception** got
+nothing. That is twice in one day, in unrelated files. **`rg
+"\.label\.toLowerCase\(\)|toLowerCase\(\)\.includes" src` is the grep**, and
+any hit comparing a CONSTANT rather than a rendered string is this bug.
+
+**What is still English on those screens, and is NOT covered by this hook:**
+
+- the chrome around the matrix — "Role access matrix", "What each role sees by
+  default", "Collapse", "All roles", and the "Scope tags — Anytime means 24/7…"
+  explainer
+- `SERVICE_MODULE_META` — the Grooming / Boarding / Daycare / Retail /
+  Sanitation chips on every staff card. A separate label table with no hook
+- the staff page's own headings, filters and empty states
+
+None of it is in any catalogue, so finishing these screens means a new block
+and its own pass — the same shape the fifty settings sections took. It is worth
+saying plainly that **the staff screens are now MIXED**, French for the
+catalogue and English around it, which is better than uniformly English for a
+reader looking up a permission and worse than finished.
+
+**And no gate watches any of it.** If these screens matter, the cheapest next
+step is not translating them — it is adding `staff` as a surface to
+`check:ui-french`, the way the four portal shells were added, so the work has a
+number and cannot go backwards.

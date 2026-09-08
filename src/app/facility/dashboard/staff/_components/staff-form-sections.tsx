@@ -32,6 +32,7 @@ import {
   X,
   ExternalLink,
 } from "lucide-react";
+import { usePermissionText } from "@/lib/settings/use-permission-text";
 import {
   ROLE_META,
   SERVICE_MODULE_META,
@@ -578,6 +579,7 @@ export function AccessSection({
   draft: StaffProfile;
   update: SectionUpdate;
 }) {
+  const permissionText = usePermissionText();
   const groupedPerms = useMemo(
     () => PERMISSION_GROUPS.filter((g) => g.id !== "core"),
     [],
@@ -724,9 +726,11 @@ export function AccessSection({
             >
               <div className="mb-2 flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-semibold">{g.label}</div>
+                  <div className="text-sm font-semibold">
+                    {permissionText.group(g)}
+                  </div>
                   <div className="text-muted-foreground text-xs">
-                    {g.description}
+                    {permissionText.groupHelp(g)}
                   </div>
                 </div>
               </div>
@@ -739,7 +743,9 @@ export function AccessSection({
                       className="flex items-center justify-between gap-3 py-2"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm">{p.label}</div>
+                        <div className="text-sm">
+                          {permissionText.permission(p.key)}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Select
