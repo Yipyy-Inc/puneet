@@ -59,7 +59,7 @@ export function ReportCardBrandedFooter({
             <button
               type="button"
               onClick={onBookVisit}
-              className="inline-block rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              className="inline-flex min-h-10 items-center rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 max-lg:min-h-12"
               style={{ backgroundColor: color }}
             >
               {brandConfig.bookingCtaText}
@@ -67,7 +67,7 @@ export function ReportCardBrandedFooter({
           ) : (
             <a
               href={brandConfig.bookingCtaUrl || "#"}
-              className="inline-block rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              className="inline-flex min-h-10 items-center rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 max-lg:min-h-12"
               style={{ backgroundColor: color }}
             >
               {brandConfig.bookingCtaText}

@@ -428,7 +428,7 @@ function AddOnsEditor({
             type="button"
             onClick={() => setFilterCat(null)}
             className={cn(
-              "min-h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
+              "min-h-10 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors max-lg:min-h-12",
               filterCat === null
                 ? "bg-foreground text-background border-foreground"
                 : "text-muted-foreground hover:bg-muted border-transparent",

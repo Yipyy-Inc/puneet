@@ -10143,3 +10143,55 @@ test reproduces it alone — and the current version measures 1 failure in 9 run
    the assertion failed, the restore was skipped, and Playwright's retry then
    read the POLLUTED value as its baseline and wrote that back as final. A real
    facility was left holding a test value with the run green. Only SQL caught it.
+
+## 2026-09-08 — the 599px pass, closed: 1,007 → 2, and both are artifacts
+
+Settings measures **2 controls under 44px across 1 section**, and neither is a
+defect: `evaluations` renders raw `<input type="radio">` inside a clickable card
+whose `onClick`, `p-3` and two lines of text make the ANCESTOR the tap target.
+Left in the report deliberately rather than excluded — a number that says "2,
+both known" is more honest than a zero achieved by teaching the audit to look
+away, and the next person re-running it sees the same two with this reasoning
+beside them.
+
+**The measurement was wrong three times, and each correction moved the answer
+more than any fix did:**
+
+| What the audit could not see                                               | Effect              |
+| -------------------------------------------------------------------------- | ------------------- |
+| `::before` hit areas — `Switch` is 20px with a 48px centred pseudo-element | 35 sections → 19    |
+| Radix's hidden `SwitchBubbleInput`, one per Switch, `opacity: 0` at 1px    | −3 (all of `hours`) |
+| The tap target being an ANCESTOR, not the element measured                 | −2 (`evaluations`)  |
+
+Trusting the first number would have inflated every switch in settings to 48px,
+undoing a deliberate design decision, and "fixed" three notification sections
+with nothing wrong. **Ask whether a finding is real before fixing what the
+number says.**
+
+**The fixes were mostly one habit.** `h-8` / `h-9` written over primitives that
+already ship `min-h-10 max-lg:min-h-12`, found in FIVE component families:
+`settings/_components`, `EvaluationBookingWizardSettings`, `TipSettings`,
+`BookingStatusSettings` and `RetailSettings`. Button's `size="sm"` is
+deliberately identical to `default` — its own comment says "if it rendered
+smaller it would be reintroducing the 32px control the redesign removes" — and
+these call sites reintroduced it anyway. The responsive half is the part nobody
+sees: `h-8` beats `h-10` at desktop while `max-lg:h-12` survives, so the control
+was 32px on a laptop and 48px on a tablet, which nobody chose.
+
+**This wants a gate**: a `className` containing `h-8`/`h-9` on a `Button`,
+`Input` or `Select` is always wrong. Not written yet; recorded so the number
+exists before someone clears it one file at a time with nothing holding the line.
+
+**Also cleared on the way:** `TabsTrigger` at 42px — one primitive that was most
+of what remained, covering the species tabs, the three tag scopes and five
+report-card tabs; four `bg-primary/5` tint fills sitting inside borders or rings
+that were already §5s's selected state; and the report card's booking CTA, which
+is not only a preview — customers tap it in a real report card, on phones, where
+the floor matters more rather than less.
+
+**Still open, unrelated to tap targets:** `ui/tabs.tsx` sets
+`data-[state=active]:bg-background`, which CLAUDE.md already records as failing
+rule 1's mechanical test — a background makes it not a legal tab strip.
+`check:edge-accents` passes it, so the gate and the prose disagree. Untouched
+here: removing an active background changes every tabbed screen in the product
+and is a design call, not a tap-target fix.

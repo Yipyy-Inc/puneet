@@ -346,7 +346,7 @@ export function InvoiceTemplateSettings() {
                     type="color"
                     value={template.accentColor}
                     onChange={(e) => update("accentColor", e.target.value)}
-                    className="h-9 w-12 cursor-pointer rounded-sm border"
+                    className="h-10 w-12 cursor-pointer rounded-sm border max-lg:h-12"
                   />
                   <Input
                     value={template.accentColor}
