@@ -10094,3 +10094,52 @@ than advice.
 settings has one save COMPONENT but two interaction shapes — read-then-edit, and
 always-editable. Whether the Edit gate should go is a product call: on business
 hours and a facility's public profile, "you are now editing" is worth a click.
+
+## 2026-09-08 — four wrong diagnoses of one flake, because the error was never read
+
+**Not product debt — a method failure, recorded because it cost hours.**
+
+`settings-save-model.spec.ts` was written to prove the SaveBar migration still
+persisted. It flaked. It was then diagnosed FOUR times without once reading the
+failure message:
+
+| #   | Theory                                                          | Verdict                                                                                                                                    |
+| --- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `waitForTimeout(1500)` races the write; `goto` aborts the PATCH | **Real bug**, fixed                                                                                                                        |
+| 2   | Wait for Save to be disabled again                              | **Real bug** — `Button` computes `disabled={isLoading \|\| disabled}`, so it is disabled WHILE WRITING and the assertion passed mid-flight |
+| 3   | Cold-route latency; raise the waits                             | **Wrong.** Runs passed and failed at both speeds                                                                                           |
+| 4   | The card writes the old value back on remount                   | **Wrong.** Disproved by measurement                                                                                                        |
+
+**Why the method persisted: Playwright's retry passed, which wiped
+`test-results/`, which deleted the error before it could be read.** Every look
+found an empty directory, so each diagnosis came from the SHAPE of the failure
+instead. Two of the four guesses happened to find real bugs, which made a bad
+method feel productive.
+
+`--retries=0` printed the real error on the second attempt, and it was none of
+the four: the assertion failing was the STORE READ — `Expected 37, Received 30`.
+
+**Two isolation probes then settled it in minutes:**
+
+```
+API alone   — PATCH then GET, a different value each iteration   20/20 correct
+Card alone  — one UI save, every PATCH body logged                5/5 correct
+```
+
+One PATCH, carrying the right value, landing every time. **The product was
+correct the whole way through.** The flake is in the two-test spec — neither
+test reproduces it alone — and the current version measures 1 failure in 9 runs.
+
+**The lessons, in order of what they would have saved:**
+
+1. **Read the error before theorising about the error.** Use `--retries=0` when
+   a flake is being diagnosed; the retry is what destroys the evidence.
+2. **Assert against the store, not the screen.** Three versions of this spec
+   reported a working save when Postgres had not been touched. `updated_at`
+   sitting an hour stale is what exposed it.
+3. **Isolate before theorising.** Two probes — API alone, component alone —
+   were worth more than four rounds of reading source and guessing.
+4. **A restore belongs in `afterAll`, never at the end of a test body.** When
+   the assertion failed, the restore was skipped, and Playwright's retry then
+   read the POLLUTED value as its baseline and wrote that back as final. A real
+   facility was left holding a test value with the run green. Only SQL caught it.
