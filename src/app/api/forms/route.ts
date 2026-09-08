@@ -69,13 +69,25 @@ export async function GET(request: NextRequest) {
   // The versions for every form in one round trip rather than one per row. RLS
   // narrows them the same way it narrows the forms, so a caller who cannot see
   // a draft simply gets no draft attached.
+  //
+  // ── FILTERED BY THE PARENT, NOT BY A LIST OF ITS KEYS ──────────────────
+  //
+  // This built `.in("form_id", [...every id...])`, which PostgREST sends as a
+  // query string holding one UUID per form. Measured 2026-09-08 against a
+  // facility with 525 forms: a ~20KB IN list, and the screen took SEVENTEEN
+  // AND A HALF SECONDS to fill in.
+  //
+  // It is not the data. The same rows come back from Postgres as a join in
+  // 0.8ms — 681 versions, 179 kB of schema, a hash join over two sequential
+  // scans. The cost was in shipping and parsing the key list.
+  //
+  // `forms!inner(facility_id)` states the relationship instead, so the filter
+  // travels as one condition. RLS is unchanged: it still narrows form_versions
+  // on its own policy, and the embed only restricts which parents count.
   const { data: versionRows } = await supabase
     .from("form_versions")
-    .select(VERSION_SELECT)
-    .in(
-      "form_id",
-      forms.map((f) => f.id),
-    );
+    .select(`${VERSION_SELECT}, forms!inner(facility_id)`)
+    .eq("forms.facility_id", context.facilityId);
 
   const versions = (versionRows ?? []) as unknown as Tables<"form_versions">[];
 

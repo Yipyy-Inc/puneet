@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,6 +86,23 @@ export default function IntakeFormsPage() {
   const formsInCategory =
     category === "templates" ? [] : allForms.filter((f) => f.type === category);
 
+  // ── "NO FORMS YET" IS A CLAIM, AND IT WAS BEING MADE WHILE LOADING ────
+  //
+  // `allForms` is `formsQuery.data ?? []`, so an unanswered query and a
+  // facility with no forms produced the same empty array and the same
+  // sentence. Measured 2026-09-08: this screen told an owner holding 27 forms
+  // that they had none, for SEVENTEEN AND A HALF SECONDS, and then filled in.
+  //
+  // §6 rule 9 — "a state a component does not implement is a bug, not a
+  // decision" — and the §5s Loading cell it belongs to. The recipe is a
+  // skeleton that replaces a surface with no data and stops the instant it
+  // arrives, not a spinner over the empty state and not the empty state
+  // itself.
+  //
+  // `isPending` and not `isFetching`: a background refetch after a mutation
+  // must NOT blank out a list the reader is already looking at.
+  const loadingForms = formsQuery.isPending;
+
   const createForm = useCreateForm();
   const updateForm = useUpdateForm();
 
@@ -148,7 +166,16 @@ export default function IntakeFormsPage() {
         </TabsContent>
         {category !== "templates" && (
           <TabsContent value={category} className="mt-4">
-            {formsInCategory.length === 0 ? (
+            {loadingForms ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton
+                    key={i}
+                    className="bg-muted h-[168px] rounded-2xl"
+                  />
+                ))}
+              </div>
+            ) : formsInCategory.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                   <p className="text-muted-foreground mb-4">

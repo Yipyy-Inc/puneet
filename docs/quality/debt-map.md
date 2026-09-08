@@ -10446,3 +10446,166 @@ own box, so the 599px audit's headline figure is necessary and not sufficient.
 
 The fix is to route it through `DataTable`, which already owns the budget, the
 picker and the saved per-user preference — not to add a second budget by hand.
+
+## 2026-09-08 — seven failures in the nightly suite, and only two were flakes' shape
+
+The full suite ran against `c644469b`: 508 passed, 7 failed. None was a retry
+flake. Triaged one at a time, they were five separate defects, and two of them
+were in the product rather than in the tests.
+
+### 1. A security assertion that had asserted nothing for five days
+
+`payroll.spec.ts` checks `Gross` twice against `body.innerText()`. **`innerText`
+applies CSS `text-transform`; `textContent` does not.** `3d6167ca` (2026-09-03)
+gave the metric tile's label §1's micro type — 12/700/.07em/**uppercase** — so
+the label has reached both lines as `"GROSS"` ever since.
+
+The positive check failed, loudly, which is how this was found. The negative one
+— _"no wage bill behind the screen"_, the assertion that a groomer cannot read
+the facility's payroll — **passed**, because `"GROSS".includes("Gross")` is false
+whatever the screen renders. It would have passed with the entire wage bill
+exposed.
+
+AGENTS.md says a spec in no suite is not coverage, it is a file. This is the
+sharper form: **a spec that runs, passes, and asserts nothing.** Both are
+case-folded now, and the groomer's also asserts that no `$n.nn` appears at all,
+because a label is a weak proxy for the thing that must not leak.
+
+**Generalises to:** any `innerText` assertion on a design-system surface. §1 puts
+`uppercase` on micro type and `capitalize` elsewhere, so string-matching a label
+through `innerText` is coupled to the stylesheet. Case-fold, or assert on
+`textContent`.
+
+### 2. Three specs still clicking the rail that was removed
+
+`settings-portal.spec.ts` walked index → rail to cover two link surfaces.
+`4dce10f1` deleted the rail on 2026-09-08 and these specs were not run in that
+change. They now walk index → section → **All settings** → section, and the
+refusal test asserts the way OUT survives rather than the rail — which matters
+more than it did, because the back link is now the only exit from a section.
+
+### 3. "Free right now" is not "free for these dates"
+
+Both boarding specs read `/api/boarding/rooms` with no query string — which
+answers for _this instant_ — and then booked or moved a stay spanning four days.
+A kennel whose guest left yesterday looks free now and refuses the write.
+
+Checked against the database rather than assumed: **no `[e2e` booking survived
+cleanup**, and six real bookings overlap [today-4, today-1], three of which end
+before today and are therefore exactly the set the old check picked first. Not
+pollution, not a flake — the helper answering a different question from the one
+the test was asking. The endpoint already takes `?from&to` and its own comment
+says so: _"A booking flow asks about its own dates."_
+
+### 4. The kennel-board test was moving a real customer's dog
+
+`before.occupied.find((o) => o.petNames.length > 0)` is "the first guest on the
+board", and the board is **production** — staging and CI share the live
+Postgres. Every run picked a real boarding stay, reassigned its kennel, and left
+it reassigned. It also made the window fix impossible: an arbitrary guest has
+arbitrary dates, so there was no window to check against. It creates and moves
+its own guest now, under the MARKER the `afterAll` already clears.
+
+**Generalises to:** a spec that mutates a row it did not create is not testing,
+it is editing the business's data. Create, act, clean up.
+
+### 5. The forms screen said "No intake forms yet" for 17.5 seconds
+
+The one that took longest to find, because three plausible causes were wrong
+before the evidence was read. The screen was not broken and the API was not
+failing: `GET /api/forms` answered 200 with 600 rows. It was **slow**, and the
+screen rendered the wait as an emptiness.
+
+Two defects, and both are worth separating:
+
+**(a) Loading was rendered as empty.** `allForms = formsQuery.data ?? []`, and
+`isPending` was consulted nowhere, so an unanswered query and a facility with no
+forms produced the same array and the same sentence. The screen told an owner
+holding 27 forms that they had none. §6 rule 9 — "a state a component does not
+implement is a bug, not a decision" — and the §5s Loading cell, whose recipe is
+a skeleton that stops the instant data arrives. `isPending`, not `isFetching`: a
+refetch after a mutation must not blank a list somebody is reading.
+
+**(b) The route shipped a 20KB `IN` list.** It fetched versions with
+`.in("form_id", [...every id...])` — one UUID per form in the query string.
+**It was never the data.** The same rows come back from Postgres as a join in
+**0.8ms** — 681 versions, 179 kB of schema, a hash join over two sequential
+scans. The cost was building, shipping and parsing the key list.
+`forms!inner(facility_id)` states the relationship instead and RLS is unchanged.
+
+Measured end to end: **17,500ms → 5,751ms**, and the empty state never appears.
+
+### And a correction worth keeping
+
+The first reading of this was "that spec has never cleaned up — 578 rows of
+debris in production". **Wrong.** It archives, and `on delete restrict` on an
+answered version means archiving is the only thing it CAN do; the comment in its
+`afterAll` says so. Of 603 rows only 78 were genuinely unreferenced, and those
+were deleted. The other 525 carry submissions and stay.
+
+The debris made the latency worse but did not cause it. Deleting rows would have
+hidden the defect and left the next facility to find it.
+
+### The tooling lesson, for the third time in one session
+
+**A later Playwright run clears `test-results/` and takes the earlier run's
+`error-context.md` with it.** Running the fixes and the card-height measurement
+in one script destroyed the evidence for the two specs still failing, and they
+had to be re-run alone. Diagnose one thing per run.
+
+## 2026-09-08 — the settings grid stretches, and the measurement chose which sections
+
+The cards in a settings section shipped with `items-start` this morning, so a
+short card's bottom edge floated above its neighbour's with ground showing under
+it. The product owner asked for them to line up, and they are right: two cards
+in a row that stop at different heights read as unfinished rather than as "one
+is shorter".
+
+**Be honest about what stretching does.** It does not remove the empty space, it
+moves it from the ground below a card to inside the card. It is an improvement
+because a grid whose cells align reads as composed — not because the whitespace
+went anywhere.
+
+### The precedent I cited this morning did not transfer
+
+`settings-landing.tsx` chose CSS columns over a grid because stretching turns a
+short card into "a tall card mostly full of white", and settings-card-grid.tsx
+quoted that as the reason for `items-start`. The failure is real. **The landing
+page grids nav groups whose lengths differ by 3× — nine leaves against three.**
+A settings section's cards are groups of related controls and differ by a row or
+two. Same rule, wrong ratio.
+
+### Measured rather than guessed, and the criterion changed as a result
+
+Every grid was measured un-stretched at 1440px — the grid's `alignItems` set to
+`start` in the page before reading each child's natural height. Twenty rows.
+
+The **absolute** difference decides it, not the ratio, and the ratio would have
+picked the wrong sections:
+
+| section              | heights     | Δ        | ratio |
+| -------------------- | ----------- | -------- | ----- |
+| booking-statuses     | 2564 vs 727 | **1837** | 0.28  |
+| smart-insights       | 414 vs 921  | **507**  | 0.45  |
+| checkin-requirements | 620 vs 208  | **412**  | 0.34  |
+| notifications        | 668 vs 452  | 216      | 0.68  |
+| boarding · daycare   | 120 vs 248  | 128      | 0.48  |
+| grooming             | 142 vs 248  | 106      | 0.57  |
+| hours                | 710 vs 668  | 42       | 0.94  |
+
+Boarding sits at 0.48 — worse than notifications' 0.68 — with a 128px gap
+against notifications' 216px. A small card beside a small card looks fine at any
+ratio; 1,837px of nothing looks fine at none. Everything under ~250px reads as a
+card with padding.
+
+So three sections keep `items-start`, each carrying its measured numbers at the
+call site. The other fourteen stretch.
+
+### One level down, the switches line up too
+
+`notification-settings-card` grids its rows two-up. Those bordered boxes stretch
+now as well — and their Email/SMS row takes `mt-auto`, so it sits at the foot of
+whichever box it is in. A French help line wraps to two lines where the English
+fits on one, which had one box's switches sitting 20px above its neighbour's.
+Stretching the box alone would have fixed the outline and left the switches
+ragged, which is the half-fix.

@@ -68,10 +68,23 @@ function bookingBody(roomId: string) {
   };
 }
 
+/**
+ * The board.
+ *
+ * `window` asks the endpoint about a span of DATES rather than about this
+ * instant, which is what any question about moving a multi-day stay actually
+ * needs. Its own comment: "Default window is 'right now' … A booking flow asks
+ * about its own dates."
+ *
+ * Left optional because the rendering tests genuinely do mean "now" — that is
+ * what the board shows — and only the move needs the stay's span.
+ */
 async function rooms(
   page: import("@playwright/test").Page,
+  window?: { startDate: string; endDate: string },
 ): Promise<RoomsPayload> {
-  const res = await page.request.get("/api/boarding/rooms");
+  const query = window ? `?from=${window.startDate}&to=${window.endDate}` : "";
+  const res = await page.request.get(`/api/boarding/rooms${query}`);
   expect(res.ok(), await res.text()).toBe(true);
   return (await res.json()) as RoomsPayload;
 }
@@ -120,14 +133,16 @@ test.describe("the kennels board", () => {
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
-    const board = await rooms(page);
+    // The window, for the same reason as the move below: this books four days
+    // and an unqualified read only answers for today.
+    const board = await rooms(page, bookingBody(""));
     const free = board.rooms.find(
       (r) =>
         r.active &&
         !r.id.includes("e2e") &&
         !board.occupied.some((o) => o.roomId === r.id),
     );
-    expect(free, "an active kennel with nobody in it").toBeTruthy();
+    expect(free, "a kennel free for the whole stay").toBeTruthy();
 
     const res = await page.request.post("/api/bookings", {
       data: bookingBody(free!.id),
@@ -160,17 +175,39 @@ test.describe("the kennels board", () => {
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
-    const before = await rooms(page);
-    const mine = before.occupied.find((o) => o.petNames.length > 0);
-    expect(mine, "a guest to move").toBeTruthy();
+    // ── ASK ABOUT THE DATES, NOT ABOUT THIS INSTANT ───────────────────────
+    //
+    // An unqualified read answers "who is in a kennel right now", which is the
+    // right question for the board and the wrong one for a stay that runs four
+    // days. A kennel empty at this moment can have somebody arriving tomorrow,
+    // and the write is refused with "already taken for these dates".
+    const stayWindow = bookingBody("");
+    const board = await rooms(page, stayWindow);
 
-    const target = before.rooms.find(
+    const [origin, target] = board.rooms.filter(
       (r) =>
         r.active &&
-        r.id !== mine!.roomId &&
-        !before.occupied.some((o) => o.roomId === r.id),
+        !r.id.includes("e2e") &&
+        !board.occupied.some((o) => o.roomId === r.id),
     );
-    expect(target, "a free kennel to move into").toBeTruthy();
+    expect(
+      origin && target,
+      "two kennels free for the whole stay",
+    ).toBeTruthy();
+
+    // Its OWN guest. This used to take `occupied.find(o => o.petNames.length)`
+    // — the first dog on the board — and the board is production, so every run
+    // reassigned a real customer's kennel and left it reassigned.
+    const res = await page.request.post("/api/bookings", {
+      data: bookingBody(origin!.id),
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    const created = (await res.json()) as BookingPayload;
+
+    const mine = (await rooms(page)).occupied.find(
+      (o) => o.bookingRef === created.id,
+    );
+    expect(mine, "the stay is on the board before it is moved").toBeTruthy();
 
     // The board drags; this drives the same mutation the drag calls. The drag
     // itself is HTML5 dataTransfer, which Playwright cannot synthesise
