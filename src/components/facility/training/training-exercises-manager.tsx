@@ -428,7 +428,7 @@ export function TrainingExercisesManager() {
                     <CollapsibleTrigger asChild>
                       <button
                         type="button"
-                        className="group flex w-full items-center justify-between gap-3 rounded-t-xl px-3 py-2 text-left hover:bg-slate-50"
+                        className="group flex min-h-10 w-full items-center justify-between gap-3 rounded-t-xl px-3 py-2 text-left hover:bg-slate-50 max-lg:min-h-12"
                         style={{ backgroundColor: hexToRgba(color, 0.06) }}
                       >
                         <div className="flex items-center gap-2">
@@ -775,7 +775,7 @@ function SortableExerciseRow({
         type="button"
         {...attributes}
         {...listeners}
-        className="text-muted-foreground hover:text-foreground -ml-1 cursor-grab touch-none rounded-sm p-1 active:cursor-grabbing"
+        className="text-muted-foreground hover:text-foreground -ml-1 flex size-8 cursor-grab touch-none items-center justify-center rounded-full active:cursor-grabbing max-lg:size-12"
         title={t("exDragTitle")}
         aria-label={t("exDragHandle").replace("{name}", exercise.name)}
       >
@@ -809,7 +809,6 @@ function SortableExerciseRow({
           checked={!exercise.isHidden}
           onCheckedChange={onToggleHidden}
           aria-label={t("exToggle").replace("{name}", exercise.name)}
-          className="scale-90"
         />
         <Button
           variant="ghost"
@@ -861,7 +860,7 @@ function FilterPill({
       onClick={onClick}
       data-active={active || undefined}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors",
+        "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-xs font-medium text-slate-700 transition-colors max-lg:min-h-12",
         "hover:bg-slate-100",
         "data-active:border-transparent data-active:text-white",
       )}

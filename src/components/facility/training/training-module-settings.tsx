@@ -442,7 +442,7 @@ export function TrainingModuleSettings() {
                       }
                       data-active={active || undefined}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                        "inline-flex min-h-10 items-center gap-1 rounded-full border px-3 text-xs font-medium transition-colors max-lg:min-h-12",
                         "hover:bg-muted",
                         // A selected filter is the primary, not near-black (§1: there is
                         // no second action colour).

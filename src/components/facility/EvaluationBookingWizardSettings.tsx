@@ -336,7 +336,7 @@ export function EvaluationBookingWizardSettings() {
                     type="button"
                     onClick={() => toggleDuration(minutes)}
                     className={cn(
-                      "rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-all",
+                      "inline-flex min-h-10 items-center justify-center rounded-lg border-2 px-3 text-sm font-medium transition-all max-lg:min-h-12",
                       selected
                         ? "border-violet-500 bg-violet-50 text-violet-700 shadow-sm"
                         : "border-border text-muted-foreground hover:border-violet-200",
@@ -393,7 +393,7 @@ export function EvaluationBookingWizardSettings() {
                       Math.max(0, parseInt(e.target.value, 10) || 0),
                     )
                   }
-                  className="mt-1 h-9 w-20 text-sm"
+                  className="mt-1 w-20 text-sm"
                   placeholder="0"
                 />
               </div>
@@ -419,7 +419,7 @@ export function EvaluationBookingWizardSettings() {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-9 gap-1.5 text-xs"
+                className="gap-1.5 text-xs"
                 onClick={addCustomDuration}
                 disabled={customHours === 0 && customMins === 0}
               >
@@ -652,7 +652,7 @@ export function EvaluationBookingWizardSettings() {
                   onChange={(e) =>
                     setBufferMinutes(parseInt(e.target.value, 10) || 0)
                   }
-                  className="mt-1 h-9 text-sm"
+                  className="mt-1 text-sm"
                 />
                 <p className="text-muted-foreground mt-0.5 text-[10px]">
                   {t("bufferHelp")}
@@ -668,7 +668,7 @@ export function EvaluationBookingWizardSettings() {
                   onChange={(e) =>
                     setCapacityPerSlot(parseInt(e.target.value, 10) || 1)
                   }
-                  className="mt-1 h-9 text-sm"
+                  className="mt-1 text-sm"
                 />
                 <p className="text-muted-foreground mt-0.5 text-[10px]">
                   {t("petsPerSlotHelp")}

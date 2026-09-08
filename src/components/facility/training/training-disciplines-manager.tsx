@@ -283,7 +283,6 @@ export function TrainingDisciplinesManager() {
                       checked={d.isActive}
                       onCheckedChange={() => toggleActive(d.id)}
                       aria-label={t("discToggle").replace("{name}", d.name)}
-                      className="scale-90"
                     />
                     <Button
                       variant="ghost"

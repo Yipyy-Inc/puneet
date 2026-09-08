@@ -9984,3 +9984,64 @@ comment describes one — and should be confirmed before being counted.
 **The method is the reusable part.** A grep found eleven fixed heights by class
 name; the rendered pass found a thousand controls, and 82% of them came from two
 components a class-name search could never have connected.
+
+## 2026-09-08 — RadioGroupItem never got the hit area its two siblings have
+
+**Severity: 🟠 high**, and product-wide rather than a settings problem.
+
+`Switch` and `Checkbox` both carry the same line:
+
+```
+max-lg:before:absolute max-lg:before:size-12 max-lg:before:top-1/2 …
+```
+
+— a 48px centred hit area below 1024px, so the control stays small to look at
+while the thing a thumb hits meets §6 rule 7. **`RadioGroupItem` did not.** It
+shipped as a bare 16px target everywhere in the product: a third of the floor,
+on a control whose entire job is to be one of several small things chosen
+between.
+
+**No grep could have found this.** The class list reads as complete; the defect
+is an ABSENCE, visible only against the two siblings that have it. It surfaced
+as `3 x 16px` in a rendering pass at 599px, inside one settings section — and
+that section was not the problem.
+
+**The general shape: when a family of primitives gets a rule applied, check
+every member.** Two of three is the easiest thing in the world to ship, because
+the two that were done make the rule feel handled.
+
+## 2026-09-08 — `scale-*` on a control silently shrinks its tap target
+
+**Severity: 🟡 medium.** Found in the same pass.
+
+`<Switch className="scale-90" />` appeared twice in the training components. A
+transform scales the whole element **including the `::before`**, so the 48px hit
+area the primitive carefully provides becomes 43.2px — under the 44 floor, by a
+call site trimming 10% off the look. §5s also names "change size" under Never,
+and doing it at rest is worse than on hover because nothing signals it.
+
+Both were removed. **`rg "scale-9|scale-8|scale-75" src` still returns ~40
+hits**, and roughly 17 sit next to a `Switch`. Not all will be tap targets, but
+each one that is has quietly given back the 48px the design system provides.
+
+Worth a gate eventually: a `scale-` utility on an element that also has a
+`before:size-12` hit area is always wrong.
+
+## 2026-09-08 — the 599px pass, end state
+
+`1,007 → 32` controls under 44px, `19 → 12` sections, horizontal overflow zero
+throughout. What closed it, in order of size: `pet-breeds` row actions (722),
+`RateColorPicker` swatches (78), training drag handles (65), roles-studio group
+toggles (32), retail pill removes (16), training headers and chips (13).
+
+**Guessing from class names failed twice** before the probe was changed to
+report each offending element's own `class` attribute instead of counting. The
+first guess blamed `size-8` buttons; the second blamed the scaled switches;
+the truth was 65 drag handles carrying `touch-none` — explicitly touch
+controls, at 24px. Counting tells you a section is wrong. Naming tells you
+which component.
+
+**Still open — 32 across 12 sections**, now a genuine tail rather than a
+cluster: `report-card-template` 8, `tips` 6, `hours` 3 (almost certainly hidden
+inputs behind switches — confirm before counting), `vaccination-requirements`
+and `tags-notes` 3 each as 42px tab strips, and six sections with one apiece.

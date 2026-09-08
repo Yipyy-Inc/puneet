@@ -1012,15 +1012,15 @@ export function RetailSettings() {
               return (
                 <div
                   key={tag.id}
-                  className="bg-background flex items-center gap-1.5 rounded-full border px-3 py-1"
+                  className="bg-background flex min-h-10 items-center gap-1.5 rounded-full border px-3 max-lg:min-h-12"
                 >
                   <div className={cn("size-2 rounded-full", colorDot)} />
                   <span className="text-xs font-medium">{tag.name}</span>
                   <button
-                    className="text-muted-foreground hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive flex size-8 items-center justify-center rounded-full max-lg:size-11"
                     onClick={() => setTags(tags.filter((_, i) => i !== idx))}
                   >
-                    <Trash2 className="size-3" />
+                    <Trash2 className="size-4" />
                   </button>
                 </div>
               );
@@ -1092,14 +1092,14 @@ export function RetailSettings() {
             {units.map((unit, idx) => (
               <div
                 key={unit.id}
-                className="bg-background flex items-center gap-1.5 rounded-full border px-3 py-1"
+                className="bg-background flex min-h-10 items-center gap-1.5 rounded-full border px-3 max-lg:min-h-12"
               >
                 <span className="text-xs font-medium">{unit.name}</span>
                 <button
-                  className="text-muted-foreground hover:text-destructive"
+                  className="text-muted-foreground hover:text-destructive flex size-8 items-center justify-center rounded-full max-lg:size-11"
                   onClick={() => setUnits(units.filter((_, i) => i !== idx))}
                 >
-                  <Trash2 className="size-3" />
+                  <Trash2 className="size-4" />
                 </button>
               </div>
             ))}
