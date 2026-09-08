@@ -10195,3 +10195,67 @@ rule 1's mechanical test — a background makes it not a legal tab strip.
 `check:edge-accents` passes it, so the gate and the prose disagree. Untouched
 here: removing an active background changes every tabbed screen in the product
 and is a design call, not a tap-target fix.
+
+## 2026-09-08 — the §5s matrix, walked: what was answered and what was not
+
+§6 rule 9: "Every component owns its row in the §5s state matrix — all eight
+cells answered, **required or not applicable**." That last clause matters: the
+rule asks for the cell to be CONSIDERED, not for every cell to be implemented.
+
+### Fixed here
+
+**Hover was unanswered on the whole form family.** §5s marks it required for
+`Input · select` AND `Checkbox · radio`; `input`, `select`, `textarea`,
+`checkbox` and `radio-group` had rest, focus, disabled and error, and hovering
+any of them did nothing at all.
+
+The step is not invented. The border ladder in `@theme` is `--line` (#E9E6E1) →
+`--line-strong` (#D9D5CF) → `--ink-disabled` (#8C99A3); these rest on the
+middle one, so "ink darkens one step" lands on `--ink-disabled`, which §1
+assigns to "chevrons and placeholder glyphs, NON-TEXT only" — a border is
+non-text. Scoped `hover:not-disabled:` so a disabled control does not react to
+a pointer, and left to lose against `focus-visible`, per §5s: "Focus — layered
+on top of whatever hover did", never replaced.
+
+**Disabled used opacity on checkbox and radio.** §5s's Disabled row says
+"Never: Opacity" flatly, and `input.tsx` had already removed exactly this in
+stage 8b. Both controls already carried the correct half —
+`disabled:border-ink-disabled`, `disabled:cursor-not-allowed` — with
+`opacity-50` on top fighting it.
+
+Removing the opacity ALONE would have been worse than leaving it: a disabled,
+CHECKED box would render solid `--primary`, identical to one you can use. The
+opacity was doing that job badly for two states at once. Each is answered
+separately now — unchecked disabled is `--inset` behind an `--ink-disabled`
+border, checked disabled is a solid `--ink-disabled`.
+
+### Answered as NOT APPLICABLE, with the reason
+
+**Card** implements none of Hover, Focus, Select, Load or Error, and that is
+correct: `ui/card.tsx` is a static container div. Those cells belong to an
+INTERACTIVE card, which is a different call site's job.
+
+**Input · select Loading** is required by the matrix and not implemented.
+Building a `loading` prop with a spinner-in-field that no caller wants is
+speculative API, and the matrix's own escape ("or not applicable") covers a
+control that never loads. **Answered as: add it with the first async caller.**
+
+### NOT fixed — measured, and left for a decision
+
+**The menu-item family still de-emphasises with opacity: 13 files.**
+`dropdown-menu`, `context-menu`, `command`, `accordion`, `select`'s own
+`SelectItem`, and both calendars use `data-disabled:opacity-50` / -40. The
+recipe is the same one input.tsx used — `text-ink-disabled` instead — but a
+menu item is not one of the twelve matrix rows, and changing 13 shared
+components is a visual change across the whole product that wants an eye on it,
+not a grep.
+
+**Table row has no Focus and no Select cell** (`data-table.tsx`), both marked
+required. Whether a row is focusable at all is a real question — selection
+there runs through a checkbox — so this needs reading, not a class.
+
+**The calendar's blocked day is `text-destructive line-through`** where §5t says
+"blocked days keep their number in `--ink-disabled` with a strikethrough, never
+hidden". The strikethrough is right and the ink is not — unless `unavailable`
+and `blocked` are two different things on that screen, which is exactly the
+question to answer before changing it.

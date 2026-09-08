@@ -48,7 +48,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 //   `dark:` variants       there is no dark mode in this product.
 // ============================================================================
 const INPUT_BASE_CLASSES = `
-  border-line-strong bg-card text-body-ink placeholder:text-ink-tertiary
+  border-line-strong hover:not-disabled:border-ink-disabled bg-card text-body-ink placeholder:text-ink-tertiary
   selection:bg-primary selection:text-primary-foreground
   flex min-h-10 w-full min-w-0 rounded-full border px-4 text-[14.5px]
   outline-none max-lg:min-h-12
