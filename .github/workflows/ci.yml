@@ -126,7 +126,7 @@ jobs:
 
   # ── THE PROJECT'S OWN RULES ────────────────────────────────────────────────
   #
-  # 33 `check:*` scripts run here. Each one exists because a
+  # 34 `check:*` scripts run here. Each one exists because a
   # specific mistake was made and cost something: a route that took its facility
   # from the request body, an update that could not tell an RLS refusal from a
   # no-op, a screen that said "Saved" with nothing behind it, a dialog with a
@@ -198,6 +198,7 @@ jobs:
             badge-glyph \
             hover-actions \
             edge-accents \
+            control-heights \
             nav-icons \
             hardcoded-locale \
             domain-server-safe \

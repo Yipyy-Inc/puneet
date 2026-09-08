@@ -63,7 +63,8 @@
     "check:nav-icons": "bun scripts/check-nav-icons.ts",
     "check:hardcoded-locale": "bun scripts/check-hardcoded-locale.ts",
     "check:hover-actions": "bun scripts/check-hover-actions.ts",
-    "check:edge-accents": "bun scripts/check-edge-accents.ts"
+    "check:edge-accents": "bun scripts/check-edge-accents.ts",
+    "check:control-heights": "bun scripts/check-control-heights.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.91.1",
