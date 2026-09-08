@@ -360,7 +360,7 @@ export function BreedManagement() {
                           <button
                             onClick={() => toggleRestrict(breed)}
                             className={cn(
-                              "rounded-sm p-1 transition-colors",
+                              "flex size-8 items-center justify-center rounded-full transition-colors max-lg:size-12",
                               breed.restricted
                                 ? "text-red-600 hover:text-red-700"
                                 : "text-ink-disabled hover:text-red-600",
@@ -371,22 +371,22 @@ export function BreedManagement() {
                                 : t("restrictBreed")
                             }
                           >
-                            <Ban className="size-3" />
+                            <Ban className="size-4" />
                           </button>
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => openEditDialog(breed)}
-                              className="text-muted-foreground hover:text-foreground rounded-sm p-1 transition-colors"
+                              className="text-muted-foreground hover:text-foreground flex size-8 items-center justify-center rounded-full transition-colors max-lg:size-12"
                               title={t("edit")}
                             >
-                              <Pencil className="size-3" />
+                              <Pencil className="size-4" />
                             </button>
                             <button
                               onClick={() => handleRemove(breed)}
-                              className="text-muted-foreground hover:text-destructive rounded-sm p-1 transition-colors"
+                              className="text-muted-foreground hover:text-destructive flex size-8 items-center justify-center rounded-full transition-colors max-lg:size-12"
                               title={t("remove")}
                             >
-                              <Trash2 className="size-3" />
+                              <Trash2 className="size-4" />
                             </button>
                           </div>
                         </div>
