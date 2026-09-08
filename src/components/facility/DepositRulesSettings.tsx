@@ -41,6 +41,7 @@ import type {
 } from "@/types/deposit-rules";
 import { SERVICE_TYPES_FOR_DEPOSITS } from "@/types/deposit-rules";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { SETTINGS_CARD_GRID } from "@/components/ui/settings-card-grid";
 
 /**
  * The catalogue key for each service type.
@@ -234,7 +235,7 @@ function DepositRulesEditor({
   };
 
   return (
-    <div className="space-y-6">
+    <div className={SETTINGS_CARD_GRID}>
       {/* "No deposit" and "not set up yet" look identical on screen, and one of
           them is a decision. Worth saying out loud here because the fallback is
           empty on purpose: the fixture used to ship 30% on boarding and $25 on

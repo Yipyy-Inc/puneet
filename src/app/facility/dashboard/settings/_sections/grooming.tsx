@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
-import { SettingsCardGrid } from "../_components/settings-card-grid";
+import { SettingsCardGrid } from "@/components/ui/settings-card-grid";
 
 export function GroomingSection() {
   const t = useSettingsText().section("grooming");

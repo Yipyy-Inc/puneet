@@ -40,6 +40,7 @@ import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { formatDateLong } from "@/lib/i18n/format";
 import type { AppLocale } from "@/lib/language-settings";
 import type { RetailTaxConfig } from "@/data/retail-config";
+import { SETTINGS_CARD_GRID } from "@/components/ui/settings-card-grid";
 
 // Heavy, conditionally-shown modal — loaded on demand when the user opens the
 // full preview, keeping it out of the settings-page bundle.
@@ -254,8 +255,8 @@ export function InvoiceTemplateSettings() {
   if (!hasMounted) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className={SETTINGS_CARD_GRID}>
+      <div className="flex flex-wrap items-start justify-between gap-3 lg:col-span-2">
         <div>
           <h2 className="text-lg font-semibold">{t("title")}</h2>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">

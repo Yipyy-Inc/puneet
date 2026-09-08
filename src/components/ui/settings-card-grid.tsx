@@ -50,6 +50,17 @@ import { cn } from "@/lib/utils";
 // `repeat(2, minmax(0, 1fr))`. A hand-written template would not be.
 // ============================================================================
 
+/**
+ * The class list, for a file whose wrapper cannot be swapped for the component
+ * — a 600-line settings component with dozens of divs, where matching the
+ * right closing tag is guesswork. Same layout, same reasoning above, one
+ * source of truth.
+ *
+ * Tailwind sees the literal here, so the utilities are generated whether a
+ * caller uses the component or the constant.
+ */
+export const SETTINGS_CARD_GRID = "grid items-start gap-6 lg:grid-cols-2";
+
 export function SettingsCardGrid({
   className,
   children,
@@ -58,9 +69,5 @@ export function SettingsCardGrid({
   className?: string;
   children: React.ReactNode;
 }) {
-  return (
-    <div className={cn("grid items-start gap-6 lg:grid-cols-2", className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn(SETTINGS_CARD_GRID, className)}>{children}</div>;
 }
