@@ -450,17 +450,33 @@
     "assignedTasks": "Assigned Tasks"
   },
   "staff": {
-    "title": "Staff Management",
-    "addStaff": "Add Staff",
-    "totalStaff": "Total Staff",
-    "onDuty": "On Duty",
-    "offDuty": "Off Duty",
-    "searchStaff": "Search staff...",
-    "staffDetails": "Staff Details",
-    "position": "Position",
-    "department": "Department",
-    "schedule": "Schedule",
-    "performance": "Performance"
+    "areas": {
+      "directory": {
+        "title": "Staff Management",
+        "addStaff": "Add Staff",
+        "totalStaff": "Total Staff",
+        "onDuty": "On Duty",
+        "offDuty": "Off Duty",
+        "searchStaff": "Search staff...",
+        "staffDetails": "Staff Details",
+        "position": "Position",
+        "department": "Department",
+        "schedule": "Schedule",
+        "performance": "Performance"
+      },
+      "shell": {
+        "title": "Staff management",
+        "tabDirectory": "Directory",
+        "tabTasks": "Tasks",
+        "tabDocuments": "Documents",
+        "tabWarnings": "Warnings",
+        "tabPerformance": "Performance",
+        "tabsLabel": "Tabs",
+        "signingIn": "Signing in…",
+        "signedInAs": "Signed in as",
+        "viewingAs": "Viewing as"
+      }
+    }
   },
   "customerReach": {
     "title": "Customer Reach",

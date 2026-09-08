@@ -20,36 +20,42 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ROLE_META } from "@/types/facility-staff";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
+/**
+ * The five staff tabs.
+ *
+ * `key`, not `name`: these labels lived here as English strings, and a
+ * module-level array is invisible to `check:ui-french` — which reads JSX
+ * text — so five words on every staff screen counted as zero and read English
+ * to a French user. The href and the glyph are structure and stay put.
+ */
 const staffTabs = [
+  { key: "tabDirectory", href: "/facility/dashboard/staff", icon: Users },
   {
-    name: "Directory",
-    href: "/facility/dashboard/staff",
-    icon: Users,
-  },
-  {
-    name: "Tasks",
+    key: "tabTasks",
     href: "/facility/dashboard/staff/tasks",
     icon: ClipboardList,
   },
   {
-    name: "Documents",
+    key: "tabDocuments",
     href: "/facility/dashboard/staff/documents",
     icon: FileSignature,
   },
   {
-    name: "Warnings",
+    key: "tabWarnings",
     href: "/facility/dashboard/staff/warnings",
     icon: ShieldAlert,
   },
   {
-    name: "Performance",
+    key: "tabPerformance",
     href: "/facility/dashboard/staff/performance",
     icon: TrendingUp,
   },
 ];
 
 function ViewingAsSwitcher() {
+  const { t } = useStaffText("shell");
   const {
     viewerId,
     setViewerId,
@@ -64,7 +70,7 @@ function ViewingAsSwitcher() {
   if (!canSwitchViewer && !viewerResolved) {
     return (
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-        <Eye className="size-3" /> Signed in…
+        <Eye className="size-3" /> {t("signingIn")}
       </div>
     );
   }
@@ -77,7 +83,7 @@ function ViewingAsSwitcher() {
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
         <Eye className="size-3" />
         <span className="truncate">
-          Signed in as{" "}
+          {t("signedInAs")}{" "}
           <span className="text-foreground font-medium">
             {viewer.firstName} {viewer.lastName}
           </span>
@@ -92,7 +98,7 @@ function ViewingAsSwitcher() {
   return (
     <div className="flex items-center gap-2">
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-        <Eye className="size-3" /> Viewing as
+        <Eye className="size-3" /> {t("viewingAs")}
       </div>
       <Select value={viewerId} onValueChange={setViewerId}>
         <SelectTrigger className="h-8 w-52 text-xs">
@@ -123,6 +129,7 @@ function ViewingAsSwitcher() {
 }
 
 function StaffLayoutShell({ children }: { children: React.ReactNode }) {
+  const { t } = useStaffText("shell");
   const pathname = usePathname();
 
   const isActiveTab = (href: string) => {
@@ -138,20 +145,20 @@ function StaffLayoutShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-3xl font-bold tracking-tight">Staff Management</h2>
+        <h2 className="text-3xl font-bold tracking-tight">{t("title")}</h2>
         <ViewingAsSwitcher />
       </div>
 
       <div className="border-b">
         <nav
           className="-mb-px flex space-x-8 overflow-x-auto"
-          aria-label="Tabs"
+          aria-label={t("tabsLabel")}
         >
           {staffTabs.map((tab) => {
             const isActive = isActiveTab(tab.href);
             return (
               <Link
-                key={tab.name}
+                key={tab.key}
                 href={tab.href}
                 className={cn(
                   `group inline-flex items-center gap-2 border-b-2 px-1 py-4 text-sm font-medium transition-colors`,
@@ -168,7 +175,7 @@ function StaffLayoutShell({ children }: { children: React.ReactNode }) {
                       : `text-muted-foreground group-hover:text-foreground`,
                   )}
                 />
-                {tab.name}
+                {t(tab.key)}
               </Link>
             );
           })}
