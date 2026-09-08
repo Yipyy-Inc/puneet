@@ -1,5 +1,6 @@
 "use client";
 
+import { SaveBar } from "@/components/ui/save-bar";
 import { useState } from "react";
 
 import {
@@ -67,16 +68,9 @@ export function BookingApprovalSettingsCard() {
             {t("approvalHelp")}
           </p>
         </div>
-        {isEditing ? (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleCancel}>
-              {t("cancel")}
-            </Button>
-            <Button size="sm" onClick={handleSave}>
-              {t("save")}
-            </Button>
-          </div>
-        ) : (
+        {/* Edit alone in the header; save and discard live at the card's
+            foot in SaveBar, the same place they sit on every other screen. */}
+        {!isEditing && (
           <Button
             variant="outline"
             size="sm"
@@ -157,6 +151,17 @@ export function BookingApprovalSettingsCard() {
             </div>
           );
         })}
+        {/* `dirty` derived from the draft against the committed config — no
+            third copy of the truth, and nothing captured before a query
+            answered. */}
+        {isEditing && (
+          <SaveBar
+            placement="card"
+            dirty={JSON.stringify(draft) !== JSON.stringify(config)}
+            onSave={handleSave}
+            onReset={handleCancel}
+          />
+        )}
       </CardContent>
     </Card>
   );

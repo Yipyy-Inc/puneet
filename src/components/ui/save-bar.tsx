@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Save, RotateCcw } from "lucide-react";
 import { useUiText } from "@/hooks/use-ui-text";
+import { cn } from "@/lib/utils";
 
 // ============================================================================
 // THE ONE SAVE MODEL — a sticky bar over a derived draft.
@@ -55,6 +56,31 @@ interface SaveBarProps {
   saveLabel?: string;
   /** True while the write is in flight. */
   saving?: boolean;
+  /**
+   * Where the bar lives.
+   *
+   * ── WHY THIS IS NOT ALWAYS STICKY ───────────────────────────────────────
+   *
+   * `page` is the loyalty shape: one screen, one config object, one bar
+   * pinned to the bottom of the viewport.
+   *
+   * `card` exists because settings is not shaped like that. The restructure
+   * made persistence PER CARD — `booking-rules` alone renders three, and they
+   * write three different settings domains through three different mutations
+   * (`updateRules`, `updateService`, `updateBookingFlow`). One sticky bar per
+   * section would have to lift all three drafts into the section and fire all
+   * three behind one button, which can half-succeed — RLS refuses one domain,
+   * the other two land — while the screen says "saved". That is the failure
+   * `check:success-claims` exists for, bought for nothing.
+   *
+   * Three sticky bars would also simply stack on top of each other at the
+   * bottom of the viewport, which is what made the question unavoidable.
+   *
+   * So the model is one COMPONENT and one set of semantics, not one bar per
+   * screen: same dirty tracking, same Loading cell, same words, with the save
+   * boundary left where the data boundary already is.
+   */
+  placement?: "page" | "card";
 }
 
 export function SaveBar({
@@ -63,17 +89,45 @@ export function SaveBar({
   onReset,
   saveLabel,
   saving = false,
+  placement = "page",
 }: SaveBarProps) {
   const { t } = useUiText();
+  const sticky = placement === "page";
 
   return (
-    <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky bottom-0 z-[var(--z-sticky)] -mx-6 flex items-center justify-end gap-2 border-t px-6 py-3 backdrop-blur-sm">
+    <div
+      className={cn(
+        "flex items-center justify-end gap-2 border-t py-3",
+        sticky
+          ? // Pinned to the viewport, and pulled out to the page gutter so the
+            // rule runs the full width of the content column.
+            "bg-background/95 supports-backdrop-filter:bg-background/60 sticky bottom-0 z-[var(--z-sticky)] -mx-6 px-6 backdrop-blur-sm"
+          : // Inside a card: no pinning, no layer, no blur — it is simply the
+            // card's footer, and a card that scrolls off takes its own save
+            // with it, which is correct when the save belongs to that card.
+            "mt-4",
+      )}
+    >
       {dirty && (
         <span className="text-muted-foreground mr-auto text-sm">
           {t("You have unsaved changes")}
         </span>
       )}
-      <Button variant="ghost" onClick={onReset} disabled={!dirty || saving}>
+      {/* ── DISCARD IS ONLY DEAD ON A PAGE BAR ───────────────────────────
+          On a page, Discard with nothing to discard does nothing, so it is
+          disabled.
+
+          In a card it ALSO leaves the editor, which is meaningful whether or
+          not anything changed — and disabling it there was a trap: the card's
+          header now holds only Edit, so a viewer who opened the editor and
+          changed nothing had no way back out. Found by reading the two states
+          against each other rather than by running it, which is the argument
+          for §5s being a matrix. */}
+      <Button
+        variant="ghost"
+        onClick={onReset}
+        disabled={saving || (!dirty && sticky)}
+      >
         <RotateCcw className="mr-2 size-4" />
         {t("Discard")}
       </Button>

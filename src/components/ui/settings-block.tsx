@@ -3,7 +3,8 @@
 import { useState, useEffect, ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, Edit } from "lucide-react";
+import { Edit } from "lucide-react";
+import { SaveBar } from "@/components/ui/save-bar";
 import { useUiText } from "@/hooks/use-ui-text";
 
 export function SettingsBlock<T>({
@@ -95,39 +96,11 @@ export function SettingsBlock<T>({
               </p>
             )}
           </div>
-          {isEditing ? (
-            <div className="flex gap-2">
-              {/* ── THE LOADING CELL BELONGS TO Button (§5s) ──────────────
-                  This hand-rolled it three ways, and each one is a cell of the
-                  §5s matrix answered wrongly:
-
-                  1. It swapped the label to "Saving…", which the matrix names
-                     under Never — "it shifts layout and throws away the verb".
-                  2. `disabled={saving}` made it RENDER disabled while loading.
-                     Those are different cells: Button scopes its disabled fill
-                     and ink to `:not([data-loading])` for exactly this reason,
-                     so a loading button is unclickable without looking dead.
-                  3. `t("Saving…")` is not in `ui-translations.ts` — `Save` is,
-                     as `Enregistrer`, and `translateUiText` returns its input
-                     unchanged on a miss. So a French user pressed Enregistrer
-                     and watched it become the English word "Saving…".
-
-                  Passing `loading` fixes all three and deletes the third
-                  outright: the label never changes, so there is no second
-                  string to translate. */}
-              <Button onClick={handleSave} loading={saving}>
-                <Save className="mr-2 size-4" />
-                {t("Save")}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                disabled={saving}
-              >
-                {t("Cancel")}
-              </Button>
-            </div>
-          ) : (
+          {/* The header keeps ONLY the read/write toggle. Save and Discard
+              moved to the card's foot, where `SaveBar` puts them on every
+              screen that has one — the point of having one model is that the
+              save controls are in the same place whatever the screen. */}
+          {!isEditing && (
             <Button onClick={() => setIsEditing(true)}>
               <Edit className="mr-2 size-4" />
               {t("Edit")}
@@ -145,6 +118,29 @@ export function SettingsBlock<T>({
           </p>
         )}
         {children(isEditing, localData, setLocalData)}
+        {/* ── ONE SAVE MODEL, AT THE CARD'S FOOT ─────────────────────────
+            `placement="card"` rather than the sticky page bar, for the reason
+            SaveBar's own prop records: settings persists PER CARD, and
+            `booking-rules` alone renders three cards writing three domains.
+            One sticky bar per section would have to fire all three behind one
+            button and could half-succeed while saying "saved".
+
+            `dirty` is DERIVED — `localData` against the `data` prop — so
+            there is no second copy of the truth to fall out of step, and no
+            `useState` capturing a value before the query answered, which is
+            what `check:settings-seeding` exists to stop.
+
+            Discard is the cancel that was already here: it restores from
+            `data` and closes the editor. */}
+        {isEditing && (
+          <SaveBar
+            placement="card"
+            dirty={JSON.stringify(localData) !== JSON.stringify(data)}
+            saving={saving}
+            onSave={handleSave}
+            onReset={handleCancel}
+          />
+        )}
       </CardContent>
     </Card>
   );
