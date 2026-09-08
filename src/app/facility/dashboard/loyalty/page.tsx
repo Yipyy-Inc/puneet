@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { LoyaltyPerformanceBanner } from "@/components/loyalty/LoyaltyPerformanceBanner";
-import { SaveBar } from "@/components/loyalty/config/SaveBar";
+import { SaveBar } from "@/components/ui/save-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";

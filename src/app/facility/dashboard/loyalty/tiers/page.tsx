@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { TierDefinitionsEditor } from "@/components/loyalty/config/TierDefinitionsEditor";
 import { TiersEditor } from "@/components/loyalty/config/TiersEditor";
-import { SaveBar } from "@/components/loyalty/config/SaveBar";
+import { SaveBar } from "@/components/ui/save-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLoyaltyProgram } from "@/hooks/use-loyalty-program";
 import type { Tier, LoyaltyTierConfig } from "@/types/loyalty";
