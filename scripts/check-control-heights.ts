@@ -227,7 +227,7 @@ const BASELINE = new Map<string, number>([
   ["src/app/facility/dashboard/staff/_components/warnings-tab.tsx", 1],
   ["src/app/facility/dashboard/staff/_components/write-ups-tab.tsx", 1],
   ["src/app/facility/dashboard/staff/documents/page.tsx", 1],
-  ["src/app/facility/dashboard/staff/layout.tsx", 1],
+
   ["src/app/facility/dashboard/staff/warnings/page.tsx", 2],
   ["src/app/facility/dashboard/tasks/CareTasks.tsx", 8],
   ["src/app/onboard/[token]/section-forms.tsx", 1],

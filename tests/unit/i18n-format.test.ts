@@ -198,3 +198,47 @@ describe("§5q — phone", () => {
     expect(formatPhone("416-555-0142 x22", "en")).toBe("416-555-0142 x22");
   });
 });
+
+// ============================================================================
+// A DATE THAT IS NOT A DATE — measured 2026-09-08, on the staff directory.
+//
+// `Intl.DateTimeFormat.format()` and `Intl.RelativeTimeFormat.format()` do not
+// return "Invalid Date" for a non-finite input, they THROW `RangeError`. Inside
+// a React render that reaches the nearest error boundary, so the entire staff
+// directory rendered as "We couldn't load your board" — five tiles, four tabs
+// and every card gone — because one profile had no last-active timestamp.
+//
+// And one always does: `mappers/staff.ts` maps `row.last_active ?? ""`, so a
+// staff member who has never signed in arrives carrying an empty string.
+//
+// This is the shape AGENTS.md keeps this tier for. Static analysis saw
+// well-typed code — `lastActive: string` is satisfied by `""`. An e2e spec
+// would have had to seed a blank timestamp into the shared production database
+// to assert something three layers below the screen. Here it is four lines.
+// ============================================================================
+
+describe("a date that will not parse renders, it does not throw", () => {
+  // Every way an absent timestamp actually reaches these functions.
+  const junk = ["", "not a date", Number.NaN, new Date("nope")] as const;
+
+  test("every date formatter returns the em dash instead of throwing", () => {
+    for (const value of junk) {
+      for (const locale of ["en", "fr"] as const) {
+        expect(formatDateLong(value, locale)).toBe("—");
+        expect(formatDateShort(value, locale)).toBe("—");
+        expect(formatTime(value, locale)).toBe("—");
+        expect(formatRelative(value, locale)).toBe("—");
+      }
+      expect(formatDateISO(value)).toBe("—");
+    }
+  });
+
+  test("a real date is untouched by the guard", () => {
+    // The guard must not swallow a falsy-but-real value. Built through the
+    // local constructor rather than from epoch 0, which is 1969-12-31 in
+    // every negative-offset zone and would fail in Toronto but not in CI.
+    const epochLocal = new Date(1970, 0, 1);
+    expect(formatDateISO(epochLocal.getTime())).toBe("1970-01-01");
+    expect(formatDateISO(new Date(2026, 8, 1))).toBe("2026-09-01");
+  });
+});

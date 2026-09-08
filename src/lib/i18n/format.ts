@@ -85,6 +85,39 @@ function asDate(value: Date | string | number): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
+/**
+ * What an unparseable date renders as.
+ *
+ * The em dash, which 167 files in this repo already use for a value that is
+ * not there. Locale-neutral, so it needs no entry in either catalogue.
+ */
+const NO_DATE = "—";
+
+/**
+ * `true` when `Intl` will THROW on this value rather than format it.
+ *
+ * ── WHY THIS EXISTS, MEASURED 2026-09-08 ─────────────────────────────────
+ *
+ * `Intl.DateTimeFormat.format()` and `Intl.RelativeTimeFormat.format()` both
+ * raise `RangeError` on a non-finite input — they do not return "Invalid
+ * Date", they throw — and a throw inside render takes out the nearest error
+ * boundary. So the whole staff directory rendered as "We couldn't load your
+ * board" the moment one profile had no last-active timestamp.
+ *
+ * And one always does: `mappers/staff.ts` maps `row.last_active ?? ""`, so a
+ * staff member who has never signed in arrives as an empty string while the
+ * type still says `lastActive: string`. The type is not lying about the shape,
+ * only about the meaning — an empty string IS the null here.
+ *
+ * The formatter this replaced degraded instead of throwing, which is the only
+ * reason the blank rows were survivable before. Losing that on the way to
+ * correct French would have traded a cosmetic defect for an outage, so the
+ * guard is not defensive padding: it is the behaviour being kept.
+ */
+function unformattable(d: Date): boolean {
+  return Number.isNaN(d.getTime());
+}
+
 // ── DATES ──────────────────────────────────────────────────────────────────
 
 /**
@@ -98,12 +131,14 @@ export function formatDateLong(
   value: Date | string | number,
   locale: AppLocale,
 ): string {
+  const d = asDate(value);
+  if (unformattable(d)) return NO_DATE;
   return dateFmt(locale, "long", {
     weekday: "short",
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(asDate(value));
+  }).format(d);
 }
 
 /** `Sep 1` · `1 sept.` — for a column where the year is obvious. */
@@ -111,9 +146,9 @@ export function formatDateShort(
   value: Date | string | number,
   locale: AppLocale,
 ): string {
-  return dateFmt(locale, "short", { month: "short", day: "numeric" }).format(
-    asDate(value),
-  );
+  const d = asDate(value);
+  if (unformattable(d)) return NO_DATE;
+  return dateFmt(locale, "short", { month: "short", day: "numeric" }).format(d);
 }
 
 /**
@@ -126,6 +161,7 @@ export function formatDateShort(
  */
 export function formatDateISO(value: Date | string | number): string {
   const d = asDate(value);
+  if (unformattable(d)) return NO_DATE;
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
@@ -149,10 +185,12 @@ export function formatTime(
   value: Date | string | number,
   locale: AppLocale,
 ): string {
+  const d = asDate(value);
+  if (unformattable(d)) return NO_DATE;
   const out = dateFmt(locale, "time", {
     hour: "numeric",
     minute: "2-digit",
-  }).format(asDate(value));
+  }).format(d);
   if (locale === "fr") return out;
   return out.replace(/\ba\.m\./i, "AM").replace(/\bp\.m\./i, "PM");
 }
@@ -248,6 +286,7 @@ export function formatRelative(
   now: Date = new Date(),
 ): string {
   const then = asDate(value);
+  if (unformattable(then)) return NO_DATE;
   const diffMs = then.getTime() - now.getTime();
   const absMin = Math.abs(diffMs) / 60000;
 

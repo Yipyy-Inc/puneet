@@ -42,7 +42,7 @@ import {
   RolePill,
   StaffAvatar,
   fullNameOf,
-  formatRelative,
+  useRelativeTime,
 } from "../_components/staff-shared";
 import {
   ProfileSection,
@@ -113,6 +113,7 @@ export function StaffProfileView({ staffId }: { staffId: string }) {
 }
 
 function StaffProfileInner({ staffId }: { staffId: string }) {
+  const relative = useRelativeTime();
   const staff = facilityStaff.find((s) => s.id === staffId);
 
   // Permission gates (stable hook order — one call per distinct key).
@@ -331,7 +332,7 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
           </div>
         </div>
         <p className="text-muted-foreground mt-4 text-[11px]">
-          Last active {formatRelative(staff.lastActive)} · Started{" "}
+          Last active {relative(staff.lastActive)} · Started{" "}
           {new Date(staff.employment.hireDate + "T00:00:00").toLocaleDateString(
             "en-US",
             { year: "numeric", month: "short", day: "numeric" },
