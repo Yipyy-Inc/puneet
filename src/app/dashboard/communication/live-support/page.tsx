@@ -346,14 +346,14 @@ export default function LiveSupportPage() {
           <TabsList className="grid h-12 w-full max-w-md grid-cols-2">
             <TabsTrigger
               value="tickets"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
+              className="data-[state=active]:text-primary gap-2"
             >
               <Ticket className="size-4" />
               Support Tickets ({ticketsState.length})
             </TabsTrigger>
             <TabsTrigger
               value="chat"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
+              className="data-[state=active]:text-primary gap-2"
             >
               <MessageSquare className="size-4" />
               Chat History ({chatConversations.length})
