@@ -41,6 +41,7 @@ import {
   ONBOARDING_TYPE_LABEL,
 } from "@/data/staff-onboarding";
 import { OnboardingSubmissionReview } from "../_components/onboarding-submission-view";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // Local editable models — this is a mock with no fs-* shift/task/rating join, so
 // these tabs are genuine admin-editable state rather than fabricated read-only
@@ -73,6 +74,7 @@ export function ScheduleTab({
   onAdd: (shift: Omit<ShiftItem, "id">) => void;
   onRemove: (id: string) => void;
 }) {
+  const { t } = useStaffText("profileTabs");
   const [date, setDate] = useState("");
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("17:00");
@@ -82,10 +84,10 @@ export function ScheduleTab({
   return (
     <div className="space-y-4">
       <div className="border-border/60 bg-card/60 rounded-xl border p-4">
-        <div className="mb-3 text-sm font-semibold">Add a shift</div>
+        <div className="mb-3 text-sm font-semibold">{t("addShift")}</div>
         <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
           <div className="space-y-1">
-            <Label className="text-xs">Date</Label>
+            <Label className="text-xs">{t("date")}</Label>
             <Input
               type="date"
               value={date}
@@ -93,7 +95,7 @@ export function ScheduleTab({
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Start</Label>
+            <Label className="text-xs">{t("start")}</Label>
             <Input
               type="time"
               value={start}
@@ -101,7 +103,7 @@ export function ScheduleTab({
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">End</Label>
+            <Label className="text-xs">{t("end")}</Label>
             <Input
               type="time"
               value={end}
@@ -116,7 +118,7 @@ export function ScheduleTab({
                 setDate("");
               }}
             >
-              <Plus className="size-3.5" /> Add
+              <Plus className="size-3.5" /> {t("add")}
             </Button>
           </div>
         </div>
@@ -125,8 +127,8 @@ export function ScheduleTab({
       {shifts.length === 0 ? (
         <EmptyState
           icon={CalendarClock}
-          title="No shifts scheduled"
-          description="Add shifts above. They'll appear here in date order."
+          title={t("noShifts")}
+          description={t("noShiftsHelp")}
         />
       ) : (
         <div className="divide-border/60 border-border/60 divide-y overflow-hidden rounded-xl border">
@@ -156,7 +158,7 @@ export function ScheduleTab({
                   size="icon"
                   className="size-8"
                   onClick={() => onRemove(s.id)}
-                  aria-label="Remove shift"
+                  aria-label={t("removeShift")}
                 >
                   <Trash2 className="size-3.5 text-rose-600" />
                 </Button>
@@ -177,6 +179,26 @@ export function ScheduleTab({
 const STALLED_OVERDUE_MIN = 1; // any overdue incomplete task flags the checklist
 
 export function OnboardingTab({ staff }: { staff: StaffProfile }) {
+  const { t, fill } = useStaffText("profileTabs");
+
+  /**
+   * An onboarding task type's words.
+   *
+   * `ONBOARDING_TYPE_LABEL` is a module constant in data/staff-onboarding.ts,
+   * so `check:ui-french` cannot see it and its nine English labels counted as
+   * zero while a French manager read "Shadow shift" on every task row. Keyed
+   * off the union; an unknown type falls back to the constant's own English
+   * rather than to a raw key.
+   */
+  const typeLabel = (type: keyof typeof ONBOARDING_TYPE_LABEL) => {
+    const key = `type${type
+      .split("_")
+      .map((w) => w[0].toUpperCase() + w.slice(1))
+      .join("")}`;
+    const label = t(key);
+    return label === key ? ONBOARDING_TYPE_LABEL[type] : label;
+  };
+
   const tasks = useOnboarding(staff.id);
   const [today] = useState(() => new Date().toISOString().split("T")[0]);
   const [newName, setNewName] = useState("");
@@ -197,9 +219,9 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
       <div className="space-y-5">
         <div className="border-border/60 flex flex-col items-center gap-2 rounded-xl border border-dashed py-10 text-center">
           <GraduationCap className="text-muted-foreground/50 size-7" />
-          <p className="text-sm font-medium">No onboarding checklist yet</p>
+          <p className="text-sm font-medium">{t("noChecklist")}</p>
           <p className="text-muted-foreground max-w-xs text-xs">
-            Start a role-appropriate checklist for {staff.firstName}.
+            {fill("noChecklistHelp", { name: staff.firstName })}
           </p>
           <Button
             size="sm"
@@ -212,7 +234,7 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
               )
             }
           >
-            <Plus className="size-3.5" /> Start onboarding checklist
+            <Plus className="size-3.5" /> {t("startChecklist")}
           </Button>
         </div>
         <OnboardingSubmissionReview profile={staff} />
@@ -226,7 +248,7 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
         setOnboardingTaskComplete(staff.id, t.id, true, "Manager");
       }
     }
-    toast.success("All onboarding tasks marked complete");
+    toast.success(t("allComplete"));
   };
 
   const addTask = () => {
@@ -240,7 +262,7 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
     setNewName("");
     setNewDesc("");
     setNewRequiresManager(false);
-    toast.success("Task added");
+    toast.success(t("taskAdded"));
   };
 
   return (
@@ -250,11 +272,13 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="text-xs">
             <p className="font-semibold text-amber-800 dark:text-amber-200">
-              Onboarding stalled
+              {t("stalledTitle")}
             </p>
             <p className="text-amber-700 dark:text-amber-300">
-              {overdue.length} task{overdue.length === 1 ? "" : "s"} past due
-              with no recent progress. Follow up with {staff.firstName}.
+              {fill(overdue.length === 1 ? "stalledOne" : "stalledOther", {
+                count: overdue.length,
+                name: staff.firstName,
+              })}
             </p>
           </div>
         </div>
@@ -263,9 +287,9 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
       <div className="border-border/60 bg-card/60 rounded-xl border p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm">
-            <span className="font-semibold">Onboarding progress</span>
+            <span className="font-semibold">{t("progress")}</span>
             <span className="text-muted-foreground ml-2">
-              {done} of {tasks.length} · {pct}%
+              {fill("progressCount", { done, total: tasks.length, pct })}
             </span>
           </div>
           <Button
@@ -274,7 +298,7 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
             disabled={allComplete}
             onClick={markAllComplete}
           >
-            <CheckCheck className="size-3.5" /> Mark all complete
+            <CheckCheck className="size-3.5" /> {t("markAllComplete")}
           </Button>
         </div>
         <Progress value={pct} className="mt-2 h-2" />
@@ -306,7 +330,7 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
                   </span>
                   {task.requiresManager && (
                     <span className="inline-flex items-center gap-1 rounded-sm bg-violet-100 px-1.5 py-0.5 text-[9px] font-medium text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
-                      <UserCog className="size-2.5" /> Manager
+                      <UserCog className="size-2.5" /> {t("managerTag")}
                     </span>
                   )}
                 </div>
@@ -316,7 +340,7 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
                   </p>
                 )}
                 <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
-                  <span>{ONBOARDING_TYPE_LABEL[task.type]}</span>
+                  <span>{typeLabel(task.type)}</span>
                   {task.dueDate && (
                     <span
                       className={cn(
@@ -324,12 +348,12 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
                         taskOverdue && "text-amber-600 dark:text-amber-400",
                       )}
                     >
-                      <Clock className="size-3" /> Due {task.dueDate}
+                      <Clock className="size-3" /> {t("due")} {task.dueDate}
                     </span>
                   )}
                   {taskDone && task.completedBy && (
                     <span className="text-emerald-600 dark:text-emerald-400">
-                      Completed by {task.completedBy}
+                      {fill("completedBy", { who: task.completedBy })}
                     </span>
                   )}
                 </div>
@@ -340,7 +364,7 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
                   size="icon"
                   className="size-7 shrink-0"
                   onClick={() => removeOnboardingTask(staff.id, task.id)}
-                  aria-label="Remove task"
+                  aria-label={t("removeTask")}
                 >
                   <Trash2 className="size-3.5 text-rose-600" />
                 </Button>
@@ -352,17 +376,17 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
 
       {/* Add a custom task */}
       <div className="border-border/60 bg-card/60 space-y-2 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Add a task</p>
+        <p className="text-sm font-semibold">{t("addTask")}</p>
         <div className="grid gap-2 sm:grid-cols-2">
           <Input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="Task name"
+            placeholder={t("taskName")}
           />
           <Input
             value={newDesc}
             onChange={(e) => setNewDesc(e.target.value)}
-            placeholder="Short description (optional)"
+            placeholder={t("taskDescription")}
           />
         </div>
         <div className="flex items-center justify-between gap-3">
@@ -371,10 +395,10 @@ export function OnboardingTab({ staff }: { staff: StaffProfile }) {
               checked={newRequiresManager}
               onCheckedChange={setNewRequiresManager}
             />
-            Manager-action task (staff can&apos;t self-complete)
+            {t("managerActionTask")}
           </label>
           <Button size="sm" disabled={!newName.trim()} onClick={addTask}>
-            <Plus className="size-3.5" /> Add task
+            <Plus className="size-3.5" /> {t("addTaskButton")}
           </Button>
         </div>
       </div>
@@ -401,42 +425,43 @@ export function NotesTab({
   log: NoteEntry[];
   onAddLog: (body: string) => void;
 }) {
+  const { t } = useStaffText("profileTabs");
   const [draft, setDraft] = useState(internalNote);
   const [entry, setEntry] = useState("");
 
   return (
     <div className="space-y-4">
       <div className="border-border/60 bg-card/60 rounded-xl border p-4">
-        <Label className="text-xs">Internal note</Label>
+        <Label className="text-xs">{t("internalNote")}</Label>
         <p className="text-muted-foreground mb-2 text-[11px]">
-          Visible to managers and owners only.
+          {t("internalNoteHelp")}
         </p>
         <Textarea
           rows={3}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="e.g. Overnight shifts only, handles hand stripping."
+          placeholder={t("internalNotePlaceholder")}
         />
         <div className="mt-2 flex justify-end">
           <Button
             size="sm"
             onClick={() => {
               onSaveInternal(draft.trim());
-              toast.success("Internal note saved");
+              toast.success(t("noteSaved"));
             }}
           >
-            Save note
+            {t("saveNote")}
           </Button>
         </div>
       </div>
 
       <div className="border-border/60 bg-card/60 rounded-xl border p-4">
-        <Label className="text-xs">Add a management note</Label>
+        <Label className="text-xs">{t("addManagementNote")}</Label>
         <div className="mt-2 flex gap-2">
           <Input
             value={entry}
             onChange={(e) => setEntry(e.target.value)}
-            placeholder="Log a note about this staff member…"
+            placeholder={t("notePlaceholder")}
           />
           <Button
             disabled={entry.trim() === ""}
@@ -445,7 +470,7 @@ export function NotesTab({
               setEntry("");
             }}
           >
-            <Plus className="size-3.5" /> Add
+            <Plus className="size-3.5" /> {t("add")}
           </Button>
         </div>
         {log.length > 0 && (
@@ -479,6 +504,7 @@ export function PerformanceTab({
   profile: StaffProfile;
   onboardingPct: number;
 }) {
+  const { t, fill } = useStaffText("profileTabs");
   const shared = usePerformanceVisibility(profile.id);
   return (
     <div className="space-y-4">
@@ -488,37 +514,36 @@ export function PerformanceTab({
           <Eye className="text-muted-foreground size-4" />
           <div>
             <p className="text-sm font-medium">
-              Share performance with {profile.firstName}
+              {fill("sharePerformance", { name: profile.firstName })}
             </p>
             <p className="text-muted-foreground text-xs">
-              When on, they can see their completion rate, punctuality, and
-              client ratings in their portal.
+              {t("sharePerformanceHelp")}
             </p>
           </div>
         </div>
         <Switch
           checked={shared}
           onCheckedChange={(v) => setPerformanceVisibility(profile.id, v)}
-          aria-label="Share performance with staff member"
+          aria-label={t("sharePerformanceLabel")}
         />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <MetricCard
           icon={ClipboardList}
-          label="Open tasks"
+          label={t("openTasks")}
           value={String(profile.openTasks)}
           tone="text-amber-600 dark:text-amber-400"
         />
         <MetricCard
           icon={CalendarClock}
-          label="Upcoming shifts"
+          label={t("upcomingShifts")}
           value={String(profile.upcomingAppointments)}
           tone="text-primary"
         />
         <MetricCard
           icon={CheckCircle2}
-          label="Onboarding"
+          label={t("onboarding")}
           value={`${onboardingPct}%`}
           tone="text-emerald-600 dark:text-emerald-400"
         />
@@ -526,14 +551,11 @@ export function PerformanceTab({
 
       {/* Metrics with no data source yet — honest empty states, not fabricated. */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <EmptyMetric icon={CheckCircle2} label="Task completion rate" />
-        <EmptyMetric icon={Timer} label="Punctuality" />
-        <EmptyMetric icon={Star} label="Client ratings" />
+        <EmptyMetric icon={CheckCircle2} label={t("completionRate")} />
+        <EmptyMetric icon={Timer} label={t("punctuality")} />
+        <EmptyMetric icon={Star} label={t("clientRatings")} />
       </div>
-      <p className="text-muted-foreground text-xs">
-        Completion, punctuality, and client-rating history will appear here once
-        connected to the scheduling and report-card data.
-      </p>
+      <p className="text-muted-foreground text-xs">{t("performanceFooter")}</p>
     </div>
   );
 }
@@ -575,11 +597,12 @@ function EmptyMetric({
   icon: React.ComponentType<{ className?: string }>;
   label: string;
 }) {
+  const { t } = useStaffText("profileTabs");
   return (
     <div className="border-border/60 bg-muted/20 flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed p-4 text-center">
       <Icon className="text-muted-foreground/50 size-5" />
       <div className="text-muted-foreground text-xs font-medium">{label}</div>
-      <div className="text-muted-foreground text-[10px]">No data yet</div>
+      <div className="text-muted-foreground text-[10px]">{t("noDataYet")}</div>
     </div>
   );
 }
