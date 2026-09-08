@@ -123,9 +123,9 @@ export function TipSettings() {
                   disabled={!isEditing}
                   onClick={() => setLocal({ ...local, mode: "general" })}
                   className={cn(
-                    "rounded-lg border p-3 text-left text-sm transition-colors",
+                    "flex min-h-10 items-center rounded-lg border p-3 text-left text-sm transition-colors max-lg:min-h-12",
                     local.mode === "general"
-                      ? "border-primary bg-primary/5 font-medium"
+                      ? "border-primary font-medium"
                       : "hover:bg-muted/50",
                     !isEditing && "cursor-default",
                   )}
@@ -140,9 +140,9 @@ export function TipSettings() {
                   disabled={!isEditing}
                   onClick={() => setLocal({ ...local, mode: "smart" })}
                   className={cn(
-                    "rounded-lg border p-3 text-left text-sm transition-colors",
+                    "flex min-h-10 items-center rounded-lg border p-3 text-left text-sm transition-colors max-lg:min-h-12",
                     local.mode === "smart"
-                      ? "border-primary bg-primary/5 font-medium"
+                      ? "border-primary font-medium"
                       : "hover:bg-muted/50",
                     !isEditing && "cursor-default",
                   )}
@@ -186,7 +186,7 @@ export function TipSettings() {
                       step={1}
                       value={local.smart.thresholdAmount}
                       disabled={!isEditing}
-                      className="h-8 pl-6 text-sm"
+                      className="pl-6 text-sm"
                       onChange={(e) =>
                         setLocal({
                           ...local,
@@ -259,7 +259,7 @@ export function TipSettings() {
                   min={1}
                   step={5}
                   value={preview}
-                  className="h-8 pl-6 text-sm"
+                  className="pl-6 text-sm"
                   onChange={(e) =>
                     setPreview(Math.max(1, parseFloat(e.target.value) || 1))
                   }

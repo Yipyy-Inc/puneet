@@ -279,7 +279,7 @@ export function BrandingSettings() {
                           primaryColor: e.target.value.toUpperCase(),
                         }))
                       }
-                      className="border-input h-9 w-14 cursor-pointer rounded-md border bg-transparent p-1"
+                      className="border-input h-10 w-14 cursor-pointer rounded-md border bg-transparent p-1 max-lg:h-12"
                     />
                     <Input
                       value={primary}

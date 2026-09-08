@@ -567,7 +567,7 @@ export function EvaluationBookingWizardSettings() {
                 className={cn(
                   "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-all",
                   slotMode === opt.value
-                    ? "border-primary bg-primary/5 ring-primary ring-1"
+                    ? "border-primary ring-primary ring-1"
                     : "hover:border-muted-foreground/30",
                 )}
               >

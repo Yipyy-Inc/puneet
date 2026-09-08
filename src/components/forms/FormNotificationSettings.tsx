@@ -210,9 +210,9 @@ export function FormNotificationSettings() {
                       <button
                         type="button"
                         onClick={() => setRedFlagModalOpen(true)}
-                        className="text-primary mt-1.5 inline-flex items-center gap-1 text-xs font-medium hover:underline"
+                        className="text-primary mt-1.5 inline-flex min-h-10 items-center gap-1 text-xs font-medium hover:underline max-lg:min-h-12"
                       >
-                        <SlidersHorizontal className="size-3" />
+                        <SlidersHorizontal className="size-4" />
                         {t("configureRedFlags")}
                       </button>
                     )}

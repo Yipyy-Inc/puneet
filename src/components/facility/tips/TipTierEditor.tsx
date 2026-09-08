@@ -81,26 +81,26 @@ export function TipTierEditor({
                 disabled={disabled}
                 onClick={() => setOption(idx, { ...opt, type: "percentage" })}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-1 py-1 transition-colors",
+                  "flex min-h-10 flex-1 items-center justify-center gap-1 transition-colors max-lg:min-h-12",
                   opt.type === "percentage"
                     ? "bg-primary text-primary-foreground"
                     : "hover:bg-muted",
                 )}
               >
-                <Percent className="size-3" /> %
+                <Percent className="size-4" /> %
               </button>
               <button
                 type="button"
                 disabled={disabled}
                 onClick={() => setOption(idx, { ...opt, type: "fixed" })}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-1 py-1 transition-colors",
+                  "flex min-h-10 flex-1 items-center justify-center gap-1 transition-colors max-lg:min-h-12",
                   opt.type === "fixed"
                     ? "bg-primary text-primary-foreground"
                     : "hover:bg-muted",
                 )}
               >
-                <DollarSign className="size-3" /> $
+                <DollarSign className="size-4" /> $
               </button>
             </div>
 

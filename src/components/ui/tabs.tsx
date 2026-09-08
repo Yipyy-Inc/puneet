@@ -42,7 +42,18 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        `text-muted-foreground hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:text-primary flex items-center gap-2 border-b px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors data-[state=active]:border-b-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+        // ── 42px, MEASURED AT 599px (§6 rule 7) ──────────────────────────
+        //
+        // `px-4 py-2.5` on 14px type came to 42px — under the 48px floor rule
+        // 7 sets below 1024px, and this one primitive was most of what the
+        // rendering pass found left in settings: the species tabs on
+        // vaccination requirements, the three tag scopes, and five of the
+        // report-card template's own tabs.
+        //
+        // `min-h`, never `h`: a tab label is a translated string, and §5g's
+        // rule is that a fixed height on one is a defect in its own right.
+        // "Booking tags" is "Étiquettes de réservation" in French.
+        `text-muted-foreground hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:text-primary flex min-h-10 items-center gap-2 border-b px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors data-[state=active]:border-b-2 max-lg:min-h-12 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className,
       )}
       {...props}

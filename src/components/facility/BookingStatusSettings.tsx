@@ -382,7 +382,7 @@ export function BookingStatusSettings() {
         <button
           type="button"
           onClick={() => setShowFlow((v) => !v)}
-          className="hover:bg-muted/30 w-full rounded-t-xl text-left transition-colors"
+          className="hover:bg-muted/30 flex min-h-10 w-full items-center rounded-t-xl text-left transition-colors max-lg:min-h-12"
         >
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -472,7 +472,7 @@ export function BookingStatusSettings() {
               return (
                 <div
                   key={s.id}
-                  className="bg-background flex items-center gap-1.5 rounded-full border px-3 py-1.5"
+                  className="bg-background flex min-h-10 items-center gap-1.5 rounded-full border px-3 max-lg:min-h-12"
                 >
                   <div
                     className={cn(
@@ -499,7 +499,7 @@ export function BookingStatusSettings() {
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5 text-xs"
+              className="gap-1.5 text-xs"
               onClick={handleAddCustom}
             >
               <Plus className="size-3.5" />
@@ -532,7 +532,7 @@ export function BookingStatusSettings() {
                       handleUpdateCustom(status.id, { name: e.target.value })
                     }
                     placeholder={t("namePlaceholder")}
-                    className="mt-1 h-8 text-sm"
+                    className="mt-1 text-sm"
                   />
                 </div>
                 <div className="sm:col-span-3">
@@ -595,7 +595,7 @@ export function BookingStatusSettings() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                    className="text-muted-foreground hover:text-destructive size-10 rounded-full p-0 max-lg:size-12"
                     onClick={() => handleRemoveCustom(status.id)}
                     aria-label={t("removeStatus")}
                   >
@@ -679,7 +679,7 @@ export function BookingStatusSettings() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1.5 text-xs"
+                className="gap-1.5 text-xs"
                 onClick={handleAddIftttRule}
               >
                 <Plus className="size-3.5" />
@@ -887,7 +887,7 @@ function IftttRuleRow({
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+            className="text-muted-foreground hover:text-destructive size-10 rounded-full p-0 max-lg:size-12"
             onClick={onRemove}
             aria-label={t("removeRule")}
           >

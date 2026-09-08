@@ -294,7 +294,7 @@ export function BreedManagement() {
               open={openSections[sp.key]}
               onOpenChange={() => toggleSection(sp.key)}
             >
-              <CollapsibleTrigger className="hover:bg-muted/50 flex w-full items-center justify-between rounded-md border px-3 py-2 transition-colors">
+              <CollapsibleTrigger className="hover:bg-muted/50 flex min-h-10 w-full items-center justify-between rounded-md border px-3 py-2 transition-colors max-lg:min-h-12">
                 <div className="flex flex-col items-start gap-0.5 text-left">
                   <div className="flex items-center gap-2">
                     <Icon className="text-muted-foreground size-4" />

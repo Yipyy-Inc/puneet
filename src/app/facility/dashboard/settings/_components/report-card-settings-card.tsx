@@ -594,7 +594,7 @@ export function ReportCardSettingsCard() {
                       <button
                         type="button"
                         onClick={() => setPreviewMode("portal")}
-                        className={`rounded-sm px-2.5 py-1 font-medium ${
+                        className={`inline-flex min-h-10 items-center rounded-sm px-2.5 font-medium max-lg:min-h-12 ${
                           previewMode === "portal"
                             ? "bg-primary text-primary-foreground"
                             : "text-muted-foreground"
@@ -605,7 +605,7 @@ export function ReportCardSettingsCard() {
                       <button
                         type="button"
                         onClick={() => setPreviewMode("sms")}
-                        className={`rounded-sm px-2.5 py-1 font-medium ${
+                        className={`inline-flex min-h-10 items-center rounded-sm px-2.5 font-medium max-lg:min-h-12 ${
                           previewMode === "sms"
                             ? "bg-primary text-primary-foreground"
                             : "text-muted-foreground"
