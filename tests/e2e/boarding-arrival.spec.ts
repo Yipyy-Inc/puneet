@@ -108,10 +108,26 @@ async function day(page: import("@playwright/test").Page): Promise<DayPayload> {
   return (await res.json()) as DayPayload;
 }
 
+/**
+ * A kennel with nobody in it FOR THE DATES ABOUT TO BE BOOKED.
+ *
+ * The window is not optional and not a refinement. Without it this asked
+ * `/api/boarding/rooms` with no query string, which answers for "this
+ * moment", and then the caller booked three or four days — so a kennel whose
+ * guest left yesterday looked free and refused the write with a 409. Six real
+ * bookings in this facility overlap the last four days; three of them ended
+ * before today, which is exactly the set that passed the old check.
+ *
+ * The endpoint was built for this. Its comment: "Default window is 'right
+ * now' … A booking flow asks about its own dates."
+ */
 async function freeRoom(
   page: import("@playwright/test").Page,
+  window: { startDate: string; endDate: string },
 ): Promise<string> {
-  const res = await page.request.get("/api/boarding/rooms");
+  const res = await page.request.get(
+    `/api/boarding/rooms?from=${window.startDate}&to=${window.endDate}`,
+  );
   expect(res.ok(), await res.text()).toBe(true);
   const payload = (await res.json()) as RoomsPayload;
   const room = payload.rooms.find(
@@ -120,7 +136,10 @@ async function freeRoom(
       !r.id.includes("e2e") &&
       !payload.occupied.some((o) => o.roomId === r.id),
   );
-  expect(room, "a free kennel").toBeTruthy();
+  expect(
+    room,
+    `a kennel free for ${window.startDate}..${window.endDate}`,
+  ).toBeTruthy();
   return room!.id;
 }
 
@@ -194,7 +213,7 @@ test.describe("the boarding arrivals board", () => {
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
-    const room = await freeRoom(page);
+    const room = await freeRoom(page, bookingBody());
     const created = await createBooking(page, bookingBody(room));
 
     const first = await page.request.post("/api/boarding/attendance", {
@@ -320,7 +339,7 @@ test.describe("the boarding arrivals board", () => {
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
-    const room = await freeRoom(page);
+    const room = await freeRoom(page, bookingBody());
     const created = await createBooking(page, bookingBody(room));
 
     await page.goto("/facility/dashboard/services/boarding/check-in");
@@ -360,18 +379,27 @@ test.describe("the boarding arrivals board", () => {
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
-    const room = await freeRoom(page);
     // Booked out YESTERDAY: this booking overlaps neither today's arrivals nor
     // today's departures. The fixture board could never reach this state — its
     // dates were static, so nothing ever became late.
+    //
+    // The window is computed BEFORE the kennel is chosen, and that ordering is
+    // the fix: asking for a room free "now" and then claiming four days in the
+    // past is how this test spent its time 409ing on real bookings that had
+    // already ended.
     const start = new Date();
     start.setDate(start.getDate() - 4);
     const end = new Date();
     end.setDate(end.getDate() - 1);
-    const created = await createBooking(page, {
-      ...bookingBody(room),
+    const past = {
       startDate: start.toISOString().slice(0, 10),
       endDate: end.toISOString().slice(0, 10),
+    };
+
+    const room = await freeRoom(page, past);
+    const created = await createBooking(page, {
+      ...bookingBody(room),
+      ...past,
     });
 
     const checkedIn = await page.request.post("/api/boarding/attendance", {

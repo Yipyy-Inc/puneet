@@ -65,13 +65,21 @@ async function follow(page: Page, link: Locator, target: string) {
 }
 
 /**
- * Open a section from the index, then a second one from the rail beside it, and
- * report where the second click landed.
+ * Open a section from the index, come back out, open a second one, and report
+ * where the second click landed.
  *
- * Both surfaces are covered on purpose. The index is a grid of every section a
- * viewer may open; the rail only appears once you are inside one. They are two
- * sets of links built by two different components, and a portal bug in either
- * strands the same person.
+ * ── THIS USED TO WALK THE RAIL ────────────────────────────────────────────
+ *
+ * Until 2026-09-08 a section page carried a 266px rail listing every other
+ * section, and this walked index → rail to cover two link surfaces built by
+ * two different components. `4dce10f1` removed the rail: a section is entered
+ * from the index and left by the "All settings" link, and that round trip is
+ * now the only path between two sections.
+ *
+ * So the two surfaces are the INDEX GRID and the WAY BACK, and both still
+ * matter for the same reason — a portal bug in either strands the same person,
+ * and the back link is now load-bearing in a way the rail never was, because
+ * it is the only exit.
  */
 async function walkTwoSections(page: Page, index: string): Promise<URL> {
   await follow(
@@ -83,7 +91,14 @@ async function walkTwoSections(page: Page, index: string): Promise<URL> {
     `${index}/my-profile`,
   );
 
-  // …and now the rail, which only exists on a section page.
+  // …out again by the only exit a section has, which must keep the portal…
+  await follow(
+    page,
+    page.getByRole("link", { name: /^\s*All settings\s*$/i }).first(),
+    index,
+  );
+
+  // …and back in to a second section, from the index's own grid.
   await follow(
     page,
     page
@@ -182,8 +197,8 @@ test.describe("old settings addresses still resolve", () => {
     // Settings has its OWN not-found boundary now, so this is the settings
     // wording rather than the root's "That page has moved". The difference is
     // the point of having one: the root state owns the whole viewport, so a
-    // mistyped settings address used to take the rail and the header with it.
-    // This one stands where the section would, and the rail survives.
+    // mistyped settings address used to take the whole shell with it. This one
+    // stands where the section would, and the way back survives.
     await expect(page.getByText("That settings section has moved")).toBeVisible(
       { timeout: 30_000 },
     );
@@ -229,13 +244,17 @@ test.describe("old settings addresses still resolve", () => {
       body.getByText("This area needs an owner's approval"),
     ).toBeVisible();
 
-    // ── 3. THE RAIL SURVIVES ──────────────────────────────────────────────
+    // ── 3. THE WAY OUT SURVIVES ───────────────────────────────────────────
     //
-    // `surface="card"` and not the full view: a refusal that took the rail and
-    // the header with it would strand somebody who has 40 other sections they
-    // may open. Same reason the not-found above is carded.
+    // `surface="card"` and not the full view: a refusal that replaced the whole
+    // shell would strand somebody who has 40 other sections they may open.
+    // Same reason the not-found above is carded.
+    //
+    // This asserted the RAIL until 2026-09-08. With the rail gone the back link
+    // is not merely one exit among many — it is the only one, so a carded
+    // refusal that dropped it would be a dead end rather than an inconvenience.
     await expect(
-      page.getByRole("link", { name: /^\s*My profile\s*$/i }).first(),
+      page.getByRole("link", { name: /^\s*All settings\s*$/i }).first(),
     ).toBeVisible();
   });
 });

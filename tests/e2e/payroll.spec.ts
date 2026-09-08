@@ -458,7 +458,9 @@ test.describe("payroll", () => {
       "You don't have access to this section",
     );
     expect(body).toContain("Payroll");
-    expect(body, "and the figures are on it").toContain("Gross");
+    // Case-folded on purpose — see the note on the groomer's assertion
+    // below. The label is CSS-uppercased and `innerText` returns it that way.
+    expect(body.toLowerCase(), "and the figures are on it").toContain("gross");
 
     // The gap was closed WITHOUT widening the portal. If this ever passes,
     // somebody has "fixed" the accountant by making them an administrator.
@@ -511,6 +513,22 @@ test.describe("payroll", () => {
     // `RequirePermission` renders EITHER the children OR the denial — never
     // both — so no restricted content is mounted behind it.
     expect(body).toContain("You don't have access to this section");
-    expect(body, "no wage bill behind the screen").not.toContain("Gross");
+    // ── WHY THIS IS CASE-FOLDED, AND WHY IT ALSO CHECKS A FIGURE ──────
+    //
+    // `innerText` applies CSS `text-transform`, and the metric tile's label
+    // has been `uppercase` since 3d6167ca (2026-09-03, §1 micro type). So
+    // `.not.toContain("Gross")` was true whatever this screen rendered — the
+    // assertion passed for five days while asserting nothing at all, on the
+    // question of whether a groomer can read the facility's wage bill.
+    //
+    // The dollar figure is checked too, because a label is a weak proxy for
+    // the thing that must not leak. A number with a currency mark on a screen
+    // a groomer reached is the actual failure.
+    expect(body.toLowerCase(), "no wage bill behind the screen").not.toContain(
+      "gross",
+    );
+    expect(body, "and no money figure at all").not.toMatch(
+      /\$\s?[\d,]+\.\d{2}/,
+    );
   });
 });
