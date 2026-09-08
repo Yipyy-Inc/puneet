@@ -9715,3 +9715,60 @@ reader looking up a permission and worse than finished.
 step is not translating them — it is adding `staff` as a surface to
 `check:ui-french`, the way the four portal shells were added, so the work has a
 number and cannot go backwards.
+
+## A file-level baseline lets a baselined file absorb new English silently
+
+`check:ui-french` kept its baseline as a `Set` of file ids: a file in the set
+was excused, whatever it contained. So new untranslated English in an
+already-baselined file passed the gate. **Measured rather than assumed** — an
+untranslated sentence was appended to `access-tab.tsx`, which is baselined, and
+the gate returned 0:
+
+```
+1. new English in a BASELINED file      PASSED — still blind
+2. new English in a NOT-baselined file  FAILED as it should
+```
+
+The `settings` surface got away with this because sections were converted whole
+and eventually all fifty reached zero. `staff` will not: 33 files and 725
+strings is many sessions, and a file could accumulate English for weeks behind
+a green build.
+
+**The baseline is a `Map<string, number>` now** — id to permitted hit count —
+so a file can only get better. Re-measured after the change, all four
+behaviours:
+
+|                                     |                                                                        |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| new English in a baselined file     | **fails**                                                              |
+| new English in a file not baselined | fails                                                                  |
+| a baselined file that goes clean    | fails (stale entry — remove it)                                        |
+| a file that improves                | passes, and prints `note … is down to 28 from 29 — lower its baseline` |
+
+The last one is deliberately a note rather than a failure, matching how the
+badge-glyph and hardcoded-locale ratchets behave: partial progress should not
+block a commit, but it should say the ratchet has lost its grip on that file.
+
+**The empty surfaces are unaffected** — settings, the four shells and the
+primitives are all `new Map<string, number>()`, and their only permitted state
+is still nothing at all.
+
+## The staff area was on nobody's list, and measured 725 strings
+
+Added as a seventh surface on 2026-09-08, **derived from the route tree** —
+every `page.tsx` and `layout.tsx` under `src/app/facility/dashboard/staff`,
+walked three imports deep — rather than from a list somebody has to remember to
+update. That is the shell surface's lesson applied: measured against a
+hand-picked list it came back clean while thirty-four strings sat in the
+support drawer.
+
+It reported **33 files, 725 strings** the moment it existed. Settings sections
+reachable from the same walk are excluded, because the roles studio is rendered
+by both and pinning its strings on `staff` too would make one fix look like
+two.
+
+**What this does not do is translate anything.** The number exists now and can
+only go down, which is the cheap half. The expensive half — the headings, the
+filters, the empty states, the dialogs and `SERVICE_MODULE_META` — is 725
+strings of real work, and the per-file counts in the baseline are the map of
+where it is.
